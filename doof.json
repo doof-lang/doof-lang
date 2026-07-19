@@ -1,0 +1,14 @@
+{
+  "name": "doof",
+  "version": "0.1.0",
+  "license": "ISC",
+  "resources": [
+    { "from": "runtime/doof_runtime.h", "to": "." },
+    { "from": "resources/std-catalog.json", "to": "." }
+  ],
+  "dependencies": {},
+  "build": {
+    "entry": "src/driver.do"
+  }
+}
+

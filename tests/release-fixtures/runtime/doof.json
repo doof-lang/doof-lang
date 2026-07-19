@@ -1,0 +1,5 @@
+{
+  "name": "doof-release-runtime",
+  "resources": [{ "from": "release-resource.txt", "to": "." }],
+  "build": { "entry": "main.do" }
+}

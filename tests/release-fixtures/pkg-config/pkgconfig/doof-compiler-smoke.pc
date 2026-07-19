@@ -1,0 +1,5 @@
+Name: doof-compiler-smoke
+Description: Header-only compiler pkg-config release fixture
+Version: 1.0
+Cflags: -I${pcfiledir}/../native
+Libs:

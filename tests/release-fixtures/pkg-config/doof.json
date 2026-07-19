@@ -1,0 +1,8 @@
+{
+  "name": "doof-release-pkg-config",
+  "build": {
+    "native": {
+      "pkgConfigPackages": ["doof-compiler-smoke"]
+    }
+  }
+}

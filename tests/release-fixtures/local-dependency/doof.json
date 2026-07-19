@@ -1,0 +1,8 @@
+{
+  "name": "doof-release-local-dependency",
+  "dependencies": {
+    "local-lib": {
+      "path": "local-lib"
+    }
+  }
+}

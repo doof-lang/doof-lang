@@ -1,0 +1,7 @@
+{
+  "name": "doof-release-native-interop",
+  "build": {
+    "entry": "main.do",
+    "native": { "extraCopyPaths": ["client.hpp"] }
+  }
+}

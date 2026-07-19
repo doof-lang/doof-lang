@@ -1,0 +1,1541 @@
+# Type System
+
+## Overview
+
+Doof features a strong, static type system with bidirectional type inference, structural interfaces, nominal classes and structs, and deep immutability tracking. The type system emphasises explicitness where it matters while reducing boilerplate through intelligent inference.
+
+---
+
+## Primitive Types
+
+| Type | Size | Description |
+|------|------|-------------|
+| `byte` | 8-bit | Unsigned byte (`0`-`255`) |
+| `int` | 32-bit | Integer (default for integer literals) |
+| `long` | 64-bit | Large integer |
+| `float` | 32-bit | Single-precision floating point |
+| `double` | 64-bit | Double-precision floating point (default for decimal literals) |
+| `string` | — | Text |
+| `char` | — | UTF-8 character |
+| `bool` | — | Boolean (`true` / `false`) |
+| `void` | — | Unit type (functions with no return value) |
+
+## Built-in Range Type
+
+`Range` is the finite integer range value produced by `a..b` and `a..<b`.
+It can be stored, passed to functions, returned, and iterated with `for of`.
+Iteration yields `int` values.
+
+```doof
+function sum(values: Range): int {
+    let total = 0
+    for value of values {
+        total = total + value
+    }
+    return total
+}
+
+window: Range := 1..<5
+```
+
+Open-ended forms such as `5..` and `..<10` are range patterns only; they are not
+valid `Range` values.
+
+### The `JsonValue` Type
+
+Doof provides a built-in `JsonValue` carrier for JSON-compatible data:
+
+```javascript
+payload: JsonValue := { name: "Ada", scores: [1, 2, 3] }
+```
+
+`JsonValue` is an exact recursive carrier, not a general implicit conversion sink. Its shape is:
+
+- `null`
+- `bool`
+- `byte`
+- `int`
+- `long`
+- `float`
+- `double`
+- `string`
+- `JsonValue[]`
+- `Map<string, JsonValue>`
+- unions composed from the cases above
+
+This has two important consequences:
+
+- JSON literals remain ergonomic through contextual typing, so `value: JsonValue := [1, 2, 3]` and `value: JsonValue := { answer: 42 }` are valid.
+- Pre-built typed collections do not implicitly convert to `JsonValue`. For example, `int[]` and `Map<string, int>` are not assignable to `JsonValue`; use JsonValue-shaped collections instead.
+
+`JsonObject` is a built-in intrinsic alias for `Map<string, JsonValue>`. It is interchangeable with that exact map shape in annotations, assignments, and return types:
+
+```doof
+payload: JsonObject := { "name": "Ada" }
+row: Map<string, JsonValue> := payload
+```
+
+64-bit integers are preserved as `long` inside `JsonValue`, including values parsed from JSON that do not fit in `int`.
+
+When a `Map<string, JsonValue>` or `JsonValue[]` is assigned to `JsonValue`, the runtime preserves reference semantics for the underlying shared container rather than copying it.
+
+`JsonValue` objects preserve insertion order for their string keys. Formatting with `formatJsonValue(...)`, iterating through the underlying map, and generated class/object JSON emission all follow that insertion order.
+
+### Numeric Literals
+
+```javascript
+let a = 42       // int (default for integer literals)
+let b = 42L      // long (explicit suffix)
+let c = 3.14     // double (default for decimal literals)
+let d = 3.14f    // float (explicit suffix)
+let e = 30_000   // int with digit separators
+let f = 3.141_59 // double with digit separators
+
+// Context can influence literal interpretation
+let b: byte = 42    // Literal interpreted as byte
+let x: long = 42    // Literal interpreted as long
+let y: float = 3.14 // Literal interpreted as float
+```
+
+Underscores may appear between two digits in numeric literals to improve readability. Leading, trailing, and consecutive underscores are rejected.
+
+### Implicit Numeric Widening
+
+Numeric types can be implicitly widened to larger types. Narrowing requires explicit conversion.
+
+```javascript
+let b: byte = 42
+let i: int = b       // ✅ Implicit widening byte → int
+
+let i: int = 42
+let l: long = i      // ✅ Implicit widening int → long
+
+let f: float = 3.14f
+let d: double = f    // ✅ Implicit widening float → double
+
+let l: long = 1000L
+let i: int = l       // ❌ Error: potential data loss
+
+let i: int = 255
+let b: byte = i      // ❌ Error: potential data loss
+```
+
+**Rationale:** Widening is always safe (no precision/range loss), while narrowing can lose data and should be explicit.
+
+### Explicit Numeric Casts
+
+To convert between numeric types explicitly, use function-call syntax with the type name:
+
+```javascript
+let x: int = 42
+let b: byte = byte(x)       // int → byte
+let f: float = float(x)      // int → float (explicit cast)
+let d: double = double(x)    // int → double
+let n: int = int(3.14)       // double → int (truncates)
+let l: long = long(x)        // int → long
+let code: int = int('A')      // char → int Unicode code point
+
+// Useful for division: avoid "/" on two integers
+a := 7
+b := 2
+result := float(a) / float(b)  // 3.5
+```
+
+Numeric casts accept exactly one numeric argument and return the target type, with one explicit character conversion: `int(char)` returns the character's Unicode code point. Casting to `byte` lowers to `uint8_t` in generated C++. Casting from a wider type to a narrower type (e.g., `double` → `int`) truncates the value.
+
+### Safe String Conversion
+
+To format primitive values as strings explicitly, use `string(...)` constructor syntax:
+
+```javascript
+let answer: string = string(42)
+let ok: string = string(true)
+let ratio: string = string(3.5)
+```
+
+`string(...)` accepts exactly one primitive argument of type `byte`, `int`, `long`, `float`, `double`, `string`, `char`, or `bool` and returns a `string`.
+
+### Numeric Parse Methods
+
+Numeric types expose a static `.parse()` method for fallible string parsing:
+
+```javascript
+count := int.parse("42")                // Result<int, ParseError>
+channel := byte.parse("255")            // Result<byte, ParseError>
+total := long.parse("9007199254740991") // Result<long, ParseError>
+ratio := double.parse("3.14159")        // Result<double, ParseError>
+```
+
+These methods return `Result<T, ParseError>` with the following builtin error cases:
+
+```javascript
+enum ParseError { InvalidFormat, Overflow, Underflow, EmptyInput }
+```
+
+Parsing is explicit and separate from numeric casts: `int("42")` is still invalid, while `int.parse("42")` returns `Success(42)`.
+
+### String Properties and Methods
+
+Strings support a `.length` property and the following built-in methods:
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `.length` | `int` (property) | Number of bytes in the string |
+| `.indexOf(s)` | `(string): int` | Position of first occurrence, or `-1` |
+| `[index]` | `char` | Character at a byte index; panics if the index is out of bounds |
+| `.contains(s)` | `(string): bool` | Whether the string contains the substring |
+| `.startsWith(s)` | `(string): bool` | Whether the string starts with the prefix |
+| `.endsWith(s)` | `(string): bool` | Whether the string ends with the suffix |
+| `.substring(start, end)` | `(int, int): string` | Extract substring by start/end indices |
+| `.slice(start)` | `(int): string` | Extract substring from start to end |
+| `.trim()` | `(): string` | Remove leading/trailing whitespace |
+| `.trimStart()` | `(): string` | Remove leading whitespace |
+| `.trimEnd()` | `(): string` | Remove trailing whitespace |
+| `.toUpperCase()` | `(): string` | Convert to uppercase |
+| `.toLowerCase()` | `(): string` | Convert to lowercase |
+| `.replace(search, repl)` | `(string, string): string` | Replace first occurrence |
+| `.replaceAll(search, repl)` | `(string, string): string` | Replace all occurrences |
+| `.split(delim)` | `(string): string[]` | Split into array of strings |
+| `.charAt(index)` | `(int): char` | Character at a byte index; panics if the index is out of bounds |
+| `.repeat(count)` | `(int): string` | Repeat string N times |
+
+```javascript
+s := "Hello, World!"
+s.length              // 13
+s.indexOf("World")    // 7
+s.contains("World")   // true
+s.startsWith("Hello") // true
+s.substring(0, 5)     // "Hello"
+s.toUpperCase()       // "HELLO, WORLD!"
+s.split(", ")         // ["Hello", "World!"]
+"  hi  ".trim()       // "hi"
+"abc".repeat(2)       // "abcabc"
+"foo bar".replace("foo", "baz")  // "baz bar"
+```
+
+### Array Properties and Methods
+
+Arrays support a `.length` property and the following built-in methods:
+
+| Method | Available on | Signature | Description |
+|--------|--------------|-----------|-------------|
+| `.length` | both | `int` (property) | Number of elements |
+| `.push(element)` | mutable only | `(T): void` | Append an element |
+| `.reserve(capacity)` | mutable only | `(int): void` | Reserve backing capacity without changing the element count |
+| `.pop()` | mutable only | `(): Result<T, string>` | Remove and return the last element, or a failure message when empty |
+| `.contains(element)` | both | `(T): bool` | Whether the array contains the value |
+| `.indexOf(element)` | both | `(T): int` | Index of first matching element, or `-1` when absent |
+| `.some(predicate)` | both | `((it: T): bool): bool` | Whether any element matches the predicate |
+| `.every(predicate)` | both | `((it: T): bool): bool` | Whether all elements match the predicate |
+| `.filter(predicate)` | both | `((it: T): bool): T[]` or `readonly T[]` | Keep elements matching predicate (preserves mutability) |
+| `.map(mapper)` | both | `<U>((it: T): U): U[]` or `readonly U[]` | Transform elements (preserves mutability) |
+| `.slice(start, end)` | both | `(int, int): T[]` or `readonly T[]` | Sub-array (preserves mutability) |
+| `.buildReadonly()` | mutable only | `(): readonly T[]` | Move-drain the array into a new readonly array (source is left empty) |
+| `.cloneMutable()` | both | `(): T[]` | Shallow-copy into a new mutable array |
+
+`push`, `reserve`, and `pop` are rejected on `readonly T[]` arrays at compile time. `buildReadonly` is also rejected on readonly arrays — use `cloneMutable` then `buildReadonly` if needed.
+
+```javascript
+nums := [1, 2, 3, 4]
+nums.push(5)                         // nums is now [1, 2, 3, 4, 5]
+popped := nums.pop()                 // Result<int, string>
+last := case popped {
+    s: Success -> s.value,
+    _: Failure -> -1,
+}
+// nums is now [1, 2, 3, 4]
+tail := nums.slice(1, 3)             // [2, 3]  (int[])
+hasTwo := nums.contains(2)           // true
+idxOfFour := nums.indexOf(4)         // 3
+anyEven := nums.some((it: int): bool => it % 2 == 0)      // true
+allPositive := nums.every((it: int): bool => it > 0)      // true
+evens := nums.filter((it: int): bool => it % 2 == 0)      // [2, 4]
+labels := nums.map((it: int): string => "#${string(it)}") // ["#1", "#2", "#3", "#4"]
+
+// Build pattern: accumulate into mutable, then freeze
+let builder: int[] = []
+builder.push(1)
+builder.push(2)
+result := builder.buildReadonly() // readonly int[], builder is now empty
+
+// Clone into a mutable copy
+let frozen: readonly int[] = [1, 2, 3]
+copy := frozen.cloneMutable() // int[]
+copy.push(4)                      // ✅ OK
+```
+
+### Non-Null Assertion
+
+The postfix `!` operator asserts that a nullable expression is non-null or unwraps a `Result<T, E>` success value. It strips `null` from nullable types at compile time, and for `Result<T, E>` it yields `T`. At runtime, if the value is actually null or the Result is a `Failure`, the program will panic.
+
+Applying `!` to a value that is neither nullable nor a `Result` is a compile error.
+
+```javascript
+name: string | null := "Alice"
+println(name!)                  // ✅ Asserts non-null, type is string
+greet(name!)                    // ✅ Works in function argument position
+
+parsed: Result<int, ParseError> := int.parse("12")
+println(parsed! + 2)            // ✅ Unwraps Success, type is int
+
+node.next!.value                // ✅ Alternative: !. force-unwrap member access
+```
+
+---
+
+## Type Inference
+
+Doof uses **bidirectional type inference** — single-step, context-aware inference without aggressive propagation.
+
+### Basic Inference Rules
+
+```javascript
+// ✅ Type inferred from initialiser
+let x = 42                        // int
+let y = 3.14                      // double
+let names = ["Alice", "Bob"]      // string[]
+let point = Point(1.0, 2.0)       // Point
+scores: Map := { "Alice": 100 }   // Map<string, int>
+unique: Set := [1, 2, 3]          // Set<int>
+
+// Empty arrays are currently accepted, though explicit annotation is clearer
+let empty = []
+let nums: int[] = []              // ✅ Explicit annotation required
+m: Map := {}                      // Error: empty map needs full annotation
+s: Set := []                      // Error: empty set needs full annotation
+
+// Null initialisers are also currently accepted, though explicit annotation is clearer
+let maybe = null
+let x: int | null = null          // ✅ Explicit annotation
+```
+
+### Bidirectional Flow
+
+Type information flows **both directions** in a single step:
+
+```javascript
+// Top-down: expected type known from context
+function process(items: int[]): void { }
+process([1, 2, 3])  // Literal infers int[] from parameter type
+
+// Bottom-up: type known from expression
+let nums = [1, 2, 3]  // int[] inferred from literal contents
+process(nums)          // Type-checked against parameter
+
+// Object initialisation
+function draw(p: Point): void { }
+draw({ x: 1.0, y: 2.0 })  // Object literal infers Point from parameter
+draw((1.0, 2.0))            // Positional literal infers Point from parameter
+
+let p: Point = { x: 1.0, y: 2.0 }  // ✅ Explicit annotation provides context
+let q = { x: 1.0, y: 2.0 }         // ❌ Error: object literal needs contextual type information
+```
+
+Object literals do not infer an anonymous structural type on their own. They must be checked against a contextual target such as a variable annotation, parameter type, return type, array element type, or constructor field type.
+
+### Contextual Numeric Narrowing
+
+When an expected type is known from context, numeric literals are interpreted as that type even when the default would differ:
+
+```javascript
+class Point { x, y: float }
+
+// Without context: 0.0 is double, 42 is int
+let d = 0.0   // double
+let i = 42    // int
+
+// With context: literals narrow to the expected type
+let p = Point(0.0, 0.0)        // 0.0 interpreted as float (from field type)
+p := Point { x: 0.0, y: 0.0 }  // Same — float context from field type
+x: float := 3.14               // 3.14 interpreted as float
+
+// Integer literals also narrow contextually
+n: long := 42                  // 42 interpreted as long
+f: float := 1                  // 1 interpreted as float
+```
+
+**Rules:**
+- Decimal literals (`0.0`, `3.14`) narrow from `double` → `float` when expected type is `float`
+- Integer literals (`42`, `1`) widen to `long`, `float`, or `double` when expected
+- This applies wherever an expected type flows: declarations, function arguments, return statements, array elements, constructor fields
+
+### Transitive Contextual Typing
+
+Expected types propagate through collection literals and method calls:
+
+```javascript
+class Point { x, y: float }
+
+// Expected type flows into array elements
+points: Point[] := [{ x: 1.0, y: 2.0 }, { x: 3.0, y: 4.0 }]
+
+// Also works with positional syntax
+points: Point[] := [(1.0, 2.0), (3.0, 4.0)]
+
+// And through function arguments
+function process(points: Point[]): void { }
+process([{ x: 0.0, y: 0.0 }])  // Element inherits Point context
+
+// And through array method calls like .push()
+let verts: Point[] = []
+verts.push({ x: 1.0, y: 2.0 })  // Inferred as Point construction
+verts.push((3.0, 4.0))           // Also works with positional syntax
+
+nums := [1, 2, 3, 4]
+tail := nums.slice(1, 3)        // Returns int[]
+hasTwo := nums.contains(2)      // true
+```
+
+### Binding-Sensitive Inference
+
+Binding keywords influence type inference and mutability:
+
+```javascript
+// := provides shallow immutability - mutable collection type
+items := [1, 2, 3]        // int[] (mutable array, immutable binding)
+items.push(4)             // ✅ OK - array is mutable
+items = [5, 6]            // ❌ Error - binding is immutable
+
+// let prefers mutable types
+let buffer = [1, 2, 3]    // int[]
+buffer.push(4)            // ✅ OK
+buffer = [5, 6]           // ✅ OK
+
+// readonly provides deep immutability
+readonly frozen = [1, 2, 3]       // readonly int[]
+frozen.push(4)                    // ❌ Error - array is readonly
+frozen = [5, 6]                   // ❌ Error - binding is immutable
+
+// Explicit readonly modifier on collection literal
+data := readonly [1, 2, 3]        // readonly int[]
+data.push(4)                      // ❌ Error - array is readonly
+
+// Explicit type overrides inference
+explicit: int[] := [1, 2, 3]     // int[] (explicit overrides)
+```
+
+### Function Return Type Inference
+
+```javascript
+// Return type inferred from body (single-step)
+function double(x: int) => x * 2  // Returns int
+
+// Unannotated block bodies default to void, so value returns are invalid
+function choose(flag: bool) {
+    if flag {
+        return 1
+    }
+    return "hello"
+}  // ❌ Error: value return is not assignable to void
+
+function clarified(flag: bool): int | string {
+    if flag {
+        return 1
+    }
+    return "hello"
+}  // ✅ Explicit annotation
+```
+
+---
+
+## Nullable Types
+
+Doof has **no implicit null** — nullability is explicit via union types:
+
+```javascript
+let x: int = null        // ❌ Error: int is not nullable
+let y: int | null = null  // ✅ Explicit nullable type
+```
+
+### Nullable vs Optional Fields
+
+These concepts are orthogonal:
+
+```javascript
+class User {
+    name: string                   // Required, non-null
+    email: string | null           // Required, nullable
+    nickname: string | null = null // Optional (has default), nullable
+}
+
+let u1 = User { name: "Alice", email: null }          // ✅ Must provide email
+let u2 = User { name: "Bob", email: "bob@example.com" }  // ✅
+let u3 = User { name: "Charlie" }                     // ❌ Error: email is required
+let u4 = User { name: "Alice", email: null, nickname: "Ali" }  // ✅
+```
+
+### Null Safety
+
+```javascript
+function getLength(s: string | null): int {
+    return s.length  // ❌ Error: s might be null
+}
+
+function safeLengthV1(s: string | null): int {
+    if s == null {
+        return 0
+    }
+    return s!.length
+}
+
+function safeLengthV2(s: string | null): int {
+    value := s else { return 0 }
+    return value.length
+}
+```
+
+---
+
+## Union Types
+
+Union types express "one of several types":
+
+```javascript
+type Value = int | string | bool
+type Optional<T> = T | null
+
+let x: int | string = 42
+x = "hello"  // ✅ Valid reassignment within union
+x = true     // ❌ Error: bool not in union
+```
+
+### Shared Member Access
+
+Members may be accessed directly on a multi-member union only when every non-null
+member type exposes that member. The resulting type is the union of the member
+result types. A single class nullable such as `Box | null` uses ordinary pointer
+member access, while a single struct nullable such as `Point | null` uses an
+optional value representation. Both may still require explicit null handling for safety.
+
+```javascript
+class Request { method: string, path: string }
+class RouterRequest { method: string, path: string }
+
+type HttpRequest = Request | RouterRequest
+
+function routeKey(request: HttpRequest): string {
+    return request.method + " " + request.path  // ✅ shared fields
+}
+```
+
+### Discriminated Unions
+
+Use literal-valued fields to create discriminated unions:
+
+```javascript
+class Success {
+    kind: "Success"
+    value: int
+}
+
+class Failure {
+    kind: "Failure"
+    error: string
+}
+
+type Result = Success | Failure
+```
+
+The language's intrinsic error arms use the same ordinary union model:
+`Result<T, E>` is the canonical alias for `Success<T> | Failure<E>`. Intrinsic
+arms expose `.value` or `.error` only after ordinary union narrowing. They remain
+non-JSON-serializable despite using the union representation.
+
+---
+
+## Enum Types
+
+Enums define a **closed set of named values** — a type-safe alternative to magic numbers or string constants.
+
+### Simple Enums
+
+When no values are assigned, variants are opaque identifiers with no underlying representation exposed to the programmer:
+
+```javascript
+enum Color { Red, Green, Blue }
+
+enum Direction {
+    North,
+    South,
+    East,
+    West
+}
+```
+
+### Integer-Valued Enums
+
+Enum variants can have explicit integer values. If a variant omits a value, it is implicitly the previous variant's value + 1. The first variant defaults to 0 if unspecified:
+
+```javascript
+enum Direction {
+    North = 1,
+    South = 2,
+    East = 4,
+    West = 8
+}
+
+enum HttpStatus {
+    OK = 200,
+    Created,        // 201
+    Accepted,       // 202
+    NoContent = 204
+}
+```
+
+### String-Valued Enums
+
+Enum variants can have explicit string values. **Every variant must have a value** — auto-increment does not apply to strings:
+
+```javascript
+enum Color { Red = "RED", Green = "GREEN", Blue = "BLUE" }
+
+enum LogLevel {
+    Debug = "DEBUG",
+    Info = "INFO",
+    Warn = "WARN",
+    Error = "ERROR"
+}
+```
+
+### Accessing Enum Values
+
+```javascript
+let dir = Direction.North       // Direction
+let status = HttpStatus.OK      // HttpStatus
+let level = LogLevel.Debug      // LogLevel
+```
+
+### Shorthand Enum References
+
+When the target type is known from context, enum variants can be referenced with **dot-shorthand** — a leading `.` without the enum name:
+
+```javascript
+let c: Direction = .East          // Direction.East
+let level: LogLevel = .Warn       // LogLevel.Warn
+
+function move(dir: Direction): void { ... }
+move(.North)                      // Direction.North
+
+function getLevel(): LogLevel {
+    return .Info                   // LogLevel.Info
+}
+```
+
+Shorthand works anywhere the compiler can infer the enum type from context:
+- Variable declarations with explicit type annotations
+- Function arguments with typed parameters
+- Return statements in functions with explicit return types
+- Parameter defaults and field defaults
+- Case arms matching on an enum value
+
+```javascript
+// Shorthand in case expressions
+direction: Direction := .North
+
+case direction {
+    .North -> moveUp()
+    .South -> moveDown()
+    .East  -> moveRight()
+    .West  -> moveLeft()
+}
+
+// Equivalent to:
+case direction {
+    Direction.North -> moveUp()
+    Direction.South -> moveDown()
+    Direction.East  -> moveRight()
+    Direction.West  -> moveLeft()
+}
+```
+
+### Enum Properties
+
+All enums have a `.name` property returning the variant's declared name as a string:
+
+```javascript
+let d = Direction.North
+print(d.name)  // "North"
+```
+
+Integer-valued and string-valued enums additionally have a `.value` property:
+
+```javascript
+let s = HttpStatus.OK
+print(s.name)   // "OK"
+print(s.value)  // 200
+
+let l = LogLevel.Debug
+print(l.name)   // "Debug"
+print(l.value)  // "DEBUG"
+```
+
+### Enum Utility Methods
+
+```javascript
+// Get all variants
+Direction.values()   // readonly Direction[] — all variants in declaration order
+
+// Convert from name
+Direction.fromName("North")   // Direction | null
+
+// Convert from value (integer enums)
+HttpStatus.fromValue(200)     // HttpStatus | null
+```
+
+### Enum Equality and Comparison
+
+Enum values support equality comparison. Integer-valued enums also support ordering:
+
+```javascript
+let a = Direction.North
+let b = Direction.North
+a == b  // true
+a != Direction.South  // true
+
+// Integer enums support ordering
+HttpStatus.OK < HttpStatus.NoContent  // true (200 < 204)
+```
+
+### Enums as Union Discriminators
+
+Enum values can be used as literal-valued fields to discriminate unions, providing a type-safe alternative to string-based discriminator fields:
+
+```javascript
+enum ShapeKind { Circle, Rectangle, Triangle }
+
+class CircleShape {
+    kind: ShapeKind.Circle
+    radius: float
+}
+
+class RectangleShape {
+    kind: ShapeKind.Rectangle
+    width, height: float
+}
+
+class TriangleShape {
+    kind: ShapeKind.Triangle
+    a, b, c: float
+}
+
+type Shape = CircleShape | RectangleShape | TriangleShape
+
+// Structural construction using enum discriminator
+let s: Shape = { kind: .Circle, radius: 5.0 }  // Constructs CircleShape
+```
+
+This provides stronger type safety than string-based discrimination — misspelled variant names are compile-time errors rather than silent bugs.
+
+### Enums vs Discriminated Unions
+
+Use **enums** for a fixed set of named values without associated data:
+
+```javascript
+enum Status { Active, Inactive, Suspended }
+```
+
+Use **discriminated unions** when variants carry different data:
+
+```javascript
+class TextMessage {
+    kind: "Text"
+    content: string
+}
+
+class ImageMessage {
+    kind: "Image"
+    url: string
+    width, height: int
+}
+
+type Message = TextMessage | ImageMessage
+```
+
+---
+
+## Class and Struct Types (Nominal)
+
+Classes and structs define **nominal types** — two declarations with identical structure are distinct types. Classes are reference types; structs are value types.
+
+```javascript
+class Point {
+    readonly x: float
+    readonly y: float
+}
+
+class Vector {
+    readonly x: float
+    readonly y: float
+}
+
+let p: Point = Vector { x: 1.0, y: 2.0 }  // ❌ Error: type mismatch
+let p: Point = Point { x: 1.0, y: 2.0 }   // ✅ OK
+```
+
+---
+
+## Interface Types (Structural)
+
+Interfaces define **structural contracts**. In Doof's closed-world compilation model, interfaces are automatically satisfied by any class with matching structure. Struct interface participation is not supported in v1.
+
+### Automatic Structural Matching
+
+```javascript
+interface Thing2D {
+    readonly x: float
+    readonly y: float
+}
+
+class Point {
+    readonly x: float
+    readonly y: float
+}
+
+class Vector {
+    readonly x: float
+    readonly y: float
+}
+
+// At compile time, Thing2D resolves to: Point | Vector | ...any other matching classes
+function distance(a: Thing2D, b: Thing2D): float {
+    return (b.x - a.x) ** 2 + (b.y - a.y) ** 2
+}
+
+let p = Point { x: 1.0, y: 2.0 }
+let v = Vector { x: 3.0, y: 4.0 }
+distance(p, v)  // ✅ Both structurally compatible
+```
+
+### Optional Explicit Implementation
+
+Classes can optionally declare interface implementation for validation:
+
+```javascript
+class Point implements Thing2D {
+    readonly x: float
+    readonly y: float
+}
+
+class BadPoint implements Thing2D {  // ❌ Compile error
+    x: float  // Error: field must be readonly to match interface
+    readonly y: float
+}
+```
+
+### Type Construction with Interfaces
+
+```javascript
+interface Positioned {
+    readonly x: float
+    readonly y: float
+}
+
+// ❌ Ambiguous — multiple classes match
+let p: Positioned = { x: 1.0, y: 2.0 }  // Error: multiple candidates
+
+// ✅ Must use explicit constructor
+let p: Positioned = Point { x: 1.0, y: 2.0 }
+let v: Positioned = Vector { x: 1.0, y: 2.0 }
+```
+
+### Literal-Valued Fields Aid Variant Identification
+
+```javascript
+enum OutcomeKind { Success, Failure }
+
+class SuccessOutcome {
+    kind: OutcomeKind.Success
+    value: int
+}
+
+class FailureOutcome {
+    kind: OutcomeKind.Failure
+    error: string
+}
+
+type Outcome = SuccessOutcome | FailureOutcome
+
+function show(o: Outcome): void {
+    case o {
+        s: SuccessOutcome -> print(s.value)
+        _: FailureOutcome -> print("unexpected")
+    }
+}
+
+// When using an enum discriminator, object literals can construct the correct variant
+show({ kind: .Success, value: 42 })
+show({ kind: .Failure, error: "timeout" })
+```
+
+---
+
+## Generic Types
+
+Doof provides built-in generic collection types and supports generic type aliases.
+Generic alias parameters remain in scope throughout the aliased type, including
+inside union members:
+
+```javascript
+type Event<T> = Message<T> | Ready<T> | Closed<T>
+```
+
+| Type | Shorthand | Description |
+|------|-----------|-------------|
+| `Array<T>` | `T[]` | Mutable array |
+| `ReadonlyArray<T>` | `readonly T[]` | Immutable array |
+| `Map<K, V>` | — | Mutable key-value map |
+| `ReadonlyMap<K, V>` | — | Immutable map |
+| `Set<T>` | — | Mutable set |
+| `ReadonlySet<T>` | — | Immutable set |
+| `Tuple<T1, T2, ...>` | — | Fixed-size heterogeneous tuple |
+
+```javascript
+let nums: int[] = [1, 2, 3]
+let matrix: int[][] = [[1, 2], [3, 4]]
+
+readonly immutable: readonly string[] = ["a", "b", "c"]
+immutable[0] = "x"  // ❌ Error: readonly array
+
+let scores: Map<string, int> = { "Alice": 100, "Bob": 95 }
+let unique: Set<int> = [1, 2, 3, 2, 1]  // Contains {1, 2, 3}
+```
+
+When a declaration or default value uses `Map`, `ReadonlyMap`, `Set`, or `ReadonlySet` **without type arguments**, the checker may infer the missing type arguments only from a **same-site non-empty homogeneous literal**.
+
+Generic type parameters can use constraints such as `T: int | long` to restrict
+valid type arguments. `JsonSerializable` and `Reflectable` are compiler-known,
+constraint-only intrinsics used by generic JSON and metadata helpers; they are
+not normal type annotations:
+
+```javascript
+function decode<T: JsonSerializable>(json: JsonValue): Result<T, string> {
+  return T.fromJsonValue(json)
+}
+
+function toolName<T: Reflectable>(tool: T): string {
+  return T.metadata.name
+}
+```
+
+```javascript
+scores: Map := { "Alice": 100, "Bob": 95 }        // Map<string, int>
+readonlyScores: ReadonlyMap := { "Alice": 100 }    // ReadonlyMap<string, int>
+unique: Set := [1, 2, 3]                             // Set<int>
+frozen: ReadonlySet := [1, 2, 3]                     // ReadonlySet<int>
+```
+
+This inference does **not** apply outside same-site literal contexts. Return types, interface fields, type aliases, and other type-only positions must use full type arguments.
+
+### Map Type
+
+`Map<K, V>` is an intrinsic generic type for key-value mappings with insertion-order iteration.
+
+#### Map Literal Syntax
+
+Maps use `{ key: value }` literal syntax within `{ }`. Empty braces `{}` produce an empty map when the target type is `Map<K, V>`.
+
+When the annotation omits type arguments entirely, non-empty homogeneous literals can supply both type arguments:
+
+```javascript
+scores: Map := { "Alice": 100, "Bob": 95 }        // Map<string, int>
+scores: ReadonlyMap := { "Alice": 100 }            // ReadonlyMap<string, int>
+let scores: readonly Map<string, int> = { "Alice": 100 } // Same as ReadonlyMap<string, int>
+let scores: Map<string, int> = { "Alice": 100 }        // Also valid
+```
+
+Both map type arguments must be omitted together. Partial annotations such as `Map<string>` and `ReadonlyMap<string>` are compile errors.
+
+Supported key types are `string`, `int`, `long`, `char`, `bool`, and enum types. In practice, the common supported forms are string keys, integer keys, long keys, and enum keys.
+
+```javascript
+// Integer keys
+let m: Map<int, string> = { 1: "one", 2: "two" }
+
+// Long keys
+let ids: Map<long, string> = { 1L: "one", 2L: "two" }
+
+// String keys
+let scores: Map<string, int> = { "Alice": 100, "Bob": 95 }
+
+// Dot-shorthand syntax (enum keys with type inference)
+enum Suit { Spades, Hearts, Diamonds, Clubs }
+let piles: Map<Suit, int> = { .Spades: 0, .Hearts: 0, .Diamonds: 0, .Clubs: 0 }
+
+// Explicit enum access also works in map initializers
+enum Color { Red, Green, Blue }
+let labels: Map<Color, string> = { Color.Red: "Red", Color.Green: "Green" }
+
+// Empty map
+let empty: Map<int, string> = {}
+m: Map := {}                     // Error: cannot infer K and V from an empty map
+```
+
+The same key restrictions apply in all map initialization contexts, including declaration initializers, return-context literals, argument-context literals, parameter defaults, and field defaults.
+
+Bare map inference is limited to same-site literals on declarations and defaults. For example, `function getMap(): Map { ... }` is rejected because there is no same-site literal attached to the return type annotation.
+
+Map iteration order is defined by first insertion order. `.keys()`, `.values()`, `for (key, value) of map`, direct map printing, and `JsonValue` object formatting all expose that order.
+
+Replacing the value for an existing key does not move it. Deleting a key and then inserting it again appends it to the end.
+
+Integer literals are contextually widened when a `long` key type is expected, so this is valid:
+
+```javascript
+let counts: Map<long, int> = { 1: 10, 2: 20 }
+```
+
+Floating-point keys are rejected even though they parse, to avoid surprising hash/equality behavior around exact comparison and `NaN` values.
+
+```javascript
+let bad: Map<float, int> = {}          // Error
+let alsoBad = { 1.5: "value" }       // Error
+```
+
+Tuple, class-instance, and other non-scalar key types are also rejected.
+
+```javascript
+let badTuple: Map<Tuple<int, string>, int> = {}  // Error
+
+class Point { x: int }
+let badPoint: Map<Point, int> = {}               // Error
+```
+
+### Set Type
+
+`Set<T>` is an intrinsic generic type for unique values with insertion-order iteration. When a `Set<T>` is expected, array literal syntax initializes the set and duplicate values are coalesced by the runtime representation.
+
+```javascript
+enum Color { Red, Blue }
+
+let unique: Set<int> = [1, 2, 3, 2, 1]
+let empty: Set<string> = []
+let palette: Set<Color> = [Color.Red, Color.Blue, Color.Red]
+let ids: Set<long> = [1, 2, 3]  // int literals widen to long in Set<long> context
+unique: Set := [1, 2, 3]        // Set<int>
+frozen: ReadonlySet := [1, 2, 3] // ReadonlySet<int>
+view: readonly Set := [1, 2, 3]  // ReadonlySet<int>; immutable binding
+let replaceable: readonly Set = [1, 2, 3] // ReadonlySet<int>; reassignable binding
+readonly deep: Set = [1, 2, 3]   // ReadonlySet<int>; deep readonly binding
+let frozen2: readonly Set<int> = [1, 2, 3] // Same as ReadonlySet<int>
+```
+
+When the annotation omits type arguments entirely, the checker may infer `T` only from a same-site non-empty homogeneous literal. Empty literals still require a full annotation:
+
+```javascript
+unique: Set := [1, 2, 3]          // Set<int>
+frozen: ReadonlySet := [1, 2, 3]  // ReadonlySet<int>
+let unique: Set<int> = [1, 2, 3]  // Also valid
+empty: Set := []                  // Error
+```
+
+Binding mutability and collection mutability are independent. `:=` prevents
+rebinding but leaves `Set` mutable; `readonly Set` (or `ReadonlySet`) prevents
+collection mutation; a `readonly` declaration applies deep readonly semantics
+and therefore turns an inferred bare `Set` into `ReadonlySet<T>`.
+
+Extra type arguments such as `Set<int, string>` or `ReadonlySet<int, string>` are compile errors.
+
+Supported set element types are `string`, `int`, `long`, `char`, `bool`, and enums. The same rule applies to declaration initializers, return-context literals, argument-context literals, parameter defaults, and field defaults.
+
+`float`, `double`, tuples, class instances, and other non-supported element types are rejected by the checker with an explicit set-element diagnostic.
+
+Set iteration order is defined by first insertion order. `.values()`, `for value of set`, and direct set printing follow that order.
+
+Adding a value that is already present does not move it. Deleting a value and then adding it again appends it to the end.
+
+#### Set Methods
+
+| Method | Available on | Return Type | Description |
+|--------|--------------|-------------|-------------|
+| `.size` | both | `int` | Number of entries |
+| `.has(value)` | both | `bool` | Check if value exists |
+| `.add(value)` | mutable only | `void` | Insert value |
+| `.delete(value)` | mutable only | `void` | Remove value |
+| `.values()` | both | `T[]` | Array of all values |
+| `.buildReadonly()` | mutable only | `ReadonlySet<T>` | Move-drain the set into a new readonly set (source is left empty) |
+| `.cloneMutable()` | both | `Set<T>` | Shallow-copy into a new mutable set |
+
+```javascript
+let unique: Set<int> = [1, 2, 3]
+unique.add(4)
+print(unique.has(2))
+unique.delete(1)
+print(unique.size)
+
+frozen := unique.buildReadonly() // ReadonlySet<int>, unique is now empty
+copy := frozen.cloneMutable()    // Set<int>
+```
+
+#### Map Methods
+
+| Method | Available on | Return Type | Description |
+|--------|--------------|-------------|-------------|
+| `.size` | both | `int` | Number of entries |
+| `.get(key)` | both | `Result<V, string>` | Retrieve value or a missing-key failure |
+| `.set(key, value)` | mutable only | `void` | Insert or update entry |
+| `.has(key)` | both | `bool` | Check if key exists |
+| `.delete(key)` | mutable only | `void` | Remove entry by key |
+| `.keys()` | both | `K[]` | Array of all keys |
+| `.values()` | both | `V[]` | Array of all values |
+| `.buildReadonly()` | mutable only | `ReadonlyMap<K, V>` | Move-drain the map into a new readonly map (source is left empty) |
+| `.cloneMutable()` | both | `Map<K, V>` | Shallow-copy into a new mutable map |
+
+```javascript
+let m: Map<string, int> = { "a": 1, "b": 2 }
+m.set("c", 3)
+case m.get("a") {
+    s: Success -> print(s.value)
+    _: Failure -> print("missing")
+}
+print(m.has("d"))     // false
+print(m.size)         // 3
+m.delete("b")
+
+for key, value of m {
+  print("${key} = ${value}")
+}
+
+frozen := m.buildReadonly()  // ReadonlyMap<string, int>, m is now empty
+copy := frozen.cloneMutable() // Map<string, int>
+```
+
+#### Map Index Access
+
+Maps support bracket-based index access, which is equivalent to direct key lookup:
+
+```javascript
+let m: Map<string, int> = { "a": 1 }
+x := m["a"]   // returns 1
+m["b"] = 2    // inserts new entry
+```
+
+### Tuple Type
+
+`Tuple` is an intrinsic parameterised type that accepts a varying number of type parameters, providing lightweight ad-hoc grouping without defining a class.
+
+A `Tuple<T1, T2, ..., Tn>` is equivalent to a class with fields `_1: T1`, `_2: T2`, ..., `_n: Tn`. All standard class construction and destructuring rules apply.
+
+```javascript
+// Explicit type
+let pair: Tuple<int, string> = (1, "hello")
+let vec: Tuple<float, float, float> = (1.0f, 2.0f, 3.0f)
+
+// Type inference from positional literal (when no named type matches)
+coords := (3.14, 2.71)           // Tuple<double, double>
+mixed := (42, "hello", true)     // Tuple<int, string, bool>
+
+// Field access via _1, _2, etc.
+print(pair._1)   // 1
+print(pair._2)   // "hello"
+print(vec._3)    // 3.0
+```
+
+#### Tuple Construction
+
+Tuples use positional literal syntax — the same `(value, ...)` form used for class positional construction:
+
+```javascript
+// When target type is known, constructs that type
+let p: Point = (1.0, 2.0)                  // Constructs Point (not a Tuple)
+let t: Tuple<float, float> = (1.0f, 2.0f)  // Constructs Tuple
+
+// When target type is unknown, infers Tuple
+result := (200, "OK")                      // Tuple<int, string>
+```
+
+#### Tuple Destructuring
+
+Tuples support positional destructuring, just like classes:
+
+```javascript
+function divmod(a: int, b: int): Tuple<int, int> {
+    return (a \ b, a % b)
+}
+
+function getRecord(): Tuple<int, string, bool> {
+    return (1, "Alice", true)
+}
+
+(quotient, remainder) := divmod(17, 5)
+
+// Mutable bindings
+let (q, r) = divmod(17, 5)
+q = 0  // ✅ OK
+
+// Partial destructuring — trailing fields can be omitted
+(id, name) := getRecord()  // Ignores third field
+```
+
+#### Tuples as Return Types
+
+Tuples are particularly useful for functions that return multiple values:
+
+```javascript
+function minMax(items: int[]): Tuple<int, int> {
+    let min = items[0]
+    let max = items[0]
+    for item of items {
+        if item < min { min = item; }
+        if item > max { max = item; }
+    }
+    return (min, max)
+}
+
+(lo, hi) := minMax([3, 1, 4, 1, 5, 9])
+print(lo)  // 1
+print(hi)  // 9
+```
+
+#### Design Notes
+
+- `Tuple` is an **intrinsic type** — it cannot be redefined or extended by user code
+- The number of type parameters is variable (variadic) — `Tuple<A>`, `Tuple<A, B>`, `Tuple<A, B, C>`, etc. are all valid
+- Tuples are **nominal** — `Tuple<int, int>` is not structurally compatible with a class that has two `int` fields
+- When a positional literal `(v1, v2, ...)` has no contextual type expectation from a named class, it infers as a `Tuple`
+
+### Type Aliases
+
+```javascript
+type UserId = int
+type Callback = (value: int): void
+type StringMap = Map<string, string>
+type Pair<A, B> = Tuple<A, B>         // Alias for common tuple arities
+```
+
+---
+
+## Function Types
+
+Functions are first-class values with explicit type signatures **including parameter names**:
+
+```javascript
+type Callback = (value: int, description: string): void
+type Predicate<T> = (item: T): bool
+type Transform = (input: int): int
+type BinaryOp = (left: int, right: int): int
+```
+
+Parameter names are part of the function type — they define the contract for how the function should be called.
+
+---
+
+## Deep Readonly / Mutability
+
+**Readonly is transitive** — it applies to the entire object graph, not just the immediate binding.
+
+### Shallow Collection Readonly vs Deep Readonly Bindings
+
+Doof distinguishes between collection-level readonly types and deep immutability on `readonly` bindings and fields:
+
+```javascript
+// := : Shallow immutability (immutable binding, mutable content)
+data := [1, 2, 3]              // int[] - binding immutable, content mutable
+data.push(4)                   // ✅ OK - array is mutable
+data = [5, 6]                  // ❌ Error - binding is immutable
+
+// readonly binding: deep immutability
+readonly frozen = [1, 2, 3]    // readonly int[] - binding is deep readonly
+frozen.push(4)                 // ❌ Error - array is readonly
+frozen = [5, 6]                // ❌ Error - binding is immutable
+
+// Collection modifier / type: readonly collection only
+data := readonly [1, 2, 3]     // readonly int[] - readonly collection surface
+
+class MutablePoint {
+    x: float
+    y: float
+}
+
+let points: readonly MutablePoint[] = readonly [MutablePoint { x: 1.0, y: 2.0 }]  // ✅ OK
+points[0].x = 2.0      // ✅ OK - element objects can still be mutable
+points.push(MutablePoint { x: 3.0, y: 4.0 })  // ❌ Error - readonly array
+```
+
+### Deep Readonly Compatibility Rules
+
+When `readonly` appears on a binding or class field, the referenced value must be deeply immutable. A type is deeply readonly-compatible if:
+
+1. **Primitives** — `int`, `long`, `float`, `double`, `string`, `bool` — always readonly-compatible
+2. **Classes** — all fields must be `readonly`
+3. **Arrays** — are treated as `readonly T[]`, and `T` must itself be deeply readonly-compatible
+4. **Collections** — are treated as `ReadonlyMap<K, V>` / `ReadonlySet<T>`, and nested types must be deeply readonly-compatible
+5. **Unions** — all variants must be readonly-compatible
+6. **Functions** — always readonly-compatible (immutable references)
+
+Readonly collection annotations are shallow at the collection boundary: they stop collection mutation, but they do not require element or value types to be deeply immutable. Collection mutability is still part of the type, so `int[]` is not assignable to `readonly int[]`, `ReadonlyArray<int>`, `ReadonlyMap<K, V>`, or `ReadonlySet<T>`, and the reverse conversions are also rejected.
+
+The parser also accepts `readonly Array<T>`, `readonly Map<K, V>`, and `readonly Set<T>` as equivalents of `ReadonlyArray<T>`, `ReadonlyMap<K, V>`, and `ReadonlySet<T>`. Other uses of `readonly` in type position are parse errors.
+
+### Readonly Classes
+
+```javascript
+// Readonly-compatible class
+class ImmutablePoint {
+    readonly x: float
+    readonly y: float
+}
+
+// Not readonly-compatible
+class MutablePoint {
+    x: float
+    y: float
+}
+
+readonly p1 = ImmutablePoint { x: 1.0, y: 2.0 }  // ✅ OK
+readonly p2 = MutablePoint { x: 1.0, y: 2.0 }    // ❌ Error: class has mutable fields
+```
+
+### Nested Readonly Constraints
+
+Readonly classes must contain only readonly-compatible types:
+
+```javascript
+class Container {
+    readonly items: int[]           // ✅ OK - implied as readonly int[]
+    readonly count: int             // ✅ OK
+}
+
+class BadContainer {
+    readonly data: MutablePoint  // ❌ Error: readonly field can't hold mutable type
+}
+
+class BadPoints {
+    readonly items: MutablePoint[]  // ❌ Error: elements are mutable
+}
+```
+
+### Bindings vs Fields vs Values
+
+```javascript
+class Container {
+    readonly items: int[]           // field surface is treated as readonly int[]
+    count: int                      // mutable field
+}
+
+// Immutable binding (shallow) to object with mixed mutability
+c1 := Container { items: [1, 2, 3], count: 3 }
+c1.items = [4, 5]       // ❌ Error: readonly field
+c1.items.push(4)        // ❌ Error: readonly array
+c1.count = 4            // ✅ OK: mutable field
+c1 = Container { ... }  // ❌ Error: immutable binding (:=)
+
+// Mutable binding with same object
+let c2 = Container { items: [1, 2, 3], count: 3 }
+c2.count = 4            // ✅ OK: mutable field
+c2 = Container { ... }  // ✅ OK: mutable binding
+
+// Deep readonly binding makes everything readonly
+readonly c3 = Container { items: [1, 2, 3], count: 3 }
+c3.count = 4            // ❌ Error: readonly binding
+c3 = Container { ... }  // ❌ Error: can't reassign readonly
+```
+
+---
+
+## Weak References
+
+Doof uses reference counting for memory management (see [Classes and Interfaces](07-classes-and-interfaces.md)). To break reference cycles, Doof provides a `weak` qualifier that creates references which do not contribute to the reference count.
+
+### Syntax
+
+`weak` is a **reference qualifier**, not a type modifier. It applies to the entire type expression:
+
+```javascript
+class TreeNode {
+    children: TreeNode[] = []
+    parent: weak TreeNode | null  // weak reference to (TreeNode | null)
+}
+```
+
+In union types, `weak` qualifies the whole reference — `weak Foo | Bar` means a weak reference to a value of type `Foo | Bar`, not `(weak Foo) | Bar`:
+
+```javascript
+class Observer {
+    target: weak Widget | Panel  // weak (Widget | Panel)
+}
+```
+
+### Access Semantics
+
+Because a weak-referenced object may have been destroyed, accessing a `weak` reference yields `Result<T, WeakReferenceError>`. The standard `?.` and `!.` operators provide lightweight access:
+
+```javascript
+class Node {
+    backEdge: weak Node | null
+    
+    visitParent(): void {
+        backEdge?.visit()   // No-op if reference was cleared
+        backEdge!.visit()   // Panic if reference was cleared
+    }
+}
+```
+
+### Weak Reference Rules
+
+| Aspect | Behaviour |
+|--------|-----------|
+| Reference count | Does not contribute |
+| Access type | `Result<T, WeakReferenceError>` |
+| Cleared when | Referent's count reaches zero |
+| Use with `?.` | Propagates WeakReferenceError on cleared reference |
+| Use with `!.` | Panics if cleared |
+| Scope | Fields, local variables |
+
+---
+
+## Type Narrowing
+
+Doof keeps implicit narrowing intentionally narrow. It does not perform broad flow-sensitive narrowing across arbitrary control flow. Instead, it supports one limited implicit rule plus several explicit narrowing forms.
+
+### No Implicit Narrowing in `if`
+
+`if` conditions do not narrow types implicitly. A null check can still guard control flow, but the checked value keeps its original type unless you use an explicit form such as `!`, declaration-`else`, `case`, or `as`:
+
+```javascript
+function process(value: int | null): void {
+    if value != null {
+        print(value!)  // explicit assertion still required
+    }
+}
+
+// `== null` can still guard control flow, but does not narrow on its own
+function getLength(s: string | null): int {
+    if s == null {
+        return 0
+    }
+    return s!.length
+}
+```
+
+Use explicit narrowing forms instead:
+
+- `name := expr else { ... }` to unwrap nullable and `Result` values
+- `expr!` to assert non-nullability
+- `case` to discriminate unions and enums
+- `expr as T` for checked runtime narrowing
+
+```javascript
+value: int | null := getValue()
+
+if value == null {
+    return
+}
+
+print(value!)  // explicit assertion still required here
+```
+
+### Explicit Narrowing Forms
+
+For everything beyond the simple null-check rule above, use an explicit narrowing form.
+
+#### `case` with Type Capture
+
+```javascript
+class Success {
+    kind: "Success"
+    value: int
+}
+
+class Failure {
+    kind: "Failure"
+    error: string
+}
+
+type Result = Success | Failure
+
+function handle(r: Result): void {
+    case r {
+        s: Success -> print(s.value)
+        f: Failure -> print(f.error)
+    }
+}
+
+enum Direction { North, South, East, West }
+
+function describe(dir: Direction): string {
+    return case dir {
+        .North -> "north",
+        .South -> "south",
+        .East -> "east",
+        .West -> "west"
+    }
+}
+```
+
+`if` conditions do not narrow discriminated unions or enums.
+
+#### Declaration-`else`
+
+Use `name := expr else { ... }` to unwrap nullable and `Result` values with an explicit bail-out path:
+
+```javascript
+function loadName(): Result<string, string> => Success("Ada")
+
+function test(): int {
+    name := loadName() else { return 0 }
+    return name.length
+}
+```
+
+This form works only for nullable and/or `Result` types. Inside the `else` block, the binding still has the full original type. After the block, the binding has the narrowed happy-path type.
+
+Each declaration removes exactly one fallible layer. For
+`Result<T, E> | null`, the binding becomes `Result<T, E>`; use a second
+declaration-`else` to unwrap that Result. For `Result<T | null, E>`, the first
+declaration unwraps the Result and produces `T | null`.
+
+For `Result<T | null, E>`, the happy-path type is `T | null`: the declaration
+unwraps the Result, but a null carried by `Success` remains part of its payload.
+
+#### `as`
+
+Use `expr as T` for checked runtime narrowing/conversion. It returns a `Result`:
+
+```javascript
+value: int | string := "hello"
+name := value as string              // Result<string, string>
+
+numeric: long | string := 42L
+small := numeric as int              // Result<int, string>
+```
+
+`as` covers:
+
+- exact union-member narrowing
+- nullable to non-null narrowing
+- interface to concrete class narrowing
+- checked numeric conversion when the runtime value fits exactly in the target type
+- `Result<V, F>` success-channel narrowing to `Result<T, F | string>`
+
+#### Non-Null Assertion
+
+Use `expr!` when you want an assertion rather than a typed failure path:
+
+```javascript
+name: string | null := maybeName()
+println(name!)  // panics at runtime if name is null
+
+parsed: Result<int, ParseError> := int.parse("12")
+println(parsed! + 2)  // panics at runtime if parsed is Failure
+```
+
+Use `!` only for nullable and `Result` values. Applying it to an already non-null, non-Result value is a compile error.
+
+**Simple rule:** `if` conditions do not narrow types implicitly. For unions, nullable values, Results, and checked runtime conversions, use `case`, declaration-`else`, `as`, or `!`.
+
+---
+
+## Summary
+
+| Feature | Approach |
+|---------|----------|
+| Type identity | Nominal (classes), Structural (interfaces) |
+| Nullability | Explicit via `T \| null` |
+| Enums | Named value sets with optional int/string values |
+| Inference | Bidirectional, single-step |
+| Immutability | Deep/transitive readonly |
+| Generics | Built-in collections and Tuple (user-defined planned) |
+| Function types | Named parameters in signatures |
+| Type narrowing | Explicit only: use `case`, declaration-`else`, `as`, and `!` |
+| Weak references | `weak T` — non-owning reference, access yields Result |
+| Widening | Implicit for safe numeric conversions |

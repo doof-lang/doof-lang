@@ -1,0 +1,4 @@
+{
+  "name": "doof-release-stdlib",
+  "build": { "entry": "main.do" }
+}

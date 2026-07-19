@@ -1,0 +1,497 @@
+# Control Flow
+
+## If/Else Statements
+
+### Basic Forms
+
+```javascript
+if condition {
+    doSomething()
+}
+
+if temperature > 30 {
+    print("Hot")
+} else {
+    print("Not hot")
+}
+
+if score >= 90 {
+    print("A")
+} else if score >= 80 {
+    print("B")
+} else if score >= 70 {
+    print("C")
+} else {
+    print("F")
+}
+```
+
+### If as Expression
+
+`if` can be used as an expression when all branches return a value:
+
+```javascript
+grade := if score >= 90 then "A" 
+         else if score >= 80 then "B"
+         else if score >= 70 then "C"
+         else "F"
+
+abs := if x >= 0 then x else -x
+
+print(if isLoggedIn then "Welcome back!" else "Please log in")
+```
+
+All branches must be present and return compatible types. The `then` keyword is required for expression form to distinguish it from statement form.
+
+### Block Requirement
+
+Blocks are required for statement forms:
+
+```javascript
+if x > 0 {
+    print("positive")
+} else {
+    print("non-positive")
+}
+```
+
+### No Implicit Null Narrowing in If
+
+```javascript
+value: int | null := getValue()
+
+if value != null {
+    print(value!)  // explicit assertion still required
+}
+
+if value == null {
+    return
+}
+
+print(value!)
+```
+
+Null checks are still useful for control flow, but they do not change the static type of the checked value. For explicit guard-style narrowing, prefer declaration-`else`, `case`, `as`, or `!`.
+
+---
+
+## Yielding Blocks
+
+Some expression-like contexts use a block that produces a value by explicitly `yield`ing it.
+
+### Case-Expression Arms
+
+Case-expression arms may use block bodies instead of a single expression:
+
+```javascript
+result := case n {
+    0 -> {
+        yield "zero"
+    }
+    _ -> {
+        if n < 0 {
+            yield "negative"
+        }
+        yield "positive"
+    }
+}
+```
+
+### `<-` Value-Yield Blocks
+
+Local `let`, local `readonly`, and statement-only local reassignment can use `<-` followed by a block:
+
+```javascript
+let x <- {
+    if ready {
+        yield 10
+    }
+    yield 5
+}
+
+x <- {
+    yield x + 1
+}
+```
+
+### Rules
+
+- Every reachable path in the block must `yield` a value.
+- `yield` is only valid inside these value-producing blocks.
+- The block cannot affect outer control flow. In particular, `return` and `try` are rejected.
+- `:=` does not accept `<-` block initializers.
+
+---
+
+## While Loops
+
+```javascript
+let count = 0
+while count < 10 {
+    print(count)
+    count += 1
+}
+
+// Infinite loop with break
+let i = 0
+while true {
+    if i >= 10 {
+        break
+    }
+    print(i)
+    i += 1
+}
+```
+
+---
+
+## For Loops
+
+### Traditional For Loop
+
+```javascript
+for let i = 0; i < 10; i += 1 {
+    print(i)
+}
+
+// Multiple variables
+for let i = 0, j = 10; i < j; i += 1, j -= 1 {
+    print("${i}, ${j}")
+}
+
+// Reverse iteration
+for let i = 9; i >= 0; i -= 1 {
+    print(i)
+}
+```
+
+### For-Of Loop
+
+Iterates over the values of any iterable. Loop variables are **immutable** bindings (no keyword needed):
+
+```javascript
+names := ["Alice", "Bob", "Charlie"]
+
+for name of names {
+    print("Hello, ${name}!")
+    // name = "other"  // ❌ Error: cannot reassign
+}
+```
+
+Current iterable forms are arrays, maps, sets, finite `Range` values, and
+`Stream<T>` values. A stream yields one element at a time by calling `next()`
+until it returns `false`, then reading the current element with `value()`.
+The iterable expression is evaluated exactly once, and a collection or stream
+temporary returned by that expression remains alive until the loop completes.
+
+```javascript
+class Counter implements Stream<int> {
+    current: int
+    end: int
+    currentValue: int = 0
+
+    next(): bool {
+        if this.current < this.end {
+            this.currentValue = this.current
+            this.current = this.current + 1
+            return true
+        }
+        return false
+    }
+
+    value(): int => this.currentValue
+}
+
+for value of Counter(0, 3) {
+    print(value)
+}
+```
+
+### For-Of with Maps
+
+```javascript
+scores: Map<string, int> := { "Alice": 95, "Bob": 87 }
+
+// Destructured entries (MapEntry has key, value fields)
+for key, value of scores {
+    print("${key} scored ${value}")
+}
+
+// Keys or values only
+for name of scores.keys() {
+    print(name)
+}
+for score of scores.values() {
+    print(score)
+}
+```
+
+Map iteration follows insertion order. Updating an existing key keeps its current position; deleting and reinserting a key moves it to the end.
+
+### For-Of with Sets
+
+```javascript
+unique: Set<int> := [1, 2, 3]
+for n of unique {
+    print(n)
+}
+
+```
+
+Set iteration follows first-insertion order. Re-adding an existing value keeps its current position; deleting and adding it again moves it to the end.
+
+---
+
+## Range-Based For Loops
+
+`a..b` and `a..<b` create finite `Range` values. A range can be stored in a
+binding, passed to a function, or used directly in `for of`. Range iteration
+yields `int`. Ranges only iterate upward; a range whose lower bound is greater
+than its upper bound is empty.
+
+### Inclusive Range (`..`)
+
+```javascript
+for i of 1..5 {
+    print(i)  // 1, 2, 3, 4, 5
+}
+
+values: Range := 1..5
+for value of values {
+    print(value)
+}
+```
+
+### Exclusive Range (`..<`)
+
+```javascript
+for i of 0..<5 {
+    print(i)  // 0, 1, 2, 3, 4
+}
+
+// Common pattern for array indices
+items := ["a", "b", "c", "d"]
+for i of 0..<items.length {
+    print("${i}: ${items[i]}")
+}
+```
+
+Open-ended ranges are not iterable `Range` values; they are only valid in
+`case` range patterns.
+
+### Range Accessors
+
+```javascript
+inclusive := 1..9
+exclusive := 1..<10
+
+inclusive.lowerBound // 1
+inclusive.upperBound // 10
+
+exclusive.lowerBound // 1
+exclusive.upperBound // 10
+```
+
+The `upperBound` accessor is always exclusive. For `1..9`, the upper bound is
+adjusted to `10`; for `1..<10`, it is already `10`.
+
+### Practical Range Example
+
+```javascript
+items := loadItems()
+indices := 0..<items.length
+print("last valid index is ${indices.upperBound - 1}")
+
+for i of indices {
+    print("${i}: ${items[i]}")
+}
+```
+
+---
+
+## Break and Continue
+
+### Basic
+
+```javascript
+for i of 0..<100 {
+    if i == 10 {
+        break     // Exits innermost loop
+    }
+    print(i)
+}
+
+for i of 0..<10 {
+    if i % 2 == 0 {
+        continue  // Skips to next iteration
+    }
+    print(i)
+}
+```
+
+### Labeled Break and Continue
+
+```javascript
+outer: for y of 0..<height {
+    for x of 0..<width {
+        if grid[y][x] == target {
+            print("Found at (${x}, ${y})")
+            break outer  // Exits both loops
+        }
+    }
+}
+
+outer: for row of rows {
+    for cell of row {
+        if cell.isEmpty() {
+            continue outer  // Skip to next row
+        }
+        process(cell)
+    }
+    markRowComplete(row)
+}
+```
+
+---
+
+## Loop Then Clause
+
+The `then` clause executes when a loop completes normally, meaning control
+leaves the loop without `break` or another non-local exit such as `return`:
+
+```javascript
+for item of items {
+    if item == target {
+        print("Found!")
+        break
+    }
+} then {
+    print("Not found")
+}
+```
+
+This applies even when the loop body ran; natural completion still counts:
+
+```javascript
+while hasMoreData() {
+    let data = readData()
+    if data.isCorrupt() {
+        print("Corrupt data found")
+        break
+    }
+    process(data)
+} then {
+    print("All data processed successfully")
+}
+```
+
+Traditional `for` loops support the same follow-up clause:
+
+```javascript
+for let i = 0; i < 3; i += 1 {
+    print(i)
+} then {
+    print("loop completed")
+}
+```
+
+---
+
+## Early Return
+
+```javascript
+function findUser(id: int): User | null {
+    if id < 0 {
+        return null
+    }
+
+    for user of users {
+        if user.id == id {
+            return user
+        }
+    }
+
+    return null
+}
+```
+
+Return exits the entire function, not just the current block.
+
+---
+
+## Best Practices
+
+### Prefer For-Of Over Traditional For
+
+```javascript
+// ✅ Preferred
+for item of items {
+    process(item)
+}
+
+// ❌ Avoid when index not needed
+for let i = 0; i < items.length; i += 1 {
+    process(items[i])
+}
+```
+
+### Use Ranges for Numeric Iteration
+
+```javascript
+// ✅ Clear and concise
+for i of 0..<10 {
+    print(i)
+}
+
+// ❌ More verbose
+for let i = 0; i < 10; i += 1 {
+    print(i)
+}
+```
+
+### Avoid Deep Nesting with Early Returns
+
+```javascript
+// ❌ Deep nesting
+function process(data: Data | null): Result | null {
+    if data != null {
+        if data.isValid() {
+            if data.hasPermission() {
+                return compute(data)
+            }
+        }
+    }
+    return null
+}
+
+// ✅ Early returns flatten the code
+function process(data: Data | null): Result | null {
+    if data == null {
+        return null
+    }
+    if !data.isValid() {
+        return null
+    }
+    if !data.hasPermission() {
+        return null
+    }
+    return compute(data)
+}
+```
+
+---
+
+## Summary
+
+| Statement | Purpose |
+|-----------|---------|
+| `if`/`else` | Conditional execution (also usable as expression) |
+| `while` | Loop while condition is true |
+| `for init; cond; update` | Traditional counted loop |
+| `for x of collection` | Iterate over values |
+| `for i of a..b` | Iterate over inclusive range |
+| `for i of a..<b` | Iterate over exclusive range |
+| `break` / `break label` | Exit innermost or labeled loop |
+| `continue` / `continue label` | Skip to next iteration |
+| `loop ... else` | Execute else when loop completes without break |
+| `return` | Exit function with value |

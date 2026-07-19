@@ -1,0 +1,91 @@
+// Shared state for the Doof emitter's nominal lowering.
+//
+// This intentionally owns only graph-wide nominal and method context. It owns
+// only the declarations needed by class construction and method field access;
+// module dependency state belongs to the module/header planner.
+
+import { Program, SourceSpan } from "./ast"
+import {
+  ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, ImportBinding,
+  InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NamespaceBinding, NullType,
+  PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType,
+  SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType, TypeParameterType,
+  TypeSubstitution, UnionResolvedType, UnknownType, VoidType, WeakResolvedType,
+} from "./semantic"
+
+export class EmitModuleSurface {
+  path: string
+  exports: Symbol[] = []
+  imports: ImportBinding[] = []
+  genericTypes: string[] = []
+  genericFunctions: string[] = []
+}
+
+export class SourceLocationSpanOverride {
+  span: SourceSpan
+}
+
+export class EmitContext {
+  modulePath: string = ""
+  allPrograms: Program[] = []
+  namespaceImports: NamespaceBinding[] = []
+  imports: ImportBinding[] = []
+  moduleSurfaces: EmitModuleSurface[] = []
+  currentClass: string = ""
+  currentClassNative: bool = false
+  currentFunctionStatic: bool = false
+  currentReturnErrorType: string = ""
+  currentFunctionName: string = ""
+  inValueYieldBlock: bool = false
+  catchVarName: string = ""
+  catchResultType: ResolvedType | null = null
+  // Call-site override used while materializing defaults such as @caller.
+  sourceLocationSpanOverride: SourceLocationSpanOverride | null = null
+  genericTypeParams: string[] = []
+  // Concrete Doof monomorphization substitution active while emitting a
+  // specialized function, class, or method body.
+  substitution: TypeSubstitution | null = null
+  concreteFunctionNames: string[] = []
+  concreteFunctionKeys: string[] = []
+  concreteClassNames: string[] = []
+  concreteClassKeys: string[] = []
+  nativeTemplateClassKeys: string[] = []
+  concreteMethodNames: string[] = []
+  concreteMethodKeys: string[] = []
+  concreteInterfaceNames: string[] = []
+  concreteInterfaceKeys: string[] = []
+  // Mutable locals captured by any lambda in the current callable. Their
+  // declarations are heap-boxed and every identifier use dereferences the box.
+  capturedMutables: string[] = []
+  tryCounter: int = 0
+  // Coverage is configured per source module by the graph emitter.
+  coverageEnabled: bool = false
+  coverageModuleId: int = -1
+  coverageInstrumentedLines: int[] = []
+}
+
+export function recordCoverageLine(context: EmitContext, line: int): void {
+  for existing of context.coverageInstrumentedLines { if existing == line { return } }
+  context.coverageInstrumentedLines.push(line)
+}
+
+export function isCapturedMutable(context: EmitContext, name: string): bool {
+  for captured of context.capturedMutables { if captured == name { return true } }
+  return false
+}
+
+export function createEmitContext(program: Program): EmitContext {
+  return createEmitContextForPrograms([program])
+}
+
+export function createEmitContextForPrograms(programs: Program[]): EmitContext {
+  return EmitContext { allPrograms: programs }
+}
+
+export function createEmitContextForModule(program: Program, modulePath: string, allPrograms: Program[] = []): EmitContext {
+  let programs = allPrograms
+  if programs.length == 0 { programs = [program] }
+  context := createEmitContextForPrograms(programs)
+  context.modulePath = modulePath
+  return context
+}
