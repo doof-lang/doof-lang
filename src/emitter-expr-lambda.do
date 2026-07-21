@@ -14,15 +14,15 @@ import {
   Statement, StringLiteral, ThisExpression, TryStatement, DestructuringStatement, TupleLiteral, UnaryExpression,
   WhileStatement, WithStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression,
 } from "./ast"
-import { FunctionType, ResolvedType, ResultResolvedType, VoidType } from "./semantic"
+import { FunctionType, ResolvedType, ResultResolvedType, NoneType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
-import { emitType } from "./emitter-types"
+import { emitReturnType, emitType } from "./emitter-types"
 
-export function emitLambdaExpression(expression: LambdaExpression, context: EmitContext, expected: ResolvedType | null = null): string {
+export function emitLambdaExpression(expression: LambdaExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   let functionType = lambdaFunctionType(expression)
-  if expected != null {
+  if expected != none {
     case expected! {
       expectedFunction: FunctionType -> { functionType = expectedFunction }
       _ -> { }
@@ -32,7 +32,7 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
   for i of 0..<expression.params.length {
     if i > 0 { params = params + ", " }
     parameter := expression.params[i]
-    if parameter.resolvedType == null { panic("Lambda parameter was not resolved before emission") }
+    if parameter.resolvedType == none { panic("Lambda parameter was not resolved before emission") }
     params = params + emitType(parameter.resolvedType!, context.modulePath) + " " + cppIdentifier(parameter.name)
   }
 
@@ -54,7 +54,7 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
     _ -> { context.currentReturnErrorType = "" }
   }
 
-  returnType := emitType(functionType.returnType, context.modulePath)
+  returnType := emitReturnType(functionType.returnType, context.modulePath)
   let lambda = "[" + captures + "](" + params + ") -> " + returnType + " {"
   case expression.body {
     block: Block -> { lambda = lambda + "\n" + emitBlock(block, 1, context) + "}" }
@@ -83,14 +83,14 @@ export function scanCapturedMutablesInExpression(body: Expression): string[] {
 }
 
 function lambdaFunctionType(expression: LambdaExpression): FunctionType {
-  if expression.resolvedType != null {
+  if expression.resolvedType != none {
     case expression.resolvedType! {
       function_: FunctionType -> { return function_ }
       _ -> { }
     }
   }
   panic("Lambda has no resolved function type")
-  return FunctionType { params: [], returnType: VoidType {} }
+  return FunctionType { params: [], returnType: NoneType {} }
 }
 
 function lambdaCaptureNames(expression: LambdaExpression): string[] {
@@ -118,21 +118,21 @@ function lambdaCaptureNames(expression: LambdaExpression): string[] {
   return captures
 }
 
-function scanBlockForLambdas(block: Block, result: string[]): void {
+function scanBlockForLambdas(block: Block, result: string[]): none {
   for statement of block.statements { scanStatementForLambdas(statement, result) }
 }
 
-function scanStatementForLambdas(statement: Statement, result: string[]): void {
+function scanStatementForLambdas(statement: Statement, result: string[]): none {
   case statement {
     const_: ConstDeclaration -> { scanExpressionForLambdas(const_.value, result) }
     readonly_: ReadonlyDeclaration -> { scanExpressionForLambdas(readonly_.value, result) }
     binding: ImmutableBinding -> {
       scanExpressionForLambdas(binding.value, result)
-      if binding.else_ != null { scanBlockForLambdas(binding.else_!, result) }
+      if binding.else_ != none { scanBlockForLambdas(binding.else_!, result) }
     }
     let_: LetDeclaration -> { scanExpressionForLambdas(let_.value, result) }
     expression: ExpressionStatement -> { scanExpressionForLambdas(expression.expression, result) }
-    return_: ReturnStatement -> { if return_.value != null { scanExpressionForLambdas(return_.value!, result) } }
+    return_: ReturnStatement -> { if return_.value != none { scanExpressionForLambdas(return_.value!, result) } }
     if_: IfStatement -> {
       scanExpressionForLambdas(if_.condition, result)
       scanBlockForLambdas(if_.body, result)
@@ -140,7 +140,7 @@ function scanStatementForLambdas(statement: Statement, result: string[]): void {
         scanExpressionForLambdas(branch.condition, result)
         scanBlockForLambdas(branch.body, result)
       }
-      if if_.else_ != null { scanBlockForLambdas(if_.else_!, result) }
+      if if_.else_ != none { scanBlockForLambdas(if_.else_!, result) }
     }
     case_: CaseStatement -> {
       scanExpressionForLambdas(case_.subject, result)
@@ -154,19 +154,19 @@ function scanStatementForLambdas(statement: Statement, result: string[]): void {
     while_: WhileStatement -> {
       scanExpressionForLambdas(while_.condition, result)
       scanBlockForLambdas(while_.body, result)
-      if while_.then_ != null { scanBlockForLambdas(while_.then_!, result) }
+      if while_.then_ != none { scanBlockForLambdas(while_.then_!, result) }
     }
     for_: ForStatement -> {
-      if for_.init != null { scanStatementForLambdas(for_.init!, result) }
-      if for_.condition != null { scanExpressionForLambdas(for_.condition!, result) }
+      if for_.init != none { scanStatementForLambdas(for_.init!, result) }
+      if for_.condition != none { scanExpressionForLambdas(for_.condition!, result) }
       for update of for_.update { scanExpressionForLambdas(update, result) }
       scanBlockForLambdas(for_.body, result)
-      if for_.then_ != null { scanBlockForLambdas(for_.then_!, result) }
+      if for_.then_ != none { scanBlockForLambdas(for_.then_!, result) }
     }
     forOf: ForOfStatement -> {
       scanExpressionForLambdas(forOf.iterable, result)
       scanBlockForLambdas(forOf.body, result)
-      if forOf.then_ != null { scanBlockForLambdas(forOf.then_!, result) }
+      if forOf.then_ != none { scanBlockForLambdas(forOf.then_!, result) }
     }
     with_: WithStatement -> {
       for binding of with_.bindings { scanExpressionForLambdas(binding.value, result) }
@@ -188,7 +188,7 @@ function scanStatementForLambdas(statement: Statement, result: string[]): void {
   }
 }
 
-function scanExpressionForLambdas(expression: Expression, result: string[]): void {
+function scanExpressionForLambdas(expression: Expression, result: string[]): none {
   case expression {
     binary: BinaryExpression -> { scanExpressionForLambdas(binary.left, result)
       scanExpressionForLambdas(binary.right, result) }
@@ -203,10 +203,10 @@ function scanExpressionForLambdas(expression: Expression, result: string[]): voi
     array: ArrayLiteral -> { for element of array.elements { scanExpressionForLambdas(element, result) } }
     object: ObjectLiteral -> {
       for property of object.properties {
-        if property.key != null { scanExpressionForLambdas(property.key!, result) }
-        if property.value != null { scanExpressionForLambdas(property.value!, result) }
+        if property.key != none { scanExpressionForLambdas(property.key!, result) }
+        if property.value != none { scanExpressionForLambdas(property.value!, result) }
       }
-      if object.spread != null { scanExpressionForLambdas(object.spread!, result) }
+      if object.spread != none { scanExpressionForLambdas(object.spread!, result) }
     }
     tuple: TupleLiteral -> { for element of tuple.elements { scanExpressionForLambdas(element, result) } }
     string_: StringLiteral -> { for interpolation of string_.interpolations { scanExpressionForLambdas(interpolation, result) } }
@@ -232,7 +232,7 @@ function scanExpressionForLambdas(expression: Expression, result: string[]): voi
           bodyExpression: Expression -> { scanExpressionForLambdas(bodyExpression, result) }
         }
       } }
-    construct: ConstructExpression -> { for property of construct.args { if property.value != null { scanExpressionForLambdas(property.value!, result) } } }
+    construct: ConstructExpression -> { for property of construct.args { if property.value != none { scanExpressionForLambdas(property.value!, result) } } }
     async_: AsyncExpression -> {
       case async_.expression {
         block: Block -> { scanBlockForLambdas(block, result) }
@@ -247,27 +247,27 @@ function scanExpressionForLambdas(expression: Expression, result: string[]): voi
   }
 }
 
-function collectBlockCaptures(block: Block, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): void {
+function collectBlockCaptures(block: Block, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
   for statement of block.statements { collectStatementCaptures(statement, bodyStart, bodyEnd, result, mutableOnly) }
 }
 
-function collectStatementCaptures(statement: Statement, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): void {
+function collectStatementCaptures(statement: Statement, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
   case statement {
     const_: ConstDeclaration -> { collectExpressionCaptures(const_.value, bodyStart, bodyEnd, result, mutableOnly) }
     readonly_: ReadonlyDeclaration -> { collectExpressionCaptures(readonly_.value, bodyStart, bodyEnd, result, mutableOnly) }
     binding: ImmutableBinding -> {
       collectExpressionCaptures(binding.value, bodyStart, bodyEnd, result, mutableOnly)
-      if binding.else_ != null { collectBlockCaptures(binding.else_!, bodyStart, bodyEnd, result, mutableOnly) }
+      if binding.else_ != none { collectBlockCaptures(binding.else_!, bodyStart, bodyEnd, result, mutableOnly) }
     }
     let_: LetDeclaration -> { collectExpressionCaptures(let_.value, bodyStart, bodyEnd, result, mutableOnly) }
     expression: ExpressionStatement -> { collectExpressionCaptures(expression.expression, bodyStart, bodyEnd, result, mutableOnly) }
-    return_: ReturnStatement -> { if return_.value != null { collectExpressionCaptures(return_.value!, bodyStart, bodyEnd, result, mutableOnly) } }
+    return_: ReturnStatement -> { if return_.value != none { collectExpressionCaptures(return_.value!, bodyStart, bodyEnd, result, mutableOnly) } }
     if_: IfStatement -> {
       collectExpressionCaptures(if_.condition, bodyStart, bodyEnd, result, mutableOnly)
       collectBlockCaptures(if_.body, bodyStart, bodyEnd, result, mutableOnly)
       for branch of if_.elseIfs { collectExpressionCaptures(branch.condition, bodyStart, bodyEnd, result, mutableOnly)
         collectBlockCaptures(branch.body, bodyStart, bodyEnd, result, mutableOnly) }
-      if if_.else_ != null { collectBlockCaptures(if_.else_!, bodyStart, bodyEnd, result, mutableOnly) }
+      if if_.else_ != none { collectBlockCaptures(if_.else_!, bodyStart, bodyEnd, result, mutableOnly) }
     }
     case_: CaseStatement -> { collectExpressionCaptures(case_.subject, bodyStart, bodyEnd, result, mutableOnly)
       for arm of case_.arms {
@@ -279,19 +279,19 @@ function collectStatementCaptures(statement: Statement, bodyStart: int, bodyEnd:
     while_: WhileStatement -> {
       collectExpressionCaptures(while_.condition, bodyStart, bodyEnd, result, mutableOnly)
       collectBlockCaptures(while_.body, bodyStart, bodyEnd, result, mutableOnly)
-      if while_.then_ != null { collectBlockCaptures(while_.then_!, bodyStart, bodyEnd, result, mutableOnly) }
+      if while_.then_ != none { collectBlockCaptures(while_.then_!, bodyStart, bodyEnd, result, mutableOnly) }
     }
     for_: ForStatement -> {
-      if for_.init != null { collectStatementCaptures(for_.init!, bodyStart, bodyEnd, result, mutableOnly) }
-      if for_.condition != null { collectExpressionCaptures(for_.condition!, bodyStart, bodyEnd, result, mutableOnly) }
+      if for_.init != none { collectStatementCaptures(for_.init!, bodyStart, bodyEnd, result, mutableOnly) }
+      if for_.condition != none { collectExpressionCaptures(for_.condition!, bodyStart, bodyEnd, result, mutableOnly) }
       for update of for_.update { collectExpressionCaptures(update, bodyStart, bodyEnd, result, mutableOnly) }
       collectBlockCaptures(for_.body, bodyStart, bodyEnd, result, mutableOnly)
-      if for_.then_ != null { collectBlockCaptures(for_.then_!, bodyStart, bodyEnd, result, mutableOnly) }
+      if for_.then_ != none { collectBlockCaptures(for_.then_!, bodyStart, bodyEnd, result, mutableOnly) }
     }
     forOf: ForOfStatement -> {
       collectExpressionCaptures(forOf.iterable, bodyStart, bodyEnd, result, mutableOnly)
       collectBlockCaptures(forOf.body, bodyStart, bodyEnd, result, mutableOnly)
-      if forOf.then_ != null { collectBlockCaptures(forOf.then_!, bodyStart, bodyEnd, result, mutableOnly) }
+      if forOf.then_ != none { collectBlockCaptures(forOf.then_!, bodyStart, bodyEnd, result, mutableOnly) }
     }
     with_: WithStatement -> { for binding of with_.bindings { collectExpressionCaptures(binding.value, bodyStart, bodyEnd, result, mutableOnly) }
       collectBlockCaptures(with_.body, bodyStart, bodyEnd, result, mutableOnly) }
@@ -311,7 +311,7 @@ function collectStatementCaptures(statement: Statement, bodyStart: int, bodyEnd:
   }
 }
 
-function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): void {
+function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
   case expression {
     identifier: Identifier -> { collectIdentifierCapture(identifier, bodyStart, bodyEnd, result, mutableOnly) }
     _: ThisExpression -> { if !mutableOnly { addUnique(result, "this") } }
@@ -328,10 +328,10 @@ function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyE
     array: ArrayLiteral -> { for element of array.elements { collectExpressionCaptures(element, bodyStart, bodyEnd, result, mutableOnly) } }
     object: ObjectLiteral -> {
       for property of object.properties {
-        if property.key != null { collectExpressionCaptures(property.key!, bodyStart, bodyEnd, result, mutableOnly) }
-        if property.value != null { collectExpressionCaptures(property.value!, bodyStart, bodyEnd, result, mutableOnly) }
+        if property.key != none { collectExpressionCaptures(property.key!, bodyStart, bodyEnd, result, mutableOnly) }
+        if property.value != none { collectExpressionCaptures(property.value!, bodyStart, bodyEnd, result, mutableOnly) }
       }
-      if object.spread != null { collectExpressionCaptures(object.spread!, bodyStart, bodyEnd, result, mutableOnly) }
+      if object.spread != none { collectExpressionCaptures(object.spread!, bodyStart, bodyEnd, result, mutableOnly) }
     }
     tuple: TupleLiteral -> { for element of tuple.elements { collectExpressionCaptures(element, bodyStart, bodyEnd, result, mutableOnly) } }
     string_: StringLiteral -> { for interpolation of string_.interpolations { collectExpressionCaptures(interpolation, bodyStart, bodyEnd, result, mutableOnly) } }
@@ -351,7 +351,7 @@ function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyE
           bodyExpression: Expression -> { collectExpressionCaptures(bodyExpression, bodyStart, bodyEnd, result, mutableOnly) }
         }
       } }
-    construct: ConstructExpression -> { for property of construct.args { if property.value != null { collectExpressionCaptures(property.value!, bodyStart, bodyEnd, result, mutableOnly) } } }
+    construct: ConstructExpression -> { for property of construct.args { if property.value != none { collectExpressionCaptures(property.value!, bodyStart, bodyEnd, result, mutableOnly) } } }
     async_: AsyncExpression -> {
       case async_.expression {
         block: Block -> { collectBlockCaptures(block, bodyStart, bodyEnd, result, mutableOnly) }
@@ -366,8 +366,8 @@ function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyE
   }
 }
 
-function collectIdentifierCapture(identifier: Identifier, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): void {
-  if identifier.resolvedBinding == null { return }
+function collectIdentifierCapture(identifier: Identifier, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
+  if identifier.resolvedBinding == none { return }
   binding := identifier.resolvedBinding!
   if binding.kind == "field" {
     if !mutableOnly { addUnique(result, "this") }
@@ -377,14 +377,14 @@ function collectIdentifierCapture(identifier: Identifier, bodyStart: int, bodyEn
     if !mutableOnly { addUnique(result, "this") }
     return
   }
-  if binding.symbol != null || binding.kind == "builtin" || binding.kind == "import" { return }
+  if binding.symbol != none || binding.kind == "builtin" || binding.kind == "import" { return }
   bindingStart := binding.span.start.offset
   if bindingStart >= bodyStart && bindingStart <= bodyEnd { return }
   if mutableOnly && !binding.mutable { return }
   addUnique(result, cppIdentifier(identifier.name))
 }
 
-function addUnique(values: string[], value: string): void {
+function addUnique(values: string[], value: string): none {
   for existing of values { if existing == value { return } }
   values.push(value)
 }

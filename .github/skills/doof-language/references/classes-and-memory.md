@@ -6,13 +6,13 @@
 class User {
     readonly id: int
     name: string
-    email: string | null = null
+    email: string | none = none
     role: string = "user"
     version: 1
 
     greet(): string => "Hi, ${name}"
 
-    private internalHelper(): void { }
+    private internalHelper(): none { }
 
     static constructor(name: string): User => User { id: nextId(), name: name }
 }
@@ -95,9 +95,9 @@ result2: Result = { kind: "Success", value: 42 }
 class Counter {
     count = 0
 
-    increment(n: int): void { count += n }
+    increment(n: int): none { count += n }
     getCount(): int => count
-    reset(count: int): void { this.count = count }
+    reset(count: int): none { this.count = count }
     add(n: int): Counter { count += n; return this }
 }
 ```
@@ -151,7 +151,7 @@ Private fields without defaults block external construction.
 
 ```doof
 interface Drawable {
-    draw(canvas: Canvas): void
+    draw(canvas: Canvas): none
 }
 
 interface Shape {
@@ -202,7 +202,7 @@ Rules:
 ```doof
 class TreeNode {
     children: TreeNode[] = []
-    parent: weak TreeNode | null = null
+    parent: weak TreeNode | none = none
 }
 ```
 

@@ -20,7 +20,7 @@ function packageInput(logicalPrefix: string, diskRoot: string): NativePackageInp
   }
 }
 
-export function testPlansPackageRelativeNativeCopiesWithoutFilenameCollisions(): void {
+export function testPlansPackageRelativeNativeCopiesWithoutFilenameCollisions(): none {
   graph := ModuleGraphEmission { modules: [
     ModuleEmission {
       modulePath: "/vendor/alpha/types.do",
@@ -52,7 +52,7 @@ export function testPlansPackageRelativeNativeCopiesWithoutFilenameCollisions():
   Assert.equal(project.nativeBuild.includePaths.contains("vendor/beta"), true)
 }
 
-export function testForwardsPackageHeadersToCanonicalGeneratedHeaders(): void {
+export function testForwardsPackageHeadersToCanonicalGeneratedHeaders(): none {
   graph := ModuleGraphEmission { modules: [ModuleEmission {
     modulePath: "/std/fs/types.do",
     header: "generated fs types",
@@ -78,7 +78,7 @@ export function testForwardsPackageHeadersToCanonicalGeneratedHeaders(): void {
   Assert.equal(project.nativeBuild.includePaths.contains("std"), true)
 }
 
-export function testPreservesNonPathNativeBuildOptions(): void {
+export function testPreservesNonPathNativeBuildOptions(): none {
   graph := ModuleGraphEmission {}
   project := planProjectEmission(graph, [NativePackageInput {
     logicalPrefix: "/std/path",

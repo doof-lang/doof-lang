@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 import { NativeBuildPlan, mergeNativeBuildPlans, parsePackageManifest } from "./package-manifest"
 
-export function testParsesExternalArchiveAndGitDependencies(): void {
+export function testParsesExternalArchiveAndGitDependencies(): none {
   manifest := try! parsePackageManifest(
     "{\"externalDependencies\":{\"curl\":{\"kind\":\"archive\",\"url\":\"https://example.com/curl.tar.xz\",\"sha256\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"destination\":\"vendor/curl\",\"stripComponents\":0,\"copyFiles\":[{\"from\":\"COPYING\",\"to\":\"LICENSE\"}],\"commands\":[{\"program\":\"sh\",\"args\":[\"\${packageRoot}/build.sh\",\"\${nativeTarget}\"],\"env\":{\"SDKROOT\":\"\${sdkPath}\"},\"workingDirectory\":\"build\"}]},\"quickjs\":{\"kind\":\"git\",\"url\":\"https://example.com/quickjs.git\",\"ref\":\"v1\",\"commit\":\"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\",\"destination\":\"vendor/quickjs\"}}}",
     "/app/doof.json",
@@ -20,7 +20,7 @@ export function testParsesExternalArchiveAndGitDependencies(): void {
   Assert.equal(manifest.externalDependencies[1].commit, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
 }
 
-export function testParsesExactPackageDependencies(): void {
+export function testParsesExactPackageDependencies(): none {
   manifest := try! parsePackageManifest(
     "{\"dependencies\":{\"local\":{\"path\":\"../local\"},\"remote\":{\"url\":\"https://example.com/remote.git\",\"ref\":\"v1.2.3\",\"commit\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}}}",
     "/app/doof.json", "/app", "linux",
@@ -32,7 +32,7 @@ export function testParsesExactPackageDependencies(): void {
   Assert.equal(manifest.dependencies[1].commit, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 }
 
-export function testRejectsFloatingPackageDependencies(): void {
+export function testRejectsFloatingPackageDependencies(): none {
   result := parsePackageManifest(
     "{\"dependencies\":{\"remote\":{\"url\":\"https://example.com/remote.git\",\"version\":\"1.2\"}}}",
     "/app/doof.json", "/app", "linux",
@@ -44,7 +44,7 @@ export function testRejectsFloatingPackageDependencies(): void {
   panic("expected floating package dependency failure")
 }
 
-export function testParsesRootResolutionsAndPolicy(): void {
+export function testParsesRootResolutionsAndPolicy(): none {
   manifest := try! parsePackageManifest(
     "{\"resolutions\":{\"packages\":{\"remote\":{\"url\":\"https://example.com/remote.git\",\"ref\":\"v2\",\"commit\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}},\"externalDependencies\":{\"quickjs\":{\"kind\":\"archive\",\"url\":\"https://example.com/quickjs.tar.xz\",\"sha256\":\"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\"}}},\"policy\":{\"allowedPackageSources\":[\"https://example.com/remote.git\"],\"allowedExternalSources\":[\"https://example.com/quickjs.tar.xz\"],\"native\":{\"allowedLinkLibraries\":[\"z\"],\"allowedFrameworks\":[\"Foundation\"],\"allowedPkgConfigPackages\":[\"libcurl\"]}}}",
     "/app/doof.json", "/app", "macos",
@@ -59,7 +59,7 @@ export function testParsesRootResolutionsAndPolicy(): void {
   Assert.equal(manifest.policy.allowedPkgConfigPackages[0], "libcurl")
 }
 
-export function testRejectsInvalidExternalDependencyConfiguration(): void {
+export function testRejectsInvalidExternalDependencyConfiguration(): none {
   missingChecksum := parsePackageManifest(
     "{\"externalDependencies\":{\"bad\":{\"kind\":\"archive\",\"url\":\"https://example.com/a.tar.gz\",\"destination\":\"vendor/a\"}}}",
     "/app/doof.json", "/app", "linux",
@@ -79,7 +79,7 @@ export function testRejectsInvalidExternalDependencyConfiguration(): void {
   panic("expected invalid external dependency failure")
 }
 
-export function testParsesAndNormalizesExecutableResources(): void {
+export function testParsesAndNormalizesExecutableResources(): none {
   manifest := try! parsePackageManifest(
     "{\"name\":\"doof\",\"resources\":[{\"from\":\"doof_runtime.h\",\"to\":\".\"},\"assets\"]}",
     "/compiler/doof.json",
@@ -94,7 +94,7 @@ export function testParsesAndNormalizesExecutableResources(): void {
   Assert.equal(manifest.resources[1].destination, "assets")
 }
 
-export function testUsesBuildResourcesWhenRootResourcesAreAbsent(): void {
+export function testUsesBuildResourcesWhenRootResourcesAreAbsent(): none {
   manifest := try! parsePackageManifest(
     "{\"build\":{\"resources\":[\"assets\"]}}",
     "/app/doof.json",
@@ -107,7 +107,7 @@ export function testUsesBuildResourcesWhenRootResourcesAreAbsent(): void {
   Assert.equal(manifest.resources[0].destination, "assets")
 }
 
-export function testRejectsExecutableResourceDestinationsOutsideResourceDirectory(): void {
+export function testRejectsExecutableResourceDestinationsOutsideResourceDirectory(): none {
   result := parsePackageManifest(
     "{\"resources\":[{\"from\":\"runtime.h\",\"to\":\"../runtime.h\"}]}",
     "/bad/doof.json",
@@ -121,7 +121,7 @@ export function testRejectsExecutableResourceDestinationsOutsideResourceDirector
   panic("expected invalid resource destination failure")
 }
 
-export function testParsesAndNormalizesBaseNativeInputs(): void {
+export function testParsesAndNormalizesBaseNativeInputs(): none {
   manifest := try! parsePackageManifest(
     "{\"name\":\"std/time\",\"build\":{\"native\":{\"includePaths\":[\"include\"],\"sourceFiles\":[\"./doof_time.cpp\"],\"extraCopyPaths\":[\"doof_time.hpp\"],\"defines\":[\"DOOF_TIME=1\"]}}}",
     "/stdlib/time/doof.json",
@@ -140,7 +140,7 @@ export function testParsesAndNormalizesBaseNativeInputs(): void {
   Assert.equal(manifest.nativeBuild.defines[0], "DOOF_TIME=1")
 }
 
-export function testMergesOnlyTheSelectedPlatformFragment(): void {
+export function testMergesOnlyTheSelectedPlatformFragment(): none {
   manifest := try! parsePackageManifest(
     "{\"name\":\"std/path\",\"build\":{\"native\":{\"frameworks\":[\"Base\"],\"macos\":{\"frameworks\":[\"CoreFoundation\"],\"sourceFiles\":[\"path.mm\"]},\"linux\":{\"linkLibraries\":[\"pthread\"],\"sourceFiles\":[\"path.cpp\"]}}}}",
     "/stdlib/path/doof.json",
@@ -156,7 +156,7 @@ export function testMergesOnlyTheSelectedPlatformFragment(): void {
   Assert.equal(manifest.nativeBuild.linkLibraries.length, 0)
 }
 
-export function testSelectsWasmNativeFragmentForWasmTargets(): void {
+export function testSelectsWasmNativeFragmentForWasmTargets(): none {
   manifest := try! parsePackageManifest(
     "{\"build\":{\"target\":\"wasm\",\"native\":{\"defines\":[\"BASE\"],\"linux\":{\"defines\":[\"LINUX\"]},\"wasm\":{\"sourceFiles\":[\"native_wasm.cpp\"],\"defines\":[\"WASM\"]}}}}",
     "/app/doof.json",
@@ -171,7 +171,7 @@ export function testSelectsWasmNativeFragmentForWasmTargets(): void {
   Assert.equal(manifest.nativeBuild.defines.contains("LINUX"), false)
 }
 
-export function testDeduplicatesManifestAndMergedNativeInputs(): void {
+export function testDeduplicatesManifestAndMergedNativeInputs(): none {
   first := try! parsePackageManifest(
     "{\"build\":{\"native\":{\"frameworks\":[\"CoreFoundation\",\"CoreFoundation\"]}}}",
     "/one/doof.json",
@@ -186,7 +186,7 @@ export function testDeduplicatesManifestAndMergedNativeInputs(): void {
   Assert.equal(merged.frameworks[1], "Foundation")
 }
 
-export function testRejectsInvalidNativeStringArrays(): void {
+export function testRejectsInvalidNativeStringArrays(): none {
   result := parsePackageManifest(
     "{\"build\":{\"native\":{\"sourceFiles\":[4]}}}",
     "/bad/doof.json",
@@ -200,7 +200,7 @@ export function testRejectsInvalidNativeStringArrays(): void {
   panic("expected invalid manifest failure")
 }
 
-export function testParsesCompactMacOSAppAndReleaseSettings(): void {
+export function testParsesCompactMacOSAppAndReleaseSettings(): none {
   manifest := try! parsePackageManifest(
     "{\"name\":\"demo-app\",\"version\":\"1.2\",\"target\":\"macos-app\",\"executable\":\"Demo\",\"id\":\"dev.example.demo\",\"title\":\"Demo App\",\"icon\":\"icon.png\",\"resources\":[\"assets\"],\"build\":{\"macosApp\":{\"category\":\"public.app-category.games\",\"embeddedLibraries\":[{\"library\":\"SDL3\"},{\"path\":\"vendor/Foo.framework\"}]},\"package\":{\"distDir\":\"artifacts\",\"macos\":{\"signing\":\"ad-hoc\",\"sandbox\":true,\"entitlements\":\"release.plist\"}}}}",
     "/app/doof.json",
@@ -209,7 +209,7 @@ export function testParsesCompactMacOSAppAndReleaseSettings(): void {
   )
 
   Assert.equal(manifest.target, "macos-app")
-  Assert.equal(manifest.macosApp != null, true)
+  Assert.equal(manifest.macosApp != none, true)
   Assert.equal(manifest.macosApp!.executableName, "Demo")
   Assert.equal(manifest.macosApp!.bundleId, "dev.example.demo")
   Assert.equal(manifest.macosApp!.displayName, "Demo App")
@@ -224,7 +224,7 @@ export function testParsesCompactMacOSAppAndReleaseSettings(): void {
   Assert.equal(manifest.packageConfig!.entitlementsPath, "/app/release.plist")
 }
 
-export function testRejectsManagedMacOSInfoPlistOverrides(): void {
+export function testRejectsManagedMacOSInfoPlistOverrides(): none {
   result := parsePackageManifest(
     "{\"name\":\"demo\",\"build\":{\"target\":\"macos-app\",\"macosApp\":{\"infoPlist\":{\"CFBundleIdentifier\":\"override\"}}}}",
     "/app/doof.json",
@@ -238,7 +238,7 @@ export function testRejectsManagedMacOSInfoPlistOverrides(): void {
   panic("expected managed plist override failure")
 }
 
-export function testParsesIOSAppAndPackageSettings(): void {
+export function testParsesIOSAppAndPackageSettings(): none {
   manifest := try! parsePackageManifest(
     "{\"name\":\"demo-ios\",\"version\":\"2.0\",\"target\":\"ios-app\",\"executable\":\"Demo\",\"build\":{\"iosApp\":{\"bundleId\":\"dev.example.ios\",\"displayName\":\"Demo iOS\",\"minimumDeploymentTarget\":\"17.0\",\"icon\":\"icon.png\",\"resources\":[{\"from\":\"assets\",\"to\":\"Data\"}]},\"package\":{\"ios\":{\"identity\":\"Apple Distribution: Example\",\"provisioningProfile\":\"profiles/app.mobileprovision\"}},\"native\":{\"frameworks\":[\"Base\"],\"iosDevice\":{\"frameworks\":[\"UIKit\"]}}}}",
     "/app/doof.json",
@@ -246,7 +246,7 @@ export function testParsesIOSAppAndPackageSettings(): void {
     "ios-device",
   )
 
-  Assert.equal(manifest.iosApp != null, true)
+  Assert.equal(manifest.iosApp != none, true)
   Assert.equal(manifest.iosApp!.executableName, "Demo")
   Assert.equal(manifest.iosApp!.bundleId, "dev.example.ios")
   Assert.equal(manifest.iosApp!.minimumDeploymentTarget, "17.0")
@@ -257,7 +257,7 @@ export function testParsesIOSAppAndPackageSettings(): void {
   Assert.equal(manifest.iosPackageConfig!.provisioningProfilePath, "/app/profiles/app.mobileprovision")
 }
 
-export function testRejectsManagedIOSInfoPlistOverrides(): void {
+export function testRejectsManagedIOSInfoPlistOverrides(): none {
   result := parsePackageManifest(
     "{\"name\":\"demo\",\"build\":{\"target\":\"ios-app\",\"iosApp\":{\"infoPlist\":{\"CFBundleIdentifier\":\"override\"}}}}",
     "/app/doof.json",
@@ -271,7 +271,7 @@ export function testRejectsManagedIOSInfoPlistOverrides(): void {
   panic("expected managed plist override failure")
 }
 
-export function testRejectsInvalidMacOSSigningMode(): void {
+export function testRejectsInvalidMacOSSigningMode(): none {
   result := parsePackageManifest(
     "{\"name\":\"demo\",\"build\":{\"package\":{\"macos\":{\"signing\":\"mystery\"}}}}",
     "/app/doof.json",
@@ -285,7 +285,7 @@ export function testRejectsInvalidMacOSSigningMode(): void {
   panic("expected invalid signing mode failure")
 }
 
-export function testRejectsMacOSPackagePathsOutsidePackageRoot(): void {
+export function testRejectsMacOSPackagePathsOutsidePackageRoot(): none {
   result := parsePackageManifest(
     "{\"name\":\"demo\",\"build\":{\"package\":{\"distDir\":\"../artifacts\"}}}",
     "/app/doof.json",

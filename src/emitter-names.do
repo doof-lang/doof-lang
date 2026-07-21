@@ -14,14 +14,14 @@ export class ModuleNamespaceMapping {
 let configuredModuleNamespaceMappings: ModuleNamespaceMapping[] = []
 
 /** Replaces the package ownership used by the next module-graph emission. */
-export function configureModuleNamespaces(mappings: ModuleNamespaceMapping[]): void {
+export function configureModuleNamespaces(mappings: ModuleNamespaceMapping[]): none {
   configuredModuleNamespaceMappings = mappings
 }
 
 export function moduleStem(path: string): string {
   let normalized = path.replaceAll("\\", "/")
   mapping := namespaceMappingForPath(normalized)
-  if mapping != null {
+  if mapping != none {
     let relativePath = normalized.substring(mapping!.logicalPrefix.length, normalized.length)
     while relativePath.startsWith("/") {
       relativePath = relativePath.substring(1, relativePath.length)
@@ -40,7 +40,7 @@ export function moduleStem(path: string): string {
 
 export function moduleNamespace(path: string): string {
   mapping := namespaceMappingForPath(path)
-  if mapping != null {
+  if mapping != none {
     let relativePath = path.substring(mapping!.logicalPrefix.length, path.length)
     while relativePath.startsWith("/") {
       relativePath = relativePath.substring(1, relativePath.length)
@@ -59,7 +59,7 @@ export function moduleNamespace(path: string): string {
 export function moduleDiagnosticPath(path: string, stripExtension: bool): string {
   let normalized = path.replaceAll("\\", "/")
   mapping := namespaceMappingForPath(normalized)
-  if mapping != null {
+  if mapping != none {
     normalized = normalized.substring(mapping!.logicalPrefix.length, normalized.length)
   }
   while normalized.startsWith("/") {
@@ -75,7 +75,7 @@ export function moduleDiagnosticPath(path: string, stripExtension: bool): string
 export function moduleNativeHeaderPath(modulePath: string, headerPath: string): string {
   if !headerPath.startsWith("./") && !headerPath.startsWith("../") { return headerPath }
   mapping := namespaceMappingForPath(modulePath)
-  if mapping == null { return headerPath }
+  if mapping == none { return headerPath }
 
   let relativeModulePath = modulePath.substring(mapping!.logicalPrefix.length, modulePath.length)
   while relativeModulePath.startsWith("/") {
@@ -101,11 +101,11 @@ export function moduleNativeHeaderPath(modulePath: string, headerPath: string): 
   return result
 }
 
-function namespaceMappingForPath(path: string): ModuleNamespaceMapping | null {
-  let selected: ModuleNamespaceMapping | null = null
+function namespaceMappingForPath(path: string): ModuleNamespaceMapping | none {
+  let selected: ModuleNamespaceMapping | none = none
   for mapping of configuredModuleNamespaceMappings {
     if path == mapping.logicalPrefix || path.startsWith(mapping.logicalPrefix + "/") {
-      if selected == null || mapping.logicalPrefix.length > selected!.logicalPrefix.length {
+      if selected == none || mapping.logicalPrefix.length > selected!.logicalPrefix.length {
         selected = mapping
       }
     }

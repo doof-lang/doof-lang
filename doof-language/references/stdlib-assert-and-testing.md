@@ -9,17 +9,17 @@ import { Assert } from "std/assert"
 ## Assertion API
 
 ```doof
-Assert.equal<T>(actual: T, expected: T, message: string | null = null, source: SourceLocation = @caller): void
-Assert.notEqual<T>(actual: T, expected: T, message: string | null = null, source: SourceLocation = @caller): void
-Assert.arrayEqual<T>(actual: readonly T[], expected: readonly T[], message: string | null = null, source: SourceLocation = @caller): void
-Assert.approxEqual(actual: double, expected: double, tolerance: double = 0.000001, message: string | null = null, source: SourceLocation = @caller): void
-Assert.isTrue(value: bool, message: string | null = null, source: SourceLocation = @caller): void
-Assert.isFalse(value: bool, message: string | null = null, source: SourceLocation = @caller): void
-Assert.contains<T>(values: readonly T[], expected: T, message: string | null = null, source: SourceLocation = @caller): void
-Assert.notContains<T>(values: readonly T[], expected: T, message: string | null = null, source: SourceLocation = @caller): void
-Assert.stringContains(value: string, expected: string, message: string | null = null, source: SourceLocation = @caller): void
-Assert.stringNotContains(value: string, expected: string, message: string | null = null, source: SourceLocation = @caller): void
-Assert.fail(message: string | null = null, source: SourceLocation = @caller): void
+Assert.equal<T>(actual: T, expected: T, message: string | none = none, source: SourceLocation = @caller): none
+Assert.notEqual<T>(actual: T, expected: T, message: string | none = none, source: SourceLocation = @caller): none
+Assert.arrayEqual<T>(actual: readonly T[], expected: readonly T[], message: string | none = none, source: SourceLocation = @caller): none
+Assert.approxEqual(actual: double, expected: double, tolerance: double = 0.000001, message: string | none = none, source: SourceLocation = @caller): none
+Assert.isTrue(value: bool, message: string | none = none, source: SourceLocation = @caller): none
+Assert.isFalse(value: bool, message: string | none = none, source: SourceLocation = @caller): none
+Assert.contains<T>(values: readonly T[], expected: T, message: string | none = none, source: SourceLocation = @caller): none
+Assert.notContains<T>(values: readonly T[], expected: T, message: string | none = none, source: SourceLocation = @caller): none
+Assert.stringContains(value: string, expected: string, message: string | none = none, source: SourceLocation = @caller): none
+Assert.stringNotContains(value: string, expected: string, message: string | none = none, source: SourceLocation = @caller): none
+Assert.fail(message: string | none = none, source: SourceLocation = @caller): none
 ```
 
 Each assertion panics on failure. The optional message is prepended to the
@@ -31,7 +31,7 @@ to the assertion call rather than the implementation in `std/assert`.
 ```doof
 import { Assert } from "std/assert"
 
-export function testAdd(): void {
+export function testAdd(): none {
     Assert.equal(1 + 2, 3)
     Assert.notEqual(1 + 2, 4)
     Assert.arrayEqual([1, 2], [1, 2])
@@ -43,7 +43,7 @@ export function testAdd(): void {
 
 - Put tests in `*.test.do` files.
 - Export top-level functions whose names start with `test`.
-- Test functions take no parameters and return `void`.
+- Test functions take no parameters and return `none`.
 - Use `assert(condition, message)` for simple checks and `Assert` for richer assertions.
 
 Repository unit suites should remain focused and deterministic. Small in-memory
@@ -57,11 +57,11 @@ Example:
 import { add } from "./math"
 import { Assert } from "std/assert"
 
-export function testAdd(): void {
+export function testAdd(): none {
     Assert.equal(add(1, 2), 3)
 }
 
-export function testAddNegative(): void {
+export function testAddNegative(): none {
     Assert.equal(add(5, -2), 3, "expected add(5, -2) to equal 3")
 }
 ```
@@ -118,7 +118,7 @@ import { Assert } from "std/assert"
 import { checkout } from "./checkout"
 import { sendPayment } from "./payments.mock"
 
-export function testCheckoutUsesMockPayment(): void {
+export function testCheckoutUsesMockPayment(): none {
     Assert.isTrue(checkout("acct-1", 7))
     Assert.equal(sendPayment.calls.length, 1)
     Assert.equal(sendPayment.calls[0].targetId, "acct-1")
@@ -135,7 +135,7 @@ mock class PaymentGateway {
     sendPayment(targetId: string, amount: int): bool => true
 }
 
-export function testGatewayTracksCallsPerInstance(): void {
+export function testGatewayTracksCallsPerInstance(): none {
     let gateway = PaymentGateway()
     gateway.sendPayment("acct-1", 7)
 
@@ -148,7 +148,7 @@ export function testGatewayTracksCallsPerInstance(): void {
 ### Bodyless Mocks
 
 ```doof
-mock function unexpectedNetworkCall(url: string): void
+mock function unexpectedNetworkCall(url: string): none
 ```
 
 If execution reaches a bodyless mock, the emitted program panics immediately.

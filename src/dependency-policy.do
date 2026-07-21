@@ -41,12 +41,12 @@ export function hasMutableStdPackageInputs(packages: ReachedPackageInput[]): boo
 export function resolutionForUrl(
   resolutions: DependencyResolution[],
   url: string,
-): DependencyResolution | null {
+): DependencyResolution | none {
   canonical := canonicalDependencyUrl(url)
   for resolution of resolutions {
     if canonicalDependencyUrl(resolution.url) == canonical { return resolution }
   }
-  return null
+  return none
 }
 
 export function selectedPackageSource(
@@ -55,7 +55,7 @@ export function selectedPackageSource(
 ): PackageDependency {
   if dependency.url == "" { return dependency }
   resolution := resolutionForUrl(resolutions, dependency.url)
-  if resolution == null { return dependency }
+  if resolution == none { return dependency }
   return PackageDependency {
     name: dependency.name,
     url: canonicalDependencyUrl(resolution!.url),
@@ -72,13 +72,13 @@ export function resolveExternalInputs(
   for owner of packages {
     for dependency of owner.manifest.externalDependencies {
       resolution := resolutionForUrl(rootManifest.externalResolutions, dependency.url)
-      if resolution != null && resolution!.kind != dependency.kind {
+      if resolution != none && resolution!.kind != dependency.kind {
         return Failure("External resolution for " + canonicalDependencyUrl(dependency.url) + " must keep kind " + dependency.kind)
       }
       selected := resolvedExternalInput(owner, dependency, resolution)
       for existing of result {
         if canonicalDependencyUrl(existing.selectedUrl) != canonicalDependencyUrl(selected.selectedUrl) { continue }
-        if !sameSelectedExternal(existing, selected) && resolution == null {
+        if !sameSelectedExternal(existing, selected) && resolution == none {
           return Failure(
             "Conflicting external dependency " + canonicalDependencyUrl(dependency.url) + " requested by " +
             existing.owner.logicalPrefix + " and " + owner.logicalPrefix +
@@ -96,12 +96,12 @@ export function validateDependencyPolicy(
   packages: ReachedPackageInput[],
   externals: ResolvedExternalInput[],
   rootManifest: PackageManifest,
-): Result<void, string> {
+): Result<none, string> {
   policy := rootManifest.policy
   for package of packages {
     if package.sourceKind == "root" { continue }
     if package.introducedBy != "" && package.sourceKind == "git" && policy.hasPackageSourceAllowlist {
-      if resolutionForUrl(rootManifest.packageResolutions, package.sourceUrl) == null &&
+      if resolutionForUrl(rootManifest.packageResolutions, package.sourceUrl) == none &&
         !containsCanonicalUrl(policy.allowedPackageSources, package.sourceUrl) {
         return Failure("Policy rejected transitive package " + package.sourceUrl + " introduced by " + package.introducedBy)
       }
@@ -111,7 +111,7 @@ export function validateDependencyPolicy(
   for external of externals {
     if external.owner.sourceKind == "root" { continue }
     if rootManifest.policy.hasExternalSourceAllowlist &&
-      resolutionForUrl(rootManifest.externalResolutions, external.selectedUrl) == null &&
+      resolutionForUrl(rootManifest.externalResolutions, external.selectedUrl) == none &&
       !containsCanonicalUrl(rootManifest.policy.allowedExternalSources, external.selectedUrl) {
       return Failure(
         "Policy rejected transitive external dependency " + canonicalDependencyUrl(external.selectedUrl) +
@@ -125,9 +125,9 @@ export function validateDependencyPolicy(
 function resolvedExternalInput(
   owner: ReachedPackageInput,
   dependency: ExternalDependency,
-  resolution: DependencyResolution | null,
+  resolution: DependencyResolution | none,
 ): ResolvedExternalInput {
-  if resolution == null {
+  if resolution == none {
     return ResolvedExternalInput {
       owner, dependency, selectedKind: dependency.kind, selectedUrl: canonicalDependencyUrl(dependency.url),
       selectedRef: dependency.ref, selectedCommit: dependency.commit, selectedSha256: dependency.sha256,
@@ -156,7 +156,7 @@ function containsCanonicalUrl(values: string[], value: string): bool {
 function validateTransitiveNativePolicy(
   package: ReachedPackageInput,
   policy: DependencyPolicy,
-): Result<void, string> {
+): Result<none, string> {
   if policy.hasLinkLibraryAllowlist {
     for value of package.manifest.nativeBuild.linkLibraries {
       if !policy.allowedLinkLibraries.contains(value) {

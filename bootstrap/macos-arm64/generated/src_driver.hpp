@@ -56,6 +56,7 @@ namespace app_src_driver_ {
 }
 
 #include "src_compiler.hpp"
+#include "src_diagnostics.hpp"
 #include "src_cli.hpp"
 #include "src_external_dependency.hpp"
 #include "src_dependency_policy.hpp"
@@ -188,6 +189,8 @@ namespace app_src_driver_ {
     std::shared_ptr<::app_src_package_manifest_::ExternalDependency> selectedExternalDependency(std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput> input);
     doof::Result<std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget>, std::string> externalTargetForRequest(std::string target, std::string nativePlatform, std::string iosDestination, std::string iosMinimumVersion);
     std::string driverLogicalPrefix(std::string path);
+    std::string driverRootLogicalPrefix(std::string packageName, std::string rootDirectory);
+    std::string driverRootLogicalPath(std::string path, std::string rootDirectory, std::string packageName);
     std::string driverPackageOutputRoot(std::string logicalPrefix);
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>> projectNativePackages(std::string projectRoot, std::shared_ptr<::app_src_package_manifest_::PackageManifest> projectManifest, std::string stdlibRoot = std::string(""));
     void ensureOutputDirectory(std::string path);

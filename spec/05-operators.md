@@ -140,19 +140,19 @@ if list.length > 0 && list[0] == target {
 
 ---
 
-## Null-Coalescing and Optional Chaining
+## Optional Coalescing and Chaining
 
-### Null-Coalescing (`??`)
+### Optional Coalescing (`??`)
 
-Provides a fallback value when an expression is `null` or a `Failure`:
+Provides a fallback value when an expression is `none` or a `Failure`:
 
 ```javascript
 // With nullable types
-name: string | null := null
+name: string | none := none
 displayName := name ?? "Anonymous"  // "Anonymous"
 
-value: int | null := 0
-result := value ?? 42  // 0 (not null, so left side used)
+value: int | none := 0
+result := value ?? 42  // 0 (present, so left side used)
 
 // With Result types
 config := loadConfig() ?? defaultConfig  // Config (unwraps Success or uses fallback)
@@ -160,12 +160,12 @@ data := readFile("cache.txt") ?? ""      // string
 ```
 
 **Type signatures:**
-- `T | null ?? T` → `T` (unwraps nullable)
+- `T | none ?? T` → `T` (unwraps nullable)
 - `Result<T, E> ?? T` → `T` (unwraps Success or uses fallback on Failure)
 
 **Associativity:** Right-to-left (ensures type correctness in chains)
 
-**Lazy evaluation:** The right operand is **only evaluated if needed** (i.e., if left is `null` or `Failure`). This is crucial for performance and avoiding side effects:
+**Lazy evaluation:** The right operand is **only evaluated if needed** (i.e., if left is `none` or `Failure`). This is crucial for performance and avoiding side effects:
 
 ```javascript
 // expensiveComputation() only called if loadFromCache() fails
@@ -178,20 +178,20 @@ config := loadFromCache() ?? loadFromDisk() ?? fetchFromNetwork() ?? defaultConf
 // Each Result<T, E> ?? T → T, so types compose naturally
 ```
 
-**Important:** `??` only checks for `null` and `Failure`, not falsiness. `||` requires `bool` operands.
+**Important:** `??` only checks for `none` and `Failure`, not falsiness. `||` requires `bool` operands.
 
-### Null-Coalescing Assignment (`??=`)
+### Optional Coalescing Assignment (`??=`)
 
-Assigns a value only if the variable is currently `null` or `Failure`:
+Assigns a value only if the variable is currently `none` or `Failure`:
 
 ```javascript
 // With nullable types
-let cache: string | null = null
+let cache: string | none = none
 cache ??= loadFromDisk()  // Assigns result of loadFromDisk()
 cache ??= loadFromDisk()  // No-op, cache already has value
 
-let config: Config | null = getConfig()
-config ??= defaultConfig  // Only assigns if getConfig() returned null
+let config: Config | none = getConfig()
+config ??= defaultConfig  // Only assigns if getConfig() returned none
 ```
 
 **With Result types:**
@@ -215,60 +215,61 @@ value ??= fetchDefault()     // Use default if both failed
 
 ### Optional Chaining (`?.`)
 
-Safely access properties/methods on potentially null values:
+Safely access properties/methods on potentially none values:
 
 ```javascript
-user: User | null := getUser()
-city := user?.address?.city    // string | null
-logger?.log("Hello")           // Only calls if logger is not null
+user: User | none := getUser()
+city := user?.address?.city    // string | none
+logger?.log("Hello")           // Only calls if logger is present
 ```
 
 **Interaction with Result types:**
 
-When the `?.` operator is used with Result types, it propagates nulls but preserves the Result wrapper:
+When the `?.` operator is used with Result types, it propagates `none` while
+preserving the Result wrapper:
 
 ```javascript
 // foo(): Result<MyObject, Error>
 // MyObject.bar(): Result<int, Error>
 
-result := foo()?.bar()  // Result<int | null, Error>
+result := foo()?.bar()  // Result<int | none, Error>
 // If foo() is Success(obj), calls bar() on obj
-// If foo() is Success(null), short-circuits to Success(null)
+// If foo() is Success(none), short-circuits to Success(none)
 // If foo() is Failure(e), propagates Failure(e)
 
 // If bar() returns a plain value (not Result):
 // MyObject.getValue(): int
-result := foo()?.getValue()  // Result<int | null, Error>
+result := foo()?.getValue()  // Result<int | none, Error>
 
 // Multiple error types are unioned:
 // bar(): Result<int, Error2>
-result := foo()?.bar()  // Result<int | null, Error | Error2>
+result := foo()?.bar()  // Result<int | none, Error | Error2>
 ```
 
-The `?.` operator only checks for null and propagates it - it does not unwrap Result types.
+The `?.` operator only checks for none and propagates it - it does not unwrap Result types.
 
 ### Combining `?.` and `??`
 
 ```javascript
 // Nullable types
-city := user?.address?.city ?? "Unknown"  // string (never null)
+city := user?.address?.city ?? "Unknown"  // string (never none)
 
 // Result types - unwrap and provide fallback
-data := parseFile("config.json")?.data ?? []  // Returns [] if parse fails or data is null
+data := parseFile("config.json")?.data ?? []  // Returns [] if parse fails or data is `none`
 
 // Can also use with try? for same effect
-data := try? parseFile("config.json") ?? []   // Less clear: conflates null and Failure
+data := try? parseFile("config.json") ?? []   // Less clear: conflates `none` and Failure
 data := parseFile("config.json") ?? { data: [] }  // Clearer: explicit about Failure handling
 ```
 
 ### Optional Indexing (`?[]`)
 
 ```javascript
-items: string[] | null := getItems()
-first := items?[0]  // string | null
+items: string[] | none := getItems()
+first := items?[0]  // string | none
 
-map: Map<string, int> | null := getScores()
-score := map?["alice"]  // int | null
+map: Map<string, int> | none := getScores()
+score := map?["alice"]  // int | none
 ```
 
 ### Force Access (`!.`)
@@ -278,12 +279,12 @@ The `!.` operator provides non-optional access with **panic on failure**. It wor
 **With nullable types:**
 
 ```javascript
-user: User | null := getUser()
-name := user!.name  // string (panics if user is null)
+user: User | none := getUser()
+name := user!.name  // string (panics if user is `none`)
 
 // Equivalent to:
-if user == null {
-    panic("Attempted to access null value")
+if user == none {
+    panic("Attempted to access none value")
 }
 name := user.name
 ```
@@ -323,44 +324,44 @@ Applying postfix `!` to a value that is neither nullable nor a `Result` is a com
 **When to use `!.`:**
 
 ```javascript
-// ✅ When null/failure indicates a programming error
-let config: Config | null = loadConfig()
+// ✅ When none/failure indicates a programming error
+let config: Config | none = loadConfig()
 port := config!.port  // Config should always exist here; panic if not
 
 // ✅ When you need to fail fast on errors
 data := loadCriticalData()!.parse()  // Panic if load fails
 
-// ❌ For expected null/failure cases — use ?. or case/try instead
+// ❌ For expected none/failure cases — use ?. or case/try instead
 let optional: Result<Data, Error> = tryLoadData()
 value := optional!.field  // Bad: failure might be expected; use case or try? instead
 ```
 
 **Type signatures:**
-- `(T | null)!.field` → `FieldType` (panics if null)
+- `(T | none)!.field` → `FieldType` (panics if none)
 - `Result<T, E>!.method()` → `ReturnType` (panics if Failure)
 - `Result<T, E>!.field` → `FieldType` (panics if Failure)
 
 **Comparison with `?.`:**
 
-| Operator | Null/Failure Behavior | Return Type |
+| Operator | None/Failure Behavior | Return Type |
 |----------|----------------------|-------------|
-| `?.` | Short-circuits, propagates null | `T \| null` or `Result<T \| null, E>` |
-| `!.` | Panics immediately | `T` (never null/Failure) |
+| `?.` | Short-circuits, propagates none | `T \| none` or `Result<T \| none, E>` |
+| `!.` | Panics immediately | `T` (never none/Failure) |
 
 ```javascript
-user: User | null := getUser()
+user: User | none := getUser()
 
-// Optional: safe, returns null if user is null
-age1 := user?.age  // int | null
+// Optional: safe, returns `none` if user is `none`
+age1 := user?.age  // int | none
 
-// Force: panics if user is null, always returns int
-age2 := user!.age  // int (panics if user is null)
+// Force: panics if user is `none`, always returns int
+age2 := user!.age  // int (panics if user is `none`)
 
 // With Result types
 result: Result<User, Error> := loadUser()
 
 // Optional: propagates Failure as Result
-email1 := result?.getEmail()  // Result<string | null, Error>
+email1 := result?.getEmail()  // Result<string | none, Error>
 
 // Force: unwraps or panics
 email2 := result!.getEmail()  // string (panics if result is Failure)
@@ -452,10 +453,10 @@ wide := numeric as long  // Result<long, string>
 
 | Source Type      | Target Type    | Runtime Check                          |
 |-----------------|----------------|----------------------------------------|
-| `T \| null`     | `T`            | Null check                            |
+| `T \| none`     | `T`            | `none` check                            |
 | `U1 \| U2`      | `Ui`           | `std::holds_alternative<Ui>` variant check |
 | Numeric primitive or numeric union member | Numeric primitive | Checked numeric conversion; succeeds only when the runtime value is exactly representable in the target type |
-| `JsonValue`      | Exact JSON member (`string`, `int`, `long`, `float`, `double`, `bool`, `null`, `JsonValue[]`, `Map<string, JsonValue>`, readonly variants) | JSON carrier tag check |
+| `JsonValue`      | Exact JSON member (`string`, `int`, `long`, `float`, `double`, `bool`, `none`, `JsonValue[]`, `Map<string, JsonValue>`, readonly variants) | JSON carrier tag check |
 | Interface       | Class          | `std::holds_alternative<Class>` variant check |
 | `Result<V, F>`  | `T`            | If failure: pass through `F`; if success: narrow `V` to `T` |
 | `T`             | `T`            | Identity — always succeeds            |
@@ -535,10 +536,10 @@ config := try! loadConfig()  // Config (panics if loadConfig fails)
 
 ### `try?` — Convert to Optional
 
-Converts `Result<T, E>` to `T | null`:
+Converts `Result<T, E>` to `T | none`:
 
 ```javascript
-config := try? loadConfig()  // Config | null (null on Failure)
+config := try? loadConfig()  // Config | none (none on Failure)
 value := try? foo()?.bar()   // Combines with optional chaining
 ```
 

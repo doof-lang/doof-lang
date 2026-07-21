@@ -6,7 +6,7 @@ import { Diagnostic, Scope } from "./semantic"
 export class CheckerState {
   result: AnalysisResult
   diagnostics: Diagnostic[] = []
-  info: ModuleInfo | null = null
-  moduleScope: Scope | null = null
+  info: ModuleInfo | none = none
+  moduleScope: Scope | none = none
 }
 

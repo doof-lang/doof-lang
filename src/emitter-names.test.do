@@ -9,7 +9,7 @@ import {
   moduleSourceName,
 } from "./emitter-names"
 
-export function testUsesPackageIdentityForOwnedModuleNamespaces(): void {
+export function testUsesPackageIdentityForOwnedModuleNamespaces(): none {
   configureModuleNamespaces([
     ModuleNamespaceMapping { logicalPrefix: "/std/time", packageName: "std/time" },
     ModuleNamespaceMapping { logicalPrefix: "/vendor/cache", packageName: "acme-clock" },
@@ -19,7 +19,7 @@ export function testUsesPackageIdentityForOwnedModuleNamespaces(): void {
   configureModuleNamespaces([])
 }
 
-export function testChoosesMostSpecificPackageNamespaceMapping(): void {
+export function testChoosesMostSpecificPackageNamespaceMapping(): none {
   configureModuleNamespaces([
     ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "umbrella" },
     ModuleNamespaceMapping { logicalPrefix: "/vendor/clock", packageName: "acme/clock" },
@@ -28,12 +28,12 @@ export function testChoosesMostSpecificPackageNamespaceMapping(): void {
   configureModuleNamespaces([])
 }
 
-export function testRetainsPathNamespaceWithoutPackageOwnership(): void {
+export function testRetainsPathNamespaceWithoutPackageOwnership(): none {
   configureModuleNamespaces([])
   Assert.equal(moduleNamespace("/app/main.do"), "app_app_main_")
 }
 
-export function testFormatsPackageRelativeDiagnosticPaths(): void {
+export function testFormatsPackageRelativeDiagnosticPaths(): none {
   configureModuleNamespaces([
     ModuleNamespaceMapping { logicalPrefix: "/workspace/assert", packageName: "std/assert" },
   ])
@@ -42,7 +42,7 @@ export function testFormatsPackageRelativeDiagnosticPaths(): void {
   configureModuleNamespaces([])
 }
 
-export function testUsesPackageRelativeGeneratedArtifactNames(): void {
+export function testUsesPackageRelativeGeneratedArtifactNames(): none {
   configureModuleNamespaces([
     ModuleNamespaceMapping {
       logicalPrefix: "/home/developer/work/doof-stdlib/os",

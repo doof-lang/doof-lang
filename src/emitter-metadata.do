@@ -2,8 +2,8 @@
 
 import { ClassDeclaration, ClassField, EnumDeclaration, ExportDeclaration, FunctionDeclaration, Program, Statement } from "./ast"
 import {
-  ArrayResolvedType, ClassType, EnumType, FunctionType, JsonValueResolvedType, NullType, PrimitiveType,
-  ResolvedType, ResultResolvedType, TupleResolvedType, UnionResolvedType, VoidType,
+  ArrayResolvedType, ClassType, EnumType, FunctionType, JsonValueResolvedType, NoneType, PrimitiveType,
+  ResolvedType, ResultResolvedType, TupleResolvedType, UnionResolvedType,
 } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -54,7 +54,7 @@ function emitMethodReflection(owner: ClassDeclaration, method: FunctionDeclarati
     type_ := parameter.resolvedType!
     safeName := cppIdentifier(parameter.name)
     iterator := "_it_" + safeName
-    if parameter.defaultValue != null {
+    if parameter.defaultValue != none {
       result = result + "                " + emitContextType(type_, context) + " " + safeName + ";\n"
       result = result + "                if (auto " + iterator + " = _p->find(\"" + escapeCpp(parameter.name) + "\"); " + iterator + " != _p->end()) {\n"
       result = result + emitParameterValidation(parameter.name, iterator + "->second", type_, "                    ")
@@ -74,7 +74,7 @@ function emitMethodReflection(owner: ClassDeclaration, method: FunctionDeclarati
   }
   returnType := methodReturnType(method)
   case returnType {
-    _: VoidType -> {
+    _: NoneType -> {
       result = result + "                _instance." + cppIdentifier(method.name) + "(" + arguments + ");\n"
       result = result + "                return " + metadataSuccess("doof::json_value(nullptr)") + ";\n"
     }
@@ -87,7 +87,7 @@ function emitMethodReflection(owner: ClassDeclaration, method: FunctionDeclarati
         result = result + "                    return " + metadataFailure(500, "\"An error occurred\"") + ";\n"
       }
       result = result + "                }\n"
-      if resultType.valueType.kind == "void" {
+      if resultType.valueType.kind == "none" {
         result = result + "                return " + metadataSuccess("doof::json_value(nullptr)") + ";\n"
       } else {
         result = result + "                auto _success = doof::success_value(_result);\n"
@@ -117,9 +117,9 @@ function metadataSuccess(value: string): string {
 function methodReturnType(method: FunctionDeclaration): ResolvedType {
   case method.resolvedType! {
     function_: FunctionType -> { return function_.returnType }
-    _ -> { return VoidType {} }
+    _ -> { return NoneType {} }
   }
-  return VoidType {}
+  return NoneType {}
 }
 
 function methodSuccessType(method: FunctionDeclaration): ResolvedType {
@@ -137,7 +137,7 @@ function emitMethodInputSchema(method: FunctionDeclaration, context: EmitContext
   for parameter of method.params {
     schema := emitTypeSchemaWithDescription(parameter.resolvedType!, parameter.description, context)
     properties.push(jsonEntry(parameter.name, schema))
-    if parameter.defaultValue == null { required.push(jsonString(parameter.name)) }
+    if parameter.defaultValue == none { required.push(jsonString(parameter.name)) }
   }
   let entries: string[] = [jsonEntry("type", jsonString("object")), jsonEntry("properties", jsonObject(properties))]
   if required.length > 0 { entries.push(jsonEntry("required", jsonArray(required))) }
@@ -163,8 +163,7 @@ function emitTypeSchemaEntries(type_: ResolvedType, context: EmitContext): strin
       return [jsonEntry("type", jsonString("boolean"))]
     }
     _: JsonValueResolvedType -> { return [] }
-    _: NullType -> { return [jsonEntry("type", jsonString("null"))] }
-    _: VoidType -> { return [jsonEntry("type", jsonString("null"))] }
+    _: NoneType -> { return [jsonEntry("type", jsonString("null"))] }
     class_: ClassType -> { return [jsonEntry("$ref", jsonString("#/$defs/" + class_.name))] }
     array: ArrayResolvedType -> { return [jsonEntry("type", jsonString("array")), jsonEntry("items", emitTypeSchema(array.elementType, context))] }
     tuple: TupleResolvedType -> {
@@ -175,7 +174,7 @@ function emitTypeSchemaEntries(type_: ResolvedType, context: EmitContext): strin
     enum_: EnumType -> {
       let values: string[] = []
       declaration := findEnum(context, enum_.symbol.module, enum_.name)
-      if declaration != null { for variant of declaration!.variants { values.push(jsonString(variant.name)) } }
+      if declaration != none { for variant of declaration!.variants { values.push(jsonString(variant.name)) } }
       return [jsonEntry("enum", jsonArray(values))]
     }
     union_: UnionResolvedType -> {
@@ -200,11 +199,11 @@ function emitDefinitions(methods: FunctionDeclaration[], context: EmitContext): 
   return jsonObject(entries)
 }
 
-function collectSchemaClasses(type_: ResolvedType, context: EmitContext, classes: ClassDeclaration[]): void {
+function collectSchemaClasses(type_: ResolvedType, context: EmitContext, classes: ClassDeclaration[]): none {
   case type_ {
     classType: ClassType -> {
       declaration := findClass(context, classType.symbol.module, classType.name)
-      if declaration == null || containsClass(classes, declaration!) { return }
+      if declaration == none || containsClass(classes, declaration!) { return }
       classes.push(declaration!)
       for field of declaration!.fields { if !field.static_ { collectSchemaClasses(field.resolvedType!, context, classes) } }
     }
@@ -223,7 +222,7 @@ function emitClassSchema(owner: ClassDeclaration, context: EmitContext): string 
     for index of 0..<field.names.length {
       description := if index < field.descriptions.length then field.descriptions[index] else ""
       properties.push(jsonEntry(field.names[index], emitTypeSchemaWithDescription(field.resolvedType!, description, context)))
-      if field.defaultValue == null { required.push(jsonString(field.names[index])) }
+      if field.defaultValue == none { required.push(jsonString(field.names[index])) }
     }
   }
   let entries: string[] = [jsonEntry("type", jsonString("object")), jsonEntry("properties", jsonObject(properties))]
@@ -232,15 +231,15 @@ function emitClassSchema(owner: ClassDeclaration, context: EmitContext): string 
   return jsonObject(entries)
 }
 
-function findClass(context: EmitContext, modulePath: string, name: string): ClassDeclaration | null {
+function findClass(context: EmitContext, modulePath: string, name: string): ClassDeclaration | none {
   for program of context.allPrograms { for statement of program.statements {
     declaration := statementClass(statement)
-    if declaration != null && declaration!.name == name && declaration!.resolvedSymbol != null && declaration!.resolvedSymbol!.module == modulePath { return declaration }
+    if declaration != none && declaration!.name == name && declaration!.resolvedSymbol != none && declaration!.resolvedSymbol!.module == modulePath { return declaration }
   } }
-  return null
+  return none
 }
 
-function findEnum(context: EmitContext, modulePath: string, name: string): EnumDeclaration | null {
+function findEnum(context: EmitContext, modulePath: string, name: string): EnumDeclaration | none {
   for program of context.allPrograms { for statement of program.statements {
     case statement {
       enum_: EnumDeclaration -> { if enum_.name == name { return enum_ } }
@@ -253,16 +252,16 @@ function findEnum(context: EmitContext, modulePath: string, name: string): EnumD
       _ -> { }
     }
   } }
-  return null
+  return none
 }
 
-function statementClass(statement: Statement): ClassDeclaration | null {
+function statementClass(statement: Statement): ClassDeclaration | none {
   case statement {
     class_: ClassDeclaration -> { return class_ }
     export_: ExportDeclaration -> { return statementClass(export_.declaration) }
-    _ -> { return null }
+    _ -> { return none }
   }
-  return null
+  return none
 }
 
 function containsClass(classes: ClassDeclaration[], candidate: ClassDeclaration): bool {

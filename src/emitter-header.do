@@ -52,10 +52,10 @@ export function planHeaders(programs: Program[], context: EmitContext): HeaderPl
     for statement of program.statements { collect(statement, plan, context) }
   }
   for imported of context.imports {
-    if imported.symbol != null && (imported.symbol!.kind == "class" || imported.symbol!.kind == "struct") && !surfaceSymbolIsGeneric(context, imported.symbol!) {
+    if imported.symbol != none && (imported.symbol!.kind == "class" || imported.symbol!.kind == "struct") && !surfaceSymbolIsGeneric(context, imported.symbol!) {
       declaration := "namespace " + moduleNamespace(imported.symbol!.module) + " { struct " + imported.symbol!.name + "; }\n"
       addUnique(plan.typeOnlyForwardDeclarations, declaration)
-    } else if imported.symbol != null && imported.symbol!.kind == "enum" {
+    } else if imported.symbol != none && imported.symbol!.kind == "enum" {
       declaration := "namespace " + moduleNamespace(imported.symbol!.module) + " { enum class " + imported.symbol!.name + "; }\n"
       addUnique(plan.typeOnlyForwardDeclarations, declaration)
     }
@@ -67,7 +67,7 @@ export function planHeaders(programs: Program[], context: EmitContext): HeaderPl
   for namespace of plan.nativeNamespaces {
     if namespace != "" {
       for imported of context.imports {
-        if imported.symbol != null {
+        if imported.symbol != none {
           if imported.symbol!.kind == "function" {
             if imported.symbol!.native_ || !surfaceFunctionIsGeneric(context, imported.symbol!) {
               target := if imported.symbol!.native_ then imported.symbol!.nativeCppName else moduleNamespace(imported.symbol!.module) + "::" + imported.symbol!.name
@@ -88,14 +88,14 @@ export function planHeaders(programs: Program[], context: EmitContext): HeaderPl
 // extern signature, including sibling exports and types imported by those
 // exports. Bridge that surface into the declared native namespace before the
 // header is included.
-function collectNativeModuleSurfaceAliases(modulePath: string, namespace: string, plan: HeaderPlan, context: EmitContext): void {
+function collectNativeModuleSurfaceAliases(modulePath: string, namespace: string, plan: HeaderPlan, context: EmitContext): none {
   for surface of context.moduleSurfaces {
     if surface.path != modulePath { continue }
     for symbol of surface.exports {
       if isNativeAliasType(symbol) && !surfaceTypeIsGeneric(surface, symbol.name) { addNativeSymbolAlias(symbol, namespace, plan) }
     }
     for imported of surface.imports {
-      if imported.symbol != null && isNativeAliasType(imported.symbol!) && !surfaceSymbolIsGeneric(context, imported.symbol!) {
+      if imported.symbol != none && isNativeAliasType(imported.symbol!) && !surfaceSymbolIsGeneric(context, imported.symbol!) {
         addNativeSymbolAlias(imported.symbol!, namespace, plan)
       }
     }
@@ -112,7 +112,7 @@ function isNativeAliasType(symbol: Symbol): bool {
   return symbol.kind == "class" || symbol.kind == "struct" || symbol.kind == "enum" || symbol.kind == "interface" || symbol.kind == "type-alias"
 }
 
-function collect(statement: Statement, plan: HeaderPlan, context: EmitContext): void {
+function collect(statement: Statement, plan: HeaderPlan, context: EmitContext): none {
   case statement {
     class_: ClassDeclaration -> {
       if class_.native_ {
@@ -147,7 +147,7 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext): 
         if fn.nativeHeader != "" { addUnique(plan.nativeIncludes, moduleNativeHeaderPath(context.modulePath, fn.nativeHeader)) }
         namespace := nativeNamespace(fn.nativeCppName)
         addUnique(plan.nativeNamespaces, namespace)
-        if fn.resolvedType != null { collectNativeTypeAliases(fn.resolvedType!, namespace, plan, context) }
+        if fn.resolvedType != none { collectNativeTypeAliases(fn.resolvedType!, namespace, plan, context) }
         return
       }
       if fn.name == "main" {
@@ -173,7 +173,7 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext): 
 function classCanEmitBeforeModuleIncludes(class_: ClassDeclaration): bool {
   if !class_.struct_ || class_.typeParams.length > 0 { return false }
   for field of class_.fields {
-    if !field.static_ && field.resolvedType != null && typeNeedsCompleteNominalDefinition(field.resolvedType!) { return false }
+    if !field.static_ && field.resolvedType != none && typeNeedsCompleteNominalDefinition(field.resolvedType!) { return false }
   }
   return true
 }
@@ -222,12 +222,12 @@ function isNativeTemplateClass(context: EmitContext, name: string): bool {
   return false
 }
 
-function collectNativeClassAliases(class_: ClassDeclaration, namespace: string, plan: HeaderPlan, context: EmitContext): void {
-  for field of class_.fields { if field.resolvedType != null { collectNativeTypeAliases(field.resolvedType!, namespace, plan, context) } }
-  for method of class_.methods { if method.resolvedType != null { collectNativeTypeAliases(method.resolvedType!, namespace, plan, context) } }
+function collectNativeClassAliases(class_: ClassDeclaration, namespace: string, plan: HeaderPlan, context: EmitContext): none {
+  for field of class_.fields { if field.resolvedType != none { collectNativeTypeAliases(field.resolvedType!, namespace, plan, context) } }
+  for method of class_.methods { if method.resolvedType != none { collectNativeTypeAliases(method.resolvedType!, namespace, plan, context) } }
 }
 
-function collectNativeTypeAliases(type_: ResolvedType, namespace: string, plan: HeaderPlan, context: EmitContext): void {
+function collectNativeTypeAliases(type_: ResolvedType, namespace: string, plan: HeaderPlan, context: EmitContext): none {
   case type_ {
     class_: ClassType -> {
       if !surfaceSymbolIsGeneric(context, class_.symbol) { addNativeSymbolAlias(class_.symbol, namespace, plan) }
@@ -274,7 +274,7 @@ function surfaceFunctionIsGeneric(context: EmitContext, symbol: Symbol): bool {
   return false
 }
 
-function addNativeSymbolAlias(symbol: Symbol, namespace: string, plan: HeaderPlan): void {
+function addNativeSymbolAlias(symbol: Symbol, namespace: string, plan: HeaderPlan): none {
   if symbol.native_ || symbol.module == "" { return }
   if symbol.kind == "class" || symbol.kind == "struct" || symbol.kind == "interface" {
     addUnique(plan.typeOnlyForwardDeclarations, "namespace " + moduleNamespace(symbol.module) + " { struct " + symbol.name + "; }\n")
@@ -331,7 +331,7 @@ function emitExportedValue(name: string, value: Expression, context: EmitContext
   return "inline const auto " + name + " = " + emitExpression(value, context) + ";\n"
 }
 
-function addUnique(values: string[], value: string): void {
+function addUnique(values: string[], value: string): none {
   for existing of values { if existing == value { return } }
   values.push(value)
 }
@@ -364,7 +364,7 @@ function emitEnumDeclaration(declaration: EnumDeclaration, context: EmitContext)
   for i of 0..<declaration.variants.length {
     variant := declaration.variants[i]
     result = result + emitDescriptionComment(variant.description, "    ") + "    " + variant.name
-    if variant.value != null { result = result + " = " + emitExpression(variant.value!, context) }
+    if variant.value != none { result = result + " = " + emitExpression(variant.value!, context) }
     if i + 1 < declaration.variants.length { result = result + "," }
     result = result + "\n"
   }
@@ -390,7 +390,7 @@ function emitEnumDeclaration(declaration: EnumDeclaration, context: EmitContext)
 }
 
 function emitTypeAlias(alias: TypeAliasDeclaration, context: EmitContext): string {
-  if alias.resolvedType == null { panic("Type alias " + alias.name + " was not checked before emission") }
+  if alias.resolvedType == none { panic("Type alias " + alias.name + " was not checked before emission") }
   return emitDescriptionComment(alias.description, "") + "using " + alias.name + " = " + emitType(alias.resolvedType!, context.modulePath) + ";\n"
 }
 

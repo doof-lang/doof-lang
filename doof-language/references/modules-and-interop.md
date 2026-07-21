@@ -75,8 +75,8 @@ Nothing hoists. Strict declaration order. Functions can self-reference for recur
 A module with `main()` is executable:
 
 ```doof
-function main(): void { println("Hello!") }
-function main(args: string[]): void { /* ... */ }
+function main(): none { println("Hello!") }
+function main(args: string[]): none { /* ... */ }
 function main(): int { return 0 }
 function main(args: string[]): int { /* ... */ }
 ```
@@ -98,8 +98,8 @@ Import external C++ classes:
 ```doof
 // Header inferred as "Logger.hpp"
 import class Logger {
-    log(message: string): void
-    setLevel(level: int): void
+    log(message: string): none
+    setLevel(level: int): none
 }
 
 // Explicit header
@@ -110,7 +110,7 @@ import class HttpClient from "./vendor/http.hpp" {
 
 // System include
 import class Socket from "<sys/socket.h>" {
-    connect(host: string, port: int): Result<void, int>
+    connect(host: string, port: int): Result<none, int>
 }
 
 // C++ namespace mapping

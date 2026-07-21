@@ -13,7 +13,7 @@ function makeConcreteExpressionBody(): Expression {
   return LambdaExpression {
     kind: "lambda-expression",
     params: [],
-    returnType: null,
+    returnType: none,
     body: IntLiteral { kind: "int-literal", value: 1, span: span() },
     parameterless: true,
     trailing: false,
@@ -25,7 +25,7 @@ function makeBlockBody(): Expression {
   return LambdaExpression {
     kind: "lambda-expression",
     params: [],
-    returnType: null,
+    returnType: none,
     body: Block { kind: "block", statements: [], span: span() },
     parameterless: true,
     trailing: false,
@@ -38,7 +38,7 @@ function makeShorthandExpressionBody(): Expression {
   return LambdaExpression {
     kind: "lambda-expression",
     params: [],
-    returnType: null,
+    returnType: none,
     body,
     parameterless: true,
     trailing: false,
@@ -51,7 +51,7 @@ function makeShorthandBlockBody(): Expression {
   return LambdaExpression {
     kind: "lambda-expression",
     params: [],
-    returnType: null,
+    returnType: none,
     body,
     parameterless: true,
     trailing: false,

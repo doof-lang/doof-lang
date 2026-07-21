@@ -40,8 +40,8 @@ export function parseStatement(parser: Parser): Statement {
   if parser.check(TokenType.Try) { return parseTryStatement(parser) }
   if parser.check(TokenType.If) { return parseIfStatement(parser) }
   if parser.check(TokenType.Case) { return parseCaseStatement(parser) }
-  if parser.check(TokenType.While) { return parseWhile(parser, null) }
-  if parser.check(TokenType.For) { return parseFor(parser, null) }
+  if parser.check(TokenType.While) { return parseWhile(parser, none) }
+  if parser.check(TokenType.For) { return parseFor(parser, none) }
   if parser.check(TokenType.With) { return parseWith(parser) }
   if parser.check(TokenType.Break) { return parseBreak(parser) }
   if parser.check(TokenType.Continue) { return parseContinue(parser) }
@@ -109,7 +109,7 @@ function parseIfStatement(parser: Parser): Statement {
   condition := parser.parseExpression()
   body := parseBlock(parser)
   let elseIfs: IfBranch[] = []
-  let else_: Block | null = null
+  let else_: Block | none = none
   while parser.match(TokenType.Else) {
     if parser.match(TokenType.If) {
       branchStart := parser.location()
@@ -187,7 +187,7 @@ function parseCasePattern(parser: Parser): CasePattern {
   if parser.match(TokenType.DotDotLess) {
     end := parser.parseAdditive()
     return RangePattern {
-      kind: "range-pattern", start: null, end, inclusive: false, span: parser.span(start),
+      kind: "range-pattern", start: none, end, inclusive: false, span: parser.span(start),
     }
   }
   if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.Colon {
@@ -202,7 +202,7 @@ function parseCasePattern(parser: Parser): CasePattern {
   if parser.match(TokenType.DotDot) {
     if parser.check(TokenType.RightArrow) || parser.check(TokenType.Pipe) || parser.check(TokenType.Comma) || parser.check(TokenType.RightBrace) || parser.atEnd() {
       return RangePattern {
-        kind: "range-pattern", start: value, end: null, inclusive: true, span: parser.span(start),
+        kind: "range-pattern", start: value, end: none, inclusive: true, span: parser.span(start),
       }
     }
     end := parser.parseAdditive()
@@ -219,17 +219,17 @@ function parseCasePattern(parser: Parser): CasePattern {
   return ValuePattern { kind: "value-pattern", value, span: parser.span(start) }
 }
 
-function parseWhile(parser: Parser, label: string | null): Statement {
+function parseWhile(parser: Parser, label: string | none): Statement {
   start := parser.location()
   parser.expect(TokenType.While)
   condition := parser.parseExpression()
   body := parseBlock(parser)
-  let then_: Block | null = null
+  let then_: Block | none = none
   if parser.match(TokenType.Then) { then_ = parseBlock(parser) }
   return WhileStatement { kind: "while-statement", condition, body, label, then_, span: parser.span(start) }
 }
 
-function parseFor(parser: Parser, label: string | null): Statement {
+function parseFor(parser: Parser, label: string | none): Statement {
   start := parser.location()
   parser.expect(TokenType.For)
   if parser.check(TokenType.Identifier) && (parser.peek(1).kind == TokenType.Of || parser.peek(1).kind == TokenType.Comma) {
@@ -240,17 +240,17 @@ function parseFor(parser: Parser, label: string | null): Statement {
     iterable := parser.parseExpression()
     parser.inForIterable = false
     body := parseBlock(parser)
-    let then_: Block | null = null
+    let then_: Block | none = none
     if parser.match(TokenType.Then) { then_ = parseBlock(parser) }
     return ForOfStatement { kind: "for-of-statement", bindings, iterable, body, label, then_, span: parser.span(start) }
   }
-  let init: Statement | null = null
+  let init: Statement | none = none
   if !parser.check(TokenType.Semicolon) {
     if parser.check(TokenType.Let) { init = parseLetNoSemicolon(parser) }
     else { init = parseExpressionStatementNoSemicolon(parser) }
   }
   parser.expect(TokenType.Semicolon)
-  let condition: Expression | null = null
+  let condition: Expression | none = none
   if !parser.check(TokenType.Semicolon) { condition = parser.parseExpression() }
   parser.expect(TokenType.Semicolon)
   let update: Expression[] = []
@@ -259,7 +259,7 @@ function parseFor(parser: Parser, label: string | null): Statement {
     if !parser.match(TokenType.Comma) { break }
   }
   body := parseBlock(parser)
-  let then_: Block | null = null
+  let then_: Block | none = none
   if parser.match(TokenType.Then) { then_ = parseBlock(parser) }
   return ForStatement { kind: "for-statement", init, condition, update, body, label, then_, span: parser.span(start) }
 }
@@ -299,7 +299,7 @@ function parseWith(parser: Parser): Statement {
 function parseBreak(parser: Parser): Statement {
   start := parser.location()
   parser.expect(TokenType.Break)
-  let label: string | null = null
+  let label: string | none = none
   if parser.check(TokenType.Identifier) && parser.sameLineAsPrevious() { label = parser.text(parser.advance()) }
   parser.consumeSemicolon()
   return BreakStatement { kind: "break-statement", label, span: parser.span(start) }
@@ -308,7 +308,7 @@ function parseBreak(parser: Parser): Statement {
 function parseContinue(parser: Parser): Statement {
   start := parser.location()
   parser.expect(TokenType.Continue)
-  let label: string | null = null
+  let label: string | none = none
   if parser.check(TokenType.Identifier) && parser.sameLineAsPrevious() { label = parser.text(parser.advance()) }
   parser.consumeSemicolon()
   return ContinueStatement { kind: "continue-statement", label, span: parser.span(start) }
@@ -351,7 +351,7 @@ export function parseDestructuring(parser: Parser, shape: string, bindingKind: s
     bindingStart := parser.location()
     if shape == "named" {
       name := parser.text(parser.expect(TokenType.Identifier))
-      let alias: string | null = null
+      let alias: string | none = none
       if parser.match(TokenType.As) { alias = parser.text(parser.expect(TokenType.Identifier)) }
       namedBindings.push(DestructureBinding { name, alias, span: parser.span(bindingStart) })
     } else if parser.check(TokenType.Underscore) { bindings.push("_"); parser.advance() }
@@ -383,22 +383,22 @@ function parseExpressionStatement(parser: Parser): Statement {
     name := parser.text(parser.advance())
     parser.advance()
     rhs := parser.parseExpression()
-    let else_: Block | null = null
-    let failureName: string | null = null
+    let else_: Block | none = none
+    let failureName: string | none = none
     if parser.check(TokenType.Else) {
       capture := parseElseCaptureAndBlock(parser)
       else_ = capture.block
       failureName = capture.failureName
     }
     parser.consumeSemicolon()
-    return ImmutableBinding { kind: "immutable-binding", name, type_: null, value: rhs, exported: false, else_, failureName, span: parser.span(start) }
+    return ImmutableBinding { kind: "immutable-binding", name, type_: none, value: rhs, exported: false, else_, failureName, span: parser.span(start) }
   }
   let value = parser.parseExpression()
   if parser.check(TokenType.Else) {
     capture := parseElseCaptureAndBlock(parser)
     parser.consumeSemicolon()
     return ImmutableBinding {
-      kind: "immutable-binding", name: "_", type_: null, value, exported: false,
+      kind: "immutable-binding", name: "_", type_: none, value, exported: false,
       else_: capture.block, failureName: capture.failureName, span: parser.span(start),
     }
   }
@@ -417,10 +417,10 @@ function parseTrailingLambdaExpressionStatement(parser: Parser, expression: Expr
     call: CallExpression -> {
       block := parseBlock(parser)
       lambda := LambdaExpression {
-        kind: "lambda-expression", params: [], returnType: null, body: block,
+        kind: "lambda-expression", params: [], returnType: none, body: block,
         parameterless: true, trailing: true, span: block.span,
       }
-      call.args.push(CallArgument { name: null, value: lambda, span: block.span })
+      call.args.push(CallArgument { name: none, value: lambda, span: block.span })
       call.span = SourceSpan { start: call.span.start, end: block.span.end }
       if parser.sameLineAsPrevious() && (
         parser.check(TokenType.Dot) || parser.check(TokenType.DoubleColon) ||
@@ -486,11 +486,11 @@ export function parseTryStatement(parser: Parser): Statement {
     name := parser.text(parser.advance())
     parser.advance()
     value := parser.parseExpression()
-    let else_: Block | null = null
+    let else_: Block | none = none
     if parser.match(TokenType.Else) { else_ = parseBlock(parser) }
     parser.consumeSemicolon()
     binding := ImmutableBinding {
-      kind: "immutable-binding", name, type_: null, value, exported: false, else_,
+      kind: "immutable-binding", name, type_: none, value, exported: false, else_,
       span: parser.span(start),
     }
     return TryStatement { kind: "try-statement", binding, span: parser.span(start) }
@@ -536,8 +536,8 @@ function parseTypedImmutableBinding(parser: Parser): Statement {
   typeValue := parser.parseTypeAnnotation()
   parser.expect(TokenType.ColonEqual)
   value := parser.parseExpression()
-  let else_: Block | null = null
-  let failureName: string | null = null
+  let else_: Block | none = none
+  let failureName: string | none = none
   if parser.check(TokenType.Else) {
     capture := parseElseCaptureAndBlock(parser)
     else_ = capture.block
@@ -556,19 +556,19 @@ function parseDiscardElseBinding(parser: Parser): Statement {
   capture := parseElseCaptureAndBlock(parser)
   parser.consumeSemicolon()
   return ImmutableBinding {
-    kind: "immutable-binding", name: "_", type_: null, value, exported: false,
+    kind: "immutable-binding", name: "_", type_: none, value, exported: false,
     else_: capture.block, failureName: capture.failureName, span: parser.span(start),
   }
 }
 
 class ElseCapture {
-  failureName: string | null
+  failureName: string | none
   block: Block
 }
 
 function parseElseCaptureAndBlock(parser: Parser): ElseCapture {
   parser.expect(TokenType.Else)
-  let failureName: string | null = null
+  let failureName: string | none = none
   if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.LeftBrace {
     failureName = parser.text(parser.advance())
   }

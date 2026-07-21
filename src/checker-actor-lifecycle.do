@@ -17,12 +17,12 @@ import {
 } from "./ast"
 import { ActorType, Binding, Diagnostic, SemanticLocation, SemanticSpan } from "./semantic"
 
-export function reportRetiredActorUses(statement: Statement, retired: Binding[], module: string, diagnostics: Diagnostic[]): void {
+export function reportRetiredActorUses(statement: Statement, retired: Binding[], module: string, diagnostics: Diagnostic[]): none {
   if retired.length == 0 { return }
   let identifiers: Identifier[] = []
   collectStatementIdentifiers(statement, identifiers)
   for identifier of identifiers {
-    if identifier.resolvedBinding == null { continue }
+    if identifier.resolvedBinding == none { continue }
     for binding of retired {
       if sameBinding(identifier.resolvedBinding!, binding) {
         diagnostics.push(Diagnostic {
@@ -36,7 +36,7 @@ export function reportRetiredActorUses(statement: Statement, retired: Binding[],
   }
 }
 
-export function collectRetiredActorBindings(statement: Statement, retired: Binding[]): void {
+export function collectRetiredActorBindings(statement: Statement, retired: Binding[]): none {
   let expressions: Expression[] = []
   collectStatementExpressions(statement, expressions)
   for expression of expressions {
@@ -44,7 +44,7 @@ export function collectRetiredActorBindings(statement: Statement, retired: Bindi
       retire_: RetireExpression -> {
         case retire_.actor {
           identifier: Identifier -> {
-            if identifier.resolvedBinding == null || identifier.resolvedType == null { continue }
+            if identifier.resolvedBinding == none || identifier.resolvedType == none { continue }
             case identifier.resolvedType! {
               _: ActorType -> { addBinding(retired, identifier.resolvedBinding!) }
               _ -> { }
@@ -58,13 +58,13 @@ export function collectRetiredActorBindings(statement: Statement, retired: Bindi
   }
 }
 
-function collectStatementIdentifiers(statement: Statement, result: Identifier[]): void {
+function collectStatementIdentifiers(statement: Statement, result: Identifier[]): none {
   let expressions: Expression[] = []
   collectStatementExpressions(statement, expressions)
   for expression of expressions { collectExpressionIdentifiers(expression, result) }
 }
 
-function collectExpressionIdentifiers(expression: Expression, result: Identifier[]): void {
+function collectExpressionIdentifiers(expression: Expression, result: Identifier[]): none {
   case expression {
     identifier: Identifier -> { result.push(identifier) }
     _ -> { }
@@ -74,35 +74,35 @@ function collectExpressionIdentifiers(expression: Expression, result: Identifier
   for child of nested { collectExpressionIdentifiers(child, result) }
 }
 
-export function collectStatementExpressions(statement: Statement, result: Expression[]): void {
+export function collectStatementExpressions(statement: Statement, result: Expression[]): none {
   case statement {
     value: ConstDeclaration -> { result.push(value.value) }
     value: ReadonlyDeclaration -> { result.push(value.value) }
-    value: ImmutableBinding -> { result.push(value.value); if value.else_ != null { collectBlockExpressions(value.else_!, result) } }
+    value: ImmutableBinding -> { result.push(value.value); if value.else_ != none { collectBlockExpressions(value.else_!, result) } }
     value: LetDeclaration -> { result.push(value.value) }
     expression: ExpressionStatement -> { result.push(expression.expression) }
-    return_: ReturnStatement -> { if return_.value != null { result.push(return_.value!) } }
+    return_: ReturnStatement -> { if return_.value != none { result.push(return_.value!) } }
     yield_: YieldStatement -> { result.push(yield_.value) }
     if_: IfStatement -> {
       result.push(if_.condition)
       collectBlockExpressions(if_.body, result)
       for branch of if_.elseIfs { result.push(branch.condition); collectBlockExpressions(branch.body, result) }
-      if if_.else_ != null { collectBlockExpressions(if_.else_!, result) }
+      if if_.else_ != none { collectBlockExpressions(if_.else_!, result) }
     }
     while_: WhileStatement -> {
       result.push(while_.condition); collectBlockExpressions(while_.body, result)
-      if while_.then_ != null { collectBlockExpressions(while_.then_!, result) }
+      if while_.then_ != none { collectBlockExpressions(while_.then_!, result) }
     }
     for_: ForStatement -> {
-      if for_.init != null { collectStatementExpressions(for_.init!, result) }
-      if for_.condition != null { result.push(for_.condition!) }
+      if for_.init != none { collectStatementExpressions(for_.init!, result) }
+      if for_.condition != none { result.push(for_.condition!) }
       for update of for_.update { result.push(update) }
       collectBlockExpressions(for_.body, result)
-      if for_.then_ != null { collectBlockExpressions(for_.then_!, result) }
+      if for_.then_ != none { collectBlockExpressions(for_.then_!, result) }
     }
     forOf: ForOfStatement -> {
       result.push(forOf.iterable); collectBlockExpressions(forOf.body, result)
-      if forOf.then_ != null { collectBlockExpressions(forOf.then_!, result) }
+      if forOf.then_ != none { collectBlockExpressions(forOf.then_!, result) }
     }
     with_: WithStatement -> {
       for binding of with_.bindings { result.push(binding.value) }
@@ -115,8 +115,8 @@ export function collectStatementExpressions(statement: Statement, result: Expres
           case pattern {
             value: ValuePattern -> { result.push(value.value) }
             range: RangePattern -> {
-              if range.start != null { result.push(range.start!) }
-              if range.end != null { result.push(range.end!) }
+              if range.start != none { result.push(range.start!) }
+              if range.end != none { result.push(range.end!) }
             }
             _ -> { }
           }
@@ -145,11 +145,11 @@ export function collectStatementExpressions(statement: Statement, result: Expres
   }
 }
 
-export function collectBlockExpressions(block: Block, result: Expression[]): void {
+export function collectBlockExpressions(block: Block, result: Expression[]): none {
   for statement of block.statements { collectStatementExpressions(statement, result) }
 }
 
-export function collectNestedExpressions(expression: Expression, result: Expression[]): void {
+export function collectNestedExpressions(expression: Expression, result: Expression[]): none {
   case expression {
     string_: StringLiteral -> { for interpolation of string_.interpolations { result.push(interpolation) } }
     binary: BinaryExpression -> { result.push(binary.left); result.push(binary.right) }
@@ -160,10 +160,10 @@ export function collectNestedExpressions(expression: Expression, result: Express
     call: CallExpression -> { result.push(call.callee); for argument of call.args { result.push(argument.value) } }
     array: ArrayLiteral -> { for element of array.elements { result.push(element) } }
     object: ObjectLiteral -> {
-      if object.spread != null { result.push(object.spread!) }
+      if object.spread != none { result.push(object.spread!) }
       for property of object.properties {
-        if property.key != null { result.push(property.key!) }
-        if property.value != null { result.push(property.value!) }
+        if property.key != none { result.push(property.key!) }
+        if property.value != none { result.push(property.value!) }
       }
     }
     tuple: TupleLiteral -> { for element of tuple.elements { result.push(element) } }
@@ -181,8 +181,8 @@ export function collectNestedExpressions(expression: Expression, result: Express
           case pattern {
             value: ValuePattern -> { result.push(value.value) }
             range: RangePattern -> {
-              if range.start != null { result.push(range.start!) }
-              if range.end != null { result.push(range.end!) }
+              if range.start != none { result.push(range.start!) }
+              if range.end != none { result.push(range.end!) }
             }
             _ -> { }
           }
@@ -204,7 +204,7 @@ export function collectNestedExpressions(expression: Expression, result: Express
     retire_: RetireExpression -> { result.push(retire_.actor) }
     actor: ActorCreationExpression -> { for argument of actor.args { result.push(argument) } }
     construct: ConstructExpression -> {
-      for property of construct.args { if property.value != null { result.push(property.value!) } }
+      for property of construct.args { if property.value != none { result.push(property.value!) } }
     }
     as_: AsExpression -> { result.push(as_.expression) }
     _ -> { }
@@ -215,7 +215,7 @@ function sameBinding(left: Binding, right: Binding): bool {
   return left.name == right.name && left.span.start.offset == right.span.start.offset && left.span.end.offset == right.span.end.offset
 }
 
-function addBinding(values: Binding[], value: Binding): void {
+function addBinding(values: Binding[], value: Binding): none {
   for existing of values { if sameBinding(existing, value) { return } }
   values.push(value)
 }

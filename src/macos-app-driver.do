@@ -38,14 +38,14 @@ function runMacOSCommand(command: string, arguments: string[]): MacOSCommandResu
   return MacOSCommandResult { exitCode: executed.exitCode, output: executed.stdout }
 }
 
-function ensureDirectory(path: string): void {
+function ensureDirectory(path: string): none {
   if path == "" || exists(path) { return }
   parent := parentPath(path)
   if parent != path { ensureDirectory(parent) }
   try! mkdir(path)
 }
 
-function copyPath(sourcePath: string, destinationPath: string): void {
+function copyPath(sourcePath: string, destinationPath: string): none {
   if isDirectory(sourcePath) {
     ensureDirectory(destinationPath)
     for entry of try! readDir(sourcePath) {
@@ -57,7 +57,7 @@ function copyPath(sourcePath: string, destinationPath: string): void {
   try! writeBlob(destinationPath, try! readBlob(sourcePath))
 }
 
-function removeTree(path: string): void {
+function removeTree(path: string): none {
   if !exists(path) { return }
   if isDirectory(path) {
     for entry of try! readDir(path) { removeTree(outputPath(path, entry.name)) }
@@ -91,7 +91,7 @@ function globMatches(pattern: string, value: string, patternIndex: int = 0, valu
   return globMatches(pattern, value, patternIndex, valueIndex + 1)
 }
 
-function collectResourceFiles(path: string, baseDirectory: string, pattern: string, results: string[]): void {
+function collectResourceFiles(path: string, baseDirectory: string, pattern: string, results: string[]): none {
   if isDirectory(path) {
     for entry of try! readDir(path) { collectResourceFiles(outputPath(path, entry.name), baseDirectory, pattern, results) }
     return
@@ -102,7 +102,7 @@ function collectResourceFiles(path: string, baseDirectory: string, pattern: stri
   if globMatches(relativePattern, relative) { results.push(path) }
 }
 
-function materializeMacOSResources(config: MacOSAppConfig, resourcesDirectory: string): void {
+function materializeMacOSResources(config: MacOSAppConfig, resourcesDirectory: string): none {
   let destinations: string[] = []
   for resource of config.resources {
     let files: string[] = []
@@ -129,7 +129,7 @@ function materializeMacOSResources(config: MacOSAppConfig, resourcesDirectory: s
   }
 }
 
-function runRequiredCommand(command: string, arguments: string[], description: string): Result<void, string> {
+function runRequiredCommand(command: string, arguments: string[], description: string): Result<none, string> {
   result := runMacOSCommand(command, arguments)
   if result.exitCode != 0 {
     output := if result.error != "" then result.error else BlobReader(result.output).readString(long(result.output.length))
@@ -138,7 +138,7 @@ function runRequiredCommand(command: string, arguments: string[], description: s
   return Success()
 }
 
-function generateMacOSIcon(iconPath: string, destinationPath: string, workRoot: string): Result<void, string> {
+function generateMacOSIcon(iconPath: string, destinationPath: string, workRoot: string): Result<none, string> {
   iconset := outputPath(workRoot, ".doof-app.iconset")
   removeTree(iconset)
   ensureDirectory(iconset)
@@ -278,20 +278,20 @@ function isSystemMachODependency(path: string): bool {
   return path.startsWith("/System/Library/") || path.startsWith("/usr/lib/")
 }
 
-function embeddedDependency(dependency: string, embedded: EmbeddedCode[]): EmbeddedCode | null {
+function embeddedDependency(dependency: string, embedded: EmbeddedCode[]): EmbeddedCode | none {
   for code of embedded {
     if dependency == code.bundleReference || dependency == code.sourcePath || dependency == code.installId ||
       fileName(dependency) == fileName(code.bundleReference) { return code }
   }
-  return null
+  return none
 }
 
-function rewriteEmbeddedDependencies(codePath: string, embedded: EmbeddedCode[]): Result<void, string> {
+function rewriteEmbeddedDependencies(codePath: string, embedded: EmbeddedCode[]): Result<none, string> {
   try dependencies := machODependencies(codePath)
   for dependency of dependencies {
     if isSystemMachODependency(dependency) { continue }
     target := embeddedDependency(dependency, embedded)
-    if target == null {
+    if target == none {
       return Failure("Mach-O file " + codePath + " references non-system dependency " + dependency + ", which is not listed in embeddedLibraries")
     }
     if dependency != target!.bundleReference {
@@ -301,7 +301,7 @@ function rewriteEmbeddedDependencies(codePath: string, embedded: EmbeddedCode[])
   return Success()
 }
 
-function ensureMachORPath(codePath: string, rpath: string): Result<void, string> {
+function ensureMachORPath(codePath: string, rpath: string): Result<none, string> {
   try loadCommands := commandText("otool", ["-l", codePath], "reading Mach-O rpaths")
   if loadCommands.contains("path " + rpath + " ") { return Success() }
   return runRequiredCommand("install_name_tool", ["-add_rpath", rpath, codePath], "adding bundled library rpath")
@@ -313,7 +313,7 @@ function embedMacOSLibraries(
   libraryPaths: string[],
   buildDirectory: string,
   contentsDirectory: string,
-): Result<void, string> {
+): Result<none, string> {
   if config.embeddedLibraries.length == 0 { return Success() }
   frameworksDirectory := outputPath(contentsDirectory, "Frameworks")
   ensureDirectory(frameworksDirectory)
@@ -343,7 +343,7 @@ function embedMacOSLibraries(
   return Success()
 }
 
-function collectNestedMacOSCode(path: string, results: string[]): void {
+function collectNestedMacOSCode(path: string, results: string[]): none {
   if !exists(path) { return }
   if isDirectory(path) {
     for entry of try! readDir(path) { collectNestedMacOSCode(outputPath(path, entry.name), results) }
@@ -437,7 +437,7 @@ export function signAndArchiveMacOSApp(
   archivePath: string,
   config: MacOSPackageConfig,
   buildDirectory: string,
-): Result<void, string> {
+): Result<none, string> {
   let identity = "-"
   if config.signing != "ad-hoc" {
     try resolvedIdentity := developerIdIdentity(config.identity)

@@ -4,7 +4,7 @@ import { ModuleEmission } from "./emitter-module"
 import { NativeCompileTask, NativeCompileTaskBatch, batchNativeCompileTasks, planNativeCompile } from "./native-build"
 import { NativeBuildPlan } from "./package-manifest"
 
-export function testPlansGeneratedAndManifestNativeSources(): void {
+export function testPlansGeneratedAndManifestNativeSources(): none {
   plan := planNativeCompile(
     "clang++",
     "/tmp/generated",
@@ -64,7 +64,7 @@ export function testPlansGeneratedAndManifestNativeSources(): void {
   }
 }
 
-export function testPreservesAbsoluteNativePaths(): void {
+export function testPreservesAbsoluteNativePaths(): none {
   plan := planNativeCompile(
     "c++",
     "/tmp/generated",
@@ -76,7 +76,7 @@ export function testPreservesAbsoluteNativePaths(): void {
   Assert.equal(plan.compileTasks[0].arguments.contains("/opt/include"), true)
 }
 
-export function testCompilesNativeCSourcesWithAdjacentCDriver(): void {
+export function testCompilesNativeCSourcesWithAdjacentCDriver(): none {
   clangPlan := planNativeCompile(
     "/opt/llvm/bin/clang++",
     "/tmp/generated",
@@ -116,7 +116,7 @@ export function testCompilesNativeCSourcesWithAdjacentCDriver(): void {
   Assert.equal(defaultPlan.compileTasks[0].compiler, "cc")
 }
 
-export function testCompilesSwiftSourcesAndLinksWithSwiftRuntime(): void {
+export function testCompilesSwiftSourcesAndLinksWithSwiftRuntime(): none {
   plan := planNativeCompile(
     "clang++",
     "/tmp/generated",
@@ -153,7 +153,7 @@ export function testCompilesSwiftSourcesAndLinksWithSwiftRuntime(): void {
   Assert.equal(plan.linkArguments.contains("-Wl,-rpath,/tmp/lib"), true)
 }
 
-export function testAddsReleaseDefaultsBeforeManifestFlags(): void {
+export function testAddsReleaseDefaultsBeforeManifestFlags(): none {
   plan := planNativeCompile(
     "clang++",
     "/tmp/generated",
@@ -179,7 +179,7 @@ export function testAddsReleaseDefaultsBeforeManifestFlags(): void {
   Assert.equal(plan.outputPath, "/tmp/dist/demo")
 }
 
-export function testPlansClangPrecompiledRuntimeForMultiModuleBuilds(): void {
+export function testPlansClangPrecompiledRuntimeForMultiModuleBuilds(): none {
   modules := [
     ModuleEmission { modulePath: "/one.do", header: "", source: "", headerName: "one.hpp", sourceName: "one.cpp" },
     ModuleEmission { modulePath: "/two.do", header: "", source: "", headerName: "two.hpp", sourceName: "two.cpp" },
@@ -204,7 +204,7 @@ export function testPlansClangPrecompiledRuntimeForMultiModuleBuilds(): void {
   Assert.equal(plan.compileTasks[1].arguments.contains("-include-pch"), true)
 }
 
-export function testDoesNotApplyCxxPrecompiledHeaderToObjectiveCxxSources(): void {
+export function testDoesNotApplyCxxPrecompiledHeaderToObjectiveCxxSources(): none {
   modules := [
     ModuleEmission { modulePath: "/one.do", header: "", source: "", headerName: "one.hpp", sourceName: "one.cpp" },
     ModuleEmission { modulePath: "/two.do", header: "", source: "", headerName: "two.hpp", sourceName: "two.cpp" },
@@ -225,7 +225,7 @@ export function testDoesNotApplyCxxPrecompiledHeaderToObjectiveCxxSources(): voi
   Assert.equal(objectiveCxxTask.arguments.contains("/tmp/generated/doof_runtime.hpp.pch"), false)
 }
 
-export function testBatchesCompileTasksAcrossAtMostEightWorkers(): void {
+export function testBatchesCompileTasksAcrossAtMostEightWorkers(): none {
   let tasks: NativeCompileTask[] = []
   for index of 0..<19 {
     tasks.push(NativeCompileTask {
@@ -251,7 +251,7 @@ export function testBatchesCompileTasksAcrossAtMostEightWorkers(): void {
   Assert.equal(batchNativeCompileTasks([]).length, 0)
 }
 
-export function testPlansGccAdjacentPrecompiledRuntime(): void {
+export function testPlansGccAdjacentPrecompiledRuntime(): none {
   modules := [
     ModuleEmission { modulePath: "/one.do", header: "", source: "", headerName: "one.hpp", sourceName: "one.cpp" },
     ModuleEmission { modulePath: "/two.do", header: "", source: "", headerName: "two.hpp", sourceName: "two.cpp" },
@@ -268,7 +268,7 @@ export function testPlansGccAdjacentPrecompiledRuntime(): void {
   Assert.equal(plan.compileTasks[0].arguments.contains("-include-pch"), false)
 }
 
-export function testPlansStandaloneEmscriptenWasmLink(): void {
+export function testPlansStandaloneEmscriptenWasmLink(): none {
   plan := planNativeCompile(
     "em++",
     "/tmp/generated",

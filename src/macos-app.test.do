@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 import { MacOSAppConfig, macOSCodesignArguments, macOSPackageArchiveName, renderMacOSInfoPlist } from "./macos-app"
 
-export function testRendersMacOSInfoPlistAndCustomMetadata(): void {
+export function testRendersMacOSInfoPlistAndCustomMetadata(): none {
   custom: JsonObject := {}
   custom.set("NSLocalNetworkUsageDescription", "Find nearby players & hosts.")
   services: JsonValue[] := ["_doof._tcp"]
@@ -24,7 +24,7 @@ export function testRendersMacOSInfoPlistAndCustomMetadata(): void {
   Assert.stringContains(plist, "<array>")
 }
 
-export function testPlansMacOSPackageNamesAndSigningArguments(): void {
+export function testPlansMacOSPackageNamesAndSigningArguments(): none {
   Assert.equal(macOSPackageArchiveName("Demo", "1.0 beta"), "Demo-1.0-beta-macos.zip")
   arguments := macOSCodesignArguments("/tmp/Demo.app", "-", "ad-hoc", "/tmp/entitlements.plist")
   Assert.equal(arguments.contains("--timestamp=none"), true)

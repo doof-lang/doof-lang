@@ -287,7 +287,7 @@ int32_t digitValue(char32_t c) {
 }
 
 void Thread::sleep(std::shared_ptr<Duration> duration) {
-    _threadSleepNanos(duration->toNanos());
+    ::doof_time::thread_sleep_nanos(duration->toNanos());
 }
 doof::JsonObject Thread::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();

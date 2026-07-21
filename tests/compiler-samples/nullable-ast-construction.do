@@ -12,11 +12,11 @@ class Right {
 type Expression = Left | Right
 
 class ReturnStatement {
-  value: Expression | null
+  value: Expression | none
 }
 
 function makeReturn(): ReturnStatement {
-  let value: Expression | null = null
+  let value: Expression | none = none
   return ReturnStatement { value }
 }
 

@@ -61,9 +61,9 @@ export function parseStdCatalog(source: string): Result<StdCatalog, string> {
   return Success(StdCatalog { schemaVersion, compilerVersion, digest: digest.toLowerCase(), packages: result })
 }
 
-export function stdCatalogPackage(catalog: StdCatalog, name: string): StdCatalogPackage | null {
+export function stdCatalogPackage(catalog: StdCatalog, name: string): StdCatalogPackage | none {
   for package of catalog.packages { if package.name == name { return package } }
-  return null
+  return none
 }
 
 function catalogString(object: JsonObject, name: string): Result<string, string> {

@@ -50,19 +50,19 @@ function commandText(command: string, arguments: string[], description: string):
   return Success(output)
 }
 
-function runRequiredCommand(command: string, arguments: string[], description: string): Result<void, string> {
+function runRequiredCommand(command: string, arguments: string[], description: string): Result<none, string> {
   try ignored := commandText(command, arguments, description)
   return Success()
 }
 
-function ensureDirectory(path: string): void {
+function ensureDirectory(path: string): none {
   if path == "" || exists(path) { return }
   parent := parentPath(path)
   if parent != path { ensureDirectory(parent) }
   try! mkdir(path)
 }
 
-function copyPath(sourcePath: string, destinationPath: string): void {
+function copyPath(sourcePath: string, destinationPath: string): none {
   if isDirectory(sourcePath) {
     ensureDirectory(destinationPath)
     for entry of try! readDir(sourcePath) {
@@ -74,7 +74,7 @@ function copyPath(sourcePath: string, destinationPath: string): void {
   try! writeBlob(destinationPath, try! readBlob(sourcePath))
 }
 
-function removeTree(path: string): void {
+function removeTree(path: string): none {
   if !exists(path) { return }
   if isDirectory(path) {
     for entry of try! readDir(path) { removeTree(outputPath(path, entry.name)) }
@@ -82,7 +82,7 @@ function removeTree(path: string): void {
   try! remove(path)
 }
 
-function appendUnique(values: string[], value: string): void {
+function appendUnique(values: string[], value: string): none {
   if !values.contains(value) { values.push(value) }
 }
 
@@ -92,7 +92,7 @@ export function configureIOSNativeBuild(
   config: IOSAppConfig,
   destination: string,
   native: NativeBuildPlan,
-): Result<void, string> {
+): Result<none, string> {
   if hostPlatform() != "macos" { return Failure("iOS app builds are only supported on macOS") }
   sdk := if destination == "device" then "iphoneos" else "iphonesimulator"
   try sdkPath := commandText("xcrun", ["--sdk", sdk, "--show-sdk-path"], "resolving the iOS SDK")
@@ -138,7 +138,7 @@ function globMatches(pattern: string, value: string, patternIndex: int = 0, valu
   return globMatches(pattern, value, patternIndex, valueIndex + 1)
 }
 
-function collectResourceFiles(path: string, baseDirectory: string, pattern: string, results: string[]): void {
+function collectResourceFiles(path: string, baseDirectory: string, pattern: string, results: string[]): none {
   if isDirectory(path) {
     for entry of try! readDir(path) { collectResourceFiles(outputPath(path, entry.name), baseDirectory, pattern, results) }
     return
@@ -149,7 +149,7 @@ function collectResourceFiles(path: string, baseDirectory: string, pattern: stri
   if globMatches(relativePattern, relative) { results.push(path) }
 }
 
-function copyIOSResources(config: IOSAppConfig, appPath: string): Result<void, string> {
+function copyIOSResources(config: IOSAppConfig, appPath: string): Result<none, string> {
   let destinations: string[] = []
   for resource of config.resources {
     let files: string[] = []
@@ -177,7 +177,7 @@ function copyIOSResources(config: IOSAppConfig, appPath: string): Result<void, s
   return Success()
 }
 
-function compileIOSIcon(config: IOSAppConfig, appPath: string, destination: string, buildDirectory: string): Result<void, string> {
+function compileIOSIcon(config: IOSAppConfig, appPath: string, destination: string, buildDirectory: string): Result<none, string> {
   if config.iconPath == "" { return Success() }
   catalogPath := outputPath(buildDirectory, "Assets.xcassets")
   iconSetPath := outputPath(catalogPath, "AppIcon.appiconset")
@@ -244,7 +244,7 @@ export function assembleIOSApp(
   return Success(appPath)
 }
 
-function collectNestedCode(path: string, results: string[]): void {
+function collectNestedCode(path: string, results: string[]): none {
   if !exists(path) { return }
   if isDirectory(path) {
     for entry of try! readDir(path) { collectNestedCode(outputPath(path, entry.name), results) }
@@ -261,7 +261,7 @@ export function signAndArchiveIOSApp(
   bundleId: string,
   config: IOSPackageConfig,
   buildDirectory: string,
-): Result<void, string> {
+): Result<none, string> {
   if hostPlatform() != "macos" { return Failure("iOS Ad Hoc packaging is only supported on macOS") }
   if config.provisioningProfilePath == "" {
     return Failure("No iOS provisioning profile configured; pass --ios-provisioning-profile")

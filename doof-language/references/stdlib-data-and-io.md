@@ -109,7 +109,7 @@ import {
 `createChannel<T>{capacity, highWater, lowWater, keepsAlive}` returns a one-way
 `Tuple<ChannelSender<T>, ChannelReceiver<T>>`. `send(value, key?)` is
 nonblocking and returns `Backpressure.None`/`.High` or `SendError.Full`/`.Closed`.
-A repeated non-null key replaces the queued value in place. Register
+A repeated present key replaces the queued value in place. Register
 `onMessage`, `onReady`, and `onClosed` handlers before pumping the main loop.
 
 `setTimeout` and `setInterval` accept `Duration`, a handler, and optional

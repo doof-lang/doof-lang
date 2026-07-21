@@ -19,6 +19,7 @@ export class Diagnostic {
   message: string
   span: SemanticSpan
   module: string
+  replacement: string = ""
 }
 
 export class Symbol {
@@ -39,7 +40,7 @@ export class ImportBinding {
   sourceName: string
   sourceModule: string
   typeOnly: bool
-  symbol: Symbol | null = null
+  symbol: Symbol | none = none
 }
 
 export class NamespaceBinding {
@@ -158,12 +159,8 @@ export class WeakResolvedType {
   inner: ResolvedType
 }
 
-export class NullType {
-  kind: string = "null"
-}
-
-export class VoidType {
-  kind: string = "void"
+export class NoneType {
+  kind: string = "none"
 }
 
 export class UnknownType {
@@ -177,7 +174,7 @@ export class TypeParameterType {
   kind: string = "type-parameter"
   name: string
   constraintName: string = ""
-  constraint: ResolvedType | null = null
+  constraint: ResolvedType | none = none
 }
 
 /** Compiler-known reflection value returned by `Type.metadata`. */
@@ -194,7 +191,7 @@ export class MethodReflectionResolvedType {
 
 export type ResolvedType = PrimitiveType | ClassType | EnumType | InterfaceType | FunctionType |
   ActorType | PromiseType | ArrayResolvedType | MapResolvedType | SetResolvedType | StreamResolvedType | RangeResolvedType | JsonValueResolvedType | ResultResolvedType | TupleResolvedType | UnionResolvedType | WeakResolvedType |
-  NullType | VoidType | UnknownType | TypeParameterType | ClassMetadataResolvedType | MethodReflectionResolvedType
+  NoneType | UnknownType | TypeParameterType | ClassMetadataResolvedType | MethodReflectionResolvedType
 
 export class TypeSubstitution {
   names: string[] = []
@@ -208,27 +205,27 @@ export class Binding {
   mutable: bool
   span: SemanticSpan
   module: string
-  symbol: Symbol | null = null
+  symbol: Symbol | none = none
   casePattern: string = ""
 }
 
 export class Scope {
-  parent: Scope | null
+  parent: Scope | none
   bindings: Binding[] = []
   typeParams: string[] = []
   typeParamConstraintNames: string[] = []
   typeParamConstraints: ResolvedTypeConstraint[] = []
-  returnType: ResolvedType | null = null
-  thisType: ResolvedType | null = null
+  returnType: ResolvedType | none = none
+  thisType: ResolvedType | none = none
   functionName: string = ""
   inValueYieldBlock: bool = false
-  yieldType: ResolvedType | null = null
+  yieldType: ResolvedType | none = none
   capturesTryErrors: bool = false
   catchErrorTypes: ResolvedType[] = []
 }
 
 export class ResolvedTypeConstraint {
-  type_: ResolvedType | null = null
+  type_: ResolvedType | none = none
 }
 
 export class CheckResult {

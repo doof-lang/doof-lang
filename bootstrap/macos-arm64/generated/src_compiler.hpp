@@ -37,6 +37,7 @@ namespace app_src_compiler_ {
 #include "src_emitter_wasm.hpp"
 #include "src_emitter_names.hpp"
 #include "src_checker.hpp"
+#include "src_diagnostics.hpp"
 #include "src_resolver.hpp"
 #include "src_semantic.hpp"
 

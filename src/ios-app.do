@@ -21,7 +21,7 @@ export class IOSAppConfig {
   displayName: string
   version: string
   iconPath: string = ""
-  infoPlist: JsonObject | null = null
+  infoPlist: JsonObject | none = none
   resources: IOSAppResource[] = []
   embeddedLibraries: IOSEmbeddedLibrary[] = []
   minimumDeploymentTarget: string = "16.0"
@@ -104,7 +104,7 @@ export function renderIOSInfoPlist(config: IOSAppConfig): string {
   body += "\t<key>UIDeviceFamily</key>\n\t<array>\n\t\t<integer>1</integer>\n\t\t<integer>2</integer>\n\t</array>\n"
   body += plistString("UILaunchStoryboardName", "")
   body += "\t<key>UIApplicationSceneManifest</key>\n\t<dict>\n\t\t<key>UIApplicationSupportsMultipleScenes</key>\n\t\t<false/>\n\t</dict>\n"
-  if config.infoPlist != null {
+  if config.infoPlist != none {
     for key, value of config.infoPlist! {
       body += "\t<key>" + escapePlistText(key) + "</key>\n" + renderPlistValue(value, 1)
     }
@@ -190,7 +190,7 @@ function plistIndent(depth: int): string {
 function renderPlistValue(value: JsonValue, depth: int): string {
   indent := plistIndent(depth)
   case value {
-    _: null -> return indent + "<string></string>\n"
+    _: none -> return indent + "<string></string>\n"
     boolean: bool -> return indent + if boolean then "<true/>\n" else "<false/>\n"
     number: int -> return indent + "<integer>" + string(number) + "</integer>\n"
     number: long -> return indent + "<integer>" + string(number) + "</integer>\n"

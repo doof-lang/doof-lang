@@ -1,6 +1,7 @@
 #include "src_driver.hpp"
 #include <cmath>
 #include "src_compiler.hpp"
+#include "src_diagnostics.hpp"
 #include "src_cli.hpp"
 #include "src_external_dependency.hpp"
 #include "src_dependency_policy.hpp"
@@ -33,6 +34,7 @@
 
 namespace app_src_driver_ {
 using namespace ::app_src_compiler_;
+using namespace ::app_src_diagnostics_;
 using namespace ::app_src_cli_;
 using namespace ::app_src_external_dependency_;
 using namespace ::app_src_dependency_policy_;
@@ -89,14 +91,14 @@ doof::Result<std::shared_ptr<NativeCommandResult>, std::string> NativeCommandRes
         if (!(doof::json_is_array(_iterator_output->second))) { return doof::Failure<std::string>{"Field \"output\" expected array but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
         _field_output = [&]() { const auto* _array = doof::json_as_array(_iterator_output->second); auto _values = std::make_shared<std::vector<uint8_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(static_cast<uint8_t>(_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
-        _field_output = std::shared_ptr<std::vector<uint8_t>>{std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{})};
+        _field_output = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
     }
     std::optional<std::string> _field_error;
     if (auto _iterator_error = _object->find("error"); _iterator_error != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
         _field_error = (_lenient ? doof::json_as_string_lenient(_iterator_error->second) : doof::json_as_string(_iterator_error->second));
     } else {
-        _field_error = std::string{std::string("")};
+        _field_error = std::string("");
     }
     auto _iterator_truncated = _object->find("truncated");
     if (_iterator_truncated == _object->end()) { return doof::Failure<std::string>{"Missing required field \"truncated\""}; }
@@ -275,49 +277,49 @@ doof::Result<std::shared_ptr<DriverReachedPackage>, std::string> DriverReachedPa
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceUrl->second) : doof::json_is_string(_iterator_sourceUrl->second)))) { return doof::Failure<std::string>{"Field \"sourceUrl\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceUrl->second))}; }
         _field_sourceUrl = (_lenient ? doof::json_as_string_lenient(_iterator_sourceUrl->second) : doof::json_as_string(_iterator_sourceUrl->second));
     } else {
-        _field_sourceUrl = std::string{std::string("")};
+        _field_sourceUrl = std::string("");
     }
     std::optional<std::string> _field_sourceRef;
     if (auto _iterator_sourceRef = _object->find("sourceRef"); _iterator_sourceRef != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceRef->second) : doof::json_is_string(_iterator_sourceRef->second)))) { return doof::Failure<std::string>{"Field \"sourceRef\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceRef->second))}; }
         _field_sourceRef = (_lenient ? doof::json_as_string_lenient(_iterator_sourceRef->second) : doof::json_as_string(_iterator_sourceRef->second));
     } else {
-        _field_sourceRef = std::string{std::string("")};
+        _field_sourceRef = std::string("");
     }
     std::optional<std::string> _field_sourceCommit;
     if (auto _iterator_sourceCommit = _object->find("sourceCommit"); _iterator_sourceCommit != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceCommit->second) : doof::json_is_string(_iterator_sourceCommit->second)))) { return doof::Failure<std::string>{"Field \"sourceCommit\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceCommit->second))}; }
         _field_sourceCommit = (_lenient ? doof::json_as_string_lenient(_iterator_sourceCommit->second) : doof::json_as_string(_iterator_sourceCommit->second));
     } else {
-        _field_sourceCommit = std::string{std::string("")};
+        _field_sourceCommit = std::string("");
     }
     std::optional<std::string> _field_requestedUrl;
     if (auto _iterator_requestedUrl = _object->find("requestedUrl"); _iterator_requestedUrl != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedUrl->second) : doof::json_is_string(_iterator_requestedUrl->second)))) { return doof::Failure<std::string>{"Field \"requestedUrl\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedUrl->second))}; }
         _field_requestedUrl = (_lenient ? doof::json_as_string_lenient(_iterator_requestedUrl->second) : doof::json_as_string(_iterator_requestedUrl->second));
     } else {
-        _field_requestedUrl = std::string{std::string("")};
+        _field_requestedUrl = std::string("");
     }
     std::optional<std::string> _field_requestedRef;
     if (auto _iterator_requestedRef = _object->find("requestedRef"); _iterator_requestedRef != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedRef->second) : doof::json_is_string(_iterator_requestedRef->second)))) { return doof::Failure<std::string>{"Field \"requestedRef\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedRef->second))}; }
         _field_requestedRef = (_lenient ? doof::json_as_string_lenient(_iterator_requestedRef->second) : doof::json_as_string(_iterator_requestedRef->second));
     } else {
-        _field_requestedRef = std::string{std::string("")};
+        _field_requestedRef = std::string("");
     }
     std::optional<std::string> _field_requestedCommit;
     if (auto _iterator_requestedCommit = _object->find("requestedCommit"); _iterator_requestedCommit != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedCommit->second) : doof::json_is_string(_iterator_requestedCommit->second)))) { return doof::Failure<std::string>{"Field \"requestedCommit\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedCommit->second))}; }
         _field_requestedCommit = (_lenient ? doof::json_as_string_lenient(_iterator_requestedCommit->second) : doof::json_as_string(_iterator_requestedCommit->second));
     } else {
-        _field_requestedCommit = std::string{std::string("")};
+        _field_requestedCommit = std::string("");
     }
     std::optional<bool> _field_mutable_;
     if (auto _iterator_mutable_ = _object->find("mutable"); _iterator_mutable_ != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mutable_->second) : doof::json_is_boolean(_iterator_mutable_->second)))) { return doof::Failure<std::string>{"Field \"mutable\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mutable_->second))}; }
         _field_mutable_ = (_lenient ? doof::json_as_bool_lenient(_iterator_mutable_->second) : doof::json_as_bool(_iterator_mutable_->second));
     } else {
-        _field_mutable_ = bool{false};
+        _field_mutable_ = false;
     }
     return doof::Success<std::shared_ptr<DriverReachedPackage>>{std::make_shared<DriverReachedPackage>(_field_acquisition, _field_manifest, _field_introducedBy, _field_sourceKind, _field_sourceUrl.value(), _field_sourceRef.value(), _field_sourceCommit.value(), _field_requestedUrl.value(), _field_requestedRef.value(), _field_requestedCommit.value(), _field_mutable_.value())};
 }
@@ -356,49 +358,49 @@ doof::Result<std::shared_ptr<DriverAcquiredSource>, std::string> DriverAcquiredS
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceUrl->second) : doof::json_is_string(_iterator_sourceUrl->second)))) { return doof::Failure<std::string>{"Field \"sourceUrl\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceUrl->second))}; }
         _field_sourceUrl = (_lenient ? doof::json_as_string_lenient(_iterator_sourceUrl->second) : doof::json_as_string(_iterator_sourceUrl->second));
     } else {
-        _field_sourceUrl = std::string{std::string("")};
+        _field_sourceUrl = std::string("");
     }
     std::optional<std::string> _field_sourceRef;
     if (auto _iterator_sourceRef = _object->find("sourceRef"); _iterator_sourceRef != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceRef->second) : doof::json_is_string(_iterator_sourceRef->second)))) { return doof::Failure<std::string>{"Field \"sourceRef\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceRef->second))}; }
         _field_sourceRef = (_lenient ? doof::json_as_string_lenient(_iterator_sourceRef->second) : doof::json_as_string(_iterator_sourceRef->second));
     } else {
-        _field_sourceRef = std::string{std::string("")};
+        _field_sourceRef = std::string("");
     }
     std::optional<std::string> _field_sourceCommit;
     if (auto _iterator_sourceCommit = _object->find("sourceCommit"); _iterator_sourceCommit != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceCommit->second) : doof::json_is_string(_iterator_sourceCommit->second)))) { return doof::Failure<std::string>{"Field \"sourceCommit\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceCommit->second))}; }
         _field_sourceCommit = (_lenient ? doof::json_as_string_lenient(_iterator_sourceCommit->second) : doof::json_as_string(_iterator_sourceCommit->second));
     } else {
-        _field_sourceCommit = std::string{std::string("")};
+        _field_sourceCommit = std::string("");
     }
     std::optional<std::string> _field_requestedUrl;
     if (auto _iterator_requestedUrl = _object->find("requestedUrl"); _iterator_requestedUrl != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedUrl->second) : doof::json_is_string(_iterator_requestedUrl->second)))) { return doof::Failure<std::string>{"Field \"requestedUrl\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedUrl->second))}; }
         _field_requestedUrl = (_lenient ? doof::json_as_string_lenient(_iterator_requestedUrl->second) : doof::json_as_string(_iterator_requestedUrl->second));
     } else {
-        _field_requestedUrl = std::string{std::string("")};
+        _field_requestedUrl = std::string("");
     }
     std::optional<std::string> _field_requestedRef;
     if (auto _iterator_requestedRef = _object->find("requestedRef"); _iterator_requestedRef != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedRef->second) : doof::json_is_string(_iterator_requestedRef->second)))) { return doof::Failure<std::string>{"Field \"requestedRef\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedRef->second))}; }
         _field_requestedRef = (_lenient ? doof::json_as_string_lenient(_iterator_requestedRef->second) : doof::json_as_string(_iterator_requestedRef->second));
     } else {
-        _field_requestedRef = std::string{std::string("")};
+        _field_requestedRef = std::string("");
     }
     std::optional<std::string> _field_requestedCommit;
     if (auto _iterator_requestedCommit = _object->find("requestedCommit"); _iterator_requestedCommit != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedCommit->second) : doof::json_is_string(_iterator_requestedCommit->second)))) { return doof::Failure<std::string>{"Field \"requestedCommit\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedCommit->second))}; }
         _field_requestedCommit = (_lenient ? doof::json_as_string_lenient(_iterator_requestedCommit->second) : doof::json_as_string(_iterator_requestedCommit->second));
     } else {
-        _field_requestedCommit = std::string{std::string("")};
+        _field_requestedCommit = std::string("");
     }
     std::optional<bool> _field_mutable_;
     if (auto _iterator_mutable_ = _object->find("mutable"); _iterator_mutable_ != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mutable_->second) : doof::json_is_boolean(_iterator_mutable_->second)))) { return doof::Failure<std::string>{"Field \"mutable\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mutable_->second))}; }
         _field_mutable_ = (_lenient ? doof::json_as_bool_lenient(_iterator_mutable_->second) : doof::json_as_bool(_iterator_mutable_->second));
     } else {
-        _field_mutable_ = bool{false};
+        _field_mutable_ = false;
     }
     return doof::Success<std::shared_ptr<DriverAcquiredSource>>{std::make_shared<DriverAcquiredSource>(_field_acquisition, _field_introducedBy, _field_sourceKind, _field_sourceUrl.value(), _field_sourceRef.value(), _field_sourceCommit.value(), _field_requestedUrl.value(), _field_requestedRef.value(), _field_requestedCommit.value(), _field_mutable_.value())};
 }
@@ -482,10 +484,10 @@ std::string driverSourceDiskPath(std::string logicalPath, std::shared_ptr<std::v
 }
 doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>> loadDriverSource(std::string logicalPath, std::shared_ptr<std::vector<std::shared_ptr<DriverSourceRoot>>> localRoots, std::shared_ptr<std::vector<std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>>> acquisitions) {
     const auto diskPath = driverSourceDiskPath(logicalPath, localRoots, acquisitions);
-    if (!::std_::fs::index::exists(diskPath)) {
+    if (!::doof_fs::exists(diskPath)) {
         return doof::Success<std::shared_ptr<::app_src_semantic_::SourceFile>>{ nullptr };
     }
-    auto _binding_value_6 = ::std_::fs::index::readText(diskPath);
+    auto _binding_value_6 = ::doof_fs::readText(diskPath);
     if (doof::is_failure(_binding_value_6)) {
         const auto& source = _binding_value_6;
         return doof::Failure<std::shared_ptr<::app_src_semantic_::Diagnostic>>{ driverDiagnostic(logicalPath, std::string("Could not read source file ") + doof::to_string(diskPath) + std::string("")) };
@@ -530,7 +532,7 @@ doof::Result<void, std::shared_ptr<::app_src_semantic_::Diagnostic>> registerRea
         }
     }
     const auto manifestPath = ::app_src_module_acquisition_::acquiredManifestPath(acquisition);
-    auto _binding_value_12 = ::std_::fs::index::readText(manifestPath);
+    auto _binding_value_12 = ::doof_fs::readText(manifestPath);
     if (doof::is_failure(_binding_value_12)) {
         const auto& manifestSource = _binding_value_12;
         return doof::Failure<std::shared_ptr<::app_src_semantic_::Diagnostic>>{ driverDiagnostic(manifestPath, std::string("Could not read doof.json for acquired package ") + doof::to_string(acquisition->logicalPrefix) + std::string(" at ") + doof::to_string(manifestPath) + std::string("")) };
@@ -599,7 +601,7 @@ doof::Result<void, std::string> ensureStdPackageReached(std::string packageName)
 }
 std::shared_ptr<::app_src_semantic_::Diagnostic> driverDiagnostic(std::string module, std::string message) {
     auto zero = ::app_src_semantic_::SemanticLocation{0, 0, 0};
-    return std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, ::app_src_semantic_::SemanticSpan{zero, zero}, module);
+    return std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, ::app_src_semantic_::SemanticSpan{zero, zero}, module, std::string(""));
 }
 std::string driverSourceDiskRoot(std::string path) {
     const auto marker = std::string("/src/");
@@ -614,6 +616,10 @@ std::string driverSourceDiskRoot(std::string path) {
 }
 doof::Result<doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>, std::string> sourceLoaderForRequest(std::string entryPath, std::string stdlibRoot, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>> namespaceMappings, std::shared_ptr<::app_src_package_manifest_::PackageManifest> rootManifest, std::string nativePlatform, std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget> externalTarget) {
     std::shared_ptr<std::vector<std::shared_ptr<DriverSourceRoot>>> localRoots = std::make_shared<std::vector<std::shared_ptr<DriverSourceRoot>>>(std::vector<std::shared_ptr<DriverSourceRoot>>{});
+    const auto rootLogicalPrefix = driverRootLogicalPrefix(rootManifest->name, rootManifest->rootDirectory);
+    if (rootLogicalPrefix != driverLogicalPrefix(rootManifest->rootDirectory)) {
+        localRoots->push_back(std::make_shared<DriverSourceRoot>(rootLogicalPrefix, rootManifest->rootDirectory));
+    }
     const auto sourceRoot = driverSourceDiskRoot(entryPath);
     if (sourceRoot != std::string("")) {
         localRoots->push_back(std::make_shared<DriverSourceRoot>(std::string("/src"), sourceRoot));
@@ -690,7 +696,7 @@ doof::Result<void, std::string> configureDeclaredDependencies(std::shared_ptr<::
         acquisitions->push_back(acquisition);
         acquiredSources->push_back(std::make_shared<DriverAcquiredSource>(acquisition, ownerPrefix, sourceKind, sourceUrl, sourceRef, sourceCommit, ((requested->url == std::string("")) ? std::string("") : ::app_src_std_catalog_::canonicalDependencyUrl(requested->url)), requested->ref, requested->commit, mutable_));
         const auto dependencyManifestPath = ::app_src_module_acquisition_::acquiredManifestPath(acquisition);
-        auto _binding_value_24 = ::std_::fs::index::readText(dependencyManifestPath);
+        auto _binding_value_24 = ::doof_fs::readText(dependencyManifestPath);
         if (doof::is_failure(_binding_value_24)) {
             const auto& dependencySource = _binding_value_24;
             return doof::Failure<std::string>{ (std::string("Could not read dependency manifest ") + dependencyManifestPath) };
@@ -768,6 +774,28 @@ std::string driverLogicalPrefix(std::string path) {
     }
     return (std::string("/") + absolutePath);
 }
+std::string driverRootLogicalPrefix(std::string packageName, std::string rootDirectory) {
+    if (doof::string_startsWith(packageName, std::string("std/"))) {
+        return (std::string("/") + packageName);
+    }
+    return driverLogicalPrefix(rootDirectory);
+}
+std::string driverRootLogicalPath(std::string path, std::string rootDirectory, std::string packageName) {
+    if (!doof::string_startsWith(packageName, std::string("std/"))) {
+        return driverLogicalPath(path);
+    }
+    const auto prefix = driverRootLogicalPrefix(packageName, rootDirectory);
+    const auto absolutePath = [&]() -> std::string { auto _try_value = ::std_::path::index::absolute(path); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+    const auto absoluteRoot = [&]() -> std::string { auto _try_value = ::std_::path::index::absolute(rootDirectory); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+    if (absolutePath == absoluteRoot) {
+        return prefix;
+    }
+    const auto rootPrefix = (doof::string_endsWith(absoluteRoot, std::string("/")) ? absoluteRoot : (absoluteRoot + std::string("/")));
+    if (doof::string_startsWith(absolutePath, rootPrefix)) {
+        return ((prefix + std::string("/")) + doof::string_substring(absolutePath, static_cast<int32_t>(rootPrefix.size()), static_cast<int32_t>(absolutePath.size())));
+    }
+    return driverLogicalPath(absolutePath);
+}
 std::string driverPackageOutputRoot(std::string logicalPrefix) {
     auto start = 0;
     while ((start < static_cast<int32_t>(logicalPrefix.size())) && (logicalPrefix[start] == U'\u002F')) {
@@ -776,11 +804,11 @@ std::string driverPackageOutputRoot(std::string logicalPrefix) {
     return doof::string_substring(logicalPrefix, start, static_cast<int32_t>(logicalPrefix.size()));
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>> projectNativePackages(std::string projectRoot, std::shared_ptr<::app_src_package_manifest_::PackageManifest> projectManifest, std::string stdlibRoot) {
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>> packages = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>>(std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>{std::make_shared<::app_src_emitter_project_::NativePackageInput>(driverLogicalPrefix(projectRoot), std::string(""), projectManifest)});
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>> packages = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>>(std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>{std::make_shared<::app_src_emitter_project_::NativePackageInput>(driverRootLogicalPrefix(projectManifest->name, projectRoot), std::string(""), projectManifest)});
     if ((projectManifest->target == std::string("wasm")) && (stdlibRoot != std::string(""))) {
         const auto jsonRoot = ::app_src_project_::joinPath(stdlibRoot, std::string("json"));
         const auto jsonManifestPath = ::app_src_project_::joinPath(jsonRoot, std::string("doof.json"));
-        const auto jsonManifest = [&]() -> std::shared_ptr<::app_src_package_manifest_::PackageManifest> { auto _try_value = ::app_src_package_manifest_::parsePackageManifest([&]() -> std::string { auto _try_value = ::std_::fs::index::readText(jsonManifestPath); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }(), jsonManifestPath, jsonRoot, std::string("wasm"), std::string("")); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+        const auto jsonManifest = [&]() -> std::shared_ptr<::app_src_package_manifest_::PackageManifest> { auto _try_value = ::app_src_package_manifest_::parsePackageManifest([&]() -> std::string { auto _try_value = ::doof_fs::readText(jsonManifestPath); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }(), jsonManifestPath, jsonRoot, std::string("wasm"), std::string("")); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
         packages->push_back(std::make_shared<::app_src_emitter_project_::NativePackageInput>(std::string("/std/json"), std::string("std/json"), jsonManifest));
     }
     const auto& _iterable_33 = configuredDriverSourceState->reachedPackages;
@@ -790,39 +818,39 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_project_::NativePa
     return packages;
 }
 void ensureOutputDirectory(std::string path) {
-    if ((path == std::string("")) || ::std_::fs::index::exists(path)) {
+    if ((path == std::string("")) || ::doof_fs::exists(path)) {
         return;
     }
     const auto parent = ::app_src_project_::parentPath(path);
     if (parent != path) {
         ensureOutputDirectory(parent);
     }
-    [&]() -> void { auto _try_value = ::std_::fs::index::mkdir(path); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+    [&]() -> void { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
 }
 void materializeNativeCopy(std::string sourcePath, std::string outputPath) {
-    if (::std_::fs::index::isDirectory(sourcePath)) {
+    if (::doof_fs::isDirectory(sourcePath)) {
         ensureOutputDirectory(outputPath);
-        const auto& _iterable_34 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::std_::fs::index::readDir(sourcePath); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+        const auto& _iterable_34 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(sourcePath); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_34) {
             materializeNativeCopy(::app_src_project_::joinPath(sourcePath, entry->name), ::app_src_project_::joinPath(outputPath, entry->name));
         }
         return;
     }
     ensureOutputDirectory(::app_src_project_::parentPath(outputPath));
-    [&]() -> void { auto _try_value = ::std_::fs::index::writeBlob(outputPath, [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::std_::fs::index::readBlob(sourcePath); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+    [&]() -> void { auto _try_value = ::doof_fs::writeBlob(outputPath, [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(sourcePath); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
 }
 void materializeProject(std::string outputDirectory, std::shared_ptr<::app_src_emitter_project_::ProjectEmission> project) {
     ensureOutputDirectory(outputDirectory);
     const auto& _iterable_35 = project->modules;
     for (const auto& module : *_iterable_35) {
-        [&]() -> void { auto _try_value = ::std_::fs::index::writeText(driverOutputPath(outputDirectory, module->headerName), module->header); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
-        [&]() -> void { auto _try_value = ::std_::fs::index::writeText(driverOutputPath(outputDirectory, module->sourceName), module->source); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+        [&]() -> void { auto _try_value = ::doof_fs::writeText(driverOutputPath(outputDirectory, module->headerName), module->header); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+        [&]() -> void { auto _try_value = ::doof_fs::writeText(driverOutputPath(outputDirectory, module->sourceName), module->source); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
     }
     const auto& _iterable_36 = project->supportFiles;
     for (const auto& supportFile : *_iterable_36) {
         const auto outputPath = driverOutputPath(outputDirectory, supportFile->relativePath);
         ensureOutputDirectory(::app_src_project_::parentPath(outputPath));
-        [&]() -> void { auto _try_value = ::std_::fs::index::writeText(outputPath, supportFile->content); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+        [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath, supportFile->content); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
     }
     const auto& _iterable_37 = project->nativeCopies;
     for (const auto& nativeCopy : *_iterable_37) {
@@ -833,14 +861,14 @@ void materializeExecutableResources(std::shared_ptr<std::vector<std::shared_ptr<
     const auto& _iterable_38 = resources;
     for (const auto& resource : *_iterable_38) {
         const auto destinationRoot = driverOutputPath(outputDirectory, resource->destination);
-        const auto outputPath = (::std_::fs::index::isDirectory(resource->sourcePath) ? destinationRoot : driverOutputPath(destinationRoot, ::app_src_project_::fileName(resource->sourcePath)));
+        const auto outputPath = (::doof_fs::isDirectory(resource->sourcePath) ? destinationRoot : driverOutputPath(destinationRoot, ::app_src_project_::fileName(resource->sourcePath)));
         materializeNativeCopy(resource->sourcePath, outputPath);
     }
 }
 void materializeRuntimeHeader(std::string outputDirectory) {
     auto sourcePath = ::app_src_project_::environmentValue(std::string("DOOF_RUNTIME_HEADER"));
-    const auto runtimeSource = ((sourcePath == std::string("")) ? ::std_::fs::index::readTextResource(std::string("doof_runtime.h")) : ::std_::fs::index::readText(sourcePath));
-    [&]() -> void { auto _try_value = ::std_::fs::index::writeText(driverOutputPath(outputDirectory, std::string("doof_runtime.hpp")), [&]() -> std::string { auto _try_value = runtimeSource; if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+    const auto runtimeSource = ((sourcePath == std::string("")) ? ::std_::fs::index::readTextResource(std::string("doof_runtime.h")) : ::doof_fs::readText(sourcePath));
+    [&]() -> void { auto _try_value = ::doof_fs::writeText(driverOutputPath(outputDirectory, std::string("doof_runtime.hpp")), [&]() -> std::string { auto _try_value = runtimeSource; if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
 }
 std::string buildOutputName(std::string projectName) {
     return doof::string_replaceAll(doof::string_replaceAll(projectName, std::string("/"), std::string("-")), std::string("\\"), std::string("-"));
@@ -945,16 +973,16 @@ void printDiagnostics(std::shared_ptr<std::vector<std::shared_ptr<::app_src_sema
     }
 }
 void collectTestFiles(std::string path, std::shared_ptr<std::vector<std::string>> results, bool root) {
-    if (!::std_::fs::index::isDirectory(path)) {
+    if (!::doof_fs::isDirectory(path)) {
         if (doof::string_endsWith(path, std::string(".do"))) {
             results->push_back(path);
         }
         return;
     }
-    if (!root && ::std_::fs::index::exists(::app_src_project_::joinPath(path, std::string("doof.json")))) {
+    if (!root && ::doof_fs::exists(::app_src_project_::joinPath(path, std::string("doof.json")))) {
         return;
     }
-    const auto entries = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::std_::fs::index::readDir(path); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+    const auto entries = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
     const auto& _iterable_45 = entries;
     for (const auto& entry : *_iterable_45) {
         const auto entryPath = ::app_src_project_::joinPath(path, entry->name);
@@ -1085,28 +1113,28 @@ std::string writeCoverageHtml(std::shared_ptr<::app_src_test_runner_::CoverageRe
         const auto indexHref = (doof::string_repeat(std::string("../"), depth) + ::app_src_project_::fileName(indexPath));
         const auto sourcePath = ::app_src_project_::joinPath(rootDirectory, file->path);
         auto source = std::string("");
-        if (::std_::fs::index::exists(sourcePath)) {
-            (source = [&]() -> std::string { auto _try_value = ::std_::fs::index::readText(sourcePath); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }());
+        if (::doof_fs::exists(sourcePath)) {
+            (source = [&]() -> std::string { auto _try_value = ::doof_fs::readText(sourcePath); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }());
         }
-        [&]() -> void { auto _try_value = ::std_::fs::index::writeText(pagePath, ::app_src_test_runner_::renderCoverageFileHtml(file, source, indexHref)); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+        [&]() -> void { auto _try_value = ::doof_fs::writeText(pagePath, ::app_src_test_runner_::renderCoverageFileHtml(file, source, indexHref)); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
     }
-    [&]() -> void { auto _try_value = ::std_::fs::index::writeText(indexPath, ::app_src_test_runner_::renderCoverageHtml(report, filesDirectoryName)); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+    [&]() -> void { auto _try_value = ::doof_fs::writeText(indexPath, ::app_src_test_runner_::renderCoverageHtml(report, filesDirectoryName)); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
     return indexPath;
 }
 int32_t testRequest(std::shared_ptr<::app_src_cli_::CliRequest> request) {
     const auto target = [&]() -> std::string { auto _try_value = ::std_::path::index::absolute(request->entry); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
-    if (!::std_::fs::index::exists(target)) {
+    if (!::doof_fs::exists(target)) {
         doof::println((std::string("error: File not found: ") + target));
         return 1;
     }
-    const auto rootDirectory = (::std_::fs::index::isDirectory(target) ? target : ::app_src_project_::parentPath(target));
+    const auto rootDirectory = (::doof_fs::isDirectory(target) ? target : ::app_src_project_::parentPath(target));
     std::shared_ptr<std::vector<std::string>> testFiles = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     collectTestFiles(target, testFiles, true);
     (testFiles = sortedTestFiles(testFiles));
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_test_runner_::DiscoveredTest>>> discovered = std::make_shared<std::vector<std::shared_ptr<::app_src_test_runner_::DiscoveredTest>>>(std::vector<std::shared_ptr<::app_src_test_runner_::DiscoveredTest>>{});
     const auto& _iterable_54 = testFiles;
     for (const auto& testFile : *_iterable_54) {
-        auto _binding_value_55 = ::std_::fs::index::readText(testFile);
+        auto _binding_value_55 = ::doof_fs::readText(testFile);
         if (doof::is_failure(_binding_value_55)) {
             const auto& source = _binding_value_55;
             doof::println((std::string("error: Could not read test file: ") + testFile));
@@ -1160,9 +1188,10 @@ int32_t testRequest(std::shared_ptr<::app_src_cli_::CliRequest> request) {
         const auto outputDirectory = ::app_src_project_::joinPath(::app_src_project_::joinPath(buildRoot, std::string(".doof-tests")), safeTestOutputName(::app_src_test_runner_::testDisplayPath(rootDirectory, testFile)));
         const auto harnessPath = ::app_src_project_::joinPath(outputDirectory, std::string("__doof_tests__.do"));
         ensureOutputDirectory(outputDirectory);
-        [&]() -> void { auto _try_value = ::std_::fs::index::writeText(harnessPath, ::app_src_test_runner_::generateTestHarness(harnessPath, moduleTests)); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+        [&]() -> void { auto _try_value = ::doof_fs::writeText(harnessPath, ::app_src_test_runner_::generateTestHarness(harnessPath, moduleTests)); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
         const auto stdlibRoot = ::app_src_project_::environmentValue(std::string("DOOF_STDLIB_ROOT"));
-        std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>> namespaceMappings = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>(std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>{std::make_shared<::app_src_emitter_names_::ModuleNamespaceMapping>(driverLogicalPrefix(project->rootDirectory), project->name, std::string(""))});
+        const auto rootLogicalPrefix = driverRootLogicalPrefix(project->name, project->rootDirectory);
+        std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>> namespaceMappings = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>(std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>{std::make_shared<::app_src_emitter_names_::ModuleNamespaceMapping>(rootLogicalPrefix, project->name, std::string(""))});
         auto _binding_value_60 = sourceLoaderForRequest(harnessPath, stdlibRoot, namespaceMappings, project->manifest, std::string(""), nullptr);
         if (doof::is_failure(_binding_value_60)) {
             const auto error = doof::failure_error(_binding_value_60);
@@ -1170,9 +1199,11 @@ int32_t testRequest(std::shared_ptr<::app_src_cli_::CliRequest> request) {
             return 1;
         }
         const auto loader = doof::success_value(_binding_value_60);
-        const auto result = ::app_src_compiler_::compileWithLoader(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>(std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>{}), driverLogicalPath(harnessPath), loader, namespaceMappings, std::string("executable"), request->coverage);
+        const auto result = ::app_src_compiler_::compileWithLoader(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>(std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>{}), driverRootLogicalPath(harnessPath, project->rootDirectory, project->name), loader, namespaceMappings, std::string("executable"), request->coverage);
         if (static_cast<int32_t>((result->diagnostics)->size()) > 0) {
             printDiagnostics(result->diagnostics);
+        }
+        if (::app_src_diagnostics_::hasErrorDiagnostics(result->diagnostics)) {
             return 1;
         }
         if (request->listOnly) {
@@ -1254,7 +1285,7 @@ int32_t testRequest(std::shared_ptr<::app_src_cli_::CliRequest> request) {
         printCoverageSummary(report);
         const auto outputPath = ((request->coverageOutput == std::string("")) ? ::app_src_project_::joinPath(::app_src_project_::joinPath(rootDirectory, std::string("build")), std::string("coverage/doof-test-coverage.json")) : [&]() -> std::string { auto _try_value = ::std_::path::index::absolute(request->coverageOutput); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }());
         ensureOutputDirectory(::app_src_project_::parentPath(outputPath));
-        [&]() -> void { auto _try_value = ::std_::fs::index::writeText(outputPath, ::app_src_test_runner_::renderCoverageJson(report)); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+        [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath, ::app_src_test_runner_::renderCoverageJson(report)); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
         doof::println((std::string("Coverage report written to ") + outputPath));
         const auto htmlPath = writeCoverageHtml(report, outputPath, rootDirectory);
         doof::println((std::string("Coverage HTML report written to ") + htmlPath));
@@ -1278,9 +1309,9 @@ int32_t emitRequest(std::shared_ptr<::app_src_cli_::CliRequest> request) {
     const auto externalTarget = doof::success_value(_binding_value_66);
     const auto rootManifest = project->manifest;
     const auto entryPath = ::app_src_project_::joinPath(project->rootDirectory, project->entry);
-    const auto entry = driverLogicalPath(entryPath);
+    const auto entry = driverRootLogicalPath(entryPath, project->rootDirectory, project->name);
     const auto stdlibRoot = ::app_src_project_::environmentValue(std::string("DOOF_STDLIB_ROOT"));
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>> namespaceMappings = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>(std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>{std::make_shared<::app_src_emitter_names_::ModuleNamespaceMapping>(driverLogicalPrefix(project->rootDirectory), project->name, std::string(""))});
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>> namespaceMappings = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>(std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>{std::make_shared<::app_src_emitter_names_::ModuleNamespaceMapping>(driverRootLogicalPrefix(project->name, project->rootDirectory), project->name, std::string(""))});
     auto _binding_value_67 = sourceLoaderForRequest(entryPath, stdlibRoot, namespaceMappings, rootManifest, nativePlatform, externalTarget);
     if (doof::is_failure(_binding_value_67)) {
         const auto error = doof::failure_error(_binding_value_67);
@@ -1300,6 +1331,8 @@ int32_t emitRequest(std::shared_ptr<::app_src_cli_::CliRequest> request) {
     const auto result = ::app_src_compiler_::compileWithLoader(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>(std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>{}), entry, loader, namespaceMappings, entryMode, false);
     if (static_cast<int32_t>((result->diagnostics)->size()) > 0) {
         printDiagnostics(result->diagnostics);
+    }
+    if (::app_src_diagnostics_::hasErrorDiagnostics(result->diagnostics)) {
         return 1;
     }
     if ((request->command == std::string("package")) && ::app_src_dependency_policy_::hasMutableStdPackageInputs(reachedPackageInputs(rootManifest))) {
@@ -1329,7 +1362,7 @@ int32_t emitRequest(std::shared_ptr<::app_src_cli_::CliRequest> request) {
     const auto emission = ::app_src_emitter_project_::planProjectEmission(doof::unwrap_optional(result->emission), projectNativePackages(project->rootDirectory, rootManifest, stdlibRoot));
     materializeProject(outputDirectory, emission);
     materializeRuntimeHeader(outputDirectory);
-    [&]() -> void { auto _try_value = ::std_::fs::index::writeText(driverOutputPath(outputDirectory, std::string("provenance.json")), ::app_src_provenance_::renderBuildProvenance(reachedPackageInputs(rootManifest), externalInputs, emission->nativeBuild, configuredDriverSourceState->stdCatalog)); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
+    [&]() -> void { auto _try_value = ::doof_fs::writeText(driverOutputPath(outputDirectory, std::string("provenance.json")), ::app_src_provenance_::renderBuildProvenance(reachedPackageInputs(rootManifest), externalInputs, emission->nativeBuild, configuredDriverSourceState->stdCatalog)); if (doof::is_failure(_try_value)) doof::panic("try! failed");  }();
     if (!doof::is_null(project->iosApp)) {
         auto _binding_value_71 = ::app_src_ios_app_driver_::configureIOSNativeBuild(outputDirectory, doof::unwrap_optional(project->iosApp), iosDestination, emission->nativeBuild);
         if (doof::is_failure(_binding_value_71)) {

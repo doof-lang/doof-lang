@@ -13,7 +13,7 @@ Doof treats functions as first-class values. Use `function <name>` for named cal
 ```javascript
 function double(x: int): int => x * 2
 
-function greet(name: string): void => print("Hello, " + name)
+function greet(name: string): none => print("Hello, " + name)
 ```
 
 ### Block Form
@@ -27,7 +27,7 @@ function factorial(n: int): int {
 }
 ```
 
-Block-bodied functions with a non-`void` return type must not fall through to
+Block-bodied functions with a non-`none` return type must not fall through to
 their closing brace. Every reachable path must return a value, call `panic(...)`,
 or otherwise be unable to complete normally (for example, an unconditional
 `while true` loop). A missing `else`, a loop that can `break`, or a `case`
@@ -43,24 +43,19 @@ function choose(flag: bool): int {
 }
 ```
 
-`void` functions may fall through normally. Expression-bodied functions are
-already value-producing and are checked against their declared or inferred
-return type as usual.
+`none` functions may fall through normally. Expression-bodied functions are
+checked against their declared return type.
 
-### Return Type Inference
+### Omitted Return Types
 
-The return type can be inferred from the body in unambiguous cases:
+Omitting a named function or method's return annotation makes its return type
+`none`. This rule also applies when the declaration is imported. A function
+that returns a value must declare its return type explicitly.
 
 ```javascript
-function double(x: int) => x * 2  // Returns int (inferred)
+function logReady() { println("ready") } // Returns none
 
-// Ambiguous cases require annotation
-function mixed(flag: bool): int | string {
-    if flag {
-        return 1
-    }
-    return "hello"
-}
+function double(x: int): int => x * 2
 ```
 
 ### Calling Functions
@@ -119,7 +114,7 @@ The same named-call form applies to methods and imported functions.
 Doof provides a built-in `SourceLocation` class and a special `@caller` default-expression intrinsic for call-site attribution.
 
 ```doof
-function debug(message: string, source: SourceLocation = @caller): void {
+function debug(message: string, source: SourceLocation = @caller): none {
     println(source.fileName + ":" + string(source.line) + ":" + source.functionName)
 }
 ```
@@ -145,13 +140,13 @@ Rules:
 This makes wrapper APIs straightforward:
 
 ```doof
-function assert(condition: bool, message: string, source: SourceLocation = @caller): void {
+function assert(condition: bool, message: string, source: SourceLocation = @caller): none {
     if !condition {
         panic("Assertion failed at " + source.fileName + ":" + string(source.line) + ": " + message)
     }
 }
 
-function assertEqual<T>(left: T, right: T, message: string, source: SourceLocation = @caller): void {
+function assertEqual<T>(left: T, right: T, message: string, source: SourceLocation = @caller): none {
     assert(left == right, message, source)
 }
 ```
@@ -197,7 +192,7 @@ export function checkPassword(candidate: string, stored: string): bool {
 Attempting to export a private function is a compile error:
 
 ```doof
-export private function helper(): void {}  // ❌ Error: cannot export a private declaration
+export private function helper(): none {}  // ❌ Error: cannot export a private declaration
 ```
 
 `private` is also valid on class methods — see [Classes and Interfaces](07-classes-and-interfaces.md) for details.
@@ -234,7 +229,7 @@ compute := (x: int) => {
 When the lambda type is known from context, parameter types can be omitted, but **names must match the signature**:
 
 ```javascript
-type Handler = (msg: string): void
+type Handler = (msg: string): none
 
 let h1: Handler = (msg) => print(msg)          // ✅ Name matches
 let h2: Handler = (message) => print(message)  // ❌ Error: name mismatch
@@ -245,7 +240,7 @@ let h2: Handler = (message) => print(message)  // ❌ Error: name mismatch
 When the complete function signature is known, the parameter list can be omitted entirely — parameter names are inherited from the signature:
 
 ```javascript
-type Handler = (msg: string): void
+type Handler = (msg: string): none
 let handler: Handler = => print(msg)  // msg from signature
 
 type Transform = (x: int): int
@@ -313,7 +308,7 @@ Built-in collection methods use consistent, brief parameter names:
 // Array method signatures:
 map:         (it: T, index: int): U
 filter:      (it: T, index: int): bool
-forEach:     (it: T, index: int): void
+forEach:     (it: T, index: int): none
 find:        (it: T, index: int): bool
 some:        (it: T, index: int): bool
 every:       (it: T, index: int): bool
@@ -353,7 +348,7 @@ users.filter((user) => user.age >= 18)
 When a function call is used as a complete expression statement, a trailing block `{ body }` after the closing `)` is parsed as an additional parameterless lambda argument. The opening `{` must be on the **same line** as the closing `)`. Trailing lambdas are intentionally scoped to read as control-structure-like statement blocks (e.g. `forEach`, `withTransaction`, `withLock`):
 
 ```javascript
-// Void callback — trailing lambda form
+// Payloadless callback — trailing lambda form
 items.forEach() { print(it) }
 
 // Multi-statement trailing lambda
@@ -380,20 +375,22 @@ handler = withLock() { refresh() }
 
 // OK — use explicit lambdas in expression positions
 logged := withTransaction(=> writeAuditLog(it))
-handler = withLock((): void => { refresh() })
+handler = withLock((): none => { refresh() })
 ```
 
 **Restrictions:**
 
 Trailing lambdas have compile-time restrictions that keep them unambiguous and statement-like:
 
-1. **Void-only:** The target callback parameter must return `void`. If the expected lambda type has a non-void return type, the trailing form is rejected — use an explicit lambda instead:
+1. **Payloadless only:** The target callback parameter must return `none`. If
+   the expected lambda type returns a value, the trailing form is rejected—use
+   an explicit lambda instead:
 
 ```javascript
-// OK — void callback
+// OK — none callback
 items.forEach() { print(it) }
 
-// ERROR — non-void callback; use explicit lambda
+// ERROR — value-returning callback; use explicit lambda
 items.map() { it * 2 }           // ✗ compile error
 items.map(=> it * 2)             // ✓ explicit parameterless lambda
 items.map((it) => it * 2)        // ✓ explicit lambda with params
@@ -445,7 +442,7 @@ items.forEach()
 Function types include parameter names as part of the type signature:
 
 ```javascript
-type Callback = (value: int, description: string): void
+type Callback = (value: int, description: string): none
 type Predicate<T> = (item: T): bool
 type Transform = (input: int): int
 type BinaryOp = (left: int, right: int): int

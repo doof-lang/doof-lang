@@ -7,7 +7,7 @@ import {
   SourceSpan, AstLocation, AssignmentExpression, BinaryExpression,
   UnaryExpression, MemberExpression, IndexExpression, CallExpression,
   IntLiteral, LongLiteral, FloatLiteral, DoubleLiteral, ArrayLiteral,
-  StringLiteral, CharLiteral, BoolLiteral, NullLiteral,
+  StringLiteral, CharLiteral, BoolLiteral, NoneLiteral,
   ThisExpression, CallerExpression, IfExpression, LambdaExpression,
   TupleLiteral, ObjectLiteral, ConstructExpression, DotShorthand,
   AsyncExpression, RetireExpression, ActorCreationExpression,
@@ -215,7 +215,7 @@ function parseCall(parser: Parser, callee: Expression, typeArgs: TypeAnnotation[
   while !parser.check(TokenType.RightParen) && !parser.atEnd() {
     start := parser.location()
     value := parser.parseExpression()
-    args.push(CallArgument { name: null, value, span: parser.span(start) })
+    args.push(CallArgument { name: none, value, span: parser.span(start) })
     if !parser.match(TokenType.Comma) { break }
   }
   parser.expect(TokenType.RightParen)
@@ -268,7 +268,8 @@ function parsePrimary(parser: Parser): Expression {
   }
   if parser.match(TokenType.True) { return BoolLiteral { kind: "bool-literal", value: true, span: parser.span(start) } }
   if parser.match(TokenType.False) { return BoolLiteral { kind: "bool-literal", value: false, span: parser.span(start) } }
-  if parser.match(TokenType.Null) { return NullLiteral { kind: "null-literal", span: parser.span(start) } }
+  if parser.match(TokenType.None) { return NoneLiteral { kind: "none-literal", sourceSpelling: "none", span: parser.span(start) } }
+  if parser.match(TokenType.Null) { return NoneLiteral { kind: "none-literal", sourceSpelling: "null", span: parser.span(start) } }
   if parser.match(TokenType.This) { return ThisExpression { kind: "this-expression", span: parser.span(start) } }
   if parser.match(TokenType.CallerIntrinsic) { return CallerExpression { kind: "caller-expression", span: parser.span(start) } }
   if parser.check(TokenType.If) { return parseIfExpression(parser) }
@@ -323,7 +324,7 @@ function parsePrimary(parser: Parser): Expression {
     return Identifier { kind: "identifier", name, span: parser.span(start) }
   }
   parser.fail("Expected an expression")
-  return NullLiteral { kind: "null-literal", span: parser.span(start) }
+  return NoneLiteral { kind: "none-literal", span: parser.span(start) }
 }
 
 function parseCatchExpression(parser: Parser): Expression {
@@ -449,7 +450,7 @@ function parseLambdaParameters(parser: Parser): Parameter[] {
     start := parser.location()
     name := parser.text(parser.expect(TokenType.Identifier, "Expected lambda parameter name"))
     type_ := parser.parseOptionalType()
-    let defaultValue: Expression | null = null
+    let defaultValue: Expression | none = none
     if parser.match(TokenType.Equal) { defaultValue = parser.parseExpression() }
     params.push(Parameter { name, type_, defaultValue, span: parser.span(start) })
     if !parser.match(TokenType.Comma) { break }
@@ -473,25 +474,25 @@ function parseParameterlessLambda(parser: Parser): Expression {
   parser.expect(TokenType.Arrow)
   if parser.check(TokenType.LeftBrace) {
     body := parser.parseBlock()
-    return LambdaExpression { kind: "lambda-expression", params: [], returnType: null, body: body, parameterless: true, trailing: false, span: parser.span(start) }
+    return LambdaExpression { kind: "lambda-expression", params: [], returnType: none, body: body, parameterless: true, trailing: false, span: parser.span(start) }
   }
   body := parser.parseExpression()
-  return LambdaExpression { kind: "lambda-expression", params: [], returnType: null, body: body, parameterless: true, trailing: false, span: parser.span(start) }
+  return LambdaExpression { kind: "lambda-expression", params: [], returnType: none, body: body, parameterless: true, trailing: false, span: parser.span(start) }
 }
 
 function parseObjectLiteral(parser: Parser): Expression {
   start := parser.location()
   parser.expect(TokenType.LeftBrace)
   let properties: ObjectProperty[] = []
-  let spread: Expression | null = null
+  let spread: Expression | none = none
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
     if parser.match(TokenType.Ellipsis) {
       spread = parser.parseExpression()
     } else {
       propertyStart := parser.location()
       let name = ""
-      let key: Expression | null = null
-      let value: Expression | null = null
+      let key: Expression | none = none
+      let value: Expression | none = none
       if parser.check(TokenType.StringLiteral) {
         name = tokenValue(parser.advance(), parser.source)
         parser.expect(TokenType.Colon, "Expected ':' after string map key")
@@ -527,7 +528,7 @@ function parseConstruction(parser: Parser, start: AstLocation, name: string, typ
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
     propertyStart := parser.location()
     propertyName := parser.text(parser.expect(TokenType.Identifier))
-    let value: Expression | null = null
+    let value: Expression | none = none
     if parser.match(TokenType.Colon) { value = parser.parseExpression() }
     properties.push(ObjectProperty { name: propertyName, value, span: parser.span(propertyStart) })
     if !parser.match(TokenType.Comma) { break }

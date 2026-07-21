@@ -7,10 +7,10 @@
 import { Program, SourceSpan } from "./ast"
 import {
   ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, ImportBinding,
-  InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NamespaceBinding, NullType,
+  InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NamespaceBinding, NoneType,
   PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType,
   SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType, TypeParameterType,
-  TypeSubstitution, UnionResolvedType, UnknownType, VoidType, WeakResolvedType,
+  TypeSubstitution, UnionResolvedType, UnknownType, WeakResolvedType,
 } from "./semantic"
 
 export class EmitModuleSurface {
@@ -38,13 +38,13 @@ export class EmitContext {
   currentFunctionName: string = ""
   inValueYieldBlock: bool = false
   catchVarName: string = ""
-  catchResultType: ResolvedType | null = null
+  catchResultType: ResolvedType | none = none
   // Call-site override used while materializing defaults such as @caller.
-  sourceLocationSpanOverride: SourceLocationSpanOverride | null = null
+  sourceLocationSpanOverride: SourceLocationSpanOverride | none = none
   genericTypeParams: string[] = []
   // Concrete Doof monomorphization substitution active while emitting a
   // specialized function, class, or method body.
-  substitution: TypeSubstitution | null = null
+  substitution: TypeSubstitution | none = none
   concreteFunctionNames: string[] = []
   concreteFunctionKeys: string[] = []
   concreteClassNames: string[] = []
@@ -64,7 +64,7 @@ export class EmitContext {
   coverageInstrumentedLines: int[] = []
 }
 
-export function recordCoverageLine(context: EmitContext, line: int): void {
+export function recordCoverageLine(context: EmitContext, line: int): none {
   for existing of context.coverageInstrumentedLines { if existing == line { return } }
   context.coverageInstrumentedLines.push(line)
 }

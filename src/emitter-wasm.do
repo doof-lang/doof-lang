@@ -13,8 +13,8 @@ import { moduleHeaderName, moduleNamespace } from "./emitter-names"
 import { emitContextType } from "./emitter-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, nullableJsonMember } from "./json-semantics"
 import {
-  ArrayResolvedType, ClassType, EnumType, FunctionType, JsonValueResolvedType, NullType,
-  PrimitiveType, ResolvedType, ResultResolvedType, UnionResolvedType, VoidType,
+  ArrayResolvedType, ClassType, EnumType, FunctionType, JsonValueResolvedType, NoneType,
+  PrimitiveType, ResolvedType, ResultResolvedType, UnionResolvedType,
 } from "./semantic"
 
 export class WasmEmission {
@@ -24,7 +24,7 @@ export class WasmEmission {
 
 export function emitWasmSupport(result: AnalysisResult, entry: string): Result<WasmEmission, string> {
   info := findModule(result, entry)
-  if info == null { return Failure("Module not found: " + entry) }
+  if info == none { return Failure("Module not found: " + entry) }
   let exports: FunctionDeclaration[] = []
   collectExportedFunctions(info!, exports)
   let names: string[] = []
@@ -54,7 +54,7 @@ export function emitWasmSupport(result: AnalysisResult, entry: string): Result<W
   return Success(WasmEmission { source, exportNames: names })
 }
 
-function collectExportedFunctions(info: ModuleInfo, result: FunctionDeclaration[]): void {
+function collectExportedFunctions(info: ModuleInfo, result: FunctionDeclaration[]): none {
   for statement of info.program.statements {
     case statement {
       fn: FunctionDeclaration -> { if fn.exported || moduleExportsFunction(info, fn.name) { result.push(fn) } }
@@ -77,7 +77,7 @@ function moduleExportsFunction(info: ModuleInfo, name: string): bool {
   return false
 }
 
-function validateWasmFunction(fn: FunctionDeclaration, analysis: AnalysisResult): Result<void, string> {
+function validateWasmFunction(fn: FunctionDeclaration, analysis: AnalysisResult): Result<none, string> {
   if fn.typeParams.length > 0 { return Failure("WebAssembly export \"" + fn.name + "\" cannot be generic") }
   resolved := fn.resolvedType else {
     return Failure("WebAssembly export \"" + fn.name + "\" is missing a resolved function type")
@@ -85,15 +85,15 @@ function validateWasmFunction(fn: FunctionDeclaration, analysis: AnalysisResult)
   case resolved {
     type_: FunctionType -> {
       for parameter of fn.params {
-        if parameter.resolvedType == null || !isWasmJsonType(parameter.resolvedType!, analysis) {
+        if parameter.resolvedType == none || !isWasmJsonType(parameter.resolvedType!, analysis) {
           return Failure("Parameter \"" + parameter.name + "\" of WebAssembly export \"" + fn.name + "\" must be supported by the JSON ABI")
         }
       }
       case type_.returnType {
-        _: VoidType -> { return Success() }
+        _: NoneType -> { return Success() }
         result: ResultResolvedType -> {
           case result.valueType {
-            _: VoidType -> { }
+            _: NoneType -> { }
             _ -> { if !isWasmJsonType(result.valueType, analysis) { return Failure("Success type of WebAssembly export \"" + fn.name + "\" must be supported by the JSON ABI") } }
           }
           if !isWasmJsonType(result.errorType, analysis) { return Failure("Error type of WebAssembly export \"" + fn.name + "\" must be supported by the JSON ABI") }
@@ -114,16 +114,16 @@ function isWasmJsonType(type_: ResolvedType, analysis: AnalysisResult): bool {
   case type_ {
     _: PrimitiveType -> { return true }
     _: JsonValueResolvedType -> { return true }
-    _: NullType -> { return true }
+    _: NoneType -> { return true }
     _: EnumType -> { return true }
     class_: ClassType -> {
       declaration := findClass(analysis, class_)
-      return declaration != null && canGenerateJsonSerialization(declaration!, allPrograms(analysis)) && canGenerateJsonDeserialization(declaration!, allPrograms(analysis))
+      return declaration != none && canGenerateJsonSerialization(declaration!, allPrograms(analysis)) && canGenerateJsonDeserialization(declaration!, allPrograms(analysis))
     }
     array: ArrayResolvedType -> { return isWasmJsonType(array.elementType, analysis) }
     union_: UnionResolvedType -> {
       inner := nullableJsonMember(union_)
-      return inner != null && isWasmJsonType(inner!, analysis)
+      return inner != none && isWasmJsonType(inner!, analysis)
     }
     _ -> { return false }
   }
@@ -160,11 +160,11 @@ function emitWasmWrapper(fn: FunctionDeclaration, exportName: string, context: E
   }
   call := "::" + moduleNamespace(context.modulePath) + "::" + cppIdentifier(fn.name) + "(" + arguments + ")"
   case type_.returnType {
-    _: VoidType -> { source = source + "        " + call + ";\n        return __doof_wasm_success(doof::json_value(nullptr));\n" }
+    _: NoneType -> { source = source + "        " + call + ";\n        return __doof_wasm_success(doof::json_value(nullptr));\n" }
     result: ResultResolvedType -> {
       source = source + "        auto __result = " + call + ";\n        if (doof::is_failure(__result)) return __doof_wasm_failure(" + emitJsonField("doof::failure_error(__result)", result.errorType, context) + ");\n"
       case result.valueType {
-        _: VoidType -> { source = source + "        return __doof_wasm_success(doof::json_value(nullptr));\n" }
+        _: NoneType -> { source = source + "        return __doof_wasm_success(doof::json_value(nullptr));\n" }
         _ -> { source = source + "        auto __value = doof::success_value(__result);\n        return __doof_wasm_success(" + emitJsonField("__value", result.valueType, context) + ");\n" }
       }
     }
@@ -178,7 +178,7 @@ function emitParameter(parameter: Parameter, context: EmitContext): string {
   name := cppIdentifier(parameter.name)
   iterator := "__it_" + name
   let source = "        auto " + iterator + " = __params->find(\"" + parameter.name + "\");\n"
-  if parameter.defaultValue != null {
+  if parameter.defaultValue != none {
     source = source + "        " + emitContextType(type_, context) + " " + name + ";\n        if (" + iterator + " == __params->end()) { " + name + " = " + emitExpression(parameter.defaultValue!, context, type_) + "; } else {\n"
     source = source + "            if (!(" + emitJsonTypeCheck(iterator + "->second", type_) + ")) return __doof_wasm_failure_message(400, \"Parameter " + parameter.name + " expected " + jsonTypeName(type_) + "\");\n"
     return source + "            " + name + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n        }\n"
@@ -188,9 +188,9 @@ function emitParameter(parameter: Parameter, context: EmitContext): string {
   return source + "        auto " + name + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n"
 }
 
-function findModule(result: AnalysisResult, path: string): ModuleInfo | null {
+function findModule(result: AnalysisResult, path: string): ModuleInfo | none {
   for module of result.modules { if module.path == path { return module } }
-  return null
+  return none
 }
 
 function allPrograms(result: AnalysisResult): Program[] {
@@ -199,9 +199,9 @@ function allPrograms(result: AnalysisResult): Program[] {
   return programs
 }
 
-function findClass(result: AnalysisResult, type_: ClassType): ClassDeclaration | null {
+function findClass(result: AnalysisResult, type_: ClassType): ClassDeclaration | none {
   module := findModule(result, type_.symbol.module)
-  if module == null { return null }
+  if module == none { return none }
   for statement of module!.program.statements {
     case statement {
       class_: ClassDeclaration -> { if class_.name == type_.name { return class_ } }
@@ -214,5 +214,5 @@ function findClass(result: AnalysisResult, type_: ClassType): ClassDeclaration |
       _ -> { }
     }
   }
-  return null
+  return none
 }

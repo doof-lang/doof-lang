@@ -7,7 +7,7 @@ import {
   ArrayType, BoolLiteral, CharLiteral, ClassDeclaration, ClassField, DoubleLiteral, FloatLiteral,
   ExportDeclaration, IntLiteral, InterfaceDeclaration, LongLiteral, NamedType, Program, Statement, StringLiteral, TypeAnnotation, UnionType,
 } from "./ast"
-import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResolvedType, NullType, PrimitiveType, ResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
 
 export class JsonDiscriminatorEntry {
   value: string
@@ -22,23 +22,23 @@ export class JsonDiscriminator {
 // Automatic dispatch deliberately uses only fixed string fields. Shape-based
 // unique-field matching belongs to contextual object literal inference and is
 // not stable enough for decoding untrusted JSON.
-export function interfaceJsonDiscriminator(owner: InterfaceDeclaration, programs: Program[]): JsonDiscriminator | null {
-  if owner.resolvedSymbol == null || owner.resolvedSymbol!.implementations.length == 0 { return null }
+export function interfaceJsonDiscriminator(owner: InterfaceDeclaration, programs: Program[]): JsonDiscriminator | none {
+  if owner.resolvedSymbol == none || owner.resolvedSymbol!.implementations.length == 0 { return none }
   let implementations: ClassDeclaration[] = []
   for symbol of owner.resolvedSymbol!.implementations {
     declaration := findJsonClassDeclaration(programs, symbol)
-    if declaration == null || !canGenerateJsonDeserialization(declaration!, programs) { return null }
+    if declaration == none || !canGenerateJsonDeserialization(declaration!, programs) { return none }
     implementations.push(declaration!)
   }
-  if implementations.length == 0 { return null }
+  if implementations.length == 0 { return none }
   for candidate of implementations[0].fields {
-    if candidate.static_ || !candidate.const_ || candidate.names.length != 1 || candidate.defaultValue == null { continue }
+    if candidate.static_ || !candidate.const_ || candidate.names.length != 1 || candidate.defaultValue == none { continue }
     case candidate.defaultValue! {
       firstValue: StringLiteral -> {
         discriminator := JsonDiscriminator { fieldName: candidate.names[0] }
         for implementation of implementations {
           matching := fixedStringField(implementation, discriminator.fieldName)
-          if matching == null || discriminatorHasValue(discriminator, matching!) { discriminator.entries = []; break }
+          if matching == none || discriminatorHasValue(discriminator, matching!) { discriminator.entries = []; break }
           discriminator.entries.push(JsonDiscriminatorEntry { value: matching!, declaration: implementation })
         }
         if discriminator.entries.length == implementations.length { return discriminator }
@@ -46,21 +46,21 @@ export function interfaceJsonDiscriminator(owner: InterfaceDeclaration, programs
       _ -> { }
     }
   }
-  return null
+  return none
 }
 
-function fixedStringField(owner: ClassDeclaration, name: string): string | null {
+function fixedStringField(owner: ClassDeclaration, name: string): string | none {
   for field of owner.fields {
-    if field.static_ || !field.const_ || field.defaultValue == null { continue }
+    if field.static_ || !field.const_ || field.defaultValue == none { continue }
     let matches = false
     for fieldName of field.names { if fieldName == name { matches = true } }
     if !matches { continue }
     case field.defaultValue! {
       value: StringLiteral -> { return value.value }
-      _ -> { return null }
+      _ -> { return none }
     }
   }
-  return null
+  return none
 }
 
 function discriminatorHasValue(discriminator: JsonDiscriminator, value: string): bool {
@@ -98,24 +98,24 @@ function canGenerateJsonDeserializationInner(owner: ClassDeclaration, programs: 
   return true
 }
 
-export function nullableJsonMember(type_: ResolvedType): ResolvedType | null {
+export function nullableJsonMember(type_: ResolvedType): ResolvedType | none {
   case type_ {
     union_: UnionResolvedType -> { return nullableJsonMemberUnchecked(union_) }
-    _ -> { return null }
+    _ -> { return none }
   }
-  return null
+  return none
 }
 
 export function isGeneratedJsonType(type_: ResolvedType, programs: Program[] = [], visited: string[] = []): bool {
   case type_ {
     _: PrimitiveType -> { return true }
     _: JsonValueResolvedType -> { return true }
-    _: NullType -> { return true }
+    _: NoneType -> { return true }
     _: EnumType -> { return true }
     class_: ClassType -> {
       if class_.symbol.native_ || class_.typeArgs.length > 0 { return false }
       declaration := findJsonClassDeclaration(programs, class_.symbol)
-      if declaration == null { return programs.length == 0 }
+      if declaration == none { return programs.length == 0 }
       return canGenerateJsonDeserializationInner(declaration!, programs, visited)
     }
     array: ArrayResolvedType -> { return isGeneratedJsonType(array.elementType, programs, visited) }
@@ -133,7 +133,7 @@ export function isGeneratedJsonType(type_: ResolvedType, programs: Program[] = [
     }
     union_: UnionResolvedType -> {
       inner := nullableJsonMemberUnchecked(union_)
-      return inner != null && isGeneratedJsonType(inner!, programs, visited)
+      return inner != none && isGeneratedJsonType(inner!, programs, visited)
     }
     _ -> { return false }
   }
@@ -145,7 +145,7 @@ function isGeneratedJsonSerializationType(type_: ResolvedType, programs: Program
     class_: ClassType -> {
       if class_.symbol.native_ || class_.typeArgs.length > 0 { return false }
       declaration := findJsonClassDeclaration(programs, class_.symbol)
-      if declaration == null { return programs.length == 0 }
+      if declaration == none { return programs.length == 0 }
       return canGenerateJsonSerializationInner(declaration!, programs, visited)
     }
     array: ArrayResolvedType -> {
@@ -166,7 +166,7 @@ function isGeneratedJsonSerializationType(type_: ResolvedType, programs: Program
     }
     union_: UnionResolvedType -> {
       inner := nullableJsonMemberUnchecked(union_)
-      if inner == null { return false }
+      if inner == none { return false }
       case inner! {
         _: ClassType -> { return isGeneratedJsonSerializationType(inner!, programs, visited) }
         _: ArrayResolvedType -> { return isGeneratedJsonSerializationType(inner!, programs, visited) }
@@ -178,7 +178,7 @@ function isGeneratedJsonSerializationType(type_: ResolvedType, programs: Program
   }
   if isGeneratedJsonType(type_, programs, visited) { return true }
   case type_ {
-    _: NullType -> { return true }
+    _: NoneType -> { return true }
     map: MapResolvedType -> {
       case map.keyType {
         key: PrimitiveType -> { return key.name == "string" && map.valueType.kind == "json-value" }
@@ -190,19 +190,19 @@ function isGeneratedJsonSerializationType(type_: ResolvedType, programs: Program
   return false
 }
 
-function nullableJsonMemberUnchecked(union_: UnionResolvedType): ResolvedType | null {
-  let value: ResolvedType | null = null
+function nullableJsonMemberUnchecked(union_: UnionResolvedType): ResolvedType | none {
+  let value: ResolvedType | none = none
   let nullCount = 0
   for member of union_.types {
     case member {
-      _: NullType -> { nullCount = nullCount + 1 }
+      _: NoneType -> { nullCount = nullCount + 1 }
       _ -> {
-        if value != null { return null }
+        if value != none { return none }
         value = member
       }
     }
   }
-  if value == null || nullCount != 1 || union_.types.length != 2 { return null }
+  if value == none || nullCount != 1 || union_.types.length != 2 { return none }
   return value
 }
 
@@ -211,9 +211,9 @@ function nullableJsonMemberUnchecked(union_: UnionResolvedType): ResolvedType | 
 // the field, then defer to the resolved semantic type thereafter.
 function isGeneratedJsonDeserializationField(field: ClassField, programs: Program[], visited: string[]): bool {
   if field.weak_ { return false }
-  if field.resolvedType != null { return isGeneratedJsonType(field.resolvedType!, programs, visited) }
-  if field.type_ != null { return isGeneratedJsonDeserializationAnnotation(field.type_!, programs, visited) }
-  if field.defaultValue == null { return false }
+  if field.resolvedType != none { return isGeneratedJsonType(field.resolvedType!, programs, visited) }
+  if field.type_ != none { return isGeneratedJsonDeserializationAnnotation(field.type_!, programs, visited) }
+  if field.defaultValue == none { return false }
   case field.defaultValue! {
     _: IntLiteral -> { return true }
     _: LongLiteral -> { return true }
@@ -229,13 +229,13 @@ function isGeneratedJsonDeserializationField(field: ClassField, programs: Progra
 
 function isGeneratedJsonSerializationField(field: ClassField, programs: Program[], visited: string[]): bool {
   if field.weak_ { return false }
-  if field.resolvedType != null { return isGeneratedJsonSerializationType(field.resolvedType!, programs, visited) }
-  if field.type_ != null { return isGeneratedJsonSerializationAnnotation(field.type_!, programs, visited) }
+  if field.resolvedType != none { return isGeneratedJsonSerializationType(field.resolvedType!, programs, visited) }
+  if field.type_ != none { return isGeneratedJsonSerializationAnnotation(field.type_!, programs, visited) }
   return isGeneratedJsonDeserializationField(field, programs, visited)
 }
 
 function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, programs: Program[], visited: string[]): bool {
-  if annotation.resolvedType != null { return isGeneratedJsonType(annotation.resolvedType!, programs, visited) }
+  if annotation.resolvedType != none { return isGeneratedJsonType(annotation.resolvedType!, programs, visited) }
   case annotation {
     named: NamedType -> {
       if named.name == "byte" || named.name == "int" || named.name == "long" ||
@@ -255,11 +255,11 @@ function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, pr
           _ -> { return false }
         }
       }
-      if named.typeArgs.length != 0 || named.resolvedSymbol == null || named.resolvedSymbol!.native_ { return false }
+      if named.typeArgs.length != 0 || named.resolvedSymbol == none || named.resolvedSymbol!.native_ { return false }
       if named.resolvedSymbol!.kind == "enum" { return true }
       if named.resolvedSymbol!.kind != "class" && named.resolvedSymbol!.kind != "struct" { return false }
       declaration := findJsonClassDeclaration(programs, named.resolvedSymbol!)
-      if declaration == null { return programs.length == 0 }
+      if declaration == none { return programs.length == 0 }
       return canGenerateJsonDeserializationInner(declaration!, programs, visited)
     }
     array: ArrayType -> {
@@ -287,7 +287,7 @@ function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, pr
 }
 
 function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, programs: Program[], visited: string[]): bool {
-  if annotation.resolvedType != null { return isGeneratedJsonSerializationType(annotation.resolvedType!, programs, visited) }
+  if annotation.resolvedType != none { return isGeneratedJsonSerializationType(annotation.resolvedType!, programs, visited) }
   case annotation {
     named: NamedType -> {
       if named.name == "Tuple" {
@@ -304,9 +304,9 @@ function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, prog
           _ -> { return false }
         }
       }
-      if named.resolvedSymbol != null && (named.resolvedSymbol!.kind == "class" || named.resolvedSymbol!.kind == "struct") {
+      if named.resolvedSymbol != none && (named.resolvedSymbol!.kind == "class" || named.resolvedSymbol!.kind == "struct") {
         declaration := findJsonClassDeclaration(programs, named.resolvedSymbol!)
-        if declaration == null { return programs.length == 0 }
+        if declaration == none { return programs.length == 0 }
         return canGenerateJsonSerializationInner(declaration!, programs, visited)
       }
     }
@@ -344,31 +344,31 @@ function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, prog
 }
 
 function markJsonOwnerVisited(owner: ClassDeclaration, visited: string[]): bool {
-  module := if owner.resolvedSymbol == null then "" else owner.resolvedSymbol!.module
+  module := if owner.resolvedSymbol == none then "" else owner.resolvedSymbol!.module
   key := module + "::" + owner.name
   for existing of visited { if existing == key { return true } }
   visited.push(key)
   return false
 }
 
-function findJsonClassDeclaration(programs: Program[], symbol: Symbol): ClassDeclaration | null {
+function findJsonClassDeclaration(programs: Program[], symbol: Symbol): ClassDeclaration | none {
   for program of programs {
     for statement of program.statements {
       declaration := jsonClassDeclaration(statement)
-      if declaration == null || declaration!.resolvedSymbol == null { continue }
+      if declaration == none || declaration!.resolvedSymbol == none { continue }
       if declaration!.resolvedSymbol!.module == symbol.module && declaration!.name == symbol.name { return declaration }
     }
   }
-  return null
+  return none
 }
 
-function jsonClassDeclaration(statement: Statement): ClassDeclaration | null {
+function jsonClassDeclaration(statement: Statement): ClassDeclaration | none {
   case statement {
     class_: ClassDeclaration -> { return class_ }
     export_: ExportDeclaration -> { return jsonClassDeclaration(export_.declaration) }
-    _ -> { return null }
+    _ -> { return none }
   }
-  return null
+  return none
 }
 
 function hasDedicatedConstructor(owner: ClassDeclaration): bool {

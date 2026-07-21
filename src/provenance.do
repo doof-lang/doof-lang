@@ -130,6 +130,6 @@ function sortedProvenanceExternals(values: ResolvedExternalInput[]): ResolvedExt
   return result
 }
 
-function provenanceSet(object: JsonObject, name: string, value: JsonValue): void {
+function provenanceSet(object: JsonObject, name: string, value: JsonValue): none {
   object.set(name, value)
 }

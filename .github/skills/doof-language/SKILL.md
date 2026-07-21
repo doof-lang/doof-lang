@@ -2,7 +2,7 @@
 name: doof-language
 description: Write, read, and reason about Doof programming language code. Doof is a statically-typed language with familiar curly-brace syntax that transpiles to C++. Use when writing .do files, designing Doof APIs, implementing Doof classes/functions, writing .test.do files, using assert or the doof test runner, handling errors with Result types, or working with Doof's module system, pattern matching, concurrency, or JSON serialization.
 metadata:
-    version: "1.6"
+    version: "1.7"
     languageVersion: "0.1"
 ---
 
@@ -18,8 +18,8 @@ Use this base file as the entry point. Load only the reference file that matches
 - When exact semantics matter, confirm them in `spec/*.md`.
 - Keep code idiomatic: immutable by default, explicit types at boundaries, no JavaScript-style coercions.
 - Use intrinsic `Success<T>` / `Failure<E>` arms and their `Result<T, E>` union alias with `case`, `try`, declaration-`else`, `as`, or `!` for fallible flows. Use `panic(...)` only for programmer errors.
-- Plain `if` null checks do **not** narrow static types. Use explicit narrowing forms.
-- Block-bodied non-`void` functions must return a value on every reachable path.
+- Plain `if value != none` checks do **not** narrow static types. Use explicit narrowing forms.
+- Block-bodied non-`none` functions must return a value on every reachable path.
 - Classes and structs are nominal. Interfaces are structural.
 - Prefer `readonly` for deeply immutable values and `:=` for immutable bindings with mutable interiors. `const` is deprecated and remains accepted temporarily with a warning.
 - Prefer `std/<name>` packages before inventing utility modules.
@@ -27,7 +27,7 @@ Use this base file as the entry point. Load only the reference file that matches
 ## Quick Syntax
 
 ```doof
-function main(): void {
+function main(): none {
     println("Hello, Doof!")
 }
 
@@ -42,7 +42,7 @@ value := source as string else { return "" }
 
 Key reminders:
 
-- `main()` may return `void` or `int`, and may optionally accept `args: string[]`.
+- `main()` may return `none` or `int`, and may optionally accept `args: string[]`.
 - Named calls use `callee{ ... }` with no whitespace before `{`.
 - `if` expressions use `then`: `if ready then start() else wait()`.
 - `for-of` evaluates its iterable once and retains returned temporaries through the loop.
@@ -51,6 +51,7 @@ Key reminders:
 - Mutable arrays support `.reserve(capacity)` to pre-size backing storage without changing their length.
 - Runtime counters use `metricsIncrement(name: string, value: long)` and `metricsSnapshotPrometheus()`.
 - Native free functions callable from actor-dispatched code require an explicit `import isolated function` contract.
+- `none` is both the unit/absence type and its sole value. Use `T | none` for optional values; deprecated `void` and `null` aliases warn.
 
 ## Reference Map
 

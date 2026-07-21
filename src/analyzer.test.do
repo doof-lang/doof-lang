@@ -13,7 +13,7 @@ function hasDiagnostic(result: AnalysisResult, message: string): bool {
   return false
 }
 
-export function testRewritesMockImportsFromGeneratedHarnessRoot(): void {
+export function testRewritesMockImportsFromGeneratedHarnessRoot(): none {
   result := createAnalyzer([
     SourceFile { path: "/build/__doof_tests__.do", source: "import { testScene } from \"../game/tests/scene.test\"\nfunction main(): void { testScene() }" },
     SourceFile { path: "/game/tests/scene.test.do", source: "mock import for \"../scene\" {\n  \"./event\" => \"./scene_event.mock\",\n  \"./model\" => \"./scene_model.mock\"\n}\nimport { Scene } from \"../scene\"\nexport function testScene(): void { ignored := Scene() }" },
@@ -32,7 +32,7 @@ export function testRewritesMockImportsFromGeneratedHarnessRoot(): void {
   Assert.equal(result.modules.length, 5)
 }
 
-export function testAppliesOnlyExactMockImportSourceMatches(): void {
+export function testAppliesOnlyExactMockImportSourceMatches(): none {
   result := createAnalyzer([
     SourceFile { path: "/tests/main.test.do", source: "mock import for \"./feature/exact\" { \"./dep\" => \"./exact.mock\" }\nmock import for \"./feature/single\" { \"./dep\" => \"./single.mock\" }\nmock import for \"./feature/nested/deep\" { \"./dep\" => \"./deep.mock\" }\nimport { exact } from \"./feature/exact\"\nimport { single } from \"./feature/single\"\nimport { deep } from \"./feature/nested/deep\"\nimport { other } from \"./other\"" },
     SourceFile { path: "/tests/feature/exact.do", source: "import { value } from \"./dep\"\nexport function exact(): int => value" },
@@ -52,7 +52,7 @@ export function testAppliesOnlyExactMockImportSourceMatches(): void {
   Assert.equal(moduleAt(result, "/tests/other.do").imports[0].sourceModule, "/tests/dep.do")
 }
 
-export function testRewritesMockedSourceReExports(): void {
+export function testRewritesMockedSourceReExports(): none {
   result := createAnalyzer([
     SourceFile { path: "/main.test.do", source: "mock import for \"./facade\" { \"./dep\" => \"./dep.mock\" }\nimport { value } from \"./facade\"" },
     SourceFile { path: "/facade.do", source: "export { value } from \"./dep\"" },
@@ -65,7 +65,7 @@ export function testRewritesMockedSourceReExports(): void {
   Assert.equal(result.modules.length, 3)
 }
 
-export function testValidatesMockImportPlacementAndSelfSubstitution(): void {
+export function testValidatesMockImportPlacementAndSelfSubstitution(): none {
   nonTest := createAnalyzer([SourceFile {
     path: "/main.do", source: "mock import for \"./service\" { \"./dep\" => \"./mock\" }",
   }]).analyze("/main.do")
@@ -83,7 +83,7 @@ export function testValidatesMockImportPlacementAndSelfSubstitution(): void {
   Assert.equal(hasDiagnostic(selfMapping, "mock import cannot substitute \"./dep\" with itself"), true)
 }
 
-export function testRejectsNestedMockRootsAndTestImports(): void {
+export function testRejectsNestedMockRootsAndTestImports(): none {
   nested := createAnalyzer([
     SourceFile { path: "/main.test.do", source: "mock import for \"./service\" {}\nimport { value } from \"./service\"" },
     SourceFile { path: "/service.do", source: "mock import for \"./leaf\" {}\nexport readonly value = 1" },
@@ -97,7 +97,7 @@ export function testRejectsNestedMockRootsAndTestImports(): void {
   Assert.equal(hasDiagnostic(testImport, "Test file \"/main.test.do\" cannot import another test file \"/helper.test.do\""), true)
 }
 
-export function testResetsMockEnvironmentBetweenAnalyses(): void {
+export function testResetsMockEnvironmentBetweenAnalyses(): none {
   analyzer := createAnalyzer([
     SourceFile { path: "/first.test.do", source: "mock import for \"./service\" { \"./dep\" => \"./first.mock\" }\nimport { run } from \"./service\"" },
     SourceFile { path: "/second.test.do", source: "mock import for \"./service\" { \"./dep\" => \"./second.mock\" }\nimport { run } from \"./service\"" },
@@ -111,7 +111,7 @@ export function testResetsMockEnvironmentBetweenAnalyses(): void {
   Assert.equal(moduleAt(second, "/service.do").imports[0].sourceModule, "/second.mock.do")
 }
 
-export function testResolvesImportsAndExports(): void {
+export function testResolvesImportsAndExports(): none {
   sources := [
     SourceFile { path: "/main.do", source: "import { add } from \"./math\"\nfunction main(): int => add(1, 2)" },
     SourceFile { path: "/math.do", source: "export function add(a: int, b: int): int => a + b" },
@@ -121,10 +121,10 @@ export function testResolvesImportsAndExports(): void {
   Assert.equal(result.modules.length, 2)
   Assert.equal(result.modules[0].imports.length, 1)
   Assert.equal(result.modules[0].imports[0].localName, "add")
-  Assert.equal(result.modules[0].imports[0].symbol != null, true)
+  Assert.equal(result.modules[0].imports[0].symbol != none, true)
 }
 
-export function testSuppressesMissingExportsWhenDependencyFailsToParse(): void {
+export function testSuppressesMissingExportsWhenDependencyFailsToParse(): none {
   sources := [
     SourceFile { path: "/main.do", source: "import { first, second } from \"./broken\"\nfunction main(): void { }" },
     SourceFile { path: "/broken.do", source: "export readonly value: readonly string = \"broken\"" },
@@ -136,7 +136,7 @@ export function testSuppressesMissingExportsWhenDependencyFailsToParse(): void {
   Assert.equal(result.diagnostics[0].message.contains("Unexpected readonly type modifier"), true)
 }
 
-export function testResolvesExplicitBareModuleSources(): void {
+export function testResolvesExplicitBareModuleSources(): none {
   sources := [
     SourceFile { path: "/main.do", source: "import { add } from \"vendor/math\"\nfunction main(): int => add(1, 2)" },
     SourceFile { path: "/vendor/math.do", source: "export function add(a: int, b: int): int => a + b" },
@@ -147,7 +147,7 @@ export function testResolvesExplicitBareModuleSources(): void {
   Assert.equal(result.modules[0].imports[0].sourceModule, "/vendor/math.do")
 }
 
-export function testDecoratesNamedTypes(): void {
+export function testDecoratesNamedTypes(): none {
   sources := [SourceFile {
     path: "/main.do",
     source: "class Point { x: int }\nfunction read(point: Point): int => point.x",
@@ -157,7 +157,7 @@ export function testDecoratesNamedTypes(): void {
   case result.modules[0].program.statements[1] {
     fn: FunctionDeclaration -> {
       case fn.params[0].type_! {
-        named: NamedType -> { Assert.equal(named.resolvedSymbol != null, true) }
+        named: NamedType -> { Assert.equal(named.resolvedSymbol != none, true) }
         _ -> { panic("expected a named type") }
       }
     }
@@ -165,7 +165,7 @@ export function testDecoratesNamedTypes(): void {
   }
 }
 
-export function testRecognizesBuiltinTupleType(): void {
+export function testRecognizesBuiltinTupleType(): none {
   result := createAnalyzer([SourceFile {
     path: "/main.do",
     source: "function pair<T>(value: T): Tuple<T, T> => (value, value)",
@@ -173,7 +173,7 @@ export function testRecognizesBuiltinTupleType(): void {
   Assert.equal(result.diagnostics.length, 0)
 }
 
-export function testResolvesReExportsToDefiningModule(): void {
+export function testResolvesReExportsToDefiningModule(): none {
   sources := [
     SourceFile { path: "/main.do", source: "import { sum } from \"./index\"\nfunction main(): int => sum(1, 2)" },
     SourceFile { path: "/index.do", source: "export { add as sum } from \"./math\"" },
@@ -182,11 +182,11 @@ export function testResolvesReExportsToDefiningModule(): void {
   result := createAnalyzer(sources).analyze("/main.do")
   Assert.equal(result.diagnostics.length, 0)
   Assert.equal(result.modules[1].reExports.length, 1)
-  Assert.equal(result.modules[0].imports[0].symbol != null, true)
+  Assert.equal(result.modules[0].imports[0].symbol != none, true)
   Assert.equal(result.modules[0].imports[0].symbol!.module, "/math.do")
 }
 
-export function testRecordsNativeClassMetadata(): void {
+export function testRecordsNativeClassMetadata(): none {
   result := createAnalyzer([SourceFile {
     path: "/main.do",
     source: "export import class Client from \"client.hpp\" as native::Client { get(): int }",
@@ -203,7 +203,7 @@ export function testRecordsNativeClassMetadata(): void {
   }
 }
 
-export function testPreservesNativeClassMetadataThroughLocalExportList(): void {
+export function testPreservesNativeClassMetadataThroughLocalExportList(): none {
   result := createAnalyzer([
     SourceFile { path: "/main.do", source: "import { NativeImage } from \"./native\"\nfunction load(image: NativeImage): NativeImage => image" },
     SourceFile { path: "/native.do", source: "import class NativeImage from \"native_image.hpp\" as doof_image::NativeImage {}\nexport { NativeImage }" },
@@ -216,7 +216,7 @@ export function testPreservesNativeClassMetadataThroughLocalExportList(): void {
   Assert.equal(symbol.nativeCppName, "doof_image::NativeImage")
 }
 
-export function testPreservesNativeClassMetadataThroughSourceReExport(): void {
+export function testPreservesNativeClassMetadataThroughSourceReExport(): none {
   result := createAnalyzer([
     SourceFile { path: "/main.do", source: "import { ImageHandle } from \"./index\"\nfunction load(image: ImageHandle): ImageHandle => image" },
     SourceFile { path: "/index.do", source: "export { NativeImage as ImageHandle } from \"./native\"" },
@@ -232,9 +232,9 @@ export function testPreservesNativeClassMetadataThroughSourceReExport(): void {
   Assert.equal(symbol.nativeCppName, "doof_image::NativeImage")
 }
 
-export function testAnalyzesOnlyTransitiveSourcesWithLoader(): void {
+export function testAnalyzesOnlyTransitiveSourcesWithLoader(): none {
   let requested: string[] = []
-  loader := (path: string): Result<SourceFile | null, Diagnostic> => {
+  loader := (path: string): Result<SourceFile | none, Diagnostic> => {
     requested.push(path)
     if path == "/math.do" {
       return Success(SourceFile { path, source: "export function add(left: int, right: int): int => left + right" })
@@ -242,7 +242,7 @@ export function testAnalyzesOnlyTransitiveSourcesWithLoader(): void {
     if path == "/unused.do" {
       return Success(SourceFile { path, source: "this is not valid Doof" })
     }
-    return Success(null)
+    return Success(none)
   }
   result := createAnalyzerWithLoader([
     SourceFile { path: "/main.do", source: "import { add } from \"./math\"\nfunction main(): int => add(1, 2)" },
@@ -254,9 +254,9 @@ export function testAnalyzesOnlyTransitiveSourcesWithLoader(): void {
   Assert.equal(requested[0], "/math.do")
 }
 
-export function testReportsLoaderFailureWithoutModuleNotFoundDiagnostic(): void {
+export function testReportsLoaderFailureWithoutModuleNotFoundDiagnostic(): none {
   zero := SemanticLocation { line: 0, column: 0, offset: 0 }
-  loader := (path: string): Result<SourceFile | null, Diagnostic> => Failure(Diagnostic {
+  loader := (path: string): Result<SourceFile | none, Diagnostic> => Failure(Diagnostic {
     severity: "error",
     message: "Could not read source file: permission denied",
     span: SemanticSpan { start: zero, end: zero },

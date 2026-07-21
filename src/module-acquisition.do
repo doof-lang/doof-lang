@@ -12,9 +12,9 @@ export class ModuleAcquisition {
 }
 
 /** Returns the package-specific acquisition that owns a logical module path. */
-export function acquiredPackageForModule(logicalPath: string, acquisitions: ModuleAcquisition[]): ModuleAcquisition | null {
+export function acquiredPackageForModule(logicalPath: string, acquisitions: ModuleAcquisition[]): ModuleAcquisition | none {
   selected := selectedAcquisition(logicalPath, acquisitions)
-  if selected == null { return null }
+  if selected == none { return none }
 
   let suffix = logicalPath.substring(selected!.logicalPrefix.length, logicalPath.length)
   while suffix.startsWith("/") { suffix = suffix.substring(1, suffix.length) }
@@ -39,9 +39,9 @@ export function acquiredPackageForModule(logicalPath: string, acquisitions: Modu
 }
 
 /** Resolves a logical source path through the most-specific acquired prefix. */
-export function acquiredModuleDiskPath(logicalPath: string, acquisitions: ModuleAcquisition[]): string | null {
+export function acquiredModuleDiskPath(logicalPath: string, acquisitions: ModuleAcquisition[]): string | none {
   selected := selectedAcquisition(logicalPath, acquisitions)
-  if selected == null { return null }
+  if selected == none { return none }
 
   let suffix = logicalPath.substring(selected!.logicalPrefix.length, logicalPath.length)
   if suffix.startsWith("/") { suffix = suffix.substring(1, suffix.length) }
@@ -57,11 +57,11 @@ function acquisitionMatches(prefix: string, logicalPath: string): bool {
   return logicalPath == prefix || logicalPath.startsWith(prefix + "/")
 }
 
-function selectedAcquisition(logicalPath: string, acquisitions: ModuleAcquisition[]): ModuleAcquisition | null {
-  let selected: ModuleAcquisition | null = null
+function selectedAcquisition(logicalPath: string, acquisitions: ModuleAcquisition[]): ModuleAcquisition | none {
+  let selected: ModuleAcquisition | none = none
   for acquisition of acquisitions {
     if acquisitionMatches(acquisition.logicalPrefix, logicalPath) {
-      if selected == null || acquisition.logicalPrefix.length > selected!.logicalPrefix.length {
+      if selected == none || acquisition.logicalPrefix.length > selected!.logicalPrefix.length {
         selected = acquisition
       }
     }

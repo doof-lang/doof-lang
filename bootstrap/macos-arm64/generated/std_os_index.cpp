@@ -8,16 +8,16 @@
 namespace std_::os::index {
 using namespace ::std_::time::index;
 doof::Result<std::string, std::string> env(std::string name) {
-    return _env(name);
+    return ::doof_os::env(name);
 }
 int32_t pid() {
-    return _pid();
+    return ::doof_os::pid();
 }
 std::string platform() {
-    return _platform();
+    return ::doof_os::platform();
 }
 std::string architecture() {
-    return _architecture();
+    return ::doof_os::architecture();
 }
 
 doof::JsonObject ExecOptions::toJsonObject() const {
@@ -47,35 +47,35 @@ doof::Result<std::shared_ptr<ExecOptions>, std::string> ExecOptions::fromJsonVal
         if (!(doof::json_is_object(_iterator_env->second))) { return doof::Failure<std::string>{"Field \"env\" expected object but got " + std::string(doof::json_type_name(_iterator_env->second))}; }
         _field_env = [&]() { const auto* _object_value = doof::json_as_object(_iterator_env->second); auto _values = std::make_shared<doof::ordered_map<std::string, std::string>>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = (_lenient ? doof::json_as_string_lenient(_entry.second) : doof::json_as_string(_entry.second)); } return _values; }();
     } else {
-        _field_env = std::shared_ptr<doof::ordered_map<std::string, std::string>>{std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{})};
+        _field_env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
     }
     std::optional<bool> _field_inheritEnv;
     if (auto _iterator_inheritEnv = _object->find("inheritEnv"); _iterator_inheritEnv != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_inheritEnv->second) : doof::json_is_boolean(_iterator_inheritEnv->second)))) { return doof::Failure<std::string>{"Field \"inheritEnv\" expected boolean but got " + std::string(doof::json_type_name(_iterator_inheritEnv->second))}; }
         _field_inheritEnv = (_lenient ? doof::json_as_bool_lenient(_iterator_inheritEnv->second) : doof::json_as_bool(_iterator_inheritEnv->second));
     } else {
-        _field_inheritEnv = bool{true};
+        _field_inheritEnv = true;
     }
     std::optional<bool> _field_withStdin;
     if (auto _iterator_withStdin = _object->find("withStdin"); _iterator_withStdin != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_withStdin->second) : doof::json_is_boolean(_iterator_withStdin->second)))) { return doof::Failure<std::string>{"Field \"withStdin\" expected boolean but got " + std::string(doof::json_type_name(_iterator_withStdin->second))}; }
         _field_withStdin = (_lenient ? doof::json_as_bool_lenient(_iterator_withStdin->second) : doof::json_as_bool(_iterator_withStdin->second));
     } else {
-        _field_withStdin = bool{true};
+        _field_withStdin = true;
     }
     std::optional<bool> _field_mergeStderrIntoStdout;
     if (auto _iterator_mergeStderrIntoStdout = _object->find("mergeStderrIntoStdout"); _iterator_mergeStderrIntoStdout != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mergeStderrIntoStdout->second) : doof::json_is_boolean(_iterator_mergeStderrIntoStdout->second)))) { return doof::Failure<std::string>{"Field \"mergeStderrIntoStdout\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mergeStderrIntoStdout->second))}; }
         _field_mergeStderrIntoStdout = (_lenient ? doof::json_as_bool_lenient(_iterator_mergeStderrIntoStdout->second) : doof::json_as_bool(_iterator_mergeStderrIntoStdout->second));
     } else {
-        _field_mergeStderrIntoStdout = bool{false};
+        _field_mergeStderrIntoStdout = false;
     }
     std::optional<bool> _field_inheritOutput;
     if (auto _iterator_inheritOutput = _object->find("inheritOutput"); _iterator_inheritOutput != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_inheritOutput->second) : doof::json_is_boolean(_iterator_inheritOutput->second)))) { return doof::Failure<std::string>{"Field \"inheritOutput\" expected boolean but got " + std::string(doof::json_type_name(_iterator_inheritOutput->second))}; }
         _field_inheritOutput = (_lenient ? doof::json_as_bool_lenient(_iterator_inheritOutput->second) : doof::json_as_bool(_iterator_inheritOutput->second));
     } else {
-        _field_inheritOutput = bool{false};
+        _field_inheritOutput = false;
     }
     std::optional<std::optional<int64_t>> _field_maxOutputBytes;
     if (auto _iterator_maxOutputBytes = _object->find("maxOutputBytes"); _iterator_maxOutputBytes != _object->end()) {
@@ -209,14 +209,14 @@ doof::Result<std::shared_ptr<ExecResult>, std::string> ExecResult::fromJsonValue
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_stdoutTruncated->second) : doof::json_is_boolean(_iterator_stdoutTruncated->second)))) { return doof::Failure<std::string>{"Field \"stdoutTruncated\" expected boolean but got " + std::string(doof::json_type_name(_iterator_stdoutTruncated->second))}; }
         _field_stdoutTruncated = (_lenient ? doof::json_as_bool_lenient(_iterator_stdoutTruncated->second) : doof::json_as_bool(_iterator_stdoutTruncated->second));
     } else {
-        _field_stdoutTruncated = bool{false};
+        _field_stdoutTruncated = false;
     }
     std::optional<bool> _field_stderrTruncated;
     if (auto _iterator_stderrTruncated = _object->find("stderrTruncated"); _iterator_stderrTruncated != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_stderrTruncated->second) : doof::json_is_boolean(_iterator_stderrTruncated->second)))) { return doof::Failure<std::string>{"Field \"stderrTruncated\" expected boolean but got " + std::string(doof::json_type_name(_iterator_stderrTruncated->second))}; }
         _field_stderrTruncated = (_lenient ? doof::json_as_bool_lenient(_iterator_stderrTruncated->second) : doof::json_as_bool(_iterator_stderrTruncated->second));
     } else {
-        _field_stderrTruncated = bool{false};
+        _field_stderrTruncated = false;
     }
     return doof::Success<std::shared_ptr<ExecResult>>{std::make_shared<ExecResult>(_field_exitCode, _field_stdout, _field_stderr, _field_stdoutTruncated.value(), _field_stderrTruncated.value())};
 }

@@ -108,15 +108,15 @@ function acquisitionReceiptMatches(path: string, source: ExactPackageSource): bo
     url == canonicalDependencyUrl(source.url) && ref == source.ref && commit == source.commit.toLowerCase()
 }
 
-function acquisitionReceiptString(object: JsonObject, name: string): string | null {
-  value := object.get(name) else { return null }
-  text := value as string else { return null }
+function acquisitionReceiptString(object: JsonObject, name: string): string | none {
+  value := object.get(name) else { return none }
+  text := value as string else { return none }
   return text
 }
 
-function acquisitionReceiptInt(object: JsonObject, name: string): int | null {
-  value := object.get(name) else { return null }
-  number := value as int else { return null }
+function acquisitionReceiptInt(object: JsonObject, name: string): int | none {
+  value := object.get(name) else { return none }
+  number := value as int else { return none }
   return number
 }
 
@@ -130,7 +130,7 @@ function renderAcquisitionReceipt(source: ExactPackageSource): string {
   return formatJsonValue(receipt) + "\n"
 }
 
-function validateAcquiredPackage(root: string, source: ExactPackageSource): Result<void, string> {
+function validateAcquiredPackage(root: string, source: ExactPackageSource): Result<none, string> {
   manifestPath := join([root, "doof.json"])
   manifestSource := readText(manifestPath) else { return Failure("Acquired package " + source.name + " is missing doof.json") }
   parsed := parseJsonValue(manifestSource) else { return Failure("Acquired package " + source.name + " has invalid doof.json") }
@@ -152,7 +152,7 @@ function packageCommand(command: string, arguments: string[]): Result<string, st
   return Success(output)
 }
 
-function ensurePackageDirectory(path: string): Result<void, string> {
+function ensurePackageDirectory(path: string): Result<none, string> {
   if path == "" || exists(path) { return Success() }
   parent := dirname(path)
   if parent != path { try ensurePackageDirectory(parent) }
@@ -160,7 +160,7 @@ function ensurePackageDirectory(path: string): Result<void, string> {
   return Success()
 }
 
-function removePackageTree(path: string): Result<void, string> {
+function removePackageTree(path: string): Result<none, string> {
   if !exists(path) { return Success() }
   if isDirectory(path) {
     entries := readDir(path) else { return Failure("Could not read " + path) }

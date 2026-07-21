@@ -46,70 +46,70 @@ doof::Result<std::shared_ptr<NativeBuildPlan>, std::string> NativeBuildPlan::fro
         if (!(doof::json_is_array(_iterator_includePaths->second))) { return doof::Failure<std::string>{"Field \"includePaths\" expected array but got " + std::string(doof::json_type_name(_iterator_includePaths->second))}; }
         _field_includePaths = [&]() { const auto* _array = doof::json_as_array(_iterator_includePaths->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_includePaths = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_includePaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_sourceFiles;
     if (auto _iterator_sourceFiles = _object->find("sourceFiles"); _iterator_sourceFiles != _object->end()) {
         if (!(doof::json_is_array(_iterator_sourceFiles->second))) { return doof::Failure<std::string>{"Field \"sourceFiles\" expected array but got " + std::string(doof::json_type_name(_iterator_sourceFiles->second))}; }
         _field_sourceFiles = [&]() { const auto* _array = doof::json_as_array(_iterator_sourceFiles->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_sourceFiles = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_sourceFiles = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_libraryPaths;
     if (auto _iterator_libraryPaths = _object->find("libraryPaths"); _iterator_libraryPaths != _object->end()) {
         if (!(doof::json_is_array(_iterator_libraryPaths->second))) { return doof::Failure<std::string>{"Field \"libraryPaths\" expected array but got " + std::string(doof::json_type_name(_iterator_libraryPaths->second))}; }
         _field_libraryPaths = [&]() { const auto* _array = doof::json_as_array(_iterator_libraryPaths->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_libraryPaths = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_libraryPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_extraCopyPaths;
     if (auto _iterator_extraCopyPaths = _object->find("extraCopyPaths"); _iterator_extraCopyPaths != _object->end()) {
         if (!(doof::json_is_array(_iterator_extraCopyPaths->second))) { return doof::Failure<std::string>{"Field \"extraCopyPaths\" expected array but got " + std::string(doof::json_type_name(_iterator_extraCopyPaths->second))}; }
         _field_extraCopyPaths = [&]() { const auto* _array = doof::json_as_array(_iterator_extraCopyPaths->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_extraCopyPaths = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_extraCopyPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_linkLibraries;
     if (auto _iterator_linkLibraries = _object->find("linkLibraries"); _iterator_linkLibraries != _object->end()) {
         if (!(doof::json_is_array(_iterator_linkLibraries->second))) { return doof::Failure<std::string>{"Field \"linkLibraries\" expected array but got " + std::string(doof::json_type_name(_iterator_linkLibraries->second))}; }
         _field_linkLibraries = [&]() { const auto* _array = doof::json_as_array(_iterator_linkLibraries->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_linkLibraries = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_linkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_frameworks;
     if (auto _iterator_frameworks = _object->find("frameworks"); _iterator_frameworks != _object->end()) {
         if (!(doof::json_is_array(_iterator_frameworks->second))) { return doof::Failure<std::string>{"Field \"frameworks\" expected array but got " + std::string(doof::json_type_name(_iterator_frameworks->second))}; }
         _field_frameworks = [&]() { const auto* _array = doof::json_as_array(_iterator_frameworks->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_frameworks = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_frameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_pkgConfigPackages;
     if (auto _iterator_pkgConfigPackages = _object->find("pkgConfigPackages"); _iterator_pkgConfigPackages != _object->end()) {
         if (!(doof::json_is_array(_iterator_pkgConfigPackages->second))) { return doof::Failure<std::string>{"Field \"pkgConfigPackages\" expected array but got " + std::string(doof::json_type_name(_iterator_pkgConfigPackages->second))}; }
         _field_pkgConfigPackages = [&]() { const auto* _array = doof::json_as_array(_iterator_pkgConfigPackages->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_pkgConfigPackages = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_pkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_defines;
     if (auto _iterator_defines = _object->find("defines"); _iterator_defines != _object->end()) {
         if (!(doof::json_is_array(_iterator_defines->second))) { return doof::Failure<std::string>{"Field \"defines\" expected array but got " + std::string(doof::json_type_name(_iterator_defines->second))}; }
         _field_defines = [&]() { const auto* _array = doof::json_as_array(_iterator_defines->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_defines = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_defines = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_compilerFlags;
     if (auto _iterator_compilerFlags = _object->find("compilerFlags"); _iterator_compilerFlags != _object->end()) {
         if (!(doof::json_is_array(_iterator_compilerFlags->second))) { return doof::Failure<std::string>{"Field \"compilerFlags\" expected array but got " + std::string(doof::json_type_name(_iterator_compilerFlags->second))}; }
         _field_compilerFlags = [&]() { const auto* _array = doof::json_as_array(_iterator_compilerFlags->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_compilerFlags = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_compilerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_linkerFlags;
     if (auto _iterator_linkerFlags = _object->find("linkerFlags"); _iterator_linkerFlags != _object->end()) {
         if (!(doof::json_is_array(_iterator_linkerFlags->second))) { return doof::Failure<std::string>{"Field \"linkerFlags\" expected array but got " + std::string(doof::json_type_name(_iterator_linkerFlags->second))}; }
         _field_linkerFlags = [&]() { const auto* _array = doof::json_as_array(_iterator_linkerFlags->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_linkerFlags = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_linkerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     return doof::Success<std::shared_ptr<NativeBuildPlan>>{std::make_shared<NativeBuildPlan>(_field_includePaths.value(), _field_sourceFiles.value(), _field_libraryPaths.value(), _field_extraCopyPaths.value(), _field_linkLibraries.value(), _field_frameworks.value(), _field_pkgConfigPackages.value(), _field_defines.value(), _field_compilerFlags.value(), _field_linkerFlags.value())};
 }
@@ -174,21 +174,21 @@ doof::Result<std::shared_ptr<ExternalDependencyCommand>, std::string> ExternalDe
         if (!(doof::json_is_array(_iterator_args->second))) { return doof::Failure<std::string>{"Field \"args\" expected array but got " + std::string(doof::json_type_name(_iterator_args->second))}; }
         _field_args = [&]() { const auto* _array = doof::json_as_array(_iterator_args->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_args = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<doof::ordered_map<std::string, std::string>>> _field_env;
     if (auto _iterator_env = _object->find("env"); _iterator_env != _object->end()) {
         if (!(doof::json_is_object(_iterator_env->second))) { return doof::Failure<std::string>{"Field \"env\" expected object but got " + std::string(doof::json_type_name(_iterator_env->second))}; }
         _field_env = [&]() { const auto* _object_value = doof::json_as_object(_iterator_env->second); auto _values = std::make_shared<doof::ordered_map<std::string, std::string>>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = (_lenient ? doof::json_as_string_lenient(_entry.second) : doof::json_as_string(_entry.second)); } return _values; }();
     } else {
-        _field_env = std::shared_ptr<doof::ordered_map<std::string, std::string>>{std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{})};
+        _field_env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
     }
     std::optional<std::string> _field_workingDirectory;
     if (auto _iterator_workingDirectory = _object->find("workingDirectory"); _iterator_workingDirectory != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_workingDirectory->second) : doof::json_is_string(_iterator_workingDirectory->second)))) { return doof::Failure<std::string>{"Field \"workingDirectory\" expected string but got " + std::string(doof::json_type_name(_iterator_workingDirectory->second))}; }
         _field_workingDirectory = (_lenient ? doof::json_as_string_lenient(_iterator_workingDirectory->second) : doof::json_as_string(_iterator_workingDirectory->second));
     } else {
-        _field_workingDirectory = std::string{std::string("")};
+        _field_workingDirectory = std::string("");
     }
     return doof::Success<std::shared_ptr<ExternalDependencyCommand>>{std::make_shared<ExternalDependencyCommand>(_field_program, _field_args.value(), _field_env.value(), _field_workingDirectory.value())};
 }
@@ -231,42 +231,42 @@ doof::Result<std::shared_ptr<ExternalDependency>, std::string> ExternalDependenc
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_sha256->second) : doof::json_is_string(_iterator_sha256->second)))) { return doof::Failure<std::string>{"Field \"sha256\" expected string but got " + std::string(doof::json_type_name(_iterator_sha256->second))}; }
         _field_sha256 = (_lenient ? doof::json_as_string_lenient(_iterator_sha256->second) : doof::json_as_string(_iterator_sha256->second));
     } else {
-        _field_sha256 = std::string{std::string("")};
+        _field_sha256 = std::string("");
     }
     std::optional<int32_t> _field_stripComponents;
     if (auto _iterator_stripComponents = _object->find("stripComponents"); _iterator_stripComponents != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_stripComponents->second) : doof::json_is_number(_iterator_stripComponents->second)))) { return doof::Failure<std::string>{"Field \"stripComponents\" expected number but got " + std::string(doof::json_type_name(_iterator_stripComponents->second))}; }
         _field_stripComponents = (_lenient ? doof::json_as_int_lenient(_iterator_stripComponents->second) : doof::json_as_int(_iterator_stripComponents->second));
     } else {
-        _field_stripComponents = int32_t{1};
+        _field_stripComponents = 1;
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>> _field_copyFiles;
     if (auto _iterator_copyFiles = _object->find("copyFiles"); _iterator_copyFiles != _object->end()) {
         if (!(doof::json_is_array(_iterator_copyFiles->second))) { return doof::Failure<std::string>{"Field \"copyFiles\" expected array but got " + std::string(doof::json_type_name(_iterator_copyFiles->second))}; }
         _field_copyFiles = [&]() { const auto* _array = doof::json_as_array(_iterator_copyFiles->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(ExternalDependencyCopyFile::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_copyFiles = std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>{std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{})};
+        _field_copyFiles = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{});
     }
     std::optional<std::string> _field_ref;
     if (auto _iterator_ref = _object->find("ref"); _iterator_ref != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_ref->second) : doof::json_is_string(_iterator_ref->second)))) { return doof::Failure<std::string>{"Field \"ref\" expected string but got " + std::string(doof::json_type_name(_iterator_ref->second))}; }
         _field_ref = (_lenient ? doof::json_as_string_lenient(_iterator_ref->second) : doof::json_as_string(_iterator_ref->second));
     } else {
-        _field_ref = std::string{std::string("")};
+        _field_ref = std::string("");
     }
     std::optional<std::string> _field_commit;
     if (auto _iterator_commit = _object->find("commit"); _iterator_commit != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_commit->second) : doof::json_is_string(_iterator_commit->second)))) { return doof::Failure<std::string>{"Field \"commit\" expected string but got " + std::string(doof::json_type_name(_iterator_commit->second))}; }
         _field_commit = (_lenient ? doof::json_as_string_lenient(_iterator_commit->second) : doof::json_as_string(_iterator_commit->second));
     } else {
-        _field_commit = std::string{std::string("")};
+        _field_commit = std::string("");
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>>> _field_commands;
     if (auto _iterator_commands = _object->find("commands"); _iterator_commands != _object->end()) {
         if (!(doof::json_is_array(_iterator_commands->second))) { return doof::Failure<std::string>{"Field \"commands\" expected array but got " + std::string(doof::json_type_name(_iterator_commands->second))}; }
         _field_commands = [&]() { const auto* _array = doof::json_as_array(_iterator_commands->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(ExternalDependencyCommand::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_commands = std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>>{std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{})};
+        _field_commands = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{});
     }
     return doof::Success<std::shared_ptr<ExternalDependency>>{std::make_shared<ExternalDependency>(_field_name, _field_kind, _field_url, _field_destination, _field_sha256.value(), _field_stripComponents.value(), _field_copyFiles.value(), _field_ref.value(), _field_commit.value(), _field_commands.value())};
 }
@@ -292,28 +292,28 @@ doof::Result<std::shared_ptr<PackageDependency>, std::string> PackageDependency:
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_path->second) : doof::json_is_string(_iterator_path->second)))) { return doof::Failure<std::string>{"Field \"path\" expected string but got " + std::string(doof::json_type_name(_iterator_path->second))}; }
         _field_path = (_lenient ? doof::json_as_string_lenient(_iterator_path->second) : doof::json_as_string(_iterator_path->second));
     } else {
-        _field_path = std::string{std::string("")};
+        _field_path = std::string("");
     }
     std::optional<std::string> _field_url;
     if (auto _iterator_url = _object->find("url"); _iterator_url != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_url->second) : doof::json_is_string(_iterator_url->second)))) { return doof::Failure<std::string>{"Field \"url\" expected string but got " + std::string(doof::json_type_name(_iterator_url->second))}; }
         _field_url = (_lenient ? doof::json_as_string_lenient(_iterator_url->second) : doof::json_as_string(_iterator_url->second));
     } else {
-        _field_url = std::string{std::string("")};
+        _field_url = std::string("");
     }
     std::optional<std::string> _field_ref;
     if (auto _iterator_ref = _object->find("ref"); _iterator_ref != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_ref->second) : doof::json_is_string(_iterator_ref->second)))) { return doof::Failure<std::string>{"Field \"ref\" expected string but got " + std::string(doof::json_type_name(_iterator_ref->second))}; }
         _field_ref = (_lenient ? doof::json_as_string_lenient(_iterator_ref->second) : doof::json_as_string(_iterator_ref->second));
     } else {
-        _field_ref = std::string{std::string("")};
+        _field_ref = std::string("");
     }
     std::optional<std::string> _field_commit;
     if (auto _iterator_commit = _object->find("commit"); _iterator_commit != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_commit->second) : doof::json_is_string(_iterator_commit->second)))) { return doof::Failure<std::string>{"Field \"commit\" expected string but got " + std::string(doof::json_type_name(_iterator_commit->second))}; }
         _field_commit = (_lenient ? doof::json_as_string_lenient(_iterator_commit->second) : doof::json_as_string(_iterator_commit->second));
     } else {
-        _field_commit = std::string{std::string("")};
+        _field_commit = std::string("");
     }
     return doof::Success<std::shared_ptr<PackageDependency>>{std::make_shared<PackageDependency>(_field_name, _field_path.value(), _field_url.value(), _field_ref.value(), _field_commit.value())};
 }
@@ -340,7 +340,7 @@ doof::Result<std::shared_ptr<DependencyResolution>, std::string> DependencyResol
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
         _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
     } else {
-        _field_kind = std::string{std::string("git")};
+        _field_kind = std::string("git");
     }
     auto _iterator_url = _object->find("url");
     if (_iterator_url == _object->end()) { return doof::Failure<std::string>{"Missing required field \"url\""}; }
@@ -351,21 +351,21 @@ doof::Result<std::shared_ptr<DependencyResolution>, std::string> DependencyResol
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_ref->second) : doof::json_is_string(_iterator_ref->second)))) { return doof::Failure<std::string>{"Field \"ref\" expected string but got " + std::string(doof::json_type_name(_iterator_ref->second))}; }
         _field_ref = (_lenient ? doof::json_as_string_lenient(_iterator_ref->second) : doof::json_as_string(_iterator_ref->second));
     } else {
-        _field_ref = std::string{std::string("")};
+        _field_ref = std::string("");
     }
     std::optional<std::string> _field_commit;
     if (auto _iterator_commit = _object->find("commit"); _iterator_commit != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_commit->second) : doof::json_is_string(_iterator_commit->second)))) { return doof::Failure<std::string>{"Field \"commit\" expected string but got " + std::string(doof::json_type_name(_iterator_commit->second))}; }
         _field_commit = (_lenient ? doof::json_as_string_lenient(_iterator_commit->second) : doof::json_as_string(_iterator_commit->second));
     } else {
-        _field_commit = std::string{std::string("")};
+        _field_commit = std::string("");
     }
     std::optional<std::string> _field_sha256;
     if (auto _iterator_sha256 = _object->find("sha256"); _iterator_sha256 != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_sha256->second) : doof::json_is_string(_iterator_sha256->second)))) { return doof::Failure<std::string>{"Field \"sha256\" expected string but got " + std::string(doof::json_type_name(_iterator_sha256->second))}; }
         _field_sha256 = (_lenient ? doof::json_as_string_lenient(_iterator_sha256->second) : doof::json_as_string(_iterator_sha256->second));
     } else {
-        _field_sha256 = std::string{std::string("")};
+        _field_sha256 = std::string("");
     }
     return doof::Success<std::shared_ptr<DependencyResolution>>{std::make_shared<DependencyResolution>(_field_name, _field_kind.value(), _field_url, _field_ref.value(), _field_commit.value(), _field_sha256.value())};
 }
@@ -392,70 +392,70 @@ doof::Result<std::shared_ptr<DependencyPolicy>, std::string> DependencyPolicy::f
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_hasPackageSourceAllowlist->second) : doof::json_is_boolean(_iterator_hasPackageSourceAllowlist->second)))) { return doof::Failure<std::string>{"Field \"hasPackageSourceAllowlist\" expected boolean but got " + std::string(doof::json_type_name(_iterator_hasPackageSourceAllowlist->second))}; }
         _field_hasPackageSourceAllowlist = (_lenient ? doof::json_as_bool_lenient(_iterator_hasPackageSourceAllowlist->second) : doof::json_as_bool(_iterator_hasPackageSourceAllowlist->second));
     } else {
-        _field_hasPackageSourceAllowlist = bool{false};
+        _field_hasPackageSourceAllowlist = false;
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_allowedPackageSources;
     if (auto _iterator_allowedPackageSources = _object->find("allowedPackageSources"); _iterator_allowedPackageSources != _object->end()) {
         if (!(doof::json_is_array(_iterator_allowedPackageSources->second))) { return doof::Failure<std::string>{"Field \"allowedPackageSources\" expected array but got " + std::string(doof::json_type_name(_iterator_allowedPackageSources->second))}; }
         _field_allowedPackageSources = [&]() { const auto* _array = doof::json_as_array(_iterator_allowedPackageSources->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_allowedPackageSources = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_allowedPackageSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<bool> _field_hasExternalSourceAllowlist;
     if (auto _iterator_hasExternalSourceAllowlist = _object->find("hasExternalSourceAllowlist"); _iterator_hasExternalSourceAllowlist != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_hasExternalSourceAllowlist->second) : doof::json_is_boolean(_iterator_hasExternalSourceAllowlist->second)))) { return doof::Failure<std::string>{"Field \"hasExternalSourceAllowlist\" expected boolean but got " + std::string(doof::json_type_name(_iterator_hasExternalSourceAllowlist->second))}; }
         _field_hasExternalSourceAllowlist = (_lenient ? doof::json_as_bool_lenient(_iterator_hasExternalSourceAllowlist->second) : doof::json_as_bool(_iterator_hasExternalSourceAllowlist->second));
     } else {
-        _field_hasExternalSourceAllowlist = bool{false};
+        _field_hasExternalSourceAllowlist = false;
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_allowedExternalSources;
     if (auto _iterator_allowedExternalSources = _object->find("allowedExternalSources"); _iterator_allowedExternalSources != _object->end()) {
         if (!(doof::json_is_array(_iterator_allowedExternalSources->second))) { return doof::Failure<std::string>{"Field \"allowedExternalSources\" expected array but got " + std::string(doof::json_type_name(_iterator_allowedExternalSources->second))}; }
         _field_allowedExternalSources = [&]() { const auto* _array = doof::json_as_array(_iterator_allowedExternalSources->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_allowedExternalSources = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_allowedExternalSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<bool> _field_hasLinkLibraryAllowlist;
     if (auto _iterator_hasLinkLibraryAllowlist = _object->find("hasLinkLibraryAllowlist"); _iterator_hasLinkLibraryAllowlist != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_hasLinkLibraryAllowlist->second) : doof::json_is_boolean(_iterator_hasLinkLibraryAllowlist->second)))) { return doof::Failure<std::string>{"Field \"hasLinkLibraryAllowlist\" expected boolean but got " + std::string(doof::json_type_name(_iterator_hasLinkLibraryAllowlist->second))}; }
         _field_hasLinkLibraryAllowlist = (_lenient ? doof::json_as_bool_lenient(_iterator_hasLinkLibraryAllowlist->second) : doof::json_as_bool(_iterator_hasLinkLibraryAllowlist->second));
     } else {
-        _field_hasLinkLibraryAllowlist = bool{false};
+        _field_hasLinkLibraryAllowlist = false;
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_allowedLinkLibraries;
     if (auto _iterator_allowedLinkLibraries = _object->find("allowedLinkLibraries"); _iterator_allowedLinkLibraries != _object->end()) {
         if (!(doof::json_is_array(_iterator_allowedLinkLibraries->second))) { return doof::Failure<std::string>{"Field \"allowedLinkLibraries\" expected array but got " + std::string(doof::json_type_name(_iterator_allowedLinkLibraries->second))}; }
         _field_allowedLinkLibraries = [&]() { const auto* _array = doof::json_as_array(_iterator_allowedLinkLibraries->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_allowedLinkLibraries = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_allowedLinkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<bool> _field_hasFrameworkAllowlist;
     if (auto _iterator_hasFrameworkAllowlist = _object->find("hasFrameworkAllowlist"); _iterator_hasFrameworkAllowlist != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_hasFrameworkAllowlist->second) : doof::json_is_boolean(_iterator_hasFrameworkAllowlist->second)))) { return doof::Failure<std::string>{"Field \"hasFrameworkAllowlist\" expected boolean but got " + std::string(doof::json_type_name(_iterator_hasFrameworkAllowlist->second))}; }
         _field_hasFrameworkAllowlist = (_lenient ? doof::json_as_bool_lenient(_iterator_hasFrameworkAllowlist->second) : doof::json_as_bool(_iterator_hasFrameworkAllowlist->second));
     } else {
-        _field_hasFrameworkAllowlist = bool{false};
+        _field_hasFrameworkAllowlist = false;
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_allowedFrameworks;
     if (auto _iterator_allowedFrameworks = _object->find("allowedFrameworks"); _iterator_allowedFrameworks != _object->end()) {
         if (!(doof::json_is_array(_iterator_allowedFrameworks->second))) { return doof::Failure<std::string>{"Field \"allowedFrameworks\" expected array but got " + std::string(doof::json_type_name(_iterator_allowedFrameworks->second))}; }
         _field_allowedFrameworks = [&]() { const auto* _array = doof::json_as_array(_iterator_allowedFrameworks->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_allowedFrameworks = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_allowedFrameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<bool> _field_hasPkgConfigAllowlist;
     if (auto _iterator_hasPkgConfigAllowlist = _object->find("hasPkgConfigAllowlist"); _iterator_hasPkgConfigAllowlist != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_hasPkgConfigAllowlist->second) : doof::json_is_boolean(_iterator_hasPkgConfigAllowlist->second)))) { return doof::Failure<std::string>{"Field \"hasPkgConfigAllowlist\" expected boolean but got " + std::string(doof::json_type_name(_iterator_hasPkgConfigAllowlist->second))}; }
         _field_hasPkgConfigAllowlist = (_lenient ? doof::json_as_bool_lenient(_iterator_hasPkgConfigAllowlist->second) : doof::json_as_bool(_iterator_hasPkgConfigAllowlist->second));
     } else {
-        _field_hasPkgConfigAllowlist = bool{false};
+        _field_hasPkgConfigAllowlist = false;
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_allowedPkgConfigPackages;
     if (auto _iterator_allowedPkgConfigPackages = _object->find("allowedPkgConfigPackages"); _iterator_allowedPkgConfigPackages != _object->end()) {
         if (!(doof::json_is_array(_iterator_allowedPkgConfigPackages->second))) { return doof::Failure<std::string>{"Field \"allowedPkgConfigPackages\" expected array but got " + std::string(doof::json_type_name(_iterator_allowedPkgConfigPackages->second))}; }
         _field_allowedPkgConfigPackages = [&]() { const auto* _array = doof::json_as_array(_iterator_allowedPkgConfigPackages->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_allowedPkgConfigPackages = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_allowedPkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     return doof::Success<std::shared_ptr<DependencyPolicy>>{std::make_shared<DependencyPolicy>(_field_hasPackageSourceAllowlist.value(), _field_allowedPackageSources.value(), _field_hasExternalSourceAllowlist.value(), _field_allowedExternalSources.value(), _field_hasLinkLibraryAllowlist.value(), _field_allowedLinkLibraries.value(), _field_hasFrameworkAllowlist.value(), _field_allowedFrameworks.value(), _field_hasPkgConfigAllowlist.value(), _field_allowedPkgConfigPackages.value())};
 }
@@ -492,7 +492,7 @@ doof::Result<std::shared_ptr<PackageManifest>, std::string> PackageManifest::fro
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_version->second) : doof::json_is_string(_iterator_version->second)))) { return doof::Failure<std::string>{"Field \"version\" expected string but got " + std::string(doof::json_type_name(_iterator_version->second))}; }
         _field_version = (_lenient ? doof::json_as_string_lenient(_iterator_version->second) : doof::json_as_string(_iterator_version->second));
     } else {
-        _field_version = std::string{std::string("1.0")};
+        _field_version = std::string("1.0");
     }
     auto _iterator_manifestPath = _object->find("manifestPath");
     if (_iterator_manifestPath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"manifestPath\""}; }
@@ -507,42 +507,42 @@ doof::Result<std::shared_ptr<PackageManifest>, std::string> PackageManifest::fro
         if (!(doof::json_is_array(_iterator_resources->second))) { return doof::Failure<std::string>{"Field \"resources\" expected array but got " + std::string(doof::json_type_name(_iterator_resources->second))}; }
         _field_resources = [&]() { const auto* _array = doof::json_as_array(_iterator_resources->second); auto _values = std::make_shared<std::vector<std::shared_ptr<PackageResource>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(PackageResource::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_resources = std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>{std::make_shared<std::vector<std::shared_ptr<PackageResource>>>(std::vector<std::shared_ptr<PackageResource>>{})};
+        _field_resources = std::make_shared<std::vector<std::shared_ptr<PackageResource>>>(std::vector<std::shared_ptr<PackageResource>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>>> _field_dependencies;
     if (auto _iterator_dependencies = _object->find("dependencies"); _iterator_dependencies != _object->end()) {
         if (!(doof::json_is_array(_iterator_dependencies->second))) { return doof::Failure<std::string>{"Field \"dependencies\" expected array but got " + std::string(doof::json_type_name(_iterator_dependencies->second))}; }
         _field_dependencies = [&]() { const auto* _array = doof::json_as_array(_iterator_dependencies->second); auto _values = std::make_shared<std::vector<std::shared_ptr<PackageDependency>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(PackageDependency::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_dependencies = std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>>{std::make_shared<std::vector<std::shared_ptr<PackageDependency>>>(std::vector<std::shared_ptr<PackageDependency>>{})};
+        _field_dependencies = std::make_shared<std::vector<std::shared_ptr<PackageDependency>>>(std::vector<std::shared_ptr<PackageDependency>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>> _field_externalDependencies;
     if (auto _iterator_externalDependencies = _object->find("externalDependencies"); _iterator_externalDependencies != _object->end()) {
         if (!(doof::json_is_array(_iterator_externalDependencies->second))) { return doof::Failure<std::string>{"Field \"externalDependencies\" expected array but got " + std::string(doof::json_type_name(_iterator_externalDependencies->second))}; }
         _field_externalDependencies = [&]() { const auto* _array = doof::json_as_array(_iterator_externalDependencies->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ExternalDependency>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(ExternalDependency::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_externalDependencies = std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>{std::make_shared<std::vector<std::shared_ptr<ExternalDependency>>>(std::vector<std::shared_ptr<ExternalDependency>>{})};
+        _field_externalDependencies = std::make_shared<std::vector<std::shared_ptr<ExternalDependency>>>(std::vector<std::shared_ptr<ExternalDependency>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>> _field_packageResolutions;
     if (auto _iterator_packageResolutions = _object->find("packageResolutions"); _iterator_packageResolutions != _object->end()) {
         if (!(doof::json_is_array(_iterator_packageResolutions->second))) { return doof::Failure<std::string>{"Field \"packageResolutions\" expected array but got " + std::string(doof::json_type_name(_iterator_packageResolutions->second))}; }
         _field_packageResolutions = [&]() { const auto* _array = doof::json_as_array(_iterator_packageResolutions->second); auto _values = std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(DependencyResolution::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_packageResolutions = std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>{std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{})};
+        _field_packageResolutions = std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>> _field_externalResolutions;
     if (auto _iterator_externalResolutions = _object->find("externalResolutions"); _iterator_externalResolutions != _object->end()) {
         if (!(doof::json_is_array(_iterator_externalResolutions->second))) { return doof::Failure<std::string>{"Field \"externalResolutions\" expected array but got " + std::string(doof::json_type_name(_iterator_externalResolutions->second))}; }
         _field_externalResolutions = [&]() { const auto* _array = doof::json_as_array(_iterator_externalResolutions->second); auto _values = std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(DependencyResolution::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_externalResolutions = std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>{std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{})};
+        _field_externalResolutions = std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{});
     }
     std::optional<std::shared_ptr<DependencyPolicy>> _field_policy;
     if (auto _iterator_policy = _object->find("policy"); _iterator_policy != _object->end()) {
         if (!(doof::json_is_object(_iterator_policy->second))) { return doof::Failure<std::string>{"Field \"policy\" expected object but got " + std::string(doof::json_type_name(_iterator_policy->second))}; }
         _field_policy = doof::success_value(DependencyPolicy::fromJsonValue(_iterator_policy->second, _lenient));
     } else {
-        _field_policy = std::shared_ptr<DependencyPolicy>{std::make_shared<DependencyPolicy>(false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}))};
+        _field_policy = std::make_shared<DependencyPolicy>(false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     }
     auto _iterator_nativeBuild = _object->find("nativeBuild");
     if (_iterator_nativeBuild == _object->end()) { return doof::Failure<std::string>{"Missing required field \"nativeBuild\""}; }
@@ -553,7 +553,7 @@ doof::Result<std::shared_ptr<PackageManifest>, std::string> PackageManifest::fro
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_target->second) : doof::json_is_string(_iterator_target->second)))) { return doof::Failure<std::string>{"Field \"target\" expected string but got " + std::string(doof::json_type_name(_iterator_target->second))}; }
         _field_target = (_lenient ? doof::json_as_string_lenient(_iterator_target->second) : doof::json_as_string(_iterator_target->second));
     } else {
-        _field_target = std::string{std::string("")};
+        _field_target = std::string("");
     }
     std::optional<std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>> _field_macosApp;
     if (auto _iterator_macosApp = _object->find("macosApp"); _iterator_macosApp != _object->end()) {
@@ -586,7 +586,7 @@ doof::Result<std::shared_ptr<PackageManifest>, std::string> PackageManifest::fro
     return doof::Success<std::shared_ptr<PackageManifest>>{std::make_shared<PackageManifest>(_field_name, _field_version.value(), _field_manifestPath, _field_rootDirectory, _field_resources.value(), _field_dependencies.value(), _field_externalDependencies.value(), _field_packageResolutions.value(), _field_externalResolutions.value(), _field_policy.value(), _field_nativeBuild, _field_target.value(), _field_macosApp.value(), _field_iosApp.value(), _field_packageConfig.value(), _field_iosPackageConfig.value())};
 }
 doof::Result<std::shared_ptr<PackageManifest>, std::string> parsePackageManifest(std::string source, std::string manifestPath, std::string rootDirectory, std::string platform, std::string targetOverride) {
-    auto _try_value_1 = ::std_::json::index::parseJsonValue(source);
+    auto _try_value_1 = ::doof_json::parse(source);
     if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
     const auto parsed = doof::success_value(_try_value_1);
     auto _try_value_2 = manifestObject(parsed, manifestPath, std::string("root"));

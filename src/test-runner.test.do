@@ -8,9 +8,9 @@ import {
   renderCoverageFileHtml, renderCoverageHtml, renderCoverageJson, stripCoverageLines, testDisplayPath,
 } from "./test-runner"
 
-export function testDiscoversAndValidatesExportedTestFunctions(): void {
+export function testDiscoversAndValidatesExportedTestFunctions(): none {
   program := Parser { source:
-    "export function testPasses(): void {}\n" +
+    "export function testPasses(): none {}\n" +
     "function helper(): void {}\n" +
     "export function testWithParameter(value: int): void {}\n" +
     "export function testGeneric<T>(): void {}\n" +
@@ -23,10 +23,10 @@ export function testDiscoversAndValidatesExportedTestFunctions(): void {
   Assert.equal(discovery.errors.length, 3)
   Assert.equal(discovery.errors[0].contains("must not declare parameters"), true)
   Assert.equal(discovery.errors[1].contains("must not declare type parameters"), true)
-  Assert.equal(discovery.errors[2].contains("must return void"), true)
+  Assert.equal(discovery.errors[2].contains("must return none"), true)
 }
 
-export function testDiscoversBlockBodiedTestWithImplicitVoidReturn(): void {
+export function testDiscoversBlockBodiedTestWithImplicitVoidReturn(): none {
   program := Parser { source: "export function testAll() {}\n" }.parse()
   discovery := discoverModuleTests(program, "/work/blob.test.do", "/work")
 
@@ -35,16 +35,16 @@ export function testDiscoversBlockBodiedTestWithImplicitVoidReturn(): void {
   Assert.equal(discovery.tests[0].name, "testAll")
 }
 
-export function testRejectsExpressionBodiedTestWithInferredValueReturn(): void {
+export function testRejectsExpressionBodiedTestWithInferredValueReturn(): none {
   program := Parser { source: "export function testValue() => 1\n" }.parse()
   discovery := discoverModuleTests(program, "/work/value.test.do", "/work")
 
   Assert.equal(discovery.tests.length, 0)
   Assert.equal(discovery.errors.length, 1)
-  Assert.equal(discovery.errors[0].contains("must return void"), true)
+  Assert.equal(discovery.errors[0].contains("must return none"), true)
 }
 
-export function testDiscoversLocallyAliasedExportLists(): void {
+export function testDiscoversLocallyAliasedExportLists(): none {
   program := Parser { source:
     "function original(): void {}\n" +
     "export { original as testAliased }\n"
@@ -56,7 +56,7 @@ export function testDiscoversLocallyAliasedExportLists(): void {
   Assert.equal(discovery.tests[0].name, "testAliased")
 }
 
-export function testFiltersTestIdsCaseInsensitively(): void {
+export function testFiltersTestIdsCaseInsensitively(): none {
   program := Parser { source:
     "export function testAdds(): void {}\n" +
     "export function testSubtracts(): void {}\n"
@@ -68,7 +68,7 @@ export function testFiltersTestIdsCaseInsensitively(): void {
   Assert.equal(selected[0].name, "testAdds")
 }
 
-export function testGeneratesPerIdHarnessWithRelativeImport(): void {
+export function testGeneratesPerIdHarnessWithRelativeImport(): none {
   program := Parser { source: "export function testAdds(): void {}\n" }.parse()
   tests := discoverModuleTests(program, "/work/src/math.test.do", "/work").tests
   harness := generateTestHarness("/work/build/.doof-tests/math/__doof_tests__.do", tests)
@@ -79,14 +79,14 @@ export function testGeneratesPerIdHarnessWithRelativeImport(): void {
   Assert.equal(harness.contains("PASS src/math.test.do::testAdds"), false)
 }
 
-export function testGeneratedHarnessPreservesTestMockImportRoot(): void {
-  program := Parser { source: "mock import for \"../scene\" { \"./event\" => \"./scene_event.mock\" }\nexport function testScene(): void { ignored := Scene() }\nimport { Scene } from \"../scene\"\n" }.parse()
+export function testGeneratedHarnessPreservesTestMockImportRoot(): none {
+  program := Parser { source: "mock import for \"../scene\" { \"./event\" => \"./scene_event.mock\" }\nexport function testScene(): none { ignored := Scene() }\nimport { Scene } from \"../scene\"\n" }.parse()
   tests := discoverModuleTests(program, "/game/tests/scene.test.do", "/game")
   harnessPath := "/game/build/.doof-tests/scene/__doof_tests__.do"
   harness := generateTestHarness(harnessPath, tests.tests)
   result := compile([
     SourceFile { path: harnessPath, source: harness },
-    SourceFile { path: "/game/tests/scene.test.do", source: "mock import for \"../scene\" { \"./event\" => \"./scene_event.mock\" }\nimport { Scene } from \"../scene\"\nexport function testScene(): void { ignored := Scene() }" },
+    SourceFile { path: "/game/tests/scene.test.do", source: "mock import for \"../scene\" { \"./event\" => \"./scene_event.mock\" }\nimport { Scene } from \"../scene\"\nexport function testScene(): none { ignored := Scene() }" },
     SourceFile { path: "/game/scene.do", source: "import { GameEvent } from \"./event\"\nexport class Scene { event: GameEvent = GameEvent() }" },
     SourceFile { path: "/game/event.do", source: "export class GameEvent { missing: UnknownProductionType }" },
     SourceFile { path: "/game/tests/scene_event.mock.do", source: "export class GameEvent {}" },
@@ -94,15 +94,15 @@ export function testGeneratedHarnessPreservesTestMockImportRoot(): void {
 
   for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
 }
 
-export function testBuildsPortableDisplayPaths(): void {
+export function testBuildsPortableDisplayPaths(): none {
   Assert.equal(testDisplayPath("/work/", "/work/src/math.test.do"), "src/math.test.do")
   Assert.equal(testDisplayPath("C:\\work", "C:\\work\\math.test.do"), "math.test.do")
 }
 
-export function testFormatsParseFailuresWithSourceAndCaret(): void {
+export function testFormatsParseFailuresWithSourceAndCaret(): none {
   rendered := formatParseFailure(
     "/work/math.test.do",
     "first := 1\nloader := (path: string): int => path",
@@ -115,7 +115,7 @@ export function testFormatsParseFailuresWithSourceAndCaret(): void {
   Assert.equal(rendered.endsWith("                  ^"), true)
 }
 
-export function testBuildsCoverageReportFromRuntimeOutput(): void {
+export function testBuildsCoverageReportFromRuntimeOutput(): none {
   modules := [CoverageModuleMetadata {
     moduleId: 3,
     modulePath: "/work/src/math.do",

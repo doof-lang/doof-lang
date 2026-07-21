@@ -3,8 +3,8 @@
 import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NullType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, VoidType, WeakResolvedType,
+  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
+  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
@@ -15,7 +15,7 @@ import {
   FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
   IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
   IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
-  LambdaExpression, LongLiteral, MemberExpression, NamedType, NullLiteral,
+  LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
   NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
   ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
   ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
@@ -28,8 +28,8 @@ import {
 import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
-  nullType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType, voidType, weakType,
+  noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
+  substituteTypeParams, typeParameter, unknownType, weakType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -61,7 +61,7 @@ export function casePatternName(pattern: TypePattern): string {
   return ""
 }
 
-export function decorateAnnotationWithResolved(annotation: TypeAnnotation, resolved: ResolvedType): void {
+export function decorateAnnotationWithResolved(annotation: TypeAnnotation, resolved: ResolvedType): none {
   case annotation {
     named: NamedType -> {
       named.resolvedType = optionalResolvedType(resolved)
@@ -124,7 +124,7 @@ export function blockContainsLoopExit(block: Block): bool {
       if_: IfStatement -> {
         if blockContainsLoopExit(if_.body) { return true }
         for branch of if_.elseIfs { if blockContainsLoopExit(branch.body) { return true } }
-        if if_.else_ != null && blockContainsLoopExit(if_.else_!) { return true }
+        if if_.else_ != none && blockContainsLoopExit(if_.else_!) { return true }
       }
       case_: CaseStatement -> {
         for arm of case_.arms {
@@ -142,7 +142,7 @@ export function blockContainsLoopExit(block: Block): bool {
   return false
 }
 
-export function optionalResolvedType(value: ResolvedType): ResolvedType | null { return value }
+export function optionalResolvedType(value: ResolvedType): ResolvedType | none { return value }
 
 export function functionParameterIndex(parameters: FunctionParamType[], name: string): int {
   for i of 0..<parameters.length { if parameters[i].name == name { return i } }
@@ -159,14 +159,14 @@ export function hasObjectProperty(properties: ObjectProperty[], name: string): b
   return false
 }
 
-export function predeclareModuleBindings(info: ModuleInfo, scope: Scope, result: AnalysisResult): void {
+export function predeclareModuleBindings(info: ModuleInfo, scope: Scope, result: AnalysisResult): none {
   for symbol of info.symbols {
     if symbol.kind == "function" || symbol.kind == "class" || symbol.kind == "struct" || symbol.kind == "interface" || symbol.kind == "enum" {
       declare(scope, Binding { name: symbol.name, kind: symbol.kind, type_: symbolType(symbol, info, result), mutable: false, span: checkerSemanticSpan(symbolSpan(info, symbol.name)), module: info.path, symbol })
     }
   }
   for imported of info.imports {
-    if imported.symbol != null { declare(scope, Binding { name: imported.localName, kind: "import", type_: symbolType(imported.symbol!, info, result), mutable: false, span: checkerSemanticSpan(symbolSpan(info, imported.localName)), module: info.path, symbol: imported.symbol }) }
+    if imported.symbol != none { declare(scope, Binding { name: imported.localName, kind: "import", type_: symbolType(imported.symbol!, info, result), mutable: false, span: checkerSemanticSpan(symbolSpan(info, imported.localName)), module: info.path, symbol: imported.symbol }) }
   }
 }
 
@@ -201,7 +201,7 @@ export function namespaceMemberType(info: ModuleInfo, namespaceName: string, mem
   for imported of info.namespaceImports {
     if imported.localName != namespaceName { continue }
     source := findModule(result, imported.sourceModule)
-    if source == null { return unknownType() }
+    if source == none { return unknownType() }
     for symbol of source!.exports {
       if symbol.name == memberName { return symbolType(symbol, source!, result) }
     }
@@ -214,21 +214,21 @@ export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisRes
   if symbol.kind == "interface" { return interfaceType(symbol.name, symbol) }
   if symbol.kind == "enum" { return enumType(symbol.name, symbol) }
   declaration := declarationFor(result, symbol)
-  if declaration == null { return unknownType() }
+  if declaration == none { return unknownType() }
   case declaration! {
     fn: FunctionDeclaration -> {
-      if fn.resolvedType != null {
+      if fn.resolvedType != none {
         case fn.resolvedType! {
           resolved: FunctionType -> { return resolved }
           _ -> { }
         }
       }
-      return functionType(functionParametersFor(fn, info, result), if fn.returnType == null then unknownType() else resolveAnnotation(fn.returnType!, info, result, fn.typeParams), fn.typeParams)
+      return functionType(functionParametersFor(fn, info, result), if fn.returnType == none then noneType() else resolveAnnotation(fn.returnType!, info, result, fn.typeParams), fn.typeParams)
     }
     alias: TypeAliasDeclaration -> { return resolveAnnotation(alias.type_, info, result) }
-    const_: ConstDeclaration -> { if const_.resolvedType != null { return const_.resolvedType! } }
-    readonly_: ReadonlyDeclaration -> { if readonly_.resolvedType != null { return readonly_.resolvedType! } }
-    binding: ImmutableBinding -> { if binding.resolvedType != null { return binding.resolvedType! } }
+    const_: ConstDeclaration -> { if const_.resolvedType != none { return const_.resolvedType! } }
+    readonly_: ReadonlyDeclaration -> { if readonly_.resolvedType != none { return readonly_.resolvedType! } }
+    binding: ImmutableBinding -> { if binding.resolvedType != none { return binding.resolvedType! } }
     _ -> { return unknownType() }
   }
   return unknownType()
@@ -240,17 +240,17 @@ export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisRes
 export function methodSignature(method: FunctionDeclaration, info: ModuleInfo, result: AnalysisResult): ResolvedType {
   let parameters: FunctionParamType[] = []
   for parameter of method.params {
-    parameterType := if parameter.type_ == null then unknownType() else resolveAnnotation(parameter.type_!, info, result, method.typeParams)
-    parameters.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != null })
+    parameterType := if parameter.type_ == none then unknownType() else resolveAnnotation(parameter.type_!, info, result, method.typeParams)
+    parameters.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
   }
-  return functionType(parameters, if method.returnType == null then unknownType() else resolveAnnotation(method.returnType!, info, result, method.typeParams), method.typeParams)
+  return functionType(parameters, if method.returnType == none then noneType() else resolveAnnotation(method.returnType!, info, result, method.typeParams), method.typeParams)
 }
 
 export function functionParametersFor(fn: FunctionDeclaration, info: ModuleInfo, result: AnalysisResult): FunctionParamType[] {
   let resultTypes: FunctionParamType[] = []
   for parameter of fn.params {
-    parameterType := if parameter.resolvedType != null then parameter.resolvedType! else if parameter.type_ == null then unknownType() else resolveAnnotation(parameter.type_!, info, result, fn.typeParams)
-    resultTypes.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != null })
+    parameterType := if parameter.resolvedType != none then parameter.resolvedType! else if parameter.type_ == none then unknownType() else resolveAnnotation(parameter.type_!, info, result, fn.typeParams)
+    resultTypes.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
   }
   return resultTypes
 }
@@ -260,8 +260,7 @@ export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, 
   // declaration types needed to predeclare recursive functions.
   case annotation {
     named: NamedType -> {
-      if named.name == "void" { return voidType() }
-      if named.name == "null" { return nullType() }
+      if named.name == "none" || named.name == "void" || named.name == "null" { return noneType() }
       if named.name == "JsonValue" { return jsonValueType() }
       if named.name == "JsonObject" { return jsonObjectType() }
       if named.name == "SourceLocation" { return builtinSourceLocationType() }
@@ -295,8 +294,8 @@ export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, 
       }
       if named.name == "Promise" && named.typeArgs.length == 1 { return promiseType(resolveAnnotation(named.typeArgs[0], info, result, typeParams)) }
       if named.name == "Result" && named.typeArgs.length >= 2 {
-        let value: ResolvedType | null = null
-        let error: ResolvedType | null = null
+        let value: ResolvedType | none = none
+        let error: ResolvedType | none = none
         let index = 0
         for typeArg of named.typeArgs {
           if index == 0 { value = resolveAnnotation(typeArg, info, result, typeParams) }
@@ -312,10 +311,10 @@ export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, 
       }
       if named.name == "byte" || named.name == "int" || named.name == "long" || named.name == "float" || named.name == "double" || named.name == "string" || named.name == "char" || named.name == "bool" { return primitive(named.name) }
       symbol := named.resolvedSymbol ?? symbolFor(info, named.name)
-      if symbol == null { return unknownType() }
+      if symbol == none { return unknownType() }
       if symbol!.kind == "type-alias" {
         declaration := declarationFor(result, symbol!)
-        if declaration == null { return unknownType() }
+        if declaration == none { return unknownType() }
         case declaration! {
           alias: TypeAliasDeclaration -> {
             let aliasParams: string[] = []
@@ -357,13 +356,13 @@ export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, 
   return unknownType()
 }
 
-export function declare(scope: Scope, binding: Binding): void {
+export function declare(scope: Scope, binding: Binding): none {
   for existing of scope.bindings { if existing.name == binding.name { return } }
   scope.bindings.push(binding)
 }
 
 // Parameters intentionally shadow implicit field and method bindings.
-export function declareShadowing(scope: Scope, binding: Binding): void {
+export function declareShadowing(scope: Scope, binding: Binding): none {
   for index of 0..<scope.bindings.length {
     if scope.bindings[index].name == binding.name {
       scope.bindings[index] = binding
@@ -374,8 +373,8 @@ export function declareShadowing(scope: Scope, binding: Binding): void {
 }
 
 export function hasTypeParam(scope: Scope, name: string): bool {
-  let current: Scope | null = scope
-  while current != null {
+  let current: Scope | none = scope
+  while current != none {
     for typeParam of current!.typeParams { if typeParam == name { return true } }
     current = current!.parent
   }
@@ -383,8 +382,8 @@ export function hasTypeParam(scope: Scope, name: string): bool {
 }
 
 export function typeParamConstraintName(scope: Scope, name: string): string {
-  let current: Scope | null = scope
-  while current != null {
+  let current: Scope | none = scope
+  while current != none {
     for index of 0..<current!.typeParams.length {
       if current!.typeParams[index] == name && index < current!.typeParamConstraintNames.length {
         return current!.typeParamConstraintNames[index]
@@ -395,9 +394,9 @@ export function typeParamConstraintName(scope: Scope, name: string): string {
   return ""
 }
 
-export function typeParamConstraint(scope: Scope, name: string): ResolvedType | null {
-  let current: Scope | null = scope
-  while current != null {
+export function typeParamConstraint(scope: Scope, name: string): ResolvedType | none {
+  let current: Scope | none = scope
+  while current != none {
     for index of 0..<current!.typeParams.length {
       if current!.typeParams[index] == name && index < current!.typeParamConstraints.length {
         return current!.typeParamConstraints[index].type_
@@ -405,40 +404,40 @@ export function typeParamConstraint(scope: Scope, name: string): ResolvedType | 
     }
     current = current!.parent
   }
-  return null
+  return none
 }
 
-export function lookup(scope: Scope, name: string): Binding | null {
-  let current: Scope | null = scope
-  while current != null {
+export function lookup(scope: Scope, name: string): Binding | none {
+  let current: Scope | none = scope
+  while current != none {
     for binding of current!.bindings { if binding.name == name { return binding } }
     current = current!.parent
   }
-  return null
+  return none
 }
 
-export function returnScope(scope: Scope): Scope | null {
-  let current: Scope | null = scope
-  while current != null {
-    if current!.returnType != null { return current }
+export function returnScope(scope: Scope): Scope | none {
+  let current: Scope | none = scope
+  while current != none {
+    if current!.returnType != none { return current }
     current = current!.parent
   }
-  return null
+  return none
 }
 
-export function valueYieldScope(scope: Scope): Scope | null {
-  let current: Scope | null = scope
-  while current != null {
+export function valueYieldScope(scope: Scope): Scope | none {
+  let current: Scope | none = scope
+  while current != none {
     if current!.inValueYieldBlock { return current }
     current = current!.parent
   }
-  return null
+  return none
 }
 
 export function currentThisType(scope: Scope): ResolvedType {
-  let current: Scope | null = scope
-  while current != null {
-    if current!.thisType != null { return current!.thisType! }
+  let current: Scope | none = scope
+  while current != none {
+    if current!.thisType != none { return current!.thisType! }
     current = current!.parent
   }
   return unknownType()
@@ -465,7 +464,7 @@ export function isPanicCall(expression: Expression): bool {
     call: CallExpression -> {
       case call.callee {
         identifier: Identifier -> {
-          return identifier.name == "panic" && identifier.resolvedBinding != null && identifier.resolvedBinding!.kind == "builtin"
+          return identifier.name == "panic" && identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "builtin"
         }
         _ -> { }
       }
@@ -476,13 +475,13 @@ export function isPanicCall(expression: Expression): bool {
 }
 
 export function builtinCallable(name: string): ResolvedType {
-  if name == "println" { return functionType([FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false }], voidType()) }
-  if name == "panic" { return functionType([FunctionParamType { name: "message", type_: primitive("string"), hasDefault: false }], voidType()) }
+  if name == "println" { return functionType([FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false }], noneType()) }
+  if name == "panic" { return functionType([FunctionParamType { name: "message", type_: primitive("string"), hasDefault: false }], noneType()) }
   if name == "assert" {
     return functionType([
       FunctionParamType { name: "condition", type_: primitive("bool"), hasDefault: false },
       FunctionParamType { name: "message", type_: primitive("string"), hasDefault: false },
-    ], voidType())
+    ], noneType())
   }
   if name == "catchPanic" {
     successType := typeParameter("T")
@@ -502,21 +501,21 @@ export function isBuiltinPrintlnCall(callee: Expression): bool {
   }
 }
 
-export function symbolFor(info: ModuleInfo, name: string): Symbol | null {
+export function symbolFor(info: ModuleInfo, name: string): Symbol | none {
   for symbol of info.symbols { if symbol.name == name { return symbol } }
   for imported of info.imports { if imported.localName == name { return imported.symbol } }
-  return null
+  return none
 }
 
-export function declarationFor(result: AnalysisResult, symbol: Symbol): Statement | null {
+export function declarationFor(result: AnalysisResult, symbol: Symbol): Statement | none {
   module := findModule(result, symbol.module)
-  if module == null { return null }
+  if module == none { return none }
   for statement of module!.program.statements {
     if statement.kind == "export-list" { continue }
     candidate := symbolName(statement)
     if candidate == symbol.name { return statement }
   }
-  return null
+  return none
 }
 
 export function symbolName(statement: Statement): string {

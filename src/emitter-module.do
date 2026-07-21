@@ -51,7 +51,7 @@ export function planModuleGraph(result: AnalysisResult): ModuleGraphPlan {
   return plan
 }
 
-function addInclude(module: ModulePlan, sourceModule: string): void {
+function addInclude(module: ModulePlan, sourceModule: string): none {
   includeName := moduleHeaderName(sourceModule)
   for existing of module.includes { if existing == includeName { return } }
   module.includes.push(includeName)
@@ -90,7 +90,7 @@ export class CxxModuleEmitter {
   namespaceImports: NamespaceBinding[] = []
   imports: ImportBinding[] = []
   moduleSurfaces: EmitModuleSurface[] = []
-  instantiations: InstantiationPlan | null = null
+  instantiations: InstantiationPlan | none = none
   coverageModuleId: int = -1
 
   function emit(program: Program, moduleIncludes: string[] = [], entryMode: string = "executable"): ModuleEmission {
@@ -102,9 +102,9 @@ export class CxxModuleEmitter {
       context.coverageEnabled = true
       context.coverageModuleId = coverageModuleId
     }
-    if instantiations != null { configureInstantiationRegistry(context, instantiations!) }
+    if instantiations != none { configureInstantiationRegistry(context, instantiations!) }
     plan := planHeader(program, context)
-    if instantiations != null { addConcreteHeaderDeclarations(plan, context, instantiations!) }
+    if instantiations != none { addConcreteHeaderDeclarations(plan, context, instantiations!) }
     return emitPlanned([program], context, plan, entryMode, moduleIncludes)
   }
 
@@ -116,7 +116,7 @@ export class CxxModuleEmitter {
     header := renderHeader(plan, namespaceName)
     let source = "#include \"" + headerName + "\"\n#include <cmath>\n"
     for include of moduleIncludes { source = source + "#include \"" + include + "\"\n" }
-    if instantiations != null { source = source + concreteImplementationIncludes(context, instantiations!, moduleIncludes) }
+    if instantiations != none { source = source + concreteImplementationIncludes(context, instantiations!, moduleIncludes) }
     source = source + "\n"
     source = source + "namespace " + namespaceName + " {\n"
     source = source + emitImportedNamespaces(context)
@@ -125,7 +125,7 @@ export class CxxModuleEmitter {
         source = source + emitSourceStatement(statement, context)
       }
     }
-    if instantiations != null { source = source + emitConcreteFunctions(context, instantiations!) }
+    if instantiations != none { source = source + emitConcreteFunctions(context, instantiations!) }
     source = source + "}\n"
     nativeMethods := emitNativeClassMethods(programs, context)
     if nativeMethods != "" {
@@ -180,7 +180,7 @@ function emitImportedNamespaces(context: EmitContext): string {
   return result
 }
 
-function addNamespace(namespaces: string[], namespace: string): void {
+function addNamespace(namespaces: string[], namespace: string): none {
   for existing of namespaces { if existing == namespace { return } }
   namespaces.push(namespace)
 }
@@ -189,7 +189,7 @@ function addNamespace(namespaces: string[], namespace: string): void {
 export function emitModuleGraph(
   result: AnalysisResult,
   entry: string = "",
-  instantiations: InstantiationPlan | null = null,
+  instantiations: InstantiationPlan | none = none,
   entryMode: string = "executable",
   coverage: bool = false,
 ): ModuleGraphEmission {
@@ -199,7 +199,7 @@ export function emitModuleGraph(
   let nextCoverageModuleId = 0
   for module of plan.modules {
     info := findGraphModule(result, module.path)
-    if info == null { continue }
+    if info == none { continue }
     let coverageModuleId = -1
     if coverage && isCoverageEligible(module.path) {
       coverageModuleId = nextCoverageModuleId
@@ -245,16 +245,16 @@ function sortedCoverageLines(lines: int[]): int[] {
   let result: int[] = []
   let last = -1
   for count of 0..<lines.length {
-    let candidate: int | null = null
+    let candidate: int | none = none
     for line of lines {
-      if line > last && (candidate == null || line < candidate!) { candidate = line }
+      if line > last && (candidate == none || line < candidate!) { candidate = line }
     }
-    if candidate != null { result.push(candidate!); last = candidate! }
+    if candidate != none { result.push(candidate!); last = candidate! }
   }
   return result
 }
 
-function configureInstantiationRegistry(context: EmitContext, plan: InstantiationPlan): void {
+function configureInstantiationRegistry(context: EmitContext, plan: InstantiationPlan): none {
   for key of plan.nativeTemplateClassKeys { context.nativeTemplateClassKeys.push(key) }
   for instantiation of plan.functions {
     context.concreteFunctionKeys.push(instantiation.key)
@@ -274,7 +274,7 @@ function configureInstantiationRegistry(context: EmitContext, plan: Instantiatio
   }
 }
 
-function addConcreteHeaderDeclarations(plan: HeaderPlan, context: EmitContext, instantiations: InstantiationPlan): void {
+function addConcreteHeaderDeclarations(plan: HeaderPlan, context: EmitContext, instantiations: InstantiationPlan): none {
   for interface_ of instantiations.interfaces {
     if interface_.name != "Stream" && interface_.modulePath != context.modulePath { continue }
     let alternatives = ""
@@ -312,7 +312,7 @@ function addConcreteHeaderDeclarations(plan: HeaderPlan, context: EmitContext, i
   }
 }
 
-function addConcreteTypeForwardDeclarations(plan: HeaderPlan, context: EmitContext, type_: ResolvedType): void {
+function addConcreteTypeForwardDeclarations(plan: HeaderPlan, context: EmitContext, type_: ResolvedType): none {
   case type_ {
     class_: ClassType -> {
       if class_.symbol.module != "" && class_.symbol.module != context.modulePath {
@@ -350,12 +350,12 @@ function emitConcreteFunctions(context: EmitContext, instantiations: Instantiati
   return result
 }
 
-function withInstantiation(context: EmitContext, names: string[], arguments: ResolvedType[]): void {
+function withInstantiation(context: EmitContext, names: string[], arguments: ResolvedType[]): none {
   context.substitution = TypeSubstitution { names, arguments }
 }
 
-function clearInstantiation(context: EmitContext): void {
-  context.substitution = null
+function clearInstantiation(context: EmitContext): none {
+  context.substitution = none
 }
 
 function emitModuleSurfaces(result: AnalysisResult): EmitModuleSurface[] {
@@ -369,7 +369,7 @@ function emitModuleSurfaces(result: AnalysisResult): EmitModuleSurface[] {
   return surfaces
 }
 
-function collectGenericSurfaceSymbols(statement: Statement, typeNames: string[], functionNames: string[]): void {
+function collectGenericSurfaceSymbols(statement: Statement, typeNames: string[], functionNames: string[]): none {
   case statement {
     class_: ClassDeclaration -> { if class_.typeParams.length > 0 { typeNames.push(class_.name) } }
     interface_: InterfaceDeclaration -> { if interface_.typeParams.length > 0 { typeNames.push(interface_.name) } }
@@ -396,9 +396,9 @@ function infoImports(result: AnalysisResult, path: string): ImportBinding[] {
   return []
 }
 
-function findGraphModule(result: AnalysisResult, path: string): ModuleInfo | null {
+function findGraphModule(result: AnalysisResult, path: string): ModuleInfo | none {
   for module of result.modules { if module.path == path { return module } }
-  return null
+  return none
 }
 
 export function emitModule(program: Program, moduleName: string = "main"): ModuleEmission {

@@ -31,8 +31,8 @@ class IsolationNode {
   module: string
   owner: string = ""
   calls: IsolationCall[] = []
-  directReason: IsolationReason | null = null
-  reason: IsolationReason | null = null
+  directReason: IsolationReason | none = none
+  reason: IsolationReason | none = none
 }
 
 class IsolationGraph {
@@ -64,21 +64,21 @@ function collectGraph(result: AnalysisResult): IsolationGraph {
   return graph
 }
 
-function findModule(result: AnalysisResult, path: string): ModuleInfo | null {
+function findModule(result: AnalysisResult, path: string): ModuleInfo | none {
   for module of result.modules { if module.path == path { return module } }
-  return null
+  return none
 }
 
 function sameSpan(left: SourceSpan, right: SemanticSpan): bool {
   return left.start.offset == right.start.offset && left.end.offset == right.end.offset
 }
 
-function moduleValueDeclaration(result: AnalysisResult, binding: Binding): Statement | null {
-  if binding.symbol != null && (binding.symbol!.kind == "const" || binding.symbol!.kind == "readonly") {
+function moduleValueDeclaration(result: AnalysisResult, binding: Binding): Statement | none {
+  if binding.symbol != none && (binding.symbol!.kind == "const" || binding.symbol!.kind == "readonly") {
     return declarationFor(result, binding.symbol!)
   }
   module := findModule(result, binding.module)
-  if module == null { return null }
+  if module == none { return none }
   for raw of module!.program.statements {
     statement := unwrapExport(raw)
     case statement {
@@ -88,35 +88,35 @@ function moduleValueDeclaration(result: AnalysisResult, binding: Binding): State
       _ -> { }
     }
   }
-  return null
+  return none
 }
 
-function mutableModuleReason(result: AnalysisResult, expression: Expression): IsolationReason | null {
+function mutableModuleReason(result: AnalysisResult, expression: Expression): IsolationReason | none {
   case expression {
     identifier: Identifier -> {
-      if identifier.resolvedBinding == null { return null }
+      if identifier.resolvedBinding == none { return none }
       declaration := moduleValueDeclaration(result, identifier.resolvedBinding!)
-      if declaration == null { return null }
+      if declaration == none { return none }
       case declaration! {
-        _: ReadonlyDeclaration -> { return null }
+        _: ReadonlyDeclaration -> { return none }
         _: ConstDeclaration -> { }
         _: ImmutableBinding -> { }
-        _ -> { return null }
+        _ -> { return none }
       }
       violation := findActorBoundaryViolation(result, identifier.resolvedBinding!.type_)
-      if violation != null {
+      if violation != none {
         return IsolationReason { kind: "module", name: identifier.name, span: identifier.span }
       }
     }
     _ -> { }
   }
-  return null
+  return none
 }
 
-function mutableStaticReason(expression: Expression): IsolationReason | null {
+function mutableStaticReason(expression: Expression): IsolationReason | none {
   case expression {
     member: MemberExpression -> {
-      if member.resolvedStaticOwner == null { return null }
+      if member.resolvedStaticOwner == none { return none }
       for field of member.resolvedStaticOwner!.fields {
         if !field.static_ || field.readonly_ { continue }
         for name of field.names {
@@ -132,7 +132,7 @@ function mutableStaticReason(expression: Expression): IsolationReason | null {
     }
     _ -> { }
   }
-  return null
+  return none
 }
 
 function allExpressions(roots: Expression[]): Expression[] {
@@ -141,7 +141,7 @@ function allExpressions(roots: Expression[]): Expression[] {
   return result
 }
 
-function collectExpressionTree(expression: Expression, result: Expression[]): void {
+function collectExpressionTree(expression: Expression, result: Expression[]): none {
   result.push(expression)
   let nested: Expression[] = []
   collectNestedExpressions(expression, nested)
@@ -150,7 +150,7 @@ function collectExpressionTree(expression: Expression, result: Expression[]): vo
 
 function functionExpressions(fn: FunctionDeclaration): Expression[] {
   let roots: Expression[] = []
-  for parameter of fn.params { if parameter.defaultValue != null { roots.push(parameter.defaultValue!) } }
+  for parameter of fn.params { if parameter.defaultValue != none { roots.push(parameter.defaultValue!) } }
   case fn.body {
     block: Block -> { collectBlockExpressions(block, roots) }
     expression: Expression -> { roots.push(expression) }
@@ -158,14 +158,14 @@ function functionExpressions(fn: FunctionDeclaration): Expression[] {
   return allExpressions(roots)
 }
 
-function nodeForDeclaration(graph: IsolationGraph, declaration: FunctionDeclaration): IsolationNode | null {
+function nodeForDeclaration(graph: IsolationGraph, declaration: FunctionDeclaration): IsolationNode | none {
   for node of graph.nodes { if node.declaration == declaration { return node } }
-  return null
+  return none
 }
 
 function nodesForDeclaration(result: AnalysisResult, graph: IsolationGraph, declaration: FunctionDeclaration): IsolationNode[] {
   direct := nodeForDeclaration(graph, declaration)
-  if direct != null { return [direct!] }
+  if direct != none { return [direct!] }
   let targets: IsolationNode[] = []
   for module of result.modules {
     for raw of module.program.statements {
@@ -177,16 +177,16 @@ function nodesForDeclaration(result: AnalysisResult, graph: IsolationGraph, decl
               ownsMethod = true
             }
           }
-          if !ownsMethod || interface_.resolvedSymbol == null { continue }
+          if !ownsMethod || interface_.resolvedSymbol == none { continue }
           for implementation of interface_.resolvedSymbol!.implementations {
             candidate := declarationFor(result, implementation)
-            if candidate == null { continue }
+            if candidate == none { continue }
             case candidate! {
               class_: ClassDeclaration -> {
                 for method of class_.methods {
                   if method.name == declaration.name && method.static_ == declaration.static_ {
                     node := nodeForDeclaration(graph, method)
-                    if node != null { targets.push(node!) }
+                    if node != none { targets.push(node!) }
                   }
                 }
               }
@@ -201,15 +201,15 @@ function nodesForDeclaration(result: AnalysisResult, graph: IsolationGraph, decl
   return targets
 }
 
-function callDeclaration(result: AnalysisResult, call: CallExpression): FunctionDeclaration | null {
-  if call.resolvedFunction != null { return call.resolvedFunction }
+function callDeclaration(result: AnalysisResult, call: CallExpression): FunctionDeclaration | none {
+  if call.resolvedFunction != none { return call.resolvedFunction }
   case call.callee {
     member: MemberExpression -> {
-      if member.object.resolvedType == null { return null }
+      if member.object.resolvedType == none { return none }
       case member.object.resolvedType! {
         interface_: InterfaceType -> {
           declaration := declarationFor(result, interface_.symbol)
-          if declaration == null { return null }
+          if declaration == none { return none }
           case declaration! {
             interfaceDeclaration: InterfaceDeclaration -> {
               for method of interfaceDeclaration.methods { if method.name == member.property { return method } }
@@ -222,23 +222,23 @@ function callDeclaration(result: AnalysisResult, call: CallExpression): Function
     }
     _ -> { }
   }
-  return null
+  return none
 }
 
-function analyzeNode(result: AnalysisResult, graph: IsolationGraph, node: IsolationNode): void {
+function analyzeNode(result: AnalysisResult, graph: IsolationGraph, node: IsolationNode): none {
   if node.declaration.bodyless && !node.declaration.isolated_ {
     node.directReason = IsolationReason { kind: "bodyless", name: node.declaration.name, span: node.declaration.span }
     return
   }
   for expression of functionExpressions(node.declaration) {
-    if node.directReason == null {
+    if node.directReason == none {
       node.directReason = mutableModuleReason(result, expression)
-      if node.directReason == null { node.directReason = mutableStaticReason(expression) }
+      if node.directReason == none { node.directReason = mutableStaticReason(expression) }
     }
     case expression {
       call: CallExpression -> {
         declaration := callDeclaration(result, call)
-        if declaration != null {
+        if declaration != none {
           node.calls.push(IsolationCall { declaration: declaration!, span: call.span })
         }
       }
@@ -247,7 +247,7 @@ function analyzeNode(result: AnalysisResult, graph: IsolationGraph, node: Isolat
   }
 }
 
-function inferIsolation(result: AnalysisResult, graph: IsolationGraph): void {
+function inferIsolation(result: AnalysisResult, graph: IsolationGraph): none {
   for node of graph.nodes {
     analyzeNode(result, graph, node)
     node.reason = node.directReason
@@ -256,20 +256,20 @@ function inferIsolation(result: AnalysisResult, graph: IsolationGraph): void {
   while changed {
     changed = false
     for node of graph.nodes {
-      if node.reason != null { continue }
+      if node.reason != none { continue }
       for call of node.calls {
         for target of nodesForDeclaration(result, graph, call.declaration) {
-          if target.reason != null {
+          if target.reason != none {
             node.reason = IsolationReason { kind: "call", name: target.declaration.name, span: call.span }
             changed = true
             break
           }
         }
-        if node.reason != null { break }
+        if node.reason != none { break }
       }
     }
   }
-  for node of graph.nodes { node.declaration.resolvedIsolated = node.reason == null }
+  for node of graph.nodes { node.declaration.resolvedIsolated = node.reason == none }
 }
 
 function reasonText(reason: IsolationReason): string {
@@ -286,21 +286,21 @@ function semanticSpan(span: SourceSpan): SemanticSpan {
   }
 }
 
-function pushDiagnostic(diagnostics: Diagnostic[], module: string, span: SourceSpan, message: string): void {
+function pushDiagnostic(diagnostics: Diagnostic[], module: string, span: SourceSpan, message: string): none {
   diagnostics.push(Diagnostic { severity: "error", message, span: semanticSpan(span), module })
 }
 
-function probeReason(result: AnalysisResult, graph: IsolationGraph, expression: Expression): IsolationReason | null {
+function probeReason(result: AnalysisResult, graph: IsolationGraph, expression: Expression): IsolationReason | none {
   for nested of allExpressions([expression]) {
     let reason = mutableModuleReason(result, nested)
-    if reason == null { reason = mutableStaticReason(nested) }
-    if reason != null { return reason }
+    if reason == none { reason = mutableStaticReason(nested) }
+    if reason != none { return reason }
     case nested {
       call: CallExpression -> {
         declaration := callDeclaration(result, call)
-        if declaration != null {
+        if declaration != none {
           for target of nodesForDeclaration(result, graph, declaration!) {
-            if target.reason != null {
+            if target.reason != none {
               return IsolationReason { kind: "call", name: target.declaration.name, span: call.span }
             }
           }
@@ -309,16 +309,16 @@ function probeReason(result: AnalysisResult, graph: IsolationGraph, expression: 
       _ -> { }
     }
   }
-  return null
+  return none
 }
 
-function actorConstructionReason(result: AnalysisResult, graph: IsolationGraph, actor: ActorCreationExpression): IsolationReason | null {
-  if actor.resolvedType == null { return null }
-  let class_: ClassDeclaration | null = null
+function actorConstructionReason(result: AnalysisResult, graph: IsolationGraph, actor: ActorCreationExpression): IsolationReason | none {
+  if actor.resolvedType == none { return none }
+  let class_: ClassDeclaration | none = none
   case actor.resolvedType! {
     actorType_: ActorType -> {
       declaration := declarationFor(result, actorType_.innerClass.symbol)
-      if declaration != null {
+      if declaration != none {
         case declaration! {
           resolved: ClassDeclaration -> { class_ = resolved }
           _ -> { }
@@ -327,26 +327,26 @@ function actorConstructionReason(result: AnalysisResult, graph: IsolationGraph, 
     }
     _ -> { }
   }
-  if class_ == null { return null }
+  if class_ == none { return none }
   for method of class_!.methods {
     if method.static_ && method.name == "constructor" {
       node := nodeForDeclaration(graph, method)
-      if node != null && node!.reason != null {
+      if node != none && node!.reason != none {
         return IsolationReason { kind: "call", name: method.name, span: actor.span }
       }
-      return null
+      return none
     }
   }
   let positionalIndex = 0
   for field of class_!.fields {
     if field.static_ { continue }
-    if positionalIndex >= actor.args.length && field.defaultValue != null {
+    if positionalIndex >= actor.args.length && field.defaultValue != none {
       reason := probeReason(result, graph, field.defaultValue!)
-      if reason != null { return reason }
+      if reason != none { return reason }
     }
     positionalIndex = positionalIndex + 1
   }
-  return null
+  return none
 }
 
 function moduleExpressions(module: ModuleInfo): Expression[] {
@@ -358,7 +358,7 @@ function moduleExpressions(module: ModuleInfo): Expression[] {
         for expression of functionExpressions(fn) { roots.push(expression) }
       }
       class_: ClassDeclaration -> {
-        for field of class_.fields { if field.defaultValue != null { roots.push(field.defaultValue!) } }
+        for field of class_.fields { if field.defaultValue != none { roots.push(field.defaultValue!) } }
         for method of class_.methods {
           for expression of functionExpressions(method) { roots.push(expression) }
         }
@@ -369,12 +369,12 @@ function moduleExpressions(module: ModuleInfo): Expression[] {
   return allExpressions(roots)
 }
 
-export function validateIsolationEffects(result: AnalysisResult, module: ModuleInfo, diagnostics: Diagnostic[]): void {
+export function validateIsolationEffects(result: AnalysisResult, module: ModuleInfo, diagnostics: Diagnostic[]): none {
   graph := collectGraph(result)
   inferIsolation(result, graph)
 
   for node of graph.nodes {
-    if node.module != module.path || !node.declaration.isolated_ || node.reason == null { continue }
+    if node.module != module.path || !node.declaration.isolated_ || node.reason == none { continue }
     owner := if node.owner == "" then "function \"" + node.declaration.name + "\"" else "method \"" + node.owner + "." + node.declaration.name + "\""
     message := if node.reason!.kind == "call"
       then "Isolated " + owner + " cannot call non-isolated function \"" + node.reason!.name + "\""
@@ -387,12 +387,12 @@ export function validateIsolationEffects(result: AnalysisResult, module: ModuleI
       call: CallExpression -> {
         case call.callee {
           member: MemberExpression -> {
-            if member.object.resolvedType != null {
+            if member.object.resolvedType != none {
               case member.object.resolvedType! {
                 _: ActorType -> {
-                  if call.resolvedFunction != null {
+                  if call.resolvedFunction != none {
                     target := nodeForDeclaration(graph, call.resolvedFunction!)
-                    if target != null && target!.reason != null {
+                    if target != none && target!.reason != none {
                       pushDiagnostic(diagnostics, module.path, call.span,
                         "Actor method \"" + target!.declaration.name + "\" is not isolated: " + reasonText(target!.reason!))
                     }
@@ -407,7 +407,7 @@ export function validateIsolationEffects(result: AnalysisResult, module: ModuleI
       }
       actor: ActorCreationExpression -> {
         reason := actorConstructionReason(result, graph, actor)
-        if reason != null {
+        if reason != none {
           pushDiagnostic(diagnostics, module.path, actor.span,
             "Actor<" + actor.className + "> construction is not isolated: " + reasonText(reason!))
         }

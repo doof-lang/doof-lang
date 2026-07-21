@@ -23,7 +23,7 @@ export class MacOSAppConfig {
   displayName: string
   version: string
   iconPath: string = ""
-  infoPlist: JsonObject | null = null
+  infoPlist: JsonObject | none = none
   resources: MacOSAppResource[] = []
   embeddedLibraries: MacOSEmbeddedLibrary[] = []
   category: string = "public.app-category.developer-tools"
@@ -66,7 +66,7 @@ export function renderMacOSInfoPlist(config: MacOSAppConfig): string {
   body = body + plistString("LSMinimumSystemVersion", config.minimumSystemVersion)
   body = body + "\t<key>NSHighResolutionCapable</key>\n\t<true/>\n"
   body = body + plistString("NSPrincipalClass", "NSApplication")
-  if config.infoPlist != null {
+  if config.infoPlist != none {
     for key, value of config.infoPlist! {
       body = body + "\t<key>" + escapePlistText(key) + "</key>\n" + renderPlistValue(value, 1)
     }
@@ -113,7 +113,7 @@ function plistIndent(depth: int): string {
 function renderPlistValue(value: JsonValue, depth: int): string {
   indent := plistIndent(depth)
   case value {
-    _: null -> return indent + "<string></string>\n"
+    _: none -> return indent + "<string></string>\n"
     boolean: bool -> return indent + if boolean then "<true/>\n" else "<false/>\n"
     number: int -> return indent + "<integer>" + string(number) + "</integer>\n"
     number: long -> return indent + "<integer>" + string(number) + "</integer>\n"

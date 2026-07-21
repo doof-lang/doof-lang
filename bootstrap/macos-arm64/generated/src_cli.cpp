@@ -46,119 +46,119 @@ doof::Result<std::shared_ptr<CliRequest>, std::string> CliRequest::fromJsonValue
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_outputDirectory->second) : doof::json_is_string(_iterator_outputDirectory->second)))) { return doof::Failure<std::string>{"Field \"outputDirectory\" expected string but got " + std::string(doof::json_type_name(_iterator_outputDirectory->second))}; }
         _field_outputDirectory = (_lenient ? doof::json_as_string_lenient(_iterator_outputDirectory->second) : doof::json_as_string(_iterator_outputDirectory->second));
     } else {
-        _field_outputDirectory = std::string{std::string("")};
+        _field_outputDirectory = std::string("");
     }
     std::optional<std::string> _field_compiler;
     if (auto _iterator_compiler = _object->find("compiler"); _iterator_compiler != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_compiler->second) : doof::json_is_string(_iterator_compiler->second)))) { return doof::Failure<std::string>{"Field \"compiler\" expected string but got " + std::string(doof::json_type_name(_iterator_compiler->second))}; }
         _field_compiler = (_lenient ? doof::json_as_string_lenient(_iterator_compiler->second) : doof::json_as_string(_iterator_compiler->second));
     } else {
-        _field_compiler = std::string{std::string("")};
+        _field_compiler = std::string("");
     }
     std::optional<std::string> _field_filter;
     if (auto _iterator_filter = _object->find("filter"); _iterator_filter != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_filter->second) : doof::json_is_string(_iterator_filter->second)))) { return doof::Failure<std::string>{"Field \"filter\" expected string but got " + std::string(doof::json_type_name(_iterator_filter->second))}; }
         _field_filter = (_lenient ? doof::json_as_string_lenient(_iterator_filter->second) : doof::json_as_string(_iterator_filter->second));
     } else {
-        _field_filter = std::string{std::string("")};
+        _field_filter = std::string("");
     }
     std::optional<bool> _field_listOnly;
     if (auto _iterator_listOnly = _object->find("listOnly"); _iterator_listOnly != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_listOnly->second) : doof::json_is_boolean(_iterator_listOnly->second)))) { return doof::Failure<std::string>{"Field \"listOnly\" expected boolean but got " + std::string(doof::json_type_name(_iterator_listOnly->second))}; }
         _field_listOnly = (_lenient ? doof::json_as_bool_lenient(_iterator_listOnly->second) : doof::json_as_bool(_iterator_listOnly->second));
     } else {
-        _field_listOnly = bool{false};
+        _field_listOnly = false;
     }
     std::optional<bool> _field_coverage;
     if (auto _iterator_coverage = _object->find("coverage"); _iterator_coverage != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_coverage->second) : doof::json_is_boolean(_iterator_coverage->second)))) { return doof::Failure<std::string>{"Field \"coverage\" expected boolean but got " + std::string(doof::json_type_name(_iterator_coverage->second))}; }
         _field_coverage = (_lenient ? doof::json_as_bool_lenient(_iterator_coverage->second) : doof::json_as_bool(_iterator_coverage->second));
     } else {
-        _field_coverage = bool{false};
+        _field_coverage = false;
     }
     std::optional<std::string> _field_coverageOutput;
     if (auto _iterator_coverageOutput = _object->find("coverageOutput"); _iterator_coverageOutput != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_coverageOutput->second) : doof::json_is_string(_iterator_coverageOutput->second)))) { return doof::Failure<std::string>{"Field \"coverageOutput\" expected string but got " + std::string(doof::json_type_name(_iterator_coverageOutput->second))}; }
         _field_coverageOutput = (_lenient ? doof::json_as_string_lenient(_iterator_coverageOutput->second) : doof::json_as_string(_iterator_coverageOutput->second));
     } else {
-        _field_coverageOutput = std::string{std::string("")};
+        _field_coverageOutput = std::string("");
     }
     std::optional<std::string> _field_distDirectory;
     if (auto _iterator_distDirectory = _object->find("distDirectory"); _iterator_distDirectory != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_distDirectory->second) : doof::json_is_string(_iterator_distDirectory->second)))) { return doof::Failure<std::string>{"Field \"distDirectory\" expected string but got " + std::string(doof::json_type_name(_iterator_distDirectory->second))}; }
         _field_distDirectory = (_lenient ? doof::json_as_string_lenient(_iterator_distDirectory->second) : doof::json_as_string(_iterator_distDirectory->second));
     } else {
-        _field_distDirectory = std::string{std::string("")};
+        _field_distDirectory = std::string("");
     }
     std::optional<std::string> _field_macosSigning;
     if (auto _iterator_macosSigning = _object->find("macosSigning"); _iterator_macosSigning != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_macosSigning->second) : doof::json_is_string(_iterator_macosSigning->second)))) { return doof::Failure<std::string>{"Field \"macosSigning\" expected string but got " + std::string(doof::json_type_name(_iterator_macosSigning->second))}; }
         _field_macosSigning = (_lenient ? doof::json_as_string_lenient(_iterator_macosSigning->second) : doof::json_as_string(_iterator_macosSigning->second));
     } else {
-        _field_macosSigning = std::string{std::string("")};
+        _field_macosSigning = std::string("");
     }
     std::optional<std::string> _field_macosSignIdentity;
     if (auto _iterator_macosSignIdentity = _object->find("macosSignIdentity"); _iterator_macosSignIdentity != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_macosSignIdentity->second) : doof::json_is_string(_iterator_macosSignIdentity->second)))) { return doof::Failure<std::string>{"Field \"macosSignIdentity\" expected string but got " + std::string(doof::json_type_name(_iterator_macosSignIdentity->second))}; }
         _field_macosSignIdentity = (_lenient ? doof::json_as_string_lenient(_iterator_macosSignIdentity->second) : doof::json_as_string(_iterator_macosSignIdentity->second));
     } else {
-        _field_macosSignIdentity = std::string{std::string("")};
+        _field_macosSignIdentity = std::string("");
     }
     std::optional<bool> _field_macosSandbox;
     if (auto _iterator_macosSandbox = _object->find("macosSandbox"); _iterator_macosSandbox != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_macosSandbox->second) : doof::json_is_boolean(_iterator_macosSandbox->second)))) { return doof::Failure<std::string>{"Field \"macosSandbox\" expected boolean but got " + std::string(doof::json_type_name(_iterator_macosSandbox->second))}; }
         _field_macosSandbox = (_lenient ? doof::json_as_bool_lenient(_iterator_macosSandbox->second) : doof::json_as_bool(_iterator_macosSandbox->second));
     } else {
-        _field_macosSandbox = bool{false};
+        _field_macosSandbox = false;
     }
     std::optional<std::string> _field_macosEntitlements;
     if (auto _iterator_macosEntitlements = _object->find("macosEntitlements"); _iterator_macosEntitlements != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_macosEntitlements->second) : doof::json_is_string(_iterator_macosEntitlements->second)))) { return doof::Failure<std::string>{"Field \"macosEntitlements\" expected string but got " + std::string(doof::json_type_name(_iterator_macosEntitlements->second))}; }
         _field_macosEntitlements = (_lenient ? doof::json_as_string_lenient(_iterator_macosEntitlements->second) : doof::json_as_string(_iterator_macosEntitlements->second));
     } else {
-        _field_macosEntitlements = std::string{std::string("")};
+        _field_macosEntitlements = std::string("");
     }
     std::optional<std::string> _field_iosDestination;
     if (auto _iterator_iosDestination = _object->find("iosDestination"); _iterator_iosDestination != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_iosDestination->second) : doof::json_is_string(_iterator_iosDestination->second)))) { return doof::Failure<std::string>{"Field \"iosDestination\" expected string but got " + std::string(doof::json_type_name(_iterator_iosDestination->second))}; }
         _field_iosDestination = (_lenient ? doof::json_as_string_lenient(_iterator_iosDestination->second) : doof::json_as_string(_iterator_iosDestination->second));
     } else {
-        _field_iosDestination = std::string{std::string("simulator")};
+        _field_iosDestination = std::string("simulator");
     }
     std::optional<std::string> _field_iosDevice;
     if (auto _iterator_iosDevice = _object->find("iosDevice"); _iterator_iosDevice != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_iosDevice->second) : doof::json_is_string(_iterator_iosDevice->second)))) { return doof::Failure<std::string>{"Field \"iosDevice\" expected string but got " + std::string(doof::json_type_name(_iterator_iosDevice->second))}; }
         _field_iosDevice = (_lenient ? doof::json_as_string_lenient(_iterator_iosDevice->second) : doof::json_as_string(_iterator_iosDevice->second));
     } else {
-        _field_iosDevice = std::string{std::string("")};
+        _field_iosDevice = std::string("");
     }
     std::optional<std::string> _field_iosSignIdentity;
     if (auto _iterator_iosSignIdentity = _object->find("iosSignIdentity"); _iterator_iosSignIdentity != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_iosSignIdentity->second) : doof::json_is_string(_iterator_iosSignIdentity->second)))) { return doof::Failure<std::string>{"Field \"iosSignIdentity\" expected string but got " + std::string(doof::json_type_name(_iterator_iosSignIdentity->second))}; }
         _field_iosSignIdentity = (_lenient ? doof::json_as_string_lenient(_iterator_iosSignIdentity->second) : doof::json_as_string(_iterator_iosSignIdentity->second));
     } else {
-        _field_iosSignIdentity = std::string{std::string("")};
+        _field_iosSignIdentity = std::string("");
     }
     std::optional<std::string> _field_iosProvisioningProfile;
     if (auto _iterator_iosProvisioningProfile = _object->find("iosProvisioningProfile"); _iterator_iosProvisioningProfile != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_iosProvisioningProfile->second) : doof::json_is_string(_iterator_iosProvisioningProfile->second)))) { return doof::Failure<std::string>{"Field \"iosProvisioningProfile\" expected string but got " + std::string(doof::json_type_name(_iterator_iosProvisioningProfile->second))}; }
         _field_iosProvisioningProfile = (_lenient ? doof::json_as_string_lenient(_iterator_iosProvisioningProfile->second) : doof::json_as_string(_iterator_iosProvisioningProfile->second));
     } else {
-        _field_iosProvisioningProfile = std::string{std::string("")};
+        _field_iosProvisioningProfile = std::string("");
     }
     std::optional<std::string> _field_targetOverride;
     if (auto _iterator_targetOverride = _object->find("targetOverride"); _iterator_targetOverride != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_targetOverride->second) : doof::json_is_string(_iterator_targetOverride->second)))) { return doof::Failure<std::string>{"Field \"targetOverride\" expected string but got " + std::string(doof::json_type_name(_iterator_targetOverride->second))}; }
         _field_targetOverride = (_lenient ? doof::json_as_string_lenient(_iterator_targetOverride->second) : doof::json_as_string(_iterator_targetOverride->second));
     } else {
-        _field_targetOverride = std::string{std::string("")};
+        _field_targetOverride = std::string("");
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_programArguments;
     if (auto _iterator_programArguments = _object->find("programArguments"); _iterator_programArguments != _object->end()) {
         if (!(doof::json_is_array(_iterator_programArguments->second))) { return doof::Failure<std::string>{"Field \"programArguments\" expected array but got " + std::string(doof::json_type_name(_iterator_programArguments->second))}; }
         _field_programArguments = [&]() { const auto* _array = doof::json_as_array(_iterator_programArguments->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_programArguments = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_programArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     return doof::Success<std::shared_ptr<CliRequest>>{std::make_shared<CliRequest>(_field_command, _field_entry, _field_outputDirectory.value(), _field_compiler.value(), _field_filter.value(), _field_listOnly.value(), _field_coverage.value(), _field_coverageOutput.value(), _field_distDirectory.value(), _field_macosSigning.value(), _field_macosSignIdentity.value(), _field_macosSandbox.value(), _field_macosEntitlements.value(), _field_iosDestination.value(), _field_iosDevice.value(), _field_iosSignIdentity.value(), _field_iosProvisioningProfile.value(), _field_targetOverride.value(), _field_programArguments.value())};
 }
@@ -182,14 +182,14 @@ doof::Result<std::shared_ptr<CliParseResult>, std::string> CliParseResult::fromJ
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
         _field_error = (_lenient ? doof::json_as_string_lenient(_iterator_error->second) : doof::json_as_string(_iterator_error->second));
     } else {
-        _field_error = std::string{std::string("")};
+        _field_error = std::string("");
     }
     std::optional<bool> _field_help;
     if (auto _iterator_help = _object->find("help"); _iterator_help != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_help->second) : doof::json_is_boolean(_iterator_help->second)))) { return doof::Failure<std::string>{"Field \"help\" expected boolean but got " + std::string(doof::json_type_name(_iterator_help->second))}; }
         _field_help = (_lenient ? doof::json_as_bool_lenient(_iterator_help->second) : doof::json_as_bool(_iterator_help->second));
     } else {
-        _field_help = bool{false};
+        _field_help = false;
     }
     return doof::Success<std::shared_ptr<CliParseResult>>{std::make_shared<CliParseResult>(_field_request, _field_error.value(), _field_help.value())};
 }

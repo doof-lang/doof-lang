@@ -183,6 +183,9 @@ TokenType keywordType(std::string word) {
         if (word == std::string("true")) {
             return TokenType::True;
         }
+        if (word == std::string("none")) {
+            return TokenType::None;
+        }
         if (word == std::string("null")) {
             return TokenType::Null;
         }
@@ -834,49 +837,49 @@ doof::Result<std::shared_ptr<Lexer>, std::string> Lexer::fromJsonValue(const doo
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_pos->second) : doof::json_is_number(_iterator_pos->second)))) { return doof::Failure<std::string>{"Field \"pos\" expected number but got " + std::string(doof::json_type_name(_iterator_pos->second))}; }
         _field_pos = (_lenient ? doof::json_as_int_lenient(_iterator_pos->second) : doof::json_as_int(_iterator_pos->second));
     } else {
-        _field_pos = int32_t{0};
+        _field_pos = 0;
     }
     std::optional<int32_t> _field_line;
     if (auto _iterator_line = _object->find("line"); _iterator_line != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_line->second) : doof::json_is_number(_iterator_line->second)))) { return doof::Failure<std::string>{"Field \"line\" expected number but got " + std::string(doof::json_type_name(_iterator_line->second))}; }
         _field_line = (_lenient ? doof::json_as_int_lenient(_iterator_line->second) : doof::json_as_int(_iterator_line->second));
     } else {
-        _field_line = int32_t{1};
+        _field_line = 1;
     }
     std::optional<int32_t> _field_column;
     if (auto _iterator_column = _object->find("column"); _iterator_column != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_column->second) : doof::json_is_number(_iterator_column->second)))) { return doof::Failure<std::string>{"Field \"column\" expected number but got " + std::string(doof::json_type_name(_iterator_column->second))}; }
         _field_column = (_lenient ? doof::json_as_int_lenient(_iterator_column->second) : doof::json_as_int(_iterator_column->second));
     } else {
-        _field_column = int32_t{1};
+        _field_column = 1;
     }
     std::optional<std::shared_ptr<std::vector<Token>>> _field_tokens;
     if (auto _iterator_tokens = _object->find("tokens"); _iterator_tokens != _object->end()) {
         if (!(doof::json_is_array(_iterator_tokens->second))) { return doof::Failure<std::string>{"Field \"tokens\" expected array but got " + std::string(doof::json_type_name(_iterator_tokens->second))}; }
         _field_tokens = [&]() { const auto* _array = doof::json_as_array(_iterator_tokens->second); auto _values = std::make_shared<std::vector<Token>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(Token::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_tokens = std::shared_ptr<std::vector<Token>>{std::make_shared<std::vector<Token>>(std::vector<Token>{})};
+        _field_tokens = std::make_shared<std::vector<Token>>(std::vector<Token>{});
     }
     std::optional<std::shared_ptr<std::vector<LexerDiagnostic>>> _field_diagnostics;
     if (auto _iterator_diagnostics = _object->find("diagnostics"); _iterator_diagnostics != _object->end()) {
         if (!(doof::json_is_array(_iterator_diagnostics->second))) { return doof::Failure<std::string>{"Field \"diagnostics\" expected array but got " + std::string(doof::json_type_name(_iterator_diagnostics->second))}; }
         _field_diagnostics = [&]() { const auto* _array = doof::json_as_array(_iterator_diagnostics->second); auto _values = std::make_shared<std::vector<LexerDiagnostic>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(LexerDiagnostic::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_diagnostics = std::shared_ptr<std::vector<LexerDiagnostic>>{std::make_shared<std::vector<LexerDiagnostic>>(std::vector<LexerDiagnostic>{})};
+        _field_diagnostics = std::make_shared<std::vector<LexerDiagnostic>>(std::vector<LexerDiagnostic>{});
     }
     std::optional<std::shared_ptr<std::vector<char32_t>>> _field_templateDelimiters;
     if (auto _iterator_templateDelimiters = _object->find("templateDelimiters"); _iterator_templateDelimiters != _object->end()) {
         if (!(doof::json_is_array(_iterator_templateDelimiters->second))) { return doof::Failure<std::string>{"Field \"templateDelimiters\" expected array but got " + std::string(doof::json_type_name(_iterator_templateDelimiters->second))}; }
         _field_templateDelimiters = [&]() { const auto* _array = doof::json_as_array(_iterator_templateDelimiters->second); auto _values = std::make_shared<std::vector<char32_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(static_cast<char32_t>(doof::json_as_string(_element)[0])); } return _values; }();
     } else {
-        _field_templateDelimiters = std::shared_ptr<std::vector<char32_t>>{std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{})};
+        _field_templateDelimiters = std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{});
     }
     std::optional<std::shared_ptr<std::vector<int32_t>>> _field_braceDepth;
     if (auto _iterator_braceDepth = _object->find("braceDepth"); _iterator_braceDepth != _object->end()) {
         if (!(doof::json_is_array(_iterator_braceDepth->second))) { return doof::Failure<std::string>{"Field \"braceDepth\" expected array but got " + std::string(doof::json_type_name(_iterator_braceDepth->second))}; }
         _field_braceDepth = [&]() { const auto* _array = doof::json_as_array(_iterator_braceDepth->second); auto _values = std::make_shared<std::vector<int32_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
-        _field_braceDepth = std::shared_ptr<std::vector<int32_t>>{std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})};
+        _field_braceDepth = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     }
     return doof::Success<std::shared_ptr<Lexer>>{std::make_shared<Lexer>(_field_source, _field_pos.value(), _field_line.value(), _field_column.value(), _field_tokens.value(), _field_diagnostics.value(), _field_templateDelimiters.value(), _field_braceDepth.value())};
 }

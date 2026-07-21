@@ -2,10 +2,10 @@
 
 import { NamedType, TypePattern } from "./ast"
 import {
-  ArrayResolvedType, JsonValueResolvedType, MapResolvedType, NullType, PrimitiveType,
+  ArrayResolvedType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType,
   ResolvedType, ResultResolvedType,
 } from "./semantic"
-import { emitType, usesNullableSingleValueRepresentation, usesVariantRepresentation } from "./emitter-types"
+import { emitResultPayloadType, emitType, usesNullableSingleValueRepresentation, usesVariantRepresentation } from "./emitter-types"
 
 export class CaseTypePatternEmission {
   condition: string
@@ -20,7 +20,7 @@ export function emitCaseTypePattern(
   bindingName: string,
   currentModulePath: string,
 ): CaseTypePatternEmission {
-  if pattern.resolvedType == null { panic("Case pattern has no resolved type") }
+  if pattern.resolvedType == none { panic("Case pattern has no resolved type") }
   patternType := pattern.resolvedType!
   case subjectType {
     result: ResultResolvedType -> { return emitResultPattern(pattern, result, subject, bindingName, currentModulePath) }
@@ -58,8 +58,8 @@ function emitResultPattern(
   let armType = ""
   case pattern.type_ {
     named: NamedType -> {
-      if named.name == "Success" { armType = "doof::Success<" + emitType(result.valueType, currentModulePath) + ">" }
-      if named.name == "Failure" { armType = "doof::Failure<" + emitType(result.errorType, currentModulePath) + ">" }
+      if named.name == "Success" { armType = "doof::Success<" + emitResultPayloadType(result.valueType, currentModulePath) + ">" }
+      if named.name == "Failure" { armType = "doof::Failure<" + emitResultPayloadType(result.errorType, currentModulePath) + ">" }
     }
     _ -> { }
   }
@@ -85,7 +85,7 @@ function emitJsonValuePattern(patternType: ResolvedType, subject: string, bindin
     }
     _: ArrayResolvedType -> { condition = "doof::json_is_array(" + subject + ")"; value = "std::get<doof::JsonArray>(doof::json_storage(" + subject + "))" }
     _: MapResolvedType -> { condition = "doof::json_is_object(" + subject + ")"; value = "doof::json_object(" + subject + ")" }
-    _: NullType -> { condition = "doof::json_is_null(" + subject + ")"; value = "nullptr" }
+    _: NoneType -> { condition = "doof::json_is_null(" + subject + ")"; value = "nullptr" }
     _: JsonValueResolvedType -> { }
     _ -> { panic("Unsupported JsonValue case pattern") }
   }

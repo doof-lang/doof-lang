@@ -54,12 +54,12 @@ export function discoverModuleTests(
         }
       }
       list: ExportList -> {
-        if list.source != null { continue }
+        if list.source != none { continue }
         for specifier of list.specifiers {
-          exportedName := if specifier.alias == null then specifier.name else specifier.alias!
+          exportedName := if specifier.alias == none then specifier.name else specifier.alias!
           if !exportedName.startsWith("test") { continue }
           declaration := findFunction(program.statements, specifier.name)
-          if declaration != null {
+          if declaration != none {
             addDiscoveredTest(result, declaration!, exportedName, modulePath, rootDirectory)
           }
         }
@@ -137,7 +137,7 @@ export function mergeCoverageOutput(
   output: string,
   modules: CoverageModuleMetadata[],
   hitsByModule: int[][],
-): void {
+): none {
   for line of output.split("\n") {
     trimmed := line.trim()
     if !trimmed.startsWith("__COV__ ") { continue }
@@ -278,7 +278,7 @@ function parseCoverageInteger(value: string): int {
   return result
 }
 
-function appendUniqueLine(lines: int[], line: int): void {
+function appendUniqueLine(lines: int[], line: int): none {
   if !containsLine(lines, line) { lines.push(line) }
 }
 
@@ -319,7 +319,7 @@ function addDiscoveredTest(
   exportedName: string,
   modulePath: string,
   rootDirectory: string,
-): void {
+): none {
   location := modulePath + ":" + string(declaration.span.start.line) + ":" + string(declaration.span.start.column)
   if declaration.params.length > 0 {
     result.errors.push(location + ": error: test \"" + exportedName + "\" must not declare parameters")
@@ -329,8 +329,8 @@ function addDiscoveredTest(
     result.errors.push(location + ": error: test \"" + exportedName + "\" must not declare type parameters")
     return
   }
-  if !returnsVoid(declaration) {
-    result.errors.push(location + ": error: test \"" + exportedName + "\" must return void")
+  if !returnsNone(declaration) {
+    result.errors.push(location + ": error: test \"" + exportedName + "\" must return none")
     return
   }
   displayPath := testDisplayPath(rootDirectory, modulePath)
@@ -342,27 +342,27 @@ function addDiscoveredTest(
   })
 }
 
-function returnsVoid(declaration: FunctionDeclaration): bool {
-  if declaration.returnType == null {
+function returnsNone(declaration: FunctionDeclaration): bool {
+  if declaration.returnType == none {
     case declaration.body {
       _: Block -> { return true }
       _ -> { return false }
     }
   }
   case declaration.returnType! {
-    named: NamedType -> { return named.name == "void" }
+    named: NamedType -> { return named.name == "none" || named.name == "void" }
     _ -> { return false }
   }
 }
 
-function findFunction(statements: Statement[], name: string): FunctionDeclaration | null {
+function findFunction(statements: Statement[], name: string): FunctionDeclaration | none {
   for statement of statements {
     case statement {
       fn: FunctionDeclaration -> { if fn.name == name { return fn } }
       _ -> { }
     }
   }
-  return null
+  return none
 }
 
 function copyTests(tests: DiscoveredTest[]): DiscoveredTest[] {

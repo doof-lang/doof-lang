@@ -3,7 +3,7 @@ import { Assert } from "std/assert"
 import { NativeBuildPlan } from "./package-manifest"
 import { PkgConfigCommandResult, applyPkgConfigResult } from "./pkg-config"
 
-export function testConvertsPkgConfigFlagsIntoNativeBuildInputs(): void {
+export function testConvertsPkgConfigFlagsIntoNativeBuildInputs(): none {
   native := NativeBuildPlan { includePaths: ["/existing/include"], linkLibraries: ["SDL3"] }
 
   try! applyPkgConfigResult(
@@ -38,7 +38,7 @@ export function testConvertsPkgConfigFlagsIntoNativeBuildInputs(): void {
   Assert.equal(native.linkerFlags[0], "-Wl,-rpath,/opt/lib")
 }
 
-export function testReportsMissingPkgConfigExecutable(): void {
+export function testReportsMissingPkgConfigExecutable(): none {
   result := applyPkgConfigResult(
     NativeBuildPlan {},
     "sdl3",
@@ -55,7 +55,7 @@ export function testReportsMissingPkgConfigExecutable(): void {
   panic("expected pkg-config failure")
 }
 
-export function testReportsMissingPkgConfigPackage(): void {
+export function testReportsMissingPkgConfigPackage(): none {
   result := applyPkgConfigResult(
     NativeBuildPlan {},
     "missing-native-package",

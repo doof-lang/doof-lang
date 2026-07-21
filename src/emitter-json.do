@@ -3,8 +3,8 @@
 // Eligibility and lowering deliberately share one recursive surface so the
 // checker never advertises synthetic methods the emitter cannot define.
 
-import { ClassDeclaration, ClassField, IntLiteral, InterfaceDeclaration, NullLiteral, StringLiteral } from "./ast"
-import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResolvedType, NullType, PrimitiveType, ResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
+import { ClassDeclaration, ClassField, IntLiteral, InterfaceDeclaration, NoneLiteral, StringLiteral } from "./ast"
+import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitClassInnerType, emitContextType, usesVariantRepresentation } from "./emitter-types"
@@ -18,7 +18,7 @@ export function emitInterfaceJsonDeclaration(owner: InterfaceDeclaration): strin
 export function emitInterfaceJsonDefinition(owner: InterfaceDeclaration, context: EmitContext): string {
   if !owner.needsJson { return "" }
   discriminator := interfaceJsonDiscriminator(owner, context.allPrograms)
-  if discriminator == null { return "" }
+  if discriminator == none { return "" }
   failureType := "doof::Failure<std::string>"
   successType := "doof::Success<" + owner.name + ">"
   let result = "\ndoof::Result<" + owner.name + ", std::string> " + owner.name + "_fromJsonValue(const doof::JsonValue& _json, bool _lenient) {\n"
@@ -90,7 +90,7 @@ function emitFromJsonValue(owner: ClassDeclaration, context: EmitContext): strin
     for name of field.names {
       if arguments != "" { arguments = arguments + ", " }
       arguments = arguments + "_field_" + cppIdentifier(name)
-      if field.defaultValue != null { arguments = arguments + ".value()" }
+      if field.defaultValue != none { arguments = arguments + ".value()" }
     }
   }
   let constructed = owner.name + "{" + arguments + "}"
@@ -99,7 +99,7 @@ function emitFromJsonValue(owner: ClassDeclaration, context: EmitContext): strin
 }
 
 function emitJsonConstFieldValidation(field: ClassField, name: string, failureType: string): string {
-  if field.defaultValue == null { return "" }
+  if field.defaultValue == none { return "" }
   iterator := "_iterator_" + cppIdentifier(name)
   case field.defaultValue! {
     value: StringLiteral -> {
@@ -124,7 +124,7 @@ function emitJsonFieldRead(field: ClassField, name: string, context: EmitContext
   value := "_field_" + safeName
   typeText := emitContextType(type_, context)
   let result = ""
-  if field.defaultValue != null {
+  if field.defaultValue != none {
     result = result + "    std::optional<" + typeText + "> " + value + ";\n"
     result = result + "    if (auto " + iterator + " = _object->find(\"" + name + "\"); " + iterator + " != _object->end()) {\n"
     result = result + emitJsonValidation(iterator + "->second", type_, name, failureType, 2)
@@ -134,7 +134,7 @@ function emitJsonFieldRead(field: ClassField, name: string, context: EmitContext
     // A nullable `null` default must engage optional<optional<T>> with an
     // empty inner optional rather than disengaging the outer presence marker.
     case field.defaultValue! {
-      _: NullLiteral -> { defaultValue = typeText + "{" + defaultValue + "}" }
+      _: NoneLiteral -> { defaultValue = typeText + "{" + defaultValue + "}" }
       _ -> {}
     }
     result = result + "        " + value + " = " + defaultValue + ";\n"
@@ -262,7 +262,7 @@ export function jsonTypeName(type_: ResolvedType): string {
 export function emitJsonField(value: string, resolvedType: ResolvedType, context: EmitContext): string {
   case resolvedType {
     _: JsonValueResolvedType -> { return value }
-    _: NullType -> { return "doof::json_value(nullptr)" }
+    _: NoneType -> { return "doof::json_value(nullptr)" }
     primitive: PrimitiveType -> {
       if primitive.name == "char" { return "doof::json_value(std::string(1, static_cast<char>(" + value + ")))" }
       if primitive.name == "byte" { return "doof::json_value(static_cast<int32_t>(" + value + "))" }

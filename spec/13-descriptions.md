@@ -188,7 +188,8 @@ if result.isSuccess() {
 - `instance` — the object to call the method on
 - `methodName` — the public instance method name to invoke
 - `params` — a JSON object with parameter names as keys
-- On **success**: returns the method's return value as `JsonValue`, or `null` for void methods
+- On **success**: returns the method's return value as `JsonValue`, using source
+  `none` (JSON `null`) for `none`-returning methods
 - On **failure**: returns a `JsonValue`. Framework failures such as invalid parameters or unknown method names return `{ code: 400, message: string }`. If the method itself returns `Result<S, JsonValue>`, then the `JsonValue` failure is passed through unchanged. For any other `Result<S, F>` failure type, invoke returns `{ code: 500, message: "An error occurred" }`.
 
 ### `.invoke`
@@ -209,14 +210,15 @@ if result.isSuccess() {
 
 - `instance` — the object to call the method on
 - `params` — a JSON object with parameter names as keys
-- On **success**: returns the method's return value as `JsonValue`, or `null` for void methods
+- On **success**: returns the method's return value as `JsonValue`, using source
+  `none` (JSON `null`) for `none`-returning methods
 - On **failure**: returns a `JsonValue` using the same failure rules as `ClassMetadata.invoke`
 
 ### JSON Schema
 
 The `inputSchema` and `outputSchema` strings contain JSON Schema Draft 7. Input schemas describe the method parameters as an object; output schemas describe the success return payload.
 
-If a method returns `Result<S, F>`, then `outputSchema` describes `S`, not the `Result` wrapper. `Result<void, F>` uses `{ "type": "null" }`.
+If a method returns `Result<S, F>`, then `outputSchema` describes `S`, not the `Result` wrapper. `Result<none, F>` uses `{ "type": "null" }`.
 
 **Type mappings to JSON Schema:**
 
@@ -226,7 +228,7 @@ If a method returns `Result<S, F>`, then `outputSchema` describes `S`, not the `
 | `float`, `double` | `{ "type": "number" }` |
 | `string`, `char` | `{ "type": "string" }` |
 | `bool` | `{ "type": "boolean" }` |
-| `void` | `{ "type": "null" }` |
+| `none` | `{ "type": "null" }` |
 | `T[]` | `{ "type": "array", "items": { ... } }` |
 | `(T, U)` | `{ "type": "array", "prefixItems": [...] }` |
 | `T \| U` | `{ "anyOf": [...] }` |
@@ -251,14 +253,14 @@ The `Result<JsonValue, JsonValue>` returned by `.invoke` supports:
 | `.orElse(fn)` | `Result<JsonValue \| U, U2>` | Recover from a failure with another Result-returning operation |
 | `.unwrapOr(value)` | `JsonValue` | Return the success payload or a fallback |
 | `.unwrapOrElse(fn)` | `JsonValue` | Return the success payload or compute a fallback from the error |
-| `.ok()` | `JsonValue \| null` | Convert success to a nullable value |
-| `.err()` | `JsonValue \| null` | Convert failure to a nullable value |
+| `.ok()` | `JsonValue \| none` | Convert success to a nullable value |
+| `.err()` | `JsonValue \| none` | Convert failure to a nullable value |
 
 ### Restrictions
 
 - **Generic classes and structs** cannot use `.metadata` (compile error)
 - All public method parameters must be **JSON-serializable** (compile error otherwise)
-- Public method return types must either be JSON-serializable, or be `Result<S, F>` where `S` is JSON-serializable (or `void`). Failure types do not need to be JSON-serializable; invoke only passes them through when `F` is exactly `JsonValue`.
+- Public method return types must either be JSON-serializable, or be `Result<S, F>` where `S` is JSON-serializable (or `none`). Failure types do not need to be JSON-serializable; invoke only passes them through when `F` is exactly `JsonValue`.
 - `"metadata"`, `"toJsonObject"`, and `"fromJsonValue"` are **reserved** — classes and structs cannot define methods or fields with these names
 - Private and static methods are excluded from metadata and invoke dispatch
 

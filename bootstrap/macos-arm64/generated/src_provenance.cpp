@@ -35,7 +35,7 @@ std::string renderBuildProvenance(std::shared_ptr<std::vector<std::shared_ptr<::
     }
     provenanceSet(root, std::string("externalDependencies"), doof::json_value(externalValues));
     provenanceSet(root, std::string("native"), doof::json_value(provenanceNative(nativeBuild)));
-    return (::std_::json::index::formatJsonValue(doof::json_value(root)) + std::string("\n"));
+    return (::doof_json::format(doof::json_value(root)) + std::string("\n"));
 }
 std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenancePackage(std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput> package) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> value = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});

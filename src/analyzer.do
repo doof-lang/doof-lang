@@ -30,7 +30,7 @@ export class ModuleInfo {
   namespaceImports: NamespaceBinding[] = []
   reExports: string[] = []
   mockImportDirectives: MockImportDirective[] = []
-  mockRootPath: string | null = null
+  mockRootPath: string | none = none
   diagnostics: Diagnostic[] = []
 }
 
@@ -39,7 +39,7 @@ export class AnalysisResult {
   diagnostics: Diagnostic[] = []
 }
 
-readonly BUILTIN_TYPES = ["byte", "int", "long", "float", "double", "string", "char", "bool", "void", "null", "JsonValue", "JsonObject", "SourceLocation", "Map", "ReadonlyMap", "Set", "ReadonlySet", "Result", "Stream", "Range", "Tuple", "Actor", "Promise"]
+readonly BUILTIN_TYPES = ["byte", "int", "long", "float", "double", "string", "char", "bool", "none", "void", "null", "JsonValue", "JsonObject", "SourceLocation", "Map", "ReadonlyMap", "Set", "ReadonlySet", "Result", "Stream", "Range", "Tuple", "Actor", "Promise"]
 
 export class ModuleAnalyzer {
   resolver: ModuleResolver
@@ -54,18 +54,18 @@ export class ModuleAnalyzer {
     resolver.loadedPaths = []
     resolver.diagnostics = []
     resolver.failedPaths = []
-    ignored := analyzeModule(if entry.endsWith(".do") then entry else entry + ".do", null)
+    ignored := analyzeModule(if entry.endsWith(".do") then entry else entry + ".do", none)
     for diagnostic of resolver.diagnostics { diagnostics.push(diagnostic) }
     return AnalysisResult { modules, diagnostics }
   }
 
-  private function analyzeModule(path: string, inheritedMockRootPath: string | null): ModuleInfo | null {
+  private function analyzeModule(path: string, inheritedMockRootPath: string | none): ModuleInfo | none {
     existing := findModule(path)
-    if existing != null { return existing }
-    if contains(inProgress, path) { return null }
+    if existing != none { return existing }
+    if contains(inProgress, path) { return none }
 
     source := resolver.find(path)
-    if source == null {
+    if source == none {
       if !resolver.failed(path) {
         diagnostics.push(Diagnostic {
           severity: "error",
@@ -74,7 +74,7 @@ export class ModuleAnalyzer {
           module: path,
         })
       }
-      return null
+      return none
     }
 
     inProgress.push(path)
@@ -90,11 +90,11 @@ export class ModuleAnalyzer {
         module: path,
       })
       ignored := try! inProgress.pop()
-      return null
+      return none
     }
     mockImportDirectives := collectMockImportDirectives(program)
     let mockRootPath = inheritedMockRootPath
-    if mockRootPath == null && mockImportDirectives.length > 0 && path.endsWith(".test.do") {
+    if mockRootPath == none && mockImportDirectives.length > 0 && path.endsWith(".test.do") {
       mockRootPath = path
     }
     info := ModuleInfo { path, program, mockImportDirectives, mockRootPath }
@@ -109,17 +109,17 @@ export class ModuleAnalyzer {
     return info
   }
 
-  private function collectSymbols(info: ModuleInfo): void {
+  private function collectSymbols(info: ModuleInfo): none {
     for statement of info.program.statements {
       symbol := symbolFor(statement, info.path)
-      if symbol == null { continue }
+      if symbol == none { continue }
       decorateDeclarationSymbol(statement, symbol!)
       info.symbols.push(symbol!)
       if symbol!.exported { info.exports.push(symbol!) }
     }
   }
 
-  private function decorateDeclarationSymbol(statement: Statement, symbol: Symbol): void {
+  private function decorateDeclarationSymbol(statement: Statement, symbol: Symbol): none {
     case statement {
       class_: ClassDeclaration -> { class_.resolvedSymbol = symbol }
       interface_: InterfaceDeclaration -> { interface_.resolvedSymbol = symbol }
@@ -127,7 +127,7 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function symbolFor(statement: Statement, module: string): Symbol | null {
+  private function symbolFor(statement: Statement, module: string): Symbol | none {
     case statement {
       value: ClassDeclaration -> {
         return Symbol {
@@ -159,9 +159,9 @@ export class ModuleAnalyzer {
       value: EnumDeclaration -> {
         return Symbol { kind: "enum", name: value.name, module, exported: value.exported }
       }
-      _ -> { return null }
+      _ -> { return none }
     }
-    return null
+    return none
   }
 
   /** Retains declaration identity when an export list introduces a public name. */
@@ -180,7 +180,7 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function resolveImports(info: ModuleInfo): void {
+  private function resolveImports(info: ModuleInfo): none {
     for statement of info.program.statements {
       case statement {
         import_: ImportDeclaration -> {
@@ -193,15 +193,15 @@ export class ModuleAnalyzer {
           for specifier of import_.specifiers {
             case specifier {
               named: NamedImport -> {
-                let imported: Symbol | null = null
-                if source != null { imported = findExport(source!, named.name) }
+                let imported: Symbol | none = none
+                if source != none { imported = findExport(source!, named.name) }
                 // A failed dependency already owns the actionable diagnostic.
                 // Do not reinterpret its missing symbol table as missing exports.
-                if source != null && imported == null {
+                if source != none && imported == none {
                   addError(info, "Module '" + import_.source + "' does not export '" + named.name + "'", named.span)
                 }
-                localName := if named.alias == null then named.name else named.alias!
-                if imported == null {
+                localName := if named.alias == none then named.name else named.alias!
+                if imported == none {
                   info.imports.push(ImportBinding {
                     localName, sourceName: named.name, sourceModule: sourcePath,
                     typeOnly: import_.typeOnly,
@@ -228,22 +228,22 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function resolveExportLists(info: ModuleInfo): void {
+  private function resolveExportLists(info: ModuleInfo): none {
     for statement of info.program.statements {
       case statement {
         list: ExportList -> {
-          if list.source != null {
+          if list.source != none {
             sourcePath := resolveImportPath(info, list.source!)
             source := analyzeModule(sourcePath, info.mockRootPath)
             info.reExports.push(sourcePath)
             for specifier of list.specifiers {
-              let exported: Symbol | null = null
-              if source != null { exported = findExport(source!, specifier.name) }
-              if source != null && exported == null {
+              let exported: Symbol | none = none
+              if source != none { exported = findExport(source!, specifier.name) }
+              if source != none && exported == none {
                 addError(info, "Module '" + list.source! + "' does not export '" + specifier.name + "'", specifier.span)
               } else {
-                if exported != null {
-                  exportedName := if specifier.alias == null then specifier.name else specifier.alias!
+                if exported != none {
+                  exportedName := if specifier.alias == none then specifier.name else specifier.alias!
                   info.exports.push(exportedSymbol(exported!, exportedName))
                 }
               }
@@ -252,9 +252,9 @@ export class ModuleAnalyzer {
           }
           for specifier of list.specifiers {
             local := findSymbol(info, specifier.name)
-            if local != null {
-              exportedName := if specifier.alias == null then specifier.name else specifier.alias!
-              if findExport(info, exportedName) == null {
+            if local != none {
+              exportedName := if specifier.alias == none then specifier.name else specifier.alias!
+              if findExport(info, exportedName) == none {
                 info.exports.push(exportedSymbol(local!, exportedName))
               }
             } else {
@@ -267,17 +267,17 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function resolveNamedTypes(info: ModuleInfo): void {
+  private function resolveNamedTypes(info: ModuleInfo): none {
     for statement of info.program.statements { visitStatementTypes(statement, info) }
   }
 
-  private function visitStatementTypes(statement: Statement, info: ModuleInfo): void {
+  private function visitStatementTypes(statement: Statement, info: ModuleInfo): none {
     case statement {
       fn: FunctionDeclaration -> { visitFunctionTypes(fn, info) }
       class_: ClassDeclaration -> {
         visitTypeParameterConstraints(class_.typeParamConstraints, info, class_.typeParams)
         for annotation of class_.implements_ { visitType(annotation, info, class_.typeParams) }
-        for field of class_.fields { if field.type_ != null { visitType(field.type_!, info, class_.typeParams) } }
+        for field of class_.fields { if field.type_ != none { visitType(field.type_!, info, class_.typeParams) } }
         for method of class_.methods { visitFunctionTypes(method, info, class_.typeParams) }
       }
       interface_: InterfaceDeclaration -> {
@@ -286,39 +286,39 @@ export class ModuleAnalyzer {
         for method of interface_.methods { visitFunctionTypes(method, info, interface_.typeParams) }
       }
       alias: TypeAliasDeclaration -> { visitTypeParameterConstraints(alias.typeParamConstraints, info, alias.typeParams); visitType(alias.type_, info, alias.typeParams) }
-      const_: ConstDeclaration -> { if const_.type_ != null { visitType(const_.type_!, info, []) } }
-      readonly_: ReadonlyDeclaration -> { if readonly_.type_ != null { visitType(readonly_.type_!, info, []) } }
-      binding: ImmutableBinding -> { if binding.type_ != null { visitType(binding.type_!, info, []) } }
-      let_: LetDeclaration -> { if let_.type_ != null { visitType(let_.type_!, info, []) } }
+      const_: ConstDeclaration -> { if const_.type_ != none { visitType(const_.type_!, info, []) } }
+      readonly_: ReadonlyDeclaration -> { if readonly_.type_ != none { visitType(readonly_.type_!, info, []) } }
+      binding: ImmutableBinding -> { if binding.type_ != none { visitType(binding.type_!, info, []) } }
+      let_: LetDeclaration -> { if let_.type_ != none { visitType(let_.type_!, info, []) } }
       _ -> { }
     }
   }
 
-  private function visitFunctionTypes(fn: FunctionDeclaration, info: ModuleInfo, ownerTypeParams: string[] = []): void {
+  private function visitFunctionTypes(fn: FunctionDeclaration, info: ModuleInfo, ownerTypeParams: string[] = []): none {
     let typeParams: string[] = []
     for parameter of ownerTypeParams { typeParams.push(parameter) }
     for parameter of fn.typeParams { typeParams.push(parameter) }
     visitTypeParameterConstraints(fn.typeParamConstraints, info, typeParams)
-    for parameter of fn.params { if parameter.type_ != null { visitType(parameter.type_!, info, typeParams) } }
-    if fn.returnType != null { visitType(fn.returnType!, info, typeParams) }
+    for parameter of fn.params { if parameter.type_ != none { visitType(parameter.type_!, info, typeParams) } }
+    if fn.returnType != none { visitType(fn.returnType!, info, typeParams) }
   }
 
-  private function visitTypeParameterConstraints(constraints: TypeParameterConstraint[], info: ModuleInfo, typeParams: string[]): void {
-    for constraint of constraints { if constraint.type_ != null { visitType(constraint.type_!, info, typeParams) } }
+  private function visitTypeParameterConstraints(constraints: TypeParameterConstraint[], info: ModuleInfo, typeParams: string[]): none {
+    for constraint of constraints { if constraint.type_ != none { visitType(constraint.type_!, info, typeParams) } }
   }
 
-  private function visitType(annotation: TypeAnnotation, info: ModuleInfo, typeParams: string[] = []): void {
+  private function visitType(annotation: TypeAnnotation, info: ModuleInfo, typeParams: string[] = []): none {
     case annotation {
       named: NamedType -> {
         if !isBuiltin(named.name) && !containsTypeParam(typeParams, named.name) {
-          let symbol: Symbol | null = findSymbol(info, named.name)
-          if symbol == null {
+          let symbol: Symbol | none = findSymbol(info, named.name)
+          if symbol == none {
             for imported of info.imports {
               if imported.localName == named.name { symbol = imported.symbol; break }
             }
           }
-          if symbol == null { symbol = findExport(info, named.name) }
-          if symbol == null { addError(info, "Unknown type '" + named.name + "'", named.span) }
+          if symbol == none { symbol = findExport(info, named.name) }
+          if symbol == none { addError(info, "Unknown type '" + named.name + "'", named.span) }
           named.resolvedSymbol = symbol
         }
         for argument of named.typeArgs { visitType(argument, info, typeParams) }
@@ -338,51 +338,51 @@ export class ModuleAnalyzer {
     return false
   }
 
-  private function findModule(path: string): ModuleInfo | null {
+  private function findModule(path: string): ModuleInfo | none {
     for module of modules { if module.path == path { return module } }
-    return null
+    return none
   }
 
   // Keep the complete Statement union visible in this module's generated
   // header.  These forms are dispatched by shared Statement-typed helpers.
   private function keepStatementTypes(
-    block: Block | null = null,
-    export_: ExportDeclaration | null = null,
-    import_: ImportDeclaration | null = null,
-    mockImport: MockImportDirective | null = null,
-    if_: IfStatement | null = null,
-    case_: CaseStatement | null = null,
-    while_: WhileStatement | null = null,
-    for_: ForStatement | null = null,
-    forOf: ForOfStatement | null = null,
-    with_: WithStatement | null = null,
-    return_: ReturnStatement | null = null,
-    yield_: YieldStatement | null = null,
-    break_: BreakStatement | null = null,
-    continue_: ContinueStatement | null = null,
-    expression: ExpressionStatement | null = null,
-    destructuring: DestructuringStatement | null = null,
-  ): void { }
+    block: Block | none = none,
+    export_: ExportDeclaration | none = none,
+    import_: ImportDeclaration | none = none,
+    mockImport: MockImportDirective | none = none,
+    if_: IfStatement | none = none,
+    case_: CaseStatement | none = none,
+    while_: WhileStatement | none = none,
+    for_: ForStatement | none = none,
+    forOf: ForOfStatement | none = none,
+    with_: WithStatement | none = none,
+    return_: ReturnStatement | none = none,
+    yield_: YieldStatement | none = none,
+    break_: BreakStatement | none = none,
+    continue_: ContinueStatement | none = none,
+    expression: ExpressionStatement | none = none,
+    destructuring: DestructuringStatement | none = none,
+  ): none { }
 
   /** Applies the root test's mock environment before ordinary path resolution. */
   private function resolveImportPath(info: ModuleInfo, specifier: string): string {
-    if info.mockRootPath == null { return resolver.resolve(info.path, specifier) }
+    if info.mockRootPath == none { return resolver.resolve(info.path, specifier) }
     root := findModule(info.mockRootPath!)
-    if root == null || root!.mockImportDirectives.length == 0 { return resolver.resolve(info.path, specifier) }
+    if root == none || root!.mockImportDirectives.length == 0 { return resolver.resolve(info.path, specifier) }
     sourceSpecifier := relativeModuleSpecifier(info.mockRootPath!, info.path)
     replacement := findMockReplacement(root!.mockImportDirectives, sourceSpecifier, specifier)
-    if replacement == null { return resolver.resolve(info.path, specifier) }
+    if replacement == none { return resolver.resolve(info.path, specifier) }
     return resolver.resolve(info.mockRootPath!, replacement!)
   }
 
-  private function validateMockImportDirectives(info: ModuleInfo, inheritedMockRootPath: string | null): void {
+  private function validateMockImportDirectives(info: ModuleInfo, inheritedMockRootPath: string | none): none {
     if info.mockImportDirectives.length == 0 { return }
     if !info.path.endsWith(".test.do") {
       for directive of info.mockImportDirectives {
         addError(info, "mock import directives are only valid in .test.do files", directive.span)
       }
     }
-    if inheritedMockRootPath != null && inheritedMockRootPath != info.path {
+    if inheritedMockRootPath != none && inheritedMockRootPath != info.path {
       for directive of info.mockImportDirectives {
         addError(info, "mock import directives are only valid in the root test file", directive.span)
       }
@@ -451,14 +451,14 @@ function findMockReplacement(
   directives: MockImportDirective[],
   sourceSpecifier: string,
   dependencySpecifier: string,
-): string | null {
+): string | none {
   for directive of directives {
     if directive.sourcePattern != sourceSpecifier { continue }
     for mapping of directive.mappings {
       if mapping.dependency == dependencySpecifier { return mapping.replacement }
     }
   }
-  return null
+  return none
 }
 
 export function createAnalyzer(sources: SourceFile[]): ModuleAnalyzer {
@@ -469,14 +469,14 @@ export function createAnalyzerWithLoader(sources: SourceFile[], loader: SourceLo
   return ModuleAnalyzer { resolver: ModuleResolver { sources, loader } }
 }
 
-function findSymbol(info: ModuleInfo, name: string): Symbol | null {
+function findSymbol(info: ModuleInfo, name: string): Symbol | none {
   for symbol of info.symbols { if symbol.name == name { return symbol } }
-  return null
+  return none
 }
 
-function findExport(info: ModuleInfo, name: string): Symbol | null {
+function findExport(info: ModuleInfo, name: string): Symbol | none {
   for symbol of info.exports { if symbol.name == name { return symbol } }
-  return null
+  return none
 }
 
 function isBuiltin(name: string): bool {
@@ -490,7 +490,7 @@ function contains(values: string[], value: string): bool {
   return false
 }
 
-function addError(info: ModuleInfo, message: string, span: SourceSpan): void {
+function addError(info: ModuleInfo, message: string, span: SourceSpan): none {
   info.diagnostics.push(Diagnostic { severity: "error", message, span: semanticSpan(span), module: info.path })
 }
 

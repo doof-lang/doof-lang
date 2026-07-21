@@ -47,7 +47,17 @@ contracts.
 ./scripts/test.sh                  # compiler unit/component tests
 ./scripts/release.sh               # full release acceptance gate
 ./scripts/update-std-catalog.sh    # regenerate the exact std package catalog
+./install.sh                       # build, test, and sudo-install the compiler
 ```
+
+`./install.sh` is the development self-install workflow. It completes the
+verified fixed-point build and compiler tests before requesting `sudo`, then
+installs the compiler bundle under `/usr/local/libexec/doof` and exposes it as
+`/usr/local/bin/doof`. Relative resource symlinks in `/usr/local/bin` support
+the macOS console-executable resource lookup while keeping the canonical files
+in the bundle. Use `./install.sh --prefix /absolute/path` to select a different
+prefix. Existing compiler files or symlinks are replaced; an existing
+directory at any managed path is left untouched and reported as an error.
 
 Language behavior is defined by [spec/](spec/). Current operational and
 compatibility limitations are tracked in [ROADMAP.md](ROADMAP.md).

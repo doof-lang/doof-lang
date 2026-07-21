@@ -18,7 +18,14 @@ Doof features a strong, static type system with bidirectional type inference, st
 | `string` | — | Text |
 | `char` | — | UTF-8 character |
 | `bool` | — | Boolean (`true` / `false`) |
-| `void` | — | Unit type (functions with no return value) |
+| `none` | — | Unit/absence type and its sole value |
+
+`none` is the canonical spelling in both type and expression positions.
+`T | none` is the canonical optional type. The legacy source spellings `void`
+and `null` are deprecated aliases: both canonicalize to `none` before emission
+and produce a warning with a source span and `none` replacement. These aliases
+do not affect external formats—generated C++ still uses `void` where required,
+and JSON still encodes absence as `null`.
 
 ## Built-in Range Type
 
@@ -51,7 +58,7 @@ payload: JsonValue := { name: "Ada", scores: [1, 2, 3] }
 
 `JsonValue` is an exact recursive carrier, not a general implicit conversion sink. Its shape is:
 
-- `null`
+- `none`
 - `bool`
 - `byte`
 - `int`
@@ -220,8 +227,8 @@ Arrays support a `.length` property and the following built-in methods:
 | Method | Available on | Signature | Description |
 |--------|--------------|-----------|-------------|
 | `.length` | both | `int` (property) | Number of elements |
-| `.push(element)` | mutable only | `(T): void` | Append an element |
-| `.reserve(capacity)` | mutable only | `(int): void` | Reserve backing capacity without changing the element count |
+| `.push(element)` | mutable only | `(T): none` | Append an element |
+| `.reserve(capacity)` | mutable only | `(int): none` | Reserve backing capacity without changing the element count |
 | `.pop()` | mutable only | `(): Result<T, string>` | Remove and return the last element, or a failure message when empty |
 | `.contains(element)` | both | `(T): bool` | Whether the array contains the value |
 | `.indexOf(element)` | both | `(T): int` | Index of first matching element, or `-1` when absent |
@@ -264,15 +271,18 @@ copy := frozen.cloneMutable() // int[]
 copy.push(4)                      // ✅ OK
 ```
 
-### Non-Null Assertion
+### Presence Assertion
 
-The postfix `!` operator asserts that a nullable expression is non-null or unwraps a `Result<T, E>` success value. It strips `null` from nullable types at compile time, and for `Result<T, E>` it yields `T`. At runtime, if the value is actually null or the Result is a `Failure`, the program will panic.
+The postfix `!` operator asserts that a nullable expression is present or
+unwraps a `Result<T, E>` success value. It strips `none` from nullable types at
+compile time, and for `Result<T, E>` it yields `T`. At runtime, if the value is
+actually `none` or the Result is a `Failure`, the program panics.
 
 Applying `!` to a value that is neither nullable nor a `Result` is a compile error.
 
 ```javascript
-name: string | null := "Alice"
-println(name!)                  // ✅ Asserts non-null, type is string
+name: string | none := "Alice"
+println(name!)                  // ✅ Asserts presence, type is string
 greet(name!)                    // ✅ Works in function argument position
 
 parsed: Result<int, ParseError> := int.parse("12")
@@ -304,9 +314,9 @@ let nums: int[] = []              // ✅ Explicit annotation required
 m: Map := {}                      // Error: empty map needs full annotation
 s: Set := []                      // Error: empty set needs full annotation
 
-// Null initialisers are also currently accepted, though explicit annotation is clearer
-let maybe = null
-let x: int | null = null          // ✅ Explicit annotation
+// `none` initializers infer the none type; annotate optional intent explicitly
+let maybe = none
+let x: int | none = none          // ✅ Explicit annotation
 ```
 
 ### Bidirectional Flow
@@ -315,7 +325,7 @@ Type information flows **both directions** in a single step:
 
 ```javascript
 // Top-down: expected type known from context
-function process(items: int[]): void { }
+function process(items: int[]): none { }
 process([1, 2, 3])  // Literal infers int[] from parameter type
 
 // Bottom-up: type known from expression
@@ -323,7 +333,7 @@ let nums = [1, 2, 3]  // int[] inferred from literal contents
 process(nums)          // Type-checked against parameter
 
 // Object initialisation
-function draw(p: Point): void { }
+function draw(p: Point): none { }
 draw({ x: 1.0, y: 2.0 })  // Object literal infers Point from parameter
 draw((1.0, 2.0))            // Positional literal infers Point from parameter
 
@@ -373,7 +383,7 @@ points: Point[] := [{ x: 1.0, y: 2.0 }, { x: 3.0, y: 4.0 }]
 points: Point[] := [(1.0, 2.0), (3.0, 4.0)]
 
 // And through function arguments
-function process(points: Point[]): void { }
+function process(points: Point[]): none { }
 process([{ x: 0.0, y: 0.0 }])  // Element inherits Point context
 
 // And through array method calls like .push()
@@ -414,19 +424,19 @@ data.push(4)                      // ❌ Error - array is readonly
 explicit: int[] := [1, 2, 3]     // int[] (explicit overrides)
 ```
 
-### Function Return Type Inference
+### Omitted Function Return Types
 
 ```javascript
-// Return type inferred from body (single-step)
-function double(x: int) => x * 2  // Returns int
+// Value-producing functions declare their return type
+function double(x: int): int => x * 2
 
-// Unannotated block bodies default to void, so value returns are invalid
+// Unannotated named functions default to none, so value returns are invalid
 function choose(flag: bool) {
     if flag {
         return 1
     }
     return "hello"
-}  // ❌ Error: value return is not assignable to void
+}  // ❌ Error: value return is not assignable to none
 
 function clarified(flag: bool): int | string {
     if flag {
@@ -440,11 +450,11 @@ function clarified(flag: bool): int | string {
 
 ## Nullable Types
 
-Doof has **no implicit null** — nullability is explicit via union types:
+Doof has **no implicit absence** — nullability is explicit via union types:
 
 ```javascript
-let x: int = null        // ❌ Error: int is not nullable
-let y: int | null = null  // ✅ Explicit nullable type
+let x: int = none        // ❌ Error: int is not nullable
+let y: int | none = none  // ✅ Explicit nullable type
 ```
 
 ### Nullable vs Optional Fields
@@ -453,32 +463,32 @@ These concepts are orthogonal:
 
 ```javascript
 class User {
-    name: string                   // Required, non-null
-    email: string | null           // Required, nullable
-    nickname: string | null = null // Optional (has default), nullable
+    name: string                   // Required and always present
+    email: string | none           // Required, nullable
+    nickname: string | none = none // Optional (has default), nullable
 }
 
-let u1 = User { name: "Alice", email: null }          // ✅ Must provide email
+let u1 = User { name: "Alice", email: none }          // ✅ Must provide email
 let u2 = User { name: "Bob", email: "bob@example.com" }  // ✅
 let u3 = User { name: "Charlie" }                     // ❌ Error: email is required
-let u4 = User { name: "Alice", email: null, nickname: "Ali" }  // ✅
+let u4 = User { name: "Alice", email: none, nickname: "Ali" }  // ✅
 ```
 
-### Null Safety
+### Absence Safety
 
 ```javascript
-function getLength(s: string | null): int {
-    return s.length  // ❌ Error: s might be null
+function getLength(s: string | none): int {
+    return s.length  // ❌ Error: s might be none
 }
 
-function safeLengthV1(s: string | null): int {
-    if s == null {
+function safeLengthV1(s: string | none): int {
+    if s == none {
         return 0
     }
     return s!.length
 }
 
-function safeLengthV2(s: string | null): int {
+function safeLengthV2(s: string | none): int {
     value := s else { return 0 }
     return value.length
 }
@@ -492,7 +502,7 @@ Union types express "one of several types":
 
 ```javascript
 type Value = int | string | bool
-type Optional<T> = T | null
+type Optional<T> = T | none
 
 let x: int | string = 42
 x = "hello"  // ✅ Valid reassignment within union
@@ -501,11 +511,11 @@ x = true     // ❌ Error: bool not in union
 
 ### Shared Member Access
 
-Members may be accessed directly on a multi-member union only when every non-null
+Members may be accessed directly on a multi-member union only when every present
 member type exposes that member. The resulting type is the union of the member
-result types. A single class nullable such as `Box | null` uses ordinary pointer
-member access, while a single struct nullable such as `Point | null` uses an
-optional value representation. Both may still require explicit null handling for safety.
+result types. A single class nullable such as `Box | none` uses ordinary pointer
+member access, while a single struct nullable such as `Point | none` uses an
+optional value representation. Both may still require explicit none handling for safety.
 
 ```javascript
 class Request { method: string, path: string }
@@ -613,7 +623,7 @@ When the target type is known from context, enum variants can be referenced with
 let c: Direction = .East          // Direction.East
 let level: LogLevel = .Warn       // LogLevel.Warn
 
-function move(dir: Direction): void { ... }
+function move(dir: Direction): none { ... }
 move(.North)                      // Direction.North
 
 function getLevel(): LogLevel {
@@ -676,10 +686,10 @@ print(l.value)  // "DEBUG"
 Direction.values()   // readonly Direction[] — all variants in declaration order
 
 // Convert from name
-Direction.fromName("North")   // Direction | null
+Direction.fromName("North")   // Direction | none
 
 // Convert from value (integer enums)
-HttpStatus.fromValue(200)     // HttpStatus | null
+HttpStatus.fromValue(200)     // HttpStatus | none
 ```
 
 ### Enum Equality and Comparison
@@ -855,7 +865,7 @@ class FailureOutcome {
 
 type Outcome = SuccessOutcome | FailureOutcome
 
-function show(o: Outcome): void {
+function show(o: Outcome): none {
     case o {
         s: SuccessOutcome -> print(s.value)
         _: FailureOutcome -> print("unexpected")
@@ -1049,8 +1059,8 @@ Adding a value that is already present does not move it. Deleting a value and th
 |--------|--------------|-------------|-------------|
 | `.size` | both | `int` | Number of entries |
 | `.has(value)` | both | `bool` | Check if value exists |
-| `.add(value)` | mutable only | `void` | Insert value |
-| `.delete(value)` | mutable only | `void` | Remove value |
+| `.add(value)` | mutable only | `none` | Insert value |
+| `.delete(value)` | mutable only | `none` | Remove value |
 | `.values()` | both | `T[]` | Array of all values |
 | `.buildReadonly()` | mutable only | `ReadonlySet<T>` | Move-drain the set into a new readonly set (source is left empty) |
 | `.cloneMutable()` | both | `Set<T>` | Shallow-copy into a new mutable set |
@@ -1072,9 +1082,9 @@ copy := frozen.cloneMutable()    // Set<int>
 |--------|--------------|-------------|-------------|
 | `.size` | both | `int` | Number of entries |
 | `.get(key)` | both | `Result<V, string>` | Retrieve value or a missing-key failure |
-| `.set(key, value)` | mutable only | `void` | Insert or update entry |
+| `.set(key, value)` | mutable only | `none` | Insert or update entry |
 | `.has(key)` | both | `bool` | Check if key exists |
-| `.delete(key)` | mutable only | `void` | Remove entry by key |
+| `.delete(key)` | mutable only | `none` | Remove entry by key |
 | `.keys()` | both | `K[]` | Array of all keys |
 | `.values()` | both | `V[]` | Array of all values |
 | `.buildReadonly()` | mutable only | `ReadonlyMap<K, V>` | Move-drain the map into a new readonly map (source is left empty) |
@@ -1197,7 +1207,7 @@ print(hi)  // 9
 
 ```javascript
 type UserId = int
-type Callback = (value: int): void
+type Callback = (value: int): none
 type StringMap = Map<string, string>
 type Pair<A, B> = Tuple<A, B>         // Alias for common tuple arities
 ```
@@ -1209,7 +1219,7 @@ type Pair<A, B> = Tuple<A, B>         // Alias for common tuple arities
 Functions are first-class values with explicit type signatures **including parameter names**:
 
 ```javascript
-type Callback = (value: int, description: string): void
+type Callback = (value: int, description: string): none
 type Predicate<T> = (item: T): bool
 type Transform = (input: int): int
 type BinaryOp = (left: int, right: int): int
@@ -1343,7 +1353,7 @@ Doof uses reference counting for memory management (see [Classes and Interfaces]
 ```javascript
 class TreeNode {
     children: TreeNode[] = []
-    parent: weak TreeNode | null  // weak reference to (TreeNode | null)
+    parent: weak TreeNode | none  // weak reference to (TreeNode | none)
 }
 ```
 
@@ -1361,9 +1371,9 @@ Because a weak-referenced object may have been destroyed, accessing a `weak` ref
 
 ```javascript
 class Node {
-    backEdge: weak Node | null
+    backEdge: weak Node | none
     
-    visitParent(): void {
+    visitParent(): none {
         backEdge?.visit()   // No-op if reference was cleared
         backEdge!.visit()   // Panic if reference was cleared
     }
@@ -1389,18 +1399,18 @@ Doof keeps implicit narrowing intentionally narrow. It does not perform broad fl
 
 ### No Implicit Narrowing in `if`
 
-`if` conditions do not narrow types implicitly. A null check can still guard control flow, but the checked value keeps its original type unless you use an explicit form such as `!`, declaration-`else`, `case`, or `as`:
+`if` conditions do not narrow types implicitly. A none check can still guard control flow, but the checked value keeps its original type unless you use an explicit form such as `!`, declaration-`else`, `case`, or `as`:
 
 ```javascript
-function process(value: int | null): void {
-    if value != null {
+function process(value: int | none): none {
+    if value != none {
         print(value!)  // explicit assertion still required
     }
 }
 
-// `== null` can still guard control flow, but does not narrow on its own
-function getLength(s: string | null): int {
-    if s == null {
+// `== none` can still guard control flow, but does not narrow on its own
+function getLength(s: string | none): int {
+    if s == none {
         return 0
     }
     return s!.length
@@ -1410,14 +1420,14 @@ function getLength(s: string | null): int {
 Use explicit narrowing forms instead:
 
 - `name := expr else { ... }` to unwrap nullable and `Result` values
-- `expr!` to assert non-nullability
+- `expr!` to assert presence
 - `case` to discriminate unions and enums
 - `expr as T` for checked runtime narrowing
 
 ```javascript
-value: int | null := getValue()
+value: int | none := getValue()
 
-if value == null {
+if value == none {
     return
 }
 
@@ -1426,7 +1436,7 @@ print(value!)  // explicit assertion still required here
 
 ### Explicit Narrowing Forms
 
-For everything beyond the simple null-check rule above, use an explicit narrowing form.
+For everything beyond the simple none-check rule above, use an explicit narrowing form.
 
 #### `case` with Type Capture
 
@@ -1443,7 +1453,7 @@ class Failure {
 
 type Result = Success | Failure
 
-function handle(r: Result): void {
+function handle(r: Result): none {
     case r {
         s: Success -> print(s.value)
         f: Failure -> print(f.error)
@@ -1480,12 +1490,12 @@ function test(): int {
 This form works only for nullable and/or `Result` types. Inside the `else` block, the binding still has the full original type. After the block, the binding has the narrowed happy-path type.
 
 Each declaration removes exactly one fallible layer. For
-`Result<T, E> | null`, the binding becomes `Result<T, E>`; use a second
-declaration-`else` to unwrap that Result. For `Result<T | null, E>`, the first
-declaration unwraps the Result and produces `T | null`.
+`Result<T, E> | none`, the binding becomes `Result<T, E>`; use a second
+declaration-`else` to unwrap that Result. For `Result<T | none, E>`, the first
+declaration unwraps the Result and produces `T | none`.
 
-For `Result<T | null, E>`, the happy-path type is `T | null`: the declaration
-unwraps the Result, but a null carried by `Success` remains part of its payload.
+For `Result<T | none, E>`, the happy-path type is `T | none`: the declaration
+unwraps the Result, but a none carried by `Success` remains part of its payload.
 
 #### `as`
 
@@ -1502,24 +1512,24 @@ small := numeric as int              // Result<int, string>
 `as` covers:
 
 - exact union-member narrowing
-- nullable to non-null narrowing
+- nullable-to-present narrowing
 - interface to concrete class narrowing
 - checked numeric conversion when the runtime value fits exactly in the target type
 - `Result<V, F>` success-channel narrowing to `Result<T, F | string>`
 
-#### Non-Null Assertion
+#### Presence Assertion
 
 Use `expr!` when you want an assertion rather than a typed failure path:
 
 ```javascript
-name: string | null := maybeName()
-println(name!)  // panics at runtime if name is null
+name: string | none := maybeName()
+println(name!)  // panics at runtime if name is none
 
 parsed: Result<int, ParseError> := int.parse("12")
 println(parsed! + 2)  // panics at runtime if parsed is Failure
 ```
 
-Use `!` only for nullable and `Result` values. Applying it to an already non-null, non-Result value is a compile error.
+Use `!` only for nullable and `Result` values. Applying it to an already present, non-Result value is a compile error.
 
 **Simple rule:** `if` conditions do not narrow types implicitly. For unions, nullable values, Results, and checked runtime conversions, use `case`, declaration-`else`, `as`, or `!`.
 
@@ -1530,7 +1540,7 @@ Use `!` only for nullable and `Result` values. Applying it to an already non-nul
 | Feature | Approach |
 |---------|----------|
 | Type identity | Nominal (classes), Structural (interfaces) |
-| Nullability | Explicit via `T \| null` |
+| Nullability | Explicit via `T \| none` |
 | Enums | Named value sets with optional int/string values |
 | Inference | Bidirectional, single-step |
 | Immutability | Deep/transitive readonly |

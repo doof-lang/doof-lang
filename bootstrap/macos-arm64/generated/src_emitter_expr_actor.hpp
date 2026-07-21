@@ -20,7 +20,7 @@ namespace app_src_ast_ { struct RetireExpression; }
 namespace app_src_semantic_ { struct ActorType; }
 namespace app_src_semantic_ { struct FunctionType; }
 namespace app_src_semantic_ { struct PromiseType; }
-namespace app_src_semantic_ { struct VoidType; }
+namespace app_src_semantic_ { struct NoneType; }
 namespace app_src_emitter_context_ { struct EmitContext; }
 namespace std_::fs::index { struct BlockReadStream; }
 namespace std_::http::index { struct BodyChunkStream; }

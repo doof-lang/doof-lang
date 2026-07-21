@@ -8,6 +8,7 @@
 // local and std/* paths are resolved from their acquired roots.
 
 import { compileWithLoader } from "./compiler"
+import { hasErrorDiagnostics } from "./diagnostics"
 import { CliRequest, cliUsage, parseCli } from "./cli"
 import { ExternalDependencyTarget, acquirePackageExternalDependencies } from "./external-dependency"
 import {
@@ -74,7 +75,7 @@ class NativeCompilerBatchResult {
 isolated function runNativeCommand(
   command: string,
   arguments: string[],
-  directory: string | null = null,
+  directory: string | none = none,
   inheritOutput: bool = false,
   // Defaults are emitted in the generated prototype before module values.
   maxOutputBytes: long = 262144L,
@@ -231,7 +232,7 @@ function driverSourceDiskPath(
     }
   }
   acquiredPath := acquiredModuleDiskPath(logicalPath, acquisitions)
-  if acquiredPath != null { return acquiredPath! }
+  if acquiredPath != none { return acquiredPath! }
   return logicalPath
 }
 
@@ -239,16 +240,16 @@ function loadDriverSource(
   logicalPath: string,
   localRoots: DriverSourceRoot[],
   acquisitions: ModuleAcquisition[],
-): Result<SourceFile | null, Diagnostic> {
+): Result<SourceFile | none, Diagnostic> {
   diskPath := driverSourceDiskPath(logicalPath, localRoots, acquisitions)
-  if !exists(diskPath) { return Success(null) }
+  if !exists(diskPath) { return Success(none) }
   source := readText(diskPath) else {
     return Failure(driverDiagnostic(logicalPath, "Could not read source file ${diskPath}"))
   }
   return Success(SourceFile { path: logicalPath, source })
 }
 
-function configuredDriverSource(logicalPath: string): Result<SourceFile | null, Diagnostic> {
+function configuredDriverSource(logicalPath: string): Result<SourceFile | none, Diagnostic> {
   if logicalPath.startsWith("/std/") {
     _ := ensureStdPackageAcquisition(logicalPath) else error {
       return Failure(driverDiagnostic(logicalPath, error))
@@ -259,21 +260,21 @@ function configuredDriverSource(logicalPath: string): Result<SourceFile | null, 
     configuredDriverSourceState.localRoots,
     configuredDriverSourceState.acquisitions,
   )
-  if source != null {
+  if source != none {
     package := acquiredPackageForLoadedSource(logicalPath, configuredDriverSourceState)
-    if package != null { try registerReachedPackage(package!) }
+    if package != none { try registerReachedPackage(package!) }
   }
   return Success(source)
 }
 
-function acquiredPackageForLoadedSource(logicalPath: string, state: DriverSourceState): ModuleAcquisition | null {
+function acquiredPackageForLoadedSource(logicalPath: string, state: DriverSourceState): ModuleAcquisition | none {
   for root of state.localRoots {
-    if logicalPath == root.logicalPrefix || logicalPath.startsWith(root.logicalPrefix + "/") { return null }
+    if logicalPath == root.logicalPrefix || logicalPath.startsWith(root.logicalPrefix + "/") { return none }
   }
   return acquiredPackageForModule(logicalPath, state.acquisitions)
 }
 
-function registerReachedPackage(acquisition: ModuleAcquisition): Result<void, Diagnostic> {
+function registerReachedPackage(acquisition: ModuleAcquisition): Result<none, Diagnostic> {
   for reached of configuredDriverSourceState.reachedPackages {
     if reached.acquisition.logicalPrefix == acquisition.logicalPrefix && reached.acquisition.diskRoot == acquisition.diskRoot {
       return Success()
@@ -296,15 +297,15 @@ function registerReachedPackage(acquisition: ModuleAcquisition): Result<void, Di
   source := acquiredSourceFor(acquisition)
   configuredDriverSourceState.reachedPackages.push(DriverReachedPackage {
     acquisition, manifest,
-    introducedBy: if source == null then "" else source!.introducedBy,
-    sourceKind: if source == null then "local" else source!.sourceKind,
-    sourceUrl: if source == null then "" else source!.sourceUrl,
-    sourceRef: if source == null then "" else source!.sourceRef,
-    sourceCommit: if source == null then "" else source!.sourceCommit,
-    requestedUrl: if source == null then "" else source!.requestedUrl,
-    requestedRef: if source == null then "" else source!.requestedRef,
-    requestedCommit: if source == null then "" else source!.requestedCommit,
-    mutable: if source == null then true else source!.mutable,
+    introducedBy: if source == none then "" else source!.introducedBy,
+    sourceKind: if source == none then "local" else source!.sourceKind,
+    sourceUrl: if source == none then "" else source!.sourceUrl,
+    sourceRef: if source == none then "" else source!.sourceRef,
+    sourceCommit: if source == none then "" else source!.sourceCommit,
+    requestedUrl: if source == none then "" else source!.requestedUrl,
+    requestedRef: if source == none then "" else source!.requestedRef,
+    requestedCommit: if source == none then "" else source!.requestedCommit,
+    mutable: if source == none then true else source!.mutable,
   })
   configuredDriverSourceState.namespaceMappings.push(ModuleNamespaceMapping {
     logicalPrefix: acquisition.logicalPrefix,
@@ -314,23 +315,23 @@ function registerReachedPackage(acquisition: ModuleAcquisition): Result<void, Di
   return Success()
 }
 
-function acquiredSourceFor(acquisition: ModuleAcquisition): DriverAcquiredSource | null {
+function acquiredSourceFor(acquisition: ModuleAcquisition): DriverAcquiredSource | none {
   for source of configuredDriverSourceState.acquiredSources {
     if source.acquisition.logicalPrefix == acquisition.logicalPrefix && source.acquisition.diskRoot == acquisition.diskRoot {
       return source
     }
   }
-  return null
+  return none
 }
 
-function ensureStdPackageAcquisition(logicalPath: string): Result<void, string> {
-  if acquiredModuleDiskPath(logicalPath, configuredDriverSourceState.acquisitions) != null { return Success() }
+function ensureStdPackageAcquisition(logicalPath: string): Result<none, string> {
+  if acquiredModuleDiskPath(logicalPath, configuredDriverSourceState.acquisitions) != none { return Success() }
   remainder := logicalPath.substring(5, logicalPath.length)
   slash := remainder.indexOf("/")
   shortName := if slash < 0 then remainder else remainder.substring(0, slash)
   packageName := "std/" + shortName
   package := stdCatalogPackage(configuredDriverSourceState.stdCatalog, packageName)
-  if package == null { return Failure("Unknown standard package " + packageName) }
+  if package == none { return Failure("Unknown standard package " + packageName) }
   acquired := acquireExactGitPackage(ExactPackageSource {
     name: package!.name, expectedManifestName: package!.name,
     url: package!.url, ref: package!.ref, commit: package!.commit,
@@ -345,11 +346,11 @@ function ensureStdPackageAcquisition(logicalPath: string): Result<void, string> 
 }
 
 /** Makes an implicitly required standard package part of the reached graph. */
-function ensureStdPackageReached(packageName: string): Result<void, string> {
+function ensureStdPackageReached(packageName: string): Result<none, string> {
   logicalPath := "/" + packageName + "/index.do"
   try ensureStdPackageAcquisition(logicalPath)
   acquisition := acquiredPackageForModule(logicalPath, configuredDriverSourceState.acquisitions)
-  if acquisition == null { return Failure("Could not resolve required standard package " + packageName) }
+  if acquisition == none { return Failure("Could not resolve required standard package " + packageName) }
   _ := registerReachedPackage(acquisition!) else error { return Failure(error.message) }
   return Success()
 }
@@ -382,9 +383,13 @@ function sourceLoaderForRequest(
   namespaceMappings: ModuleNamespaceMapping[],
   rootManifest: PackageManifest,
   nativePlatform: string = "",
-  externalTarget: ExternalDependencyTarget | null = null,
+  externalTarget: ExternalDependencyTarget | none = none,
 ): Result<SourceLoader, string> {
   let localRoots: DriverSourceRoot[] = []
+  rootLogicalPrefix := driverRootLogicalPrefix(rootManifest.name, rootManifest.rootDirectory)
+  if rootLogicalPrefix != driverLogicalPrefix(rootManifest.rootDirectory) {
+    localRoots.push(DriverSourceRoot { logicalPrefix: rootLogicalPrefix, diskRoot: rootManifest.rootDirectory })
+  }
   sourceRoot := driverSourceDiskRoot(entryPath)
   if sourceRoot != "" {
     localRoots.push(DriverSourceRoot { logicalPrefix: "/src", diskRoot: sourceRoot })
@@ -413,7 +418,7 @@ function sourceLoaderForRequest(
     reachedPackages: [],
     namespaceMappings,
     nativePlatform: if nativePlatform == "" then hostPlatform() else nativePlatform,
-    externalTarget: if externalTarget == null
+    externalTarget: if externalTarget == none
       then ExternalDependencyTarget { nativeTarget: if nativePlatform == "" then hostPlatform() else nativePlatform }
       else externalTarget!,
     rootManifest,
@@ -431,7 +436,7 @@ function configureDeclaredDependencies(
   nativePlatform: string,
   acquisitions: ModuleAcquisition[],
   acquiredSources: DriverAcquiredSource[],
-): Result<void, string> {
+): Result<none, string> {
   for requested of manifest.dependencies {
     if requested.name.startsWith("std/") { continue }
     selected := selectedPackageSource(requested, rootManifest.packageResolutions)
@@ -525,7 +530,7 @@ function resolvedDependencyInputs(rootManifest: PackageManifest): Result<Resolve
 function acquireResolvedExternalInputs(
   inputs: ResolvedExternalInput[],
   target: ExternalDependencyTarget,
-): Result<void, string> {
+): Result<none, string> {
   for input of inputs {
     dependency := selectedExternalDependency(input)
     manifest := PackageManifest {
@@ -595,6 +600,24 @@ function driverLogicalPrefix(path: string): string {
   return "/" + absolutePath
 }
 
+export function driverRootLogicalPrefix(packageName: string, rootDirectory: string): string {
+  if packageName.startsWith("std/") { return "/" + packageName }
+  return driverLogicalPrefix(rootDirectory)
+}
+
+export function driverRootLogicalPath(path: string, rootDirectory: string, packageName: string): string {
+  if !packageName.startsWith("std/") { return driverLogicalPath(path) }
+  prefix := driverRootLogicalPrefix(packageName, rootDirectory)
+  absolutePath := try! absolute(path)
+  absoluteRoot := try! absolute(rootDirectory)
+  if absolutePath == absoluteRoot { return prefix }
+  rootPrefix := if absoluteRoot.endsWith("/") then absoluteRoot else absoluteRoot + "/"
+  if absolutePath.startsWith(rootPrefix) {
+    return prefix + "/" + absolutePath.substring(rootPrefix.length, absolutePath.length)
+  }
+  return driverLogicalPath(absolutePath)
+}
+
 function driverPackageOutputRoot(logicalPrefix: string): string {
   let start = 0
   while start < logicalPrefix.length && logicalPrefix[start] == '/' { start = start + 1 }
@@ -603,7 +626,7 @@ function driverPackageOutputRoot(logicalPrefix: string): string {
 
 function projectNativePackages(projectRoot: string, projectManifest: PackageManifest, stdlibRoot: string = ""): NativePackageInput[] {
   let packages: NativePackageInput[] = [NativePackageInput {
-    logicalPrefix: driverLogicalPrefix(projectRoot),
+    logicalPrefix: driverRootLogicalPrefix(projectManifest.name, projectRoot),
     outputRoot: "",
     manifest: projectManifest,
   }]
@@ -627,14 +650,14 @@ function projectNativePackages(projectRoot: string, projectManifest: PackageMani
   return packages
 }
 
-function ensureOutputDirectory(path: string): void {
+function ensureOutputDirectory(path: string): none {
   if path == "" || exists(path) { return }
   parent := parentPath(path)
   if parent != path { ensureOutputDirectory(parent) }
   try! mkdir(path)
 }
 
-function materializeNativeCopy(sourcePath: string, outputPath: string): void {
+function materializeNativeCopy(sourcePath: string, outputPath: string): none {
   if isDirectory(sourcePath) {
     ensureOutputDirectory(outputPath)
     for entry of try! readDir(sourcePath) {
@@ -646,7 +669,7 @@ function materializeNativeCopy(sourcePath: string, outputPath: string): void {
   try! writeBlob(outputPath, try! readBlob(sourcePath))
 }
 
-function materializeProject(outputDirectory: string, project: ProjectEmission): void {
+function materializeProject(outputDirectory: string, project: ProjectEmission): none {
   ensureOutputDirectory(outputDirectory)
   for module of project.modules {
     try! writeText(driverOutputPath(outputDirectory, module.headerName), module.header)
@@ -665,7 +688,7 @@ function materializeProject(outputDirectory: string, project: ProjectEmission): 
   }
 }
 
-function materializeExecutableResources(resources: PackageResource[], outputDirectory: string): void {
+function materializeExecutableResources(resources: PackageResource[], outputDirectory: string): none {
   for resource of resources {
     destinationRoot := driverOutputPath(outputDirectory, resource.destination)
     outputPath := if isDirectory(resource.sourcePath)
@@ -675,7 +698,7 @@ function materializeExecutableResources(resources: PackageResource[], outputDire
   }
 }
 
-function materializeRuntimeHeader(outputDirectory: string): void {
+function materializeRuntimeHeader(outputDirectory: string): none {
   // Packaged compilers carry the canonical header as an executable resource.
   // The override remains useful when developing against an alternate runtime.
   let sourcePath = environmentValue("DOOF_RUNTIME_HEADER")
@@ -783,7 +806,7 @@ function buildProject(
   return linkResult.exitCode
 }
 
-function printDiagnostics(diagnostics: Diagnostic[]): void {
+function printDiagnostics(diagnostics: Diagnostic[]): none {
   displayCount := if diagnostics.length < MAX_PRINTED_DIAGNOSTICS then diagnostics.length else MAX_PRINTED_DIAGNOSTICS
   for index of 0..<displayCount {
     diagnostic := diagnostics[index]
@@ -797,7 +820,7 @@ function printDiagnostics(diagnostics: Diagnostic[]): void {
   }
 }
 
-function collectTestFiles(path: string, results: string[], root: bool = true): void {
+function collectTestFiles(path: string, results: string[], root: bool = true): none {
   if !isDirectory(path) {
     if path.endsWith(".do") { results.push(path) }
     return
@@ -818,11 +841,11 @@ function sortedTestFiles(values: string[]): string[] {
   let result: string[] = []
   let last = ""
   for count of 0..<values.length {
-    let candidate: string | null = null
+    let candidate: string | none = none
     for value of values {
-      if (result.length == 0 || value > last) && (candidate == null || value < candidate!) { candidate = value }
+      if (result.length == 0 || value > last) && (candidate == none || value < candidate!) { candidate = value }
     }
-    if candidate != null { result.push(candidate!); last = candidate! }
+    if candidate != none { result.push(candidate!); last = candidate! }
   }
   return result
 }
@@ -831,11 +854,11 @@ function sortedDiscoveredTests(values: DiscoveredTest[]): DiscoveredTest[] {
   let result: DiscoveredTest[] = []
   let last = ""
   for count of 0..<values.length {
-    let candidate: DiscoveredTest | null = null
+    let candidate: DiscoveredTest | none = none
     for value of values {
-      if (result.length == 0 || value.id > last) && (candidate == null || value.id < candidate!.id) { candidate = value }
+      if (result.length == 0 || value.id > last) && (candidate == none || value.id < candidate!.id) { candidate = value }
     }
-    if candidate != null { result.push(candidate!); last = candidate!.id }
+    if candidate != none { result.push(candidate!); last = candidate!.id }
   }
   return result
 }
@@ -855,7 +878,7 @@ function mergeCoverageGroup(
   groupHits: int[][],
   allModules: CoverageModuleMetadata[],
   allHits: int[][],
-): void {
+): none {
   for groupIndex of 0..<groupModules.length {
     groupModule := groupModules[groupIndex]
     diskPath := driverSourceDiskPath(
@@ -888,7 +911,7 @@ function mergeCoverageGroup(
   }
 }
 
-function printCoverageSummary(report: CoverageReport): void {
+function printCoverageSummary(report: CoverageReport): none {
   println("Coverage summary:")
   for file of report.files {
     percent := string(file.percentTenths \ 10) + "." + string(file.percentTenths % 10)
@@ -977,8 +1000,9 @@ function testRequest(request: CliRequest): int {
     try! writeText(harnessPath, generateTestHarness(harnessPath, moduleTests))
 
     stdlibRoot := environmentValue("DOOF_STDLIB_ROOT")
+    rootLogicalPrefix := driverRootLogicalPrefix(project.name, project.rootDirectory)
     let namespaceMappings: ModuleNamespaceMapping[] = [ModuleNamespaceMapping {
-      logicalPrefix: driverLogicalPrefix(project.rootDirectory),
+      logicalPrefix: rootLogicalPrefix,
       packageName: project.name,
       outputRoot: "",
     }]
@@ -988,16 +1012,14 @@ function testRequest(request: CliRequest): int {
       println("error: " + error)
       return 1
     }
-    result := compileWithLoader([], driverLogicalPath(harnessPath), loader, namespaceMappings, "executable", request.coverage)
-    if result.diagnostics.length > 0 {
-      printDiagnostics(result.diagnostics)
-      return 1
-    }
+    result := compileWithLoader([], driverRootLogicalPath(harnessPath, project.rootDirectory, project.name), loader, namespaceMappings, "executable", request.coverage)
+    if result.diagnostics.length > 0 { printDiagnostics(result.diagnostics) }
+    if hasErrorDiagnostics(result.diagnostics) { return 1 }
     if request.listOnly {
       for test of moduleTests { println(test.id) }
       continue
     }
-    if result.emission == null { panic("test compiler produced no emission") }
+    if result.emission == none { panic("test compiler produced no emission") }
     rootManifest := project.manifest
     testExternalTarget := ExternalDependencyTarget { nativeTarget: hostPlatform() }
     externalInputs := resolvedDependencyInputs(rootManifest) else error {
@@ -1070,19 +1092,19 @@ function testRequest(request: CliRequest): int {
 function emitRequest(request: CliRequest): int {
   let project = readProjectSpec(request.entry, hostPlatform(), request.targetOverride)
   iosDestination := if request.command == "package" then "device" else request.iosDestination
-  nativePlatform := if project.iosApp == null then hostPlatform() else "ios-" + iosDestination
-  if project.iosApp != null { project = readProjectSpec(request.entry, nativePlatform, request.targetOverride) }
-  iosMinimumVersion := if project.iosApp == null then "" else project.iosApp!.minimumDeploymentTarget
+  nativePlatform := if project.iosApp == none then hostPlatform() else "ios-" + iosDestination
+  if project.iosApp != none { project = readProjectSpec(request.entry, nativePlatform, request.targetOverride) }
+  iosMinimumVersion := if project.iosApp == none then "" else project.iosApp!.minimumDeploymentTarget
   externalTarget := externalTargetForRequest(project.target, nativePlatform, iosDestination, iosMinimumVersion) else error {
     println("error: " + error)
     return 1
   }
   rootManifest := project.manifest
   entryPath := joinPath(project.rootDirectory, project.entry)
-  entry := driverLogicalPath(entryPath)
+  entry := driverRootLogicalPath(entryPath, project.rootDirectory, project.name)
   stdlibRoot := environmentValue("DOOF_STDLIB_ROOT")
   let namespaceMappings: ModuleNamespaceMapping[] = [ModuleNamespaceMapping {
-    logicalPrefix: driverLogicalPrefix(project.rootDirectory),
+    logicalPrefix: driverRootLogicalPrefix(project.name, project.rootDirectory),
     packageName: project.name,
     outputRoot: "",
   }]
@@ -1098,12 +1120,10 @@ function emitRequest(request: CliRequest): int {
       return 1
     }
   }
-  entryMode := if project.target == "wasm" then "wasm" else if project.iosApp == null then "executable" else "ios-app"
+  entryMode := if project.target == "wasm" then "wasm" else if project.iosApp == none then "executable" else "ios-app"
   result := compileWithLoader([], entry, loader, namespaceMappings, entryMode)
-  if result.diagnostics.length > 0 {
-    printDiagnostics(result.diagnostics)
-    return 1
-  }
+  if result.diagnostics.length > 0 { printDiagnostics(result.diagnostics) }
+  if hasErrorDiagnostics(result.diagnostics) { return 1 }
   if request.command == "package" && hasMutableStdPackageInputs(reachedPackageInputs(rootManifest)) {
     println("warning: packaging with standard packages overridden by DOOF_STDLIB_ROOT; provenance.json will record them as mutable inputs")
   }
@@ -1112,7 +1132,7 @@ function emitRequest(request: CliRequest): int {
     return 1
   }
   if request.command == "check" { return 0 }
-  if result.emission == null { panic("compiler produced no emission") }
+  if result.emission == none { panic("compiler produced no emission") }
   _ := acquireResolvedExternalInputs(externalInputs, externalTarget) else error {
     println("error: " + error)
     return 1
@@ -1136,7 +1156,7 @@ function emitRequest(request: CliRequest): int {
       reachedPackageInputs(rootManifest), externalInputs, emission.nativeBuild, configuredDriverSourceState.stdCatalog,
     ),
   )
-  if project.iosApp != null {
+  if project.iosApp != none {
     _ := configureIOSNativeBuild(outputDirectory, project.iosApp!, iosDestination, emission.nativeBuild) else error {
       println("error: " + error)
       return 1
@@ -1147,12 +1167,12 @@ function emitRequest(request: CliRequest): int {
       println("error: doof run is not supported for --target wasm; instantiate the generated .wasm from your host runtime")
       return 1
     }
-    executableName := if project.target == "wasm" then buildOutputName(project.name) + ".wasm" else if project.macosApp != null then project.macosApp!.executableName else if project.iosApp != null then project.iosApp!.executableName else buildOutputName(project.name)
+    executableName := if project.target == "wasm" then buildOutputName(project.name) + ".wasm" else if project.macosApp != none then project.macosApp!.executableName else if project.iosApp != none then project.iosApp!.executableName else buildOutputName(project.name)
     outputPath := driverOutputPath(outputDirectory, executableName)
-    if project.macosApp == null && project.iosApp == null { materializeExecutableResources(project.resources, outputDirectory) }
+    if project.macosApp == none && project.iosApp == none { materializeExecutableResources(project.resources, outputDirectory) }
     exitCode := buildProject(request, outputDirectory, outputPath, emission)
     if exitCode != 0 { return exitCode }
-    if project.iosApp != null {
+    if project.iosApp != none {
       appPath := assembleIOSApp(outputDirectory, outputPath, project.iosApp!, iosDestination) else error {
         println("error: " + error)
         return 1
@@ -1203,7 +1223,7 @@ function emitRequest(request: CliRequest): int {
       if launchResult.error != "" { println("error: " + launchResult.error) }
       return launchResult.exitCode
     }
-    if project.macosApp != null {
+    if project.macosApp != none {
       appPath := assembleMacOSApp(outputDirectory, outputPath, project.macosApp!, emission.nativeBuild.libraryPaths) else error {
         println("error: " + error)
         return 1
@@ -1221,25 +1241,25 @@ function emitRequest(request: CliRequest): int {
     return runResult.exitCode
   }
   if request.command == "package" {
-    if project.packageConfig == null { panic("project package settings were not resolved") }
+    if project.packageConfig == none { panic("project package settings were not resolved") }
     distDirectory := if request.distDirectory != "" then try! absolute(request.distDirectory) else project.packageConfig!.distDirectory
     ensureOutputDirectory(distDirectory)
-    executableName := if project.target == "wasm" then buildOutputName(project.name) + ".wasm" else if project.macosApp != null then project.macosApp!.executableName else if project.iosApp != null then project.iosApp!.executableName else buildOutputName(project.name)
-    outputPath := if project.macosApp == null && project.iosApp == null
+    executableName := if project.target == "wasm" then buildOutputName(project.name) + ".wasm" else if project.macosApp != none then project.macosApp!.executableName else if project.iosApp != none then project.iosApp!.executableName else buildOutputName(project.name)
+    outputPath := if project.macosApp == none && project.iosApp == none
       then driverOutputPath(distDirectory, executableName)
       else driverOutputPath(outputDirectory, executableName)
     exitCode := buildProject(request, outputDirectory, outputPath, emission, true)
     if exitCode != 0 { return exitCode }
-    if project.macosApp == null && project.iosApp == null {
+    if project.macosApp == none && project.iosApp == none {
       materializeExecutableResources(project.resources, distDirectory)
       return 0
     }
-    if project.iosApp != null {
+    if project.iosApp != none {
       appPath := assembleIOSApp(outputDirectory, outputPath, project.iosApp!, iosDestination) else error {
         println("error: " + error)
         return 1
       }
-      if project.iosPackageConfig == null { panic("iOS package settings were not resolved") }
+      if project.iosPackageConfig == none { panic("iOS package settings were not resolved") }
       iosConfig := project.iosPackageConfig!
       environmentIdentity := environmentValue("DOOF_IOS_SIGN_IDENTITY")
       if environmentIdentity != "" { iosConfig.identity = environmentIdentity }

@@ -93,35 +93,35 @@ doof::Result<std::shared_ptr<ProjectEmission>, std::string> ProjectEmission::fro
         if (!(doof::json_is_array(_iterator_modules->second))) { return doof::Failure<std::string>{"Field \"modules\" expected array but got " + std::string(doof::json_type_name(_iterator_modules->second))}; }
         _field_modules = [&]() { const auto* _array = doof::json_as_array(_iterator_modules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(::app_src_emitter_module_::ModuleEmission::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_modules = std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>{std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>(std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>{})};
+        _field_modules = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>(std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>>> _field_supportFiles;
     if (auto _iterator_supportFiles = _object->find("supportFiles"); _iterator_supportFiles != _object->end()) {
         if (!(doof::json_is_array(_iterator_supportFiles->second))) { return doof::Failure<std::string>{"Field \"supportFiles\" expected array but got " + std::string(doof::json_type_name(_iterator_supportFiles->second))}; }
         _field_supportFiles = [&]() { const auto* _array = doof::json_as_array(_iterator_supportFiles->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ProjectSupportFile>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(ProjectSupportFile::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_supportFiles = std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>>{std::make_shared<std::vector<std::shared_ptr<ProjectSupportFile>>>(std::vector<std::shared_ptr<ProjectSupportFile>>{})};
+        _field_supportFiles = std::make_shared<std::vector<std::shared_ptr<ProjectSupportFile>>>(std::vector<std::shared_ptr<ProjectSupportFile>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>>> _field_nativeCopies;
     if (auto _iterator_nativeCopies = _object->find("nativeCopies"); _iterator_nativeCopies != _object->end()) {
         if (!(doof::json_is_array(_iterator_nativeCopies->second))) { return doof::Failure<std::string>{"Field \"nativeCopies\" expected array but got " + std::string(doof::json_type_name(_iterator_nativeCopies->second))}; }
         _field_nativeCopies = [&]() { const auto* _array = doof::json_as_array(_iterator_nativeCopies->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ProjectNativeCopy>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(ProjectNativeCopy::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_nativeCopies = std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>>{std::make_shared<std::vector<std::shared_ptr<ProjectNativeCopy>>>(std::vector<std::shared_ptr<ProjectNativeCopy>>{})};
+        _field_nativeCopies = std::make_shared<std::vector<std::shared_ptr<ProjectNativeCopy>>>(std::vector<std::shared_ptr<ProjectNativeCopy>>{});
     }
     std::optional<std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>> _field_nativeBuild;
     if (auto _iterator_nativeBuild = _object->find("nativeBuild"); _iterator_nativeBuild != _object->end()) {
         if (!(doof::json_is_object(_iterator_nativeBuild->second))) { return doof::Failure<std::string>{"Field \"nativeBuild\" expected object but got " + std::string(doof::json_type_name(_iterator_nativeBuild->second))}; }
         _field_nativeBuild = doof::success_value(::app_src_package_manifest_::NativeBuildPlan::fromJsonValue(_iterator_nativeBuild->second, _lenient));
     } else {
-        _field_nativeBuild = std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>{std::make_shared<::app_src_package_manifest_::NativeBuildPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}))};
+        _field_nativeBuild = std::make_shared<::app_src_package_manifest_::NativeBuildPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_wasmExportNames;
     if (auto _iterator_wasmExportNames = _object->find("wasmExportNames"); _iterator_wasmExportNames != _object->end()) {
         if (!(doof::json_is_array(_iterator_wasmExportNames->second))) { return doof::Failure<std::string>{"Field \"wasmExportNames\" expected array but got " + std::string(doof::json_type_name(_iterator_wasmExportNames->second))}; }
         _field_wasmExportNames = [&]() { const auto* _array = doof::json_as_array(_iterator_wasmExportNames->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_wasmExportNames = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     return doof::Success<std::shared_ptr<ProjectEmission>>{std::make_shared<ProjectEmission>(_field_modules.value(), _field_supportFiles.value(), _field_nativeCopies.value(), _field_nativeBuild.value(), _field_wasmExportNames.value())};
 }

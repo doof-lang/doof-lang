@@ -11,22 +11,22 @@ namespace std_::crypto::index {
 using namespace ::std_::json::index;
 using namespace ::std_::blob::index;
 std::string sha1Hex(std::shared_ptr<std::vector<uint8_t>> data) {
-    return encodeHex(sha1(data));
+    return ::doof_crypto::encode_hex(::doof_crypto::sha1_bytes(data));
 }
 std::string sha1HexString(std::string text) {
-    return encodeHex(sha1String(text));
+    return ::doof_crypto::encode_hex(::doof_crypto::sha1_utf8(text));
 }
 std::string sha256Hex(std::shared_ptr<std::vector<uint8_t>> data) {
-    return encodeHex(sha256(data));
+    return ::doof_crypto::encode_hex(::doof_crypto::sha256_bytes(data));
 }
 std::string sha256HexString(std::string text) {
-    return encodeHex(sha256String(text));
+    return ::doof_crypto::encode_hex(::doof_crypto::sha256_utf8(text));
 }
 std::string hmacSha256Hex(std::shared_ptr<::doof_crypto::SecretBytes> key, std::shared_ptr<std::vector<uint8_t>> data) {
-    return encodeHex(hmacSha256(key, data));
+    return ::doof_crypto::encode_hex(::doof_crypto::hmac_sha256(key, data));
 }
 std::string hmacSha256Base64Url(std::shared_ptr<::doof_crypto::SecretBytes> key, std::shared_ptr<std::vector<uint8_t>> data) {
-    return encodeBase64Url(hmacSha256(key, data));
+    return ::doof_crypto::encode_base64_url(::doof_crypto::hmac_sha256(key, data));
 }
 std::shared_ptr<::doof_crypto::SecretBytes> randomBytes(int32_t length) {
     return ::doof_crypto::SecretBytes::random(length);
@@ -62,7 +62,7 @@ doof::Result<std::shared_ptr<Jwt>, std::string> Jwt::fromJsonValue(const doof::J
     return doof::Success<std::shared_ptr<Jwt>>{std::make_shared<Jwt>(_field_header, _field_claims, _field_signedContent, _field_signature)};
 }
 doof::Result<std::string, std::string> decodeBase64UrlToString(std::string text) {
-    auto _binding_value_1 = decodeBase64Url(text);
+    auto _binding_value_1 = ::doof_crypto::decode_base64_url(text);
     if (doof::is_failure(_binding_value_1)) {
         const auto& blob = _binding_value_1;
         return doof::Failure<std::string>{ std::string("Invalid Base64Url string") };
@@ -93,19 +93,19 @@ doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(std::string token) {
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
     }
     const auto claimsJson = doof::success_value(_binding_value_3);
-    auto _binding_value_4 = ::std_::json::index::parseJsonValue(headerJson);
+    auto _binding_value_4 = ::doof_json::parse(headerJson);
     if (doof::is_failure(_binding_value_4)) {
         const auto& headerJsonValue = _binding_value_4;
         return doof::Failure<JwtError>{ JwtError::InvalidHeader };
     }
     const auto headerJsonValue = doof::success_value(_binding_value_4);
-    auto _binding_value_5 = ::std_::json::index::parseJsonValue(claimsJson);
+    auto _binding_value_5 = ::doof_json::parse(claimsJson);
     if (doof::is_failure(_binding_value_5)) {
         const auto& claimsJsonValue = _binding_value_5;
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
     }
     const auto claimsJsonValue = doof::success_value(_binding_value_5);
-    auto _binding_value_6 = decodeBase64Url((*parts)[2]);
+    auto _binding_value_6 = ::doof_crypto::decode_base64_url((*parts)[2]);
     if (doof::is_failure(_binding_value_6)) {
         const auto& signature = _binding_value_6;
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
@@ -141,8 +141,8 @@ doof::Result<std::shared_ptr<Jwt>, JwtError> verifyJwtHs256(std::string token, s
     if (alg != std::string("HS256")) {
         return doof::Failure<JwtError>{ JwtError::AlgorithmMismatch };
     }
-    const auto expectedSignature = hmacSha256(key, stringToBytes(jwt->signedContent));
-    if (!timingSafeEqual(jwt->signature, expectedSignature)) {
+    const auto expectedSignature = ::doof_crypto::hmac_sha256(key, stringToBytes(jwt->signedContent));
+    if (!::doof_crypto::timing_safe_equal(jwt->signature, expectedSignature)) {
         return doof::Failure<JwtError>{ JwtError::SignatureInvalid };
     }
     return doof::Success<std::shared_ptr<Jwt>>{ jwt };

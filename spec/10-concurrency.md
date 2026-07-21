@@ -20,7 +20,7 @@ Actors wrap classes:
 class Counter {
     value: int
 
-    increment(n: int): void {
+    increment(n: int): none {
         this.value = this.value + n
     }
 
@@ -221,7 +221,7 @@ allowed because those references already belong to the current domain.
 ```doof
 shared := [0]
 
-isolated function invalid(): void {
+isolated function invalid(): none {
     shared.push(1) // error: accesses mutable module state
 }
 ```

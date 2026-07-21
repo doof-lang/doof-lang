@@ -32,28 +32,28 @@ doof::Result<std::shared_ptr<EmitModuleSurface>, std::string> EmitModuleSurface:
         if (!(doof::json_is_array(_iterator_exports->second))) { return doof::Failure<std::string>{"Field \"exports\" expected array but got " + std::string(doof::json_type_name(_iterator_exports->second))}; }
         _field_exports = [&]() { const auto* _array = doof::json_as_array(_iterator_exports->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(::app_src_semantic_::Symbol::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_exports = std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>{std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>(std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>{})};
+        _field_exports = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>(std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>> _field_imports;
     if (auto _iterator_imports = _object->find("imports"); _iterator_imports != _object->end()) {
         if (!(doof::json_is_array(_iterator_imports->second))) { return doof::Failure<std::string>{"Field \"imports\" expected array but got " + std::string(doof::json_type_name(_iterator_imports->second))}; }
         _field_imports = [&]() { const auto* _array = doof::json_as_array(_iterator_imports->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(::app_src_semantic_::ImportBinding::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_imports = std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>{std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{})};
+        _field_imports = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_genericTypes;
     if (auto _iterator_genericTypes = _object->find("genericTypes"); _iterator_genericTypes != _object->end()) {
         if (!(doof::json_is_array(_iterator_genericTypes->second))) { return doof::Failure<std::string>{"Field \"genericTypes\" expected array but got " + std::string(doof::json_type_name(_iterator_genericTypes->second))}; }
         _field_genericTypes = [&]() { const auto* _array = doof::json_as_array(_iterator_genericTypes->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_genericTypes = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_genericTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_genericFunctions;
     if (auto _iterator_genericFunctions = _object->find("genericFunctions"); _iterator_genericFunctions != _object->end()) {
         if (!(doof::json_is_array(_iterator_genericFunctions->second))) { return doof::Failure<std::string>{"Field \"genericFunctions\" expected array but got " + std::string(doof::json_type_name(_iterator_genericFunctions->second))}; }
         _field_genericFunctions = [&]() { const auto* _array = doof::json_as_array(_iterator_genericFunctions->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_genericFunctions = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_genericFunctions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     return doof::Success<std::shared_ptr<EmitModuleSurface>>{std::make_shared<EmitModuleSurface>(_field_path, _field_exports.value(), _field_imports.value(), _field_genericTypes.value(), _field_genericFunctions.value())};
 }

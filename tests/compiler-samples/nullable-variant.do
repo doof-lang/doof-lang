@@ -1,5 +1,5 @@
 // Smallest current Doof emitter bottleneck:
-// converting a non-null variant into a nullable variant field and binding.
+// converting a present variant into an optional variant field and binding.
 
 class Left {
   value: int
@@ -12,13 +12,13 @@ class Right {
 type Value = Left | Right
 
 class Holder {
-  value: Value | null
+  value: Value | none
 }
 
 function makeValue(): Value => Left { value: 1 }
 
 function makeHolder(): Holder {
-  let value: Value | null = null
+  let value: Value | none = none
   value = makeValue()
   return Holder { value }
 }

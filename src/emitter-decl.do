@@ -9,21 +9,21 @@ import {
 } from "./ast"
 import {
   ActorType, ArrayResolvedType, ClassType, FunctionType, InterfaceType, PromiseType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType,
-  UnionResolvedType, UnknownType, VoidType, WeakResolvedType,
+  UnionResolvedType, UnknownType, NoneType, WeakResolvedType,
 } from "./semantic"
 import { EmitContext, recordCoverageLine } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
-import { emitClassInnerType, emitContextType, emitType, specializeEmitType } from "./emitter-types"
+import { emitClassInnerType, emitContextReturnType, emitContextType, emitReturnType, emitType, specializeEmitType } from "./emitter-types"
 import { scanCapturedMutablesInBlock, scanCapturedMutablesInExpression } from "./emitter-expr-lambda"
 import { moduleNamespace } from "./emitter-names"
 import { MethodInstantiation } from "./emitter-monomorphize"
 import { emitGeneratedJsonDeclarations } from "./emitter-json"
 import { emitMetadataDeclaration } from "./emitter-metadata"
 
-export function emitFunctionSignature(fn: FunctionDeclaration, name: string = "", modulePath: string = "", includeDefaults: bool = false, defaultContext: EmitContext | null = null, ownerTypeParams: string[] = []): string {
+export function emitFunctionSignature(fn: FunctionDeclaration, name: string = "", modulePath: string = "", includeDefaults: bool = false, defaultContext: EmitContext | none = none, ownerTypeParams: string[] = []): string {
   let functionType = checkedFunctionType(fn)
-  if defaultContext != null {
+  if defaultContext != none {
     case specializeEmitType(functionType, defaultContext!) {
       specialized: FunctionType -> { functionType = specialized }
       _ -> { }
@@ -33,17 +33,17 @@ export function emitFunctionSignature(fn: FunctionDeclaration, name: string = ""
   let genericParams: string[] = []
   for typeParam of ownerTypeParams { genericParams.push(typeParam) }
   for typeParam of fn.typeParams { genericParams.push(typeParam) }
-  returnType := if defaultContext == null then emitType(functionType.returnType, modulePath) else emitContextType(functionType.returnType, defaultContext!)
+  returnType := if defaultContext == none then emitReturnType(functionType.returnType, modulePath) else emitContextReturnType(functionType.returnType, defaultContext!)
   ensureKnown(functionType.returnType, fn.name + " return type")
   let result = returnType + " " + functionName + "("
   for i of 0..<fn.params.length {
     if i > 0 { result = result + ", " }
     parameterType := fn.params[i].resolvedType ?? functionType.params[i].type_
-    parameterText := if defaultContext == null then emitType(parameterType, modulePath) else emitContextType(parameterType, defaultContext!)
+    parameterText := if defaultContext == none then emitType(parameterType, modulePath) else emitContextType(parameterType, defaultContext!)
     ensureKnown(parameterType, fn.name + " parameter " + fn.params[i].name)
     result = result + parameterText + " " + cppIdentifier(fn.params[i].name)
     if includeDefaults && canEmitDefault(fn, i) {
-      if defaultContext == null { panic("Default parameter emission requires an emit context") }
+      if defaultContext == none { panic("Default parameter emission requires an emit context") }
       result = result + " = " + emitExpression(fn.params[i].defaultValue!, defaultContext!, parameterType)
     }
   }
@@ -70,11 +70,13 @@ export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitCon
     }
     _ -> { context.currentReturnErrorType = "" }
   }
-  let result = emitCallableDescription(fn, "") + (if context.substitution == null then templatePrefix(fn.typeParams) else "") + emitFunctionSignature(fn, name, context.modulePath, false, context) + " {\n"
+  let result = emitCallableDescription(fn, "") + (if context.substitution == none then templatePrefix(fn.typeParams) else "") + emitFunctionSignature(fn, name, context.modulePath, false, context) + " {\n"
   case fn.body {
     expression: Expression -> {
       result = result + emitExpressionCoverageMark(expression, context)
-      result = result + "    return " + emitExpression(expression, context, functionReturnType(fn)) + ";\n"
+      returnType := functionReturnType(fn)
+      if returnType != none && returnType!.kind == "none" { result = result + "    " + emitExpression(expression, context, returnType) + ";\n" }
+      else { result = result + "    return " + emitExpression(expression, context, returnType) + ";\n" }
     }
     block: Block -> { result = result + emitBlock(block, 1, context) }
   }
@@ -84,8 +86,8 @@ export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitCon
   return result + "}\n"
 }
 
-export function emitFunctionDeclaration(fn: FunctionDeclaration, name: string = "", modulePath: string = "", defaultContext: EmitContext | null = null): string {
-  template := if defaultContext == null || defaultContext!.substitution == null then templatePrefix(fn.typeParams) else ""
+export function emitFunctionDeclaration(fn: FunctionDeclaration, name: string = "", modulePath: string = "", defaultContext: EmitContext | none = none): string {
+  template := if defaultContext == none || defaultContext!.substitution == none then templatePrefix(fn.typeParams) else ""
   return emitCallableDescription(fn, "") + template + emitFunctionSignature(fn, name, modulePath, true, defaultContext) + ";\n"
 }
 
@@ -103,7 +105,7 @@ export function emitNativeFunctionAdapterDefinition(fn: FunctionDeclaration, emi
   }
   call = call + ")"
   returnType := specializeEmitType(checkedFunctionType(fn).returnType, context)
-  if returnType.kind == "void" { return signature + " {\n    " + call + ";\n}\n" }
+  if returnType.kind == "none" { return signature + " {\n    " + call + ";\n}\n" }
   return signature + " {\n    return " + call + ";\n}\n"
 }
 
@@ -131,26 +133,26 @@ function checkedFunctionType(fn: FunctionDeclaration): FunctionType {
     resolved: FunctionType -> { return resolved }
     _ -> { panic("Function " + fn.name + " was not checked before emission") }
   }
-  return FunctionType { params: [], returnType: VoidType {} }
+  return FunctionType { params: [], returnType: NoneType {} }
 }
 
-function functionReturnType(fn: FunctionDeclaration): ResolvedType | null {
+function functionReturnType(fn: FunctionDeclaration): ResolvedType | none {
   case fn.resolvedType! {
     function_: FunctionType -> { return function_.returnType }
-    _ -> { return null }
+    _ -> { return none }
   }
-  return null
+  return none
 }
 
 function canEmitDefault(fn: FunctionDeclaration, index: int): bool {
-  if fn.params[index].defaultValue == null { return false }
+  if fn.params[index].defaultValue == none { return false }
   for i of index + 1..<fn.params.length {
-    if fn.params[i].defaultValue == null { return false }
+    if fn.params[i].defaultValue == none { return false }
   }
   return true
 }
 
-function ensureKnown(resolvedType: ResolvedType, owner: string): void {
+function ensureKnown(resolvedType: ResolvedType, owner: string): none {
   case resolvedType {
     _: UnknownType -> { panic("Cannot emit unresolved type for " + owner) }
     array: ArrayResolvedType -> { ensureKnown(array.elementType, owner + " element") }
@@ -185,7 +187,7 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
     ownershipName = ownershipName + ">"
   }
   let inheritance = if decl.struct_ then "" else " : public std::enable_shared_from_this<" + ownershipName + ">"
-  let result = emitDescriptionComment(decl.description, "") + (if context.substitution == null then templatePrefix(decl.typeParams) else "") + "struct " + className + inheritance + " {\n"
+  let result = emitDescriptionComment(decl.description, "") + (if context.substitution == none then templatePrefix(decl.typeParams) else "") + "struct " + className + inheritance + " {\n"
   for field of decl.fields {
     for index of 0..<field.names.length {
       name := field.names[index]
@@ -195,7 +197,7 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
       ensureKnown(effectiveType, decl.name + "." + name)
       result = result + emitDescriptionComment(description, "    ")
       result = result + "    " + (if field.static_ then "static " else if field.const_ then "const " else "") + fieldType + " " + cppIdentifier(name)
-      if field.defaultValue != null && !field.static_ {
+      if field.defaultValue != none && !field.static_ {
         defaultText := emitExpression(field.defaultValue!, context, effectiveType)
         if !defaultNeedsImportedDefinition(defaultText, context) { result = result + " = " + defaultText }
       }
@@ -211,7 +213,7 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
     for field of decl.fields {
       if field.static_ || field.const_ { continue }
       for name of field.names {
-        if field.defaultValue == null { lastRequiredParameter = parameterIndex }
+        if field.defaultValue == none { lastRequiredParameter = parameterIndex }
         parameterIndex = parameterIndex + 1
       }
     }
@@ -220,7 +222,7 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
     for field of decl.fields {
       if field.static_ || field.const_ { continue }
       for name of field.names {
-        if parameterIndex > lastRequiredParameter && field.defaultValue != null {
+        if parameterIndex > lastRequiredParameter && field.defaultValue != none {
           defaultText := emitExpression(field.defaultValue!, context, fieldTypeForEmission(field))
           if defaultNeedsImportedDefinition(defaultText, context) { suppressTrailingDefaults = true }
         }
@@ -238,7 +240,7 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
         effectiveType := fieldTypeForEmission(field)
         fieldType := fieldTypeTextForEmission(field, effectiveType, context)
         result = result + fieldType + " " + cppIdentifier(name)
-        if !suppressTrailingDefaults && parameterIndex > lastRequiredParameter && field.defaultValue != null {
+        if !suppressTrailingDefaults && parameterIndex > lastRequiredParameter && field.defaultValue != none {
           defaultText := emitExpression(field.defaultValue!, context, effectiveType)
           if !defaultNeedsImportedDefinition(defaultText, context) { result = result + " = " + defaultText }
         }
@@ -272,14 +274,14 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
           context.substitution = previousSubstitution
         }
       }
-    } else if decl.typeParams.length > 0 || context.substitution != null {
+    } else if decl.typeParams.length > 0 || context.substitution != none {
       result = result + emitInlineClassMethod(decl, method, context)
     } else {
       staticPrefix := if method.static_ then "static " else ""
       result = result + emitCallableDescription(method, "    ") + "    " + templatePrefix(method.typeParams) + staticPrefix + emitFunctionSignature(method, "", context.modulePath, true, context, decl.typeParams) + ";\n"
     }
   }
-  if decl.destructor_ != null {
+  if decl.destructor_ != none {
     result = result + "    ~" + className + "() {\n"
     result = result + emitBlock(decl.destructor_!, 2, context)
     result = result + "    }\n"
@@ -300,7 +302,7 @@ function defaultNeedsImportedDefinition(defaultText: string, context: EmitContex
 }
 
 function fieldTypeForEmission(field: ClassField): ResolvedType {
-  if field.resolvedType == null { panic("Class field was not resolved before emission") }
+  if field.resolvedType == none { panic("Class field was not resolved before emission") }
   return field.resolvedType!
 }
 
@@ -314,7 +316,7 @@ function fieldTypeTextForEmission(field: ClassField, resolvedType: ResolvedType,
     }
   }
   typeText := emitContextType(resolvedType, context)
-  if field.defaultValue == null { return typeText }
+  if field.defaultValue == none { return typeText }
   defaultText := emitExpression(field.defaultValue!, context, resolvedType)
   if defaultText == "std::monostate{}" && typeText.startsWith("std::variant<") && !typeText.startsWith("std::variant<std::monostate") {
     return "std::variant<std::monostate, " + typeText.substring(13, 1000000)
@@ -331,7 +333,7 @@ export function emitStaticClassFieldDefinitions(owner: ClassDeclaration, context
   if owner.native_ || owner.typeParams.length > 0 { return "" }
   let result = ""
   for field of owner.fields {
-    if !field.static_ || field.defaultValue == null { continue }
+    if !field.static_ || field.defaultValue == none { continue }
     for name of field.names {
       resolvedType := fieldTypeForEmission(field)
       result = result + fieldTypeTextForEmission(field, resolvedType, context) + " " + owner.name + "::" + cppIdentifier(name) + " = " + emitExpression(field.defaultValue!, context, resolvedType) + ";\n"
@@ -360,7 +362,7 @@ function emitInlineClassMethod(owner: ClassDeclaration, method: FunctionDeclarat
   for typeParam of owner.typeParams { context.genericTypeParams.push(typeParam) }
   for typeParam of method.typeParams { context.genericTypeParams.push(typeParam) }
   staticPrefix := if method.static_ then "static " else ""
-  template := if context.substitution == null then templatePrefix(method.typeParams) else ""
+  template := if context.substitution == none then templatePrefix(method.typeParams) else ""
   let result = emitCallableDescription(method, "    ") + "    " + template + staticPrefix + emitFunctionSignature(method, emittedName, context.modulePath, true, context, owner.typeParams) + " {\n"
   case method.body {
     expression: Expression -> { result = result + "        return " + emitExpression(expression, context, functionReturnType(method)) + ";\n" }
@@ -403,7 +405,7 @@ function emitCallableDescription(fn: FunctionDeclaration, indent: string): strin
 }
 
 export function emitInterfaceAlias(decl: InterfaceDeclaration, context: EmitContext): string {
-  if decl.resolvedSymbol == null { panic("Interface " + decl.name + " was not analyzed") }
+  if decl.resolvedSymbol == none { panic("Interface " + decl.name + " was not analyzed") }
   implementations := decl.resolvedSymbol!.implementations
   if implementations.length == 0 { panic("Interface " + decl.name + " has no implementing classes") }
   let result = emitDescriptionComment(decl.description, "") + "using " + decl.name + " = std::variant<"

@@ -12,7 +12,11 @@
 | `string` | text |
 | `char` | UTF-8 character |
 | `bool` | boolean |
-| `void` | unit type |
+| `none` | unit type |
+
+`none` is both the unit/absence type and its sole value. `void` and `null` are
+deprecated source aliases that canonicalize to `none` and produce replacement
+warnings. JSON still spells the corresponding wire value `null`.
 
 `string[index]` and `string.charAt(index)` return a `char`. Both forms panic
 when the index is negative or outside the string's byte range. Convert the
@@ -91,7 +95,7 @@ names := ["Alice", "Bob"]
 process([1, 2, 3])
 
 empty: int[] = []
-maybeName: string | null := null
+maybeName: string | none := none
 ```
 
 Binding kind affects inference:
@@ -103,23 +107,24 @@ readonly frozen = [1, 2, 3]
 data := readonly [1, 2, 3]
 ```
 
-Return types may be inferred for unambiguous functions.
+Omitted named function and method return annotations mean `none`. Value-returning
+named functions require an explicit return type; lambda returns may be inferred.
 
 ## Nullable Types
 
 Nullability is explicit through unions.
 
 ```doof
-name: string | null := null
-value: int := null
+name: string | none := none
+value: int := none
 ```
 
 The second line is a compile error.
 
-Important rule: plain `if value != null` and `if value == null` do not change the static type. Use declaration-`else`, `case`, `as`, or postfix `!` for explicit narrowing.
+Important rule: plain `if value != none` and `if value == none` do not change the static type. Use declaration-`else`, `case`, `as`, or postfix `!` for explicit narrowing.
 
 ```doof
-if name != null {
+if name != none {
     println(name!)
 }
 
@@ -132,7 +137,7 @@ age := user!.age
 
 ```doof
 type Value = int | string | bool
-type Optional<T> = T | null
+type Optional<T> = T | none
 ```
 
 Discriminated unions usually use shared literal-valued fields.
@@ -143,7 +148,7 @@ class Failure { kind: "Failure"; error: string }
 type ParseResult = Success | Failure
 ```
 
-Direct member access on a multi-member union is allowed only when every non-null
+Direct member access on a multi-member union is allowed only when every present
 member has that field or method.
 
 Error results are also ordinary unions: `Result<T, E>` is the canonical spelling
@@ -160,7 +165,7 @@ payload: JsonValue := { name: "Ada", scores: [1, 2, 3] }
 
 Accepted shapes:
 
-- `null`
+- `none` (serialized as JSON `null`)
 - `bool`, `byte`, `int`, `long`, `float`, `double`, `string`
 - `JsonValue[]`
 - `Map<string, JsonValue>`
@@ -264,9 +269,9 @@ Common APIs:
 | Member | Return | Notes |
 | --- | --- | --- |
 | `.get(key)` | `Result<V, string>` | failure when missing |
-| `.set(key, value)` | `void` | mutable maps only |
+| `.set(key, value)` | `none` | mutable maps only |
 | `.has(key)` | `bool` | key test |
-| `.delete(key)` | `void` | mutable maps only |
+| `.delete(key)` | `none` | mutable maps only |
 | `.keys()` | `K[]` | insertion order |
 | `.values()` | `V[]` | insertion order |
 | `.size` | `int` | entry count |
@@ -329,7 +334,7 @@ class Counter implements Stream<int> {
 - Interface types resolve against the closed world of matching classes at compile time.
 
 ```doof
-interface Drawable { draw(canvas: Canvas): void }
+interface Drawable { draw(canvas: Canvas): none }
 ```
 
 Use classes for identity-rich domain types, structs for copied value data, and interfaces for structural contracts.

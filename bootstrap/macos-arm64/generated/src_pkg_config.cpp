@@ -28,14 +28,14 @@ doof::Result<std::shared_ptr<PkgConfigCommandResult>, std::string> PkgConfigComm
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_output->second) : doof::json_is_string(_iterator_output->second)))) { return doof::Failure<std::string>{"Field \"output\" expected string but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
         _field_output = (_lenient ? doof::json_as_string_lenient(_iterator_output->second) : doof::json_as_string(_iterator_output->second));
     } else {
-        _field_output = std::string{std::string("")};
+        _field_output = std::string("");
     }
     std::optional<std::string> _field_error;
     if (auto _iterator_error = _object->find("error"); _iterator_error != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
         _field_error = (_lenient ? doof::json_as_string_lenient(_iterator_error->second) : doof::json_as_string(_iterator_error->second));
     } else {
-        _field_error = std::string{std::string("")};
+        _field_error = std::string("");
     }
     return doof::Success<std::shared_ptr<PkgConfigCommandResult>>{std::make_shared<PkgConfigCommandResult>(_field_exitCode, _field_output.value(), _field_error.value())};
 }

@@ -4,7 +4,7 @@ import {
   planMacOSAppRun, planNativeProgramRun,
 } from "./run-command"
 
-export function testPlansNativeProgramArgumentsAndPackageRoot(): void {
+export function testPlansNativeProgramArgumentsAndPackageRoot(): none {
   plan := planNativeProgramRun("/tmp/build/demo", ["--port", "8080"], "/tmp/package")
   Assert.equal(plan.command, "/tmp/build/demo")
   Assert.equal(plan.arguments.length, 2)
@@ -13,7 +13,7 @@ export function testPlansNativeProgramArgumentsAndPackageRoot(): void {
   Assert.equal(plan.directory, "/tmp/package")
 }
 
-export function testPlansMacOSBundleLaunch(): void {
+export function testPlansMacOSBundleLaunch(): none {
   plan := planMacOSAppRun("/tmp/build/Demo.app", "/tmp/package")
   Assert.equal(plan.command, "open")
   Assert.equal(plan.arguments[0], "-n")
@@ -21,7 +21,7 @@ export function testPlansMacOSBundleLaunch(): void {
   Assert.equal(plan.directory, "/tmp/package")
 }
 
-export function testPlansIOSSimulatorInstallAndLaunch(): void {
+export function testPlansIOSSimulatorInstallAndLaunch(): none {
   install := planIOSSimulatorInstall("/tmp/build/Demo.app", "/tmp/package")
   Assert.equal(install.command, "xcrun")
   Assert.equal(install.arguments[0], "simctl")
@@ -37,7 +37,7 @@ export function testPlansIOSSimulatorInstallAndLaunch(): void {
   Assert.equal(launch.arguments[3], "dev.doof.demo")
 }
 
-export function testPlansIOSDeviceInstallAndLaunch(): void {
+export function testPlansIOSDeviceInstallAndLaunch(): none {
   install := planIOSDeviceInstall("/tmp/build/Demo.app", "device-123", "/tmp/package")
   Assert.equal(install.command, "xcrun")
   Assert.equal(install.arguments.length, 7)

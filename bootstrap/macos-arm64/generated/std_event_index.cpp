@@ -29,16 +29,16 @@ std::shared_ptr<Timer> setInterval(std::shared_ptr<::std_::time::duration::Durat
     return std::make_shared<Timer>(::doof_event::NativeTimer::createInterval(interval->toNanos(), keepsAlive, doof::callback<void()>([timerHandler]() -> void { return timerHandler.call(); })));
 }
 void runMainEventLoop() {
-    _runMainEventLoop();
+    ::doof_event::runMainEventLoop();
 }
 int32_t drainMainEventLoop() {
-    return _drainMainEventLoop();
+    return ::doof_event::drainMainEventLoop();
 }
 void setMainEventWakeHandler(doof::callback<void()> handler) {
-    _setMainEventWakeHandler(handler);
+    ::doof_event::setMainEventWakeCallback(handler);
 }
 void clearMainEventWakeHandler() {
-    _clearMainEventWakeHandler();
+    ::doof_event::clearMainEventWakeHandler();
 }
 std::tuple<std::shared_ptr<ChannelSender<std::variant<std::shared_ptr<::std_::http::websocket::WebSocketOpen>, std::shared_ptr<::std_::http::websocket::WebSocketText>, std::shared_ptr<::std_::http::websocket::WebSocketBinary>, std::shared_ptr<::std_::http::websocket::WebSocketWritable>, std::shared_ptr<::std_::http::websocket::WebSocketClose>, std::shared_ptr<::std_::http::websocket::WebSocketError>>>>, std::shared_ptr<ChannelReceiver<std::variant<std::shared_ptr<::std_::http::websocket::WebSocketOpen>, std::shared_ptr<::std_::http::websocket::WebSocketText>, std::shared_ptr<::std_::http::websocket::WebSocketBinary>, std::shared_ptr<::std_::http::websocket::WebSocketWritable>, std::shared_ptr<::std_::http::websocket::WebSocketClose>, std::shared_ptr<::std_::http::websocket::WebSocketError>>>>> createChannel__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(int32_t capacity, int32_t highWater, int32_t lowWater, bool keepsAlive) {
     if (capacity <= 0) {

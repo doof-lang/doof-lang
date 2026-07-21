@@ -3,8 +3,8 @@
 import {
   ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType,
   InterfaceType,
-  JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NullType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType,
-  UnionResolvedType, UnknownType, TypeParameterType, VoidType, WeakResolvedType,
+  JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType,
+  UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import type {
   ArrayType as AstArrayType, AstFunctionType,
@@ -16,8 +16,7 @@ export function primitive(name: string): ResolvedType {
 }
 
 export function unknownType(): ResolvedType { return UnknownType {} }
-export function nullType(): ResolvedType { return NullType {} }
-export function voidType(): ResolvedType { return VoidType {} }
+export function noneType(): ResolvedType { return NoneType {} }
 
 export function arrayType(element: ResolvedType, readonly_: bool = false): ResolvedType {
   return ArrayResolvedType { elementType: element, readonly_ }
@@ -80,7 +79,7 @@ export function unionType(types: ResolvedType[]): ResolvedType {
   return UnionResolvedType { types: members }
 }
 
-function pushUniqueType(types: ResolvedType[], candidate: ResolvedType): void {
+function pushUniqueType(types: ResolvedType[], candidate: ResolvedType): none {
   for existing of types { if sameType(existing, candidate) { return } }
   types.push(candidate)
 }
@@ -183,7 +182,7 @@ export function substituteTypeParams(type_: ResolvedType, names: string[], argum
   return type_
 }
 
-export function typeParameter(name: string, constraintName: string = "", constraint: ResolvedType | null = null): ResolvedType {
+export function typeParameter(name: string, constraintName: string = "", constraint: ResolvedType | none = none): ResolvedType {
   return TypeParameterType { name, constraintName, constraint }
 }
 
@@ -248,8 +247,7 @@ export function typeName(resolvedType: ResolvedType): string {
       }
       return result
     }
-    _: NullType -> { return "null" }
-    _: VoidType -> { return "void" }
+    _: NoneType -> { return "none" }
     _: UnknownType -> { return "unknown" }
     parameter: TypeParameterType -> { return parameter.name }
     metadata: ClassMetadataResolvedType -> { return "ClassMetadata<" + typeName(metadata.classType) + ">" }
@@ -392,7 +390,7 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
         _: TypeParameterType -> { return sameType(value, target) }
         _ -> { }
       }
-      if parameter.constraint != null { return isAssignable(parameter.constraint!, target) }
+      if parameter.constraint != none { return isAssignable(parameter.constraint!, target) }
     }
     _: UnknownType -> { return true }
     valueUnion: UnionResolvedType -> {
@@ -503,12 +501,12 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
         _ -> { }
       }
     }
-    _: NullType -> {
+    _: NoneType -> {
       case target {
         union: UnionResolvedType -> {
           for member of union.types {
             case member {
-              _: NullType -> { return true }
+              _: NoneType -> { return true }
               _ -> { }
             }
           }
@@ -532,7 +530,7 @@ function isJsonValueAssignable(value: ResolvedType): bool {
   case value {
     _: UnknownType -> { return true }
     _: JsonValueResolvedType -> { return true }
-    _: NullType -> { return true }
+    _: NoneType -> { return true }
     primitiveValue: PrimitiveType -> {
       return primitiveValue.name == "byte" || primitiveValue.name == "int" || primitiveValue.name == "long" ||
         primitiveValue.name == "float" || primitiveValue.name == "double" || primitiveValue.name == "string" || primitiveValue.name == "char" || primitiveValue.name == "bool"

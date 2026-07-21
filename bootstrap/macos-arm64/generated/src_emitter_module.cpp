@@ -60,7 +60,7 @@ doof::Result<std::shared_ptr<ModulePlan>, std::string> ModulePlan::fromJsonValue
         if (!(doof::json_is_array(_iterator_includes->second))) { return doof::Failure<std::string>{"Field \"includes\" expected array but got " + std::string(doof::json_type_name(_iterator_includes->second))}; }
         _field_includes = [&]() { const auto* _array = doof::json_as_array(_iterator_includes->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_includes = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_includes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     return doof::Success<std::shared_ptr<ModulePlan>>{std::make_shared<ModulePlan>(_field_path, _field_namespaceName, _field_headerName, _field_sourceName, _field_includes.value())};
 }
@@ -78,7 +78,7 @@ doof::Result<std::shared_ptr<ModuleGraphPlan>, std::string> ModuleGraphPlan::fro
         if (!(doof::json_is_array(_iterator_modules->second))) { return doof::Failure<std::string>{"Field \"modules\" expected array but got " + std::string(doof::json_type_name(_iterator_modules->second))}; }
         _field_modules = [&]() { const auto* _array = doof::json_as_array(_iterator_modules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ModulePlan>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(ModulePlan::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_modules = std::shared_ptr<std::vector<std::shared_ptr<ModulePlan>>>{std::make_shared<std::vector<std::shared_ptr<ModulePlan>>>(std::vector<std::shared_ptr<ModulePlan>>{})};
+        _field_modules = std::make_shared<std::vector<std::shared_ptr<ModulePlan>>>(std::vector<std::shared_ptr<ModulePlan>>{});
     }
     return doof::Success<std::shared_ptr<ModuleGraphPlan>>{std::make_shared<ModuleGraphPlan>(_field_modules.value())};
 }
@@ -153,14 +153,14 @@ doof::Result<std::shared_ptr<ModuleEmission>, std::string> ModuleEmission::fromJ
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_coverageModuleId->second) : doof::json_is_number(_iterator_coverageModuleId->second)))) { return doof::Failure<std::string>{"Field \"coverageModuleId\" expected number but got " + std::string(doof::json_type_name(_iterator_coverageModuleId->second))}; }
         _field_coverageModuleId = (_lenient ? doof::json_as_int_lenient(_iterator_coverageModuleId->second) : doof::json_as_int(_iterator_coverageModuleId->second));
     } else {
-        _field_coverageModuleId = int32_t{-1};
+        _field_coverageModuleId = -1;
     }
     std::optional<std::shared_ptr<std::vector<int32_t>>> _field_instrumentedLines;
     if (auto _iterator_instrumentedLines = _object->find("instrumentedLines"); _iterator_instrumentedLines != _object->end()) {
         if (!(doof::json_is_array(_iterator_instrumentedLines->second))) { return doof::Failure<std::string>{"Field \"instrumentedLines\" expected array but got " + std::string(doof::json_type_name(_iterator_instrumentedLines->second))}; }
         _field_instrumentedLines = [&]() { const auto* _array = doof::json_as_array(_iterator_instrumentedLines->second); auto _values = std::make_shared<std::vector<int32_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
-        _field_instrumentedLines = std::shared_ptr<std::vector<int32_t>>{std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})};
+        _field_instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     }
     return doof::Success<std::shared_ptr<ModuleEmission>>{std::make_shared<ModuleEmission>(_field_modulePath, _field_header, _field_source, _field_headerName, _field_sourceName, _field_coverageModuleId.value(), _field_instrumentedLines.value())};
 }
@@ -188,7 +188,7 @@ doof::Result<std::shared_ptr<CoverageModuleMetadata>, std::string> CoverageModul
         if (!(doof::json_is_array(_iterator_instrumentedLines->second))) { return doof::Failure<std::string>{"Field \"instrumentedLines\" expected array but got " + std::string(doof::json_type_name(_iterator_instrumentedLines->second))}; }
         _field_instrumentedLines = [&]() { const auto* _array = doof::json_as_array(_iterator_instrumentedLines->second); auto _values = std::make_shared<std::vector<int32_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
-        _field_instrumentedLines = std::shared_ptr<std::vector<int32_t>>{std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})};
+        _field_instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     }
     return doof::Success<std::shared_ptr<CoverageModuleMetadata>>{std::make_shared<CoverageModuleMetadata>(_field_moduleId, _field_modulePath, _field_instrumentedLines.value())};
 }
@@ -209,28 +209,28 @@ doof::Result<std::shared_ptr<ModuleGraphEmission>, std::string> ModuleGraphEmiss
         if (!(doof::json_is_array(_iterator_modules->second))) { return doof::Failure<std::string>{"Field \"modules\" expected array but got " + std::string(doof::json_type_name(_iterator_modules->second))}; }
         _field_modules = [&]() { const auto* _array = doof::json_as_array(_iterator_modules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ModuleEmission>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(ModuleEmission::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_modules = std::shared_ptr<std::vector<std::shared_ptr<ModuleEmission>>>{std::make_shared<std::vector<std::shared_ptr<ModuleEmission>>>(std::vector<std::shared_ptr<ModuleEmission>>{})};
+        _field_modules = std::make_shared<std::vector<std::shared_ptr<ModuleEmission>>>(std::vector<std::shared_ptr<ModuleEmission>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<CoverageModuleMetadata>>>> _field_coverageModules;
     if (auto _iterator_coverageModules = _object->find("coverageModules"); _iterator_coverageModules != _object->end()) {
         if (!(doof::json_is_array(_iterator_coverageModules->second))) { return doof::Failure<std::string>{"Field \"coverageModules\" expected array but got " + std::string(doof::json_type_name(_iterator_coverageModules->second))}; }
         _field_coverageModules = [&]() { const auto* _array = doof::json_as_array(_iterator_coverageModules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<CoverageModuleMetadata>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(CoverageModuleMetadata::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_coverageModules = std::shared_ptr<std::vector<std::shared_ptr<CoverageModuleMetadata>>>{std::make_shared<std::vector<std::shared_ptr<CoverageModuleMetadata>>>(std::vector<std::shared_ptr<CoverageModuleMetadata>>{})};
+        _field_coverageModules = std::make_shared<std::vector<std::shared_ptr<CoverageModuleMetadata>>>(std::vector<std::shared_ptr<CoverageModuleMetadata>>{});
     }
     std::optional<std::string> _field_wasmSupportSource;
     if (auto _iterator_wasmSupportSource = _object->find("wasmSupportSource"); _iterator_wasmSupportSource != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_wasmSupportSource->second) : doof::json_is_string(_iterator_wasmSupportSource->second)))) { return doof::Failure<std::string>{"Field \"wasmSupportSource\" expected string but got " + std::string(doof::json_type_name(_iterator_wasmSupportSource->second))}; }
         _field_wasmSupportSource = (_lenient ? doof::json_as_string_lenient(_iterator_wasmSupportSource->second) : doof::json_as_string(_iterator_wasmSupportSource->second));
     } else {
-        _field_wasmSupportSource = std::string{std::string("")};
+        _field_wasmSupportSource = std::string("");
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_wasmExportNames;
     if (auto _iterator_wasmExportNames = _object->find("wasmExportNames"); _iterator_wasmExportNames != _object->end()) {
         if (!(doof::json_is_array(_iterator_wasmExportNames->second))) { return doof::Failure<std::string>{"Field \"wasmExportNames\" expected array but got " + std::string(doof::json_type_name(_iterator_wasmExportNames->second))}; }
         _field_wasmExportNames = [&]() { const auto* _array = doof::json_as_array(_iterator_wasmExportNames->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_wasmExportNames = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     return doof::Success<std::shared_ptr<ModuleGraphEmission>>{std::make_shared<ModuleGraphEmission>(_field_modules.value(), _field_coverageModules.value(), _field_wasmSupportSource.value(), _field_wasmExportNames.value())};
 }
@@ -492,7 +492,7 @@ void addConcreteHeaderDeclarations(std::shared_ptr<::app_src_emitter_header_::He
         clearInstantiation(context);
     }
 }
-void addConcreteTypeForwardDeclarations(std::shared_ptr<::app_src_emitter_header_::HeaderPlan> plan, std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NullType>, std::shared_ptr<::app_src_semantic_::VoidType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_) {
+void addConcreteTypeForwardDeclarations(std::shared_ptr<::app_src_emitter_header_::HeaderPlan> plan, std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_) {
     {
         auto _case_subject = type_;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
@@ -584,7 +584,7 @@ std::string emitConcreteFunctions(std::shared_ptr<::app_src_emitter_context_::Em
     }
     return result;
 }
-void withInstantiation(std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::shared_ptr<std::vector<std::string>> names, std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NullType>, std::shared_ptr<::app_src_semantic_::VoidType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>> arguments) {
+void withInstantiation(std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::shared_ptr<std::vector<std::string>> names, std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>> arguments) {
     (context->substitution = std::make_shared<::app_src_semantic_::TypeSubstitution>(names, arguments));
 }
 void clearInstantiation(std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {

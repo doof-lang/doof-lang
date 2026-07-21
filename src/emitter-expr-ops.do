@@ -1,7 +1,7 @@
 // Assignment, identifier, operator, member, and index lowering.
 
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, ThisExpression, UnaryExpression } from "./ast"
-import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, VoidType } from "./semantic"
+import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType } from "./emitter-expr-utils"
@@ -58,7 +58,7 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
             return "[&]() -> " + resultCpp + " { auto _as_nullable = " + source + "; if (doof::is_null(_as_nullable)) return " + failure + "{\"JsonValue narrowing failed\"}; return " + jsonNarrowing + "; }()"
           }
           member := naturalNullableUnionMember(union_)
-          if member != null {
+          if member != none {
             if sameType(member!, target) {
               case target {
                 _: ClassType -> {
@@ -129,7 +129,7 @@ function emitAssignmentTarget(target: Expression, context: EmitContext): string 
   case target {
     member: MemberExpression -> {
       objectType := decoratedExpressionType(member.object)
-      if objectType != null && isVariantCarrier(objectType!) {
+      if objectType != none && isVariantCarrier(objectType!) {
         object := emitExpression(member.object, context)
         return "std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->" + cppIdentifier(member.property) + "); }, " + object + ")"
       }
@@ -144,7 +144,7 @@ function isVariantCarrier(resolvedType: ResolvedType): bool {
     _: InterfaceType -> { return true }
     union_: UnionResolvedType -> {
       let nonNull = 0
-      for member of union_.types { if member.kind != "null" { nonNull = nonNull + 1 } }
+      for member of union_.types { if member.kind != "none" { nonNull = nonNull + 1 } }
       return nonNull > 1
     }
     _ -> { }
@@ -153,18 +153,18 @@ function isVariantCarrier(resolvedType: ResolvedType): bool {
 }
 
 export function emitIdentifier(expression: Identifier, context: EmitContext): string {
-  if expression.resolvedBinding != null && expression.resolvedBinding!.kind == "field" && !context.currentFunctionStatic {
+  if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "field" && !context.currentFunctionStatic {
     return "this->" + cppIdentifier(expression.name)
   }
   for imported of context.imports {
-    if imported.localName == expression.name && imported.symbol != null {
+    if imported.localName == expression.name && imported.symbol != none {
       if imported.symbol!.native_ {
         return "::" + (if imported.symbol!.nativeCppName == "" then imported.symbol!.name else imported.symbol!.nativeCppName)
       }
       return "::" + exprModuleNamespaceFor(imported.symbol!.module) + "::" + cppIdentifier(emittedSymbolName(imported.symbol!))
     }
   }
-  if expression.resolvedBinding != null && expression.resolvedBinding!.symbol != null {
+  if expression.resolvedBinding != none && expression.resolvedBinding!.symbol != none {
     symbol := expression.resolvedBinding!.symbol!
     if symbol.native_ {
       return "::" + (if symbol.nativeCppName == "" then symbol.name else symbol.nativeCppName)
@@ -173,14 +173,14 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
       return "::" + exprModuleNamespaceFor(symbol.module) + "::" + cppIdentifier(emittedSymbolName(symbol))
     }
   }
-  if expression.resolvedBinding != null && expression.resolvedBinding!.kind == "import" {
+  if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "import" {
     for imported of context.imports {
-      if imported.localName == expression.name && imported.symbol != null {
+      if imported.localName == expression.name && imported.symbol != none {
         return "::" + exprModuleNamespaceFor(imported.symbol!.module) + "::" + cppIdentifier(emittedSymbolName(imported.symbol!))
       }
     }
   }
-  if expression.resolvedBinding != null && expression.resolvedBinding!.mutable && isCapturedMutable(context, expression.name) {
+  if expression.resolvedBinding != none && expression.resolvedBinding!.mutable && isCapturedMutable(context, expression.name) {
     return "(*" + cppIdentifier(expression.name) + ")"
   }
   return cppIdentifier(expression.name)
@@ -210,7 +210,7 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
         valueType := emitType(result.valueType, context.modulePath)
         body := "auto _try_value = " + operand + "; if (doof::is_failure(_try_value)) doof::panic(\"" + expression.operator + " failed\"); "
         case result.valueType {
-          _: VoidType -> { return "[&]() -> void { " + body + " }()" }
+          _: NoneType -> { return "[&]() -> void { " + body + " }()" }
           _ -> { }
         }
         if expression.operator == "try?" {
@@ -224,13 +224,13 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
   operand := emitExpression(expression.operand, context)
   if !expression.prefix && expression.operator == "!" {
     operandType := decoratedExpressionType(expression.operand)
-    if operandType != null {
+    if operandType != none {
       case operandType! {
         result: ResultResolvedType -> {
           valueType := emitType(result.valueType, context.modulePath)
           body := "auto _assert_value = " + operand + "; if (doof::is_failure(_assert_value)) doof::panic(\"! failed\"); "
           case result.valueType {
-            _: VoidType -> { return "[&]() -> void { " + body + "}()" }
+            _: NoneType -> { return "[&]() -> void { " + body + "}()" }
             _ -> { }
           }
           return "[&]() -> " + valueType + " { " + body + "return std::move(doof::success_value(_assert_value)); }()"
@@ -242,13 +242,13 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
       member: MemberExpression -> { return "doof::unwrap_optional(" + operand + ")" }
       _ -> { }
     }
-    if operandType != null {
+    if operandType != none {
       case operandType! {
         union_: UnionResolvedType -> {
           if hasSinglePrimitiveMember(union_) { return operand + ".value()" }
           if usesVariantRepresentation(union_) {
             let nonNullMembers: ResolvedType[] = []
-            for member of union_.types { if member.kind != "null" { nonNullMembers.push(member) } }
+            for member of union_.types { if member.kind != "none" { nonNullMembers.push(member) } }
             if nonNullMembers.length == 1 { return "std::get<" + emitType(nonNullMembers[0], context.modulePath) + ">(" + operand + ")" }
           }
           if isNullableVariantType(operandType) { return "doof::unwrap_optional(" + operand + ")" }
@@ -277,11 +277,11 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
     right := emitExpression(expression.right, context)
     return "(doof::is_null(" + left + ") ? " + right + " : doof::unwrap_optional(" + left + "))"
   }
-  if (expression.operator == "==" || expression.operator == "!=") && expression.right.kind == "null-literal" {
+  if (expression.operator == "==" || expression.operator == "!=") && expression.right.kind == "none-literal" {
     let test = "doof::is_null(" + emitExpression(expression.left, context) + ")"
     return if expression.operator == "==" then test else "(!" + test + ")"
   }
-  if (expression.operator == "==" || expression.operator == "!=") && expression.left.kind == "null-literal" {
+  if (expression.operator == "==" || expression.operator == "!=") && expression.left.kind == "none-literal" {
     let test = "doof::is_null(" + emitExpression(expression.right, context) + ")"
     return if expression.operator == "==" then test else "(!" + test + ")"
   }
@@ -300,7 +300,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   }
   case expression.object {
     identifier: Identifier -> {
-      if identifier.resolvedBinding != null && identifier.resolvedBinding!.casePattern != "" && (expression.property == "value" || expression.property == "error") {
+      if identifier.resolvedBinding != none && identifier.resolvedBinding!.casePattern != "" && (expression.property == "value" || expression.property == "error") {
         return object + "." + cppIdentifier(expression.property)
       }
     }
@@ -317,7 +317,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     _ -> { }
   }
   staticObjectType := decoratedExpressionType(expression.object)
-  if staticObjectType != null {
+  if staticObjectType != none {
     case staticObjectType! {
       parameter: TypeParameterType -> {
         specialized := specializeEmitType(parameter, context)
@@ -331,12 +331,12 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
         }
       }
       class_: ClassType -> {
-        if expression.resolvedStaticOwner != null {
+        if expression.resolvedStaticOwner != none {
           owner := expression.resolvedStaticOwner!
           let ownerName = owner.name
           if owner.native_ {
             ownerName = "::" + (if owner.nativeCppName == "" then owner.name else owner.nativeCppName)
-          } else if owner.resolvedSymbol != null && owner.resolvedSymbol!.module != context.modulePath && context.modulePath != "" {
+          } else if owner.resolvedSymbol != none && owner.resolvedSymbol!.module != context.modulePath && context.modulePath != "" {
             ownerName = "::" + exprModuleNamespaceFor(owner.resolvedSymbol!.module) + "::" + owner.name
           }
           return ownerName + "::" + (if expression.property == "metadata" then "_metadata" else cppIdentifier(expression.property))
@@ -348,7 +348,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   // Nominal fields and methods take precedence over builtin and aggregate
   // pseudo-members. This keeps ordinary members named length, kind,
   // resolvedType, span, push, or value from being rewritten as accessors.
-  if staticObjectType != null {
+  if staticObjectType != none {
     case staticObjectType! {
       class_: ClassType -> {
         if class_.name == "Expression" || class_.name == "Statement" || class_.name == "TypeAnnotation" {
@@ -362,13 +362,24 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       _ -> { }
     }
   }
-  if expression.property == "kind" { return "doof::kind(" + object + ")" }
-  if expression.property == "resolvedType" { return "doof::resolved_type(" + object + ")" }
-  if expression.property == "span" { return "doof::span(" + object + ")" }
+  // AST union pseudo-fields use runtime visitors, but callable members with
+  // the same names remain ordinary nominal methods. Nullable native classes
+  // are a common example: `node!.kind()` must emit `node->kind()`, not
+  // `doof::kind(node)()`.
+  let callableMember = false
+  if expression.resolvedType != none {
+    case expression.resolvedType! {
+      _: FunctionType -> { callableMember = true }
+      _ -> { }
+    }
+  }
+  if !callableMember && expression.property == "kind" { return "doof::kind(" + object + ")" }
+  if !callableMember && expression.property == "resolvedType" { return "doof::resolved_type(" + object + ")" }
+  if !callableMember && expression.property == "span" { return "doof::span(" + object + ")" }
   if expression.property == "push" { return object + "->push_back" }
   if expression.property == "value" && object.contains("::") { return "static_cast<int32_t>(" + object + ")" }
   objectType := decoratedExpressionType(expression.object)
-  if objectType != null {
+  if objectType != none {
     case objectType! {
       function_: FunctionType -> { return object + "." + cppIdentifier(expression.property) }
       _: PromiseType -> { return object + "." + cppIdentifier(expression.property) }
@@ -404,7 +415,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
 export function emitIndex(expression: IndexExpression, context: EmitContext): string {
   object := emitExpression(expression.object, context)
   objectType := decoratedExpressionType(expression.object)
-  if objectType != null {
+  if objectType != none {
     case objectType! {
       _: ArrayResolvedType -> { return "(*" + object + ")[" + emitExpression(expression.index, context) + "]" }
       _: MapResolvedType -> { return "(*" + object + ")[" + emitExpression(expression.index, context) + "]" }

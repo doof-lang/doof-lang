@@ -155,35 +155,35 @@ doof::Result<std::shared_ptr<TimerBucket>, std::string> TimerBucket::fromJsonVal
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_count->second) : doof::json_is_number(_iterator_count->second)))) { return doof::Failure<std::string>{"Field \"count\" expected number but got " + std::string(doof::json_type_name(_iterator_count->second))}; }
         _field_count = (_lenient ? doof::json_as_int_lenient(_iterator_count->second) : doof::json_as_int(_iterator_count->second));
     } else {
-        _field_count = int32_t{0};
+        _field_count = 0;
     }
     std::optional<int64_t> _field_totalNanos;
     if (auto _iterator_totalNanos = _object->find("totalNanos"); _iterator_totalNanos != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_totalNanos->second) : doof::json_is_number(_iterator_totalNanos->second)))) { return doof::Failure<std::string>{"Field \"totalNanos\" expected number but got " + std::string(doof::json_type_name(_iterator_totalNanos->second))}; }
         _field_totalNanos = (_lenient ? doof::json_as_long_lenient(_iterator_totalNanos->second) : doof::json_as_long(_iterator_totalNanos->second));
     } else {
-        _field_totalNanos = int64_t{0LL};
+        _field_totalNanos = 0LL;
     }
     std::optional<int64_t> _field_minNanos;
     if (auto _iterator_minNanos = _object->find("minNanos"); _iterator_minNanos != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_minNanos->second) : doof::json_is_number(_iterator_minNanos->second)))) { return doof::Failure<std::string>{"Field \"minNanos\" expected number but got " + std::string(doof::json_type_name(_iterator_minNanos->second))}; }
         _field_minNanos = (_lenient ? doof::json_as_long_lenient(_iterator_minNanos->second) : doof::json_as_long(_iterator_minNanos->second));
     } else {
-        _field_minNanos = int64_t{0LL};
+        _field_minNanos = 0LL;
     }
     std::optional<int64_t> _field_maxNanos;
     if (auto _iterator_maxNanos = _object->find("maxNanos"); _iterator_maxNanos != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_maxNanos->second) : doof::json_is_number(_iterator_maxNanos->second)))) { return doof::Failure<std::string>{"Field \"maxNanos\" expected number but got " + std::string(doof::json_type_name(_iterator_maxNanos->second))}; }
         _field_maxNanos = (_lenient ? doof::json_as_long_lenient(_iterator_maxNanos->second) : doof::json_as_long(_iterator_maxNanos->second));
     } else {
-        _field_maxNanos = int64_t{0LL};
+        _field_maxNanos = 0LL;
     }
     std::optional<std::shared_ptr<std::vector<int64_t>>> _field_durations;
     if (auto _iterator_durations = _object->find("durations"); _iterator_durations != _object->end()) {
         if (!(doof::json_is_array(_iterator_durations->second))) { return doof::Failure<std::string>{"Field \"durations\" expected array but got " + std::string(doof::json_type_name(_iterator_durations->second))}; }
         _field_durations = [&]() { const auto* _array = doof::json_as_array(_iterator_durations->second); auto _values = std::make_shared<std::vector<int64_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_long_lenient(_element) : doof::json_as_long(_element))); } return _values; }();
     } else {
-        _field_durations = std::shared_ptr<std::vector<int64_t>>{std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{})};
+        _field_durations = std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{});
     }
     return doof::Success<std::shared_ptr<TimerBucket>>{std::make_shared<TimerBucket>(_field_count.value(), _field_totalNanos.value(), _field_minNanos.value(), _field_maxNanos.value(), _field_durations.value())};
 }
@@ -280,7 +280,7 @@ doof::Result<std::shared_ptr<Stopwatch>, std::string> Stopwatch::fromJsonValue(c
         if (!(doof::json_is_object(_iterator_timers->second))) { return doof::Failure<std::string>{"Field \"timers\" expected object but got " + std::string(doof::json_type_name(_iterator_timers->second))}; }
         _field_timers = [&]() { const auto* _object_value = doof::json_as_object(_iterator_timers->second); auto _values = std::make_shared<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = doof::success_value(TimerBucket::fromJsonValue(_entry.second, _lenient)); } return _values; }();
     } else {
-        _field_timers = std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>>{std::make_shared<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<TimerBucket>>>{})};
+        _field_timers = std::make_shared<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<TimerBucket>>>{});
     }
     return doof::Success<std::shared_ptr<Stopwatch>>{std::make_shared<Stopwatch>(_field_timers.value())};
 }
@@ -324,7 +324,7 @@ doof::Result<std::shared_ptr<StopwatchSpan>, std::string> StopwatchSpan::fromJso
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_finished->second) : doof::json_is_boolean(_iterator_finished->second)))) { return doof::Failure<std::string>{"Field \"finished\" expected boolean but got " + std::string(doof::json_type_name(_iterator_finished->second))}; }
         _field_finished = (_lenient ? doof::json_as_bool_lenient(_iterator_finished->second) : doof::json_as_bool(_iterator_finished->second));
     } else {
-        _field_finished = bool{false};
+        _field_finished = false;
     }
     std::optional<std::shared_ptr<::std_::time::duration::Duration>> _field_finishedDuration;
     if (auto _iterator_finishedDuration = _object->find("finishedDuration"); _iterator_finishedDuration != _object->end()) {

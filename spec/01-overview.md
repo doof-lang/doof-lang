@@ -6,7 +6,7 @@ Doof is a statically-typed, compiled programming language designed around safety
 
 ## Design Philosophy
 
-1. **Safety first** — No data races, no null pointer exceptions, no unhandled errors
+1. **Safety first** — No data races, no absent-value dereferences, no unhandled errors
 2. **Explicitness** — Intent should be clear from the code
 3. **Simplicity** — Features should be straightforward without hidden complexity
 4. **Composability** — Features work together naturally
@@ -16,7 +16,7 @@ Doof is a statically-typed, compiled programming language designed around safety
 
 - **Strong static typing** with bidirectional type inference
 - **Immutability control** via `:=` (shallow) and `readonly` (deep)
-- **No null by default** — nullability is explicit via union types (`T | null`)
+- **No none by default** — nullability is explicit via union types (`T | none`)
 - **No exceptions** — error handling via `Result` types with `try`/`try!`/`try?`/`??` operators, and `panic` for bugs
 - **Pattern matching** via `case` expressions with type capture
 - **Concurrency without data races** — actor-owned mutable domains
@@ -42,7 +42,7 @@ This specification is organised into the following sections:
 | [02-type-system.md](02-type-system.md) | Primitive types, type inference, nullability, unions, generics, readonly |
 | [03-variables-and-bindings.md](03-variables-and-bindings.md) | `readonly`, `:=`, `let`, scope rules, hoisting, destructuring |
 | [04-functions-and-lambdas.md](04-functions-and-lambdas.md) | Function declarations, lambdas, closures, parameter inference |
-| [05-operators.md](05-operators.md) | Arithmetic, comparison, logical, bitwise, null-coalescing, ranges |
+| [05-operators.md](05-operators.md) | Arithmetic, comparison, logical, bitwise, optional-coalescing, ranges |
 | [06-control-flow.md](06-control-flow.md) | If/else, loops, break/continue, early return |
 | [07-classes-and-interfaces.md](07-classes-and-interfaces.md) | Classes, structs, interfaces, object initialisation, destructuring |
 | [08-pattern-matching.md](08-pattern-matching.md) | Case expressions, value/range/type matching, type narrowing |
@@ -71,7 +71,7 @@ let x = 1; let y = 2; let z = 3    // legal but discouraged
 ## Hello World
 
 ```javascript
-function main(): void {
+function main(): none {
     print("Hello, Doof!")
 }
 ```
@@ -84,7 +84,7 @@ import { readFile } from "io"
 class User {
     readonly id: int
     readonly name: string
-    readonly email: string | null = null
+    readonly email: string | none = none
 }
 
 function processUsers(users: readonly User[]): Map<int, string> {
@@ -92,7 +92,7 @@ function processUsers(users: readonly User[]): Map<int, string> {
     
     for user of users {
         case user.email {
-            null -> print("${user.name} has no email"),
+            none -> print("${user.name} has no email"),
             e: string -> result.set(user.id, e)
         }
     }

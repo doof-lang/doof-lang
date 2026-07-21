@@ -5,7 +5,7 @@ import {
   MemberExpression, FunctionDeclaration, ClassDeclaration, ArrayLiteral, Block,
   IfStatement, ExpressionStatement, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding, LetDeclaration, TryStatement,
   StringLiteral, LambdaExpression, AsyncExpression, RetireExpression, AsExpression,
-  ActorCreationExpression, CaseExpression, EnumDeclaration, InterfaceDeclaration, NamedType, ObjectLiteral, RangePattern, TypeAliasDeclaration, UnionType, YieldStatement,
+  ActorCreationExpression, CaseExpression, EnumDeclaration, InterfaceDeclaration, NamedType, NoneLiteral, ObjectLiteral, RangePattern, TypeAliasDeclaration, UnionType, ValuePattern, YieldStatement,
   MockImportDirective, WeakType, CatchExpression, YieldBlockExpression, YieldBlockAssignmentStatement, DestructuringStatement, DotShorthand,
 } from "./ast"
 import type { Statement, Expression } from "./ast"
@@ -14,7 +14,57 @@ function first(source: string): Statement {
   return parse(source).statements[0]
 }
 
-export function testParsesYieldBlockDeclarationsAndReassignment(): void {
+export function testParsesNoneInTypeLiteralGenericAndPatternPositions(): none {
+  program := parse("type Maybe = Result<string | none, none>\nvalue := none\nlegacy := null\nresult := case value { none -> 1, _ -> 0 }")
+  case program.statements[0] {
+    alias: TypeAliasDeclaration -> { case alias.type_ {
+      result: NamedType -> {
+        case result.typeArgs[0] {
+          optional: UnionType -> { case optional.types[1] {
+            noneType: NamedType -> { Assert.equal(noneType.name, "none") }
+            _ -> { panic("expected none type") }
+          } }
+          _ -> { panic("expected optional type") }
+        }
+        case result.typeArgs[1] {
+          noneType: NamedType -> { Assert.equal(noneType.name, "none") }
+          _ -> { panic("expected none generic argument") }
+        }
+      }
+      _ -> { panic("expected Result type") }
+    } }
+    _ -> { panic("expected type alias") }
+  }
+  case program.statements[1] {
+    binding: ImmutableBinding -> { case binding.value {
+      literal: NoneLiteral -> { Assert.equal(literal.sourceSpelling, "none") }
+      _ -> { panic("expected none literal") }
+    } }
+    _ -> { panic("expected none binding") }
+  }
+  case program.statements[2] {
+    binding: ImmutableBinding -> { case binding.value {
+      literal: NoneLiteral -> { Assert.equal(literal.sourceSpelling, "null") }
+      _ -> { panic("expected legacy none literal") }
+    } }
+    _ -> { panic("expected legacy binding") }
+  }
+  case program.statements[3] {
+    binding: ImmutableBinding -> { case binding.value {
+      expression: CaseExpression -> { case expression.arms[0].patterns[0] {
+        pattern: ValuePattern -> { case pattern.value {
+          literal: NoneLiteral -> { Assert.equal(literal.sourceSpelling, "none") }
+          _ -> { panic("expected none pattern literal") }
+        } }
+        _ -> { panic("expected value pattern") }
+      } }
+      _ -> { panic("expected case expression") }
+    } }
+    _ -> { panic("expected case binding") }
+  }
+}
+
+export function testParsesYieldBlockDeclarationsAndReassignment(): none {
   program := parse("function main(): int { let value <- { yield 1 }\nvalue <- { yield value + 1 }\nreturn value }")
   case program.statements[0] {
     fn: FunctionDeclaration -> { case fn.body {
@@ -37,7 +87,7 @@ export function testParsesYieldBlockDeclarationsAndReassignment(): void {
   }
 }
 
-export function testParsesCatchExpression(): void {
+export function testParsesCatchExpression(): none {
   case first("error := catch { try load() }") {
     binding: ImmutableBinding -> { case binding.value {
       catch_: CatchExpression -> { Assert.equal(catch_.body.statements.length, 1) }
@@ -47,7 +97,7 @@ export function testParsesCatchExpression(): void {
   }
 }
 
-export function testParsesWeakFieldAndTypeQualifiers(): void {
+export function testParsesWeakFieldAndTypeQualifiers(): none {
   program := parse("class Node { weak parent: Node\nancestor: weak Node | null }")
   case program.statements[0] {
     class_: ClassDeclaration -> {
@@ -68,7 +118,7 @@ export function testParsesWeakFieldAndTypeQualifiers(): void {
   }
 }
 
-export function testParsesFixedConstClassFields(): void {
+export function testParsesFixedConstClassFields(): none {
   case first("class Circle { const kind = \"circle\"\nradius: double }") {
     class_: ClassDeclaration -> {
       Assert.equal(class_.fields[0].const_, true)
@@ -82,7 +132,7 @@ export function testParsesFixedConstClassFields(): void {
   }
 }
 
-export function testRetainsDeclarationDescriptions(): void {
+export function testRetainsDeclarationDescriptions(): none {
   program := parse("class Tool \"A tool.\" { x \"x-axis\", y: int\nfunction run \"Runs.\"(input \"Payload.\": string): string => input }\ninterface Named \"A name.\" { value \"Value.\": string\nread \"Reads.\"(): string }\nenum State \"State.\" { Ready \"Ready now.\", Done }\ntype Label \"Label.\" = string\nreadonly version \"Version.\" = 1")
   case program.statements[0] {
     class_: ClassDeclaration -> {
@@ -119,7 +169,7 @@ export function testRetainsDeclarationDescriptions(): void {
   }
 }
 
-export function testRecognizesDescriptionsWhenClassifyingShortFormMethods(): void {
+export function testRecognizesDescriptionsWhenClassifyingShortFormMethods(): none {
   program := parse("class Tool { run \"Runs.\"(input: string): string => input\nstatic build \"Builds.\"<T>(value: T): T => value\nprivate reset \"Resets.\"(): void {} }")
   case program.statements[0] {
     class_: ClassDeclaration -> {
@@ -135,28 +185,28 @@ export function testRecognizesDescriptionsWhenClassifyingShortFormMethods(): voi
   }
 }
 
-function assertInt(expression: Expression, expected: int): void {
+function assertInt(expression: Expression, expected: int): none {
   case expression {
     value: IntLiteral -> { Assert.equal(value.kind, "int-literal"); Assert.equal(value.value, expected) }
     _ -> { panic("expected int literal") }
   }
 }
 
-function assertDouble(expression: Expression, expected: double): void {
+function assertDouble(expression: Expression, expected: double): none {
   case expression {
     value: DoubleLiteral -> { Assert.equal(value.kind, "double-literal"); Assert.equal(value.value, expected) }
     _ -> { panic("expected double literal") }
   }
 }
 
-function assertLong(expression: Expression, expected: long): void {
+function assertLong(expression: Expression, expected: long): none {
   case expression {
     value: LongLiteral -> { Assert.equal(value.kind, "long-literal"); Assert.equal(value.value, expected) }
     _ -> { panic("expected long literal") }
   }
 }
 
-export function testParsesMockImportDirectives(): void {
+export function testParsesMockImportDirectives(): none {
   case first("mock import for \"../scene\" {\n  \"./event\" => \"./scene_event.mock\",\n  \"./model\" => \"./scene_model.mock\";\n  \"./render\" => \"./scene_render.mock\"\n}") {
     directive: MockImportDirective -> {
       Assert.equal(directive.kind, "mock-import-directive")
@@ -172,7 +222,7 @@ export function testParsesMockImportDirectives(): void {
   }
 }
 
-export function testParsesPrimitiveLiterals(): void {
+export function testParsesPrimitiveLiterals(): none {
   intStmt := first("42")
   Assert.equal(intStmt.kind, "expression-statement")
   case intStmt {
@@ -185,7 +235,7 @@ export function testParsesPrimitiveLiterals(): void {
   }
 }
 
-export function testParsesLongLiteralsWithoutIntTruncation(): void {
+export function testParsesLongLiteralsWithoutIntTruncation(): none {
   case first("72623859790382856L") {
     statement: ExpressionStatement -> { assertLong(statement.expression, 72623859790382856L) }
     _ -> { panic("expected expression statement") }
@@ -196,7 +246,7 @@ export function testParsesLongLiteralsWithoutIntTruncation(): void {
   }
 }
 
-export function testParsesLargeDoubleLiteralsWithoutIntTruncation(): void {
+export function testParsesLargeDoubleLiteralsWithoutIntTruncation(): none {
   case first("86400000000000.0") {
     statement: ExpressionStatement -> { assertDouble(statement.expression, 86400000000000.0) }
     _ -> { panic("expected expression statement") }
@@ -212,7 +262,7 @@ export function testParsesLargeDoubleLiteralsWithoutIntTruncation(): void {
   }
 }
 
-export function testPreservesOperatorPrecedence(): void {
+export function testPreservesOperatorPrecedence(): none {
   case first("1 + 2 * 3") {
     statement: ExpressionStatement -> {
       case statement.expression {
@@ -230,7 +280,7 @@ export function testPreservesOperatorPrecedence(): void {
   }
 }
 
-export function testParsesPostfixCallsAndMembers(): void {
+export function testParsesPostfixCallsAndMembers(): none {
   case first("items.map(=> it * 2).length") {
     statement: ExpressionStatement -> {
       case statement.expression {
@@ -251,7 +301,7 @@ export function testParsesPostfixCallsAndMembers(): void {
   }
 }
 
-export function testParsesTrailingLambdaAfterMethodCall(): void {
+export function testParsesTrailingLambdaAfterMethodCall(): none {
   case first("receiver.onMessage() { this.values.push(it) }") {
     statement: ExpressionStatement -> {
       case statement.expression {
@@ -276,7 +326,7 @@ export function testParsesTrailingLambdaAfterMethodCall(): void {
   }
 }
 
-export function testParsesReadonlyArrayLiteral(): void {
+export function testParsesReadonlyArrayLiteral(): none {
   case first("readonly [1, 2]") {
     statement: ExpressionStatement -> {
       case statement.expression {
@@ -291,7 +341,7 @@ export function testParsesReadonlyArrayLiteral(): void {
   }
 }
 
-export function testParsesReadonlyMapType(): void {
+export function testParsesReadonlyMapType(): none {
   case first("function read(value: readonly Map<string, JsonValue>): void { }") {
     fn: FunctionDeclaration -> {
       case fn.params[0].type_! {
@@ -306,7 +356,7 @@ export function testParsesReadonlyMapType(): void {
   }
 }
 
-export function testParsesReadonlySetType(): void {
+export function testParsesReadonlySetType(): none {
   case first("function read(value: readonly Set<int>): void { }") {
     fn: FunctionDeclaration -> {
       case fn.params[0].type_! {
@@ -321,7 +371,7 @@ export function testParsesReadonlySetType(): void {
   }
 }
 
-export function testParsesExplicitGenericCalls(): void {
+export function testParsesExplicitGenericCalls(): none {
   program := parse("create<int>(1)\ncreate<string>{ value: \"ok\" }")
   for statement of program.statements {
     case statement {
@@ -339,7 +389,7 @@ export function testParsesExplicitGenericCalls(): void {
   }
 }
 
-export function testParsesActorConcurrencyExpressions(): void {
+export function testParsesActorConcurrencyExpressions(): none {
   program := parse("worker := Actor<Worker>(42)\npromise := async worker.run()\nstate := retire worker\n")
   case program.statements[0] {
     binding: ImmutableBinding -> {
@@ -380,7 +430,7 @@ export function testParsesActorConcurrencyExpressions(): void {
   }
 }
 
-export function testParsesAsyncBlockForSemanticDiagnostic(): void {
+export function testParsesAsyncBlockForSemanticDiagnostic(): none {
   case first("async { return 42 }") {
     statement: ExpressionStatement -> {
       case statement.expression {
@@ -397,7 +447,7 @@ export function testParsesAsyncBlockForSemanticDiagnostic(): void {
   }
 }
 
-export function testPreservesReadonlyInterfaceFields(): void {
+export function testPreservesReadonlyInterfaceFields(): none {
   case first("interface Payload { readonly value: int\nmutable: string }") {
     interface_: InterfaceDeclaration -> {
       Assert.equal(interface_.fields[0].readonly_, true)
@@ -407,12 +457,12 @@ export function testPreservesReadonlyInterfaceFields(): void {
   }
 }
 
-export function testSeparatesGenericNamedCallsAcrossLines(): void {
+export function testSeparatesGenericNamedCallsAcrossLines(): none {
   program := parse("first := createChannel<int>{ capacity: 1 }\nsecond := createChannel<string>{ capacity: 2 }")
   Assert.equal(program.statements.length, 2)
 }
 
-export function testParsesDeclarationElseForms(): void {
+export function testParsesDeclarationElseForms(): none {
   program := parse(`
     value := load() else error { return }
     typed: int := maybe() else { return }
@@ -421,15 +471,15 @@ export function testParsesDeclarationElseForms(): void {
   Assert.equal(program.statements.length, 3)
   case program.statements[0] {
     binding: ImmutableBinding -> {
-      Assert.equal(binding.else_ != null, true)
+      Assert.equal(binding.else_ != none, true)
       Assert.equal(binding.failureName, "error")
     }
     _ -> { panic("expected declaration-else binding") }
   }
   case program.statements[1] {
     binding: ImmutableBinding -> {
-      Assert.equal(binding.else_ != null, true)
-      Assert.equal(binding.failureName, null)
+      Assert.equal(binding.else_ != none, true)
+      Assert.equal(binding.failureName, none)
     }
     _ -> { panic("expected typed declaration-else binding") }
   }
@@ -442,7 +492,7 @@ export function testParsesDeclarationElseForms(): void {
   }
 }
 
-export function testParsesAsNarrowingBeforeDeclarationElse(): void {
+export function testParsesAsNarrowingBeforeDeclarationElse(): none {
   program := parse("value := raw as bool else { return }")
   case program.statements[0] {
     binding: ImmutableBinding -> {
@@ -456,13 +506,13 @@ export function testParsesAsNarrowingBeforeDeclarationElse(): void {
         }
         _ -> { panic("expected as expression") }
       }
-      Assert.equal(binding.else_ != null, true)
+      Assert.equal(binding.else_ != none, true)
     }
     _ -> { panic("expected declaration-else binding") }
   }
 }
 
-export function testParsesTryValueDeclarations(): void {
+export function testParsesTryValueDeclarations(): none {
   program := parse(`
     try const first = load()
     try readonly second = load()
@@ -486,7 +536,7 @@ export function testParsesTryValueDeclarations(): void {
   }
 }
 
-export function testParsesMultipleValuePatternsAsAlternatives(): void {
+export function testParsesMultipleValuePatternsAsAlternatives(): none {
   program := parse(`result := case ext {
     ".html" | ".htm" -> "text/html",
     _ -> "unknown"
@@ -504,7 +554,7 @@ export function testParsesMultipleValuePatternsAsAlternatives(): void {
   }
 }
 
-export function testParsesFiniteAndOpenEndedCaseRangePatterns(): void {
+export function testParsesFiniteAndOpenEndedCaseRangePatterns(): none {
   program := parse("result := case value { 1..5 -> 1, 6..<10 -> 2, 10.. -> 3, ..<0 -> 4, _ -> 5 }")
   case program.statements[0] {
     statement: ImmutableBinding -> { case statement.value {
@@ -535,19 +585,19 @@ export function testParsesFiniteAndOpenEndedCaseRangePatterns(): void {
   }
 }
 
-export function testParsesExpressionResultElseAsDiscardBinding(): void {
+export function testParsesExpressionResultElseAsDiscardBinding(): none {
   program := parse("save() else error { println(error) }")
   case program.statements[0] {
     binding: ImmutableBinding -> {
       Assert.equal(binding.name, "_")
       Assert.equal(binding.failureName, "error")
-      Assert.equal(binding.else_ != null, true)
+      Assert.equal(binding.else_ != none, true)
     }
     _ -> { panic("expected result-else discard binding") }
   }
 }
 
-export function testPreservesTemplateInterpolationParts(): void {
+export function testPreservesTemplateInterpolationParts(): none {
   case first("`hello \${name}!`") {
     statement: ExpressionStatement -> {
       case statement.expression {
@@ -562,7 +612,7 @@ export function testPreservesTemplateInterpolationParts(): void {
   }
 }
 
-export function testParsesBindingsFunctionsAndClasses(): void {
+export function testParsesBindingsFunctionsAndClasses(): none {
   program := parse(`
     readonly answer: int = 42
     function double(value: int): int => value * 2
@@ -590,24 +640,24 @@ export function testParsesBindingsFunctionsAndClasses(): void {
   }
 }
 
-export function testPreservesStructDeclarations(): void {
+export function testPreservesStructDeclarations(): none {
   case first("struct Point { x: int }") {
     structDecl: ClassDeclaration -> { Assert.equal(structDecl.struct_, true) }
     _ -> { panic("expected struct declaration") }
   }
 }
 
-export function testParsesClassDestructorBody(): void {
+export function testParsesClassDestructorBody(): none {
   case first("class Resource { destructor { println(\"closed\") } }") {
     classDecl: ClassDeclaration -> {
-      Assert.isTrue(classDecl.destructor_ != null)
+      Assert.isTrue(classDecl.destructor_ != none)
       Assert.equal(classDecl.destructor_!.statements.length, 1)
     }
     _ -> { panic("expected class declaration") }
   }
 }
 
-export function testParsesTypesCollectionsAndIfStatements(): void {
+export function testParsesTypesCollectionsAndIfStatements(): none {
   program := parse(`
     values: int[] := [1, 2, 3]
     result := if values.length > 0 then values[0] else 0
@@ -631,7 +681,7 @@ export function testParsesTypesCollectionsAndIfStatements(): void {
   }
 }
 
-export function testTracksSourceSpans(): void {
+export function testTracksSourceSpans(): none {
   parser := Parser { source: "let value = 42" }
   program := parser.parse()
   Assert.equal(program.span.start.line, 1)
@@ -640,7 +690,7 @@ export function testTracksSourceSpans(): void {
   Assert.equal(program.statements[0].span.end.offset, 14)
 }
 
-export function testParsesQuotedStringMapKeys(): void {
+export function testParsesQuotedStringMapKeys(): none {
   case first("options := { \"DOOF_STDLIB_ROOT\": absolutePath(\"../doof-stdlib\") }") {
     binding: ImmutableBinding -> {
       case binding.value {
@@ -659,7 +709,7 @@ export function testParsesQuotedStringMapKeys(): void {
   }
 }
 
-export function testParsesDotShorthandEnumMapKeys(): void {
+export function testParsesDotShorthandEnumMapKeys(): none {
   case first("piles: Map<Suit, int> := { .Spades: 1, .Hearts: 2 }") {
     binding: ImmutableBinding -> {
       case binding.value {
@@ -681,7 +731,7 @@ export function testParsesDotShorthandEnumMapKeys(): void {
   }
 }
 
-export function testParsesIntegerMapKeys(): void {
+export function testParsesIntegerMapKeys(): none {
   case first("labels: Map<int, string> := { 1: \"one\", 2L: \"two\" }") {
     binding: ImmutableBinding -> {
       case binding.value {
@@ -702,7 +752,7 @@ export function testParsesIntegerMapKeys(): void {
   }
 }
 
-export function testParsesTypedLambdaParametersAndReturnTypes(): void {
+export function testParsesTypedLambdaParametersAndReturnTypes(): none {
   program := parse("loader := (path: string): SourceFile | null => null")
   case program.statements[0] {
     binding: ImmutableBinding -> {
@@ -726,7 +776,7 @@ export function testParsesTypedLambdaParametersAndReturnTypes(): void {
   }
 }
 
-export function testRetainsStructuredParseFailureLocation(): void {
+export function testRetainsStructuredParseFailureLocation(): none {
   parser := Parser { source: "value := (path: string): int => path\nnext :=" }
   result := catchPanic(=> parser.parse())
   case result {
@@ -739,11 +789,11 @@ export function testRetainsStructuredParseFailureLocation(): void {
   Assert.equal(parser.errorOffset > 0, true)
 }
 
-export function testParsesMemberComparisonInWhile(): void {
+export function testParsesMemberComparisonInWhile(): none {
   parse("function f(): void { while index < raw.length { return } }")
 }
 
-export function testDoesNotParseUppercaseConditionOperandAsConstruction(): void {
+export function testDoesNotParseUppercaseConditionOperandAsConstruction(): none {
   program := parse("function f(signature: long): void { if signature != CENTRAL_DIRECTORY_SIGNATURE { return } }")
   case program.statements[0] {
     function_: FunctionDeclaration -> {
@@ -766,7 +816,7 @@ export function testDoesNotParseUppercaseConditionOperandAsConstruction(): void 
   }
 }
 
-export function testParsesBlockBodiedCaseExpressionArms(): void {
+export function testParsesBlockBodiedCaseExpressionArms(): none {
   case first("result := case value { f: Failure -> { Assert.fail(f.error.message)\nyield null } }") {
     binding: ImmutableBinding -> {
       case binding.value {
@@ -789,11 +839,11 @@ export function testParsesBlockBodiedCaseExpressionArms(): void {
   }
 }
 
-export function testParsesNegatedDiagnosticCall(): void {
+export function testParsesNegatedDiagnosticCall(): none {
   parse("function f(): void { if !terminated { diagnostic(\"Unterminated block comment\", commentLine, commentColumn) } }")
 }
 
-export function testParsesNativeClassSurface(): void {
+export function testParsesNativeClassSurface(): none {
   program := parse("export import class Client from \"<client.hpp>\" as native::Client { value: int get(): int isolated static make(value: int): Client raw(): int => 7 label(): string { return \"ok\" } }")
   case program.statements[0] {
     class_: ClassDeclaration -> {
@@ -814,7 +864,7 @@ export function testParsesNativeClassSurface(): void {
   }
 }
 
-export function testParsesExportedIsolatedFunction(): void {
+export function testParsesExportedIsolatedFunction(): none {
   program := parse("export isolated function compute(value: int): int => value")
   case program.statements[0] {
     function_: FunctionDeclaration -> {
@@ -825,7 +875,7 @@ export function testParsesExportedIsolatedFunction(): void {
   }
 }
 
-export function testParsesGenericNativeFunction(): void {
+export function testParsesGenericNativeFunction(): none {
   program := parse("import function send<T>(value: T): void from \"native.hpp\" as native::send")
   case program.statements[0] {
     fn: FunctionDeclaration -> {
@@ -836,7 +886,7 @@ export function testParsesGenericNativeFunction(): void {
   }
 }
 
-export function testPreservesGenericFunctionConstraints(): void {
+export function testPreservesGenericFunctionConstraints(): none {
   program := parse("function describe<T: Reflectable>(tool: T): string => T.metadata.name")
   case program.statements[0] {
     fn: FunctionDeclaration -> {
@@ -850,7 +900,7 @@ export function testPreservesGenericFunctionConstraints(): void {
   }
 }
 
-export function testPreservesUnionGenericConstraints(): void {
+export function testPreservesUnionGenericConstraints(): none {
   program := parse("function widen<T: int | long>(value: T): T => value")
   case program.statements[0] {
     fn: FunctionDeclaration -> {
@@ -873,7 +923,7 @@ export function testPreservesUnionGenericConstraints(): void {
   }
 }
 
-export function testParsesIsolatedNativeFunction(): void {
+export function testParsesIsolatedNativeFunction(): none {
   program := parse("export import isolated function poll(): int from \"native.hpp\" as native::poll")
   case program.statements[0] {
     fn: FunctionDeclaration -> {
@@ -886,7 +936,7 @@ export function testParsesIsolatedNativeFunction(): void {
   }
 }
 
-export function testParsesDestructuringDeclarationsAndAssignments(): void {
+export function testParsesDestructuringDeclarationsAndAssignments(): none {
   program := parse("function main(): void { values := [1, 2, 3]\n[first, _, third] := values\nlet (left, right) = (1, 2)\n{ name as displayName, age } := Person { name: \"Ada\", age: 37 }\n[first, third] = values\n(left, right) = (3, 4)\n{ name as displayName } = Person { name: \"Grace\", age: 40 } }")
   case program.statements[0] {
     fn: FunctionDeclaration -> { case fn.body {
@@ -911,7 +961,7 @@ export function testParsesDestructuringDeclarationsAndAssignments(): void {
   }
 }
 
-export function testParsesLineLeadingArrayDestructuringAfterExpression(): void {
+export function testParsesLineLeadingArrayDestructuringAfterExpression(): none {
   program := parse("function main(): void { println(\"ready\")\n[first, second] := [1, 2] }")
   case program.statements[0] {
     fn: FunctionDeclaration -> { case fn.body {
@@ -928,7 +978,7 @@ export function testParsesLineLeadingArrayDestructuringAfterExpression(): void {
   }
 }
 
-export function testTreatsEveryLineLeadingArrayAsANewStatement(): void {
+export function testTreatsEveryLineLeadingArrayAsANewStatement(): none {
   program := parse("function main(): void { println(\"ready\")\n[1, 2, 3] }")
   case program.statements[0] {
     fn: FunctionDeclaration -> { case fn.body {
@@ -948,7 +998,7 @@ export function testTreatsEveryLineLeadingArrayAsANewStatement(): void {
   }
 }
 
-export function testParsesTryDestructuringForms(): void {
+export function testParsesTryDestructuringForms(): none {
   program := parse("function load(): Result<Tuple<int, int>, string> => Success { value: (1, 2) }\nfunction run(): Result<int, string> { try (left, right) := load()\nlet a = 0\nlet b = 0\ntry (a, b) = load()\nreturn Success { value: left + right + a + b } }")
   case program.statements[1] {
     fn: FunctionDeclaration -> { case fn.body {

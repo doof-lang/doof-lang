@@ -86,7 +86,7 @@ export class Parser {
     return current()
   }
 
-  function fail(message: string): void {
+  function fail(message: string): none {
     token := current()
     errorMessage = message
     errorLine = token.line
@@ -142,7 +142,7 @@ export class Parser {
     return previous.offset + previous.length == current().offset
   }
 
-  function consumeSemicolon(): void { match(TokenType.Semicolon) }
+  function consumeSemicolon(): none { match(TokenType.Semicolon) }
 
   function locationSpan(): SourceSpan { start := location(); return SourceSpan { start, end: start } }
 
@@ -173,7 +173,7 @@ export class Parser {
   }
   function parseTryStatement(): Statement { return parseTryStatementImpl(this) }
 
-  function parseOptionalType(): TypeAnnotation | null { return parseOptionalTypeImpl(this) }
+  function parseOptionalType(): TypeAnnotation | none { return parseOptionalTypeImpl(this) }
   function parseTypeAnnotation(): TypeAnnotation { return parseTypeAnnotationImpl(this) }
 
   function parseExpression(): Expression { return parseExpressionImpl(this) }

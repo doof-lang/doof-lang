@@ -5,8 +5,8 @@
 
 import {
   ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PromiseType, RangeResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType,
-  FunctionType, NullType, PrimitiveType, Symbol, TupleResolvedType, UnionResolvedType,
-  UnknownType, TypeParameterType, VoidType, WeakResolvedType,
+  FunctionType, NoneType, PrimitiveType, Symbol, TupleResolvedType, UnionResolvedType,
+  UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import type { ResolvedType } from "./semantic"
 
@@ -25,8 +25,8 @@ export class NamedType {
   kind: string
   name: string
   typeArgs: TypeAnnotation[]
-  resolvedSymbol: Symbol | null = null
-  resolvedType: ResolvedType | null = null
+  resolvedSymbol: Symbol | none = none
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -34,14 +34,14 @@ export class ArrayType {
   kind: string
   elementType: TypeAnnotation
   readonly_: bool
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class UnionType {
   kind: string
   types: TypeAnnotation[]
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -49,14 +49,14 @@ export class AstFunctionType {
   kind: string
   params: FunctionTypeParam[]
   returnType: TypeAnnotation
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class WeakType {
   kind: string = "weak-type"
   type_: TypeAnnotation
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -71,14 +71,14 @@ export type TypeAnnotation = NamedType | ArrayType | UnionType | AstFunctionType
 export class IntLiteral {
   kind: string
   value: int
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class LongLiteral {
   kind: string
   value: long
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -86,7 +86,7 @@ export class FloatLiteral {
   kind: string
   value: float
   raw: string = ""
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -94,7 +94,7 @@ export class DoubleLiteral {
   kind: string
   value: double
   raw: string = ""
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -103,35 +103,36 @@ export class StringLiteral {
   value: string
   parts: string[]
   interpolations: Expression[]
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class CharLiteral {
   kind: string
   value: char
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class BoolLiteral {
   kind: string
   value: bool
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
-export class NullLiteral {
+export class NoneLiteral {
   kind: string
-  resolvedType: ResolvedType | null = null
+  sourceSpelling: string = "none"
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class Identifier {
   kind: string
   name: string
-  resolvedType: ResolvedType | null = null
-  resolvedBinding: Binding | null = null
+  resolvedType: ResolvedType | none = none
+  resolvedBinding: Binding | none = none
   span: SourceSpan
 }
 
@@ -140,7 +141,7 @@ export class BinaryExpression {
   operator: string
   left: Expression
   right: Expression
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -149,7 +150,7 @@ export class UnaryExpression {
   operator: string
   operand: Expression
   prefix: bool
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -158,7 +159,7 @@ export class AssignmentExpression {
   operator: string
   target: Expression
   value: Expression
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -168,9 +169,9 @@ export class MemberExpression {
   property: string
   optional: bool
   force: bool
-  resolvedStaticOwner: ClassDeclaration | null = null
+  resolvedStaticOwner: ClassDeclaration | none = none
   resolvedCallableField: bool = false
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -179,12 +180,12 @@ export class IndexExpression {
   object: Expression
   index: Expression
   optional: bool
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class CallArgument {
-  name: string | null
+  name: string | none
   value: Expression
   span: SourceSpan
 }
@@ -195,10 +196,10 @@ export class CallExpression {
   args: CallArgument[]
   typeArgs: TypeAnnotation[] = []
   resolvedGenericTypeArgs: ResolvedType[] = []
-  resolvedFunction: FunctionDeclaration | null = null
-  resolvedConstructor: FunctionDeclaration | null = null
-  resolvedClass: ClassDeclaration | null = null
-  resolvedType: ResolvedType | null = null
+  resolvedFunction: FunctionDeclaration | none = none
+  resolvedConstructor: FunctionDeclaration | none = none
+  resolvedClass: ClassDeclaration | none = none
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -206,7 +207,7 @@ export class ArrayLiteral {
   kind: string
   elements: Expression[]
   readonly_: bool
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -214,36 +215,36 @@ export class ObjectProperty {
   name: string
   // Map entries retain non-string keys as expressions so contextual typing can
   // resolve enum shorthand such as `.Spades` against Map<Suit, V>.
-  key: Expression | null = null
-  value: Expression | null
-  resolvedType: ResolvedType | null = null
+  key: Expression | none = none
+  value: Expression | none
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class ObjectLiteral {
   kind: string
   properties: ObjectProperty[]
-  spread: Expression | null
-  resolvedClass: ClassDeclaration | null = null
-  resolvedType: ResolvedType | null = null
+  spread: Expression | none
+  resolvedClass: ClassDeclaration | none = none
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class TupleLiteral {
   kind: string
   elements: Expression[]
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class LambdaExpression {
   kind: string
   params: Parameter[]
-  returnType: TypeAnnotation | null
+  returnType: TypeAnnotation | none
   body: Expression | Block
   parameterless: bool
   trailing: bool
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -252,7 +253,7 @@ export class IfExpression {
   condition: Expression
   then_: Expression
   else_: Expression
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -262,10 +263,10 @@ export class ConstructExpression {
   typeArgs: TypeAnnotation[]
   args: ObjectProperty[]
   named: bool
-  resolvedClass: ClassDeclaration | null = null
-  resolvedConstructor: FunctionDeclaration | null = null
-  resolvedConstructedType: ResolvedType | null = null
-  resolvedType: ResolvedType | null = null
+  resolvedClass: ClassDeclaration | none = none
+  resolvedConstructor: FunctionDeclaration | none = none
+  resolvedConstructedType: ResolvedType | none = none
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -275,33 +276,33 @@ export class DotShorthand {
   resolvedShorthandOwnerName: string = ""
   resolvedShorthandOwnerKind: string = ""
   resolvedShorthandOwnerModule: string = ""
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class ThisExpression {
   kind: string
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class CallerExpression {
   kind: string
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class AsyncExpression {
   kind: string
   expression: Expression | Block
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class RetireExpression {
   kind: string
   actor: Expression
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -309,7 +310,7 @@ export class AsExpression {
   kind: string
   expression: Expression
   targetType: TypeAnnotation
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -317,27 +318,27 @@ export class ActorCreationExpression {
   kind: string
   className: string
   args: Expression[]
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class YieldBlockExpression {
   kind: string = "yield-block-expression"
   body: Block
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class CatchExpression {
   kind: string = "catch-expression"
   body: Block
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export type Expression =
   IntLiteral | LongLiteral | FloatLiteral | DoubleLiteral | StringLiteral |
-  CharLiteral | BoolLiteral | NullLiteral | Identifier | BinaryExpression |
+  CharLiteral | BoolLiteral | NoneLiteral | Identifier | BinaryExpression |
   UnaryExpression | AssignmentExpression | MemberExpression | IndexExpression |
   CallExpression | ArrayLiteral | ObjectLiteral | TupleLiteral |
   LambdaExpression | IfExpression | CaseExpression | ConstructExpression | DotShorthand |
@@ -347,9 +348,9 @@ export type Expression =
 export class Parameter {
   name: string
   description: string = ""
-  type_: TypeAnnotation | null
-  defaultValue: Expression | null
-  resolvedType: ResolvedType | null = null
+  type_: TypeAnnotation | none
+  defaultValue: Expression | none
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -363,10 +364,10 @@ export class ConstDeclaration {
   kind: string
   name: string
   description: string = ""
-  type_: TypeAnnotation | null
+  type_: TypeAnnotation | none
   value: Expression
   exported: bool
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -374,31 +375,31 @@ export class ReadonlyDeclaration {
   kind: string
   name: string
   description: string = ""
-  type_: TypeAnnotation | null
+  type_: TypeAnnotation | none
   value: Expression
   exported: bool
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class ImmutableBinding {
   kind: string
   name: string
-  type_: TypeAnnotation | null
+  type_: TypeAnnotation | none
   value: Expression
   exported: bool
-  else_: Block | null = null
-  failureName: string | null = null
-  resolvedType: ResolvedType | null = null
+  else_: Block | none = none
+  failureName: string | none = none
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class LetDeclaration {
   kind: string
   name: string
-  type_: TypeAnnotation | null
+  type_: TypeAnnotation | none
   value: Expression
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -409,7 +410,7 @@ export class FunctionDeclaration {
   typeParams: string[]
   typeParamConstraints: TypeParameterConstraint[] = []
   params: Parameter[]
-  returnType: TypeAnnotation | null
+  returnType: TypeAnnotation | none
   body: Expression | Block
   exported: bool
   static_: bool
@@ -420,18 +421,18 @@ export class FunctionDeclaration {
   native_: bool = false
   nativeHeader: string = ""
   nativeCppName: string = ""
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class TypeParameterConstraint {
-  type_: TypeAnnotation | null = null
+  type_: TypeAnnotation | none = none
 }
 
 export class ReturnStatement {
   kind: string
-  value: Expression | null = null
-  resolvedExpectedType: ResolvedType | null = null
+  value: Expression | none = none
+  resolvedExpectedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -445,7 +446,7 @@ export class YieldBlockAssignmentStatement {
   kind: string = "yield-block-assignment-statement"
   name: string
   value: YieldBlockExpression
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -454,7 +455,7 @@ export class IfStatement {
   condition: Expression
   body: Block
   elseIfs: IfBranch[]
-  else_: Block | null
+  else_: Block | none
   span: SourceSpan
 }
 
@@ -462,7 +463,7 @@ export class CaseExpression {
   kind: string
   subject: Expression
   arms: CaseExpressionArm[]
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -491,7 +492,7 @@ export class TypePattern {
   kind: string
   name: string
   type_: TypeAnnotation
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -508,8 +509,8 @@ export class ValuePattern {
 
 export class RangePattern {
   kind: string
-  start: Expression | null
-  end: Expression | null
+  start: Expression | none
+  end: Expression | none
   inclusive: bool
   span: SourceSpan
 }
@@ -526,19 +527,19 @@ export class WhileStatement {
   kind: string
   condition: Expression
   body: Block
-  label: string | null
-  then_: Block | null
+  label: string | none
+  then_: Block | none
   span: SourceSpan
 }
 
 export class ForStatement {
   kind: string
-  init: Statement | null
-  condition: Expression | null
+  init: Statement | none
+  condition: Expression | none
   update: Expression[]
   body: Block
-  label: string | null
-  then_: Block | null
+  label: string | none
+  then_: Block | none
   span: SourceSpan
 }
 
@@ -547,16 +548,16 @@ export class ForOfStatement {
   bindings: string[]
   iterable: Expression
   body: Block
-  label: string | null
-  then_: Block | null
+  label: string | none
+  then_: Block | none
   span: SourceSpan
 }
 
 export class WithBinding {
   name: string
-  type_: TypeAnnotation | null
+  type_: TypeAnnotation | none
   value: Expression
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -569,13 +570,13 @@ export class WithStatement {
 
 export class BreakStatement {
   kind: string
-  label: string | null
+  label: string | none
   span: SourceSpan
 }
 
 export class ContinueStatement {
   kind: string
-  label: string | null
+  label: string | none
   span: SourceSpan
 }
 
@@ -596,7 +597,7 @@ export class DestructuringStatement {
 
 export class DestructureBinding {
   name: string
-  alias: string | null = null
+  alias: string | none = none
   span: SourceSpan
 }
 
@@ -617,13 +618,13 @@ export class ClassDeclaration {
   implements_: NamedType[]
   fields: ClassField[]
   methods: FunctionDeclaration[]
-  destructor_: Block | null = null
+  destructor_: Block | none = none
   exported: bool
   private_: bool
   native_: bool = false
   nativeHeader: string = ""
   nativeCppName: string = ""
-  resolvedSymbol: Symbol | null = null
+  resolvedSymbol: Symbol | none = none
   needsMetadata: bool = false
   span: SourceSpan
 }
@@ -632,14 +633,14 @@ export class ClassField {
   kind: string
   names: string[]
   descriptions: string[] = []
-  type_: TypeAnnotation | null
-  defaultValue: Expression | null
+  type_: TypeAnnotation | none
+  defaultValue: Expression | none
   static_: bool
   const_: bool = false
   readonly_: bool
   weak_: bool = false
   private_: bool
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -652,7 +653,7 @@ export class InterfaceDeclaration {
   fields: InterfaceField[]
   methods: FunctionDeclaration[]
   exported: bool
-  resolvedSymbol: Symbol | null = null
+  resolvedSymbol: Symbol | none = none
   needsJson: bool = false
   span: SourceSpan
 }
@@ -663,7 +664,7 @@ export class InterfaceField {
   description: string = ""
   type_: TypeAnnotation
   readonly_: bool = false
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -680,7 +681,7 @@ export class EnumVariant {
   kind: string
   name: string
   description: string = ""
-  value: Expression | null
+  value: Expression | none
   span: SourceSpan
 }
 
@@ -692,14 +693,14 @@ export class TypeAliasDeclaration {
   typeParamConstraints: TypeParameterConstraint[] = []
   type_: TypeAnnotation
   exported: bool
-  resolvedType: ResolvedType | null = null
+  resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class NamedImport {
   kind: string
   name: string
-  alias: string | null
+  alias: string | none
   span: SourceSpan
 }
 
@@ -740,14 +741,14 @@ export class ExportDeclaration {
 
 export class ExportSpecifier {
   name: string
-  alias: string | null
+  alias: string | none
   span: SourceSpan
 }
 
 export class ExportList {
   kind: string
   specifiers: ExportSpecifier[]
-  source: string | null
+  source: string | none
   span: SourceSpan
 }
 

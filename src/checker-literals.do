@@ -3,8 +3,8 @@
 import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NullType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, VoidType,
+  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
+  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
@@ -15,7 +15,7 @@ import {
   FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
   IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
   IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
-  LambdaExpression, LongLiteral, MemberExpression, NamedType, NullLiteral,
+  LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
   NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
   ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
   ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
@@ -27,8 +27,8 @@ import {
 import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
-  nullType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType, voidType,
+  noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
+  substituteTypeParams, typeParameter, unknownType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -45,10 +45,10 @@ import { findClassField } from "./checker-interfaces"
 // Bare Map/Set annotations are declaration-local inference requests. Keep the
 // literal inspection here so contextual literal typing and collection
 // finalization share one owner in the Doof checker.
-export function checkOmittedCollectionLiteral(state: CheckerState, annotation: TypeAnnotation, expression: Expression, scope: Scope): ResolvedType | null {
+export function checkOmittedCollectionLiteral(state: CheckerState, annotation: TypeAnnotation, expression: Expression, scope: Scope): ResolvedType | none {
   case annotation {
     named: NamedType -> {
-      if named.typeArgs.length != 0 { return null }
+      if named.typeArgs.length != 0 { return none }
       if named.name == "Set" || named.name == "ReadonlySet" {
         case expression {
           array: ArrayLiteral -> {
@@ -56,7 +56,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
               typeError(state, "Cannot infer " + named.name + " element type from an empty set literal; provide a full " + named.name + "<T> annotation", array.span)
               return finish(state, expression, setType(unknownType(), named.name == "ReadonlySet"))
             }
-            inferred := checkArray(state, array, scope, null)
+            inferred := checkArray(state, array, scope, none)
             case inferred {
               arrayType_: ArrayResolvedType -> {
                 let hasConcreteElement = true
@@ -74,7 +74,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
             }
           }
           _ -> {
-            checkExpression(state, expression, scope, null)
+            checkExpression(state, expression, scope, none)
             typeError(state, "Omitted type arguments for " + named.name + " require a same-site non-empty set literal", expression.span)
             return setType(unknownType(), named.name == "ReadonlySet")
           }
@@ -90,13 +90,13 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
             let keyType = unknownType()
             let valueType = unknownType()
             for property of object.properties {
-              propertyKeyType := if property.key == null then primitive("string") else checkExpression(state, property.key!, scope, null)
+              propertyKeyType := if property.key == none then primitive("string") else checkExpression(state, property.key!, scope, none)
               keyType = joinTypes(keyType, propertyKeyType)
               let propertyType = unknownType()
-              if property.value != null { propertyType = checkExpression(state, property.value!, scope, null) }
+              if property.value != none { propertyType = checkExpression(state, property.value!, scope, none) }
               else {
                 binding := lookup(scope, property.name)
-                if binding == null { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span) }
+                if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span) }
                 else { propertyType = binding!.type_ }
               }
               property.resolvedType = optionalResolvedType(propertyType)
@@ -117,7 +117,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
             return finish(state, expression, mapType(keyType, valueType, named.name == "ReadonlyMap"))
           }
           _ -> {
-            checkExpression(state, expression, scope, null)
+            checkExpression(state, expression, scope, none)
             typeError(state, "Omitted type arguments for " + named.name + " require a same-site non-empty map literal", expression.span)
             return mapType(unknownType(), unknownType(), named.name == "ReadonlyMap")
           }
@@ -126,11 +126,11 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
     }
     _ -> { }
   }
-  return null
+  return none
 }
 
-export function checkArray(state: CheckerState, expression: ArrayLiteral, scope: Scope, expected: ResolvedType | null): ResolvedType {
-  if expected != null {
+export function checkArray(state: CheckerState, expression: ArrayLiteral, scope: Scope, expected: ResolvedType | none): ResolvedType {
+  if expected != none {
     case expected! {
       _: JsonValueResolvedType -> {
         for item of expression.elements {
@@ -151,22 +151,22 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
       _ -> { }
     }
   }
-  if expression.elements.length == 0 && expected != null {
+  if expression.elements.length == 0 && expected != none {
     case expected! {
       _: ArrayResolvedType -> { return finish(state, expression, expected!) }
       _: SetResolvedType -> { return finish(state, expression, expected!) }
       _ -> { }
     }
   }
-  let expectedElement: ResolvedType | null = null
-  if expected != null {
+  let expectedElement: ResolvedType | none = none
+  if expected != none {
     case expected! {
       array: ArrayResolvedType -> { expectedElement = array.elementType }
       set: SetResolvedType -> { expectedElement = set.elementType }
       _ -> { }
     }
   }
-  if expectedElement != null {
+  if expectedElement != none {
     for item of expression.elements {
       actual := checkExpression(state, item, scope, optionalResolvedType(expectedElement!))
       if !isAssignable(actual, expectedElement!) { typeError(state, "Cannot assign " + typeName(actual) + " to " + typeName(expectedElement!), item.span) }
@@ -178,29 +178,29 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
     }
   }
   let element = unknownType()
-  for item of expression.elements { element = joinTypes(element, checkExpression(state, item, scope, null)) }
+  for item of expression.elements { element = joinTypes(element, checkExpression(state, item, scope, none)) }
   return finish(state, expression, arrayType(element, expression.readonly_))
 }
 
-export function checkObject(state: CheckerState, expression: ObjectLiteral, scope: Scope, expected: ResolvedType | null): ResolvedType {
-  if expected != null {
+export function checkObject(state: CheckerState, expression: ObjectLiteral, scope: Scope, expected: ResolvedType | none): ResolvedType {
+  if expected != none {
     case expected! {
       result: ResultResolvedType -> {
         let recognized = 0
         let hasValue = false
         let hasError = false
         for property of expression.properties {
-          let propertyExpected: ResolvedType | null = null
+          let propertyExpected: ResolvedType | none = none
           if property.name == "value" { recognized = recognized + 1; hasValue = true; propertyExpected = result.valueType }
           else if property.name == "error" { recognized = recognized + 1; hasError = true; propertyExpected = result.errorType }
-          if property.value != null {
+          if property.value != none {
             property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, propertyExpected))
           } else {
             binding := lookup(scope, property.name)
-            if binding == null { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
+            if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
             else { property.resolvedType = optionalResolvedType(binding!.type_) }
           }
-          if propertyExpected != null && !isAssignable(property.resolvedType!, propertyExpected!) {
+          if propertyExpected != none && !isAssignable(property.resolvedType!, propertyExpected!) {
             typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(propertyExpected!), property.span)
           }
         }
@@ -211,21 +211,21 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
       }
       class_: ClassType -> {
         declaration := declarationFor(state.result, class_.symbol)
-        if declaration != null {
+        if declaration != none {
           case declaration! {
             classDeclaration: ClassDeclaration -> {
               expression.resolvedClass = classDeclaration
               for property of expression.properties {
                 field := findClassField(classDeclaration.fields, property.name)
-                if field == null || field!.static_ || field!.const_ {
+                if field == none || field!.static_ || field!.const_ {
                   typeError(state, "Unknown field '" + property.name + "' for " + class_.name, property.span)
                   continue
                 }
                 fieldType := memberType(state, class_, property.name, property.span)
-                if property.value != null { property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, optionalResolvedType(fieldType))) }
+                if property.value != none { property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, optionalResolvedType(fieldType))) }
                 else {
                   binding := lookup(scope, property.name)
-                  if binding == null { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
+                  if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
                   else { property.resolvedType = optionalResolvedType(binding!.type_) }
                 }
                 if !isAssignable(property.resolvedType!, fieldType) { typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(fieldType), property.span) }
@@ -233,7 +233,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
               for field of classDeclaration.fields {
                 if field.static_ || field.const_ { continue }
                 for name of field.names {
-                  if field.defaultValue == null && !hasObjectProperty(expression.properties, name) { typeError(state, "Missing required field '" + name + "'", expression.span) }
+                  if field.defaultValue == none && !hasObjectProperty(expression.properties, name) { typeError(state, "Missing required field '" + name + "'", expression.span) }
                 }
               }
               return finish(state, expression, class_)
@@ -245,8 +245,8 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
       _ -> { }
     }
   }
-  let expectedValue: ResolvedType | null = null
-  if expected != null {
+  let expectedValue: ResolvedType | none = none
+  if expected != none {
     case expected! {
       _: JsonValueResolvedType -> { expectedValue = jsonValueType() }
       union_: UnionResolvedType -> {
@@ -254,7 +254,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
       }
       map: MapResolvedType -> {
         for property of expression.properties {
-          if property.key != null {
+          if property.key != none {
             actualKey := checkExpression(state, property.key!, scope, optionalResolvedType(map.keyType))
             if !isAssignable(actualKey, map.keyType) { typeError(state, "Cannot assign " + typeName(actualKey) + " to map key type " + typeName(map.keyType), property.span) }
           } else if !sameType(map.keyType, primitive("string")) {
@@ -267,14 +267,14 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
     }
   }
   for property of expression.properties {
-    if property.value != null {
+    if property.value != none {
       property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, expectedValue))
-      if expectedValue != null && !isAssignable(property.resolvedType!, expectedValue!) {
+      if expectedValue != none && !isAssignable(property.resolvedType!, expectedValue!) {
         typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(expectedValue!), property.span)
       }
     }
   }
-  if expected != null {
+  if expected != none {
     case expected! {
       _: JsonValueResolvedType -> { return finish(state, expression, expected!) }
       union_: UnionResolvedType -> { if containsJsonValue(state, union_) { return finish(state, expression, jsonValueType()) } }

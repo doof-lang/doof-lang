@@ -2,7 +2,7 @@ import { Assert } from "std/assert"
 import { exists, mkdir, writeText } from "std/fs"
 import { readProjectSpec } from "./project"
 
-export function testReadsRootProjectNativeBuildThroughPackageManifestModel(): void {
+export function testReadsRootProjectNativeBuildThroughPackageManifestModel(): none {
   root := "/tmp/doof-compiler-project-native-test"
   if !exists(root) { try! mkdir(root) }
   if !exists(root + "/src") { try! mkdir(root + "/src") }
@@ -23,7 +23,7 @@ export function testReadsRootProjectNativeBuildThroughPackageManifestModel(): vo
   Assert.equal(project.externalDependencies[0].destination, "vendor/lib")
 }
 
-export function testReadsRootProjectExecutableResources(): void {
+export function testReadsRootProjectExecutableResources(): none {
   root := "/tmp/doof-compiler-project-resource-test"
   if !exists(root) { try! mkdir(root) }
   try! writeText(
@@ -39,7 +39,7 @@ export function testReadsRootProjectExecutableResources(): void {
   Assert.equal(project.resources[0].destination, "")
 }
 
-export function testFallsBackWhenNoProjectManifestExists(): void {
+export function testFallsBackWhenNoProjectManifestExists(): none {
   root := "/tmp/doof-compiler-project-no-manifest-test"
   if !exists(root) { try! mkdir(root) }
   entry := root + "/standalone.do"

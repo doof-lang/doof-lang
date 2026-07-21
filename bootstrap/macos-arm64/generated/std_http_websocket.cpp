@@ -29,28 +29,28 @@ doof::Result<std::shared_ptr<WebSocketOptions>, std::string> WebSocketOptions::f
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_eventCapacity->second) : doof::json_is_number(_iterator_eventCapacity->second)))) { return doof::Failure<std::string>{"Field \"eventCapacity\" expected number but got " + std::string(doof::json_type_name(_iterator_eventCapacity->second))}; }
         _field_eventCapacity = (_lenient ? doof::json_as_int_lenient(_iterator_eventCapacity->second) : doof::json_as_int(_iterator_eventCapacity->second));
     } else {
-        _field_eventCapacity = int32_t{1024};
+        _field_eventCapacity = 1024;
     }
     std::optional<int32_t> _field_commandCapacity;
     if (auto _iterator_commandCapacity = _object->find("commandCapacity"); _iterator_commandCapacity != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_commandCapacity->second) : doof::json_is_number(_iterator_commandCapacity->second)))) { return doof::Failure<std::string>{"Field \"commandCapacity\" expected number but got " + std::string(doof::json_type_name(_iterator_commandCapacity->second))}; }
         _field_commandCapacity = (_lenient ? doof::json_as_int_lenient(_iterator_commandCapacity->second) : doof::json_as_int(_iterator_commandCapacity->second));
     } else {
-        _field_commandCapacity = int32_t{1024};
+        _field_commandCapacity = 1024;
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>> _field_headers;
     if (auto _iterator_headers = _object->find("headers"); _iterator_headers != _object->end()) {
         if (!(doof::json_is_array(_iterator_headers->second))) { return doof::Failure<std::string>{"Field \"headers\" expected array but got " + std::string(doof::json_type_name(_iterator_headers->second))}; }
         _field_headers = [&]() { const auto* _array = doof::json_as_array(_iterator_headers->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(::std_::http::types::HttpHeader::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_headers = std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>{std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{})};
+        _field_headers = std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{});
     }
     std::optional<int32_t> _field_timeoutMs;
     if (auto _iterator_timeoutMs = _object->find("timeoutMs"); _iterator_timeoutMs != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_timeoutMs->second) : doof::json_is_number(_iterator_timeoutMs->second)))) { return doof::Failure<std::string>{"Field \"timeoutMs\" expected number but got " + std::string(doof::json_type_name(_iterator_timeoutMs->second))}; }
         _field_timeoutMs = (_lenient ? doof::json_as_int_lenient(_iterator_timeoutMs->second) : doof::json_as_int(_iterator_timeoutMs->second));
     } else {
-        _field_timeoutMs = int32_t{30000};
+        _field_timeoutMs = 30000;
     }
     return doof::Success<std::shared_ptr<WebSocketOptions>>{std::make_shared<WebSocketOptions>(_field_eventCapacity.value(), _field_commandCapacity.value(), _field_headers.value(), _field_timeoutMs.value())};
 }
@@ -131,14 +131,14 @@ doof::Result<std::shared_ptr<WebSocketCloseCommand>, std::string> WebSocketClose
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_code->second) : doof::json_is_number(_iterator_code->second)))) { return doof::Failure<std::string>{"Field \"code\" expected number but got " + std::string(doof::json_type_name(_iterator_code->second))}; }
         _field_code = (_lenient ? doof::json_as_int_lenient(_iterator_code->second) : doof::json_as_int(_iterator_code->second));
     } else {
-        _field_code = int32_t{1000};
+        _field_code = 1000;
     }
     std::optional<std::string> _field_reason;
     if (auto _iterator_reason = _object->find("reason"); _iterator_reason != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_reason->second) : doof::json_is_string(_iterator_reason->second)))) { return doof::Failure<std::string>{"Field \"reason\" expected string but got " + std::string(doof::json_type_name(_iterator_reason->second))}; }
         _field_reason = (_lenient ? doof::json_as_string_lenient(_iterator_reason->second) : doof::json_as_string(_iterator_reason->second));
     } else {
-        _field_reason = std::string{std::string("")};
+        _field_reason = std::string("");
     }
     return doof::Success<std::shared_ptr<WebSocketCloseCommand>>{std::make_shared<WebSocketCloseCommand>(_field_code.value(), _field_reason.value())};
 }

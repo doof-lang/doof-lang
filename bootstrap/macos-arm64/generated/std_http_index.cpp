@@ -38,14 +38,14 @@ doof::Result<std::shared_ptr<BodyChunkStream>, std::string> BodyChunkStream::fro
         if (!(doof::json_is_array(_iterator_chunk->second))) { return doof::Failure<std::string>{"Field \"chunk\" expected array but got " + std::string(doof::json_type_name(_iterator_chunk->second))}; }
         _field_chunk = [&]() { const auto* _array = doof::json_as_array(_iterator_chunk->second); auto _values = std::make_shared<std::vector<uint8_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(static_cast<uint8_t>(_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
-        _field_chunk = std::shared_ptr<std::vector<uint8_t>>{std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{})};
+        _field_chunk = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
     }
     std::optional<bool> _field_consumed;
     if (auto _iterator_consumed = _object->find("consumed"); _iterator_consumed != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_consumed->second) : doof::json_is_boolean(_iterator_consumed->second)))) { return doof::Failure<std::string>{"Field \"consumed\" expected boolean but got " + std::string(doof::json_type_name(_iterator_consumed->second))}; }
         _field_consumed = (_lenient ? doof::json_as_bool_lenient(_iterator_consumed->second) : doof::json_as_bool(_iterator_consumed->second));
     } else {
-        _field_consumed = bool{false};
+        _field_consumed = false;
     }
     return doof::Success<std::shared_ptr<BodyChunkStream>>{std::make_shared<BodyChunkStream>(_field_chunk.value(), _field_consumed.value())};
 }
@@ -127,14 +127,14 @@ doof::Result<std::shared_ptr<SetCookie>, std::string> SetCookie::fromJsonValue(c
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_secure->second) : doof::json_is_boolean(_iterator_secure->second)))) { return doof::Failure<std::string>{"Field \"secure\" expected boolean but got " + std::string(doof::json_type_name(_iterator_secure->second))}; }
         _field_secure = (_lenient ? doof::json_as_bool_lenient(_iterator_secure->second) : doof::json_as_bool(_iterator_secure->second));
     } else {
-        _field_secure = bool{false};
+        _field_secure = false;
     }
     std::optional<bool> _field_httpOnly;
     if (auto _iterator_httpOnly = _object->find("httpOnly"); _iterator_httpOnly != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_httpOnly->second) : doof::json_is_boolean(_iterator_httpOnly->second)))) { return doof::Failure<std::string>{"Field \"httpOnly\" expected boolean but got " + std::string(doof::json_type_name(_iterator_httpOnly->second))}; }
         _field_httpOnly = (_lenient ? doof::json_as_bool_lenient(_iterator_httpOnly->second) : doof::json_as_bool(_iterator_httpOnly->second));
     } else {
-        _field_httpOnly = bool{false};
+        _field_httpOnly = false;
     }
     std::optional<std::optional<std::string>> _field_sameSite;
     if (auto _iterator_sameSite = _object->find("sameSite"); _iterator_sameSite != _object->end()) {
@@ -182,7 +182,7 @@ doof::Result<std::shared_ptr<HttpRequest>, std::string> HttpRequest::fromJsonVal
         if (!(doof::json_is_array(_iterator_headers->second))) { return doof::Failure<std::string>{"Field \"headers\" expected array but got " + std::string(doof::json_type_name(_iterator_headers->second))}; }
         _field_headers = [&]() { const auto* _array = doof::json_as_array(_iterator_headers->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(::std_::http::types::HttpHeader::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_headers = std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>{std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{})};
+        _field_headers = std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{});
     }
     std::optional<std::shared_ptr<std::vector<uint8_t>>> _field_body;
     if (auto _iterator_body = _object->find("body"); _iterator_body != _object->end()) {
@@ -196,14 +196,14 @@ doof::Result<std::shared_ptr<HttpRequest>, std::string> HttpRequest::fromJsonVal
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_timeoutMs->second) : doof::json_is_number(_iterator_timeoutMs->second)))) { return doof::Failure<std::string>{"Field \"timeoutMs\" expected number but got " + std::string(doof::json_type_name(_iterator_timeoutMs->second))}; }
         _field_timeoutMs = (_lenient ? doof::json_as_int_lenient(_iterator_timeoutMs->second) : doof::json_as_int(_iterator_timeoutMs->second));
     } else {
-        _field_timeoutMs = int32_t{30000};
+        _field_timeoutMs = 30000;
     }
     std::optional<bool> _field_followRedirects;
     if (auto _iterator_followRedirects = _object->find("followRedirects"); _iterator_followRedirects != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_followRedirects->second) : doof::json_is_boolean(_iterator_followRedirects->second)))) { return doof::Failure<std::string>{"Field \"followRedirects\" expected boolean but got " + std::string(doof::json_type_name(_iterator_followRedirects->second))}; }
         _field_followRedirects = (_lenient ? doof::json_as_bool_lenient(_iterator_followRedirects->second) : doof::json_as_bool(_iterator_followRedirects->second));
     } else {
-        _field_followRedirects = bool{true};
+        _field_followRedirects = true;
     }
     return doof::Success<std::shared_ptr<HttpRequest>>{std::make_shared<HttpRequest>(_field_method, _field_url, _field_headers.value(), _field_body.value(), _field_timeoutMs.value(), _field_followRedirects.value())};
 }
@@ -232,7 +232,7 @@ Stream__string HttpResponse::getLineStream() {
     return ::std_::stream::index::blobStreamToLineStream(std::make_shared<BodyChunkStream>(this->body, false));
 }
 doof::Result<doof::JsonValue, std::string> HttpResponse::getJsonValue() {
-    return ::std_::json::index::parseJsonValue(this->getText());
+    return ::doof_json::parse(this->getText());
 }
 doof::JsonObject HttpResponse::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
@@ -275,7 +275,7 @@ doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types:
 }
 doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> postJsonValue(std::shared_ptr<HttpClient> client, std::string url, doof::JsonValue body) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
-    builder->writeString(::std_::json::index::formatJsonValue(body));
+    builder->writeString(::doof_json::format(body));
     const auto headers = std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{std::make_shared<::std_::http::types::HttpHeader>(std::string("Content-Type"), std::string("application/json"))});
     return send(client, std::make_shared<HttpRequest>(std::string("POST"), url, headers, builder->build(), 30000, true));
 }

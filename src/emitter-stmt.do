@@ -41,7 +41,7 @@ export function emitStatement(statement: Statement, level: int = 1, context: Emi
     const_: ConstDeclaration -> { return coverageMark + emitLocalDeclaration(ind, const_.name, const_.type_, const_.resolvedType!, const_.value, context, true) }
     readonly_: ReadonlyDeclaration -> { return coverageMark + emitLocalDeclaration(ind, readonly_.name, readonly_.type_, readonly_.resolvedType!, readonly_.value, context, true) }
     binding: ImmutableBinding -> {
-      if binding.else_ != null { return coverageMark + emitBindingElse(binding, level, context) }
+      if binding.else_ != none { return coverageMark + emitBindingElse(binding, level, context) }
       return coverageMark + emitLocalDeclaration(ind, binding.name, binding.type_, binding.resolvedType!, binding.value, context, true, true)
     }
     let_: LetDeclaration -> { return coverageMark + emitLocalDeclaration(ind, let_.name, let_.type_, let_.resolvedType!, let_.value, context, false) }
@@ -79,7 +79,7 @@ function emitWith(statement: WithStatement, level: int, context: EmitContext): s
   innerInd := indent(level + 1)
   let output = ind + "{\n"
   for binding of statement.bindings {
-    if binding.resolvedType == null { panic("With binding was not resolved before emission: " + binding.name) }
+    if binding.resolvedType == none { panic("With binding was not resolved before emission: " + binding.name) }
     resolvedType := binding.resolvedType!
     value := emitExpression(binding.value, context, resolvedType)
     let declarationType = "auto"
@@ -101,7 +101,7 @@ function emitDestructuring(statement: DestructuringStatement, level: int, contex
 }
 
 /** Lowers every destructuring shape after evaluating its source exactly once. */
-function emitDestructuringValue(statement: DestructuringStatement, source: string, sourceType: ResolvedType | null, level: int, context: EmitContext): string {
+function emitDestructuringValue(statement: DestructuringStatement, source: string, sourceType: ResolvedType | none, level: int, context: EmitContext): string {
   ind := indent(level)
   context.tryCounter = context.tryCounter + 1
   temporaryName := "_destructure_" + string(context.tryCounter)
@@ -124,7 +124,7 @@ function emitDestructuringValue(statement: DestructuringStatement, source: strin
   }
 
   let positionalFields: string[] = []
-  if sourceType != null { case sourceType! {
+  if sourceType != none { case sourceType! {
     class_: ClassType -> { positionalFields = classFieldNames(class_, context) }
     _ -> { }
   } }
@@ -133,7 +133,7 @@ function emitDestructuringValue(statement: DestructuringStatement, source: strin
     if name != "_" {
       qualifier := if statement.bindingKind == "let" then "auto" else "const auto"
       let value = "std::get<" + string(i) + ">(" + temporaryName + ")"
-      if sourceType != null {
+      if sourceType != none {
         case sourceType! {
           _: ArrayResolvedType -> { value = "doof::array_at(" + temporaryName + ", " + string(i) + ", " + quote(context.modulePath) + ", " + string(statement.span.start.line) + ")" }
           _: TupleResolvedType -> { }
@@ -153,8 +153,8 @@ function emitDestructuringValue(statement: DestructuringStatement, source: strin
   return result
 }
 
-function emitDestructuredField(source: string, field: string, sourceType: ResolvedType | null, context: EmitContext): string {
-  if sourceType != null { case sourceType! {
+function emitDestructuredField(source: string, field: string, sourceType: ResolvedType | none, context: EmitContext): string {
+  if sourceType != none { case sourceType! {
     class_: ClassType -> {
       accessor := if class_.symbol.kind == "struct" then "." else "->"
       return source + accessor + cppIdentifier(field)
@@ -168,7 +168,7 @@ function emitDestructuredField(source: string, field: string, sourceType: Resolv
 function classFieldNames(class_: ClassType, context: EmitContext): string[] {
   let result: string[] = []
   declaration := findClassDeclaration(class_, context)
-  if declaration == null { return result }
+  if declaration == none { return result }
   for field of declaration!.fields {
     if field.static_ { continue }
     for name of field.names { result.push(name) }
@@ -176,21 +176,21 @@ function classFieldNames(class_: ClassType, context: EmitContext): string[] {
   return result
 }
 
-function findClassDeclaration(class_: ClassType, context: EmitContext): ClassDeclaration | null {
+function findClassDeclaration(class_: ClassType, context: EmitContext): ClassDeclaration | none {
   for program of context.allPrograms { for statement of program.statements {
     candidate := statementClass(statement)
-    if candidate != null && candidate!.resolvedSymbol != null && candidate!.resolvedSymbol!.module == class_.symbol.module && candidate!.name == class_.name { return candidate }
+    if candidate != none && candidate!.resolvedSymbol != none && candidate!.resolvedSymbol!.module == class_.symbol.module && candidate!.name == class_.name { return candidate }
   } }
-  return null
+  return none
 }
 
-function statementClass(statement: Statement): ClassDeclaration | null {
+function statementClass(statement: Statement): ClassDeclaration | none {
   case statement {
     class_: ClassDeclaration -> { return class_ }
     export_: ExportDeclaration -> { return statementClass(export_.declaration) }
-    _ -> { return null }
+    _ -> { return none }
   }
-  return null
+  return none
 }
 
 function emitAssignmentTarget(name: string, context: EmitContext): string {
@@ -199,13 +199,13 @@ function emitAssignmentTarget(name: string, context: EmitContext): string {
 
 function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitContext): string {
   ind := indent(level)
-  if binding.else_ == null { return emitLocalDeclaration(ind, binding.name, binding.type_, binding.resolvedType!, binding.value, context, true) }
+  if binding.else_ == none { return emitLocalDeclaration(ind, binding.name, binding.type_, binding.resolvedType!, binding.value, context, true) }
   context.tryCounter = context.tryCounter + 1
   temporaryName := "_binding_value_" + string(context.tryCounter)
-  if binding.value.resolvedType != null && isSingleOptional(binding.value.resolvedType!) {
+  if binding.value.resolvedType != none && isSingleOptional(binding.value.resolvedType!) {
     let output = ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
     output = output + ind + "if (doof::is_null(" + temporaryName + ")) {\n"
-    if binding.failureName == null && binding.name != "_" { output = output + indent(level + 1) + "const auto& " + cppIdentifier(binding.name) + " = " + temporaryName + ";\n" }
+    if binding.failureName == none && binding.name != "_" { output = output + indent(level + 1) + "const auto& " + cppIdentifier(binding.name) + " = " + temporaryName + ";\n" }
     output = output + emitBlock(binding.else_!, level + 1, context)
     output = output + ind + "}\n"
     if binding.name == "_" { return output }
@@ -213,7 +213,7 @@ function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitCon
   }
   let output = ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
   output = output + ind + "if (doof::is_failure(" + temporaryName + ")) {\n"
-  if binding.failureName != null && binding.failureName! != "_" {
+  if binding.failureName != none && binding.failureName! != "_" {
     output = output + indent(level + 1) + "const auto " + cppIdentifier(binding.failureName!) + " = doof::failure_error(" + temporaryName + ");\n"
   } else if binding.name != "_" {
     output = output + indent(level + 1) + "const auto& " + cppIdentifier(binding.name) + " = " + temporaryName + ";\n"
@@ -227,14 +227,14 @@ function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitCon
 function isSingleOptional(resolvedType: ResolvedType): bool {
   case resolvedType {
     union_: UnionResolvedType -> {
-      let hasNull = false
+      let hasNone = false
       for member of union_.types {
-        if member.kind == "null" { hasNull = true }
+        if member.kind == "none" { hasNone = true }
       }
       // Nullable aliases may flatten into several non-null arms. All native
       // nullable carriers (pointer, optional, or monostate variant) share the
       // is_null/unwrap_optional runtime surface.
-      return hasNull
+      return hasNone
     }
     _ -> { return false }
   }
@@ -259,15 +259,15 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
       output = output + ind + "if (doof::is_failure(" + temporaryName + ")) { "
       errorType := value.resolvedType
       let hasErrorValue = true
-      if errorType != null {
+      if errorType != none {
         case errorType! {
-          result: ResultResolvedType -> { if result.errorType.kind == "void" { hasErrorValue = false } }
+          result: ResultResolvedType -> { if result.errorType.kind == "none" { hasErrorValue = false } }
           _ -> { }
         }
       }
       if hasErrorValue {
         let promoted = "doof::failure_error(" + temporaryName + ")"
-        if context.catchResultType != null {
+        if context.catchResultType != none {
           promoted = "doof::variant_promote<" + emitType(context.catchResultType!, context.modulePath) + ">(" + promoted + ")"
         }
         output = output + context.catchVarName + " = " + promoted + "; "
@@ -310,24 +310,24 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
 }
 
 function emitTryDestructuring(statement: DestructuringStatement, temporaryName: string, level: int, context: EmitContext): string {
-  let successType: ResolvedType | null = null
-  if statement.value.resolvedType != null { case statement.value.resolvedType! {
+  let successType: ResolvedType | none = none
+  if statement.value.resolvedType != none { case statement.value.resolvedType! {
     result: ResultResolvedType -> { successType = result.valueType }
     _ -> { }
   } }
   return emitDestructuringValue(statement, "doof::success_value(" + temporaryName + ")", successType, level, context)
 }
 
-function emitLocalDeclaration(ind: string, name: string, annotation: TypeAnnotation | null, resolvedType: ResolvedType | null, value: Expression, context: EmitContext, readonly_: bool, shallowImmutable: bool = false): string {
-  if resolvedType == null { panic("Local declaration was not resolved before emission") }
-  let typeText = if annotation == null then "auto" else emitType(resolvedType!, context.modulePath)
+function emitLocalDeclaration(ind: string, name: string, annotation: TypeAnnotation | none, resolvedType: ResolvedType | none, value: Expression, context: EmitContext, readonly_: bool, shallowImmutable: bool = false): string {
+  if resolvedType == none { panic("Local declaration was not resolved before emission") }
+  let typeText = if annotation == none then "auto" else emitType(resolvedType!, context.modulePath)
   let shallowStruct = false
   case resolvedType! {
     class_: ClassType -> { shallowStruct = shallowImmutable && class_.symbol.kind == "struct" }
     _ -> { }
   }
   let prefix = if readonly_ && !shallowStruct then "const " else ""
-  let expected: ResolvedType | null = resolvedType
+  let expected: ResolvedType | none = resolvedType
   let valueText = emitExpression(value, context, expected)
   if !readonly_ && isCapturedMutable(context, name) {
     return ind + "auto " + cppIdentifier(name) + " = std::make_shared<" + emitType(resolvedType!, context.modulePath) + ">(" + valueText + ");\n"
@@ -343,7 +343,7 @@ function emitCase(statement: CaseStatement, level: int, context: EmitContext): s
   let result = ind + "{\n" + inner + "auto " + subject + " = " + emitExpression(statement.subject, context) + ";\n"
   let previous = false
   subjectType := caseSubjectType(statement.subject)
-  if subjectType == null { panic("Case statement subject has no resolved type") }
+  if subjectType == none { panic("Case statement subject has no resolved type") }
 
   for arm of statement.arms {
     for pattern of arm.patterns {
@@ -381,8 +381,8 @@ function emitCase(statement: CaseStatement, level: int, context: EmitContext): s
 
 function emitRangePatternCondition(pattern: RangePattern, subject: string, context: EmitContext): string {
   let condition = ""
-  if pattern.start != null { condition = subject + " >= " + emitExpression(pattern.start!, context) }
-  if pattern.end != null {
+  if pattern.start != none { condition = subject + " >= " + emitExpression(pattern.start!, context) }
+  if pattern.end != none {
     operator := if pattern.inclusive then " <= " else " < "
     if condition != "" { condition = condition + " && " }
     condition = condition + subject + operator + emitExpression(pattern.end!, context)
@@ -390,20 +390,24 @@ function emitRangePatternCondition(pattern: RangePattern, subject: string, conte
   return condition
 }
 
-function caseSubjectType(expression: Expression): ResolvedType | null {
-  if expression.resolvedType != null { return expression.resolvedType }
+function caseSubjectType(expression: Expression): ResolvedType | none {
+  if expression.resolvedType != none { return expression.resolvedType }
   case expression {
     identifier: Identifier -> {
-      if identifier.resolvedBinding != null { return identifier.resolvedBinding!.type_ }
+      if identifier.resolvedBinding != none { return identifier.resolvedBinding!.type_ }
     }
     _ -> { }
   }
-  return null
+  return none
 }
 
 function emitReturn(statement: ReturnStatement, context: EmitContext): string {
-  if statement.value == null { return "return;\n" }
+  if statement.value == none { return "return;\n" }
   expected := statement.resolvedExpectedType
+  if expected != none && expected!.kind == "none" {
+    if statement.value!.kind == "none-literal" { return "return;\n" }
+    return emitExpression(statement.value!, context, expected) + ";\nreturn;\n"
+  }
   return "return " + emitExpression(statement.value!, context, expected) + ";\n"
 }
 
@@ -415,7 +419,7 @@ function emitIf(statement: IfStatement, level: int, context: EmitContext): strin
     result = result + " else if (" + emitCondition(branch.condition, context) + ") {\n"
     result = result + emitBlock(branch.body, level + 1, context) + ind + "}"
   }
-  if statement.else_ != null {
+  if statement.else_ != none {
     result = result + " else {\n" + emitBlock(statement.else_!, level + 1, context) + ind + "}"
   }
   return result + "\n"
@@ -444,7 +448,7 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
   context.tryCounter = context.tryCounter + 1
   iterableName := "_iterable_" + string(context.tryCounter)
   iterableBinding := ind + "const auto& " + iterableName + " = " + iterable + ";\n"
-  if statement.iterable.resolvedType != null {
+  if statement.iterable.resolvedType != none {
     case statement.iterable.resolvedType! {
       _: RangeResolvedType -> {
         return iterableBinding + ind + "for (const auto& " + name + " : " + iterableName + ") {\n" +
@@ -474,12 +478,12 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
 function emitFor(statement: ForStatement, level: int, context: EmitContext): string {
   ind := indent(level)
   let init = ""
-  if statement.init != null {
+  if statement.init != none {
     init = emitStatement(statement.init!, 0, context).trim()
     if init.endsWith(";") { init = init.substring(0, init.length - 1) }
   }
   let condition = "true"
-  if statement.condition != null { condition = emitCondition(statement.condition!, context) }
+  if statement.condition != none { condition = emitCondition(statement.condition!, context) }
   let update = ""
   for i of 0..<statement.update.length {
     if i > 0 { update = update + ", " }

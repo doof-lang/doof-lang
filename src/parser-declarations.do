@@ -44,19 +44,19 @@ export function parseExport(parser: Parser): Statement {
     while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
       itemStart := parser.location()
       name := parser.text(parser.expect(TokenType.Identifier))
-      let alias: string | null = null
+      let alias: string | none = none
       if parser.match(TokenType.As) { alias = parser.text(parser.expect(TokenType.Identifier)) }
       specifiers.push(ExportSpecifier { name, alias, span: parser.span(itemStart) })
       if !parser.match(TokenType.Comma) { break }
     }
     parser.expect(TokenType.RightBrace)
-    let sourceValue: string | null = null
+    let sourceValue: string | none = none
     if parser.match(TokenType.From) { sourceValue = parser.text(parser.expect(TokenType.StringLiteral)) }
     parser.consumeSemicolon()
     return ExportList { kind: "export-list", specifiers, source: sourceValue, span: parser.span(start) }
   }
   parser.fail("Expected a declaration or export list after export")
-  return ExportList { kind: "export-list", specifiers: [], source: null, span: parser.span(start) }
+  return ExportList { kind: "export-list", specifiers: [], source: none, span: parser.span(start) }
 }
 
 export function parseConst(parser: Parser, exported: bool): Statement {
@@ -149,14 +149,14 @@ function parseMethod(parser: Parser, static_: bool, private_: bool): FunctionDec
   return makeFunctionBlock(parser, name, description, typeParams, parsedTypeParams.constraints, params, returnType, body, false, static_, false, private_, start)
 }
 
-function makeFunctionExpression(parser: Parser, name: string, description: string, typeParams: string[], typeParamConstraints: TypeParameterConstraint[], params: Parameter[], returnType: TypeAnnotation | null, body: Expression, exported: bool, static_: bool, isolated_: bool, private_: bool, start: AstLocation): FunctionDeclaration {
+function makeFunctionExpression(parser: Parser, name: string, description: string, typeParams: string[], typeParamConstraints: TypeParameterConstraint[], params: Parameter[], returnType: TypeAnnotation | none, body: Expression, exported: bool, static_: bool, isolated_: bool, private_: bool, start: AstLocation): FunctionDeclaration {
   return FunctionDeclaration {
     kind: "function-declaration", name, description, typeParams, typeParamConstraints, params, returnType, body: body,
     exported, static_, isolated_, private_, bodyless: false, span: parser.span(start),
   }
 }
 
-function makeFunctionBlock(parser: Parser, name: string, description: string, typeParams: string[], typeParamConstraints: TypeParameterConstraint[], params: Parameter[], returnType: TypeAnnotation | null, body: Block, exported: bool, static_: bool, isolated_: bool, private_: bool, start: AstLocation): FunctionDeclaration {
+function makeFunctionBlock(parser: Parser, name: string, description: string, typeParams: string[], typeParamConstraints: TypeParameterConstraint[], params: Parameter[], returnType: TypeAnnotation | none, body: Block, exported: bool, static_: bool, isolated_: bool, private_: bool, start: AstLocation): FunctionDeclaration {
   return FunctionDeclaration {
     kind: "function-declaration", name, description, typeParams, typeParamConstraints, params, returnType, body: body,
     exported, static_, isolated_, private_, bodyless: false, span: parser.span(start),
@@ -176,7 +176,7 @@ function parseTypeParameters(parser: Parser): ParsedTypeParameters {
   if !parser.match(TokenType.Less) { return ParsedTypeParameters { names, constraints } }
   while !parser.check(TokenType.Greater) && !parser.atEnd() {
     names.push(parser.text(parser.expect(TokenType.Identifier)))
-    let constraint: TypeAnnotation | null = null
+    let constraint: TypeAnnotation | none = none
     if parser.match(TokenType.Colon) {
       constraint = parser.parseTypeAnnotation()
     }
@@ -194,7 +194,7 @@ function parseParameters(parser: Parser): Parameter[] {
     name := parser.text(parser.expect(TokenType.Identifier))
     description := parseDescription(parser)
     typeValue := parser.parseOptionalType()
-    let defaultValue: Expression | null = null
+    let defaultValue: Expression | none = none
     if parser.match(TokenType.Equal) { defaultValue = parser.parseExpression() }
     params.push(Parameter { name, description, type_: typeValue, defaultValue, span: parser.span(start) })
     if !parser.match(TokenType.Comma) { break }
@@ -219,7 +219,7 @@ export function parseClass(parser: Parser, exported: bool, private_: bool): Stat
 
   let fields: ClassField[] = []
   let methods: FunctionDeclaration[] = []
-  let destructor_: Block | null = null
+  let destructor_: Block | none = none
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
     if parser.check(TokenType.Function) {
       methods.push(parseFunction(parser, false, false, false, false))
@@ -246,7 +246,7 @@ export function parseClass(parser: Parser, exported: bool, private_: bool): Stat
         fields.push(parseClassField(parser, false, true))
       }
     } else if parser.check(TokenType.Destructor) {
-      if destructor_ != null { parser.fail("A class may declare at most one destructor") }
+      if destructor_ != none { parser.fail("A class may declare at most one destructor") }
       parser.advance()
       destructor_ = parser.parseBlock()
     } else if parser.check(TokenType.Static) {
@@ -304,9 +304,9 @@ function parseClassField(parser: Parser, static_: bool, private_: bool): ClassFi
     descriptions.push(parseDescription(parser))
   }
   typeValue := parser.parseOptionalType()
-  let defaultValue: Expression | null = null
+  let defaultValue: Expression | none = none
   if parser.match(TokenType.Equal) { defaultValue = parser.parseExpression() }
-  if const_ && defaultValue == null { parser.fail("Const class fields require a fixed value") }
+  if const_ && defaultValue == none { parser.fail("Const class fields require a fixed value") }
   parser.consumeSemicolon()
   return ClassField { kind: "class-field", names, descriptions, type_: typeValue, defaultValue, static_: staticValue, const_, readonly_, weak_, private_, span: parser.span(start) }
 }
@@ -361,7 +361,7 @@ export function parseEnum(parser: Parser, exported: bool): Statement {
     variantStart := parser.location()
     variantName := parser.text(parser.expect(TokenType.Identifier))
     variantDescription := parseDescription(parser)
-    let enumValue: Expression | null = null
+    let enumValue: Expression | none = none
     if parser.match(TokenType.Equal) { enumValue = parser.parseExpression() }
     variants.push(EnumVariant { kind: "enum-variant", name: variantName, description: variantDescription, value: enumValue, span: parser.span(variantStart) })
     if !parser.match(TokenType.Comma) { parser.consumeSemicolon() }
@@ -406,7 +406,7 @@ export function parseImport(parser: Parser): Statement {
     while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
       itemStart := parser.location()
       name := parser.text(parser.expect(TokenType.Identifier))
-      let alias: string | null = null
+      let alias: string | none = none
       if parser.match(TokenType.As) { alias = parser.text(parser.expect(TokenType.Identifier)) }
       specifiers.push(NamedImport { kind: "named-import-specifier", name, alias, span: parser.span(itemStart) })
       if !parser.match(TokenType.Comma) { break }

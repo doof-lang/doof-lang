@@ -10,7 +10,7 @@ import { ExternalDependency, ExternalDependencyCommand, PackageManifest } from "
 
 function testPath(directory: string, name: string): string => join([directory, name])
 
-function removeTestTree(path: string): void {
+function removeTestTree(path: string): none {
   if !exists(path) { return }
   if isDirectory(path) {
     for entry of try! readDir(path) { removeTestTree(testPath(path, entry.name)) }
@@ -25,7 +25,7 @@ function runTestCommand(command: string, arguments: string[]): string {
   return output
 }
 
-export function testAppliesExternalCommandSubstitutions(): void {
+export function testAppliesExternalCommandSubstitutions(): none {
   target := ExternalDependencyTarget {
     nativeTarget: "ios-device",
     sdkPath: "/SDK",
@@ -40,7 +40,7 @@ export function testAppliesExternalCommandSubstitutions(): void {
   Assert.equal(actual, "/app|/app/vendor/lib|8|ios-device|/SDK|arm64-apple-ios17.0|aarch64-apple-darwin")
 }
 
-export function testAcquiresArchiveRunsCommandsAndReusesSentinels(): void {
+export function testAcquiresArchiveRunsCommandsAndReusesSentinels(): none {
   root := "/tmp/doof-compiler-external-dependency-test"
   removeTestTree(root)
   try! mkdir(root)
@@ -96,7 +96,7 @@ export function testAcquiresArchiveRunsCommandsAndReusesSentinels(): void {
   removeTestTree(root)
 }
 
-export function testAcquiresPinnedGitCommitAndRejectsMismatch(): void {
+export function testAcquiresPinnedGitCommitAndRejectsMismatch(): none {
   root := "/tmp/doof-compiler-external-git-test"
   removeTestTree(root)
   try! mkdir(root)

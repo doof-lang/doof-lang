@@ -40,7 +40,7 @@ doof::Result<std::shared_ptr<ExactPackageSource>, std::string> ExactPackageSourc
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_expectedManifestName->second) : doof::json_is_string(_iterator_expectedManifestName->second)))) { return doof::Failure<std::string>{"Field \"expectedManifestName\" expected string but got " + std::string(doof::json_type_name(_iterator_expectedManifestName->second))}; }
         _field_expectedManifestName = (_lenient ? doof::json_as_string_lenient(_iterator_expectedManifestName->second) : doof::json_as_string(_iterator_expectedManifestName->second));
     } else {
-        _field_expectedManifestName = std::string{std::string("")};
+        _field_expectedManifestName = std::string("");
     }
     auto _iterator_url = _object->find("url");
     if (_iterator_url == _object->end()) { return doof::Failure<std::string>{"Missing required field \"url\""}; }
@@ -80,7 +80,7 @@ doof::Result<std::shared_ptr<AcquiredPackage>, std::string> AcquiredPackage::fro
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mutable_->second) : doof::json_is_boolean(_iterator_mutable_->second)))) { return doof::Failure<std::string>{"Field \"mutable\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mutable_->second))}; }
         _field_mutable_ = (_lenient ? doof::json_as_bool_lenient(_iterator_mutable_->second) : doof::json_as_bool(_iterator_mutable_->second));
     } else {
-        _field_mutable_ = bool{false};
+        _field_mutable_ = false;
     }
     return doof::Success<std::shared_ptr<AcquiredPackage>>{std::make_shared<AcquiredPackage>(_field_source, _field_rootDirectory, _field_mutable_.value())};
 }
@@ -107,7 +107,7 @@ doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPacka
     auto _try_value_1 = ensurePackageDirectory(::std_::path::index::dirname(root));
     if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
     const auto staging = ((root + std::string(".staging-")) + doof::to_string(::std_::os::index::pid()));
-    if (::std_::fs::index::exists(staging)) {
+    if (::doof_fs::exists(staging)) {
         auto _try_value_2 = removePackageTree(staging);
         if (doof::is_failure(_try_value_2)) return doof::Failure<std::string>{doof::failure_error(_try_value_2)};
     }
@@ -144,13 +144,13 @@ doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPacka
         if (doof::is_failure(_try_value_10)) return doof::Failure<std::string>{doof::failure_error(_try_value_10)};
         return doof::Failure<std::string>{ (((std::string("Could not remove Git metadata for package ") + source->name) + std::string(": ")) + error) };
     }
-    auto _binding_value_11 = ::std_::fs::index::writeText(packageAcquisitionReceiptPath(staging), renderAcquisitionReceipt(source));
+    auto _binding_value_11 = ::doof_fs::writeText(packageAcquisitionReceiptPath(staging), renderAcquisitionReceipt(source));
     if (doof::is_failure(_binding_value_11)) {
         auto _try_value_12 = removePackageTree(staging);
         if (doof::is_failure(_try_value_12)) return doof::Failure<std::string>{doof::failure_error(_try_value_12)};
         return doof::Failure<std::string>{ (std::string("Could not write acquisition receipt for package ") + source->name) };
     }
-    if (::std_::fs::index::exists(root)) {
+    if (::doof_fs::exists(root)) {
         auto _binding_value_13 = removePackageTree(root);
         if (doof::is_failure(_binding_value_13)) {
             const auto error = doof::failure_error(_binding_value_13);
@@ -159,7 +159,7 @@ doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPacka
             return doof::Failure<std::string>{ (((std::string("Could not replace acquired package ") + source->name) + std::string(": ")) + error) };
         }
     }
-    auto _binding_value_15 = ::std_::fs::index::rename(staging, root);
+    auto _binding_value_15 = ::doof_fs::rename(staging, root);
     if (doof::is_failure(_binding_value_15)) {
         auto _try_value_16 = removePackageTree(staging);
         if (doof::is_failure(_try_value_16)) return doof::Failure<std::string>{doof::failure_error(_try_value_16)};
@@ -180,7 +180,7 @@ bool validPackageAcquisitionName(std::string name) {
     return true;
 }
 bool reusableAcquiredPackage(std::string root, std::shared_ptr<ExactPackageSource> source) {
-    if (!::std_::fs::index::isDirectory(root) || !acquisitionReceiptMatches(packageAcquisitionReceiptPath(root), source)) {
+    if (!::doof_fs::isDirectory(root) || !acquisitionReceiptMatches(packageAcquisitionReceiptPath(root), source)) {
         return false;
     }
     auto _binding_value_18 = validateAcquiredPackage(root, source);
@@ -190,13 +190,13 @@ bool reusableAcquiredPackage(std::string root, std::shared_ptr<ExactPackageSourc
     return true;
 }
 bool acquisitionReceiptMatches(std::string path, std::shared_ptr<ExactPackageSource> source) {
-    auto _binding_value_19 = ::std_::fs::index::readText(path);
+    auto _binding_value_19 = ::doof_fs::readText(path);
     if (doof::is_failure(_binding_value_19)) {
         const auto& receiptSource = _binding_value_19;
         return false;
     }
     const auto receiptSource = doof::success_value(_binding_value_19);
-    auto _binding_value_20 = ::std_::json::index::parseJsonValue(receiptSource);
+    auto _binding_value_20 = ::doof_json::parse(receiptSource);
     if (doof::is_failure(_binding_value_20)) {
         const auto& parsed = _binding_value_20;
         return false;
@@ -252,17 +252,17 @@ std::string renderAcquisitionReceipt(std::shared_ptr<ExactPackageSource> source)
     doof::map_set(receipt, std::string("url"), doof::json_value(::app_src_std_catalog_::canonicalDependencyUrl(source->url)), "", 0);
     doof::map_set(receipt, std::string("ref"), doof::json_value(source->ref), "", 0);
     doof::map_set(receipt, std::string("commit"), doof::json_value(doof::string_toLowerCase(source->commit)), "", 0);
-    return (::std_::json::index::formatJsonValue(doof::json_value(receipt)) + std::string("\n"));
+    return (::doof_json::format(doof::json_value(receipt)) + std::string("\n"));
 }
 doof::Result<void, std::string> validateAcquiredPackage(std::string root, std::shared_ptr<ExactPackageSource> source) {
     const auto manifestPath = ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{root, std::string("doof.json")}));
-    auto _binding_value_26 = ::std_::fs::index::readText(manifestPath);
+    auto _binding_value_26 = ::doof_fs::readText(manifestPath);
     if (doof::is_failure(_binding_value_26)) {
         const auto& manifestSource = _binding_value_26;
         return doof::Failure<std::string>{ ((std::string("Acquired package ") + source->name) + std::string(" is missing doof.json")) };
     }
     const auto manifestSource = doof::success_value(_binding_value_26);
-    auto _binding_value_27 = ::std_::json::index::parseJsonValue(manifestSource);
+    auto _binding_value_27 = ::doof_json::parse(manifestSource);
     if (doof::is_failure(_binding_value_27)) {
         const auto& parsed = _binding_value_27;
         return doof::Failure<std::string>{ ((std::string("Acquired package ") + source->name) + std::string(" has invalid doof.json")) };
@@ -305,7 +305,7 @@ doof::Result<std::string, std::string> packageCommand(std::string command, std::
     return doof::Success<std::string>{ output };
 }
 doof::Result<void, std::string> ensurePackageDirectory(std::string path) {
-    if ((path == std::string("")) || ::std_::fs::index::exists(path)) {
+    if ((path == std::string("")) || ::doof_fs::exists(path)) {
         return doof::Success<void>{};
     }
     const auto parent = ::std_::path::index::dirname(path);
@@ -313,18 +313,18 @@ doof::Result<void, std::string> ensurePackageDirectory(std::string path) {
         auto _try_value_32 = ensurePackageDirectory(parent);
         if (doof::is_failure(_try_value_32)) return doof::Failure<std::string>{doof::failure_error(_try_value_32)};
     }
-    auto _binding_value_33 = ::std_::fs::index::mkdir(path);
+    auto _binding_value_33 = ::doof_fs::mkdir(path);
     if (doof::is_failure(_binding_value_33)) {
         return doof::Failure<std::string>{ (std::string("Could not create package acquisition directory ") + path) };
     }
     return doof::Success<void>{};
 }
 doof::Result<void, std::string> removePackageTree(std::string path) {
-    if (!::std_::fs::index::exists(path)) {
+    if (!::doof_fs::exists(path)) {
         return doof::Success<void>{};
     }
-    if (::std_::fs::index::isDirectory(path)) {
-        auto _binding_value_34 = ::std_::fs::index::readDir(path);
+    if (::doof_fs::isDirectory(path)) {
+        auto _binding_value_34 = ::doof_fs::readDir(path);
         if (doof::is_failure(_binding_value_34)) {
             const auto& entries = _binding_value_34;
             return doof::Failure<std::string>{ (std::string("Could not read ") + path) };
@@ -336,7 +336,7 @@ doof::Result<void, std::string> removePackageTree(std::string path) {
             if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::failure_error(_try_value_36)};
         }
     }
-    auto _binding_value_37 = ::std_::fs::index::remove(path);
+    auto _binding_value_37 = ::doof_fs::remove(path);
     if (doof::is_failure(_binding_value_37)) {
         return doof::Failure<std::string>{ (std::string("Could not remove ") + path) };
     }

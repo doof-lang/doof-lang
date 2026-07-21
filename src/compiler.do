@@ -10,11 +10,12 @@ import { buildInstantiationPlan } from "./emitter-monomorphize"
 import { emitWasmSupport } from "./emitter-wasm"
 import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
 import { createChecker, ModuleChecker, validateCheckedTypes } from "./checker"
+import { hasErrorDiagnostics } from "./diagnostics"
 import { SourceLoader, noSourceLoader } from "./resolver"
 import { CheckResult, Diagnostic, SemanticLocation, SemanticSpan, SourceFile } from "./semantic"
 
 export class Compilation {
-  emission: ModuleGraphEmission | null
+  emission: ModuleGraphEmission | none
   diagnostics: Diagnostic[]
 }
 
@@ -46,7 +47,7 @@ function compileInternal(
   let diagnostics: Diagnostic[] = []
   for diagnostic of analysis.diagnostics { diagnostics.push(diagnostic) }
 
-  if diagnostics.length == 0 {
+  if !hasErrorDiagnostics(diagnostics) {
     checker := createChecker(analysis)
     let checkedPaths: string[] = []
     let visitingPaths: string[] = []
@@ -55,12 +56,12 @@ function compileInternal(
     }
   }
 
-  if diagnostics.length > 0 {
-    return Compilation { emission: null, diagnostics }
+  if hasErrorDiagnostics(diagnostics) {
+    return Compilation { emission: none, diagnostics }
   }
   for diagnostic of validateCheckedTypes(analysis) { diagnostics.push(diagnostic) }
-  if diagnostics.length > 0 {
-    return Compilation { emission: null, diagnostics }
+  if hasErrorDiagnostics(diagnostics) {
+    return Compilation { emission: none, diagnostics }
   }
   instantiations := buildInstantiationPlan(analysis)
   if instantiations.overflow {
@@ -73,14 +74,14 @@ function compileInternal(
       span: SemanticSpan { start: zero, end: zero },
       module: entry,
     })
-    return Compilation { emission: null, diagnostics }
+    return Compilation { emission: none, diagnostics }
   }
   emission := emitModuleGraph(analysis, entry, instantiations, entryMode, coverage)
   if entryMode == "wasm" {
     wasm := emitWasmSupport(analysis, entry) else message {
       zero := SemanticLocation { line: 0, column: 0, offset: 0 }
       diagnostics.push(Diagnostic { severity: "error", message, span: SemanticSpan { start: zero, end: zero }, module: entry })
-      return Compilation { emission: null, diagnostics }
+      return Compilation { emission: none, diagnostics }
     }
     emission.wasmSupportSource = wasm.source
     emission.wasmExportNames = wasm.exportNames
@@ -98,10 +99,10 @@ function checkModuleDependencies(
   checkedPaths: string[],
   visitingPaths: string[],
   diagnostics: Diagnostic[],
-): void {
+): none {
   if containsPath(checkedPaths, path) || containsPath(visitingPaths, path) { return }
   module := findAnalysisModule(analysis, path)
-  if module == null { return }
+  if module == none { return }
   visitingPaths.push(path)
   for imported of module!.imports {
     checkModuleDependencies(imported.sourceModule, analysis, checker, checkedPaths, visitingPaths, diagnostics)
@@ -120,7 +121,7 @@ function containsPath(paths: string[], path: string): bool {
   return false
 }
 
-function findAnalysisModule(result: AnalysisResult, path: string): ModuleInfo | null {
+function findAnalysisModule(result: AnalysisResult, path: string): ModuleInfo | none {
   for module of result.modules { if module.path == path { return module } }
-  return null
+  return none
 }

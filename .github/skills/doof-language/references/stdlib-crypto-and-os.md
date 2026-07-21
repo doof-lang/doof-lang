@@ -48,7 +48,7 @@ import { ConsoleLogger, RollingFileLogger, LogLevel, Logger, setLogger, debug, i
 Install one global `Logger` with `setLogger`. Without one, ordinary log calls
 are no-ops; `fatal` still panics after attempting to log. Every `LogEntry`
 contains level, message, structured `Map<string, LogValue>`, `@caller` source,
-and `Instant` timestamp. Context values are primitive scalar values or `null`.
+and `Instant` timestamp. Context values are primitive scalar values or `none`.
 
 `ConsoleLogger` writes filtered lines to stderr. `RollingFileLogger(path, level,
 maxBytes, maxAge, maxFiles)` rotates by size or age and exposes `flush()`.
@@ -83,7 +83,7 @@ control or `run(...)` for buffered completion.
 
 `ExecOptions` controls `cwd`, environment overrides/inheritance, stdin,
 stderr merging, inherited output, per-stream `maxOutputBytes`, and a
-`Duration | null` timeout. `Exec` exposes stdout/stderr byte streams, stdin
+`Duration | none` timeout. `Exec` exposes stdout/stderr byte streams, stdin
 writing/closing, `isRunning`, `wait`, and `terminate`. A timeout is enforced by
 `run()` and `wait()`, not by an individual blocking stream read. Merge stderr
 when only stdout will be drained to avoid pipe backpressure deadlocks.

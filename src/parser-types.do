@@ -5,8 +5,8 @@ import { TokenType } from "./lexer"
 import { AstFunctionType, ArrayType, FunctionTypeParam, NamedType, SourceSpan, UnionType, WeakType } from "./ast"
 import type { TypeAnnotation } from "./ast"
 
-export function parseOptionalType(parser: Parser): TypeAnnotation | null {
-  if !parser.match(TokenType.Colon) { return null }
+export function parseOptionalType(parser: Parser): TypeAnnotation | none {
+  if !parser.match(TokenType.Colon) { return none }
   return parseTypeAnnotation(parser)
 }
 
@@ -80,7 +80,7 @@ function parsePrimaryType(parser: Parser): TypeAnnotation {
     return AstFunctionType { kind: "function-type", params, returnType, span: parser.span(start) }
   }
   nameToken := parser.advance()
-  if nameToken.kind != TokenType.Identifier && nameToken.kind != TokenType.Void && nameToken.kind != TokenType.Null {
+  if nameToken.kind != TokenType.Identifier && nameToken.kind != TokenType.None && nameToken.kind != TokenType.Void && nameToken.kind != TokenType.Null {
     parser.fail("Expected a type name")
   }
   name := parser.text(nameToken)

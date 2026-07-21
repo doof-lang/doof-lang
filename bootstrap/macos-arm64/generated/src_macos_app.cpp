@@ -41,14 +41,14 @@ doof::Result<std::shared_ptr<MacOSEmbeddedLibrary>, std::string> MacOSEmbeddedLi
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_library->second) : doof::json_is_string(_iterator_library->second)))) { return doof::Failure<std::string>{"Field \"library\" expected string but got " + std::string(doof::json_type_name(_iterator_library->second))}; }
         _field_library = (_lenient ? doof::json_as_string_lenient(_iterator_library->second) : doof::json_as_string(_iterator_library->second));
     } else {
-        _field_library = std::string{std::string("")};
+        _field_library = std::string("");
     }
     std::optional<std::string> _field_path;
     if (auto _iterator_path = _object->find("path"); _iterator_path != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_path->second) : doof::json_is_string(_iterator_path->second)))) { return doof::Failure<std::string>{"Field \"path\" expected string but got " + std::string(doof::json_type_name(_iterator_path->second))}; }
         _field_path = (_lenient ? doof::json_as_string_lenient(_iterator_path->second) : doof::json_as_string(_iterator_path->second));
     } else {
-        _field_path = std::string{std::string("")};
+        _field_path = std::string("");
     }
     return doof::Success<std::shared_ptr<MacOSEmbeddedLibrary>>{std::make_shared<MacOSEmbeddedLibrary>(_field_library.value(), _field_path.value())};
 }
@@ -91,7 +91,7 @@ doof::Result<std::shared_ptr<MacOSAppConfig>, std::string> MacOSAppConfig::fromJ
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_iconPath->second) : doof::json_is_string(_iterator_iconPath->second)))) { return doof::Failure<std::string>{"Field \"iconPath\" expected string but got " + std::string(doof::json_type_name(_iterator_iconPath->second))}; }
         _field_iconPath = (_lenient ? doof::json_as_string_lenient(_iterator_iconPath->second) : doof::json_as_string(_iterator_iconPath->second));
     } else {
-        _field_iconPath = std::string{std::string("")};
+        _field_iconPath = std::string("");
     }
     std::optional<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>> _field_infoPlist;
     if (auto _iterator_infoPlist = _object->find("infoPlist"); _iterator_infoPlist != _object->end()) {
@@ -105,28 +105,28 @@ doof::Result<std::shared_ptr<MacOSAppConfig>, std::string> MacOSAppConfig::fromJ
         if (!(doof::json_is_array(_iterator_resources->second))) { return doof::Failure<std::string>{"Field \"resources\" expected array but got " + std::string(doof::json_type_name(_iterator_resources->second))}; }
         _field_resources = [&]() { const auto* _array = doof::json_as_array(_iterator_resources->second); auto _values = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(MacOSAppResource::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_resources = std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>>{std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{})};
+        _field_resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>> _field_embeddedLibraries;
     if (auto _iterator_embeddedLibraries = _object->find("embeddedLibraries"); _iterator_embeddedLibraries != _object->end()) {
         if (!(doof::json_is_array(_iterator_embeddedLibraries->second))) { return doof::Failure<std::string>{"Field \"embeddedLibraries\" expected array but got " + std::string(doof::json_type_name(_iterator_embeddedLibraries->second))}; }
         _field_embeddedLibraries = [&]() { const auto* _array = doof::json_as_array(_iterator_embeddedLibraries->second); auto _values = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(MacOSEmbeddedLibrary::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_embeddedLibraries = std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>{std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{})};
+        _field_embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{});
     }
     std::optional<std::string> _field_category;
     if (auto _iterator_category = _object->find("category"); _iterator_category != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_category->second) : doof::json_is_string(_iterator_category->second)))) { return doof::Failure<std::string>{"Field \"category\" expected string but got " + std::string(doof::json_type_name(_iterator_category->second))}; }
         _field_category = (_lenient ? doof::json_as_string_lenient(_iterator_category->second) : doof::json_as_string(_iterator_category->second));
     } else {
-        _field_category = std::string{std::string("public.app-category.developer-tools")};
+        _field_category = std::string("public.app-category.developer-tools");
     }
     std::optional<std::string> _field_minimumSystemVersion;
     if (auto _iterator_minimumSystemVersion = _object->find("minimumSystemVersion"); _iterator_minimumSystemVersion != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_minimumSystemVersion->second) : doof::json_is_string(_iterator_minimumSystemVersion->second)))) { return doof::Failure<std::string>{"Field \"minimumSystemVersion\" expected string but got " + std::string(doof::json_type_name(_iterator_minimumSystemVersion->second))}; }
         _field_minimumSystemVersion = (_lenient ? doof::json_as_string_lenient(_iterator_minimumSystemVersion->second) : doof::json_as_string(_iterator_minimumSystemVersion->second));
     } else {
-        _field_minimumSystemVersion = std::string{std::string("11.0")};
+        _field_minimumSystemVersion = std::string("11.0");
     }
     return doof::Success<std::shared_ptr<MacOSAppConfig>>{std::make_shared<MacOSAppConfig>(_field_executableName, _field_bundleId, _field_displayName, _field_version, _field_iconPath.value(), _field_infoPlist.value(), _field_resources.value(), _field_embeddedLibraries.value(), _field_category.value(), _field_minimumSystemVersion.value())};
 }
@@ -148,35 +148,35 @@ doof::Result<std::shared_ptr<MacOSPackageConfig>, std::string> MacOSPackageConfi
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_distDirectory->second) : doof::json_is_string(_iterator_distDirectory->second)))) { return doof::Failure<std::string>{"Field \"distDirectory\" expected string but got " + std::string(doof::json_type_name(_iterator_distDirectory->second))}; }
         _field_distDirectory = (_lenient ? doof::json_as_string_lenient(_iterator_distDirectory->second) : doof::json_as_string(_iterator_distDirectory->second));
     } else {
-        _field_distDirectory = std::string{std::string("")};
+        _field_distDirectory = std::string("");
     }
     std::optional<std::string> _field_signing;
     if (auto _iterator_signing = _object->find("signing"); _iterator_signing != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_signing->second) : doof::json_is_string(_iterator_signing->second)))) { return doof::Failure<std::string>{"Field \"signing\" expected string but got " + std::string(doof::json_type_name(_iterator_signing->second))}; }
         _field_signing = (_lenient ? doof::json_as_string_lenient(_iterator_signing->second) : doof::json_as_string(_iterator_signing->second));
     } else {
-        _field_signing = std::string{std::string("developer-id")};
+        _field_signing = std::string("developer-id");
     }
     std::optional<std::string> _field_identity;
     if (auto _iterator_identity = _object->find("identity"); _iterator_identity != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_identity->second) : doof::json_is_string(_iterator_identity->second)))) { return doof::Failure<std::string>{"Field \"identity\" expected string but got " + std::string(doof::json_type_name(_iterator_identity->second))}; }
         _field_identity = (_lenient ? doof::json_as_string_lenient(_iterator_identity->second) : doof::json_as_string(_iterator_identity->second));
     } else {
-        _field_identity = std::string{std::string("")};
+        _field_identity = std::string("");
     }
     std::optional<bool> _field_sandbox;
     if (auto _iterator_sandbox = _object->find("sandbox"); _iterator_sandbox != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_sandbox->second) : doof::json_is_boolean(_iterator_sandbox->second)))) { return doof::Failure<std::string>{"Field \"sandbox\" expected boolean but got " + std::string(doof::json_type_name(_iterator_sandbox->second))}; }
         _field_sandbox = (_lenient ? doof::json_as_bool_lenient(_iterator_sandbox->second) : doof::json_as_bool(_iterator_sandbox->second));
     } else {
-        _field_sandbox = bool{false};
+        _field_sandbox = false;
     }
     std::optional<std::string> _field_entitlementsPath;
     if (auto _iterator_entitlementsPath = _object->find("entitlementsPath"); _iterator_entitlementsPath != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_entitlementsPath->second) : doof::json_is_string(_iterator_entitlementsPath->second)))) { return doof::Failure<std::string>{"Field \"entitlementsPath\" expected string but got " + std::string(doof::json_type_name(_iterator_entitlementsPath->second))}; }
         _field_entitlementsPath = (_lenient ? doof::json_as_string_lenient(_iterator_entitlementsPath->second) : doof::json_as_string(_iterator_entitlementsPath->second));
     } else {
-        _field_entitlementsPath = std::string{std::string("")};
+        _field_entitlementsPath = std::string("");
     }
     return doof::Success<std::shared_ptr<MacOSPackageConfig>>{std::make_shared<MacOSPackageConfig>(_field_distDirectory.value(), _field_signing.value(), _field_identity.value(), _field_sandbox.value(), _field_entitlementsPath.value())};
 }

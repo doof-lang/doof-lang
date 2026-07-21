@@ -26,7 +26,7 @@ doof::Result<std::shared_ptr<RunInvocation>, std::string> RunInvocation::fromJso
         if (!(doof::json_is_array(_iterator_arguments->second))) { return doof::Failure<std::string>{"Field \"arguments\" expected array but got " + std::string(doof::json_type_name(_iterator_arguments->second))}; }
         _field_arguments = [&]() { const auto* _array = doof::json_as_array(_iterator_arguments->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_arguments = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     auto _iterator_directory = _object->find("directory");
     if (_iterator_directory == _object->end()) { return doof::Failure<std::string>{"Missing required field \"directory\""}; }

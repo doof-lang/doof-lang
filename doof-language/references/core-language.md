@@ -2,7 +2,7 @@
 
 ## Design Philosophy
 
-1. Safety first: no data races, no implicit null, no unhandled recoverable errors.
+1. Safety first: no data races, no implicit absence, no unhandled recoverable errors.
 2. Explicitness: intent should be visible in the code.
 3. Immutability by default: mutation is opt-in.
 4. No exceptions: expected failures use `Result`; unrecoverable bugs use `panic(...)`.
@@ -10,7 +10,7 @@
 ## Hello World and Entry Points
 
 ```doof
-function main(): void {
+function main(): none {
     println("Hello, Doof!")
 }
 ```
@@ -18,9 +18,9 @@ function main(): void {
 A module with a `main()` function is executable. Valid signatures are:
 
 ```doof
-function main(): void
+function main(): none
 function main(): int
-function main(args: string[]): void
+function main(args: string[]): none
 function main(args: string[]): int
 ```
 
@@ -81,15 +81,18 @@ function factorial(n: int): int {
     return n * factorial(n - 1)
 }
 
-function add(a: int, b: int) => a + b
+function add(a: int, b: int): int => a + b
 ```
 
-Block-bodied functions with a non-`void` return type must return a value on
+Block-bodied functions with a non-`none` return type must return a value on
 every path. Falling through the closing brace is an error; `panic(...)` and an
-unconditional non-terminating loop count as non-fallthrough paths. `void`
+unconditional non-terminating loop count as non-fallthrough paths. `none`
 functions may complete normally.
 
-Return type inference works when the body is unambiguous.
+Omitting a named function or method return annotation means `none`, including
+for imported declarations. Functions that return values require an explicit
+return type. Lambda return types may still be inferred from context or their
+body.
 
 ### Calling Functions
 
@@ -113,7 +116,7 @@ Named calls match parameters by name. Any omitted parameter must have a default.
 `SourceLocation` is a builtin class for source attribution. Use `@caller` only in parameter or field defaults when you want the call or construction site:
 
 ```doof
-function info(message: string, source: SourceLocation = @caller): void {
+function info(message: string, source: SourceLocation = @caller): none {
     println(source.fileName + ":" + string(source.line))
 }
 
@@ -168,7 +171,7 @@ withTransaction() {
 Restrictions:
 
 - The call plus trailing lambda must be the final part of an expression statement.
-- The callback type must return `void`.
+- The callback type must return `none`.
 - `return` is forbidden inside the trailing lambda body.
 - Chaining from a trailing-lambda call is forbidden.
 
@@ -177,7 +180,7 @@ Use an explicit lambda for value-producing callbacks, binding initializers, assi
 ### Function Types and Modifiers
 
 ```doof
-type Callback = (value: int, label: string): void
+type Callback = (value: int, label: string): none
 type Predicate<T> = (item: T): bool
 ```
 
@@ -244,7 +247,8 @@ Other supported forms:
 - labeled `break` and `continue`
 - `if` expressions with `then`
 
-Plain `if value != null` checks help control flow but do not narrow the static type. Use explicit narrowing tools when you need a non-null or narrowed binding.
+Plain `if value != none` checks help control flow but do not narrow the static
+type. Use explicit narrowing tools when you need a present or narrowed binding.
 
 ## Pattern Matching
 
@@ -284,7 +288,7 @@ Rules:
 - Arithmetic: `+`, `-`, `*`, `/`, `\\`, `%`, `**`
 - Comparison: `==`, `!=`, `<`, `<=`, `>`, `>=`
 - Logical: `&&`, `||`, `!`
-- Null helpers: `??`, `?.`, `?[]`
+- Optional helpers: `??`, `?.`, `?[]`
 - Force access: postfix `!`, `!.`, `try!`, `try?`
 - Checked narrowing: `as`
 

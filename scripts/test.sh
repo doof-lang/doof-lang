@@ -10,3 +10,4 @@ fi
 
 DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/dist/doof" test "$repo_root/src"
 
+DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/scripts/install.test.sh" "$stdlib_root"

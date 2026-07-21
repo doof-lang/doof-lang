@@ -3,8 +3,8 @@
 import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NullType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, VoidType, WeakResolvedType,
+  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
+  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
@@ -15,7 +15,7 @@ import {
   FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
   IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
   IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
-  LambdaExpression, LongLiteral, MemberExpression, NamedType, NullLiteral,
+  LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
   NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
   ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
   ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
@@ -27,8 +27,8 @@ import {
 import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
-  nullType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType, voidType,
+  noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
+  substituteTypeParams, typeParameter, unknownType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -45,30 +45,30 @@ export function validateCheckedTypes(result: AnalysisResult): Diagnostic[] {
   return diagnostics
 }
 
-export function validateStatement(statement: Statement, module: string, diagnostics: Diagnostic[]): void {
+export function validateStatement(statement: Statement, module: string, diagnostics: Diagnostic[]): none {
   case statement {
     const_: ConstDeclaration -> { validateValue(const_, const_.resolvedType, const_.type_, module, diagnostics); validateExpression(const_.value, module, diagnostics) }
     readonly_: ReadonlyDeclaration -> { validateValue(readonly_, readonly_.resolvedType, readonly_.type_, module, diagnostics); validateExpression(readonly_.value, module, diagnostics) }
     binding: ImmutableBinding -> {
       validateValue(binding, binding.resolvedType, binding.type_, module, diagnostics)
       validateExpression(binding.value, module, diagnostics)
-      if binding.else_ != null { validateBlock(binding.else_!, module, diagnostics) }
+      if binding.else_ != none { validateBlock(binding.else_!, module, diagnostics) }
     }
     let_: LetDeclaration -> { validateValue(let_, let_.resolvedType, let_.type_, module, diagnostics); validateExpression(let_.value, module, diagnostics) }
     fn: FunctionDeclaration -> { validateFunction(fn, module, diagnostics) }
     class_: ClassDeclaration -> {
-      if class_.resolvedSymbol == null { addValidationError(module, class_.span, "Class '" + class_.name + "' has no resolved symbol", diagnostics) }
+      if class_.resolvedSymbol == none { addValidationError(module, class_.span, "Class '" + class_.name + "' has no resolved symbol", diagnostics) }
       validateTypeParameterConstraints(class_.typeParamConstraints, module, diagnostics)
       for implementation of class_.implements_ { validateTypeAnnotation(implementation, module, diagnostics) }
       for field of class_.fields {
-        if field.type_ != null { validateTypeAnnotation(field.type_!, module, diagnostics) }
+        if field.type_ != none { validateTypeAnnotation(field.type_!, module, diagnostics) }
         validateResolved(field.resolvedType, field.span, module, "field " + class_.name, diagnostics)
-        if field.defaultValue != null { validateExpression(field.defaultValue!, module, diagnostics) }
+        if field.defaultValue != none { validateExpression(field.defaultValue!, module, diagnostics) }
       }
       for method of class_.methods { validateFunction(method, module, diagnostics) }
     }
     interface_: InterfaceDeclaration -> {
-      if interface_.resolvedSymbol == null { addValidationError(module, interface_.span, "Interface '" + interface_.name + "' has no resolved symbol", diagnostics) }
+      if interface_.resolvedSymbol == none { addValidationError(module, interface_.span, "Interface '" + interface_.name + "' has no resolved symbol", diagnostics) }
       validateTypeParameterConstraints(interface_.typeParamConstraints, module, diagnostics)
       for field of interface_.fields {
         validateTypeAnnotation(field.type_, module, diagnostics)
@@ -76,7 +76,7 @@ export function validateStatement(statement: Statement, module: string, diagnost
       }
       for method of interface_.methods { validateFunction(method, module, diagnostics) }
     }
-    enum_: EnumDeclaration -> { for variant of enum_.variants { if variant.value != null { validateExpression(variant.value!, module, diagnostics) } } }
+    enum_: EnumDeclaration -> { for variant of enum_.variants { if variant.value != none { validateExpression(variant.value!, module, diagnostics) } } }
     alias: TypeAliasDeclaration -> {
       validateTypeParameterConstraints(alias.typeParamConstraints, module, diagnostics)
       validateTypeAnnotation(alias.type_, module, diagnostics)
@@ -85,7 +85,7 @@ export function validateStatement(statement: Statement, module: string, diagnost
     if_: IfStatement -> {
       validateExpression(if_.condition, module, diagnostics); validateBlock(if_.body, module, diagnostics)
       for branch of if_.elseIfs { validateExpression(branch.condition, module, diagnostics); validateBlock(branch.body, module, diagnostics) }
-      if if_.else_ != null { validateBlock(if_.else_!, module, diagnostics) }
+      if if_.else_ != none { validateBlock(if_.else_!, module, diagnostics) }
     }
     case_: CaseStatement -> {
       validateExpression(case_.subject, module, diagnostics)
@@ -97,23 +97,23 @@ export function validateStatement(statement: Statement, module: string, diagnost
         }
       }
     }
-    while_: WhileStatement -> { validateExpression(while_.condition, module, diagnostics); validateBlock(while_.body, module, diagnostics); if while_.then_ != null { validateBlock(while_.then_!, module, diagnostics) } }
+    while_: WhileStatement -> { validateExpression(while_.condition, module, diagnostics); validateBlock(while_.body, module, diagnostics); if while_.then_ != none { validateBlock(while_.then_!, module, diagnostics) } }
     for_: ForStatement -> {
-      if for_.init != null { validateStatement(for_.init!, module, diagnostics) }
-      if for_.condition != null { validateExpression(for_.condition!, module, diagnostics) }
+      if for_.init != none { validateStatement(for_.init!, module, diagnostics) }
+      if for_.condition != none { validateExpression(for_.condition!, module, diagnostics) }
       for update of for_.update { validateExpression(update, module, diagnostics) }
-      validateBlock(for_.body, module, diagnostics); if for_.then_ != null { validateBlock(for_.then_!, module, diagnostics) }
+      validateBlock(for_.body, module, diagnostics); if for_.then_ != none { validateBlock(for_.then_!, module, diagnostics) }
     }
-    forOf: ForOfStatement -> { validateExpression(forOf.iterable, module, diagnostics); validateBlock(forOf.body, module, diagnostics); if forOf.then_ != null { validateBlock(forOf.then_!, module, diagnostics) } }
+    forOf: ForOfStatement -> { validateExpression(forOf.iterable, module, diagnostics); validateBlock(forOf.body, module, diagnostics); if forOf.then_ != none { validateBlock(forOf.then_!, module, diagnostics) } }
     with_: WithStatement -> {
       for binding of with_.bindings {
-        if binding.type_ != null { validateTypeAnnotation(binding.type_!, module, diagnostics) }
+        if binding.type_ != none { validateTypeAnnotation(binding.type_!, module, diagnostics) }
         validateResolved(binding.resolvedType, binding.span, module, "with binding " + binding.name, diagnostics)
         validateExpression(binding.value, module, diagnostics)
       }
       validateBlock(with_.body, module, diagnostics)
     }
-    return_: ReturnStatement -> { if return_.value != null { validateExpression(return_.value!, module, diagnostics) } }
+    return_: ReturnStatement -> { if return_.value != none { validateExpression(return_.value!, module, diagnostics) } }
     yield_: YieldStatement -> { validateExpression(yield_.value, module, diagnostics) }
     assignment: YieldBlockAssignmentStatement -> { validateExpression(assignment.value, module, diagnostics); validateResolved(assignment.resolvedType, assignment.span, module, "yield-block assignment", diagnostics) }
     expression: ExpressionStatement -> { validateExpression(expression.expression, module, diagnostics) }
@@ -134,19 +134,19 @@ export function validateStatement(statement: Statement, module: string, diagnost
   }
 }
 
-export function validateValue(statement: Statement, resolvedType: ResolvedType | null, annotation: TypeAnnotation | null, module: string, diagnostics: Diagnostic[]): void {
-  if annotation != null { validateTypeAnnotation(annotation!, module, diagnostics) }
+export function validateValue(statement: Statement, resolvedType: ResolvedType | none, annotation: TypeAnnotation | none, module: string, diagnostics: Diagnostic[]): none {
+  if annotation != none { validateTypeAnnotation(annotation!, module, diagnostics) }
   validateResolved(resolvedType, statement.span, module, "value", diagnostics)
 }
 
-export function validateFunction(fn: FunctionDeclaration, module: string, diagnostics: Diagnostic[]): void {
+export function validateFunction(fn: FunctionDeclaration, module: string, diagnostics: Diagnostic[]): none {
   validateResolved(fn.resolvedType, fn.span, module, "function " + fn.name, diagnostics)
   validateTypeParameterConstraints(fn.typeParamConstraints, module, diagnostics)
-  if fn.returnType != null { validateTypeAnnotation(fn.returnType!, module, diagnostics) }
+  if fn.returnType != none { validateTypeAnnotation(fn.returnType!, module, diagnostics) }
   for parameter of fn.params {
-    if parameter.type_ != null { validateTypeAnnotation(parameter.type_!, module, diagnostics) }
+    if parameter.type_ != none { validateTypeAnnotation(parameter.type_!, module, diagnostics) }
     validateResolved(parameter.resolvedType, parameter.span, module, "parameter " + parameter.name, diagnostics)
-    if parameter.defaultValue != null { validateExpression(parameter.defaultValue!, module, diagnostics) }
+    if parameter.defaultValue != none { validateExpression(parameter.defaultValue!, module, diagnostics) }
   }
   case fn.body {
     block: Block -> { validateBlock(block, module, diagnostics) }
@@ -154,9 +154,9 @@ export function validateFunction(fn: FunctionDeclaration, module: string, diagno
   }
 }
 
-function validateTypeParameterConstraints(constraints: TypeParameterConstraint[], module: string, diagnostics: Diagnostic[]): void {
+function validateTypeParameterConstraints(constraints: TypeParameterConstraint[], module: string, diagnostics: Diagnostic[]): none {
   for constraint of constraints {
-    if constraint.type_ == null { continue }
+    if constraint.type_ == none { continue }
     case constraint.type_! {
       named: NamedType -> {
         if named.typeArgs.length == 0 && (named.name == "JsonSerializable" || named.name == "Reflectable") { continue }
@@ -167,23 +167,23 @@ function validateTypeParameterConstraints(constraints: TypeParameterConstraint[]
   }
 }
 
-export function validateBlock(block: Block, module: string, diagnostics: Diagnostic[]): void {
+export function validateBlock(block: Block, module: string, diagnostics: Diagnostic[]): none {
   for statement of block.statements { validateStatement(statement, module, diagnostics) }
 }
 
-export function validatePattern(pattern: CasePattern, module: string, diagnostics: Diagnostic[]): void {
+export function validatePattern(pattern: CasePattern, module: string, diagnostics: Diagnostic[]): none {
   case pattern {
     type_: TypePattern -> { validateTypeAnnotation(type_.type_, module, diagnostics); validateResolved(type_.resolvedType, type_.span, module, "case pattern", diagnostics) }
     value: ValuePattern -> { validateExpression(value.value, module, diagnostics) }
     range: RangePattern -> {
-      if range.start != null { validateExpression(range.start!, module, diagnostics) }
-      if range.end != null { validateExpression(range.end!, module, diagnostics) }
+      if range.start != none { validateExpression(range.start!, module, diagnostics) }
+      if range.end != none { validateExpression(range.end!, module, diagnostics) }
     }
     _: WildcardPattern -> { }
   }
 }
 
-export function validateExpression(expression: Expression, module: string, diagnostics: Diagnostic[]): void {
+export function validateExpression(expression: Expression, module: string, diagnostics: Diagnostic[]): none {
   validateResolved(expression.resolvedType, expression.span, module, "expression " + expression.kind, diagnostics)
   case expression {
     string_: StringLiteral -> { for interpolation of string_.interpolations { validateExpression(interpolation, module, diagnostics) } }
@@ -200,16 +200,16 @@ export function validateExpression(expression: Expression, module: string, diagn
     }
     array: ArrayLiteral -> { for item of array.elements { validateExpression(item, module, diagnostics) } }
     object: ObjectLiteral -> {
-      if object.spread != null { validateExpression(object.spread!, module, diagnostics) }
+      if object.spread != none { validateExpression(object.spread!, module, diagnostics) }
       for property of object.properties {
         validateResolved(property.resolvedType, property.span, module, "object property", diagnostics)
-        if property.key != null { validateExpression(property.key!, module, diagnostics) }
-        if property.value != null { validateExpression(property.value!, module, diagnostics) }
+        if property.key != none { validateExpression(property.key!, module, diagnostics) }
+        if property.value != none { validateExpression(property.value!, module, diagnostics) }
       }
-      if object.resolvedType != null {
+      if object.resolvedType != none {
         case object.resolvedType! {
           _: ClassType -> {
-            if object.resolvedClass == null { addValidationError(module, object.span, "Class object literal has no resolved class", diagnostics) }
+            if object.resolvedClass == none { addValidationError(module, object.span, "Class object literal has no resolved class", diagnostics) }
           }
           _ -> { }
         }
@@ -217,11 +217,11 @@ export function validateExpression(expression: Expression, module: string, diagn
     }
     tuple: TupleLiteral -> { for item of tuple.elements { validateExpression(item, module, diagnostics) } }
     lambda: LambdaExpression -> {
-      if lambda.returnType != null { validateTypeAnnotation(lambda.returnType!, module, diagnostics) }
+      if lambda.returnType != none { validateTypeAnnotation(lambda.returnType!, module, diagnostics) }
       for parameter of lambda.params {
-        if parameter.type_ != null { validateTypeAnnotation(parameter.type_!, module, diagnostics) }
+        if parameter.type_ != none { validateTypeAnnotation(parameter.type_!, module, diagnostics) }
         validateResolved(parameter.resolvedType, parameter.span, module, "lambda parameter", diagnostics)
-        if parameter.defaultValue != null { validateExpression(parameter.defaultValue!, module, diagnostics) }
+        if parameter.defaultValue != none { validateExpression(parameter.defaultValue!, module, diagnostics) }
       }
       case lambda.body {
         block: Block -> { validateBlock(block, module, diagnostics) }
@@ -244,21 +244,21 @@ export function validateExpression(expression: Expression, module: string, diagn
     construct: ConstructExpression -> {
       if construct.type_ != "Success" && construct.type_ != "Failure" {
         validateResolved(construct.resolvedConstructedType, construct.span, module, "constructed type", diagnostics)
-        if construct.resolvedClass == null { addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved class", diagnostics) }
+        if construct.resolvedClass == none { addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved class", diagnostics) }
         else {
           constructor := classConstructor(construct.resolvedClass!)
-          if constructor != null && construct.resolvedConstructor == null && !spanInsideFunction(construct.span, constructor!) {
+          if constructor != none && construct.resolvedConstructor == none && !spanInsideFunction(construct.span, constructor!) {
             addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved constructor", diagnostics)
           }
         }
       }
-      if construct.resolvedConstructor != null {
+      if construct.resolvedConstructor != none {
         validateResolved(construct.resolvedConstructor!.resolvedType, construct.span, module, "constructor " + construct.type_, diagnostics)
       }
       for argument of construct.typeArgs { validateTypeAnnotation(argument, module, diagnostics) }
       for property of construct.args {
         validateResolved(property.resolvedType, property.span, module, "constructor property", diagnostics)
-        if property.value != null { validateExpression(property.value!, module, diagnostics) }
+        if property.value != none { validateExpression(property.value!, module, diagnostics) }
       }
     }
     async_: AsyncExpression -> {
@@ -271,16 +271,16 @@ export function validateExpression(expression: Expression, module: string, diagn
     actor: ActorCreationExpression -> { for argument of actor.args { validateExpression(argument, module, diagnostics) } }
     as_: AsExpression -> { validateExpression(as_.expression, module, diagnostics); validateTypeAnnotation(as_.targetType, module, diagnostics) }
     identifier: Identifier -> {
-      if identifier.resolvedBinding == null { addValidationError(module, identifier.span, "Identifier '" + identifier.name + "' has no resolved binding", diagnostics) }
+      if identifier.resolvedBinding == none { addValidationError(module, identifier.span, "Identifier '" + identifier.name + "' has no resolved binding", diagnostics) }
       else { validateResolved(identifier.resolvedBinding!.type_, identifier.span, module, "binding " + identifier.name, diagnostics) }
     }
     _ -> { }
   }
 }
 
-export function classConstructor(class_: ClassDeclaration): FunctionDeclaration | null {
+export function classConstructor(class_: ClassDeclaration): FunctionDeclaration | none {
   for method of class_.methods { if method.name == "constructor" { return method } }
-  return null
+  return none
 }
 
 export function spanInsideFunction(span: SourceSpan, fn: FunctionDeclaration): bool {
@@ -291,7 +291,7 @@ export function spanInsideFunction(span: SourceSpan, fn: FunctionDeclaration): b
   return false
 }
 
-export function validateTypeAnnotation(annotation: TypeAnnotation, module: string, diagnostics: Diagnostic[]): void {
+export function validateTypeAnnotation(annotation: TypeAnnotation, module: string, diagnostics: Diagnostic[]): none {
   case annotation {
     named: NamedType -> {
       validateResolved(named.resolvedType, named.span, module, "type annotation", diagnostics)
@@ -317,8 +317,8 @@ export function validateTypeAnnotation(annotation: TypeAnnotation, module: strin
   }
 }
 
-export function validateResolved(resolvedType: ResolvedType | null, span: SourceSpan, module: string, owner: string, diagnostics: Diagnostic[]): void {
-  if resolvedType == null { addValidationError(module, span, "Missing resolved type for " + owner, diagnostics); return }
+export function validateResolved(resolvedType: ResolvedType | none, span: SourceSpan, module: string, owner: string, diagnostics: Diagnostic[]): none {
+  if resolvedType == none { addValidationError(module, span, "Missing resolved type for " + owner, diagnostics); return }
   case resolvedType! {
     _: UnknownType -> { addValidationError(module, span, "Unknown resolved type for " + owner, diagnostics) }
     class_: ClassType -> { for argument of class_.typeArgs { validateResolved(argument, span, module, owner + " type argument", diagnostics) } }
@@ -339,12 +339,12 @@ export function validateResolved(resolvedType: ResolvedType | null, span: Source
       for parameter of function_.params { validateResolved(parameter.type_, span, module, owner + " parameter", diagnostics) }
       validateResolved(function_.returnType, span, module, owner + " return", diagnostics)
     }
-    parameter: TypeParameterType -> { if parameter.constraint != null { validateResolved(parameter.constraint, span, module, owner + " constraint", diagnostics) } }
+    parameter: TypeParameterType -> { if parameter.constraint != none { validateResolved(parameter.constraint, span, module, owner + " constraint", diagnostics) } }
     _ -> { }
   }
 }
 
-export function addValidationError(module: string, span: SourceSpan, message: string, diagnostics: Diagnostic[]): void {
+export function addValidationError(module: string, span: SourceSpan, message: string, diagnostics: Diagnostic[]): none {
   diagnostics.push(Diagnostic { severity: "error", message: message + " at " + string(span.start.line) + ":" + string(span.start.column), span: checkerSemanticSpan(span), module })
 }
 

@@ -26,9 +26,9 @@ export class ModuleChecker {
 function checkModule(state: CheckerState, entry: string): CheckResult {
   state.diagnostics = []
   state.info = findModule(state.result, if entry.endsWith(".do") then entry else entry + ".do")
-  if state.info == null { return CheckResult { diagnostics: state.diagnostics } }
+  if state.info == none { return CheckResult { diagnostics: state.diagnostics } }
   discoverInterfaceImplementations(state.result)
-  state.moduleScope = Scope { parent: null }
+  state.moduleScope = Scope { parent: none }
   predeclareModuleBindings(state.info!, state.moduleScope!, state.result)
   let retiredActors: Binding[] = []
   for statement of state.info!.program.statements {

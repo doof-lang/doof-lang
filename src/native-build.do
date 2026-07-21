@@ -228,7 +228,7 @@ function wasmExportList(names: string[]): string {
   return result + "]"
 }
 
-function appendObjectArguments(arguments: string[], sourcePath: string, outputPath: string): void {
+function appendObjectArguments(arguments: string[], sourcePath: string, outputPath: string): none {
   arguments.push("-c")
   arguments.push(sourcePath)
   arguments.push("-o")

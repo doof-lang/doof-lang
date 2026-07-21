@@ -73,13 +73,13 @@ println(formatJsonValue(u.toJsonObject()))
 | `string` | JSON string |
 | `char` | JSON string (single character) |
 | `bool` | JSON boolean |
-| `null` | JSON `null` |
+| `none` | JSON `null` |
 | Class or struct instances | JSON object (recursive) |
 | `T[]` | JSON array |
 | `Tuple<T1, T2, ...>` | JSON array |
 | `Map<string, T>` | JSON object when `T` is serializable |
 | Enums | JSON string (member name) |
-| `T | null` | Value or `null` |
+| `T | none` | Value or JSON `null` |
 | `JsonValue` | Preserved as-is |
 
 ### Non-Serializable Types
@@ -91,13 +91,12 @@ The following types are not JSON-serializable. A compile-time error is produced 
 - `Actor<T>`
 - `Promise<T>`
 - `Result<T, E>`
-- `void`
 - Classes or structs with a dedicated static `constructor(...): Self` or
   `constructor(...): Result<Self, E>` method
 
 ```doof
 class Bad {
-  callback: (int) → void
+  callback: (int) → none
 }
 
 b := Bad { callback: (x) => println(x) }
@@ -202,13 +201,13 @@ class Todo {
   done: bool
 }
 
-Todo.fromJsonValue({ title: null, done: 1 }, true)
+Todo.fromJsonValue({ title: none, done: 1 }, true)
 // Success: Todo { title: "", done: true }
 ```
 
 When `lenient` is `true`:
 
-- Required `string` fields accept `null` as `""`.
+- Required `string` fields accept JSON `null` (source `none`) as `""`.
 - `string` fields also accept booleans and numbers via stringification.
 - `bool` fields accept booleans, numbers (`0` => `false`, non-zero => `true`), and strings `"true"`, `"false"`, `"1"`, and `"0"`.
 - Numeric fields accept booleans as `1` or `0`.

@@ -34,22 +34,24 @@ Rules:
 | `float`, `double` | number |
 | `string`, `char` | string |
 | `bool` | boolean |
-| `null` | null |
+| `none` | JSON `null` |
 | Class or struct instances | object (recursive) |
 | `T[]` | array |
 | `Tuple<T1, T2>` | array |
 | Enums (opaque) | string (member name) |
 | Enums (string) | string (value) |
 | Enums (int) | number (value) |
-| `T | null` | value or null |
+| `T | none` | value or JSON `null` |
 
-**Not serializable:** function types, `weak` references, `Actor<T>`, `Promise<T>`, `Result<T,E>`, `void`, classes or structs with a dedicated static `constructor(...): Self`.
+**Not serializable:** function types, `weak` references, `Actor<T>`,
+`Promise<T>`, `Result<T,E>`, and classes or structs with a dedicated static
+`constructor(...): Self`.
 
 ### `.fromJsonValue()` — Static Method
 
 ```doof
 result := Point.fromJsonValue({ x: 1.5, y: 2.5 })  // Result<Point, string>
-lenient := Point.fromJsonValue({ x: 1, y: null }, true)
+lenient := Point.fromJsonValue({ x: 1, y: none }, true)
 ```
 
 Generic helpers can deserialize through a type parameter when it is explicitly
@@ -76,7 +78,7 @@ Rules:
 - Non-object JsonValue input produces `Failure`
 
 When `lenient` is `true`:
-- Required `string` fields accept `null` as `""`
+- Required `string` fields accept JSON `null` (represented by source `none`) as `""`
 - `string` fields accept booleans and numbers via stringification
 - `bool` fields accept numbers and `"true"` / `"false"` / `"1"` / `"0"`
 - Numeric fields accept booleans as `1` / `0`
@@ -168,7 +170,7 @@ or structs that are eligible for metadata and automatic JSON generation.
 | `float`, `double` | `{ "type": "number" }` |
 | `string`, `char` | `{ "type": "string" }` |
 | `bool` | `{ "type": "boolean" }` |
-| `void` | `{ "type": "null" }` |
+| `none` | `{ "type": "null" }` |
 | `T[]` | `{ "type": "array", "items": { ... } }` |
 | `(T, U)` | `{ "type": "array", "prefixItems": [...] }` |
 | `T \| U` | `{ "anyOf": [...] }` |

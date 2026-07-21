@@ -55,23 +55,25 @@ if x > 0 {
 }
 ```
 
-### No Implicit Null Narrowing in If
+### No Implicit `none` Narrowing in If
 
 ```javascript
-value: int | null := getValue()
+value: int | none := getValue()
 
-if value != null {
+if value != none {
     print(value!)  // explicit assertion still required
 }
 
-if value == null {
+if value == none {
     return
 }
 
 print(value!)
 ```
 
-Null checks are still useful for control flow, but they do not change the static type of the checked value. For explicit guard-style narrowing, prefer declaration-`else`, `case`, `as`, or `!`.
+`none` checks are still useful for control flow, but they do not change the
+static type of the checked value. For explicit guard-style narrowing, prefer
+declaration-`else`, `case`, `as`, or `!`.
 
 ---
 
@@ -400,9 +402,9 @@ for let i = 0; i < 3; i += 1 {
 ## Early Return
 
 ```javascript
-function findUser(id: int): User | null {
+function findUser(id: int): User | none {
     if id < 0 {
-        return null
+        return none
     }
 
     for user of users {
@@ -411,7 +413,7 @@ function findUser(id: int): User | null {
         }
     }
 
-    return null
+    return none
 }
 ```
 
@@ -453,27 +455,27 @@ for let i = 0; i < 10; i += 1 {
 
 ```javascript
 // ❌ Deep nesting
-function process(data: Data | null): Result | null {
-    if data != null {
+function process(data: Data | none): Result | none {
+    if data != none {
         if data.isValid() {
             if data.hasPermission() {
                 return compute(data)
             }
         }
     }
-    return null
+    return none
 }
 
 // ✅ Early returns flatten the code
-function process(data: Data | null): Result | null {
-    if data == null {
-        return null
+function process(data: Data | none): Result | none {
+    if data == none {
+        return none
     }
     if !data.isValid() {
-        return null
+        return none
     }
     if !data.hasPermission() {
-        return null
+        return none
     }
     return compute(data)
 }

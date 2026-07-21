@@ -77,6 +77,7 @@ namespace app_src_lexer_ {
     As,
     True,
     False,
+    None,
     Null,
     Void,
     Try,
@@ -194,6 +195,7 @@ inline const char* TokenType_name(TokenType value) {
     case TokenType::As: return "As";
     case TokenType::True: return "True";
     case TokenType::False: return "False";
+    case TokenType::None: return "None";
     case TokenType::Null: return "Null";
     case TokenType::Void: return "Void";
     case TokenType::Try: return "Try";
@@ -312,6 +314,7 @@ inline std::optional<TokenType> TokenType_fromName(std::string_view value) {
   if (value == "As") return TokenType::As;
   if (value == "True") return TokenType::True;
   if (value == "False") return TokenType::False;
+  if (value == "None") return TokenType::None;
   if (value == "Null") return TokenType::Null;
   if (value == "Void") return TokenType::Void;
   if (value == "Try") return TokenType::Try;
@@ -430,6 +433,7 @@ inline std::optional<TokenType> TokenType_fromValue(int32_t value) {
     case TokenType::As: return TokenType::As;
     case TokenType::True: return TokenType::True;
     case TokenType::False: return TokenType::False;
+    case TokenType::None: return TokenType::None;
     case TokenType::Null: return TokenType::Null;
     case TokenType::Void: return TokenType::Void;
     case TokenType::Try: return TokenType::Try;

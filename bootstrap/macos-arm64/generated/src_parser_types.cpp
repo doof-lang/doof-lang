@@ -97,7 +97,7 @@ std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_s
         return doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(std::make_shared<::app_src_ast_::AstFunctionType>(std::string("function-type"), params, returnType, std::monostate{}, parser->span(start)));
     }
     auto nameToken = parser->advance();
-    if (((nameToken.kind != ::app_src_lexer_::TokenType::Identifier) && (nameToken.kind != ::app_src_lexer_::TokenType::Void)) && (nameToken.kind != ::app_src_lexer_::TokenType::Null)) {
+    if ((((nameToken.kind != ::app_src_lexer_::TokenType::Identifier) && (nameToken.kind != ::app_src_lexer_::TokenType::None)) && (nameToken.kind != ::app_src_lexer_::TokenType::Void)) && (nameToken.kind != ::app_src_lexer_::TokenType::Null)) {
         parser->fail(std::string("Expected a type name"));
     }
     const auto name = parser->text(nameToken);

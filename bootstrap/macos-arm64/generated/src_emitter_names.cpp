@@ -30,7 +30,7 @@ doof::Result<std::shared_ptr<ModuleNamespaceMapping>, std::string> ModuleNamespa
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_outputRoot->second) : doof::json_is_string(_iterator_outputRoot->second)))) { return doof::Failure<std::string>{"Field \"outputRoot\" expected string but got " + std::string(doof::json_type_name(_iterator_outputRoot->second))}; }
         _field_outputRoot = (_lenient ? doof::json_as_string_lenient(_iterator_outputRoot->second) : doof::json_as_string(_iterator_outputRoot->second));
     } else {
-        _field_outputRoot = std::string{std::string("")};
+        _field_outputRoot = std::string("");
     }
     return doof::Success<std::shared_ptr<ModuleNamespaceMapping>>{std::make_shared<ModuleNamespaceMapping>(_field_logicalPrefix, _field_packageName, _field_outputRoot.value())};
 }

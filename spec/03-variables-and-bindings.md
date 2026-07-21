@@ -262,7 +262,7 @@ config := loadConfig()                // Binding is immutable; value interior ma
 
 // ✅ Valid — functions hoist
 bar(5)  // Works — functions hoist
-function greet(name: string): void => print("Hello, " + name)
+function greet(name: string): none => print("Hello, " + name)
 function bar(x: int): int => x * 12
 
 // ❌ Invalid at global scope

@@ -64,7 +64,7 @@ relative remaining path for sub-routing. Named parameters are retained in
 
 `Router` provides HTTP verb helpers, any-method `route` prefix matching,
 method-specific prefix routes, WebSocket routes, and `staticFiles`. `handle`
-returns `null` when no path matches and a 405 response with `Allow` when only
+returns `none` when no path matches and a 405 response with `Allow` when only
 the method fails. Normal HTTP handlers do not receive WebSocket upgrades.
 
 Use `pathToFileSystemPath(root, path)` or

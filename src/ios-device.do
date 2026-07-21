@@ -46,30 +46,30 @@ class IOSDeviceCommandResult {
   error: string = ""
 }
 
-function jsonObjectField(object: JsonObject, name: string): JsonValue | null {
-  if !object.has(name) { return null }
-  value := object.get(name) else { return null }
+function jsonObjectField(object: JsonObject, name: string): JsonValue | none {
+  if !object.has(name) { return none }
+  value := object.get(name) else { return none }
   return value
 }
 
-function jsonObjectValue(value: JsonValue | null): JsonObject | null {
-  if value == null { return null }
+function jsonObjectValue(value: JsonValue | none): JsonObject | none {
+  if value == none { return none }
   case value! {
     object: JsonObject -> return object
-    _ -> return null
+    _ -> return none
   }
 }
 
-function jsonArrayValue(value: JsonValue | null): JsonValue[] {
-  if value == null { return [] }
+function jsonArrayValue(value: JsonValue | none): JsonValue[] {
+  if value == none { return [] }
   case value! {
     array: JsonValue[] -> return array
     _ -> return []
   }
 }
 
-function jsonStringValue(value: JsonValue | null): string {
-  if value == null { return "" }
+function jsonStringValue(value: JsonValue | none): string {
+  if value == none { return "" }
   case value! {
     text: string -> return text
     _ -> return ""
@@ -80,22 +80,22 @@ function jsonStringValue(value: JsonValue | null): string {
 export function parseConnectedIOSDevices(rawJson: string): Result<IOSDevice[], string> {
   parsed := parseJsonValue(rawJson) else error { return Failure(error) }
   root := jsonObjectValue(parsed)
-  if root == null { return Failure("Invalid devicectl device JSON: expected an object") }
+  if root == none { return Failure("Invalid devicectl device JSON: expected an object") }
   result := jsonObjectValue(jsonObjectField(root!, "result"))
-  if result == null { return Success([]) }
+  if result == none { return Success([]) }
   values := jsonArrayValue(jsonObjectField(result!, "devices"))
   let devices: IOSDevice[] = []
   for value of values {
     device := jsonObjectValue(value)
-    if device == null { continue }
+    if device == none { continue }
     identifier := jsonStringValue(jsonObjectField(device!, "identifier"))
     deviceProperties := jsonObjectValue(jsonObjectField(device!, "deviceProperties"))
     hardwareProperties := jsonObjectValue(jsonObjectField(device!, "hardwareProperties"))
     connectionProperties := jsonObjectValue(jsonObjectField(device!, "connectionProperties"))
-    name := if deviceProperties == null then "" else jsonStringValue(jsonObjectField(deviceProperties!, "name"))
-    platformName := if hardwareProperties == null then "" else jsonStringValue(jsonObjectField(hardwareProperties!, "platform"))
-    reality := if hardwareProperties == null then "" else jsonStringValue(jsonObjectField(hardwareProperties!, "reality"))
-    tunnelState := if connectionProperties == null then "" else jsonStringValue(jsonObjectField(connectionProperties!, "tunnelState"))
+    name := if deviceProperties == none then "" else jsonStringValue(jsonObjectField(deviceProperties!, "name"))
+    platformName := if hardwareProperties == none then "" else jsonStringValue(jsonObjectField(hardwareProperties!, "platform"))
+    reality := if hardwareProperties == none then "" else jsonStringValue(jsonObjectField(hardwareProperties!, "reality"))
+    tunnelState := if connectionProperties == none then "" else jsonStringValue(jsonObjectField(connectionProperties!, "tunnelState"))
     if identifier == "" || platformName != "iOS" || tunnelState != "connected" { continue }
     if reality != "" && reality != "physical" { continue }
     devices.push(IOSDevice { identifier, name: if name == "" then identifier else name })
@@ -189,12 +189,12 @@ export function selectProvisioningProfile(
   profiles: IOSProvisioningProfile[],
   nowEpochMs: long,
 ): Result<IOSProvisioningProfile, string> {
-  let selected: IOSProvisioningProfile | null = null
+  let selected: IOSProvisioningProfile | none = none
   for profile of profiles {
     if !profileMatchesBundleId(profile.applicationIdentifier, bundleId) { continue }
-    if selected == null || betterProvisioningProfile(profile, selected!, bundleId, nowEpochMs) { selected = profile }
+    if selected == none || betterProvisioningProfile(profile, selected!, bundleId, nowEpochMs) { selected = profile }
   }
-  if selected == null {
+  if selected == none {
     return Failure("Could not auto-detect a provisioning profile for bundle id \"" + bundleId + "\". Pass --ios-provisioning-profile.")
   }
   return Success(selected!)
@@ -255,7 +255,7 @@ export function validateIOSAdHocSigning(
   identityName: string,
   bundleId: string,
   nowEpochMs: long,
-): Result<void, string> {
+): Result<none, string> {
   if !profileMatchesBundleId(profile.applicationIdentifier, bundleId) {
     return Failure(
       "Provisioning profile application-identifier \"" + profile.applicationIdentifier +
@@ -277,11 +277,11 @@ export function validateIOSAdHocSigning(
   if !identityName.startsWith("Apple Distribution:") && !identityName.startsWith("iPhone Distribution:") {
     return Failure("iOS Ad Hoc packaging requires an Apple Distribution signing identity, got \"" + identityName + "\"")
   }
-  let selected: IOSCodesignIdentity | null = null
+  let selected: IOSCodesignIdentity | none = none
   for identity of identities {
     if identity.name == identityName { selected = identity; break }
   }
-  if selected == null {
+  if selected == none {
     return Failure("Configured iOS signing identity is not currently valid: \"" + identityName + "\"")
   }
   if !profile.certFingerprints.contains(selected!.fingerprint) {
@@ -300,14 +300,14 @@ function hostPlatform(): string {
 
 function devicePath(directory: string, name: string): string => join([directory, name])
 
-function ensureDirectory(path: string): void {
+function ensureDirectory(path: string): none {
   if path == "" || exists(path) { return }
   parent := dirname(path)
   if parent != path { ensureDirectory(parent) }
   try! mkdir(path)
 }
 
-function removeTree(path: string): void {
+function removeTree(path: string): none {
   if !exists(path) { return }
   if isDirectory(path) {
     for entry of try! readDir(path) { removeTree(devicePath(path, entry.name)) }
@@ -334,7 +334,7 @@ function deviceCommandText(command: string, arguments: string[], description: st
   return Success(output)
 }
 
-function decodeProvisioningProfile(profilePath: string, decodedPath: string): Result<void, string> {
+function decodeProvisioningProfile(profilePath: string, decodedPath: string): Result<none, string> {
   securityResult := runDeviceCommand("security", ["cms", "-D", "-i", profilePath])
   if securityResult.exitCode == 0 {
     try! writeText(decodedPath, securityResult.output)
@@ -360,7 +360,7 @@ function resolveUserPath(path: string): string {
   return try! absolute(path)
 }
 
-function appendUnique(values: string[], value: string): void {
+function appendUnique(values: string[], value: string): none {
   if !values.contains(value) { values.push(value) }
 }
 
@@ -543,7 +543,7 @@ export function resolveIOSDeviceIdentifier(overrideIdentifier: string, workDirec
   return selectIOSDeviceIdentifier("", devices)
 }
 
-function collectNestedIOSCode(path: string, results: string[]): void {
+function collectNestedIOSCode(path: string, results: string[]): none {
   if !exists(path) { return }
   if isDirectory(path) {
     if path.endsWith(".framework") || path.endsWith(".appex") { results.push(path); return }
@@ -559,7 +559,7 @@ export function signIOSDeviceApp(
   bundleId: string,
   options: IOSDeviceSigningOptions,
   workDirectory: string,
-): Result<void, string> {
+): Result<none, string> {
   if hostPlatform() != "macos" { return Failure("iOS device signing is only supported on macOS") }
   if !exists(options.provisioningProfilePath) {
     return Failure("Provisioning profile not found: " + options.provisioningProfilePath)

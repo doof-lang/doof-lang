@@ -57,10 +57,10 @@ function planPackageSupportFiles(
   project: ProjectEmission,
   graph: ModuleGraphEmission,
   package_: NativePackageInput,
-): void {
+): none {
   for module of graph.modules {
     relativeModulePath := logicalSuffix(module.modulePath, package_.logicalPrefix)
-    if relativeModulePath == null { continue }
+    if relativeModulePath == none { continue }
     relativeHeaderPath := replaceDoExtension(relativeModulePath!)
     addSupportFile(project.supportFiles, ProjectSupportFile {
       relativePath: projectJoinPath(package_.outputRoot, relativeHeaderPath),
@@ -72,7 +72,7 @@ function planPackageSupportFiles(
   }
 }
 
-function planPackageNativeBuild(project: ProjectEmission, package_: NativePackageInput): void {
+function planPackageNativeBuild(project: ProjectEmission, package_: NativePackageInput): none {
   native := package_.manifest.nativeBuild
   let copiedAny = false
 
@@ -133,10 +133,10 @@ function addNativeCopy(
   return relativePath
 }
 
-function logicalSuffix(path: string, prefix: string): string | null {
+function logicalSuffix(path: string, prefix: string): string | none {
   if path == prefix { return "" }
   boundary := prefix + "/"
-  if !path.startsWith(boundary) { return null }
+  if !path.startsWith(boundary) { return none }
   return path.substring(boundary.length, path.length)
 }
 
@@ -172,7 +172,7 @@ function projectParentPath(path: string): string {
   return path.substring(0, separator)
 }
 
-function addSupportFile(files: ProjectSupportFile[], file: ProjectSupportFile): void {
+function addSupportFile(files: ProjectSupportFile[], file: ProjectSupportFile): none {
   for existing of files {
     if existing.relativePath == file.relativePath {
       if existing.content != file.content {
@@ -184,11 +184,11 @@ function addSupportFile(files: ProjectSupportFile[], file: ProjectSupportFile): 
   files.push(file)
 }
 
-function appendUniqueValues(target: string[], values: string[]): void {
+function appendUniqueValues(target: string[], values: string[]): none {
   for value of values { appendUnique(target, value) }
 }
 
-function appendUnique(target: string[], value: string): void {
+function appendUnique(target: string[], value: string): none {
   for existing of target { if existing == value { return } }
   target.push(value)
 }

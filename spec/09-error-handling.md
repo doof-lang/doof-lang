@@ -76,7 +76,7 @@ return Failure { error: .InvalidFormat }
 Either channel may be payloadless:
 
 ```doof
-function save(): Result<void, string> {
+function save(): Result<none, string> {
     if !canWrite() {
         return Failure("disk full")
     }
@@ -85,11 +85,11 @@ function save(): Result<void, string> {
 }
 ```
 
-`Success()` and `Success {}` are valid only for `Result<void, E>`, where the
+`Success()` and `Success {}` are valid only for `Result<none, E>`, where the
 success state carries no payload. `Success(value)` and
-`Success { value: value }` are valid only for non-void success types.
+`Success { value: value }` are valid only for present success types.
 
-Likewise, `Failure()` and `Failure {}` construct `Failure<void>`. That arm has
+Likewise, `Failure()` and `Failure {}` construct `Failure<none>`. That arm has
 no `.error` member, cannot be captured by `else error` or a failure case binding,
 and propagation or panic paths do not attempt to format an error payload.
 
@@ -203,7 +203,7 @@ Rules:
 Supported forms:
 
 ```doof
-try step()                 // Result<void, E>; no value is bound
+try step()                 // Result<none, E>; no value is bound
 try value := expr          // immutable binding
 try value: Type := expr    // typed immutable binding
 try readonly value = expr  // readonly declaration
@@ -214,8 +214,8 @@ try [a, _, c] := expr      // array destructuring
 try { name, age } := expr  // named destructuring
 ```
 
-`Result<void, E>` can be used only with the bare `try expr` form. Binding a
-void success value is rejected.
+`Result<none, E>` can be used only with the bare `try expr` form. Binding a
+none success value is rejected.
 
 For array destructuring, the success type must be an array. The generated code
 panics at runtime if the success array is shorter than the pattern.
@@ -233,16 +233,16 @@ means the program cannot sensibly continue.
 
 ### `try?` Expression
 
-`try?` converts `Result<T, E>` to `T | null`:
+`try?` converts `Result<T, E>` to `T | none`:
 
 ```doof
 config := try? loadConfig("optional.json")
 ```
 
 On success, the result is the success payload. On failure, the result is
-`null`.
+`none`.
 
-`try?` is rejected for `Result<void, E>` because there is no success payload to
+`try?` is rejected for `Result<none, E>` because there is no success payload to
 return. Use bare `try`, `case`, or statement-`else` instead.
 
 ---
@@ -266,24 +266,24 @@ The binding after the `else` block is the happy-path type:
 
 | Subject type | Binding type after `else` |
 | --- | --- |
-| `T | null` | `T` |
+| `T | none` | `T` |
 | `Result<T, E>` | `T` |
-| `Result<T, E> | null` | `Result<T, E>` |
-| `Result<T | null, E>` | `T | null` |
+| `Result<T, E> | none` | `Result<T, E>` |
+| `Result<T | none, E>` | `T | none` |
 
 Rules:
 
 - The subject must be nullable, a `Result`, or both.
 - A declaration removes exactly one layer. A nullable Result first loses its
-  outer null; a second declaration is required to unwrap the Result.
+  outer none; a second declaration is required to unwrap the Result.
 - If a binding is introduced and used after the `else`, the `else` block must
   exit the current scope with `return`, `break`, `continue`, or `panic(...)`.
 - Without failure capture, the binding name has the original full type inside
   the `else` block.
-- `else error { ... }` captures the error payload for non-null `Result<T, E>`
+- `else error { ... }` captures the error payload for present `Result<T, E>`
   subjects.
 - Failure capture is not allowed for nullable-only subjects or
-  `Result<T, E> | null` subjects because the unhappy path may be null.
+  `Result<T, E> | none` subjects because the unhappy path may be `none`.
 
 ```doof
 text := readText(path) else error {
@@ -321,7 +321,7 @@ saveState() else error {
 
 Rules:
 
-- The subject must be a non-null `Result<T, E>`.
+- The subject must be a present `Result<T, E>`.
 - The captured name receives the error payload.
 - The handler may fall through because no success-path binding must be made
   definitely available afterward.
@@ -346,10 +346,10 @@ the fallback on failure. Evaluation is lazy and right-associative.
 
 ### `??=`
 
-`??=` assigns only when the left-hand variable is null or a `Failure`:
+`??=` assigns only when the left-hand variable is `none` or a `Failure`:
 
 ```doof
-let cached: string | null = null
+let cached: string | none = none
 cached ??= loadFromDisk()
 
 let config: Result<Config, string> = loadCache()
@@ -362,7 +362,7 @@ For `Result<T, E>` variables, the right-hand side may be either a compatible
 ### `!` and `!.`
 
 Postfix `!` unwraps nullable values and `Result` success values, panicking on
-null or `Failure`:
+none or `Failure`:
 
 ```doof
 user := maybeUser()!
@@ -383,7 +383,7 @@ compile-time error.
 
 ## Optional Chaining Across Results
 
-`?.` checks for null and propagates null through the success channel. It does
+`?.` checks for none and propagates none through the success channel. It does
 not unwrap `Result`.
 
 ```doof
@@ -391,24 +391,24 @@ not unwrap `Result`.
 // User.profile(): Result<Profile, ProfileError>
 
 profile := findUser(id)?.profile()
-// Result<Profile | null, LookupError | ProfileError>
+// Result<Profile | none, LookupError | ProfileError>
 ```
 
 If the left side is `Failure`, the failure is preserved. If the success value is
-null, the chain short-circuits as a success containing null. If a later call
+none, the chain short-circuits as a success containing none. If a later call
 also returns `Result`, the error types are unioned.
 
 For a plain member on the success value:
 
 ```doof
 // findUser(): Result<User, LookupError>
-name := findUser(id)?.name  // Result<string | null, LookupError>
+name := findUser(id)?.name  // Result<string | none, LookupError>
 ```
 
-Use `try?` if both failures and nulls should collapse to `null`:
+Use `try?` if both failures and nulls should collapse to `none`:
 
 ```doof
-profile := try? findUser(id)?.profile()  // Profile | null
+profile := try? findUser(id)?.profile()  // Profile | none
 ```
 
 ---
@@ -439,14 +439,14 @@ function next(input: Result<int, string>): Result<string, string | bool> {
 | `.orElse(fn)` | Recover from failure with another `Result`: `Result<T | U, F>` |
 | `.unwrapOr(value)` | Return the success value or a fallback value |
 | `.unwrapOrElse(fn)` | Return the success value or compute a fallback from the error |
-| `.ok()` | Convert success to `T | null`, discarding failures |
-| `.err()` | Convert failure to `E | null`, discarding successes |
+| `.ok()` | Convert success to `T | none`, discarding failures |
+| `.err()` | Convert failure to `E | none`, discarding successes |
 | `.isSuccess()` | Return `true` when the Result is in the success state |
 | `.isFailure()` | Return `true` when the Result is in the failure state |
 
-`map` is not available on `Result<void, E>` because there is no success payload
-to transform. `andThen` receives a zero-argument callback for `Success<void>`.
-For `Failure<void>`, `.err()` is absent and `mapError`, `orElse`, and
+`map` is not available on `Result<none, E>` because there is no success payload
+to transform. `andThen` receives a zero-argument callback for `Success<none>`.
+For `Failure<none>`, `.err()` is absent and `mapError`, `orElse`, and
 `unwrapOrElse` receive zero-argument callbacks.
 
 ---
@@ -508,27 +508,27 @@ err := catch {
 ```
 
 If every `try` in the block succeeds, the `catch` expression evaluates to
-`null`. If a `try` sees a `Failure`, the block stops immediately and evaluates
+`none`. If a `try` sees a `Failure`, the block stops immediately and evaluates
 to that failure payload.
 
-The type is the union of all captured error types plus `null`:
+The type is the union of all captured error types plus `none`:
 
 ```doof
-// readHeader(): Result<void, IOError>
+// readHeader(): Result<none, IOError>
 // parseHeader(): Result<Header, ParseError>
 
 err := catch {
     try readHeader()
     try header := parseHeader()
 }
-// IOError | ParseError | null
+// IOError | ParseError | none
 ```
 
 Rules:
 
 - Only statement-level `try` is redirected by `catch`.
 - `try!` still panics on failure.
-- `try?` still converts failure to `null`.
+- `try?` still converts failure to `none`.
 - Nested `catch` blocks capture independently.
 - A `catch` body with no `try` statements produces a warning.
 - In binding form, `return` inside the body returns from the enclosing function.
@@ -576,7 +576,7 @@ input, missing files, parse errors, or network failures. Model those as
 The primitive assertion helper is:
 
 ```doof
-function assert(condition: bool, message: string): void
+function assert(condition: bool, message: string): none
 ```
 
 An assertion failure panics. Use assertions for tests and internal invariants,
@@ -587,7 +587,7 @@ The `std/assert` module provides richer test helpers:
 ```doof
 import { Assert } from "std/assert"
 
-export function testAdd(): void {
+export function testAdd(): none {
     Assert.equal(1 + 1, 2)
     Assert.notEqual(1 + 1, 3)
 }
@@ -609,8 +609,8 @@ result := catchPanic(=> {
 ```
 
 If the callback completes normally, `catchPanic` returns a success Result with
-the callback's return value. For a void callback, it returns
-`Result<void, string>`.
+the callback's return value. For a none callback, it returns
+`Result<none, string>`.
 
 Use `catchPanic` sparingly at process, plugin, host, or test boundaries. It is
 not a general exception system.
@@ -622,7 +622,7 @@ not a general exception system.
 Doof provides process-local runtime counters for lightweight instrumentation:
 
 ```doof
-function metricsIncrement(name: string, value: long): void
+function metricsIncrement(name: string, value: long): none
 function metricsSnapshotPrometheus(): string
 ```
 
@@ -657,7 +657,7 @@ and reference-counted ownership.
 // Constructing
 return Success(value)
 return Success { value: value }
-return Success()              // only Result<void, E>
+return Success()              // only Result<none, E>
 return Failure(error)
 return Failure { error: error }
 
@@ -669,7 +669,7 @@ case result {
 
 // Propagation and conversion
 try value := fallible()
-try stepReturningVoid()
+try stepReturningNone()
 value := try! fallible()
 maybe := try? fallible()
 value := fallible() ?? fallback

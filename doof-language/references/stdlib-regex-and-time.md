@@ -12,7 +12,7 @@ Flags are `.IgnoreCase`, `.Multiline`, `.DotAll`, and `.Extended`.
 
 `Match.value` is the full match; `range` contains byte offsets. `captures` and
 `captureRanges` start with capture group 1. `capture(name)` and
-`captureRange(name)` return named captures or `null`. Replacements support
+`captureRange(name)` return named captures or `none`. Replacements support
 `$1`-style backreferences. Compile failures return `RegexError` with stage,
 pattern, flags, and the native diagnostic.
 

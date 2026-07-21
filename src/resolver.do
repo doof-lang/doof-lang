@@ -8,9 +8,9 @@ import { Diagnostic, SourceFile } from "./semantic"
 
 // A successful null means absence; filesystem and acquisition failures remain
 // structured diagnostics rather than being collapsed into a missing module.
-export type SourceLoader = (path: string): Result<SourceFile | null, Diagnostic>
+export type SourceLoader = (path: string): Result<SourceFile | none, Diagnostic>
 
-export function noSourceLoader(path: string): Result<SourceFile | null, Diagnostic> => Success(null)
+export function noSourceLoader(path: string): Result<SourceFile | none, Diagnostic> => Success(none)
 
 export class ModuleResolver {
   sources: SourceFile[]
@@ -19,20 +19,20 @@ export class ModuleResolver {
   failedPaths: string[] = []
   diagnostics: Diagnostic[] = []
 
-  function find(path: string): SourceFile | null {
+  function find(path: string): SourceFile | none {
     for source of sources { if source.path == path { return source } }
-    for loaded of loadedPaths { if loaded == path { return null } }
+    for loaded of loadedPaths { if loaded == path { return none } }
     loadedPaths.push(path)
     loaded := loader(path) else diagnostic {
       failedPaths.push(path)
       diagnostics.push(diagnostic)
-      return null
+      return none
     }
-    if loaded != null {
+    if loaded != none {
       sources.push(loaded!)
       return loaded!
     }
-    return null
+    return none
   }
 
   function failed(path: string): bool {
@@ -46,9 +46,9 @@ export class ModuleResolver {
       else "/" + specifier
     exact := withExtension(base)
     if base.endsWith(".do") { return exact }
-    if find(exact) != null { return exact }
+    if find(exact) != none { return exact }
     barrel := base + "/index.do"
-    if find(barrel) != null { return barrel }
+    if find(barrel) != none { return barrel }
     return exact
   }
 }

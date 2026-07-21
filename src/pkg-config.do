@@ -25,7 +25,7 @@ export function applyPkgConfigResult(
   packageName: string,
   mode: string,
   result: PkgConfigCommandResult,
-): Result<void, string> {
+): Result<none, string> {
   if result.exitCode == -1 {
     detail := if result.error == "" then "the executable could not be started" else result.error
     return Failure(
@@ -56,7 +56,7 @@ function pkgConfigTokens(output: string): string[] {
   return tokens
 }
 
-function applyPkgConfigTokens(native: NativeBuildPlan, tokens: string[], mode: string): void {
+function applyPkgConfigTokens(native: NativeBuildPlan, tokens: string[], mode: string): none {
   let index = 0
   while index < tokens.length {
     token := tokens[index]
@@ -93,7 +93,7 @@ function applyPkgConfigTokens(native: NativeBuildPlan, tokens: string[], mode: s
   }
 }
 
-function appendUnique(target: string[], value: string): void {
+function appendUnique(target: string[], value: string): none {
   for existing of target { if existing == value { return } }
   target.push(value)
 }

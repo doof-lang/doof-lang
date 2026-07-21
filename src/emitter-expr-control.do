@@ -31,9 +31,9 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext)
   return "(" + emitExpression(expression.condition, context) + " ? " + emitExpression(expression.then_, context) + " : " + elseValue + ")"
 }
 
-export function emitYieldBlockExpression(expression: YieldBlockExpression, context: EmitContext, expected: ResolvedType | null): string {
-  resultType := if expected == null then expression.resolvedType else expected
-  if resultType == null { panic("Yield block has no resolved result type") }
+export function emitYieldBlockExpression(expression: YieldBlockExpression, context: EmitContext, expected: ResolvedType | none): string {
+  resultType := if expected == none then expression.resolvedType else expected
+  if resultType == none { panic("Yield block has no resolved result type") }
   previousYieldState := context.inValueYieldBlock
   context.inValueYieldBlock = true
   body := emitBlock(expression.body, 1, context)
@@ -42,7 +42,7 @@ export function emitYieldBlockExpression(expression: YieldBlockExpression, conte
 }
 
 export function emitCatchExpression(expression: CatchExpression, context: EmitContext): string {
-  if expression.resolvedType == null { panic("Catch expression has no resolved result type") }
+  if expression.resolvedType == none { panic("Catch expression has no resolved result type") }
   resultType := expression.resolvedType!
   resultCppType := emitType(resultType, context.modulePath)
   context.tryCounter = context.tryCounter + 1
@@ -66,11 +66,11 @@ function catchNullValue(resultCppType: string): string {
   return "std::monostate{}"
 }
 
-export function emitCaseExpression(expression: CaseExpression, context: EmitContext, expected: ResolvedType | null): string {
-  let resultType: ResolvedType | null = null
-  if expected != null { resultType = expected! }
-  else if expression.resolvedType != null { resultType = expression.resolvedType! }
-  if resultType == null { panic("Case expression has no resolved result type") }
+export function emitCaseExpression(expression: CaseExpression, context: EmitContext, expected: ResolvedType | none): string {
+  let resultType: ResolvedType | none = none
+  if expected != none { resultType = expected! }
+  else if expression.resolvedType != none { resultType = expression.resolvedType! }
+  if resultType == none { panic("Case expression has no resolved result type") }
   let output = "[&]() -> " + emitType(resultType!, context.modulePath) + " {\n"
   output = output + "    auto _case_subject = " + emitExpression(expression.subject, context) + ";\n"
   subjectResult := caseSubjectResultType(expression.subject)
@@ -98,7 +98,14 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
           output = output + emitBlock(block, 2, context)
           context.inValueYieldBlock = previousYieldState
         }
-        bodyExpression: Expression -> { output = output + "        return " + emitExpression(bodyExpression, context, resultType) + ";\n" }
+        bodyExpression: Expression -> {
+          emittedBody := emitExpression(bodyExpression, context, resultType)
+          if resultType!.kind == "none" {
+            output = output + "        " + emittedBody + ";\n        return std::monostate{};\n"
+          } else {
+            output = output + "        return " + emittedBody + ";\n"
+          }
+        }
       }
       output = output + "    }\n"
     }
@@ -108,8 +115,8 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
 
 function emitRangePatternCondition(pattern: RangePattern, subject: string, context: EmitContext): string {
   let condition = ""
-  if pattern.start != null { condition = subject + " >= " + emitExpression(pattern.start!, context) }
-  if pattern.end != null {
+  if pattern.start != none { condition = subject + " >= " + emitExpression(pattern.start!, context) }
+  if pattern.end != none {
     operator := if pattern.inclusive then " <= " else " < "
     if condition != "" { condition = condition + " && " }
     condition = condition + subject + operator + emitExpression(pattern.end!, context)
@@ -118,7 +125,7 @@ function emitRangePatternCondition(pattern: RangePattern, subject: string, conte
 }
 
 function caseSubjectResultType(subject: Expression): ResolvedType {
-  if subject.resolvedType == null {
+  if subject.resolvedType == none {
     panic("Case expression subject has no resolved type")
   }
   return subject.resolvedType!

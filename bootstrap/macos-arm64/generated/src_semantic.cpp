@@ -58,6 +58,7 @@ doof::JsonObject Diagnostic::toJsonObject() const {
     (*_json)["message"] = doof::json_value(this->message);
     (*_json)["span"] = doof::json_value(this->span.toJsonObject());
     (*_json)["module"] = doof::json_value(this->module);
+    (*_json)["replacement"] = doof::json_value(this->replacement);
     return _json;
 }
 doof::Result<std::shared_ptr<Diagnostic>, std::string> Diagnostic::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
@@ -79,7 +80,14 @@ doof::Result<std::shared_ptr<Diagnostic>, std::string> Diagnostic::fromJsonValue
     if (_iterator_module == _object->end()) { return doof::Failure<std::string>{"Missing required field \"module\""}; }
     if (!((_lenient ? doof::json_is_lenient_string(_iterator_module->second) : doof::json_is_string(_iterator_module->second)))) { return doof::Failure<std::string>{"Field \"module\" expected string but got " + std::string(doof::json_type_name(_iterator_module->second))}; }
     auto _field_module = (_lenient ? doof::json_as_string_lenient(_iterator_module->second) : doof::json_as_string(_iterator_module->second));
-    return doof::Success<std::shared_ptr<Diagnostic>>{std::make_shared<Diagnostic>(_field_severity, _field_message, _field_span, _field_module)};
+    std::optional<std::string> _field_replacement;
+    if (auto _iterator_replacement = _object->find("replacement"); _iterator_replacement != _object->end()) {
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_replacement->second) : doof::json_is_string(_iterator_replacement->second)))) { return doof::Failure<std::string>{"Field \"replacement\" expected string but got " + std::string(doof::json_type_name(_iterator_replacement->second))}; }
+        _field_replacement = (_lenient ? doof::json_as_string_lenient(_iterator_replacement->second) : doof::json_as_string(_iterator_replacement->second));
+    } else {
+        _field_replacement = std::string("");
+    }
+    return doof::Success<std::shared_ptr<Diagnostic>>{std::make_shared<Diagnostic>(_field_severity, _field_message, _field_span, _field_module, _field_replacement.value())};
 }
 
 doof::JsonObject Symbol::toJsonObject() const {
@@ -120,42 +128,42 @@ doof::Result<std::shared_ptr<Symbol>, std::string> Symbol::fromJsonValue(const d
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_originalName->second) : doof::json_is_string(_iterator_originalName->second)))) { return doof::Failure<std::string>{"Field \"originalName\" expected string but got " + std::string(doof::json_type_name(_iterator_originalName->second))}; }
         _field_originalName = (_lenient ? doof::json_as_string_lenient(_iterator_originalName->second) : doof::json_as_string(_iterator_originalName->second));
     } else {
-        _field_originalName = std::string{std::string("")};
+        _field_originalName = std::string("");
     }
     std::optional<bool> _field_native_;
     if (auto _iterator_native_ = _object->find("native_"); _iterator_native_ != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_native_->second) : doof::json_is_boolean(_iterator_native_->second)))) { return doof::Failure<std::string>{"Field \"native_\" expected boolean but got " + std::string(doof::json_type_name(_iterator_native_->second))}; }
         _field_native_ = (_lenient ? doof::json_as_bool_lenient(_iterator_native_->second) : doof::json_as_bool(_iterator_native_->second));
     } else {
-        _field_native_ = bool{false};
+        _field_native_ = false;
     }
     std::optional<std::string> _field_nativeHeader;
     if (auto _iterator_nativeHeader = _object->find("nativeHeader"); _iterator_nativeHeader != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_nativeHeader->second) : doof::json_is_string(_iterator_nativeHeader->second)))) { return doof::Failure<std::string>{"Field \"nativeHeader\" expected string but got " + std::string(doof::json_type_name(_iterator_nativeHeader->second))}; }
         _field_nativeHeader = (_lenient ? doof::json_as_string_lenient(_iterator_nativeHeader->second) : doof::json_as_string(_iterator_nativeHeader->second));
     } else {
-        _field_nativeHeader = std::string{std::string("")};
+        _field_nativeHeader = std::string("");
     }
     std::optional<std::string> _field_nativeCppName;
     if (auto _iterator_nativeCppName = _object->find("nativeCppName"); _iterator_nativeCppName != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_nativeCppName->second) : doof::json_is_string(_iterator_nativeCppName->second)))) { return doof::Failure<std::string>{"Field \"nativeCppName\" expected string but got " + std::string(doof::json_type_name(_iterator_nativeCppName->second))}; }
         _field_nativeCppName = (_lenient ? doof::json_as_string_lenient(_iterator_nativeCppName->second) : doof::json_as_string(_iterator_nativeCppName->second));
     } else {
-        _field_nativeCppName = std::string{std::string("")};
+        _field_nativeCppName = std::string("");
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<Symbol>>>> _field_implementations;
     if (auto _iterator_implementations = _object->find("implementations"); _iterator_implementations != _object->end()) {
         if (!(doof::json_is_array(_iterator_implementations->second))) { return doof::Failure<std::string>{"Field \"implementations\" expected array but got " + std::string(doof::json_type_name(_iterator_implementations->second))}; }
         _field_implementations = [&]() { const auto* _array = doof::json_as_array(_iterator_implementations->second); auto _values = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(Symbol::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_implementations = std::shared_ptr<std::vector<std::shared_ptr<Symbol>>>{std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{})};
+        _field_implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_implementedInterfaceTypes;
     if (auto _iterator_implementedInterfaceTypes = _object->find("implementedInterfaceTypes"); _iterator_implementedInterfaceTypes != _object->end()) {
         if (!(doof::json_is_array(_iterator_implementedInterfaceTypes->second))) { return doof::Failure<std::string>{"Field \"implementedInterfaceTypes\" expected array but got " + std::string(doof::json_type_name(_iterator_implementedInterfaceTypes->second))}; }
         _field_implementedInterfaceTypes = [&]() { const auto* _array = doof::json_as_array(_iterator_implementedInterfaceTypes->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_implementedInterfaceTypes = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     return doof::Success<std::shared_ptr<Symbol>>{std::make_shared<Symbol>(_field_kind, _field_name, _field_module, _field_exported, _field_originalName.value(), _field_native_.value(), _field_nativeHeader.value(), _field_nativeCppName.value(), _field_implementations.value(), _field_implementedInterfaceTypes.value())};
 }
@@ -257,7 +265,7 @@ doof::Result<std::shared_ptr<PrimitiveType>, std::string> PrimitiveType::fromJso
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
         _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
     } else {
-        _field_kind = std::string{std::string("primitive")};
+        _field_kind = std::string("primitive");
     }
     auto _iterator_name = _object->find("name");
     if (_iterator_name == _object->end()) { return doof::Failure<std::string>{"Missing required field \"name\""}; }
@@ -282,7 +290,7 @@ doof::Result<std::shared_ptr<EnumType>, std::string> EnumType::fromJsonValue(con
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
         _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
     } else {
-        _field_kind = std::string{std::string("enum")};
+        _field_kind = std::string("enum");
     }
     auto _iterator_name = _object->find("name");
     if (_iterator_name == _object->end()) { return doof::Failure<std::string>{"Missing required field \"name\""}; }
@@ -317,7 +325,7 @@ doof::Result<std::shared_ptr<RangeResolvedType>, std::string> RangeResolvedType:
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
         _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
     } else {
-        _field_kind = std::string{std::string("range")};
+        _field_kind = std::string("range");
     }
     return doof::Success<std::shared_ptr<RangeResolvedType>>{std::make_shared<RangeResolvedType>(_field_kind.value())};
 }
@@ -335,7 +343,7 @@ doof::Result<std::shared_ptr<JsonValueResolvedType>, std::string> JsonValueResol
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
         _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
     } else {
-        _field_kind = std::string{std::string("json-value")};
+        _field_kind = std::string("json-value");
     }
     return doof::Success<std::shared_ptr<JsonValueResolvedType>>{std::make_shared<JsonValueResolvedType>(_field_kind.value())};
 }
@@ -344,12 +352,12 @@ doof::Result<std::shared_ptr<JsonValueResolvedType>, std::string> JsonValueResol
 
 
 
-doof::JsonObject NullType::toJsonObject() const {
+doof::JsonObject NoneType::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
     (*_json)["kind"] = doof::json_value(this->kind);
     return _json;
 }
-doof::Result<std::shared_ptr<NullType>, std::string> NullType::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
+doof::Result<std::shared_ptr<NoneType>, std::string> NoneType::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
     const auto* _object = doof::json_as_object(_json);
     if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     std::optional<std::string> _field_kind;
@@ -357,27 +365,9 @@ doof::Result<std::shared_ptr<NullType>, std::string> NullType::fromJsonValue(con
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
         _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
     } else {
-        _field_kind = std::string{std::string("null")};
+        _field_kind = std::string("none");
     }
-    return doof::Success<std::shared_ptr<NullType>>{std::make_shared<NullType>(_field_kind.value())};
-}
-
-doof::JsonObject VoidType::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["kind"] = doof::json_value(this->kind);
-    return _json;
-}
-doof::Result<std::shared_ptr<VoidType>, std::string> VoidType::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    std::optional<std::string> _field_kind;
-    if (auto _iterator_kind = _object->find("kind"); _iterator_kind != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
-        _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
-    } else {
-        _field_kind = std::string{std::string("void")};
-    }
-    return doof::Success<std::shared_ptr<VoidType>>{std::make_shared<VoidType>(_field_kind.value())};
+    return doof::Success<std::shared_ptr<NoneType>>{std::make_shared<NoneType>(_field_kind.value())};
 }
 
 doof::JsonObject UnknownType::toJsonObject() const {
@@ -393,7 +383,7 @@ doof::Result<std::shared_ptr<UnknownType>, std::string> UnknownType::fromJsonVal
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
         _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
     } else {
-        _field_kind = std::string{std::string("unknown")};
+        _field_kind = std::string("unknown");
     }
     return doof::Success<std::shared_ptr<UnknownType>>{std::make_shared<UnknownType>(_field_kind.value())};
 }
@@ -418,7 +408,7 @@ doof::Result<std::shared_ptr<CheckResult>, std::string> CheckResult::fromJsonVal
         if (!(doof::json_is_array(_iterator_diagnostics->second))) { return doof::Failure<std::string>{"Field \"diagnostics\" expected array but got " + std::string(doof::json_type_name(_iterator_diagnostics->second))}; }
         _field_diagnostics = [&]() { const auto* _array = doof::json_as_array(_iterator_diagnostics->second); auto _values = std::make_shared<std::vector<std::shared_ptr<Diagnostic>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(Diagnostic::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_diagnostics = std::shared_ptr<std::vector<std::shared_ptr<Diagnostic>>>{std::make_shared<std::vector<std::shared_ptr<Diagnostic>>>(std::vector<std::shared_ptr<Diagnostic>>{})};
+        _field_diagnostics = std::make_shared<std::vector<std::shared_ptr<Diagnostic>>>(std::vector<std::shared_ptr<Diagnostic>>{});
     }
     return doof::Success<std::shared_ptr<CheckResult>>{std::make_shared<CheckResult>(_field_diagnostics.value())};
 }

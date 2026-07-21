@@ -37,7 +37,7 @@ function manifestString(object: JsonObject, name: string, fallback: string = "")
   return Success(text)
 }
 
-function insertPackage(packages: CatalogPackage[], package_: CatalogPackage): void {
+function insertPackage(packages: CatalogPackage[], package_: CatalogPackage): none {
   packages.push(package_)
   let index = packages.length - 1
   while index > 0 && packages[index].name < packages[index - 1].name {

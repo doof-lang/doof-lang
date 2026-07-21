@@ -6,7 +6,7 @@ import {
   validateIOSAdHocSigning,
 } from "./ios-device"
 
-export function testParsesConnectedPhysicalIOSDevices(): void {
+export function testParsesConnectedPhysicalIOSDevices(): none {
   devices := try! parseConnectedIOSDevices(
     "{\"result\":{\"devices\":[" +
       "{\"identifier\":\"watch-1\",\"hardwareProperties\":{\"platform\":\"watchOS\",\"reality\":\"physical\"},\"connectionProperties\":{\"tunnelState\":\"connected\"},\"deviceProperties\":{\"name\":\"Watch\"}}," +
@@ -18,7 +18,7 @@ export function testParsesConnectedPhysicalIOSDevices(): void {
   Assert.equal(devices[0].name, "My iPhone")
 }
 
-export function testSelectsExplicitOrSingleConnectedDevice(): void {
+export function testSelectsExplicitOrSingleConnectedDevice(): none {
   devices := try! parseConnectedIOSDevices(
     "{\"result\":{\"devices\":[{\"identifier\":\"phone-1\",\"hardwareProperties\":{\"platform\":\"iOS\",\"reality\":\"physical\"},\"connectionProperties\":{\"tunnelState\":\"connected\"},\"deviceProperties\":{\"name\":\"My iPhone\"}}]}}",
   )
@@ -26,7 +26,7 @@ export function testSelectsExplicitOrSingleConnectedDevice(): void {
   Assert.equal(try! selectIOSDeviceIdentifier("", devices), "phone-1")
 }
 
-export function testReportsMissingAndAmbiguousDevices(): void {
+export function testReportsMissingAndAmbiguousDevices(): none {
   missing := selectIOSDeviceIdentifier("", [])
   Assert.equal(missing.isFailure(), true)
   case missing { failure: Failure<string> -> Assert.stringContains(failure.error, "Could not auto-detect") }
@@ -42,7 +42,7 @@ export function testReportsMissingAndAmbiguousDevices(): void {
   } }
 }
 
-export function testSelectsMostSpecificActiveProvisioningProfile(): void {
+export function testSelectsMostSpecificActiveProvisioningProfile(): none {
   profiles := [
     IOSProvisioningProfile { profilePath: "/wild", applicationIdentifier: "TEAM.dev.doof.*", expirationEpochMs: 300L },
     IOSProvisioningProfile { profilePath: "/exact-expired", applicationIdentifier: "TEAM.dev.doof.demo", expirationEpochMs: 90L },
@@ -55,7 +55,7 @@ export function testSelectsMostSpecificActiveProvisioningProfile(): void {
   Assert.equal(expiredExact.profilePath, "/exact-expired")
 }
 
-export function testReportsMissingProvisioningProfileAndSigningIdentity(): void {
+export function testReportsMissingProvisioningProfileAndSigningIdentity(): none {
   profileResult := selectProvisioningProfile("dev.missing.app", [], 100L)
   Assert.equal(profileResult.isFailure(), true)
   case profileResult { failure: Failure<string> -> Assert.stringContains(failure.error, "--ios-provisioning-profile") }
@@ -69,7 +69,7 @@ export function testReportsMissingProvisioningProfileAndSigningIdentity(): void 
   case identityResult { failure: Failure<string> -> Assert.stringContains(failure.error, "DeveloperCertificates") }
 }
 
-export function testParsesAndMatchesCodesignIdentityFingerprint(): void {
+export function testParsesAndMatchesCodesignIdentityFingerprint(): none {
   identities := parseCodesignIdentities(
     "  1) 11966AB9C099F8FABEFAC54C08D5BE2BD8C903AF \"Apple Development: Jane Doe (TEAMID)\"\n" +
     "     0 valid identities found",
@@ -85,7 +85,7 @@ export function testParsesAndMatchesCodesignIdentityFingerprint(): void {
   Assert.equal(try! selectSigningIdentity(profile, identities), identities[0].name)
 }
 
-export function testValidatesAdHocPackageProfileAndIdentityTogether(): void {
+export function testValidatesAdHocPackageProfileAndIdentityTogether(): none {
   profile := IOSProvisioningProfile {
     profilePath: "/profile.mobileprovision",
     applicationIdentifier: "TEAMID.dev.doof.*",
@@ -103,7 +103,7 @@ export function testValidatesAdHocPackageProfileAndIdentityTogether(): void {
   Assert.equal(result.isFailure(), false)
 }
 
-export function testAutoResolvesSingleDistributionIdentityFromProfileCertificates(): void {
+export function testAutoResolvesSingleDistributionIdentityFromProfileCertificates(): none {
   profile := IOSProvisioningProfile {
     profilePath: "/profile.mobileprovision",
     applicationIdentifier: "TEAMID.dev.doof.demo",
@@ -127,7 +127,7 @@ export function testAutoResolvesSingleDistributionIdentityFromProfileCertificate
   )
 }
 
-export function testRequiresOverrideWhenProfileHasMultipleInstalledDistributionIdentities(): void {
+export function testRequiresOverrideWhenProfileHasMultipleInstalledDistributionIdentities(): none {
   profile := IOSProvisioningProfile {
     profilePath: "/profile.mobileprovision",
     applicationIdentifier: "TEAMID.dev.doof.demo",
@@ -153,7 +153,7 @@ export function testRequiresOverrideWhenProfileHasMultipleInstalledDistributionI
   case result { failure: Failure<string> -> Assert.stringContains(failure.error, "Multiple Apple Distribution identities") }
 }
 
-export function testRejectsPackageIdentityOutsideProvisioningProfile(): void {
+export function testRejectsPackageIdentityOutsideProvisioningProfile(): none {
   profile := IOSProvisioningProfile {
     profilePath: "/profile.mobileprovision",
     applicationIdentifier: "TEAMID.dev.doof.demo",
@@ -172,7 +172,7 @@ export function testRejectsPackageIdentityOutsideProvisioningProfile(): void {
   case result { failure: Failure<string> -> Assert.stringContains(failure.error, "not included in provisioning profile") }
 }
 
-export function testRejectsExpiredAndNonAdHocPackageProfiles(): void {
+export function testRejectsExpiredAndNonAdHocPackageProfiles(): none {
   identities := [IOSCodesignIdentity {
     fingerprint: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
     name: "Apple Distribution: Jane Doe (TEAMID)",

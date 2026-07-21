@@ -3,8 +3,8 @@
 import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NullType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, VoidType, WeakResolvedType,
+  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
+  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
@@ -15,7 +15,7 @@ import {
   FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
   IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
   IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
-  LambdaExpression, LongLiteral, MemberExpression, NamedType, NullLiteral,
+  LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
   NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
   ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
   ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
@@ -27,8 +27,8 @@ import {
 import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
-  nullType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType, voidType,
+  noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
+  substituteTypeParams, typeParameter, unknownType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -38,7 +38,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 import { declarationFor } from "./checker-symbols"
 import { findClassMethod } from "./checker-interfaces"
 
-export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, name: string): ResolvedType | null {
+export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, name: string): ResolvedType | none {
   case pattern {
     parameter: TypeParameterType -> { if parameter.name == name { return actual } }
     array: ArrayResolvedType -> {
@@ -51,7 +51,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
       case actual {
         concrete: MapResolvedType -> {
           key := inferTypeArgument(map.keyType, concrete.keyType, name)
-          if key != null { return key }
+          if key != none { return key }
           return inferTypeArgument(map.valueType, concrete.valueType, name)
         }
         _ -> { }
@@ -72,11 +72,11 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
     class_: ClassType -> {
       case actual {
         concrete: ClassType -> {
-          if class_.symbol.module != concrete.symbol.module || class_.symbol.name != concrete.symbol.name { return null }
+          if class_.symbol.module != concrete.symbol.module || class_.symbol.name != concrete.symbol.name { return none }
           for i of 0..<class_.typeArgs.length {
             if i < concrete.typeArgs.length {
               candidate := inferTypeArgument(class_.typeArgs[i], concrete.typeArgs[i], name)
-              if candidate != null { return candidate }
+              if candidate != none { return candidate }
             }
           }
         }
@@ -89,7 +89,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
           for i of 0..<interface_.typeArgs.length {
             if i < concrete.typeArgs.length {
               candidate := inferTypeArgument(interface_.typeArgs[i], concrete.typeArgs[i], name)
-              if candidate != null { return candidate }
+              if candidate != none { return candidate }
             }
           }
         }
@@ -102,7 +102,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
           for i of 0..<function_.params.length {
             if i < concrete.params.length {
               candidate := inferTypeArgument(function_.params[i].type_, concrete.params[i].type_, name)
-              if candidate != null { return candidate }
+              if candidate != none { return candidate }
             }
           }
           return inferTypeArgument(function_.returnType, concrete.returnType, name)
@@ -114,7 +114,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
       case actual {
         concrete: ResultResolvedType -> {
           value := inferTypeArgument(result_.valueType, concrete.valueType, name)
-          if value != null { return value }
+          if value != none { return value }
           return inferTypeArgument(result_.errorType, concrete.errorType, name)
         }
         _ -> { }
@@ -126,7 +126,7 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
           for i of 0..<tuple.elements.length {
             if i < concrete.elements.length {
               candidate := inferTypeArgument(tuple.elements[i], concrete.elements[i], name)
-              if candidate != null { return candidate }
+              if candidate != none { return candidate }
             }
           }
         }
@@ -141,23 +141,23 @@ export function inferTypeArgument(pattern: ResolvedType, actual: ResolvedType, n
     }
     _ -> { }
   }
-  return null
+  return none
 }
 
-export function functionDeclarationForCallee(callee: Expression, calleeType: ResolvedType, result: AnalysisResult): FunctionDeclaration | null {
+export function functionDeclarationForCallee(callee: Expression, calleeType: ResolvedType, result: AnalysisResult): FunctionDeclaration | none {
   case callee {
     identifier: Identifier -> {
-      if identifier.resolvedBinding != null && identifier.resolvedBinding!.symbol != null {
+      if identifier.resolvedBinding != none && identifier.resolvedBinding!.symbol != none {
         symbol := identifier.resolvedBinding!.symbol!
         declaration := declarationFor(result, symbol)
-        if declaration != null {
+        if declaration != none {
           case declaration! {
             fn: FunctionDeclaration -> { return fn }
             class_: ClassDeclaration -> {
               let method = findClassMethod(class_.methods, identifier.name, false)
-              if method != null { return method }
+              if method != none { return method }
               method = findClassMethod(class_.methods, identifier.name, true)
-              if method != null { return method }
+              if method != none { return method }
             }
             _ -> { }
           }
@@ -166,17 +166,17 @@ export function functionDeclarationForCallee(callee: Expression, calleeType: Res
     }
     member: MemberExpression -> {
       objectType := member.object.resolvedType
-      if objectType != null {
+      if objectType != none {
         case objectType! {
           class_: ClassType -> {
             declaration := declarationFor(result, class_.symbol)
-            if declaration != null {
+            if declaration != none {
               case declaration! {
                 classDeclaration: ClassDeclaration -> {
                   let method = findClassMethod(classDeclaration.methods, member.property, false)
-                  if method != null { return method }
+                  if method != none { return method }
                   method = findClassMethod(classDeclaration.methods, member.property, true)
-                  if method != null { return method }
+                  if method != none { return method }
                 }
                 _ -> { }
               }
@@ -184,11 +184,11 @@ export function functionDeclarationForCallee(callee: Expression, calleeType: Res
           }
           actor: ActorType -> {
             declaration := declarationFor(result, actor.innerClass.symbol)
-            if declaration != null {
+            if declaration != none {
               case declaration! {
                 classDeclaration: ClassDeclaration -> {
                   method := findClassMethod(classDeclaration.methods, member.property, false)
-                  if method != null { return method }
+                  if method != none { return method }
                 }
                 _ -> { }
               }
@@ -196,7 +196,7 @@ export function functionDeclarationForCallee(callee: Expression, calleeType: Res
           }
           interface_: InterfaceType -> {
             declaration := declarationFor(result, interface_.symbol)
-            if declaration != null {
+            if declaration != none {
               case declaration! {
                 interfaceDeclaration: InterfaceDeclaration -> {
                   for method of interfaceDeclaration.methods { if method.name == member.property { return method } }
@@ -211,27 +211,27 @@ export function functionDeclarationForCallee(callee: Expression, calleeType: Res
     }
     _ -> { }
   }
-  return null
+  return none
 }
 
-export function constructorForClass(class_: ClassType, result: AnalysisResult): FunctionDeclaration | null {
+export function constructorForClass(class_: ClassType, result: AnalysisResult): FunctionDeclaration | none {
   declaration := declarationFor(result, class_.symbol)
-  if declaration == null { return null }
+  if declaration == none { return none }
   case declaration! {
     classDeclaration: ClassDeclaration -> {
       for method of classDeclaration.methods { if method.name == "constructor" { return method } }
     }
     _ -> { }
   }
-  return null
+  return none
 }
 
 export function insideConstructorFactory(scope: Scope, class_: ClassType): bool {
-  let current: Scope | null = scope
-  while current != null {
+  let current: Scope | none = scope
+  while current != none {
     if current!.functionName != "" {
       if current!.functionName != "constructor" { return false }
-      if current!.thisType == null { return false }
+      if current!.thisType == none { return false }
       case current!.thisType! {
         owner: ClassType -> { return owner.symbol.module == class_.symbol.module && owner.symbol.name == class_.symbol.name }
         _ -> { return false }
@@ -242,11 +242,11 @@ export function insideConstructorFactory(scope: Scope, class_: ClassType): bool 
   return false
 }
 
-export function staticMemberOwner(objectType: ResolvedType, property: string, result: AnalysisResult): ClassDeclaration | null {
+export function staticMemberOwner(objectType: ResolvedType, property: string, result: AnalysisResult): ClassDeclaration | none {
   case objectType {
     class_: ClassType -> {
       declaration := declarationFor(result, class_.symbol)
-      if declaration != null {
+      if declaration != none {
         case declaration! {
           classDeclaration: ClassDeclaration -> {
             if property == "metadata" && classDeclaration.needsMetadata { return classDeclaration }
@@ -262,7 +262,7 @@ export function staticMemberOwner(objectType: ResolvedType, property: string, re
     }
     _ -> { }
   }
-  return null
+  return none
 }
 
 function jsonPrograms(result: AnalysisResult): Program[] {

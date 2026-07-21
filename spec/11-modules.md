@@ -33,8 +33,8 @@ Or export separately from declaration:
 
 ```javascript
 class Helper { ... }
-function publicFunction(): void { ... }
-function privateFunction(): void { ... }
+function publicFunction(): none { ... }
+function privateFunction(): none { ... }
 
 export { Helper, publicFunction }
 ```
@@ -105,7 +105,7 @@ Import only type information (erased at runtime):
 ```javascript
 import type { User, Config } from "./types"
 
-function process(user: User, config: Config): void { ... }
+function process(user: User, config: Config): none { ... }
 
 let u = User { ... }  // ❌ Error: User is a type-only import
 ```
@@ -294,7 +294,7 @@ Items not exported are module-private:
 ```javascript
 readonly INTERNAL_PRECISION = 1e-10  // Private
 
-function internalHelper(): void { ... }  // Private
+function internalHelper(): none { ... }  // Private
 
 export function calculate(): float {
     internalHelper()  // ✅ Can use internally
@@ -312,13 +312,13 @@ Doof handles circular imports cleanly because module-level `readonly` declaratio
 // a.do
 import { B } from "./b"
 export class A {
-    b: B | null = null
+    b: B | none = none
 }
 
 // b.do
 import { A } from "./a"
 export class B {
-    a: A | null = null
+    a: A | none = none
 }
 ```
 
@@ -333,7 +333,7 @@ export class B {
 A module becomes **executable** by defining a `main()` function:
 
 ```javascript
-function main(): void {
+function main(): none {
     print("Hello, Doof!")
 }
 ```
@@ -342,10 +342,10 @@ The `main()` function serves as the program's entry point and must have one of t
 
 ```javascript
 // No arguments
-function main(): void { ... }
+function main(): none { ... }
 
 // With command-line arguments
-function main(args: string[]): void { ... }
+function main(args: string[]): none { ... }
 
 // With return code
 function main(): int { ... }
@@ -357,7 +357,7 @@ arguments. The executable path is omitted, so `doof-server ./site` receives
 `args[0] == "./site"`.
 
 **Return value:**
-- `void` — Program exits with code 0
+- `none` — Program exits with code 0
 - `int` — Program exits with the returned code
 
 ### Executable vs. Library Modules
@@ -368,7 +368,7 @@ The presence of a `main()` function distinguishes executable modules from librar
 // app.do — Executable module
 import { processData } from "./lib"
 
-function main(): void {
+function main(): none {
     data := processData()
     print("Result: ${data}")
 }
@@ -433,7 +433,7 @@ A project can have multiple executable modules:
 // server.do
 import { startServer } from "./http"
 
-function main(): void {
+function main(): none {
     startServer()
 }
 ```
@@ -442,7 +442,7 @@ function main(): void {
 // migrate.do
 import { runMigrations } from "./database"
 
-function main(): void {
+function main(): none {
     runMigrations()
 }
 ```
@@ -465,17 +465,17 @@ Current conventions:
 - Test files should use the `*.test.do` suffix
 - Test functions should be exported top-level functions
 - Test function names should start with `test`
-- Test functions must have zero parameters and return `void`
+- Test functions must have zero parameters and return `none`
 
 Example:
 
 ```javascript
 // math.test.do
-export function testAdd(): void {
+export function testAdd(): none {
     assert(1 + 1 == 2, "expected addition to work")
 }
 
-export function testMul(): void {
+export function testMul(): none {
     assert(3 * 4 == 12, "expected multiplication to work")
 }
 ```
@@ -519,7 +519,7 @@ import { loadConfig } from "./config"
 readonly config = loadConfig()
 print("Config loaded")
 
-function main(): void {
+function main(): none {
     // Executes after all modules are initialized
     print("Starting app with config: ${config.name}")
 }
@@ -538,7 +538,7 @@ The `main()` function can use `try!/try?` for error handling:
 import { readFile } from "io"
 import type { Config } from "./types"
 
-function main(): void {
+function main(): none {
     // Panic if file read fails (acceptable for entry point)
     config := try! loadConfig("config.json")
     print("Loaded: ${config.name}")
@@ -593,8 +593,8 @@ Doof can import external C++ classes to enable interop with existing C++ librari
 ```javascript
 // Import a C++ class — header inferred as "Logger.hpp"
 import class Logger {
-    log(message: string): void
-    setLevel(level: int): void
+    log(message: string): none
+    setLevel(level: int): none
 }
 
 // Import from a specific header
@@ -660,10 +660,10 @@ Extern classes behave exactly like regular Doof classes — they're heap-allocat
 ```javascript
 import class Database from "./db.hpp" {
     query(sql: string): Result<Array<string>, string>
-    close(): void
+    close(): none
 }
 
-function main(): void {
+function main(): none {
     db := Database("localhost", 5432)   // shared_ptr<Database>
     result := try! db.query("SELECT 1")
 }
@@ -733,7 +733,7 @@ import class Point from "./geometry.hpp" {
     x, y: float
 }
 
-function main(): void {
+function main(): none {
     p := Point(1.0, 2.0)
     println(p.x)  // Doof auto-dereferences shared_ptr for field access
 }
@@ -779,7 +779,7 @@ import class NativeSqliteStatement from "./native_sqlite.hpp" {
     bindText(index: int, value: string): Result<int, string>
     bindInt(index: int, value: int): Result<int, string>
     step(): Result<bool, string>
-    columnText(name: string): Result<string | null, string>
+    columnText(name: string): Result<string | none, string>
 }
 
 class Database {

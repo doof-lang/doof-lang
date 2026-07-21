@@ -3,8 +3,8 @@
 import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NullType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, VoidType, WeakResolvedType,
+  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
+  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
@@ -15,7 +15,7 @@ import {
   FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
   IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
   IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
-  LambdaExpression, LongLiteral, MemberExpression, NamedType, NullLiteral,
+  LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
   NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
   ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
   ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
@@ -27,8 +27,8 @@ import {
 import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
-  nullType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType, voidType,
+  noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
+  substituteTypeParams, typeParameter, unknownType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -42,16 +42,16 @@ export function symbolSpan(info: ModuleInfo, name: string): SourceSpan {
   return info.program.span
 }
 
-export function findModule(result: AnalysisResult, path: string): ModuleInfo | null {
+export function findModule(result: AnalysisResult, path: string): ModuleInfo | none {
   for module of result.modules { if module.path == path { return module } }
-  return null
+  return none
 }
 
 // Interface lowering is closed-world: every class in the analyzed graph is a
 // candidate, including classes that do not spell an explicit `implements` list.
 // Populate this map before checking expressions so ordinary assignment and
 // return compatibility can use the same structural result as emission.
-export function discoverInterfaceImplementations(result: AnalysisResult): void {
+export function discoverInterfaceImplementations(result: AnalysisResult): none {
   for interfaceModule of result.modules {
     for interfaceSymbol of interfaceModule.symbols {
       if interfaceSymbol.kind != "interface" { continue }
@@ -76,7 +76,7 @@ export function containsImplementation(implementations: Symbol[], candidate: Sym
   return false
 }
 
-export function addImplementedInterfaceType(symbol: Symbol, name: string): void {
+export function addImplementedInterfaceType(symbol: Symbol, name: string): none {
   for existing of symbol.implementedInterfaceTypes { if existing == name { return } }
   symbol.implementedInterfaceTypes.push(name)
 }
@@ -84,12 +84,12 @@ export function addImplementedInterfaceType(symbol: Symbol, name: string): void 
 // Concrete generic interfaces remain structural. Record matching ordinary
 // classes as soon as a concrete interface use is resolved so subsequent
 // assignment and call compatibility can use the normal assignability path.
-export function registerConcreteInterfaceImplementations(result: AnalysisResult, interface_: InterfaceType): void {
+export function registerConcreteInterfaceImplementations(result: AnalysisResult, interface_: InterfaceType): none {
   for module of result.modules {
     for symbol of module.symbols {
       if symbol.kind != "class" { continue }
       declaration := declarationFor(result, symbol)
-      if declaration == null { continue }
+      if declaration == none { continue }
       case declaration! {
         class_: ClassDeclaration -> {
           if class_.typeParams.length == 0 && classSatisfiesConcreteInterface(result, class_, classType(class_.name, symbol), interface_) {
@@ -128,24 +128,24 @@ export function concreteTypes(types: ResolvedType[]): bool {
 
 export function classSatisfiesConcreteInterface(result: AnalysisResult, class_: ClassDeclaration, classType_: ClassType, interfaceType_: InterfaceType): bool {
   declaration := declarationFor(result, interfaceType_.symbol)
-  if declaration == null { return false }
+  if declaration == none { return false }
   case declaration! {
     interface_: InterfaceDeclaration -> {
       for required of interface_.fields {
         actualField := findClassField(class_.fields, required.name)
-        if actualField == null || actualField!.type_ == null { return false }
+        if actualField == none || actualField!.type_ == none { return false }
         if required.readonly_ && !actualField!.readonly_ { return false }
-        actualBase := if actualField!.resolvedType == null then resolveAnnotation(actualField!.type_!, classModuleFor(result, classType_.symbol), result, class_.typeParams) else actualField!.resolvedType!
-        requiredBase := if required.resolvedType == null then resolveAnnotation(required.type_, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams) else required.resolvedType!
+        actualBase := if actualField!.resolvedType == none then resolveAnnotation(actualField!.type_!, classModuleFor(result, classType_.symbol), result, class_.typeParams) else actualField!.resolvedType!
+        requiredBase := if required.resolvedType == none then resolveAnnotation(required.type_, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams) else required.resolvedType!
         actual := substituteTypeParams(actualBase, class_.typeParams, classType_.typeArgs)
         expected := substituteTypeParams(requiredBase, interface_.typeParams, interfaceType_.typeArgs)
         if !isAssignable(actual, expected) { return false }
       }
       for requiredMethod of interface_.methods {
         actualMethod := findClassMethod(class_.methods, requiredMethod.name, requiredMethod.static_)
-        if actualMethod == null { return false }
-        actualBase := if actualMethod!.resolvedType == null then methodSignature(actualMethod!, classModuleFor(result, classType_.symbol), result) else actualMethod!.resolvedType!
-        requiredBase := if requiredMethod.resolvedType == null then methodSignature(requiredMethod, classModuleFor(result, interfaceType_.symbol), result) else requiredMethod.resolvedType!
+        if actualMethod == none { return false }
+        actualBase := if actualMethod!.resolvedType == none then methodSignature(actualMethod!, classModuleFor(result, classType_.symbol), result) else actualMethod!.resolvedType!
+        requiredBase := if requiredMethod.resolvedType == none then methodSignature(requiredMethod, classModuleFor(result, interfaceType_.symbol), result) else requiredMethod.resolvedType!
         actual := substituteTypeParams(actualBase, class_.typeParams, classType_.typeArgs)
         expected := substituteTypeParams(requiredBase, interface_.typeParams, interfaceType_.typeArgs)
         if !sameConcreteMethodType(actual, expected) { return false }
@@ -160,22 +160,22 @@ export function classSatisfiesConcreteInterface(result: AnalysisResult, class_: 
 export function classSatisfiesInterface(result: AnalysisResult, classSymbol: Symbol, interfaceSymbol: Symbol): bool {
   classDeclaration := declarationFor(result, classSymbol)
   interfaceDeclaration := declarationFor(result, interfaceSymbol)
-  if classDeclaration == null || interfaceDeclaration == null { return false }
+  if classDeclaration == none || interfaceDeclaration == none { return false }
   case classDeclaration! {
     class_: ClassDeclaration -> {
       case interfaceDeclaration! {
         interface_: InterfaceDeclaration -> {
           for required of interface_.fields {
             classField := findClassField(class_.fields, required.name)
-            if classField == null { return false }
+            if classField == none { return false }
             if required.readonly_ && !classField!.readonly_ { return false }
-            actual := if classField!.resolvedType == null then resolveAnnotation(classField!.type_!, classModuleFor(result, classSymbol), result) else classField!.resolvedType!
-            expected := if required.resolvedType == null then resolveAnnotation(required.type_, classModuleFor(result, interfaceSymbol), result) else required.resolvedType!
+            actual := if classField!.resolvedType == none then resolveAnnotation(classField!.type_!, classModuleFor(result, classSymbol), result) else classField!.resolvedType!
+            expected := if required.resolvedType == none then resolveAnnotation(required.type_, classModuleFor(result, interfaceSymbol), result) else required.resolvedType!
             if !isAssignable(actual, expected) { return false }
           }
           for requiredMethod of interface_.methods {
             classMethod := findClassMethod(class_.methods, requiredMethod.name, requiredMethod.static_)
-            if classMethod == null || classMethod!.params.length != requiredMethod.params.length { return false }
+            if classMethod == none || classMethod!.params.length != requiredMethod.params.length { return false }
             if !sameFunctionSignature(classMethod!, requiredMethod, result, classSymbol, interfaceSymbol) { return false }
           }
           return true
@@ -207,32 +207,31 @@ export function sameConcreteMethodType(actual: ResolvedType, expected: ResolvedT
   return false
 }
 
-export function findClassField(fields: ClassField[], name: string): ClassField | null {
+export function findClassField(fields: ClassField[], name: string): ClassField | none {
   for field of fields { for fieldName of field.names { if fieldName == name { return field } } }
-  return null
+  return none
 }
 
-export function findClassMethod(methods: FunctionDeclaration[], name: string, static_: bool): FunctionDeclaration | null {
+export function findClassMethod(methods: FunctionDeclaration[], name: string, static_: bool): FunctionDeclaration | none {
   for method of methods { if method.name == name && method.static_ == static_ { return method } }
-  return null
+  return none
 }
 
 export function sameFunctionSignature(classMethod: FunctionDeclaration, interfaceMethod: FunctionDeclaration, result: AnalysisResult, classSymbol: Symbol, interfaceSymbol: Symbol): bool {
   classModule := classModuleFor(result, classSymbol)
   interfaceModule := classModuleFor(result, interfaceSymbol)
   for i of 0..<classMethod.params.length {
-    actualParameterType := if classMethod.params[i].resolvedType == null then resolveAnnotation(classMethod.params[i].type_!, classModule, result) else classMethod.params[i].resolvedType!
-    interfaceType_ := if interfaceMethod.params[i].resolvedType == null then resolveAnnotation(interfaceMethod.params[i].type_!, interfaceModule, result) else interfaceMethod.params[i].resolvedType!
+    actualParameterType := if classMethod.params[i].resolvedType == none then resolveAnnotation(classMethod.params[i].type_!, classModule, result) else classMethod.params[i].resolvedType!
+    interfaceType_ := if interfaceMethod.params[i].resolvedType == none then resolveAnnotation(interfaceMethod.params[i].type_!, interfaceModule, result) else interfaceMethod.params[i].resolvedType!
     if !sameType(actualParameterType, interfaceType_) { return false }
   }
-  if classMethod.returnType == null || interfaceMethod.returnType == null { return classMethod.returnType == null && interfaceMethod.returnType == null }
-  classReturn := resolveAnnotation(classMethod.returnType!, classModule, result)
-  interfaceReturn := resolveAnnotation(interfaceMethod.returnType!, interfaceModule, result)
+  classReturn := if classMethod.returnType == none then noneType() else resolveAnnotation(classMethod.returnType!, classModule, result)
+  interfaceReturn := if interfaceMethod.returnType == none then noneType() else resolveAnnotation(interfaceMethod.returnType!, interfaceModule, result)
   return isAssignable(classReturn, interfaceReturn)
 }
 
 export function classModuleFor(result: AnalysisResult, symbol: Symbol): ModuleInfo {
   module := findModule(result, symbol.module)
-  if module == null { panic("Missing module for symbol " + symbol.name) }
+  if module == none { panic("Missing module for symbol " + symbol.name) }
   return module!
 }

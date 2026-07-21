@@ -4,7 +4,7 @@ import { ExternalDependency, NativeBuildPlan, parsePackageManifest } from "./pac
 import { renderBuildProvenance } from "./provenance"
 import { StdCatalog } from "./std-catalog"
 
-export function testRendersDeterministicGraphProvenance(): void {
+export function testRendersDeterministicGraphProvenance(): none {
   root := try! parsePackageManifest("{\"name\":\"app\"}", "/app/doof.json", "/app", "linux")
   dependency := try! parsePackageManifest("{\"name\":\"dep\"}", "/dep/doof.json", "/dep", "linux")
   packages := [

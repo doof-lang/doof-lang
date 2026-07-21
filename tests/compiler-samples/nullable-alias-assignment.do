@@ -21,17 +21,17 @@ class StatementRight {
 type Statement = StatementLeft | StatementRight
 
 class Holder {
-  expression: Expression | null
-  statement: Statement | null
+  expression: Expression | none
+  statement: Statement | none
 }
 
 function makeExpression(): Expression => ExpressionLeft { value: 1 }
 function makeStatement(): Statement => StatementLeft { value: 2 }
 
 function makeHolder(): Holder {
-  let expression: Expression | null = null
+  let expression: Expression | none = none
   expression = makeExpression()
-  let statement: Statement | null = null
+  let statement: Statement | none = none
   statement = makeStatement()
   return Holder { expression, statement }
 }

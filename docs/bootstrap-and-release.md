@@ -25,3 +25,19 @@ The first supported clean-bootstrap host is macOS arm64 with Xcode Command Line
 Tools. `DOOF_STDLIB_ROOT` or adjacent `../doof-stdlib` package checkouts are
 currently required when rebuilding or testing source.
 
+## Development self-install
+
+Run `./install.sh` to build through the B5/B6 fixed point, run the compiler
+suite, and install the verified artifacts. No privileged command runs until
+both verification steps pass. The default layout keeps `doof`,
+`doof_runtime.h`, and `std-catalog.json` together in
+`/usr/local/libexec/doof`, with `/usr/local/bin/doof` as a relative symlink to
+the bundled executable. Relative links for both resources are also placed in
+`/usr/local/bin`, because macOS console executables resolve packaged resources
+from the launch directory even when the executable itself is a symlink.
+
+An alternate absolute prefix can be supplied with
+`./install.sh --prefix /opt/doof`. Empty and relative prefixes, and `/` itself,
+are rejected before the build or privilege boundary. Installation replaces
+existing compiler files and symlinks but refuses to replace a directory at any
+managed destination.

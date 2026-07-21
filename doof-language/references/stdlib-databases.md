@@ -18,14 +18,14 @@ import {
 
 - `open(":memory:")` creates an in-memory database.
 - Parameters use `?` placeholders and accept `int | long | bool | double |
-  string | readonly byte[] | null`.
+  string | readonly byte[] | none`.
 - Rows are `Map<string, SqliteValue>` where SQLite integers are `long` and
   blobs are `readonly byte[]`.
 - `query` returns `Stream<Result<Map<string, SqliteValue>, SqliteError>>`, so
   row conversion can fail during iteration.
 - `execute` rejects a statement that unexpectedly produces rows.
 - `ExecResult` contains `changes` and `lastInsertRowId`.
-- `toJsonRow` maps blob values to `null`; boolean columns normally need an
+- `toJsonRow` maps blob values to JSON `null` (source `none`); boolean columns normally need an
   application schema or SQLite convention.
 
 ## `std/postgres`
@@ -46,7 +46,7 @@ import {
   values to `double` when parseable, `BYTEA` to bytes, and other types to
   `string`.
 - `query` streams `Result<Map<string, PostgresValue>, PostgresError>` rows;
-  `queryOne` returns the first row or `null`.
+  `queryOne` returns the first row or `none`.
 - `ExecResult` contains `rowCount` and the PostgreSQL `commandTag`.
 - `PostgresError.code` contains SQLSTATE when available; detail and SQL text are
   retained separately.

@@ -185,8 +185,8 @@ case result {
 `Success<T>` and `Failure<E>` are intrinsic types, and `Result<T, E>` is their
 canonical union. Result cases therefore use the normal union-pattern rules and
 the shorthand `s: Success` / `f: Failure` specializes from the subject type.
-Payloadless `Success<void>` may be discarded but not captured for `.value`;
-payloadless `Failure<void>` may not be captured because it has no `.error`.
+Payloadless `Success<none>` may be discarded but not captured for `.value`;
+payloadless `Failure<none>` may not be captured because it has no `.error`.
 
 ### Nested Access with Capture
 
@@ -376,20 +376,20 @@ Else-narrow works only on **Result** and/or **nullable** types. Plain unions (e.
 
 | Expression type | Narrowed type |
 |---|---|
-| `string \| null` | `string` |
+| `string \| none` | `string` |
 | `Result<Config, Error>` | `Config` |
-| `Result<Config, Error> \| null` | `Result<Config, Error>` |
-| `Result<Config \| null, Error>` | `Config \| null` |
+| `Result<Config, Error> \| none` | `Result<Config, Error>` |
+| `Result<Config \| none, Error>` | `Config \| none` |
 | `int` | ❌ compile error |
 | `Circle \| Rect` | ❌ compile error |
 
 ### Nullable Type Narrowing
 
 ```javascript
-function getValue(): string | null => "hello"
+function getValue(): string | none => "hello"
 function test(): int {
     x := getValue() else { return 0 }
-    // x is string here (null removed)
+    // x is string here (none removed)
     return x.length
 }
 ```
@@ -408,13 +408,13 @@ function test(): string {
 }
 ```
 
-### Result | null Narrowing
+### Result | none Narrowing
 
 When the expression is both nullable and a Result, one declaration removes the
-outer null layer. A second declaration unwraps the remaining Result:
+outer none layer. A second declaration unwraps the remaining Result:
 
 ```javascript
-function loadConfig(): Result<Config, AppError> | null => null
+function loadConfig(): Result<Config, AppError> | none => none
 
 function test(): string {
     result := loadConfig() else { return "missing" }
@@ -427,16 +427,16 @@ function test(): string {
 
 ### Nullable Result Success Values
 
-Declaration-`else` unwraps the Result but preserves null inside its success
-payload. A successful null is data carried by `Success`, not an unhappy state
+Declaration-`else` unwraps the Result but preserves none inside its success
+payload. A successful none is data carried by `Success`, not an unhappy state
 handled by this declaration-`else`:
 
 ```javascript
-function loadConfig(): Result<Config | null, AppError> => Success { value: null }
+function loadConfig(): Result<Config | none, AppError> => Success { value: none }
 
 function test(): string {
     x := loadConfig() else { return "" }
-    // x is Config | null here
+    // x is Config | none here
     return x!.name
 }
 ```
@@ -461,7 +461,8 @@ function test(): string {
 }
 ```
 
-For non-null `Result<T, E>` subjects, `else error { ... }` captures the `Failure<E>.error` payload directly:
+For a `Result<T, E>` subject without an outer `none` member,
+`else error { ... }` captures the `Failure<E>.error` payload directly:
 
 ```javascript
 function loadConfig(): Result<Config, AppError> => Failure { error: AppError { message: "not found" } }
@@ -475,7 +476,9 @@ function test(): string {
 }
 ```
 
-Failure capture is Result-only. Nullable-only subjects and `Result<T, E> | null` subjects cannot use `else error` because the unhappy path may be null and has no failure payload.
+Failure capture is Result-only. Nullable-only subjects and
+`Result<T, E> | none` subjects cannot use `else error` because the unhappy path
+may be `none` and has no failure payload.
 
 ### With Type Annotations
 
@@ -490,8 +493,8 @@ x: string := getValue() else { return 0 }
 Else-narrow works with `break` and `continue` in loop contexts:
 
 ```javascript
-function getValue(): string | null => null
-function process(): void {
+function getValue(): string | none => none
+function process(): none {
     while true {
         x := getValue() else { break }
         println(x)
@@ -517,7 +520,9 @@ savePuzzleState(path) else error {
 }
 ```
 
-This form applies only to non-null `Result<T, E>` expressions. The `else` block does not need to exit scope because there is no post-block binding invariant to satisfy.
+This form applies only to `Result<T, E>` expressions without an outer `none`
+member. The `else` block does not need to exit scope because there is no
+post-block binding invariant to satisfy.
 
 ---
 
@@ -540,7 +545,7 @@ function categorize(age: int): string => case age {
     65.. -> "senior"
 }
 
-function handleResponse(r: Response): void => case r.status {
+function handleResponse(r: Response): none => case r.status {
     200 | 201 | 204 -> print("Success: ${r.body}"),
     404 -> print("Not found"),
     500..599 -> print("Server error"),

@@ -43,28 +43,28 @@ doof::Result<std::shared_ptr<ExternalDependencyTarget>, std::string> ExternalDep
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_sdkPath->second) : doof::json_is_string(_iterator_sdkPath->second)))) { return doof::Failure<std::string>{"Field \"sdkPath\" expected string but got " + std::string(doof::json_type_name(_iterator_sdkPath->second))}; }
         _field_sdkPath = (_lenient ? doof::json_as_string_lenient(_iterator_sdkPath->second) : doof::json_as_string(_iterator_sdkPath->second));
     } else {
-        _field_sdkPath = std::string{std::string("")};
+        _field_sdkPath = std::string("");
     }
     std::optional<std::string> _field_targetTriple;
     if (auto _iterator_targetTriple = _object->find("targetTriple"); _iterator_targetTriple != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_targetTriple->second) : doof::json_is_string(_iterator_targetTriple->second)))) { return doof::Failure<std::string>{"Field \"targetTriple\" expected string but got " + std::string(doof::json_type_name(_iterator_targetTriple->second))}; }
         _field_targetTriple = (_lenient ? doof::json_as_string_lenient(_iterator_targetTriple->second) : doof::json_as_string(_iterator_targetTriple->second));
     } else {
-        _field_targetTriple = std::string{std::string("")};
+        _field_targetTriple = std::string("");
     }
     std::optional<std::string> _field_configureHost;
     if (auto _iterator_configureHost = _object->find("configureHost"); _iterator_configureHost != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_configureHost->second) : doof::json_is_string(_iterator_configureHost->second)))) { return doof::Failure<std::string>{"Field \"configureHost\" expected string but got " + std::string(doof::json_type_name(_iterator_configureHost->second))}; }
         _field_configureHost = (_lenient ? doof::json_as_string_lenient(_iterator_configureHost->second) : doof::json_as_string(_iterator_configureHost->second));
     } else {
-        _field_configureHost = std::string{std::string("")};
+        _field_configureHost = std::string("");
     }
     std::optional<int32_t> _field_jobs;
     if (auto _iterator_jobs = _object->find("jobs"); _iterator_jobs != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_jobs->second) : doof::json_is_number(_iterator_jobs->second)))) { return doof::Failure<std::string>{"Field \"jobs\" expected number but got " + std::string(doof::json_type_name(_iterator_jobs->second))}; }
         _field_jobs = (_lenient ? doof::json_as_int_lenient(_iterator_jobs->second) : doof::json_as_int(_iterator_jobs->second));
     } else {
-        _field_jobs = int32_t{1};
+        _field_jobs = 1;
     }
     return doof::Success<std::shared_ptr<ExternalDependencyTarget>>{std::make_shared<ExternalDependencyTarget>(_field_nativeTarget, _field_sdkPath.value(), _field_targetTriple.value(), _field_configureHost.value(), _field_jobs.value())};
 }
@@ -72,7 +72,7 @@ std::string externalPath(std::string directory, std::string name) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{directory, name}));
 }
 doof::Result<void, std::string> ensureExternalDirectory(std::string path) {
-    if ((path == std::string("")) || ::std_::fs::index::exists(path)) {
+    if ((path == std::string("")) || ::doof_fs::exists(path)) {
         return doof::Success<void>{};
     }
     const auto parent = ::std_::path::index::dirname(path);
@@ -80,7 +80,7 @@ doof::Result<void, std::string> ensureExternalDirectory(std::string path) {
         auto _try_value_1 = ensureExternalDirectory(parent);
         if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
     }
-    auto _binding_value_2 = ::std_::fs::index::mkdir(path);
+    auto _binding_value_2 = ::doof_fs::mkdir(path);
     if (doof::is_failure(_binding_value_2)) {
         const auto error = doof::failure_error(_binding_value_2);
         return doof::Failure<std::string>{ (std::string("Could not create directory ") + path) };
@@ -88,11 +88,11 @@ doof::Result<void, std::string> ensureExternalDirectory(std::string path) {
     return doof::Success<void>{};
 }
 doof::Result<void, std::string> removeExternalTree(std::string path) {
-    if (!::std_::fs::index::exists(path)) {
+    if (!::doof_fs::exists(path)) {
         return doof::Success<void>{};
     }
-    if (::std_::fs::index::isDirectory(path)) {
-        auto _binding_value_3 = ::std_::fs::index::readDir(path);
+    if (::doof_fs::isDirectory(path)) {
+        auto _binding_value_3 = ::doof_fs::readDir(path);
         if (doof::is_failure(_binding_value_3)) {
             const auto error = doof::failure_error(_binding_value_3);
             return doof::Failure<std::string>{ (std::string("Could not read directory ") + path) };
@@ -104,7 +104,7 @@ doof::Result<void, std::string> removeExternalTree(std::string path) {
             if (doof::is_failure(_try_value_5)) return doof::Failure<std::string>{doof::failure_error(_try_value_5)};
         }
     }
-    auto _binding_value_6 = ::std_::fs::index::remove(path);
+    auto _binding_value_6 = ::doof_fs::remove(path);
     if (doof::is_failure(_binding_value_6)) {
         const auto error = doof::failure_error(_binding_value_6);
         return doof::Failure<std::string>{ (std::string("Could not remove ") + path) };
@@ -112,10 +112,10 @@ doof::Result<void, std::string> removeExternalTree(std::string path) {
     return doof::Success<void>{};
 }
 doof::Result<void, std::string> copyExternalPath(std::string sourcePath, std::string destinationPath) {
-    if (::std_::fs::index::isDirectory(sourcePath)) {
+    if (::doof_fs::isDirectory(sourcePath)) {
         auto _try_value_7 = ensureExternalDirectory(destinationPath);
         if (doof::is_failure(_try_value_7)) return doof::Failure<std::string>{doof::failure_error(_try_value_7)};
-        auto _binding_value_8 = ::std_::fs::index::readDir(sourcePath);
+        auto _binding_value_8 = ::doof_fs::readDir(sourcePath);
         if (doof::is_failure(_binding_value_8)) {
             const auto error = doof::failure_error(_binding_value_8);
             return doof::Failure<std::string>{ (std::string("Could not read directory ") + sourcePath) };
@@ -130,13 +130,13 @@ doof::Result<void, std::string> copyExternalPath(std::string sourcePath, std::st
     }
     auto _try_value_11 = ensureExternalDirectory(::std_::path::index::dirname(destinationPath));
     if (doof::is_failure(_try_value_11)) return doof::Failure<std::string>{doof::failure_error(_try_value_11)};
-    auto _binding_value_12 = ::std_::fs::index::readBlob(sourcePath);
+    auto _binding_value_12 = ::doof_fs::readBlob(sourcePath);
     if (doof::is_failure(_binding_value_12)) {
         const auto error = doof::failure_error(_binding_value_12);
         return doof::Failure<std::string>{ (std::string("Could not read ") + sourcePath) };
     }
     const auto blob = doof::success_value(_binding_value_12);
-    auto _binding_value_13 = ::std_::fs::index::writeBlob(destinationPath, blob);
+    auto _binding_value_13 = ::doof_fs::writeBlob(destinationPath, blob);
     if (doof::is_failure(_binding_value_13)) {
         const auto error = doof::failure_error(_binding_value_13);
         return doof::Failure<std::string>{ (std::string("Could not write ") + destinationPath) };
@@ -189,16 +189,16 @@ std::string externalNativeFingerprint(std::shared_ptr<::app_src_package_manifest
     return ::std_::crypto::index::sha256HexString(value);
 }
 bool markerMatches(std::string path, std::string fingerprint) {
-    if (!::std_::fs::index::exists(path)) {
+    if (!::doof_fs::exists(path)) {
         return false;
     }
-    auto _binding_value_19 = ::std_::fs::index::readText(path);
+    auto _binding_value_19 = ::doof_fs::readText(path);
     if (doof::is_failure(_binding_value_19)) {
         const auto& source = _binding_value_19;
         return false;
     }
     const auto source = doof::success_value(_binding_value_19);
-    auto _binding_value_20 = ::std_::json::index::parseJsonValue(source);
+    auto _binding_value_20 = ::doof_json::parse(source);
     if (doof::is_failure(_binding_value_20)) {
         const auto& parsed = _binding_value_20;
         return false;
@@ -234,10 +234,10 @@ bool markerMatches(std::string path, std::string fingerprint) {
     }
 }
 bool markerContentMatches(std::string path, std::string expected) {
-    if (!::std_::fs::index::exists(path)) {
+    if (!::doof_fs::exists(path)) {
         return false;
     }
-    auto _binding_value_22 = ::std_::fs::index::readText(path);
+    auto _binding_value_22 = ::doof_fs::readText(path);
     if (doof::is_failure(_binding_value_22)) {
         const auto& source = _binding_value_22;
         return false;
@@ -299,7 +299,7 @@ std::string externalSourceMarkerContent(std::shared_ptr<::app_src_package_manife
         externalJsonSet(marker, std::string("ref"), doof::json_value(dependency->ref));
         externalJsonSet(marker, std::string("commit"), doof::json_value(dependency->commit));
     }
-    return (::std_::json::index::formatJsonValue(doof::json_value(marker)) + std::string("\n"));
+    return (::doof_json::format(doof::json_value(marker)) + std::string("\n"));
 }
 std::string externalNativeMarkerContent(std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::shared_ptr<ExternalDependencyTarget> target, std::string fingerprint) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> marker = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
@@ -311,13 +311,13 @@ std::string externalNativeMarkerContent(std::shared_ptr<::app_src_package_manife
     externalJsonSet(marker, std::string("configureHost"), doof::json_value(target->configureHost));
     externalJsonSet(marker, std::string("commands"), doof::json_value(externalCommandsJson(dependency->commands)));
     externalJsonSet(marker, std::string("fingerprint"), doof::json_value(fingerprint));
-    return (::std_::json::index::formatJsonValue(doof::json_value(marker)) + std::string("\n"));
+    return (::doof_json::format(doof::json_value(marker)) + std::string("\n"));
 }
 bool isEmptyExternalDirectory(std::string path) {
-    if (!::std_::fs::index::isDirectory(path)) {
+    if (!::doof_fs::isDirectory(path)) {
         return false;
     }
-    auto _binding_value_27 = ::std_::fs::index::readDir(path);
+    auto _binding_value_27 = ::doof_fs::readDir(path);
     if (doof::is_failure(_binding_value_27)) {
         const auto& entries = _binding_value_27;
         return false;
@@ -326,12 +326,12 @@ bool isEmptyExternalDirectory(std::string path) {
     return (static_cast<int32_t>((entries)->size()) == 0);
 }
 doof::Result<void, std::string> copyArchiveContents(std::string sourceRoot, std::string destination) {
-    if (!::std_::fs::index::isDirectory(sourceRoot)) {
+    if (!::doof_fs::isDirectory(sourceRoot)) {
         return doof::Failure<std::string>{ (std::string("stripped archive root is not a directory: ") + sourceRoot) };
     }
     auto _try_value_28 = ensureExternalDirectory(destination);
     if (doof::is_failure(_try_value_28)) return doof::Failure<std::string>{doof::failure_error(_try_value_28)};
-    auto _binding_value_29 = ::std_::fs::index::readDir(sourceRoot);
+    auto _binding_value_29 = ::doof_fs::readDir(sourceRoot);
     if (doof::is_failure(_binding_value_29)) {
         const auto error = doof::failure_error(_binding_value_29);
         return doof::Failure<std::string>{ std::string("Could not read extracted archive") };
@@ -347,7 +347,7 @@ doof::Result<void, std::string> copyArchiveContents(std::string sourceRoot, std:
 doof::Result<std::string, std::string> strippedArchiveRoot(std::string extractRoot, int32_t count, std::string dependencyName) {
     auto current = extractRoot;
     for (int32_t ignored = 0; ignored < count; ++ignored) {
-        auto _binding_value_32 = ::std_::fs::index::readDir(current);
+        auto _binding_value_32 = ::doof_fs::readDir(current);
         if (doof::is_failure(_binding_value_32)) {
             const auto error = doof::failure_error(_binding_value_32);
             return doof::Failure<std::string>{ (std::string("Could not inspect archive for ") + dependencyName) };
@@ -373,7 +373,7 @@ doof::Result<std::string, std::string> strippedArchiveRoot(std::string extractRo
 doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> downloadExternalArchive(std::string url) {
     if (doof::string_startsWith(url, std::string("file://"))) {
         const auto path = doof::string_substring(url, 7, static_cast<int32_t>(url.size()));
-        auto _binding_value_34 = ::std_::fs::index::readBlob(path);
+        auto _binding_value_34 = ::doof_fs::readBlob(path);
         if (doof::is_failure(_binding_value_34)) {
             const auto error = doof::failure_error(_binding_value_34);
             return doof::Failure<std::string>{ (std::string("Could not read local archive ") + path) };
@@ -402,7 +402,7 @@ doof::Result<void, std::string> acquireArchive(std::shared_ptr<::app_src_package
     auto _try_value_37 = downloadExternalArchive(dependency->url);
     if (doof::is_failure(_try_value_37)) return doof::Failure<std::string>{doof::failure_error(_try_value_37)};
     const auto archive = doof::success_value(_try_value_37);
-    auto _binding_value_38 = ::std_::fs::index::writeBlob(archivePath, archive);
+    auto _binding_value_38 = ::doof_fs::writeBlob(archivePath, archive);
     if (doof::is_failure(_binding_value_38)) {
         const auto error = doof::failure_error(_binding_value_38);
         return doof::Failure<std::string>{ std::string("Could not stage downloaded archive") };
@@ -435,7 +435,7 @@ doof::Result<void, std::string> acquireArchive(std::shared_ptr<::app_src_package
         auto _try_value_44 = copyExternalPath(sourcePath, destinationPath);
         if (doof::is_failure(_try_value_44)) return doof::Failure<std::string>{doof::failure_error(_try_value_44)};
     }
-    auto _binding_value_45 = ::std_::fs::index::rename(payloadRoot, destination);
+    auto _binding_value_45 = ::doof_fs::rename(payloadRoot, destination);
     if (doof::is_failure(_binding_value_45)) {
         const auto error = doof::failure_error(_binding_value_45);
         return doof::Failure<std::string>{ (std::string("Could not install external dependency ") + dependency->name) };
@@ -455,7 +455,7 @@ doof::Result<void, std::string> acquireGit(std::shared_ptr<::app_src_package_man
     }
     auto _try_value_48 = removeExternalTree(externalPath(repositoryRoot, std::string(".git")));
     if (doof::is_failure(_try_value_48)) return doof::Failure<std::string>{doof::failure_error(_try_value_48)};
-    auto _binding_value_49 = ::std_::fs::index::rename(repositoryRoot, destination);
+    auto _binding_value_49 = ::doof_fs::rename(repositoryRoot, destination);
     if (doof::is_failure(_binding_value_49)) {
         const auto error = doof::failure_error(_binding_value_49);
         return doof::Failure<std::string>{ (std::string("Could not install external dependency ") + dependency->name) };
@@ -471,7 +471,7 @@ doof::Result<void, std::string> runExternalCommands(std::shared_ptr<::app_src_pa
     if (markerMatches(nativeMarker, fingerprint)) {
         const auto content = externalNativeMarkerContent(dependency, target, fingerprint);
         if (!markerContentMatches(nativeMarker, content)) {
-            auto _binding_value_50 = ::std_::fs::index::writeText(nativeMarker, content);
+            auto _binding_value_50 = ::doof_fs::writeText(nativeMarker, content);
             if (doof::is_failure(_binding_value_50)) {
                 const auto error = doof::failure_error(_binding_value_50);
                 return doof::Failure<std::string>{ std::string("Could not refresh external dependency native marker") };
@@ -502,7 +502,7 @@ doof::Result<void, std::string> runExternalCommands(std::shared_ptr<::app_src_pa
             return doof::Failure<std::string>{ (((((std::string("External dependency ") + dependency->name) + std::string(" command ")) + doof::to_string((index + 1))) + std::string(" failed: ")) + error) };
         }
     }
-    auto _binding_value_54 = ::std_::fs::index::writeText(nativeMarker, externalNativeMarkerContent(dependency, target, fingerprint));
+    auto _binding_value_54 = ::doof_fs::writeText(nativeMarker, externalNativeMarkerContent(dependency, target, fingerprint));
     if (doof::is_failure(_binding_value_54)) {
         const auto error = doof::failure_error(_binding_value_54);
         return doof::Failure<std::string>{ std::string("Could not write external dependency native marker") };
@@ -519,8 +519,8 @@ doof::Result<void, std::string> acquirePackageExternalDependencies(std::shared_p
         const auto sourceMarker = externalPath(destination, EXTERNAL_SOURCE_MARKER);
         const auto fingerprint = externalSourceFingerprint(dependency);
         if (!markerMatches(sourceMarker, fingerprint)) {
-            if (::std_::fs::index::exists(destination)) {
-                if (!::std_::fs::index::exists(sourceMarker) && !isEmptyExternalDirectory(destination)) {
+            if (::doof_fs::exists(destination)) {
+                if (!::doof_fs::exists(sourceMarker) && !isEmptyExternalDirectory(destination)) {
                     return doof::Failure<std::string>{ (((((std::string("External dependency ") + dependency->name) + std::string(" destination already exists without ")) + EXTERNAL_SOURCE_MARKER) + std::string(": ")) + destination) };
                 }
                 auto _try_value_56 = removeExternalTree(destination);
@@ -530,7 +530,7 @@ doof::Result<void, std::string> acquirePackageExternalDependencies(std::shared_p
             auto _try_value_57 = ensureExternalDirectory(parent);
             if (doof::is_failure(_try_value_57)) return doof::Failure<std::string>{doof::failure_error(_try_value_57)};
             const auto stagingRoot = externalPath(parent, ((std::string(".doof-") + dependency->name) + std::string("-staging")));
-            if (::std_::fs::index::exists(stagingRoot)) {
+            if (::doof_fs::exists(stagingRoot)) {
                 auto _try_value_58 = removeExternalTree(stagingRoot);
                 if (doof::is_failure(_try_value_58)) return doof::Failure<std::string>{doof::failure_error(_try_value_58)};
             }
@@ -551,7 +551,7 @@ doof::Result<void, std::string> acquirePackageExternalDependencies(std::shared_p
         }
         const auto content = externalSourceMarkerContent(dependency, fingerprint);
         if (!markerContentMatches(sourceMarker, content)) {
-            auto _binding_value_64 = ::std_::fs::index::writeText(sourceMarker, content);
+            auto _binding_value_64 = ::doof_fs::writeText(sourceMarker, content);
             if (doof::is_failure(_binding_value_64)) {
                 const auto error = doof::failure_error(_binding_value_64);
                 return doof::Failure<std::string>{ std::string("Could not refresh external dependency marker") };
@@ -562,7 +562,7 @@ doof::Result<void, std::string> acquirePackageExternalDependencies(std::shared_p
             if (doof::is_failure(_binding_value_65)) {
                 const auto error = doof::failure_error(_binding_value_65);
                 const auto nativeMarker = externalPath(destination, ((std::string(".doof-external-native-") + target->nativeTarget) + std::string(".json")));
-                if (::std_::fs::index::exists(nativeMarker)) {
+                if (::doof_fs::exists(nativeMarker)) {
                     auto _try_value_66 = removeExternalTree(nativeMarker);
                     if (doof::is_failure(_try_value_66)) return doof::Failure<std::string>{doof::failure_error(_try_value_66)};
                 }

@@ -39,7 +39,7 @@ doof::Result<std::shared_ptr<NativeCompileTask>, std::string> NativeCompileTask:
         if (!(doof::json_is_array(_iterator_arguments->second))) { return doof::Failure<std::string>{"Field \"arguments\" expected array but got " + std::string(doof::json_type_name(_iterator_arguments->second))}; }
         _field_arguments = [&]() { const auto* _array = doof::json_as_array(_iterator_arguments->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_arguments = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     return doof::Success<std::shared_ptr<NativeCompileTask>>{std::make_shared<NativeCompileTask>(_field_compiler, _field_sourcePath, _field_outputPath, _field_arguments.value())};
 }
@@ -70,21 +70,21 @@ doof::Result<std::shared_ptr<NativeCompilePlan>, std::string> NativeCompilePlan:
         if (!(doof::json_is_array(_iterator_precompiledHeaderArguments->second))) { return doof::Failure<std::string>{"Field \"precompiledHeaderArguments\" expected array but got " + std::string(doof::json_type_name(_iterator_precompiledHeaderArguments->second))}; }
         _field_precompiledHeaderArguments = [&]() { const auto* _array = doof::json_as_array(_iterator_precompiledHeaderArguments->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_precompiledHeaderArguments = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_precompiledHeaderArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>> _field_compileTasks;
     if (auto _iterator_compileTasks = _object->find("compileTasks"); _iterator_compileTasks != _object->end()) {
         if (!(doof::json_is_array(_iterator_compileTasks->second))) { return doof::Failure<std::string>{"Field \"compileTasks\" expected array but got " + std::string(doof::json_type_name(_iterator_compileTasks->second))}; }
         _field_compileTasks = [&]() { const auto* _array = doof::json_as_array(_iterator_compileTasks->second); auto _values = std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(NativeCompileTask::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_compileTasks = std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>{std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(std::vector<std::shared_ptr<NativeCompileTask>>{})};
+        _field_compileTasks = std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(std::vector<std::shared_ptr<NativeCompileTask>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_linkArguments;
     if (auto _iterator_linkArguments = _object->find("linkArguments"); _iterator_linkArguments != _object->end()) {
         if (!(doof::json_is_array(_iterator_linkArguments->second))) { return doof::Failure<std::string>{"Field \"linkArguments\" expected array but got " + std::string(doof::json_type_name(_iterator_linkArguments->second))}; }
         _field_linkArguments = [&]() { const auto* _array = doof::json_as_array(_iterator_linkArguments->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_linkArguments = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_linkArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     auto _iterator_outputPath = _object->find("outputPath");
     if (_iterator_outputPath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"outputPath\""}; }

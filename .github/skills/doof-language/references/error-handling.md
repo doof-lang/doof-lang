@@ -20,10 +20,10 @@ standalone arm types, while an expected Result context supplies contextual
 payload typing. Normal union case patterns expose `.value` only on Success and
 `.error` only on Failure.
 
-`Success()` / `Success {}` construct `Success<void>`. `Failure()` /
-`Failure {}` construct `Failure<void>`. Payloadless arms omit their payload
-member; failure capture and `.err()` are unavailable for `Failure<void>`, and
-callbacks consuming a void channel take no arguments.
+`Success()` / `Success {}` construct `Success<none>`. `Failure()` /
+`Failure {}` construct `Failure<none>`. Payloadless arms omit their payload
+member; failure capture and `.err()` are unavailable for `Failure<none>`, and
+callbacks consuming a payloadless channel take no arguments.
 
 ### Returning Results
 
@@ -89,20 +89,20 @@ config := try! loadConfig()
 
 ### `try?`
 
-Expression-level convert-to-null:
+Expression-level conversion from failure to `none`:
 
 ```doof
 config := try? loadConfig()
 ```
 
-`try?` requires a non-`void` success type.
+`try?` requires a non-`none` success type.
 
 ### `??` and `??=`
 
 ```doof
 config := loadConfig() ?? defaultConfig
 
-let cache: string | null = null
+let cache: string | none = none
 cache ??= loadFromDisk()
 ```
 
@@ -131,12 +131,12 @@ Rules:
 
 - The `else` block must exit the current scope via `return`, `break`, `continue`, or `panic(...)` when the binding name is used after the block.
 - `_ := result else ...` is a discard handler; it does not introduce a binding after the block, so its `else` block can continue.
-- `else error { ... }` captures the error payload for non-null `Result<T, E>` subjects.
+- `else error { ... }` captures the error payload for present `Result<T, E>` subjects.
 - Without capture, inside the `else` block, the binding has the original full type.
 - After the block, the binding has the narrowed happy-path type.
-- Each declaration removes exactly one fallible layer. `Result<T, E> | null`
+- Each declaration removes exactly one fallible layer. `Result<T, E> | none`
   becomes `Result<T, E>` and needs a second declaration to unwrap the Result.
-- For `Result<T | null, E>`, the happy-path type remains `T | null`; a null
+- For `Result<T | none, E>`, the happy-path type remains `T | none`; `none`
   inside `Success` is payload data and is not handled by the `else` block.
 - It applies only to nullable and/or `Result` types.
 
@@ -161,7 +161,7 @@ saveState() else error {
 
 Rules:
 
-- It applies only to non-null `Result<T, E>` expressions.
+- It applies only to present `Result<T, E>` expressions.
 - `else error { ... }` captures the error payload as `E`.
 - The handler does not need to exit scope because no success-path binding must be satisfied.
 
@@ -201,7 +201,7 @@ s := x as string else { return "" }
 result := foo()?.bar()
 ```
 
-When `foo()` returns `Result<MyObj, E1>` and `bar()` returns `Result<int, E2>`, the final type is `Result<int | null, E1 | E2>`.
+When `foo()` returns `Result<MyObj, E1>` and `bar()` returns `Result<int, E2>`, the final type is `Result<int | none, E1 | E2>`.
 
 ## Catch Expressions
 
@@ -214,7 +214,7 @@ err := catch {
 }
 ```
 
-The resulting type is the union of all captured error types plus `null`.
+The resulting type is the union of all captured error types plus `none`.
 
 Inside `catch`:
 

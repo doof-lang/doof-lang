@@ -16,7 +16,7 @@ class Point {
 class User {
     readonly id: int          // Set once at construction
     name: string              // Mutable field
-    email: string | null      // Nullable field
+    email: string | none      // Nullable field
     role: string = "user"     // Field with default value
 }
 ```
@@ -82,7 +82,7 @@ type Result = Success | Failure
 class Counter {
     count = 0
     
-    increment(amount: int): void {
+    increment(amount: int): none {
         count += amount
     }
     
@@ -160,13 +160,13 @@ as `Transform.zero`, and `transform: Transform = .identity()` lowers as
 class Counter {
     count = 0
     
-    increment(): void { count += 1; }
+    increment(): none { count += 1; }
     
     static constructor(initial: int): Counter {
         return Counter { count: initial }
     }
     
-    static badMethod(): void {
+    static badMethod(): none {
         count += 1  // ❌ Error: static method cannot access instance field
         increment() // ❌ Error: static method cannot call instance method
     }
@@ -218,7 +218,7 @@ and explicit static constructor calls:
 
 ```javascript
 class Channel<T> {
-    static constructor(handler: (value: T): void): Channel<T> {
+    static constructor(handler: (value: T): none): Channel<T> {
         return Channel<T> { handler }
     }
 }
@@ -255,7 +255,7 @@ q := Point(3, 4)
 Structs lower to direct C++ values:
 
 - `Point` lowers to `Point`, not `std::shared_ptr<Point>`.
-- `Point | null` lowers to `std::optional<Point>`.
+- `Point | none` lowers to `std::optional<Point>`.
 - Arrays, maps, and sets store struct elements by value.
 - Construction lowers to direct value construction, not `std::make_shared`.
 - Instance field and method access lowers with `.`, not `->`.
@@ -344,8 +344,8 @@ h := u.passwordHash   // ❌ Error: "passwordHash" is private
 ```doof
 class Parser {
     source: string
-    private function advance(): void { /* ... */ }
-    function parse(): void { this.advance() }   // ✅ same file
+    private function advance(): none { /* ... */ }
+    function parse(): none { this.advance() }   // ✅ same file
 }
 ```
 
@@ -369,7 +369,7 @@ export function publicApi(): int => helper() // ✅ same file
 ```
 
 ```doof
-export private function foo(): void {}  // ❌ Parse error: cannot export a private declaration
+export private function foo(): none {}  // ❌ Parse error: cannot export a private declaration
 ```
 
 #### Construction Restrictions
@@ -427,12 +427,12 @@ class Player {
     name: string
     score = 0
     
-    addPoints(points: int): void {
+    addPoints(points: int): none {
         score += points             // Implicit this — accesses this.score
         logScore()                  // Implicit this — calls this.logScore()
     }
     
-    logScore(): void {
+    logScore(): none {
         print("${name}: ${score}")  // Implicit this for both fields
     }
 }
@@ -447,12 +447,12 @@ class Point {
     x, y: float
     
     // Parameter 'x' shadows field 'x' — this.x required
-    setX(x: float): void {
+    setX(x: float): none {
         this.x = x           // ✅ Assigns parameter to field
     }
     
     // No shadowing — this. is optional
-    offsetY(dy: float): void {
+    offsetY(dy: float): none {
         y += dy              // ✅ Implicit this.y
         this.y += dy         // ✅ Also valid — explicit this
     }
@@ -497,13 +497,13 @@ Lambdas capture `this` from their **lexical scope**, just like any other variabl
 class Processor {
     items: string[] = []
     
-    addAll(newItems: string[]): void {
+    addAll(newItems: string[]): none {
         // Lambda captures 'this' from the enclosing method
         newItems.forEach((item) => items.push(item))   // ✅ Implicit this.items
         newItems.forEach((item) => this.items.push(item)) // ✅ Explicit also works
     }
     
-    getHandler(): (string): void {
+    getHandler(): (string): none {
         // Returned lambda still captures this
         return (item) => items.push(item)  // ✅ this.items from Processor
     }
@@ -694,7 +694,7 @@ Interfaces define structural contracts. In Doof's closed-world model, interfaces
 
 ```javascript
 interface Drawable {
-    draw(canvas: Canvas): void
+    draw(canvas: Canvas): none
 }
 
 interface Positioned {
@@ -711,11 +711,11 @@ class Circle {
     readonly y: float
     radius: float
     
-    draw(canvas: Canvas): void { ... }
+    draw(canvas: Canvas): none { ... }
 }
 
 // Circle automatically satisfies both Drawable and Positioned
-function render(d: Drawable): void { d.draw(canvas); }
+function render(d: Drawable): none { d.draw(canvas); }
 render(Circle { x: 0.0, y: 0.0, radius: 5.0 })  // ✅ OK
 ```
 
@@ -729,7 +729,7 @@ class Circle implements Drawable, Positioned {
     readonly y: float
     radius: float
     
-    draw(canvas: Canvas): void { ... }
+    draw(canvas: Canvas): none { ... }
 }
 ```
 
@@ -840,7 +840,7 @@ function processFile(path: string): Result<Data, IOError> {
 Because Doof uses reference counting (not garbage collection), destruction is predictable:
 
 ```javascript
-function transferData(): Result<void, IOError> {
+function transferData(): Result<none, IOError> {
     src := try openFile("input.dat")
     dst := try openFile("output.dat")
     
@@ -864,7 +864,7 @@ To break reference cycles (the primary downside of reference counting), Doof pro
 ```javascript
 class TreeNode {
     children: TreeNode[] = []
-    parent: weak TreeNode | null = null  // Weak reference to parent
+    parent: weak TreeNode | none = none  // Weak reference to parent
 }
 
 class Observer {
@@ -876,20 +876,20 @@ class Observer {
 - A `weak` reference does not prevent the referenced object from being destroyed
 - Accessing a `weak` reference yields `Result<T, WeakReferenceError>` — the referent may have been collected
 - `weak` qualifies the binding, not the type — `weak Foo | Bar` means a weak reference to a value of type `Foo | Bar`
-- Use `?.` and `!.` operators for lightweight access (same syntax as Result/null handling)
+- Use `?.` and `!.` operators for lightweight access (same syntax as Result/none handling)
 
 ```javascript
 // Preventing cycles in a graph
 class Node {
     edges: Node[] = []            // Strong — keeps neighbours alive
-    backEdge: weak Node | null    // Weak — doesn't prevent cleanup
+    backEdge: weak Node | none    // Weak — doesn't prevent cleanup
 }
 
 // Observer pattern — observers shouldn't keep subjects alive
 class EventEmitter {
     listeners: weak EventListener[] = []
     
-    notify(event: Event): void {
+    notify(event: Event): none {
         for listener of listeners {
             listener?.handleEvent(event)  // Skip if collected
         }

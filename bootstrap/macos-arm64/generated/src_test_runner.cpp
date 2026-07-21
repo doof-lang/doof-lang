@@ -45,14 +45,14 @@ doof::Result<std::shared_ptr<CoverageFileReport>, std::string> CoverageFileRepor
         if (!(doof::json_is_array(_iterator_hitLines->second))) { return doof::Failure<std::string>{"Field \"hitLines\" expected array but got " + std::string(doof::json_type_name(_iterator_hitLines->second))}; }
         _field_hitLines = [&]() { const auto* _array = doof::json_as_array(_iterator_hitLines->second); auto _values = std::make_shared<std::vector<int32_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
-        _field_hitLines = std::shared_ptr<std::vector<int32_t>>{std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})};
+        _field_hitLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     }
     std::optional<std::shared_ptr<std::vector<int32_t>>> _field_missedLines;
     if (auto _iterator_missedLines = _object->find("missedLines"); _iterator_missedLines != _object->end()) {
         if (!(doof::json_is_array(_iterator_missedLines->second))) { return doof::Failure<std::string>{"Field \"missedLines\" expected array but got " + std::string(doof::json_type_name(_iterator_missedLines->second))}; }
         _field_missedLines = [&]() { const auto* _array = doof::json_as_array(_iterator_missedLines->second); auto _values = std::make_shared<std::vector<int32_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
-        _field_missedLines = std::shared_ptr<std::vector<int32_t>>{std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})};
+        _field_missedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     }
     return doof::Success<std::shared_ptr<CoverageFileReport>>{std::make_shared<CoverageFileReport>(_field_path, _field_covered, _field_total, _field_percentTenths, _field_hitLines.value(), _field_missedLines.value())};
 }
@@ -73,28 +73,28 @@ doof::Result<std::shared_ptr<CoverageReport>, std::string> CoverageReport::fromJ
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_totalCovered->second) : doof::json_is_number(_iterator_totalCovered->second)))) { return doof::Failure<std::string>{"Field \"totalCovered\" expected number but got " + std::string(doof::json_type_name(_iterator_totalCovered->second))}; }
         _field_totalCovered = (_lenient ? doof::json_as_int_lenient(_iterator_totalCovered->second) : doof::json_as_int(_iterator_totalCovered->second));
     } else {
-        _field_totalCovered = int32_t{0};
+        _field_totalCovered = 0;
     }
     std::optional<int32_t> _field_totalLines;
     if (auto _iterator_totalLines = _object->find("totalLines"); _iterator_totalLines != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_totalLines->second) : doof::json_is_number(_iterator_totalLines->second)))) { return doof::Failure<std::string>{"Field \"totalLines\" expected number but got " + std::string(doof::json_type_name(_iterator_totalLines->second))}; }
         _field_totalLines = (_lenient ? doof::json_as_int_lenient(_iterator_totalLines->second) : doof::json_as_int(_iterator_totalLines->second));
     } else {
-        _field_totalLines = int32_t{0};
+        _field_totalLines = 0;
     }
     std::optional<int32_t> _field_totalPercentTenths;
     if (auto _iterator_totalPercentTenths = _object->find("totalPercentTenths"); _iterator_totalPercentTenths != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_totalPercentTenths->second) : doof::json_is_number(_iterator_totalPercentTenths->second)))) { return doof::Failure<std::string>{"Field \"totalPercentTenths\" expected number but got " + std::string(doof::json_type_name(_iterator_totalPercentTenths->second))}; }
         _field_totalPercentTenths = (_lenient ? doof::json_as_int_lenient(_iterator_totalPercentTenths->second) : doof::json_as_int(_iterator_totalPercentTenths->second));
     } else {
-        _field_totalPercentTenths = int32_t{1000};
+        _field_totalPercentTenths = 1000;
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<CoverageFileReport>>>> _field_files;
     if (auto _iterator_files = _object->find("files"); _iterator_files != _object->end()) {
         if (!(doof::json_is_array(_iterator_files->second))) { return doof::Failure<std::string>{"Field \"files\" expected array but got " + std::string(doof::json_type_name(_iterator_files->second))}; }
         _field_files = [&]() { const auto* _array = doof::json_as_array(_iterator_files->second); auto _values = std::make_shared<std::vector<std::shared_ptr<CoverageFileReport>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(CoverageFileReport::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_files = std::shared_ptr<std::vector<std::shared_ptr<CoverageFileReport>>>{std::make_shared<std::vector<std::shared_ptr<CoverageFileReport>>>(std::vector<std::shared_ptr<CoverageFileReport>>{})};
+        _field_files = std::make_shared<std::vector<std::shared_ptr<CoverageFileReport>>>(std::vector<std::shared_ptr<CoverageFileReport>>{});
     }
     return doof::Success<std::shared_ptr<CoverageReport>>{std::make_shared<CoverageReport>(_field_totalCovered.value(), _field_totalLines.value(), _field_totalPercentTenths.value(), _field_files.value())};
 }
@@ -143,14 +143,14 @@ doof::Result<std::shared_ptr<TestDiscovery>, std::string> TestDiscovery::fromJso
         if (!(doof::json_is_array(_iterator_tests->second))) { return doof::Failure<std::string>{"Field \"tests\" expected array but got " + std::string(doof::json_type_name(_iterator_tests->second))}; }
         _field_tests = [&]() { const auto* _array = doof::json_as_array(_iterator_tests->second); auto _values = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(DiscoveredTest::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
-        _field_tests = std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>>{std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{})};
+        _field_tests = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_errors;
     if (auto _iterator_errors = _object->find("errors"); _iterator_errors != _object->end()) {
         if (!(doof::json_is_array(_iterator_errors->second))) { return doof::Failure<std::string>{"Field \"errors\" expected array but got " + std::string(doof::json_type_name(_iterator_errors->second))}; }
         _field_errors = [&]() { const auto* _array = doof::json_as_array(_iterator_errors->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_errors = std::shared_ptr<std::vector<std::string>>{std::make_shared<std::vector<std::string>>(std::vector<std::string>{})};
+        _field_errors = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     return doof::Success<std::shared_ptr<TestDiscovery>>{std::make_shared<TestDiscovery>(_field_tests.value(), _field_errors.value())};
 }
@@ -442,14 +442,14 @@ void addDiscoveredTest(std::shared_ptr<TestDiscovery> result, std::shared_ptr<::
         result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must not declare type parameters")));
         return;
     }
-    if (!returnsVoid(declaration)) {
-        result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must return void")));
+    if (!returnsNone(declaration)) {
+        result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must return none")));
         return;
     }
     const auto displayPath = testDisplayPath(rootDirectory, modulePath);
     result->tests->push_back(std::make_shared<DiscoveredTest>(((displayPath + std::string("::")) + exportedName), exportedName, modulePath, displayPath));
 }
-bool returnsVoid(std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration) {
+bool returnsNone(std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration) {
     if (doof::is_null(declaration->returnType)) {
         {
             auto _case_subject = declaration->body;
@@ -465,7 +465,7 @@ bool returnsVoid(std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaratio
         auto _case_subject = doof::unwrap_optional(declaration->returnType);
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
             const auto& named = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
-            return (named->name == std::string("void"));
+            return ((named->name == std::string("none")) || (named->name == std::string("void")));
     }
     else {
             return false;

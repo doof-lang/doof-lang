@@ -24,11 +24,10 @@ namespace app_src_semantic_ { struct ClassType; }
 namespace app_src_semantic_ { struct EnumType; }
 namespace app_src_semantic_ { struct FunctionType; }
 namespace app_src_semantic_ { struct JsonValueResolvedType; }
-namespace app_src_semantic_ { struct NullType; }
+namespace app_src_semantic_ { struct NoneType; }
 namespace app_src_semantic_ { struct PrimitiveType; }
 namespace app_src_semantic_ { struct ResultResolvedType; }
 namespace app_src_semantic_ { struct UnionResolvedType; }
-namespace app_src_semantic_ { struct VoidType; }
 namespace std_::fs::index { struct BlockReadStream; }
 namespace std_::http::index { struct BodyChunkStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
@@ -63,7 +62,7 @@ namespace app_src_emitter_wasm_ {
     void collectExportedFunctions(std::shared_ptr<::app_src_analyzer_::ModuleInfo> info, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>> result);
     bool moduleExportsFunction(std::shared_ptr<::app_src_analyzer_::ModuleInfo> info, std::string name);
     doof::Result<void, std::string> validateWasmFunction(std::shared_ptr<::app_src_ast_::FunctionDeclaration> fn, std::shared_ptr<::app_src_analyzer_::AnalysisResult> analysis);
-    bool isWasmJsonType(std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NullType>, std::shared_ptr<::app_src_semantic_::VoidType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_, std::shared_ptr<::app_src_analyzer_::AnalysisResult> analysis);
+    bool isWasmJsonType(std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_, std::shared_ptr<::app_src_analyzer_::AnalysisResult> analysis);
     std::string wasmPreamble(std::shared_ptr<::app_src_analyzer_::ModuleInfo> info);
     std::string emitWasmWrapper(std::shared_ptr<::app_src_ast_::FunctionDeclaration> fn, std::string exportName, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
     std::string emitParameter(std::shared_ptr<::app_src_ast_::Parameter> parameter, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);

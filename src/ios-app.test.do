@@ -4,7 +4,7 @@ import {
   renderIOSInfoPlist, renderIOSMainSource,
 } from "./ios-app"
 
-export function testRendersIOSSupportFiles(): void {
+export function testRendersIOSSupportFiles(): none {
   custom: JsonObject := {}
   custom.set("NSCameraUsageDescription", "Scan & share")
   config := IOSAppConfig {
@@ -26,7 +26,7 @@ export function testRendersIOSSupportFiles(): void {
   Assert.stringContains(main, "doof_entry_main")
 }
 
-export function testPlansIOSTargetsArchiveAndSigning(): void {
+export function testPlansIOSTargetsArchiveAndSigning(): none {
   Assert.equal(try! iosTargetTriple("16.0", "simulator", "arm64"), "arm64-apple-ios16.0-simulator")
   Assert.equal(try! iosTargetTriple("16.0", "simulator", "x86_64"), "x86_64-apple-ios16.0-simulator")
   Assert.equal(try! iosTargetTriple("16.0", "device", "arm64"), "arm64-apple-ios16.0")
@@ -36,7 +36,7 @@ export function testPlansIOSTargetsArchiveAndSigning(): void {
   Assert.equal(arguments[arguments.length - 1], "/tmp/Demo.app")
 }
 
-export function testExpandsWildcardProfileApplicationIdentifierForSigning(): void {
+export function testExpandsWildcardProfileApplicationIdentifierForSigning(): none {
   Assert.equal(
     try! iosExactApplicationIdentifier("TEAMID.dev.doof.*", "dev.doof.demo"),
     "TEAMID.dev.doof.demo",
@@ -47,7 +47,7 @@ export function testExpandsWildcardProfileApplicationIdentifierForSigning(): voi
   )
 }
 
-export function testRejectsMismatchedProfileApplicationIdentifierForSigning(): void {
+export function testRejectsMismatchedProfileApplicationIdentifierForSigning(): none {
   result := iosExactApplicationIdentifier("TEAMID.dev.other.*", "dev.doof.demo")
   Assert.equal(result.isFailure(), true)
   case result { failure: Failure<string> -> Assert.stringContains(failure.error, "does not match bundle id") }

@@ -21,7 +21,7 @@ class Config {
   name: string
   enabled: bool
   count: int = 10
-  notes: string | null = null
+  notes: string | none = none
 }
 
 class Calculator "A calculator." {

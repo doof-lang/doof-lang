@@ -26,7 +26,7 @@ export class ExternalDependencyTarget {
 
 function externalPath(directory: string, name: string): string => join([directory, name])
 
-function ensureExternalDirectory(path: string): Result<void, string> {
+function ensureExternalDirectory(path: string): Result<none, string> {
   if path == "" || exists(path) { return Success() }
   parent := dirname(path)
   if parent != path { try ensureExternalDirectory(parent) }
@@ -34,7 +34,7 @@ function ensureExternalDirectory(path: string): Result<void, string> {
   return Success()
 }
 
-function removeExternalTree(path: string): Result<void, string> {
+function removeExternalTree(path: string): Result<none, string> {
   if !exists(path) { return Success() }
   if isDirectory(path) {
     entries := readDir(path) else error { return Failure("Could not read directory " + path) }
@@ -44,7 +44,7 @@ function removeExternalTree(path: string): Result<void, string> {
   return Success()
 }
 
-function copyExternalPath(sourcePath: string, destinationPath: string): Result<void, string> {
+function copyExternalPath(sourcePath: string, destinationPath: string): Result<none, string> {
   if isDirectory(sourcePath) {
     try ensureExternalDirectory(destinationPath)
     entries := readDir(sourcePath) else error { return Failure("Could not read directory " + sourcePath) }
@@ -123,7 +123,7 @@ function markerContentMatches(path: string, expected: string): bool {
   return source == expected
 }
 
-function externalJsonSet(object: JsonObject, key: string, value: JsonValue): void {
+function externalJsonSet(object: JsonObject, key: string, value: JsonValue): none {
   object.set(key, value)
 }
 
@@ -195,7 +195,7 @@ function isEmptyExternalDirectory(path: string): bool {
   return entries.length == 0
 }
 
-function copyArchiveContents(sourceRoot: string, destination: string): Result<void, string> {
+function copyArchiveContents(sourceRoot: string, destination: string): Result<none, string> {
   if !isDirectory(sourceRoot) { return Failure("stripped archive root is not a directory: " + sourceRoot) }
   try ensureExternalDirectory(destination)
   entries := readDir(sourceRoot) else error { return Failure("Could not read extracted archive") }
@@ -240,7 +240,7 @@ function downloadExternalArchive(url: string): Result<readonly byte[], string> {
   return Success(response.getBlob())
 }
 
-function acquireArchive(dependency: ExternalDependency, destination: string, stagingRoot: string): Result<void, string> {
+function acquireArchive(dependency: ExternalDependency, destination: string, stagingRoot: string): Result<none, string> {
   archivePath := externalPath(stagingRoot, "source")
   extractRoot := externalPath(stagingRoot, "extract")
   payloadRoot := externalPath(stagingRoot, "payload")
@@ -270,7 +270,7 @@ function acquireArchive(dependency: ExternalDependency, destination: string, sta
   return Success()
 }
 
-function acquireGit(dependency: ExternalDependency, destination: string, stagingRoot: string): Result<void, string> {
+function acquireGit(dependency: ExternalDependency, destination: string, stagingRoot: string): Result<none, string> {
   repositoryRoot := externalPath(stagingRoot, "repository")
   try ignoredClone := commandOutput(
     "git", ["clone", "--depth", "1", "--branch", dependency.ref, dependency.url, repositoryRoot],
@@ -306,7 +306,7 @@ function runExternalCommands(
   packageRoot: string,
   destination: string,
   target: ExternalDependencyTarget,
-): Result<void, string> {
+): Result<none, string> {
   nativeMarker := externalPath(destination, ".doof-external-native-" + target.nativeTarget + ".json")
   fingerprint := externalNativeFingerprint(dependency, target)
   if markerMatches(nativeMarker, fingerprint) {
@@ -352,7 +352,7 @@ function runExternalCommands(
 export function acquirePackageExternalDependencies(
   manifest: PackageManifest,
   target: ExternalDependencyTarget,
-): Result<void, string> {
+): Result<none, string> {
   if manifest.manifestPath == "" { return Success() }
   for dependency of manifest.externalDependencies {
     destination := externalPath(manifest.rootDirectory, dependency.destination)

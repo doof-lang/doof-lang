@@ -33,11 +33,11 @@ import { Assert } from "std/assert"
 ### API
 
 ```
-Assert.equal<T>(actual: T, expected: T, message: string | null = null): void
-Assert.notEqual<T>(actual: T, expected: T, message: string | null = null): void
-Assert.isTrue(value: bool, message: string | null = null): void
-Assert.isFalse(value: bool, message: string | null = null): void
-Assert.fail(message: string | null = null): void
+Assert.equal<T>(actual: T, expected: T, message: string | none = none): none
+Assert.notEqual<T>(actual: T, expected: T, message: string | none = none): none
+Assert.isTrue(value: bool, message: string | none = none): none
+Assert.isFalse(value: bool, message: string | none = none): none
+Assert.fail(message: string | none = none): none
 ```
 
 All methods accept an optional trailing message that is prepended to the default failure text.
@@ -48,7 +48,7 @@ All methods accept an optional trailing message that is prepended to the default
 import { Assert } from "std/assert"
 import { add } from "./math"
 
-export function testAdd(): void {
+export function testAdd(): none {
     Assert.equal(add(2, 3), 5)
     Assert.equal(add(-1, 1), 0, "zero sum")
 }
@@ -83,18 +83,18 @@ BlobBuilder.constructor(size: long = 0L, endianness: Endian = .LittleEndian): Bl
 
 // Position
 getPosition(): long
-setPosition(position: long): void
+setPosition(position: long): none
 length(): long
 
 // Writing
-writeByte(value: byte): void
-writeBool(value: bool): void
-writeInt(value: int): void
-writeLong(value: long): void
-writeFloat(value: float): void
-writeDouble(value: double): void
-writeBytes(value: readonly byte[]): void
-writeString(value: string): void    // raw UTF-8 bytes, no length prefix
+writeByte(value: byte): none
+writeBool(value: bool): none
+writeInt(value: int): none
+writeLong(value: long): none
+writeFloat(value: float): none
+writeDouble(value: double): none
+writeBytes(value: readonly byte[]): none
+writeString(value: string): none    // raw UTF-8 bytes, no length prefix
 
 // Produce result
 build(): readonly byte[]
@@ -111,7 +111,7 @@ BlobReader.constructor(data: readonly byte[], endianness: Endian = .LittleEndian
 
 // Position and size
 getPosition(): long
-setPosition(position: long): void
+setPosition(position: long): none
 length(): long
 remaining(): long
 
@@ -126,7 +126,7 @@ readBytes(length: long): readonly byte[]
 readString(length: long): string
 
 // Search
-findNextAny(candidates: readonly byte[]): long | null
+findNextAny(candidates: readonly byte[]): long | none
 ```
 
 ### Example
@@ -262,11 +262,11 @@ enum IoError {
 
 ```
 readText(path: string): Result<string, IoError>
-writeText(path: string, content: string): Result<void, IoError>
+writeText(path: string, content: string): Result<none, IoError>
 readBlob(path: string): Result<readonly byte[], IoError>
-writeBlob(path: string, data: readonly byte[]): Result<void, IoError>
-appendText(path: string, content: string): Result<void, IoError>
-appendBlob(path: string, data: readonly byte[]): Result<void, IoError>
+writeBlob(path: string, data: readonly byte[]): Result<none, IoError>
+appendText(path: string, content: string): Result<none, IoError>
+appendBlob(path: string, data: readonly byte[]): Result<none, IoError>
 ```
 
 ### Streaming I/O
@@ -275,8 +275,8 @@ appendBlob(path: string, data: readonly byte[]): Result<void, IoError>
 readBlockStream(path: string, blockSize: int = 65536): Result<Stream<readonly byte[]>, IoError>
 readBlobStream(path: string, blockSize: int = 65536): Result<Stream<readonly byte[]>, IoError>
 readLineStream(path: string, blockSize: int = 65536): Result<Stream<string>, IoError>
-writeBlobStream(path: string, chunks: Stream<readonly byte[]>): Result<void, IoError>
-writeLineStream(path: string, lines: Stream<string>): Result<void, IoError>
+writeBlobStream(path: string, chunks: Stream<readonly byte[]>): Result<none, IoError>
+writeLineStream(path: string, lines: Stream<string>): Result<none, IoError>
 ```
 
 `readLineStream` splits on `\n`, `\r`, and `\r\n`, stripping the delimiter.  The final line is yielded even without a trailing newline.
@@ -288,10 +288,10 @@ exists(path: string): bool
 isFile(path: string): bool
 isDirectory(path: string): bool
 readDir(path: string): Result<DirEntry[], IoError>
-mkdir(path: string): Result<void, IoError>
-remove(path: string): Result<void, IoError>
-rename(sourcePath: string, destPath: string): Result<void, IoError>
-copy(sourcePath: string, destPath: string): Result<void, IoError>
+mkdir(path: string): Result<none, IoError>
+remove(path: string): Result<none, IoError>
+rename(sourcePath: string, destPath: string): Result<none, IoError>
+copy(sourcePath: string, destPath: string): Result<none, IoError>
 ```
 
 ### Example
@@ -328,10 +328,10 @@ class HttpRequest {
     readonly method: string
     readonly url: string
     readonly headers: HttpHeader[] = []
-    readonly body: readonly byte[] | null = null
+    readonly body: readonly byte[] | none = none
     readonly timeoutMs: int = 30000
     readonly followRedirects: bool = true
-    header(name: string): string | null
+    header(name: string): string | none
 }
 
 class HttpResponse {
@@ -340,7 +340,7 @@ class HttpResponse {
     readonly headers: HttpHeader[]
     readonly body: readonly byte[]
     ok(): bool                              // status 200–299
-    header(name: string): string | null     // case-insensitive lookup
+    header(name: string): string | none     // case-insensitive lookup
     getText(): string
     getBlob(): readonly byte[]
     getLineStream(): Stream<string>
@@ -375,7 +375,7 @@ function fetchJson(url: string): Result<JsonValue, string> {
     return resp.getJsonValue()
 }
 
-function patchResource(url: string, data: readonly byte[]): Result<void, string> {
+function patchResource(url: string, data: readonly byte[]): Result<none, string> {
     client := createClient()
     req := HttpRequest {
         method: "PATCH",
@@ -442,26 +442,26 @@ platform(): string
 architecture(): string
 
 class ExecOptions {
-    readonly cwd: string | null = null
+    readonly cwd: string | none = none
     readonly env: Map<string, string> = {}
     readonly inheritEnv: bool = true
     readonly withStdin: bool = true
     readonly mergeStderrIntoStdout: bool = false
     readonly inheritOutput: bool = false
-    readonly maxOutputBytes: long | null = null
+    readonly maxOutputBytes: long | none = none
 }
 
 class Exec {
     static spawn(command: string, args: string[] = [], options: ExecOptions = ExecOptions {}): Result<Exec, string>
     stdoutStream(): Stream<readonly byte[]>
     stderrStream(): Stream<readonly byte[]>
-    nextStdoutChunk(): readonly byte[] | null
-    nextStderrChunk(): readonly byte[] | null
-    writeStdinText(value: string): Result<void, string>
-    closeStdin(): Result<void, string>
+    nextStdoutChunk(): readonly byte[] | none
+    nextStderrChunk(): readonly byte[] | none
+    writeStdinText(value: string): Result<none, string>
+    closeStdin(): Result<none, string>
     isRunning(): bool
     wait(): Result<int, string>
-    terminate(signal: int = 15): Result<void, string>
+    terminate(signal: int = 15): Result<none, string>
     stdoutOpen(): bool
     stderrOpen(): bool
 }
@@ -514,7 +514,7 @@ homeDirectory(): Result<string, string>
 tempDirectory(): string
 currentWorkingDirectory(): Result<string, string>
 absolute(path: string): Result<string, string>
-setCurrentWorkingDirectory(path: string): Result<void, string>
+setCurrentWorkingDirectory(path: string): Result<none, string>
 
 join(parts: string[]): string
 dirname(path: string): string
@@ -582,8 +582,8 @@ class Match {
     range: Tuple<int, int>          // (start, end) byte offsets
     captures: string[]              // indexed capture groups (1-based, stored 0-based)
     captureRanges: Tuple<int, int>[]
-    capture(name: string): string | null        // named capture group
-    captureRange(name: string): Tuple<int, int> | null
+    capture(name: string): string | none        // named capture group
+    captureRange(name: string): Tuple<int, int> | none
 }
 ```
 
@@ -593,7 +593,7 @@ class Match {
 static compile(pattern: string, flags: ReadonlySet<RegexFlag> = []): Result<Regex, RegexError>
 
 test(input: string): bool
-find(input: string): Match | null
+find(input: string): Match | none
 findAll(input: string): Match[]
 replaceFirst(input: string, replacement: string): string
 replaceAll(input: string, replacement: string): string
@@ -619,7 +619,7 @@ domain := match.captures[1]             // "example.com"
 // Named groups
 try namedRe := Regex.compile("(?P<user>[^@]+)@(?P<domain>[^@]+)")
 m := namedRe.find("ada@example.com") else { return }
-u := m.capture("user")                  // "ada" | null
+u := m.capture("user")                  // "ada" | none
 
 // Case-insensitive replace
 try ci := Regex.compile("hello", readonly [.IgnoreCase])
@@ -1054,8 +1054,8 @@ import { Regex } from "std/regex"
 
 try emailRe := Regex.compile("([^@]+)@([^@]+\\.\\w+)")
 
-function extractEmail(input: string): (string, string) | null {
-    match := emailRe.find(input) else { return null }
+function extractEmail(input: string): (string, string) | none {
+    match := emailRe.find(input) else { return none }
     return (match.captures[0], match.captures[1])
 }
 ```
@@ -1103,7 +1103,7 @@ import { readBlockStream, writeLineStream, IoError } from "std/fs"
 import { blobStreamToLineStream } from "std/stream"
 import { Chain } from "std/stream"
 
-function extractNonEmpty(src: string, dst: string): Result<void, IoError> {
+function extractNonEmpty(src: string, dst: string): Result<none, IoError> {
     try blocks := readBlockStream(src)
     lines  := blobStreamToLineStream(blocks)
     output := Chain<string> { source: lines }.filter(=> it.length > 0)
@@ -1117,12 +1117,12 @@ function extractNonEmpty(src: string, dst: string): Result<void, IoError> {
 import { Assert } from "std/assert"
 import { join, basename } from "std/path"
 
-export function testJoin(): void {
+export function testJoin(): none {
     Assert.equal(join(["a", "b", "c"]), "a/b/c")
     Assert.equal(join(["/root", "..", "sibling"]), "/sibling")
 }
 
-export function testBasename(): void {
+export function testBasename(): none {
     Assert.equal(basename("/a/b/file.txt"), "file.txt")
     Assert.equal(basename("/"), "")
 }

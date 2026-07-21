@@ -108,10 +108,10 @@ export class PackageManifest {
   policy: DependencyPolicy = DependencyPolicy {}
   nativeBuild: NativeBuildPlan
   target: string = ""
-  macosApp: MacOSAppConfig | null = null
-  iosApp: IOSAppConfig | null = null
-  packageConfig: MacOSPackageConfig | null = null
-  iosPackageConfig: IOSPackageConfig | null = null
+  macosApp: MacOSAppConfig | none = none
+  iosApp: IOSAppConfig | none = none
+  packageConfig: MacOSPackageConfig | none = none
+  iosPackageConfig: IOSPackageConfig | none = none
 }
 
 /** Parses package identity and host-platform native inputs from doof.json. */
@@ -269,7 +269,7 @@ function appendPolicyStrings(
   name: string,
   manifestPath: string,
   fieldPath: string,
-): Result<void, string> {
+): Result<none, string> {
   try values := manifestArray(manifestJsonField(object, name), manifestPath, fieldPath + "." + name)
   for index of 0..<values.length {
     try value := manifestString(values[index], manifestPath, fieldPath + "." + name + "[" + string(index) + "]")
@@ -515,8 +515,8 @@ function parseMacOSApp(
   packageName: string,
   packageVersion: string,
   target: string,
-): Result<MacOSAppConfig | null, string> {
-  if target != "macos-app" { return Success(null) }
+): Result<MacOSAppConfig | none, string> {
+  if target != "macos-app" { return Success(none) }
   let build: JsonObject = {}
   if manifestJsonHas(root, "build") {
     try parsedBuild := manifestObject(manifestJsonField(root, "build"), manifestPath, "build")
@@ -564,7 +564,7 @@ function parseMacOSApp(
     }
   }
 
-  let infoPlist: JsonObject | null = null
+  let infoPlist: JsonObject | none = none
   if manifestJsonHas(nested, "infoPlist") {
     try parsedInfo := manifestObject(manifestJsonField(nested, "infoPlist"), manifestPath, "build.macosApp.infoPlist")
     for key, ignored of parsedInfo {
@@ -575,7 +575,7 @@ function parseMacOSApp(
     infoPlist = parsedInfo
   }
 
-  let resourceValue: JsonValue | null = null
+  let resourceValue: JsonValue | none = none
   let resourceField = "build.macosApp.resources"
   if manifestJsonHas(root, "resources") {
     resourceValue = manifestJsonField(root, "resources")
@@ -587,7 +587,7 @@ function parseMacOSApp(
     resourceField = "build.resources"
   }
   let resources: MacOSAppResource[] = []
-  if resourceValue != null {
+  if resourceValue != none {
     try parsedResources := parseResourceArray(resourceValue!, manifestPath, rootDirectory, resourceField)
     for resource of parsedResources {
       resources.push(MacOSAppResource { sourcePath: resource.sourcePath, destination: resource.destination })
@@ -637,8 +637,8 @@ function parseIOSApp(
   packageName: string,
   packageVersion: string,
   target: string,
-): Result<IOSAppConfig | null, string> {
-  if target != "ios-app" { return Success(null) }
+): Result<IOSAppConfig | none, string> {
+  if target != "ios-app" { return Success(none) }
   let build: JsonObject = {}
   if manifestJsonHas(root, "build") {
     try parsedBuild := manifestObject(manifestJsonField(root, "build"), manifestPath, "build")
@@ -685,7 +685,7 @@ function parseIOSApp(
     }
   }
 
-  let infoPlist: JsonObject | null = null
+  let infoPlist: JsonObject | none = none
   if manifestJsonHas(nested, "infoPlist") {
     try parsedInfo := manifestObject(manifestJsonField(nested, "infoPlist"), manifestPath, "build.iosApp.infoPlist")
     for key, ignored of parsedInfo {
@@ -696,7 +696,7 @@ function parseIOSApp(
     infoPlist = parsedInfo
   }
 
-  let resourceValue: JsonValue | null = null
+  let resourceValue: JsonValue | none = none
   let resourceField = "build.iosApp.resources"
   if manifestJsonHas(root, "resources") {
     resourceValue = manifestJsonField(root, "resources")
@@ -708,7 +708,7 @@ function parseIOSApp(
     resourceField = "build.resources"
   }
   let resources: IOSAppResource[] = []
-  if resourceValue != null {
+  if resourceValue != none {
     try parsedResources := parseResourceArray(resourceValue!, manifestPath, rootDirectory, resourceField)
     for resource of parsedResources {
       resources.push(IOSAppResource { sourcePath: resource.sourcePath, destination: resource.destination })
@@ -971,7 +971,7 @@ function appendNativeFragment(
   manifestPath: string,
   rootDirectory: string,
   fieldPath: string,
-): Result<void, string> {
+): Result<none, string> {
   try appendStringArrayField(target.includePaths, fragment, "includePaths", manifestPath, fieldPath, rootDirectory)
   try appendStringArrayField(target.sourceFiles, fragment, "sourceFiles", manifestPath, fieldPath, rootDirectory)
   try appendStringArrayField(target.libraryPaths, fragment, "libraryPaths", manifestPath, fieldPath, rootDirectory)
@@ -992,7 +992,7 @@ function appendStringArrayField(
   manifestPath: string,
   fieldPath: string,
   pathRoot: string,
-): Result<void, string> {
+): Result<none, string> {
   if !manifestJsonHas(object, name) { return Success() }
   try values := manifestArray(manifestJsonField(object, name), manifestPath, fieldPath + "." + name)
   for index of 0..<values.length {
@@ -1007,7 +1007,7 @@ function appendStringArrayField(
   return Success()
 }
 
-function appendNativeBuild(target: NativeBuildPlan, source: NativeBuildPlan): void {
+function appendNativeBuild(target: NativeBuildPlan, source: NativeBuildPlan): none {
   appendUniqueValues(target.includePaths, source.includePaths)
   appendUniqueValues(target.sourceFiles, source.sourceFiles)
   appendUniqueValues(target.libraryPaths, source.libraryPaths)
@@ -1020,11 +1020,11 @@ function appendNativeBuild(target: NativeBuildPlan, source: NativeBuildPlan): vo
   appendUniqueValues(target.linkerFlags, source.linkerFlags)
 }
 
-function appendUniqueValues(target: string[], values: string[]): void {
+function appendUniqueValues(target: string[], values: string[]): none {
   for value of values { appendUnique(target, value) }
 }
 
-function appendUnique(target: string[], value: string): void {
+function appendUnique(target: string[], value: string): none {
   for existing of target { if existing == value { return } }
   target.push(value)
 }

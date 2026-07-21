@@ -6,6 +6,7 @@
 #include "src_emitter_wasm.hpp"
 #include "src_emitter_names.hpp"
 #include "src_checker.hpp"
+#include "src_diagnostics.hpp"
 #include "src_resolver.hpp"
 #include "src_semantic.hpp"
 #include "std_fs_index.hpp"
@@ -20,6 +21,7 @@ using namespace ::app_src_emitter_monomorphize_;
 using namespace ::app_src_emitter_wasm_;
 using namespace ::app_src_emitter_names_;
 using namespace ::app_src_checker_;
+using namespace ::app_src_diagnostics_;
 using namespace ::app_src_resolver_;
 using namespace ::app_src_semantic_;
 
@@ -56,7 +58,7 @@ std::shared_ptr<Compilation> compileInternal(std::shared_ptr<std::vector<std::sh
     for (const auto& diagnostic : *_iterable_1) {
         diagnostics->push_back(diagnostic);
     }
-    if (static_cast<int32_t>((diagnostics)->size()) == 0) {
+    if (!::app_src_diagnostics_::hasErrorDiagnostics(diagnostics)) {
         const auto checker = ::app_src_checker_::createChecker(analysis);
         std::shared_ptr<std::vector<std::string>> checkedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
         std::shared_ptr<std::vector<std::string>> visitingPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
@@ -65,14 +67,14 @@ std::shared_ptr<Compilation> compileInternal(std::shared_ptr<std::vector<std::sh
             checkModuleDependencies(module->path, analysis, checker, checkedPaths, visitingPaths, diagnostics);
         }
     }
-    if (static_cast<int32_t>((diagnostics)->size()) > 0) {
+    if (::app_src_diagnostics_::hasErrorDiagnostics(diagnostics)) {
         return std::make_shared<Compilation>(nullptr, diagnostics);
     }
     const auto& _iterable_3 = ::app_src_checker_::validateCheckedTypes(analysis);
     for (const auto& diagnostic : *_iterable_3) {
         diagnostics->push_back(diagnostic);
     }
-    if (static_cast<int32_t>((diagnostics)->size()) > 0) {
+    if (::app_src_diagnostics_::hasErrorDiagnostics(diagnostics)) {
         return std::make_shared<Compilation>(nullptr, diagnostics);
     }
     const auto instantiations = ::app_src_emitter_monomorphize_::buildInstantiationPlan(analysis);
@@ -83,7 +85,7 @@ std::shared_ptr<Compilation> compileInternal(std::shared_ptr<std::vector<std::sh
             (trace = ((trace + ((trace == std::string("")) ? std::string("") : std::string(" -> "))) + item));
         }
         auto zero = ::app_src_semantic_::SemanticLocation{0, 0, 0};
-        diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (std::string("Generic instantiation did not converge after 256 concrete instantiations") + ((trace == std::string("")) ? std::string("") : (std::string(": ") + trace))), ::app_src_semantic_::SemanticSpan{zero, zero}, entry));
+        diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (std::string("Generic instantiation did not converge after 256 concrete instantiations") + ((trace == std::string("")) ? std::string("") : (std::string(": ") + trace))), ::app_src_semantic_::SemanticSpan{zero, zero}, entry, std::string("")));
         return std::make_shared<Compilation>(nullptr, diagnostics);
     }
     const auto emission = ::app_src_emitter_module_::emitModuleGraph(analysis, entry, instantiations, entryMode, coverage);
@@ -92,7 +94,7 @@ std::shared_ptr<Compilation> compileInternal(std::shared_ptr<std::vector<std::sh
         if (doof::is_failure(_binding_value_5)) {
             const auto message = doof::failure_error(_binding_value_5);
             auto zero = ::app_src_semantic_::SemanticLocation{0, 0, 0};
-            diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, ::app_src_semantic_::SemanticSpan{zero, zero}, entry));
+            diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, ::app_src_semantic_::SemanticSpan{zero, zero}, entry, std::string("")));
             return std::make_shared<Compilation>(nullptr, diagnostics);
         }
         const auto wasm = doof::success_value(_binding_value_5);

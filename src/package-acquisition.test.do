@@ -11,7 +11,7 @@ import {
 
 function acquisitionTestPath(name: string): string => join([tempDirectory(), "doof-compiler-package-acquisition-" + name])
 
-function removeAcquisitionTestTree(path: string): void {
+function removeAcquisitionTestTree(path: string): none {
   if !exists(path) { return }
   if isDirectory(path) {
     for entry of try! readDir(path) { removeAcquisitionTestTree(join([path, entry.name])) }
@@ -27,14 +27,14 @@ function git(path: string, arguments: string[]): string {
   return BlobReader(result.stdout).readString(long(result.stdout.length)).trim()
 }
 
-export function testUsesDirectWorkspacePackageDirectories(): void {
+export function testUsesDirectWorkspacePackageDirectories(): none {
   packagesRoot := workspacePackageAcquisitionRoot("/workspace")
   Assert.equal(packagesRoot, "/workspace/.doof/packages")
   Assert.equal(packageAcquisitionPath(packagesRoot, "std/fs"), "/workspace/.doof/packages/std/fs")
   Assert.equal(packageAcquisitionReceiptPath(packageAcquisitionPath(packagesRoot, "std/fs")), "/workspace/.doof/packages/std/fs/.doof-acquisition.json")
 }
 
-export function testRejectsPackageNamesThatEscapeAcquisitionRoot(): void {
+export function testRejectsPackageNamesThatEscapeAcquisitionRoot(): none {
   result := acquireExactGitPackage(ExactPackageSource {
     name: "../outside", url: "/unused", ref: "main", commit: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   }, acquisitionTestPath("unsafe-name"))
@@ -45,7 +45,7 @@ export function testRejectsPackageNamesThatEscapeAcquisitionRoot(): void {
   panic("expected invalid acquired package name")
 }
 
-export function testAcquiresAndReusesExactGitPackage(): void {
+export function testAcquiresAndReusesExactGitPackage(): none {
   root := acquisitionTestPath("reuse")
   removeAcquisitionTestTree(root)
   try! mkdir(root)
@@ -74,7 +74,7 @@ export function testAcquiresAndReusesExactGitPackage(): void {
   removeAcquisitionTestTree(root)
 }
 
-export function testReplacesPackageInPlaceWhenExactRevisionChanges(): void {
+export function testReplacesPackageInPlaceWhenExactRevisionChanges(): none {
   root := acquisitionTestPath("replace")
   removeAcquisitionTestTree(root)
   try! mkdir(root)
@@ -109,7 +109,7 @@ export function testReplacesPackageInPlaceWhenExactRevisionChanges(): void {
   removeAcquisitionTestTree(root)
 }
 
-export function testReacquiresPackageWhenReceiptIsMissingOrInvalid(): void {
+export function testReacquiresPackageWhenReceiptIsMissingOrInvalid(): none {
   root := acquisitionTestPath("missing-receipt")
   removeAcquisitionTestTree(root)
   try! mkdir(root)
@@ -140,7 +140,7 @@ export function testReacquiresPackageWhenReceiptIsMissingOrInvalid(): void {
   removeAcquisitionTestTree(root)
 }
 
-export function testRejectsMovedExactPackageRef(): void {
+export function testRejectsMovedExactPackageRef(): none {
   root := acquisitionTestPath("mismatch")
   removeAcquisitionTestTree(root)
   try! mkdir(root)

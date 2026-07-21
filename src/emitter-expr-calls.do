@@ -6,20 +6,20 @@ import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { decoratedExpressionType, emittedSymbolName, emitExpectedExpression, emitNullableVariantPromotion, exprModuleNamespaceFor, findProperty, needsNullableVariantPromotion, optionalExpectedType } from "./emitter-expr-utils"
-import { emitContextType, emitType } from "./emitter-types"
+import { emitContextType, emitResultPayloadType, emitType } from "./emitter-types"
 import { specializeEmitType } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
 
-export function emitCall(expression: CallExpression, context: EmitContext, expected: ResolvedType | null = null): string {
+export function emitCall(expression: CallExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   case expression.callee {
     identifier: Identifier -> {
       if identifier.name == "catchPanic" && expression.args.length == 1 {
         case expression.resolvedType! {
           result: ResultResolvedType -> {
             callback := emitExpression(expression.args[0].value, context)
-            successType := emitType(result.valueType, context.modulePath)
-            if result.valueType.kind == "void" {
+            successType := emitResultPayloadType(result.valueType, context.modulePath)
+            if result.valueType.kind == "none" {
               return "[&]() -> doof::Result<void, std::string> { try { " + callback + ".call(); return doof::Success<void>{}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }()"
             }
             return "[&]() -> doof::Result<" + successType + ", std::string> { try { return doof::Success<" + successType + ">{" + callback + ".call()}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }()"
@@ -33,16 +33,17 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   case expression.callee {
     identifier: Identifier -> {
       if identifier.name == "Success" || identifier.name == "Failure" {
-        let resultType: ResolvedType | null = null
-        if expected != null { resultType = expected! }
-        else if expression.resolvedType != null { resultType = expression.resolvedType! }
-        if resultType == null { panic(identifier.name + " has no expected Result type") }
+        let resultType: ResolvedType | none = none
+        if expected != none { resultType = expected! }
+        else if expression.resolvedType != none { resultType = expression.resolvedType! }
+        if resultType == none { panic(identifier.name + " has no expected Result type") }
         case resultType! {
           result: ResultResolvedType -> {
-            if expression.args.length == 0 { return "doof::" + identifier.name + "<" + emitType(if identifier.name == "Success" then result.valueType else result.errorType, context.modulePath) + ">{}" }
+            if expression.args.length == 0 { return "doof::" + identifier.name + "<" + emitResultPayloadType(if identifier.name == "Success" then result.valueType else result.errorType, context.modulePath) + ">{}" }
             valueType := if identifier.name == "Success" then result.valueType else result.errorType
             value := emitExpression(expression.args[0].value, context, valueType)
-            return "doof::" + identifier.name + "<" + emitType(valueType, context.modulePath) + ">{ " + value + " }"
+            payloadType := emitResultPayloadType(valueType, context.modulePath)
+            return "doof::" + identifier.name + "<" + payloadType + ">{ " + value + " }"
           }
           _ -> { }
         }
@@ -52,7 +53,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   }
   case expression.callee {
     member: MemberExpression -> {
-      if member.object.resolvedType != null {
+      if member.object.resolvedType != none {
         case member.object.resolvedType! {
           actor: ActorType -> { return emitSyncActorCall(expression, member, actor, context) }
           resultType: ResultResolvedType -> {
@@ -77,7 +78,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     _: Identifier -> { nativeConstructorCall = true }
     _ -> { }
   }
-  if nativeConstructorCall && expression.resolvedConstructor != null && expression.callee.resolvedType != null {
+  if nativeConstructorCall && expression.resolvedConstructor != none && expression.callee.resolvedType != none {
     case expression.callee.resolvedType! {
       owner: ClassType -> {
         return emitConstructorFactoryCall(owner, expression.resolvedConstructor!, expression.args, context, expression.span)
@@ -85,31 +86,31 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       _ -> { }
     }
   }
-  if nativeConstructorCall && isClassCallee(expression.callee) && expression.resolvedType != null {
+  if nativeConstructorCall && isClassCallee(expression.callee) && expression.resolvedType != none {
     case expression.resolvedType! {
       class_: ClassType -> {
         if class_.symbol.native_ {
           nativeName := "::" + (if class_.symbol.nativeCppName == "" then class_.symbol.name else class_.symbol.nativeCppName)
-          if expression.resolvedConstructor == null { return "std::make_shared<" + nativeName + ">()" }
+          if expression.resolvedConstructor == none { return "std::make_shared<" + nativeName + ">()" }
           let result = nativeName + "::constructor("
           constructorMethod := expression.resolvedConstructor
           for i of 0..<expression.args.length {
             if i > 0 { result = result + ", " }
-            let expectedArgument: ResolvedType | null = null
-            if constructorMethod != null && i < constructorMethod!.params.length { expectedArgument = constructorMethod!.params[i].resolvedType }
+            let expectedArgument: ResolvedType | none = none
+            if constructorMethod != none && i < constructorMethod!.params.length { expectedArgument = constructorMethod!.params[i].resolvedType }
             let argumentText = emitExpression(expression.args[i].value, context, expectedArgument)
             result = result + argumentText
           }
-          if constructorMethod != null {
+          if constructorMethod != none {
             for i of expression.args.length..<constructorMethod!.params.length {
               if result != nativeName + "::constructor(" { result = result + ", " }
-              if constructorMethod!.params[i].defaultValue == null { panic("Native constructor " + class_.name + " is missing a default argument") }
+              if constructorMethod!.params[i].defaultValue == none { panic("Native constructor " + class_.name + " is missing a default argument") }
               result = result + emitDefaultExpression(constructorMethod!.params[i].defaultValue!, context, constructorMethod!.params[i].resolvedType, expression.span)
             }
           }
           return result + ")"
         }
-        if expression.resolvedConstructor != null || isClassCallee(expression.callee) {
+        if expression.resolvedConstructor != none || isClassCallee(expression.callee) {
         let cppName = if class_.symbol.module != "" && class_.symbol.module != context.modulePath then "::" + exprModuleNamespaceFor(class_.symbol.module) + "::" + emittedSymbolName(class_.symbol) else emittedSymbolName(class_.symbol)
         concrete := concreteClassName(class_, context)
         if concrete != "" { cppName = concrete }
@@ -118,14 +119,14 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           if i > 0 { values = values + ", " }
           values = values + emitExpression(expression.args[i].value, context)
         }
-        if expression.resolvedClass != null {
+        if expression.resolvedClass != none {
           let fieldIndex = 0
           for field of expression.resolvedClass!.fields {
             if field.static_ || field.const_ { continue }
             for name of field.names {
               if fieldIndex >= expression.args.length {
                 if values != "" { values = values + ", " }
-                if field.defaultValue == null { panic("Construction of '" + class_.name + "' is missing required field '" + name + "'") }
+                if field.defaultValue == none { panic("Construction of '" + class_.name + "' is missing required field '" + name + "'") }
                 values = values + emitDefaultExpression(field.defaultValue!, context, field.resolvedType, expression.span)
               }
               fieldIndex = fieldIndex + 1
@@ -142,21 +143,21 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     member: MemberExpression -> {
       arrayObjectType := decoratedExpressionType(member.object)
       let nominalReceiver = false
-      if arrayObjectType != null {
+      if arrayObjectType != none {
         case arrayObjectType! {
           _: ClassType -> { nominalReceiver = true }
           _ -> { }
         }
       }
       if member.property == "length" {
-        if arrayObjectType != null {
+        if arrayObjectType != none {
           case arrayObjectType! {
             class_: ClassType -> { return emitExpression(member.object, context) + (if class_.symbol.kind == "struct" then "." else "->") + "length()" }
             _ -> { }
           }
         }
       }
-      if arrayObjectType != null {
+      if arrayObjectType != none {
         case arrayObjectType! {
           _: InterfaceType -> {
             if member.property == "fromJsonValue" { return emitInterfaceJsonCall(member, expression, context) }
@@ -206,7 +207,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if !nominalReceiver && member.property == "contains" { return emitBuiltinCall("doof::string_contains", member.object, expression, context) }
       if !nominalReceiver && member.property == "indexOf" { return emitBuiltinCall("doof::string_indexOf", member.object, expression, context) }
       objectType := decoratedExpressionType(member.object)
-      if objectType != null {
+      if objectType != none {
         case objectType! {
           _: ArrayResolvedType -> {
             if member.property == "slice" && expression.args.length == 2 {
@@ -217,6 +218,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         }
       }
       if !nominalReceiver && member.property == "trim" && expression.args.length == 0 { return "doof::string_trim(" + emitExpression(member.object, context) + ")" }
+      if !nominalReceiver && member.property == "trimStart" && expression.args.length == 0 { return "doof::string_trimStart(" + emitExpression(member.object, context) + ")" }
       if !nominalReceiver && member.property == "repeat" && expression.args.length == 1 { return "doof::string_repeat(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ")" }
       if !nominalReceiver && member.property == "slice" { return "doof::string_slice(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ")" }
       if !nominalReceiver && member.property == "charAt" { return "doof::string_at(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
@@ -233,7 +235,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if member.property == "toJsonObject" && expression.args.length == 0 {
         object := emitExpression(member.object, context)
         objectType := decoratedExpressionType(member.object)
-        if objectType != null {
+        if objectType != none {
           case objectType! {
             class_: ClassType -> { if class_.symbol.kind == "struct" { return object + ".toJsonObject()" } }
             _ -> { }
@@ -249,7 +251,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         }
         _ -> { }
       }
-      if member.property == "fromJsonValue" && (!nominalReceiver || member.resolvedStaticOwner != null) {
+      if member.property == "fromJsonValue" && (!nominalReceiver || member.resolvedStaticOwner != none) {
         object := emitExpression(member.object, context)
         let args = ""
         for i of 0..<expression.args.length {
@@ -257,7 +259,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           args = args + emitExpression(expression.args[i].value, context)
         }
         objectType := decoratedExpressionType(member.object)
-        if objectType != null {
+        if objectType != none {
           case objectType! {
             _: InterfaceType -> { return object + "_fromJsonValue(" + args + ")" }
             _ -> { }
@@ -275,8 +277,8 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       _ -> { }
     }
   }
-  let functionType: FunctionType | null = null
-  if expression.callee.resolvedType != null {
+  let functionType: FunctionType | none = none
+  if expression.callee.resolvedType != none {
     case expression.callee.resolvedType! {
       resolved: FunctionType -> { functionType = resolved }
       _ -> { }
@@ -284,7 +286,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   }
   let concreteGenericArgs: ResolvedType[] = []
   for argument of expression.resolvedGenericTypeArgs { concreteGenericArgs.push(specializeEmitType(argument, context)) }
-  if functionType != null && concreteGenericArgs.length > 0 {
+  if functionType != none && concreteGenericArgs.length > 0 {
     substituted := substituteTypeParams(functionType!, functionType!.typeParams, concreteGenericArgs)
     case substituted {
       specialized: FunctionType -> { functionType = specialized }
@@ -293,18 +295,18 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   }
   functionDeclaration := expression.resolvedFunction
   let usesConcreteInstantiation = false
-  if functionDeclaration != null && (functionDeclaration!.typeParams.length > 0 || functionDeclaration!.native_) {
+  if functionDeclaration != none && functionDeclaration!.typeParams.length > 0 {
     let targetModule = context.modulePath
     let concreteMethodName = ""
     case expression.callee {
       identifier: Identifier -> {
-        if identifier.resolvedBinding != null {
-          if identifier.resolvedBinding!.symbol != null { targetModule = identifier.resolvedBinding!.symbol!.module }
+        if identifier.resolvedBinding != none {
+          if identifier.resolvedBinding!.symbol != none { targetModule = identifier.resolvedBinding!.symbol!.module }
           else if identifier.resolvedBinding!.module != "" { targetModule = identifier.resolvedBinding!.module }
         }
       }
       member: MemberExpression -> {
-        if member.object.resolvedType != null {
+        if member.object.resolvedType != none {
           case specializeEmitType(member.object.resolvedType!, context) {
             class_: ClassType -> {
               targetModule = class_.symbol.module
@@ -333,7 +335,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       }
     }
   }
-  if concreteGenericArgs.length > 0 && functionDeclaration != null && functionDeclaration!.typeParams.length > 0 && !usesConcreteInstantiation {
+  if concreteGenericArgs.length > 0 && functionDeclaration != none && functionDeclaration!.typeParams.length > 0 && !usesConcreteInstantiation {
     callee = callee + "<"
     for i of 0..<concreteGenericArgs.length {
       if i > 0 { callee = callee + ", " }
@@ -343,33 +345,33 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   }
   let invokesCallback = false
   case expression.callee {
-    identifier: Identifier -> { invokesCallback = !isBuiltinName(identifier.name) && functionType != null && functionDeclaration == null }
-    member: MemberExpression -> { invokesCallback = member.resolvedCallableField && functionType != null }
-    _ -> { invokesCallback = functionType != null && functionDeclaration == null }
+    identifier: Identifier -> { invokesCallback = !isBuiltinName(identifier.name) && functionType != none && functionDeclaration == none }
+    member: MemberExpression -> { invokesCallback = member.resolvedCallableField && functionType != none }
+    _ -> { invokesCallback = functionType != none && functionDeclaration == none }
   }
   callPrefix := if invokesCallback then callee + ".call(" else callee + "("
   let result = callPrefix
   let named = false
-  for argument of expression.args { if argument.name != null { named = true } }
-  if named && functionDeclaration != null {
+  for argument of expression.args { if argument.name != none { named = true } }
+  if named && functionDeclaration != none {
     for i of 0..<functionDeclaration!.params.length {
       parameter := functionDeclaration!.params[i]
       argument := callArgumentNamed(expression, parameter.name)
-      let expected: ResolvedType | null = parameter.resolvedType
-      if functionType != null && i < functionType!.params.length { expected = optionalExpectedType(functionType!.params[i].type_) }
-      if argument != null || parameter.defaultValue != null {
+      let expected: ResolvedType | none = parameter.resolvedType
+      if functionType != none && i < functionType!.params.length { expected = optionalExpectedType(functionType!.params[i].type_) }
+      if argument != none || parameter.defaultValue != none {
         if result != callPrefix { result = result + ", " }
-        if argument != null { result = result + emitExpectedExpression(argument!.value, context, expected) }
+        if argument != none { result = result + emitExpectedExpression(argument!.value, context, expected) }
         else { result = result + emitDefaultExpression(parameter.defaultValue!, context, expected, expression.span) }
       }
     }
-  } else if named && functionType != null {
+  } else if named && functionType != none {
     // Callback-valued callees do not retain a declaration pointer. Their
     // function type still defines the named-argument order required by the
     // generated positional callback ABI.
     for parameter of functionType!.params {
       argument := callArgumentNamed(expression, parameter.name)
-      if argument != null {
+      if argument != none {
         if result != callPrefix { result = result + ", " }
         result = result + emitExpectedExpression(argument!.value, context, optionalExpectedType(parameter.type_))
       }
@@ -377,20 +379,20 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   } else {
     for i of 0..<expression.args.length {
       if i > 0 { result = result + ", " }
-      let expected: ResolvedType | null = null
-      if functionType != null && i < functionType!.params.length { expected = optionalExpectedType(functionType!.params[i].type_) }
-      if expected == null && functionDeclaration != null && i < functionDeclaration!.params.length { expected = functionDeclaration!.params[i].resolvedType }
+      let expected: ResolvedType | none = none
+      if functionType != none && i < functionType!.params.length { expected = optionalExpectedType(functionType!.params[i].type_) }
+      if expected == none && functionDeclaration != none && i < functionDeclaration!.params.length { expected = functionDeclaration!.params[i].resolvedType }
       case expression.callee {
-        identifier: Identifier -> { if identifier.name == "println" || isBuiltinConversionName(identifier.name) { expected = null } }
+        identifier: Identifier -> { if identifier.name == "println" || isBuiltinConversionName(identifier.name) { expected = none } }
         _ -> { }
       }
       let argument = emitExpectedExpression(expression.args[i].value, context, expected)
       result = result + argument
     }
-    if functionDeclaration != null {
+    if functionDeclaration != none {
       for i of expression.args.length..<functionDeclaration!.params.length {
         parameter := functionDeclaration!.params[i]
-        if parameter.defaultValue != null {
+        if parameter.defaultValue != none {
           if result != callPrefix { result = result + ", " }
           result = result + emitDefaultExpression(parameter.defaultValue!, context, parameter.resolvedType, expression.span)
         }
@@ -411,12 +413,12 @@ function isBuiltinConversionName(name: string): bool {
 function isClassCallee(callee: Expression): bool {
   case callee {
     identifier: Identifier -> {
-      if identifier.resolvedBinding == null { return false }
+      if identifier.resolvedBinding == none { return false }
       binding := identifier.resolvedBinding!
       if binding.kind == "class" || binding.kind == "struct" { return true }
       // Method bindings retain their owner symbol for cross-module naming.  An
       // owner class does not make the method identifier a class constructor.
-      if binding.kind == "import" && binding.symbol != null {
+      if binding.kind == "import" && binding.symbol != none {
         return binding.symbol!.kind == "class" || binding.symbol!.kind == "struct"
       }
       return false
@@ -425,9 +427,9 @@ function isClassCallee(callee: Expression): bool {
   }
 }
 
-function callArgumentNamed(expression: CallExpression, name: string): CallArgument | null {
+function callArgumentNamed(expression: CallExpression, name: string): CallArgument | none {
   for argument of expression.args { if argument.name == name { return argument } }
-  return null
+  return none
 }
 
 function emitBuiltinCall(name: string, object: Expression, expression: CallExpression, context: EmitContext): string {
@@ -474,9 +476,9 @@ function isBuiltinName(name: string): bool {
   return name == "println" || name == "panic" || name == "assert" || name == "catchPanic" || name == "string" || name == "byte" || name == "int" || name == "long" || name == "float" || name == "double" || name == "char" || name == "bool"
 }
 
-function declaredConstructor(class_: ClassDeclaration): FunctionDeclaration | null {
+function declaredConstructor(class_: ClassDeclaration): FunctionDeclaration | none {
   for method of class_.methods { if method.name == "constructor" { return method } }
-  return null
+  return none
 }
 
 function insideDeclaredConstructor(class_: ClassDeclaration, context: EmitContext): bool {
@@ -486,43 +488,44 @@ function insideDeclaredConstructor(class_: ClassDeclaration, context: EmitContex
 export function emitConstruct(expression: ConstructExpression, context: EmitContext): string {
   if expression.type_ == "Success" || expression.type_ == "Failure" {
     resultType := expression.resolvedType
-    if resultType == null { panic(expression.type_ + " has no resolved Result type") }
+    if resultType == none { panic(expression.type_ + " has no resolved Result type") }
     case resultType! {
       result: ResultResolvedType -> {
         valueType := if expression.type_ == "Success" then result.valueType else result.errorType
         propertyName := if expression.type_ == "Success" then "value" else "error"
         property := findProperty(expression.args, propertyName)
-        if property == null || property!.value == null { return "doof::" + expression.type_ + "<" + emitType(valueType, context.modulePath) + ">{ }" }
+        payloadType := emitResultPayloadType(valueType, context.modulePath)
+        if property == none || property!.value == none { return "doof::" + expression.type_ + "<" + payloadType + ">{ }" }
         value := emitExpectedExpression(property!.value!, context, valueType)
-        return "doof::" + expression.type_ + "<" + emitType(valueType, context.modulePath) + ">{ " + value + " }"
+        return "doof::" + expression.type_ + "<" + payloadType + ">{ " + value + " }"
       }
       _ -> { }
     }
     panic(expression.type_ + " does not construct a Result")
   }
   class_ := expression.resolvedClass
-  if class_ == null { panic("Cannot construct unresolved class " + expression.type_) }
+  if class_ == none { panic("Cannot construct unresolved class " + expression.type_) }
   constructedType := expression.resolvedConstructedType
-  if constructedType == null { panic("Construction of '" + expression.type_ + "' has no resolved constructed type") }
-  let owner: ClassType | null = null
+  if constructedType == none { panic("Construction of '" + expression.type_ + "' has no resolved constructed type") }
+  let owner: ClassType | none = none
   case constructedType! {
     class_: ClassType -> { owner = class_ }
     _ -> { panic("Construction of '" + expression.type_ + "' has a non-class constructed type") }
   }
   constructorMethod := declaredConstructor(class_!)
   insideConstructor := insideDeclaredConstructor(class_!, context)
-  if constructorMethod != null && !insideConstructor && expression.resolvedConstructor == null {
+  if constructorMethod != none && !insideConstructor && expression.resolvedConstructor == none {
     panic("Construction of '" + expression.type_ + "' has no resolved constructor")
   }
-  if expression.resolvedConstructor != null {
-    if constructorMethod == null { panic("Construction of '" + expression.type_ + "' has unexpected constructor metadata") }
+  if expression.resolvedConstructor != none {
+    if constructorMethod == none { panic("Construction of '" + expression.type_ + "' has unexpected constructor metadata") }
     return emitNamedConstructorFactoryCall(owner!, expression.resolvedConstructor!, expression, context)
   }
   let cppName = expression.type_
   let native = class_!.native_
   let structValue = false
   if native { cppName = "::" + (if class_!.nativeCppName == "" then class_!.name else class_!.nativeCppName) }
-  if expression.resolvedType != null {
+  if expression.resolvedType != none {
     case expression.resolvedType! {
       resolved: ClassType -> {
         structValue = resolved.symbol.kind == "struct"
@@ -543,8 +546,8 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
       first = false
       property := findProperty(expression.args, name)
       let value = ""
-      if property != null {
-        if property!.value == null { value = cppIdentifier(name) }
+      if property != none {
+        if property!.value == none { value = cppIdentifier(name) }
         else {
           case property!.value! {
             _: ThisExpression -> {
@@ -556,20 +559,20 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
             _ -> { value = emitExpectedExpression(property!.value!, context, field.resolvedType) }
           }
         }
-      } else if field.defaultValue != null { value = emitDefaultExpression(field.defaultValue!, context, field.resolvedType, expression.span) }
+      } else if field.defaultValue != none { value = emitDefaultExpression(field.defaultValue!, context, field.resolvedType, expression.span) }
       else { panic("Construction of '" + expression.type_ + "' is missing required field '" + name + "'") }
       if expression.type_ == "FunctionDeclaration" && name == "body" {
         value = "doof::variant_promote<" + emitContextType(field.resolvedType!, context) + ">(" + value + ")"
       }
-      if expression.type_ == "LambdaExpression" && name == "body" && property != null {
+      if expression.type_ == "LambdaExpression" && name == "body" && property != none {
         value = "doof::variant_promote<" + emitContextType(field.resolvedType!, context) + ">(" + value + ")"
       }
-      if expression.type_ == "AsyncExpression" && name == "expression" && property != null {
+      if expression.type_ == "AsyncExpression" && name == "expression" && property != none {
         value = "doof::variant_promote<" + emitContextType(field.resolvedType!, context) + ">(" + value + ")"
       }
       // Shorthand fields have no expression node, so they cannot pass their
       // expected type through emitExpression's central promotion path.
-      if property != null && property!.value == null && needsNullableVariantPromotion(property!.resolvedType, field.resolvedType) { value = emitNullableVariantPromotion(value, property!.resolvedType, field.resolvedType, context.modulePath) }
+      if property != none && property!.value == none && needsNullableVariantPromotion(property!.resolvedType, field.resolvedType) { value = emitNullableVariantPromotion(value, property!.resolvedType, field.resolvedType, context.modulePath) }
       values = values + value
     }
   }
@@ -585,13 +588,13 @@ function emitConstructorFactoryCall(owner: ClassType, constructorMethod: Functio
   let result = cppName + "::constructor("
   for i of 0..<args.length {
     if i > 0 { result = result + ", " }
-    let expectedType: ResolvedType | null = null
+    let expectedType: ResolvedType | none = none
     if i < constructorMethod.params.length { expectedType = constructorMethod.params[i].resolvedType }
     result = result + emitExpression(args[i].value, context, expectedType)
   }
   for i of args.length..<constructorMethod.params.length {
     if i > 0 { result = result + ", " }
-    if constructorMethod.params[i].defaultValue == null { panic("Constructor " + owner.name + " is missing argument " + constructorMethod.params[i].name) }
+    if constructorMethod.params[i].defaultValue == none { panic("Constructor " + owner.name + " is missing argument " + constructorMethod.params[i].name) }
     result = result + emitDefaultExpression(constructorMethod.params[i].defaultValue!, context, constructorMethod.params[i].resolvedType, callSiteSpan)
   }
   return result + ")"
@@ -606,17 +609,17 @@ function emitNamedConstructorFactoryCall(owner: ClassType, constructorMethod: Fu
     if i > 0 { result = result + ", " }
     parameter := constructorMethod.params[i]
     property := findProperty(expression.args, parameter.name)
-    if property != null {
-      if property!.value == null { result = result + cppIdentifier(property!.name) }
+    if property != none {
+      if property!.value == none { result = result + cppIdentifier(property!.name) }
       else { result = result + emitExpression(property!.value!, context, parameter.resolvedType) }
-    } else if parameter.defaultValue != null {
+    } else if parameter.defaultValue != none {
       result = result + emitDefaultExpression(parameter.defaultValue!, context, parameter.resolvedType, expression.span)
     } else { panic("Constructor " + owner.name + " is missing argument " + parameter.name) }
   }
   return result + ")"
 }
 
-function emitDefaultExpression(expression: Expression, context: EmitContext, expected: ResolvedType | null, callSiteSpan: SourceSpan): string {
+function emitDefaultExpression(expression: Expression, context: EmitContext, expected: ResolvedType | none, callSiteSpan: SourceSpan): string {
   previous := context.sourceLocationSpanOverride
   context.sourceLocationSpanOverride = SourceLocationSpanOverride { span: callSiteSpan }
   result := emitExpression(expression, context, expected)

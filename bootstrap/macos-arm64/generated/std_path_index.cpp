@@ -21,25 +21,25 @@ doof::Result<std::string, std::string> normalizePathResult(doof::Result<std::str
 }();
 }
 doof::Result<std::string, std::string> homeDirectory() {
-    return normalizePathResult(_homeDirectory());
+    return normalizePathResult(::doof_path::homeDirectory());
 }
 std::string tempDirectory() {
-    return join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{_tempDirectory()}));
+    return join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{::doof_path::tempDirectory()}));
 }
 doof::Result<std::string, std::string> dataDirectory(std::optional<std::string> appId) {
-    return normalizePathResult(_dataDirectory(appId));
+    return normalizePathResult(::doof_path::dataDirectory(appId));
 }
 doof::Result<std::string, std::string> cacheDirectory(std::optional<std::string> appId) {
-    return normalizePathResult(_cacheDirectory(appId));
+    return normalizePathResult(::doof_path::cacheDirectory(appId));
 }
 doof::Result<std::string, std::string> currentWorkingDirectory() {
-    return normalizePathResult(_currentWorkingDirectory());
+    return normalizePathResult(::doof_path::currentWorkingDirectory());
 }
 doof::Result<std::string, std::string> absolute(std::string path) {
-    return normalizePathResult(_absolute(path));
+    return normalizePathResult(::doof_path::absolute(path));
 }
 doof::Result<std::string, std::string> resourcesDirectory() {
-    return normalizePathResult(_resourcesDirectory());
+    return normalizePathResult(::doof_path::resourcesDirectory());
 }
 doof::Result<std::string, std::string> resourcePath(std::string path) {
     auto _try_value_1 = resourcesDirectory();

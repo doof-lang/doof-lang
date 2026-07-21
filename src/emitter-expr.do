@@ -4,12 +4,12 @@
 // single decorated-AST dispatch point and the public identifier helper used
 // by statement and declaration emission.
 
-import { ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, BoolLiteral, CallExpression, CallerExpression, CaseExpression, CatchExpression, CharLiteral, ConstructExpression, DoubleLiteral, DotShorthand, Expression, FloatLiteral, Identifier, IfExpression, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NullLiteral, ObjectLiteral, RetireExpression, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression } from "./ast"
-import { ClassType, JsonValueResolvedType, NullType, PrimitiveType, ResolvedType } from "./semantic"
+import { ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, BoolLiteral, CallExpression, CallerExpression, CaseExpression, CatchExpression, CharLiteral, ConstructExpression, DoubleLiteral, DotShorthand, Expression, FloatLiteral, Identifier, IfExpression, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NoneLiteral, ObjectLiteral, RetireExpression, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression } from "./ast"
+import { ClassType, JsonValueResolvedType, NoneType, PrimitiveType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitAs, emitAssignment, emitBinary, emitIdentifier, emitIndex, emitMember, emitUnary, cppIdentifier as emitCppIdentifier } from "./emitter-expr-ops"
 import { emitCall, emitConstruct } from "./emitter-expr-calls"
-import { emitArray, emitChar, emitNullLiteral, emitObject, emitString, emitTuple } from "./emitter-expr-literals"
+import { emitArray, emitChar, emitNoneLiteral, emitObject, emitString, emitTuple } from "./emitter-expr-literals"
 import { emitCaseExpression, emitCatchExpression, emitDotShorthand, emitIfExpression, emitYieldBlockExpression } from "./emitter-expr-control"
 import { emitLambdaExpression } from "./emitter-expr-lambda"
 import { decoratedExpressionType, emitNullableVariantPromotion, needsNullableVariantPromotion, needsVariantPromotion } from "./emitter-expr-utils"
@@ -17,7 +17,7 @@ import { emitClassInnerType, emitType } from "./emitter-types"
 import { emitActorCreation, emitAsyncActorCall, emitRetireActor } from "./emitter-expr-actor"
 import { moduleDiagnosticPath } from "./emitter-names"
 
-export function emitExpression(expression: Expression, context: EmitContext, expected: ResolvedType | null = null): string {
+export function emitExpression(expression: Expression, context: EmitContext, expected: ResolvedType | none = none): string {
   let value = ""
   case expression {
     int_: IntLiteral -> { value = string(int_.value) }
@@ -27,10 +27,10 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     string_: StringLiteral -> { value = emitString(string_, context) }
     char_: CharLiteral -> { value = emitChar(char_.value) }
     bool_: BoolLiteral -> { value = if bool_.value then "true" else "false" }
-    null_: NullLiteral -> { value = emitNullLiteral(expected) }
+    none_: NoneLiteral -> { value = emitNoneLiteral(expected) }
     caller: CallerExpression -> {
       functionName := if context.currentFunctionName == "" then "<module>" else context.currentFunctionName
-      span := if context.sourceLocationSpanOverride == null then caller.span else context.sourceLocationSpanOverride!.span
+      span := if context.sourceLocationSpanOverride == none then caller.span else context.sourceLocationSpanOverride!.span
       fileName := moduleDiagnosticPath(context.modulePath, true)
       value = "std::make_shared<doof::SourceLocation>(std::string(\"" + fileName + "\"), " + string(span.start.line) + ", std::string(\"" + functionName + "\"))"
     }
@@ -57,7 +57,7 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     dot: DotShorthand -> { value = emitDotShorthand(dot, context) }
     this_: ThisExpression -> {
       let structThis = false
-      if this_.resolvedType != null {
+      if this_.resolvedType != none {
         case this_.resolvedType! {
           class_: ClassType -> { structThis = class_.symbol.kind == "struct" }
           _ -> { }
@@ -83,15 +83,15 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
 // Literal collection emitters already construct JsonValue directly. Other
 // expressions need an explicit runtime wrapper when contextual typing widens a
 // primitive or an exact JSON carrier into JsonValue.
-function emitJsonValuePromotion(expression: Expression, value: string, source: ResolvedType | null, expected: ResolvedType | null): string {
-  if source == null || expected == null { return value }
+function emitJsonValuePromotion(expression: Expression, value: string, source: ResolvedType | none, expected: ResolvedType | none): string {
+  if source == none || expected == none { return value }
   case expected! {
     _: JsonValueResolvedType -> { }
     _ -> { return value }
   }
   case source! {
     _: JsonValueResolvedType -> { return value }
-    _: NullType -> { return value }
+    _: NoneType -> { return value }
     primitive: PrimitiveType -> {
       if primitive.name == "byte" || primitive.name == "char" { return "doof::json_value(static_cast<int32_t>(" + value + "))" }
     }

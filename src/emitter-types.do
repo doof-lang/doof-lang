@@ -6,7 +6,7 @@
 
 import {
   ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol,
-  NullType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, VoidType, WeakResolvedType,
+  NoneType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { moduleNamespace } from "./emitter-names"
 import { substituteTypeParams } from "./checker-types"
@@ -14,13 +14,34 @@ import { EmitContext } from "./emitter-context"
 import { classInstantiationKey, concreteName, interfaceInstantiationKey } from "./emitter-monomorphize"
 
 export function specializeEmitType(resolvedType: ResolvedType, context: EmitContext): ResolvedType {
-  if context.substitution == null { return resolvedType }
+  if context.substitution == none { return resolvedType }
   return substituteTypeParams(resolvedType, context.substitution!.names, context.substitution!.arguments)
 }
 
 export function emitContextType(resolvedType: ResolvedType, context: EmitContext): string {
   specialized := specializeEmitType(resolvedType, context)
   return emitType(lowerRegisteredTypes(specialized, context), context.modulePath)
+}
+
+export function emitContextReturnType(resolvedType: ResolvedType, context: EmitContext): string {
+  specialized := specializeEmitType(resolvedType, context)
+  return emitReturnType(lowerRegisteredTypes(specialized, context), context.modulePath)
+}
+
+export function emitReturnType(resolvedType: ResolvedType, currentModulePath: string = ""): string {
+  case resolvedType {
+    _: NoneType -> { return "void" }
+    _ -> { return emitType(resolvedType, currentModulePath) }
+  }
+  return "void"
+}
+
+export function emitResultPayloadType(resolvedType: ResolvedType, currentModulePath: string = ""): string {
+  case resolvedType {
+    _: NoneType -> { return "void" }
+    _ -> { return emitType(resolvedType, currentModulePath) }
+  }
+  return "void"
 }
 
 // Replace reached Doof generic nominals throughout a compound type before
@@ -134,9 +155,9 @@ export function emitType(resolvedType: ResolvedType, currentModulePath: string =
     stream: StreamResolvedType -> { return concreteName("Stream", [stream.elementType]) }
     _: RangeResolvedType -> { return "doof::Range" }
     _: JsonValueResolvedType -> { return "doof::JsonValue" }
-    result: ResultResolvedType -> { return "doof::Result<" + emitType(result.valueType, currentModulePath) + ", " + emitType(result.errorType, currentModulePath) + ">" }
+    result: ResultResolvedType -> { return "doof::Result<" + emitResultPayloadType(result.valueType, currentModulePath) + ", " + emitResultPayloadType(result.errorType, currentModulePath) + ">" }
     actor: ActorType -> { return "std::shared_ptr<doof::Actor<" + emitClassInnerType(actor.innerClass, currentModulePath) + ">>" }
-    promise: PromiseType -> { return "doof::Promise<" + emitType(promise.valueType, currentModulePath) + ">" }
+    promise: PromiseType -> { return "doof::Promise<" + emitResultPayloadType(promise.valueType, currentModulePath) + ">" }
     tuple: TupleResolvedType -> { return emitTupleType(tuple, currentModulePath) }
     union_: UnionResolvedType -> { return emitUnionType(union_, currentModulePath) }
     weak_: WeakResolvedType -> {
@@ -145,8 +166,7 @@ export function emitType(resolvedType: ResolvedType, currentModulePath: string =
         _ -> { return "std::weak_ptr<" + emitType(weak_.inner, currentModulePath) + ">" }
       }
     }
-    _: NullType -> { return "std::monostate" }
-    _: VoidType -> { return "void" }
+    _: NoneType -> { return "std::monostate" }
     _: UnknownType -> { panic("Cannot emit unresolved unknown type in " + currentModulePath) }
     parameter: TypeParameterType -> { return parameter.name }
     metadata: ClassMetadataResolvedType -> { return "doof::ClassMetadata<" + emitMetadataInnerType(metadata.classType, currentModulePath) + ">" }
@@ -182,7 +202,7 @@ function nativeCppName(symbol: Symbol): string {
 }
 
 function expressionAlternatives(ownerModule: string, currentModulePath: string): string {
-  return "std::shared_ptr<" + ownedName("IntLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("LongLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("FloatLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("DoubleLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("StringLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("CharLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("BoolLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("NullLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("Identifier", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("BinaryExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("UnaryExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("AssignmentExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("MemberExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("IndexExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("CallExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("ArrayLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("ObjectLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("TupleLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("LambdaExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("IfExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("CaseExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("ConstructExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("DotShorthand", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("ThisExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("CallerExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("AsExpression", ownerModule, currentModulePath) + ">"
+  return "std::shared_ptr<" + ownedName("IntLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("LongLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("FloatLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("DoubleLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("StringLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("CharLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("BoolLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("NoneLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("Identifier", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("BinaryExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("UnaryExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("AssignmentExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("MemberExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("IndexExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("CallExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("ArrayLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("ObjectLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("TupleLiteral", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("LambdaExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("IfExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("CaseExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("ConstructExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("DotShorthand", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("ThisExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("CallerExpression", ownerModule, currentModulePath) + ">, std::shared_ptr<" + ownedName("AsExpression", ownerModule, currentModulePath) + ">"
 }
 
 function statementAlternatives(ownerModule: string, currentModulePath: string): string {
@@ -208,7 +228,7 @@ function emitCallbackType(function_: FunctionType, currentModulePath: string): s
     if i > 0 { parameters = parameters + ", " }
     parameters = parameters + emitType(function_.params[i].type_, currentModulePath)
   }
-  return "doof::callback<" + emitType(function_.returnType, currentModulePath) + "(" + parameters + ")>"
+  return "doof::callback<" + emitReturnType(function_.returnType, currentModulePath) + "(" + parameters + ")>"
 }
 
 function emitTupleType(tuple: TupleResolvedType, currentModulePath: string = ""): string {
@@ -225,34 +245,34 @@ function emitUnionType(union_: UnionResolvedType, currentModulePath: string = ""
     panic("Cannot emit empty resolved union in " + currentModulePath)
   }
   flattened := flattenUnionMembers(union_.types)
-  let nonNull: ResolvedType[] = []
-  let hasNull = false
+  let nonNone: ResolvedType[] = []
+  let hasNone = false
   for member of flattened {
-    if member.kind == "null" { hasNull = true }
-    else { nonNull.push(member) }
+    if member.kind == "none" { hasNone = true }
+    else { nonNone.push(member) }
   }
 
   // A nullable class already has a natural nullptr representation.  Primitive
   // nullable values use optional; larger unions retain an explicit variant.
-  if hasNull && nonNull.length == 1 && usesNaturalNullableMember(nonNull[0]) {
-    case nonNull[0] {
+  if hasNone && nonNone.length == 1 && usesNaturalNullableMember(nonNone[0]) {
+    case nonNone[0] {
       class_: ClassType -> {
-        if class_.symbol.kind == "struct" { return "std::optional<" + emitType(nonNull[0], currentModulePath) + ">" }
-        return emitType(nonNull[0], currentModulePath)
+        if class_.symbol.kind == "struct" { return "std::optional<" + emitType(nonNone[0], currentModulePath) + ">" }
+        return emitType(nonNone[0], currentModulePath)
       }
-      _: ArrayResolvedType -> { return emitType(nonNull[0], currentModulePath) }
-      _: MapResolvedType -> { return emitType(nonNull[0], currentModulePath) }
-      _: SetResolvedType -> { return emitType(nonNull[0], currentModulePath) }
-      _: WeakResolvedType -> { return emitType(nonNull[0], currentModulePath) }
-      _: PrimitiveType -> { return "std::optional<" + emitType(nonNull[0], currentModulePath) + ">" }
+      _: ArrayResolvedType -> { return emitType(nonNone[0], currentModulePath) }
+      _: MapResolvedType -> { return emitType(nonNone[0], currentModulePath) }
+      _: SetResolvedType -> { return emitType(nonNone[0], currentModulePath) }
+      _: WeakResolvedType -> { return emitType(nonNone[0], currentModulePath) }
+      _: PrimitiveType -> { return "std::optional<" + emitType(nonNone[0], currentModulePath) + ">" }
       _ -> { }
     }
   }
 
   let result = "std::variant<"
   let hasMember = false
-  if hasNull { result = result + "std::monostate"; hasMember = true }
-  for member of nonNull {
+  if hasNone { result = result + "std::monostate"; hasMember = true }
+  for member of nonNone {
     memberText := emitType(member, currentModulePath)
     if hasMember { result = result + ", " }
     result = result + memberText
@@ -276,29 +296,29 @@ export function usesVariantRepresentation(type_: ResolvedType): bool {
 
 /** Whether a union uses a natural nullable/optional carrier instead of variant. */
 export function usesNullableSingleValueRepresentation(type_: ResolvedType): bool {
-  return naturalNullableUnionMember(type_) != null
+  return naturalNullableUnionMember(type_) != none
 }
 
 function usesNaturalNullableUnion(union_: UnionResolvedType): bool {
-  return naturalNullableUnionMember(union_) != null
+  return naturalNullableUnionMember(union_) != none
 }
 
 /** Returns the sole non-null member when a union uses a natural nullable carrier. */
-export function naturalNullableUnionMember(type_: ResolvedType): ResolvedType | null {
+export function naturalNullableUnionMember(type_: ResolvedType): ResolvedType | none {
   case type_ {
     union_: UnionResolvedType -> {
       flattened := flattenUnionMembers(union_.types)
-      let nonNull: ResolvedType[] = []
-      let hasNull = false
+      let nonNone: ResolvedType[] = []
+      let hasNone = false
       for member of flattened {
-        if member.kind == "null" { hasNull = true }
-        else { nonNull.push(member) }
+        if member.kind == "none" { hasNone = true }
+        else { nonNone.push(member) }
       }
-      if hasNull && nonNull.length == 1 && usesNaturalNullableMember(nonNull[0]) { return nonNull[0] }
+      if hasNone && nonNone.length == 1 && usesNaturalNullableMember(nonNone[0]) { return nonNone[0] }
     }
-    _ -> { return null }
+    _ -> { return none }
   }
-  return null
+  return none
 }
 
 function usesNaturalNullableMember(member: ResolvedType): bool {

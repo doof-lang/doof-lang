@@ -44,6 +44,7 @@ export enum TokenType {
   As,
   True,
   False,
+  None,
   Null,
   Void,
   Try,
@@ -197,6 +198,7 @@ function keywordType(word: string): TokenType {
     if word == "enum" { return TokenType.Enum }
     if word == "from" { return TokenType.From }
     if word == "true" { return TokenType.True }
+    if word == "none" { return TokenType.None }
     if word == "null" { return TokenType.Null }
     if word == "void" { return TokenType.Void }
     if word == "this" { return TokenType.This }
@@ -296,11 +298,11 @@ export class Lexer {
     return ch
   }
 
-  private function addToken(kind: TokenType, tokenOffset: int, tokenLength: int, valueOffset: int, valueLength: int, needsDecode: bool, tokenLine: int, tokenColumn: int): void {
+  private function addToken(kind: TokenType, tokenOffset: int, tokenLength: int, valueOffset: int, valueLength: int, needsDecode: bool, tokenLine: int, tokenColumn: int): none {
     tokens.push(Token { kind, length: tokenLength, valueOffset, valueLength, needsDecode, line: tokenLine, column: tokenColumn, offset: tokenOffset })
   }
 
-  private function diagnostic(message: string, diagnosticLine: int, diagnosticColumn: int): void {
+  private function diagnostic(message: string, diagnosticLine: int, diagnosticColumn: int): none {
     diagnostics.push(LexerDiagnostic {
       severity: "error",
       message,
@@ -309,7 +311,7 @@ export class Lexer {
     })
   }
 
-  private function skipWhitespaceAndComments(): void {
+  private function skipWhitespaceAndComments(): none {
     while pos < source.length {
       ch := peek()
       if ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' {
@@ -362,7 +364,7 @@ export class Lexer {
     return isIdentStart(ch) || isDigit(ch)
   }
 
-  private function readDigits(base: int): void {
+  private function readDigits(base: int): none {
     let sawDigit = false
 
     while pos < source.length {
@@ -386,7 +388,7 @@ export class Lexer {
 
   }
 
-  private function readNumber(): void {
+  private function readNumber(): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -421,7 +423,7 @@ export class Lexer {
     readNumericSuffix(start, pos, tokenLine, tokenColumn)
   }
 
-  private function readNumericSuffix(valueStart: int, valueEnd: int, tokenLine: int, tokenColumn: int): void {
+  private function readNumericSuffix(valueStart: int, valueEnd: int, tokenLine: int, tokenColumn: int): none {
     if peek() == 'L' || peek() == 'l' {
       advance()
       addToken(TokenType.LongLiteral, valueStart, pos - valueStart, valueStart, valueEnd - valueStart, false, tokenLine, tokenColumn)
@@ -433,7 +435,7 @@ export class Lexer {
     }
   }
 
-  private function readIdentifier(): void {
+  private function readIdentifier(): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -453,7 +455,7 @@ export class Lexer {
     }
   }
 
-  private function readQuoted(delimiter: char): void {
+  private function readQuoted(delimiter: char): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -490,7 +492,7 @@ export class Lexer {
     addToken(TokenType.StringLiteral, start, pos - start, contentStart, valueEnd - contentStart, needsDecode, tokenLine, tokenColumn)
   }
 
-  private function readTemplateContinuation(): void {
+  private function readTemplateContinuation(): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -527,7 +529,7 @@ export class Lexer {
     addToken(TokenType.TemplateLiteralEnd, start, pos - start, contentStart, valueEnd - contentStart, needsDecode, tokenLine, tokenColumn)
   }
 
-  private function readChar(): void {
+  private function readChar(): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -546,7 +548,7 @@ export class Lexer {
     addToken(TokenType.CharLiteral, start, pos - start, valueStart, valueEnd - valueStart, needsDecode, tokenLine, tokenColumn)
   }
 
-  private function emit(kind: TokenType, tokenLine: int, tokenColumn: int, start: int, count: int): void {
+  private function emit(kind: TokenType, tokenLine: int, tokenColumn: int, start: int, count: int): none {
     // Operators are on the hot path. Unroll the tiny fixed-width consume so
     // no range/iterator object is created for each punctuation token.
     if count > 0 { advance() }
@@ -559,7 +561,7 @@ export class Lexer {
     addToken(kind, start, count, start, count, false, tokenLine, tokenColumn)
   }
 
-  private function readOperatorOrPunctuation(): void {
+  private function readOperatorOrPunctuation(): none {
     start := pos
     tokenLine := line
     tokenColumn := column

@@ -45,10 +45,10 @@ export class ProjectSpec {
   externalDependencies: ExternalDependency[] = []
   nativeBuild: NativeBuildPlan
   target: string = ""
-  macosApp: MacOSAppConfig | null = null
-  iosApp: IOSAppConfig | null = null
-  packageConfig: MacOSPackageConfig | null = null
-  iosPackageConfig: IOSPackageConfig | null = null
+  macosApp: MacOSAppConfig | none = none
+  iosApp: IOSAppConfig | none = none
+  packageConfig: MacOSPackageConfig | none = none
+  iosPackageConfig: IOSPackageConfig | none = none
 }
 
 export function readProjectSpec(requestedPath: string, platform: string = "", targetOverride: string = ""): ProjectSpec {

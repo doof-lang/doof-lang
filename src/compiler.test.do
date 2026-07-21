@@ -12,31 +12,79 @@ function compileSample(path: string): Compilation {
   ], "/sample.do")
 }
 
-export function testCompilesAnImportedProject(): void {
+export function testCompilesAnImportedProject(): none {
   result := compile([
     SourceFile { path: "/main.do", source: "import { add } from \"./math\"\nfunction main(): int => add(2, 3)" },
     SourceFile { path: "/math.do", source: "export function add(a: int, b: int): int => a + b" },
   ], "/main.do")
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   Assert.equal(result.emission!.modules.length, 2)
   Assert.equal(result.emission!.modules[0].header.contains("int32_t main_"), false)
   Assert.equal(result.emission!.modules[0].header.contains("#include \"math.hpp\""), true)
 }
 
-export function testCompilesInferredCollectionAnnotations(): void {
+export function testCompilesCanonicalNoneOptionalValue(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "function main(): none { value: string | none := none\nprintln(value ?? \"missing\") }",
+  }], "/main.do")
+
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.emission != none, true)
+  Assert.equal(result.emission!.modules[0].source.contains("std::nullopt"), true)
+}
+
+export function testLegacyNoneAliasWarningsStillEmit(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "function main(): none { value: string | null := null\nprintln(value ?? \"missing\") }",
+  }], "/main.do")
+
+  Assert.equal(result.diagnostics.length, 2)
+  Assert.equal(result.diagnostics[0].severity, "warning")
+  Assert.equal(result.diagnostics[0].replacement, "none")
+  Assert.equal(result.diagnostics[1].severity, "warning")
+  Assert.equal(result.diagnostics[1].replacement, "none")
+  Assert.equal(result.emission != none, true)
+}
+
+export function testWarningOnlyCompilationStillEmits(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "function main(): none { ignored := catch { println(\"ok\") } }",
+  }], "/main.do")
+
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].severity, "warning")
+  Assert.equal(result.emission != none, true)
+}
+
+export function testErrorStillBlocksEmissionWhenAWarningIsPresent(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "function main(): int { ignored := catch { println(\"ok\") } }",
+  }], "/main.do")
+
+  Assert.equal(result.diagnostics.length, 2)
+  Assert.equal(result.diagnostics[0].severity, "warning")
+  Assert.equal(result.diagnostics[1].severity, "error")
+  Assert.equal(result.emission, none)
+}
+
+export function testCompilesInferredCollectionAnnotations(): none {
   result := compile([SourceFile {
     path: "/main.do",
     source: "function main(): int { values: Set := [1, 2, 3]\nscores: Map := { \"Ada\": 10 }\nreturn values.size + scores.size }",
   }], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   Assert.equal(result.emission!.modules[0].source.contains("doof::ordered_set<int32_t>"), true)
   Assert.equal(result.emission!.modules[0].source.contains("doof::ordered_map<std::string, int32_t>"), true)
 }
 
-export function testEmitsCoverageMetadataAndStatementMarks(): void {
+export function testEmitsCoverageMetadataAndStatementMarks(): none {
   result := compile([
     SourceFile { path: "/main.test.do", source: "import { add } from \"./math\"\nfunction main(): int { value := add(2, 3)\nreturn value }" },
     SourceFile { path: "/math.do", source: "export function add(a: int, b: int): int { result := a + b\nreturn result }" },
@@ -44,7 +92,7 @@ export function testEmitsCoverageMetadataAndStatementMarks(): void {
 
   for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   Assert.equal(result.emission!.coverageModules.length, 1)
   Assert.equal(result.emission!.coverageModules[0].modulePath, "/math.do")
   Assert.equal(result.emission!.coverageModules[0].instrumentedLines.length, 2)
@@ -61,7 +109,7 @@ export function testEmitsCoverageMetadataAndStatementMarks(): void {
   Assert.equal(testSource.contains("doof::coverage::cov_mark"), false)
 }
 
-export function testCompilesMockImportReplacementInsteadOfOriginalDependency(): void {
+export function testCompilesMockImportReplacementInsteadOfOriginalDependency(): none {
   result := compile([
     SourceFile { path: "/main.test.do", source: "mock import for \"./service\" { \"./dep\" => \"./dep.mock\" }\nimport { run } from \"./service\"\nfunction main(): int => run()" },
     SourceFile { path: "/service.do", source: "import { value } from \"./dep\"\nexport function run(): int => value()" },
@@ -71,7 +119,7 @@ export function testCompilesMockImportReplacementInsteadOfOriginalDependency(): 
 
   for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   let sawMock = false
   let sawOriginal = false
   for module of result.emission!.modules {
@@ -82,14 +130,14 @@ export function testCompilesMockImportReplacementInsteadOfOriginalDependency(): 
   Assert.equal(sawOriginal, false)
 }
 
-export function testMonomorphizesDoofFunctionsAndClasses(): void {
+export function testMonomorphizesDoofFunctionsAndClasses(): none {
   result := compile([SourceFile {
     path: "/main.do",
     source: "type Value<T> = T\nfunction identity<T>(value: T): T => value\nfunction outer<T>(value: T): T => identity(value)\nclass Box<T> { value: T get(): T => value map<U>(other: U): U => other }\nfunction main(): int { value: Value<int> := outer(3)\nbox := Box<int> { value }\nreturn box.get() + box.map<int>(4) }",
   }], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   module := result.emission!.modules[0]
   Assert.equal(module.header.contains("template <typename T>\nstruct Box"), false)
   Assert.equal(module.header.contains("template <typename T>\nT identity"), false)
@@ -106,19 +154,19 @@ export function testMonomorphizesDoofFunctionsAndClasses(): void {
   Assert.equal(module.source.contains("map__int(4)"), true)
 }
 
-export function testDiagnosesExpandingGenericInstantiations(): void {
+export function testDiagnosesExpandingGenericInstantiations(): none {
   result := compile([SourceFile {
     path: "/main.do",
     source: "function grow<T>(value: T): int => grow<T[]>([value])\nfunction main(): int => grow<int>(1)",
   }], "/main.do")
-  Assert.equal(result.emission == null, true)
+  Assert.equal(result.emission == none, true)
   Assert.equal(result.diagnostics.length, 1)
   Assert.equal(result.diagnostics[0].message.contains("Generic instantiation did not converge"), true)
   Assert.equal(result.diagnostics[0].message.contains("grow__array"), true)
   Assert.equal(result.diagnostics[0].message.contains("->"), true)
 }
 
-export function testMonomorphizesNativeFunctionAdapters(): void {
+export function testMonomorphizesNativeFunctionAdapters(): none {
   result := compile([
     SourceFile { path: "/math.do", source: "export import function sin<T: float | double>(x: T): T from \"<cmath>\" as std::sin\nexport import function abs<T: float | double>(x: T): T from \"<cmath>\" as std::abs\nexport import function pow<T: float | double>(x: T, y: int = 2): T from \"<cmath>\" as std::pow" },
     SourceFile { path: "/facade.do", source: "export { sin, abs, pow } from \"./math\"" },
@@ -126,7 +174,7 @@ export function testMonomorphizesNativeFunctionAdapters(): void {
   ], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   let mathHeader = ""
   let mathSource = ""
   let mainSource = ""
@@ -148,14 +196,14 @@ export function testMonomorphizesNativeFunctionAdapters(): void {
   Assert.equal(mainSource.contains("::app_math_::pow__float(2.0f, 2)"), true)
 }
 
-export function testMonomorphizesClosedWorldStreams(): void {
+export function testMonomorphizesClosedWorldStreams(): none {
   result := compile([SourceFile {
     path: "/main.do",
     source: "class Counter implements Stream<int> { current: int end: int value_: int = 0 next(): bool { if current < end { value_ = current\ncurrent = current + 1\nreturn true }\nreturn false } value(): int => value_ }\nclass Chain<T> implements Stream<T> { source: Stream<T> next(): bool => source.next() value(): T => source.value() }\nclass MappedStream<T, U> implements Stream<U> { source: Stream<T> mapped: U next(): bool => source.next() value(): U => mapped }\nfunction main(): int { base: Stream<int> := Counter { current: 1, end: 4 }\nstream: Stream<int> := Chain<int> { source: base }\nwords: Stream<string> := MappedStream<int, string> { source: stream, mapped: \"value\" }\nlet total = 0\nfor value of stream { total = total + value }\nreturn total + int(words.value().length) }",
   }], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   module := result.emission!.modules[0]
   Assert.equal(module.header.contains("using Stream__int = std::variant<"), true)
   Assert.equal(module.header.contains("std::shared_ptr<Counter>"), true)
@@ -166,23 +214,23 @@ export function testMonomorphizesClosedWorldStreams(): void {
   Assert.equal(module.source.contains("std::visit([](auto&& _obj) { return _obj->next(); }"), true)
 }
 
-export function testMonomorphizesGenericStructuralInterfaces(): void {
+export function testMonomorphizesGenericStructuralInterfaces(): none {
   result := compile([SourceFile {
     path: "/main.do",
     source: "interface Reader<T> { read(): T }\nclass IntReader { value: int read(): int => value }\nfunction read(reader: Reader<int>): int => reader.read()\nfunction main(): int { reader: Reader<int> := IntReader { value: 7 }\nreturn read(reader) }",
   }], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   module := result.emission!.modules[0]
   Assert.equal(module.header.contains("using Reader__int = std::variant<std::shared_ptr<IntReader>>"), true)
   Assert.equal(module.header.contains("struct Reader"), false)
   Assert.equal(module.source.contains("std::visit([&](auto&& _obj) { return _obj->read(); }, reader)"), true)
 }
 
-export function testCompilesWithTransitiveSourceLoading(): void {
+export function testCompilesWithTransitiveSourceLoading(): none {
   let requested: string[] = []
-  loader := (path: string): Result<SourceFile | null, Diagnostic> => {
+  loader := (path: string): Result<SourceFile | none, Diagnostic> => {
     requested.push(path)
     if path == "/lib/index.do" {
       return Success(SourceFile { path, source: "export function add(left: int, right: int): int => left + right" })
@@ -190,21 +238,21 @@ export function testCompilesWithTransitiveSourceLoading(): void {
     if path == "/unused.do" {
       return Success(SourceFile { path, source: "this is not valid Doof" })
     }
-    return Success(null)
+    return Success(none)
   }
   result := compileWithLoader([
     SourceFile { path: "/main.do", source: "import { add } from \"./lib\"\nfunction main(): int => add(2, 3)" },
   ], "/main.do", loader)
 
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   Assert.equal(result.emission!.modules.length, 2)
   Assert.equal(requested.length, 2)
   Assert.equal(requested[0], "/lib.do")
   Assert.equal(requested[1], "/lib/index.do")
 }
 
-export function testEmitsSplitImportedProject(): void {
+export function testEmitsSplitImportedProject(): none {
   sources := [
     SourceFile { path: "/main.do", source: "import { sum } from \"./index\"\nfunction main(): int => sum(2, 3)" },
     SourceFile { path: "/index.do", source: "export { add as sum } from \"./lib/math\"" },
@@ -230,7 +278,7 @@ export function testEmitsSplitImportedProject(): void {
   Assert.equal(graph.modules[0].source.contains("::app_lib_math_::add(2, 3)"), true)
 }
 
-export function testEmitsContextualEmptyArrayForConstructedField(): void {
+export function testEmitsContextualEmptyArrayForConstructedField(): none {
   result := compile([
     SourceFile {
       path: "/main.do",
@@ -243,22 +291,31 @@ export function testEmitsContextualEmptyArrayForConstructedField(): void {
   ], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   for module of result.emission!.modules {
     Assert.equal(module.source.contains("std::variant<>"), false)
   }
 }
 
-export function testStopsBeforeEmissionOnAnalyzerErrors(): void {
+export function testStopsBeforeEmissionOnAnalyzerErrors(): none {
   result := compile([
     SourceFile { path: "/main.do", source: "import { missing } from \"./math\"\nfunction main(): int => missing" },
     SourceFile { path: "/math.do", source: "export function add(): int => 1" },
   ], "/main.do")
   Assert.equal(result.diagnostics.length > 0, true)
-  Assert.equal(result.emission == null, true)
+  Assert.equal(result.emission == none, true)
 }
 
-export function testStopsBeforeEmissionOnUnknownCheckedTypes(): void {
+export function testReportsUnknownMemberWithoutResolvedTypeCascades(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "function bad(value: string): string => value.missing()" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Type \"string\" has no member \"missing\"")
+  Assert.equal(result.emission == none, true)
+}
+
+export function testStopsBeforeEmissionOnUnknownCheckedTypes(): none {
   result := compile([
     SourceFile { path: "/main.do", source: "function main(): int { values := []\nreturn 0 }" },
   ], "/main.do")
@@ -267,41 +324,41 @@ export function testStopsBeforeEmissionOnUnknownCheckedTypes(): void {
     if diagnostic.message.contains("Unknown resolved type") { foundUnknownDiagnostic = true }
   }
   Assert.equal(foundUnknownDiagnostic, true)
-  Assert.equal(result.emission == null, true)
+  Assert.equal(result.emission == none, true)
 }
 
-export function testEmitsFocusedNullableVariantSample(): void {
+export function testEmitsFocusedNullableVariantSample(): none {
   result := compileSample("tests/compiler-samples/nullable-variant.do")
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
 }
 
-export function testEmitsFocusedNullableAstConstructionSample(): void {
+export function testEmitsFocusedNullableAstConstructionSample(): none {
   result := compileSample("tests/compiler-samples/nullable-ast-construction.do")
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
 }
 
-export function testEmitsFocusedNullableAliasAssignmentSample(): void {
+export function testEmitsFocusedNullableAliasAssignmentSample(): none {
   result := compileSample("tests/compiler-samples/nullable-alias-assignment.do")
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
 }
 
-export function testEmitsFocusedRecursiveAstUnionSample(): void {
+export function testEmitsFocusedRecursiveAstUnionSample(): none {
   result := compileSample("tests/compiler-samples/recursive-ast-union.do")
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
 }
 
-export function testEmitsActorAffineLambdaCaptures(): void {
+export function testEmitsActorAffineLambdaCaptures(): none {
   result := compile([SourceFile {
     path: "/lambda-captures.do",
     source: "function makeCounter(offset: int): (): int {\nlet count = offset\nreturn (): int => { count = count + 1\nreturn count }\n}",
   }], "/lambda-captures.do")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   source := result.emission!.modules[0].source
   Assert.equal(source.contains("auto count = std::make_shared<int32_t>(offset);"), true)
   Assert.equal(source.contains("doof::callback<int32_t()>([count]() -> int32_t"), true)
@@ -310,38 +367,38 @@ export function testEmitsActorAffineLambdaCaptures(): void {
   Assert.equal(source.contains("std::function"), false)
 }
 
-export function testEmitsComputedForOfLifetimeOwner(): void {
+export function testEmitsComputedForOfLifetimeOwner(): none {
   result := compile([SourceFile {
     path: "/computed-iterable.do",
     source: "function values(): int[] => [1, 2, 3]\nfunction main(): int { let total = 0\nfor value of values() { total = total + value }\nreturn total }",
   }], "/computed-iterable.do")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   Assert.equal(result.emission!.modules[0].source.contains("const auto& _iterable_"), true)
 }
 
-export function testEmitsImmutableLambdaCaptureByValue(): void {
+export function testEmitsImmutableLambdaCaptureByValue(): none {
   result := compile([SourceFile {
     path: "/immutable-lambda-capture.do",
     source: "function makeValue(base: int): (): int {\nreturn (): int => base\n}",
   }], "/immutable-lambda-capture.do")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   source := result.emission!.modules[0].source
   Assert.equal(source.contains("doof::callback<int32_t()>([base]() -> int32_t"), true)
   Assert.equal(source.contains("std::make_shared<int32_t>(base)"), false)
 }
 
-export function testDoesNotBoxUncapturedMutableLambdaLocal(): void {
+export function testDoesNotBoxUncapturedMutableLambdaLocal(): none {
   result := compile([SourceFile {
     path: "/lambda-local.do",
     source: "function main(): int {\ncallback := (): int => {\nlet value = 1\nvalue = value + 1\nreturn value\n}\nreturn callback()\n}",
   }], "/lambda-local.do")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission != null, true)
+  Assert.equal(result.emission != none, true)
   source := result.emission!.modules[0].source
   Assert.equal(source.contains("auto value = 1;"), true)
   Assert.equal(source.contains("std::make_shared<int32_t>(1)"), false)

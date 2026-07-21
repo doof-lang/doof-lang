@@ -1,3 +1,3 @@
-function main(): void {
+function main(): none {
   println("Doof iOS app")
 }

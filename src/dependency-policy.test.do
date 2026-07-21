@@ -9,7 +9,7 @@ function policyManifest(source: string, path: string): PackageManifest {
   return try! parsePackageManifest(source, path + "/doof.json", path, "linux")
 }
 
-export function testDetectsOnlyReachedMutableStandardPackages(): void {
+export function testDetectsOnlyReachedMutableStandardPackages(): none {
   manifest := policyManifest("{\"name\":\"dep\"}", "/dep")
   Assert.equal(hasMutableStdPackageInputs([
     ReachedPackageInput { logicalPrefix: "/std/fs", introducedBy: "/app", manifest, sourceKind: "local", mutable: true },
@@ -20,7 +20,7 @@ export function testDetectsOnlyReachedMutableStandardPackages(): void {
   ]), false)
 }
 
-export function testRequiresRootResolutionForExternalCommitConflict(): void {
+export function testRequiresRootResolutionForExternalCommitConflict(): none {
   root := policyManifest("{\"name\":\"app\"}", "/app")
   one := policyManifest("{\"name\":\"one\",\"externalDependencies\":{\"quickjs\":{\"kind\":\"git\",\"url\":\"https://example.com/quickjs.git\",\"ref\":\"v1\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"destination\":\"vendor/quickjs\"}}}", "/one")
   two := policyManifest("{\"name\":\"two\",\"externalDependencies\":{\"quickjs\":{\"kind\":\"git\",\"url\":\"https://EXAMPLE.com/quickjs/\",\"ref\":\"v2\",\"commit\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"destination\":\"vendor/quickjs\"}}}", "/two")
@@ -35,7 +35,7 @@ export function testRequiresRootResolutionForExternalCommitConflict(): void {
   panic("expected external conflict")
 }
 
-export function testRootResolutionSelectsOneExternalCommit(): void {
+export function testRootResolutionSelectsOneExternalCommit(): none {
   root := policyManifest("{\"name\":\"app\",\"resolutions\":{\"externalDependencies\":{\"quickjs\":{\"kind\":\"git\",\"url\":\"https://example.com/quickjs\",\"ref\":\"v2\",\"commit\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}}}}", "/app")
   one := policyManifest("{\"name\":\"one\",\"externalDependencies\":{\"quickjs\":{\"kind\":\"git\",\"url\":\"https://example.com/quickjs.git\",\"ref\":\"v1\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"destination\":\"vendor/quickjs\"}}}", "/one")
   resolved := try! resolveExternalInputs([
@@ -46,7 +46,7 @@ export function testRootResolutionSelectsOneExternalCommit(): void {
   Assert.equal(resolved[0].overridden, true)
 }
 
-export function testRootResolutionSelectsOnePackageCommit(): void {
+export function testRootResolutionSelectsOnePackageCommit(): none {
   root := policyManifest("{\"name\":\"app\",\"resolutions\":{\"packages\":{\"shared\":{\"url\":\"https://example.com/shared.git\",\"ref\":\"v2\",\"commit\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"}}}}", "/app")
   selected := selectedPackageSource(PackageDependency {
     name: "shared", url: "https://EXAMPLE.com/shared/", ref: "v1",
@@ -57,7 +57,7 @@ export function testRootResolutionSelectsOnePackageCommit(): void {
   Assert.equal(selected.commit, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
 }
 
-export function testPolicyRejectsNewFourthPartyAndNativeInputs(): void {
+export function testPolicyRejectsNewFourthPartyAndNativeInputs(): none {
   root := policyManifest("{\"name\":\"app\",\"policy\":{\"allowedExternalSources\":[],\"native\":{\"allowedLinkLibraries\":[]}}}", "/app")
   dependency := policyManifest("{\"name\":\"dep\",\"externalDependencies\":{\"new\":{\"kind\":\"git\",\"url\":\"https://example.com/new.git\",\"ref\":\"v1\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"destination\":\"vendor/new\"}}}", "/dep")
   reached := [ReachedPackageInput { logicalPrefix: "/dep", introducedBy: "/app", manifest: dependency, sourceKind: "git" }]
@@ -70,7 +70,7 @@ export function testPolicyRejectsNewFourthPartyAndNativeInputs(): void {
   panic("expected fourth-party policy rejection")
 }
 
-export function testPolicyRejectsTransitiveNativeLinkInput(): void {
+export function testPolicyRejectsTransitiveNativeLinkInput(): none {
   root := policyManifest("{\"name\":\"app\",\"policy\":{\"native\":{\"allowedLinkLibraries\":[]}}}", "/app")
   dependency := policyManifest("{\"name\":\"dep\",\"build\":{\"native\":{\"linkLibraries\":[\"surprise\"]}}}", "/dep")
   reached := [ReachedPackageInput { logicalPrefix: "/dep", introducedBy: "", manifest: dependency, sourceKind: "git" }]

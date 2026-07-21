@@ -1,13 +1,13 @@
 // Actor, Promise, async-call, and retirement lowering.
 
 import { ActorCreationExpression, AsyncExpression, Block, CallExpression, Expression, MemberExpression, RetireExpression } from "./ast"
-import { ActorType, FunctionType, PromiseType, ResolvedType, VoidType } from "./semantic"
+import { ActorType, FunctionType, PromiseType, ResolvedType, NoneType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { emitClassInnerType, emitContextType } from "./emitter-types"
+import { emitClassInnerType, emitContextReturnType } from "./emitter-types"
 
 export function emitActorCreation(expression: ActorCreationExpression, context: EmitContext): string {
-  if expression.resolvedType == null { panic("Actor creation is missing its resolved type") }
+  if expression.resolvedType == none { panic("Actor creation is missing its resolved type") }
   case expression.resolvedType! {
     actor: ActorType -> {
       let args = ""
@@ -31,7 +31,7 @@ export function emitAsyncActorCall(expression: AsyncExpression, context: EmitCon
         call: CallExpression -> {
           case call.callee {
             member: MemberExpression -> {
-              if member.object.resolvedType != null {
+              if member.object.resolvedType != none {
                 case member.object.resolvedType! {
                   actor: ActorType -> { return emitActorMethodCall(call, member, actor, true, context) }
                   _ -> { }
@@ -60,8 +60,8 @@ export function emitSyncActorCall(expression: CallExpression, member: MemberExpr
 function emitActorMethodCall(expression: CallExpression, member: MemberExpression, actor: ActorType, async_: bool, context: EmitContext): string {
   object := emitExpression(member.object, context)
   className := emitClassInnerType(actor.innerClass, context.modulePath)
-  let methodType: FunctionType | null = null
-  if member.resolvedType != null {
+  let methodType: FunctionType | none = none
+  if member.resolvedType != none {
     case member.resolvedType! {
       function_: FunctionType -> { methodType = function_ }
       _ -> { }
@@ -70,16 +70,16 @@ function emitActorMethodCall(expression: CallExpression, member: MemberExpressio
   let args = ""
   for i of 0..<expression.args.length {
     if i > 0 { args = args + ", " }
-    let expected: ResolvedType | null = null
-    if methodType != null && i < methodType!.params.length { expected = methodType!.params[i].type_ }
+    let expected: ResolvedType | none = none
+    if methodType != none && i < methodType!.params.length { expected = methodType!.params[i].type_ }
     args = args + emitExpression(expression.args[i].value, context, expected)
   }
   returnType := expression.resolvedType
-  if returnType == null { panic("Actor method call is missing its resolved return type") }
+  if returnType == none { panic("Actor method call is missing its resolved return type") }
   // Actor calls may return compound types containing reached generic nominals.
   // Lower those through the whole-program concrete-type registry just like
   // declarations do, or the lambda signature can reintroduce C++ templates.
-  cppReturn := emitContextType(returnType!, context)
+  cppReturn := emitContextReturnType(returnType!, context)
   callName := if async_ then "call_async" else "call_sync"
   capture := if args == "" then "[]" else if async_ then "[=]" else "[&]"
   let lambda = capture + "(" + className + "& _self)"

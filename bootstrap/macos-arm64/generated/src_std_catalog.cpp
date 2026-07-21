@@ -95,7 +95,7 @@ std::string canonicalDependencyUrl(std::string value) {
     return (((scheme + std::string("://")) + host) + doof::string_substring(remainder, slash, static_cast<int32_t>(remainder.size())));
 }
 doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(std::string source) {
-    auto _try_value_1 = ::std_::json::index::parseJsonValue(source);
+    auto _try_value_1 = ::doof_json::parse(source);
     if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
     const auto parsed = doof::success_value(_try_value_1);
     auto _binding_value_2 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = parsed; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();

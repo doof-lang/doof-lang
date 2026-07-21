@@ -21,7 +21,7 @@ Core rules:
 class Counter {
     value: int
 
-    increment(n: int): void {
+    increment(n: int): none {
         this.value = this.value + n
     }
 
