@@ -80,12 +80,14 @@ doof test src --coverage --coverage-output build/coverage/report.json
 Runner behavior:
 
 - Discovery is static, not reflective.
-- The CLI generates a temporary harness per test file.
-- Each `.test.do` module is compiled separately.
+- Selected roots without `mock import` share one generated harness and native executable.
+- Each root containing `mock import` is compiled into its own isolated executable.
 - Each exported test runs in its own process.
+- All modules in a shared no-mock graph perform module-level initialization in each test process.
 - One failing test does not stop later tests from running.
 - `--filter` matches ids of the form `<relative-path>::<functionName>`.
 - Recursive directory discovery skips subdirectories that contain their own `doof.json`; run `doof test` against that package directly to test it.
+- `--list` performs static discovery without compiling, and warm native builds skip unchanged PCH, object, and link tasks.
 - `--coverage` instruments non-test, non-stdlib Doof modules and writes JSON plus HTML reports; `--coverage-output` selects the JSON path.
 
 ## Mocking

@@ -10,10 +10,13 @@ The compiler processes a closed source graph in four phases:
 4. The emitter consumes only the decorated graph and writes split C++17
    modules plus explicit runtime/native support inputs.
 
-`compiler.do` coordinates the pure graph pipeline. `driver.do` owns filesystem,
-process, package acquisition, native build, test, app, and CLI boundaries.
+`compiler.do` coordinates the pure graph pipeline. `driver.do` owns CLI,
+package acquisition, test, app, and general filesystem/process boundaries.
 `emitter-project.do` combines generated modules with manifest-owned native
-inputs; `native-build.do` creates bounded parallel compile/link tasks.
+inputs. `native-build.do` creates stable compile/link tasks;
+`native-build-driver.do` fingerprints their compiler arguments and discovered
+header dependencies, persists versioned state, skips clean PCH/object/link
+work, and executes dirty tasks with bounded parallelism.
 
 The checker and emitter are split by concern. Shared semantic contracts live in
 `semantic.do`, checker state/types modules, and the emit-readiness validation

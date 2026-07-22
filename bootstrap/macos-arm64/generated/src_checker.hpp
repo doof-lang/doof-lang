@@ -48,6 +48,7 @@ namespace app_src_checker_ {
     std::shared_ptr<::app_src_semantic_::CheckResult> checkModule(std::shared_ptr<::app_src_checker_state_::CheckerState> state, std::string entry);
     std::shared_ptr<ModuleChecker> createChecker(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result);
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateCheckedTypes(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result);
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateIsolationEffects(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result);
 }
 
 namespace app_src_checker_ {

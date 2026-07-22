@@ -4,7 +4,7 @@ import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 import {
   CoverageModuleMetadata, buildCoverageReport, discoverModuleTests, filterDiscoveredTests,
-  coverageFileRelativePath, formatParseFailure, generateTestHarness, mergeCoverageOutput,
+  coverageFileRelativePath, formatParseFailure, generateTestHarness, groupTestsForCompilation, mergeCoverageOutput,
   renderCoverageFileHtml, renderCoverageHtml, renderCoverageJson, stripCoverageLines, testDisplayPath,
 } from "./test-runner"
 
@@ -73,10 +73,30 @@ export function testGeneratesPerIdHarnessWithRelativeImport(): none {
   tests := discoverModuleTests(program, "/work/src/math.test.do", "/work").tests
   harness := generateTestHarness("/work/build/.doof-tests/math/__doof_tests__.do", tests)
 
-  Assert.equal(harness.contains("import { testAdds } from \"../../../src/math.test\""), true)
+  Assert.equal(harness.contains("import { testAdds as __doof_test_0 } from \"../../../src/math.test\""), true)
   Assert.equal(harness.contains("if testId == \"src/math.test.do::testAdds\""), true)
-  Assert.equal(harness.contains("testAdds()"), true)
+  Assert.equal(harness.contains("__doof_test_0()"), true)
   Assert.equal(harness.contains("PASS src/math.test.do::testAdds"), false)
+}
+
+export function testGroupsOrdinaryTestsAndIsolatesMockRoots(): none {
+  ordinaryProgram := Parser { source: "export function testSame(): none {}\n" }.parse()
+  mockedProgram := Parser { source: "mock import for \"./service\" { \"./dep\" => \"./mock\" }\nexport function testSame(): none {}\n" }.parse()
+  first := discoverModuleTests(ordinaryProgram, "/work/first.test.do", "/work").tests[0]
+  second := discoverModuleTests(ordinaryProgram, "/work/second.test.do", "/work").tests[0]
+  mocked := discoverModuleTests(mockedProgram, "/work/mocked.test.do", "/work").tests[0]
+
+  groups := groupTestsForCompilation([first, mocked, second])
+  Assert.equal(groups.length, 2)
+  Assert.equal(groups[0].outputName, "shared")
+  Assert.equal(groups[0].tests.length, 2)
+  Assert.equal(groups[1].outputName, "mock-mocked_test_do")
+  Assert.equal(groups[1].tests.length, 1)
+  Assert.equal(groups[1].tests[0].usesMocks, true)
+
+  harness := generateTestHarness("/work/build/__doof_tests__.do", groups[0].tests)
+  Assert.stringContains(harness, "testSame as __doof_test_0")
+  Assert.stringContains(harness, "testSame as __doof_test_1")
 }
 
 export function testGeneratedHarnessPreservesTestMockImportRoot(): none {

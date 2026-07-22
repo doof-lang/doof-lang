@@ -51,8 +51,10 @@ namespace app_src_emitter_expr_ops_ {
 #include "src_semantic.hpp"
 #include "src_emitter_context.hpp"
 #include "src_emitter_expr.hpp"
+#include "src_emitter_expr_literals.hpp"
 #include "src_emitter_expr_utils.hpp"
 #include "src_emitter_types.hpp"
+#include "src_emitter_names.hpp"
 #include "src_checker_types.hpp"
 
 namespace app_src_emitter_expr_ops_ {

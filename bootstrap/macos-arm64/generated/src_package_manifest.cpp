@@ -18,7 +18,7 @@ std::string manifestJoinPath(std::string directory, std::string name) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{directory, name}));
 }
 doof::JsonValue manifestJsonField(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name) {
-    return [&]() -> doof::JsonValue { auto _try_value = doof::map_get(object, name, "", 0); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+    return [&]() -> doof::JsonValue { auto _try_value = doof::map_get(object, name, "", 0); if (doof::is_failure(_try_value)) doof::panic_at("src/package-manifest", 13, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
 }
 bool manifestJsonHas(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name) {
     return (object->find(name) != object->end());
@@ -1559,7 +1559,7 @@ doof::Result<std::string, std::string> normalizeResourceDestination(std::string 
             if (static_cast<int32_t>((segments)->size()) == 0) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(" must stay within the executable resource directory")) };
             }
-            const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(segments); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+            const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(segments); if (doof::is_failure(_try_value)) doof::panic_at("src/package-manifest", 955, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
             continue;
         }
         segments->push_back(segment);

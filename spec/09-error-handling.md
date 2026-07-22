@@ -231,6 +231,10 @@ config := try! loadConfig("required.json")
 It is an expression and can be used in any function. Use it only when failure
 means the program cannot sensibly continue.
 
+The panic identifies the source path and line of the `try!` expression. When
+the failure payload is a `string`, the message also includes that payload so
+the originating error is not discarded.
+
 ### `try?` Expression
 
 `try?` converts `Result<T, E>` to `T | none`:

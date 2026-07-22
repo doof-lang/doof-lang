@@ -4,8 +4,10 @@
 #include "src_semantic.hpp"
 #include "src_emitter_context.hpp"
 #include "src_emitter_expr.hpp"
+#include "src_emitter_expr_literals.hpp"
 #include "src_emitter_expr_utils.hpp"
 #include "src_emitter_types.hpp"
+#include "src_emitter_names.hpp"
 #include "src_checker_types.hpp"
 #include "std_fs_index.hpp"
 #include "std_http_index.hpp"
@@ -17,8 +19,10 @@ using namespace ::app_src_ast_;
 using namespace ::app_src_semantic_;
 using namespace ::app_src_emitter_context_;
 using namespace ::app_src_emitter_expr_;
+using namespace ::app_src_emitter_expr_literals_;
 using namespace ::app_src_emitter_expr_utils_;
 using namespace ::app_src_emitter_types_;
+using namespace ::app_src_emitter_names_;
 using namespace ::app_src_checker_types_;
 std::string emitAs(std::shared_ptr<::app_src_ast_::AsExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
     const auto sourceType = ::app_src_emitter_expr_utils_::requireExpressionType(expression->expression, std::string("as source"));
@@ -303,7 +307,20 @@ std::string emitUnary(std::shared_ptr<::app_src_ast_::UnaryExpression> expressio
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject)) {
                 const auto& result = std::get<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject);
                 const auto valueType = ::app_src_emitter_types_::emitType(result->valueType, context->modulePath);
-                const auto body = ((((std::string("auto _try_value = ") + operand) + std::string("; if (doof::is_failure(_try_value)) doof::panic(\"")) + expression->operator_) + std::string(" failed\"); "));
+                auto failureMessage = ((std::string("std::string(\"") + expression->operator_) + std::string(" failed\")"));
+                {
+                    auto _case_subject = result->errorType;
+                    if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
+                        const auto& primitive = std::get<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject);
+                        if (primitive->name == std::string("string")) {
+                            (failureMessage = (failureMessage + std::string(" + std::string(\": \") + doof::failure_error(_try_value)")));
+                        }
+                }
+                else {
+                }
+                }
+                const auto sourcePath = ::app_src_emitter_names_::moduleDiagnosticPath(context->modulePath, true);
+                const auto body = ((((((((std::string("auto _try_value = ") + operand) + std::string("; if (doof::is_failure(_try_value)) doof::panic_at(")) + ::app_src_emitter_expr_literals_::quote(sourcePath)) + std::string(", ")) + doof::to_string(expression->span.start.line)) + std::string(", ")) + failureMessage) + std::string("); "));
                 {
                     auto _case_subject = result->valueType;
                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::NoneType>>(_case_subject)) {

@@ -24,6 +24,21 @@ export function testCompilesAnImportedProject(): none {
   Assert.equal(result.emission!.modules[0].header.contains("#include \"math.hpp\""), true)
 }
 
+export function testValidatesIsolationOnceAfterCheckingImportedGraph(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "import { Worker } from \"./worker\"\nfunction main(): none { worker := Actor<Worker>()\nworker.run() }" },
+    SourceFile { path: "/worker.do", source: "import { mutate } from \"./state\"\nexport class Worker { function run(): none { mutate() } }" },
+    SourceFile { path: "/state.do", source: "values := [0]\nexport function mutate(): none { values.push(1) }" },
+  ], "/main.do")
+
+  Assert.equal(result.emission, none)
+  let found = false
+  for diagnostic of result.diagnostics {
+    if diagnostic.message.contains("Actor method \"run\" is not isolated") && diagnostic.message.contains("non-isolated function \"mutate\"") { found = true }
+  }
+  Assert.equal(found, true)
+}
+
 export function testEmitsRenamedImportedClassFromSymbolIdentity(): none {
   result := compile([
     SourceFile { path: "/main.do", source: "import type { Widget as AstNamedType } from \"./types\"\nfunction keep(value: AstNamedType): AstNamedType => value" },

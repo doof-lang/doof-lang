@@ -11,7 +11,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 import { discoverInterfaceImplementations, findModule } from "./checker-interfaces"
 import { predeclareModuleBindings } from "./checker-symbols"
 import { validateCheckedTypes as validateCheckedTypesImpl } from "./checker-validation"
-import { validateIsolationEffects } from "./checker-isolation"
+import { validateIsolationEffects as validateIsolationEffectsImpl } from "./checker-isolation"
 
 export class ModuleChecker {
   state: CheckerState
@@ -37,7 +37,6 @@ function checkModule(state: CheckerState, entry: string): CheckResult {
     collectRetiredActorBindings(statement, retiredActors)
   }
   validateInterfaces(state, state.info!)
-  validateIsolationEffects(state.result, state.info!, state.diagnostics)
   return CheckResult { diagnostics: state.diagnostics }
 }
 
@@ -47,4 +46,12 @@ export function createChecker(result: AnalysisResult): ModuleChecker {
 
 export function validateCheckedTypes(result: AnalysisResult): Diagnostic[] {
   return validateCheckedTypesImpl(result)
+}
+
+// Isolation is a graph-wide phase. Run it only after every module has been
+// checked so all bindings and types are decorated and the graph is scanned once.
+export function validateIsolationEffects(result: AnalysisResult): Diagnostic[] {
+  let diagnostics: Diagnostic[] = []
+  validateIsolationEffectsImpl(result, diagnostics)
+  return diagnostics
 }

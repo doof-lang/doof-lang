@@ -14,6 +14,7 @@
 namespace app_src_ast_ { struct Block; }
 namespace app_src_ast_ { struct ExportList; }
 namespace app_src_ast_ { struct FunctionDeclaration; }
+namespace app_src_ast_ { struct MockImportDirective; }
 namespace app_src_ast_ { struct NamedType; }
 namespace app_src_ast_ { struct Program; }
 namespace app_src_emitter_module_ { struct CoverageModuleMetadata; }
@@ -27,6 +28,7 @@ namespace app_src_test_runner_ {
     struct CoverageFileReport;
     struct CoverageReport;
     struct DiscoveredTest;
+    struct TestCompilationGroup;
     struct TestDiscovery;
 }
 
@@ -61,9 +63,17 @@ namespace app_src_test_runner_ {
     std::string name;
     std::string modulePath;
     std::string moduleDisplayPath;
-    DiscoveredTest(std::string id, std::string name, std::string modulePath, std::string moduleDisplayPath) : id(id), name(name), modulePath(modulePath), moduleDisplayPath(moduleDisplayPath) {}
+    bool usesMocks = false;
+    DiscoveredTest(std::string id, std::string name, std::string modulePath, std::string moduleDisplayPath, bool usesMocks = false) : id(id), name(name), modulePath(modulePath), moduleDisplayPath(moduleDisplayPath), usesMocks(usesMocks) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<DiscoveredTest>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+    struct TestCompilationGroup : public std::enable_shared_from_this<TestCompilationGroup> {
+    std::string outputName;
+    std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{});
+    TestCompilationGroup(std::string outputName, std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{})) : outputName(outputName), tests(tests) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<TestCompilationGroup>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TestDiscovery : public std::enable_shared_from_this<TestDiscovery> {
     std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{});
@@ -73,8 +83,10 @@ namespace app_src_test_runner_ {
     static doof::Result<std::shared_ptr<TestDiscovery>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     std::shared_ptr<TestDiscovery> discoverModuleTests(std::shared_ptr<::app_src_ast_::Program> program, std::string modulePath, std::string rootDirectory);
+    std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsForCompilation(std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests);
     std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> filterDiscoveredTests(std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests, std::string filter);
     std::string generateTestHarness(std::string harnessPath, std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests);
+    std::string safeGroupName(std::string value);
     std::string testDisplayPath(std::string rootDirectory, std::string modulePath);
     std::string formatParseFailure(std::string modulePath, std::string source, int32_t line, int32_t column, std::string message);
     void mergeCoverageOutput(std::string output, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>> modules, std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>> hitsByModule);
@@ -92,7 +104,7 @@ namespace app_src_test_runner_ {
     std::string renderLineArray(std::shared_ptr<std::vector<int32_t>> lines);
     std::string escapeJson(std::string value);
     std::string escapeHtml(std::string value);
-    void addDiscoveredTest(std::shared_ptr<TestDiscovery> result, std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration, std::string exportedName, std::string modulePath, std::string rootDirectory);
+    void addDiscoveredTest(std::shared_ptr<TestDiscovery> result, std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration, std::string exportedName, std::string modulePath, std::string rootDirectory, bool usesMocks);
     bool returnsNone(std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration);
     std::shared_ptr<::app_src_ast_::FunctionDeclaration> findFunction(std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>> statements, std::string name);
     std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> copyTests(std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests);

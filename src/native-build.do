@@ -6,12 +6,16 @@
 
 import { ModuleEmission } from "./emitter-module"
 import { NativeBuildPlan } from "./package-manifest"
+import { sha1HexString } from "std/crypto"
 
 /** One independently executable object compilation task. */
 export class NativeCompileTask {
+  readonly id: string
   readonly compiler: string
   readonly sourcePath: string
   readonly outputPath: string
+  readonly dependencyFilePath: string = ""
+  readonly usesPrecompiledHeader: bool = false
   readonly arguments: string[] = []
 }
 
@@ -22,7 +26,7 @@ export type NativeCompileTaskBatch = readonly NativeCompileTask[]
 export class NativeCompilePlan {
   compiler: string
   linker: string
-  precompiledHeaderArguments: string[] = []
+  precompiledHeaderTask: NativeCompileTask | none = none
   compileTasks: NativeCompileTask[] = []
   linkArguments: string[] = []
   outputPath: string
@@ -46,8 +50,8 @@ export function batchNativeCompileTasks(
 /**
  * Plans independent GCC-compatible object compilations followed by one link.
  *
- * Source and output paths stay explicit on each task so a future incremental
- * executor can fingerprint and skip tasks without changing this build model.
+ * Source and output paths stay explicit so the native driver can fingerprint
+ * and skip unchanged tasks without changing this pure build model.
  */
 export function planNativeCompile(
   compiler: string,
@@ -79,7 +83,7 @@ export function planNativeCompile(
     compileArguments.push(resolveBuildPath(outputDirectory, includePath))
   }
   for flag of native.compilerFlags { compileArguments.push(flag) }
-  let precompiledHeaderArguments: string[] = []
+  let precompiledHeaderTask: NativeCompileTask | none = none
   let clangPchPath = ""
   // The runtime dominates repeated parsing in larger generated projects. Build
   // it once, but avoid paying the PCH startup cost for a single module.
@@ -87,12 +91,25 @@ export function planNativeCompile(
     runtimeHeader := resolveBuildPath(outputDirectory, "doof_runtime.hpp")
     clangPch := usesClangPrecompiledHeader(compiler, platform)
     pchPath := runtimeHeader + if clangPch then ".pch" else ".gch"
-    for argument of compileArguments { precompiledHeaderArguments.push(argument) }
-    precompiledHeaderArguments.push("-x")
-    precompiledHeaderArguments.push("c++-header")
-    precompiledHeaderArguments.push(runtimeHeader)
-    precompiledHeaderArguments.push("-o")
-    precompiledHeaderArguments.push(pchPath)
+    let pchArguments: string[] = []
+    for argument of compileArguments { pchArguments.push(argument) }
+    dependencyFile := pchPath + ".d"
+    pchArguments.push("-MMD")
+    pchArguments.push("-MF")
+    pchArguments.push(dependencyFile)
+    pchArguments.push("-x")
+    pchArguments.push("c++-header")
+    pchArguments.push(runtimeHeader)
+    pchArguments.push("-o")
+    pchArguments.push(pchPath)
+    precompiledHeaderTask = NativeCompileTask {
+      id: "pch:" + pchPath,
+      compiler,
+      sourcePath: runtimeHeader,
+      outputPath: pchPath,
+      dependencyFilePath: dependencyFile,
+      arguments: pchArguments.buildReadonly(),
+    }
     if clangPch { clangPchPath = pchPath }
   }
 
@@ -100,7 +117,8 @@ export function planNativeCompile(
   let objectPaths: string[] = []
   for index of 0..<modules.length {
     sourcePath := resolveBuildPath(outputDirectory, modules[index].sourceName)
-    objectPath := resolveBuildPath(outputDirectory, ".doof-objects/generated-" + string(index) + ".o")
+    objectPath := resolveBuildPath(outputDirectory, ".doof-objects/generated/" + replaceSourceExtension(modules[index].sourceName, ".o"))
+    dependencyFile := objectPath + ".d"
     arguments := copyArguments(compileArguments)
     // A C++ PCH is valid for generated C++ translation units. Native sources
     // may be C or Objective-C++, whose compiler language mode is incompatible.
@@ -108,27 +126,41 @@ export function planNativeCompile(
       arguments.push("-include-pch")
       arguments.push(clangPchPath)
     }
+    arguments.push("-MMD")
+    arguments.push("-MF")
+    arguments.push(dependencyFile)
     appendObjectArguments(arguments, sourcePath, objectPath)
     compileTasks.push(NativeCompileTask {
+      id: "object:" + objectPath,
       compiler,
       sourcePath,
       outputPath: objectPath,
+      dependencyFilePath: dependencyFile,
+      usesPrecompiledHeader: precompiledHeaderTask != none,
       arguments: arguments.buildReadonly(),
     })
     objectPaths.push(objectPath)
   }
   for index of 0..<native.sourceFiles.length {
     sourcePath := resolveBuildPath(outputDirectory, native.sourceFiles[index])
-    objectPath := resolveBuildPath(outputDirectory, ".doof-objects/native-" + string(index) + ".o")
     swiftSource := isSwiftSource(sourcePath)
+    objectPath := resolveBuildPath(outputDirectory, ".doof-objects/native/" + sha1HexString(native.sourceFiles[index]) + ".o")
+    dependencyFile := if swiftSource then "" else objectPath + ".d"
     cSource := isCSource(sourcePath)
     arguments := if swiftSource then swiftObjectArguments(sourcePath, objectPath) else copyNativeCompileArguments(compileArguments, cSource)
-    if !swiftSource { appendObjectArguments(arguments, sourcePath, objectPath) }
+    if !swiftSource {
+      arguments.push("-MMD")
+      arguments.push("-MF")
+      arguments.push(dependencyFile)
+      appendObjectArguments(arguments, sourcePath, objectPath)
+    }
     taskCompiler := if swiftSource then "swiftc" else if cSource then deriveCCompiler(compiler) else compiler
     compileTasks.push(NativeCompileTask {
+      id: "object:" + objectPath,
       compiler: taskCompiler,
       sourcePath,
       outputPath: objectPath,
+      dependencyFilePath: dependencyFile,
       arguments: arguments.buildReadonly(),
     })
     objectPaths.push(objectPath)
@@ -167,11 +199,16 @@ export function planNativeCompile(
   return NativeCompilePlan {
     compiler,
     linker: if swiftLink then "swiftc" else compiler,
-    precompiledHeaderArguments,
+    precompiledHeaderTask,
     compileTasks,
     linkArguments,
     outputPath,
   }
+}
+
+function replaceSourceExtension(path: string, extension: string): string {
+  if path.endsWith(".cpp") { return path.substring(0, path.length - 4) + extension }
+  return path + extension
 }
 
 function copyArguments(source: string[]): string[] {

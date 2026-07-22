@@ -369,10 +369,7 @@ function moduleExpressions(module: ModuleInfo): Expression[] {
   return allExpressions(roots)
 }
 
-export function validateIsolationEffects(result: AnalysisResult, module: ModuleInfo, diagnostics: Diagnostic[]): none {
-  graph := collectGraph(result)
-  inferIsolation(result, graph)
-
+function validateModuleIsolationEffects(result: AnalysisResult, graph: IsolationGraph, module: ModuleInfo, diagnostics: Diagnostic[]): none {
   for node of graph.nodes {
     if node.module != module.path || !node.declaration.isolated_ || node.reason == none { continue }
     owner := if node.owner == "" then "function \"" + node.declaration.name + "\"" else "method \"" + node.owner + "." + node.declaration.name + "\""
@@ -414,5 +411,14 @@ export function validateIsolationEffects(result: AnalysisResult, module: ModuleI
       }
       _ -> { }
     }
+  }
+}
+
+/** Infers isolation once for the checked graph, then validates every module. */
+export function validateIsolationEffects(result: AnalysisResult, diagnostics: Diagnostic[]): none {
+  graph := collectGraph(result)
+  inferIsolation(result, graph)
+  for module of result.modules {
+    validateModuleIsolationEffects(result, graph, module, diagnostics)
   }
 }

@@ -27,12 +27,21 @@ dist/doof test path/to/package --list
 dist/doof test path/to/package --coverage --coverage-output build/coverage/report.json
 ```
 
-Each test file receives an isolated generated harness and process. Coverage
-aggregates stable source-line markers and produces text, JSON, summary HTML,
-and annotated per-file HTML output. Use `mock import` for root-scoped import
-replacement where supported.
+Selected test files without `mock import` share one generated harness and
+native executable. Every test function still runs in a fresh process, but all
+modules in that shared graph perform module-level initialization in each test
+process. A test file that declares `mock import` receives its own isolated
+harness and executable so its substitutions cannot affect another root.
+
+Generated files are written only when their contents change. Native builds
+persist dependency-aware object, precompiled-header, and link state under the
+output directory, so an unchanged warm test run performs no native compiler or
+linker work. Coverage uses a separate build directory and state. `--list`
+performs static discovery only and never invokes the compiler toolchain.
+
+Coverage aggregates stable source-line markers and produces text, JSON,
+summary HTML, and annotated per-file HTML output.
 
 Focused semantic tests belong beside their source module. Native
 representation, runtime, resource, package, and Apple-platform behavior belongs
 in `tests/release-fixtures/` and `./scripts/release.sh`.
-

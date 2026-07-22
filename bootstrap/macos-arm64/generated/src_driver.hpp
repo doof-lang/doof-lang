@@ -19,7 +19,6 @@ namespace app_src_emitter_project_ { struct NativePackageInput; }
 namespace app_src_emitter_project_ { struct ProjectEmission; }
 namespace app_src_emitter_names_ { struct ModuleNamespaceMapping; }
 namespace app_src_module_acquisition_ { struct ModuleAcquisition; }
-namespace app_src_native_build_ { struct NativeCompileTask; }
 namespace app_src_package_manifest_ { struct ExternalDependency; }
 namespace app_src_package_manifest_ { struct NativeBuildPlan; }
 namespace app_src_package_manifest_ { struct PackageDependency; }
@@ -27,7 +26,6 @@ namespace app_src_package_manifest_ { struct PackageManifest; }
 namespace app_src_package_manifest_ { struct PackageResource; }
 namespace app_src_package_acquisition_ { struct ExactPackageSource; }
 namespace app_src_parser_ { struct Parser; }
-namespace app_src_pkg_config_ { struct PkgConfigCommandResult; }
 namespace app_src_semantic_ { struct Diagnostic; }
 namespace app_src_semantic_ { struct SemanticLocation; }
 namespace app_src_semantic_ { struct SemanticSpan; }
@@ -47,8 +45,6 @@ namespace std_::stream::index { struct DecodedLineStream; }
 
 namespace app_src_driver_ {
     struct NativeCommandResult;
-    struct NativeCompilerBatchResult;
-    struct NativeCompilerWorker;
     struct DriverSourceRoot;
     struct DriverReachedPackage;
     struct DriverAcquiredSource;
@@ -63,7 +59,7 @@ namespace app_src_driver_ {
 #include "src_emitter_project.hpp"
 #include "src_emitter_names.hpp"
 #include "src_module_acquisition.hpp"
-#include "src_native_build.hpp"
+#include "src_native_build_driver.hpp"
 #include "src_package_manifest.hpp"
 #include "src_package_acquisition.hpp"
 #include "src_macos_app.hpp"
@@ -72,7 +68,6 @@ namespace app_src_driver_ {
 #include "src_ios_app_driver.hpp"
 #include "src_ios_device.hpp"
 #include "src_parser.hpp"
-#include "src_pkg_config.hpp"
 #include "src_project.hpp"
 #include "src_provenance.hpp"
 #include "src_resolver.hpp"
@@ -96,20 +91,6 @@ namespace app_src_driver_ {
     NativeCommandResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> output, std::string error, bool truncated) : exitCode(exitCode), output(output), error(error), truncated(truncated) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<NativeCommandResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
-};
-    struct NativeCompilerBatchResult : public std::enable_shared_from_this<NativeCompilerBatchResult> {
-    int32_t exitCode;
-    std::shared_ptr<std::vector<std::shared_ptr<NativeCommandResult>>> outputs;
-    NativeCompilerBatchResult(int32_t exitCode, std::shared_ptr<std::vector<std::shared_ptr<NativeCommandResult>>> outputs) : exitCode(exitCode), outputs(outputs) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeCompilerBatchResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
-};
-    struct NativeCompilerWorker : public std::enable_shared_from_this<NativeCompilerWorker> {
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>> tasks;
-    NativeCompilerWorker(std::shared_ptr<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>> tasks) : tasks(tasks) {}
-    std::shared_ptr<NativeCompilerBatchResult> compile();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeCompilerWorker>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct DriverSourceRoot : public std::enable_shared_from_this<DriverSourceRoot> {
     std::string logicalPrefix;
@@ -195,17 +176,17 @@ namespace app_src_driver_ {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>> projectNativePackages(std::string projectRoot, std::shared_ptr<::app_src_package_manifest_::PackageManifest> projectManifest, std::string stdlibRoot = std::string(""));
     void ensureOutputDirectory(std::string path);
     void materializeNativeCopy(std::string sourcePath, std::string outputPath);
+    void writeTextIfChanged(std::string path, std::string content);
+    void writeBlobIfChanged(std::string path, std::shared_ptr<std::vector<uint8_t>> content);
+    bool blobsEqual(std::shared_ptr<std::vector<uint8_t>> left, std::shared_ptr<std::vector<uint8_t>> right);
     void materializeProject(std::string outputDirectory, std::shared_ptr<::app_src_emitter_project_::ProjectEmission> project);
     void materializeExecutableResources(std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources, std::string outputDirectory);
     void materializeRuntimeHeader(std::string outputDirectory);
     std::string buildOutputName(std::string projectName);
-    int32_t buildProject(std::shared_ptr<::app_src_cli_::CliRequest> request, std::string outputDirectory, std::string outputPath, std::shared_ptr<::app_src_emitter_project_::ProjectEmission> project, bool release = false);
     void printDiagnostics(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics);
     void collectTestFiles(std::string path, std::shared_ptr<std::vector<std::string>> results, bool root = true);
     std::shared_ptr<std::vector<std::string>> sortedTestFiles(std::shared_ptr<std::vector<std::string>> values);
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_test_runner_::DiscoveredTest>>> sortedDiscoveredTests(std::shared_ptr<std::vector<std::shared_ptr<::app_src_test_runner_::DiscoveredTest>>> values);
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_test_runner_::DiscoveredTest>>> selectedModuleTests(std::shared_ptr<std::vector<std::shared_ptr<::app_src_test_runner_::DiscoveredTest>>> tests, std::string modulePath);
-    std::string safeTestOutputName(std::string displayPath);
     void mergeCoverageGroup(std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>> groupModules, std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>> groupHits, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>> allModules, std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>> allHits);
     void printCoverageSummary(std::shared_ptr<::app_src_test_runner_::CoverageReport> report);
     std::string coverageHtmlPath(std::string jsonPath);

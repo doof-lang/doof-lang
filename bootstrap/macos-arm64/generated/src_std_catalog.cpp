@@ -119,7 +119,7 @@ doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(std::stri
     if (static_cast<int32_t>(digest.size()) != 64) {
         return doof::Failure<std::string>{ std::string("Invalid std catalog digest") };
     }
-    const auto rawPackages = [&]() -> doof::JsonValue { auto _try_value = doof::map_get(root, std::string("packages"), "", 0); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+    const auto rawPackages = [&]() -> doof::JsonValue { auto _try_value = doof::map_get(root, std::string("packages"), "", 0); if (doof::is_failure(_try_value)) doof::panic_at("src/std-catalog", 42, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     auto _binding_value_6 = [&]() -> doof::Result<std::shared_ptr<std::vector<doof::JsonValue>>, std::string> { auto _as_value = rawPackages; if (doof::json_is_array(_as_value)) return doof::Success<std::shared_ptr<std::vector<doof::JsonValue>>>{std::get<doof::JsonArray>(doof::json_storage(_as_value))}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
     if (doof::is_failure(_binding_value_6)) {
         const auto& packages = _binding_value_6;

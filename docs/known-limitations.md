@@ -11,8 +11,7 @@ goal is complete.
 - Diagnostic behavior has focused tests but no exhaustive invalid-program
   compatibility corpus.
 - Some JSON union/interface cases, interface reflection, recorded mocks,
-  timeouts, incremental builds, Windows/MSVC support, and iOS embedded-library
+  timeouts, Windows/MSVC support, and iOS embedded-library
   packaging remain incomplete.
 
 See [ROADMAP.md](../ROADMAP.md) for acceptance-oriented follow-up work.
-

@@ -542,9 +542,7 @@ std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLite
     }
     return allExpressions(roots);
 }
-void validateIsolationEffects(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::shared_ptr<::app_src_analyzer_::ModuleInfo> module, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics) {
-    const auto graph = collectGraph(result);
-    inferIsolation(result, graph);
+void validateModuleIsolationEffects(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::shared_ptr<IsolationGraph> graph, std::shared_ptr<::app_src_analyzer_::ModuleInfo> module, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics) {
     const auto& _iterable_33 = graph->nodes;
     for (const auto& node : *_iterable_33) {
         if (((node->module != module->path) || !node->declaration->isolated_) || doof::is_null(node->reason)) {
@@ -594,6 +592,14 @@ void validateIsolationEffects(std::shared_ptr<::app_src_analyzer_::AnalysisResul
         else {
         }
         }
+    }
+}
+void validateIsolationEffects(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics) {
+    const auto graph = collectGraph(result);
+    inferIsolation(result, graph);
+    const auto& _iterable_35 = result->modules;
+    for (const auto& module : *_iterable_35) {
+        validateModuleIsolationEffects(result, graph, module, diagnostics);
     }
 }
 }

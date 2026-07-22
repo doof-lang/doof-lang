@@ -87,6 +87,9 @@ Expression-level unwrap-or-panic:
 config := try! loadConfig()
 ```
 
+Failure panics identify the source path and line of the `try!` expression. If
+the error payload is a `string`, its value is included in the panic message.
+
 ### `try?`
 
 Expression-level conversion from failure to `none`:

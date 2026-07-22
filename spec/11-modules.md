@@ -508,6 +508,17 @@ Each discovered test is assigned an id of the form `<relative-path>::<functionNa
 
 This is a build-time discovery convention. It is not runtime reflection, and it does not change how ordinary modules are imported or executed.
 
+After filtering, test roots without `mock import` are compiled into one shared
+test executable. Each test function is still invoked in its own process. All
+modules reached by the shared graph therefore perform module-level
+initialization in every test process. Roots containing `mock import` are each
+compiled into a separate executable so substitutions remain root-scoped.
+
+The native test build is incremental: unchanged generated files retain their
+timestamps, and compiler-produced dependency files determine which PCH and
+object tasks need rebuilding. Coverage and ordinary test builds use separate
+state. Listing tests performs discovery only and does not compile them.
+
 ### Module-Level Initialization
 
 Code at module scope executes during module initialization, **before** `main()` runs:

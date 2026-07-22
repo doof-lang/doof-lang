@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
-import { createChecker, validateCheckedTypes } from "./checker"
+import { createChecker, validateCheckedTypes, validateIsolationEffects } from "./checker"
 import { CheckResult, Diagnostic, FunctionType, SourceFile } from "./semantic"
 import { AsExpression, AssignmentExpression, Block, CaseStatement, ClassDeclaration, ConstructExpression, Expression, ExpressionStatement, Identifier, IfStatement, FunctionDeclaration, ImmutableBinding, LetDeclaration, ObjectLiteral, ReadonlyDeclaration, WithStatement } from "./ast"
 import { typeName, unknownType } from "./checker-types"
@@ -10,7 +10,9 @@ function checkedIncludingDeprecations(source: string): CheckResult {
   analysis := createAnalyzer(sources).analyze("/main.do")
   checker := createChecker(analysis)
   semantic := checker.check("/main.do")
-  return CheckResult { diagnostics: semantic.diagnostics }
+  diagnostics := semantic.diagnostics
+  for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
+  return CheckResult { diagnostics }
 }
 
 // Most checker fixtures intentionally exercise behavior unrelated to legacy
@@ -34,6 +36,7 @@ function checkedSources(sources: SourceFile[], entry: string): CheckResult {
     checkedModule := checker.check(module.path)
     for diagnostic of checkedModule.diagnostics { diagnostics.push(diagnostic) }
   }
+  for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
   return CheckResult { diagnostics }
 }
 
@@ -799,6 +802,8 @@ export function testPropagatesIsolationThroughInterfaceDispatch(): none {
   source := "shared := [0]\ninterface Job { run(): void }\nclass UnsafeJob implements Job { function run(): void { shared.push(1) } }\nclass Worker { job: Job = UnsafeJob {}\nfunction execute(): void { this.job.run() } }\nfunction main(): void { worker := Actor<Worker>()\nworker.execute() }"
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
   semantic := createChecker(analysis).check("/main.do")
+  diagnostics := semantic.diagnostics
+  for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
   let unsafeFound = false
   let workerFound = false
   for statement of analysis.modules[0].program.statements {
@@ -812,7 +817,7 @@ export function testPropagatesIsolationThroughInterfaceDispatch(): none {
   }
   Assert.equal(unsafeFound, true)
   Assert.equal(workerFound, true)
-  result := CheckResult { diagnostics: semantic.diagnostics }
+  result := CheckResult { diagnostics }
   Assert.equal(result.diagnostics.length > 0, true)
   let found = false
   for diagnostic of result.diagnostics {

@@ -131,17 +131,20 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::File
 doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlob(std::string path) {
     return ::doof_fs::readBlob(path);
 }
-doof::Result<void, ::std_::fs::types::IoError> writeBlob(std::string path, std::shared_ptr<std::vector<uint8_t>> data) {
-    return ::doof_fs::writeBlob(path, data);
-}
 doof::Result<void, ::std_::fs::types::IoError> writeText(std::string path, std::string content) {
     return ::doof_fs::writeText(path, content);
+}
+doof::Result<void, ::std_::fs::types::IoError> writeBlob(std::string path, std::shared_ptr<std::vector<uint8_t>> data) {
+    return ::doof_fs::writeBlob(path, data);
 }
 doof::Result<void, ::std_::fs::types::IoError> remove(std::string path) {
     return ::doof_fs::remove(path);
 }
 doof::Result<void, ::std_::fs::types::IoError> rename(std::string sourcePath, std::string destPath) {
     return ::doof_fs::rename(sourcePath, destPath);
+}
+doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(std::string path) {
+    return ::doof_fs::metadata(path);
 }
 bool isFile(std::string path) {
     return ::doof_fs::isFile(path);

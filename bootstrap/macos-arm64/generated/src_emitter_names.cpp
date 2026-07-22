@@ -101,7 +101,7 @@ std::string moduleNativeHeaderPath(std::string modulePath, std::string headerPat
     }
     const auto components = doof::string_split(relativeModulePath, std::string("/"));
     if (static_cast<int32_t>((components)->size()) > 0) {
-        const auto ignoredModuleName = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+        const auto ignoredModuleName = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-names", 85, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }
     const auto& _iterable_1 = doof::string_split(doof::string_replaceAll(headerPath, std::string("\\"), std::string("/")), std::string("/"));
     for (const auto& component : *_iterable_1) {
@@ -112,7 +112,7 @@ std::string moduleNativeHeaderPath(std::string modulePath, std::string headerPat
             if (static_cast<int32_t>((components)->size()) == 0) {
                 return headerPath;
             }
-            const auto ignoredParent = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+            const auto ignoredParent = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-names", 90, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
         } else {
             components->push_back(component);
         }

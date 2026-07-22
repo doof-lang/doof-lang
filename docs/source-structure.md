@@ -10,8 +10,12 @@ Production code and focused tests live together under `src/`.
 - `compiler.do` — checked graph to generated project orchestration
 - `cli.do`, `project.do`, `package-*.do`, `dependency-policy.do` — command and
   package contracts
-- `driver.do`, `native-build.do`, platform driver modules — filesystem,
-  process, native toolchain, test, and application boundaries
+- `native-build.do`, `native-build-state.do` — pure native task planning,
+  stable artifacts, dependency-file parsing, and persisted state contracts
+- `native-build-driver.do` — incremental PCH/object/link execution and native
+  compiler process ownership
+- `driver.do` and platform driver modules — CLI filesystem, test, package, and
+  application boundaries
 - `*.test.do` — focused unit/component tests for the adjacent concern
 
 Other maintained inputs:
@@ -23,4 +27,3 @@ Other maintained inputs:
 - `bootstrap/macos-arm64/generated/` — generated stage-0 trust root
 
 Keep files focused and make ownership changes explicit in this document.
-

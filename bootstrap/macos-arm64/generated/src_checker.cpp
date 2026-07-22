@@ -45,7 +45,6 @@ std::shared_ptr<::app_src_semantic_::CheckResult> checkModule(std::shared_ptr<::
         ::app_src_checker_actor_lifecycle_::collectRetiredActorBindings(statement, retiredActors);
     }
     ::app_src_checker_statements_::validateInterfaces(state, doof::unwrap_optional(state->info));
-    ::app_src_checker_isolation_::validateIsolationEffects(state->result, doof::unwrap_optional(state->info), state->diagnostics);
     return std::make_shared<::app_src_semantic_::CheckResult>(state->diagnostics);
 }
 std::shared_ptr<ModuleChecker> createChecker(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result) {
@@ -53,5 +52,10 @@ std::shared_ptr<ModuleChecker> createChecker(std::shared_ptr<::app_src_analyzer_
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateCheckedTypes(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result) {
     return ::app_src_checker_validation_::validateCheckedTypes(result);
+}
+std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateIsolationEffects(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result) {
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{});
+    ::app_src_checker_isolation_::validateIsolationEffects(result, diagnostics);
+    return diagnostics;
 }
 }

@@ -331,6 +331,14 @@ export function testEmitsActorCreationCallsPromiseAndRetirement(): none {
   Assert.equal(result.source.contains("worker->retire()"), true)
 }
 
+export function testTryBangPanicIncludesOriginAndStringFailure(): none {
+  result := emitMonomorphized("function load(): Result<int, string> => Failure { error: \"disk failed\" }\nfunction main(): int => try! load()")
+  Assert.stringContains(result.source, "doof::panic_at(\"main\", 2, std::string(\"try! failed\") + std::string(\": \") + doof::failure_error(_try_value))")
+
+  enumFailure := emitMonomorphized("enum Problem { Broken }\nfunction load(): Result<int, Problem> => Failure { error: Problem.Broken }\nfunction main(): int => try! load()")
+  Assert.stringContains(enumFailure.source, "doof::panic_at(\"main\", 3, std::string(\"try! failed\"))")
+}
+
 export function testActorCreationUsesTrailingFieldDefaults(): none {
   result := emit("class Worker { values: int[] = []\nlimit: int = 4 }\nfunction create(): Actor<Worker> => Actor<Worker>()")
   Assert.equal(result.header.contains("Worker(std::shared_ptr<std::vector<int32_t>> values = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), int32_t limit = 4)"), true)

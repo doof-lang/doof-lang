@@ -4,8 +4,10 @@ import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Ident
 import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
+import { quote } from "./emitter-expr-literals"
 import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
 import { emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, sameType } from "./checker-types"
 
 /** Lowers checked `as` conversion to a Result without evaluating its source twice. */
@@ -208,7 +210,17 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
     case operandType {
       result: ResultResolvedType -> {
         valueType := emitType(result.valueType, context.modulePath)
-        body := "auto _try_value = " + operand + "; if (doof::is_failure(_try_value)) doof::panic(\"" + expression.operator + " failed\"); "
+        let failureMessage = "std::string(\"" + expression.operator + " failed\")"
+        case result.errorType {
+          primitive: PrimitiveType -> {
+            if primitive.name == "string" {
+              failureMessage = failureMessage + " + std::string(\": \") + doof::failure_error(_try_value)"
+            }
+          }
+          _ -> { }
+        }
+        sourcePath := moduleDiagnosticPath(context.modulePath, true)
+        body := "auto _try_value = " + operand + "; if (doof::is_failure(_try_value)) doof::panic_at(" + quote(sourcePath) + ", " + string(expression.span.start.line) + ", " + failureMessage + "); "
         case result.valueType {
           _: NoneType -> { return "[&]() -> void { " + body + " }()" }
           _ -> { }

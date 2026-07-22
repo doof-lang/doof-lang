@@ -6,7 +6,7 @@
 // Mock roots are found by the analyzer when each generated harness imports its
 // test module.
 
-import { Block, ExportList, FunctionDeclaration, NamedType, Program } from "./ast"
+import { Block, ExportList, FunctionDeclaration, MockImportDirective, NamedType, Program } from "./ast"
 import type { Statement } from "./ast"
 export { CoverageModuleMetadata } from "./emitter-module"
 import { CoverageModuleMetadata } from "./emitter-module"
@@ -32,6 +32,12 @@ export class DiscoveredTest {
   name: string
   modulePath: string
   moduleDisplayPath: string
+  usesMocks: bool = false
+}
+
+export class TestCompilationGroup {
+  outputName: string
+  tests: DiscoveredTest[] = []
 }
 
 export class TestDiscovery {
@@ -46,11 +52,18 @@ export function discoverModuleTests(
   rootDirectory: string,
 ): TestDiscovery {
   result := TestDiscovery {}
+  let usesMocks = false
+  for statement of program.statements {
+    case statement {
+      _: MockImportDirective -> { usesMocks = true }
+      _ -> { }
+    }
+  }
   for statement of program.statements {
     case statement {
       fn: FunctionDeclaration -> {
         if fn.exported && fn.name.startsWith("test") {
-          addDiscoveredTest(result, fn, fn.name, modulePath, rootDirectory)
+          addDiscoveredTest(result, fn, fn.name, modulePath, rootDirectory, usesMocks)
         }
       }
       list: ExportList -> {
@@ -60,13 +73,38 @@ export function discoverModuleTests(
           if !exportedName.startsWith("test") { continue }
           declaration := findFunction(program.statements, specifier.name)
           if declaration != none {
-            addDiscoveredTest(result, declaration!, exportedName, modulePath, rootDirectory)
+            addDiscoveredTest(result, declaration!, exportedName, modulePath, rootDirectory, usesMocks)
           }
         }
       }
       _ -> { }
     }
   }
+  return result
+}
+
+/** Shares one graph for ordinary roots while retaining one graph per mock root. */
+export function groupTestsForCompilation(tests: DiscoveredTest[]): TestCompilationGroup[] {
+  shared := TestCompilationGroup { outputName: "shared" }
+  let mocked: TestCompilationGroup[] = []
+  for test of tests {
+    if !test.usesMocks {
+      shared.tests.push(test)
+      continue
+    }
+    let group: TestCompilationGroup | none = none
+    for existing of mocked {
+      if existing.tests.length > 0 && existing.tests[0].modulePath == test.modulePath { group = existing; break }
+    }
+    if group == none {
+      group = TestCompilationGroup { outputName: "mock-" + safeGroupName(test.moduleDisplayPath) }
+      mocked.push(group!)
+    }
+    group!.tests.push(test)
+  }
+  let result: TestCompilationGroup[] = []
+  if shared.tests.length > 0 { result.push(shared) }
+  for group of mocked { result.push(group) }
   return result
 }
 
@@ -84,8 +122,9 @@ export function filterDiscoveredTests(tests: DiscoveredTest[], filter: string): 
 /** Generates the one-file harness that dispatches one test id per process. */
 export function generateTestHarness(harnessPath: string, tests: DiscoveredTest[]): string {
   let source = ""
-  for test of tests {
-    source = source + "import { " + test.name + " } from \"" + relativeImportSpecifier(harnessPath, test.modulePath) + "\"\n"
+  for index of 0..<tests.length {
+    test := tests[index]
+    source = source + "import { " + test.name + " as __doof_test_" + string(index) + " } from \"" + relativeImportSpecifier(harnessPath, test.modulePath) + "\"\n"
   }
   source = source + "\nfunction main(args: string[]): int {\n"
   source = source + "    if args.length < 1 {\n"
@@ -97,7 +136,7 @@ export function generateTestHarness(harnessPath: string, tests: DiscoveredTest[]
     keyword := if index == 0 then "if" else "} else if"
     id := escapeDoofString(tests[index].id)
     source = source + "    " + keyword + " testId == \"" + id + "\" {\n"
-    source = source + "        " + tests[index].name + "()\n"
+    source = source + "        __doof_test_" + string(index) + "()\n"
     source = source + "        return 0\n"
   }
   source = source + "    } else {\n"
@@ -106,6 +145,10 @@ export function generateTestHarness(harnessPath: string, tests: DiscoveredTest[]
   source = source + "    }\n"
   source = source + "}\n"
   return source
+}
+
+function safeGroupName(value: string): string {
+  return value.replaceAll("/", "_").replaceAll("\\", "_").replaceAll(".", "_").replaceAll("-", "_")
 }
 
 /** Returns a stable slash-separated path beneath the requested test root. */
@@ -319,6 +362,7 @@ function addDiscoveredTest(
   exportedName: string,
   modulePath: string,
   rootDirectory: string,
+  usesMocks: bool,
 ): none {
   location := modulePath + ":" + string(declaration.span.start.line) + ":" + string(declaration.span.start.column)
   if declaration.params.length > 0 {
@@ -339,6 +383,7 @@ function addDiscoveredTest(
     name: exportedName,
     modulePath,
     moduleDisplayPath: displayPath,
+    usesMocks,
   })
 }
 

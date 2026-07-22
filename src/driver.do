@@ -18,7 +18,7 @@ import {
 import { NativePackageInput, ProjectEmission, planProjectEmission } from "./emitter-project"
 import { ModuleNamespaceMapping } from "./emitter-names"
 import { ModuleAcquisition, acquiredManifestPath, acquiredModuleDiskPath, acquiredPackageForModule } from "./module-acquisition"
-import { NativeCompileTask, batchNativeCompileTasks, planNativeCompile } from "./native-build"
+import { buildNativeProject } from "./native-build-driver"
 import {
   ExternalDependency, NativeBuildPlan, PackageDependency, PackageManifest, PackageResource, parsePackageManifest,
 } from "./package-manifest"
@@ -29,7 +29,6 @@ import { iosPackageArchiveName, iosTargetTriple } from "./ios-app"
 import { assembleIOSApp, configureIOSNativeBuild, signAndArchiveIOSApp } from "./ios-app-driver"
 import { resolveIOSDeviceIdentifier, resolveIOSDeviceSigningOptions, signIOSDeviceApp } from "./ios-device"
 import { Parser } from "./parser"
-import { PkgConfigCommandResult, applyPkgConfigResult } from "./pkg-config"
 import { environmentValue, fileName, joinPath, parentPath, readProjectSpec } from "./project"
 import { renderBuildProvenance } from "./provenance"
 import { SourceLoader } from "./resolver"
@@ -41,7 +40,7 @@ import { Diagnostic, SemanticLocation, SemanticSpan, SourceFile } from "./semant
 import { StdCatalog, canonicalDependencyUrl, parseStdCatalog, stdCatalogPackage } from "./std-catalog"
 import {
   CoverageModuleMetadata, CoverageReport, DiscoveredTest, buildCoverageReport, discoverModuleTests,
-  coverageFileRelativePath, filterDiscoveredTests, formatParseFailure, generateTestHarness,
+  coverageFileRelativePath, filterDiscoveredTests, formatParseFailure, generateTestHarness, groupTestsForCompilation,
   mergeCoverageOutput, renderCoverageFileHtml, renderCoverageHtml, renderCoverageJson,
   stripCoverageLines, testDisplayPath,
 } from "./test-runner"
@@ -51,7 +50,6 @@ import { ExecOptions, architecture, run, platform } from "std/os"
 import { absolute } from "std/path"
 
 readonly MAX_PRINTED_DIAGNOSTICS = 8
-readonly MAX_NATIVE_COMPILER_OUTPUT_LINES = 40
 readonly MAX_NATIVE_COMPILER_OUTPUT_BYTES = 262144L
 readonly MAX_COVERAGE_OUTPUT_BYTES = 16777216L
 
@@ -65,11 +63,6 @@ class NativeCommandResult {
   readonly output: readonly byte[] = []
   readonly error: string = ""
   readonly truncated: bool
-}
-
-class NativeCompilerBatchResult {
-  readonly exitCode: int
-  readonly outputs: readonly NativeCommandResult[]
 }
 
 isolated function runNativeCommand(
@@ -110,25 +103,6 @@ function printNativeCommandOutput(result: NativeCommandResult, remainingLines: i
     remaining -= 1
   }
   return remaining
-}
-
-/** Owns a serial batch of compiler tasks; up to eight workers overlap. */
-class NativeCompilerWorker {
-  readonly tasks: readonly NativeCompileTask[]
-
-  compile(): NativeCompilerBatchResult {
-    let outputs: NativeCommandResult[] = []
-    for task of this.tasks {
-      let arguments: string[] = []
-      for argument of task.arguments { arguments.push(argument) }
-      result := runNativeCommand(task.compiler, arguments)
-      outputs.push(result)
-      if result.exitCode != 0 {
-        return NativeCompilerBatchResult { exitCode: result.exitCode, outputs: outputs.buildReadonly() }
-      }
-    }
-    return NativeCompilerBatchResult { exitCode: 0, outputs: outputs.buildReadonly() }
-  }
 }
 
 function driverWithExtension(path: string): string {
@@ -666,19 +640,41 @@ function materializeNativeCopy(sourcePath: string, outputPath: string): none {
     return
   }
   ensureOutputDirectory(parentPath(outputPath))
-  try! writeBlob(outputPath, try! readBlob(sourcePath))
+  writeBlobIfChanged(outputPath, try! readBlob(sourcePath))
+}
+
+function writeTextIfChanged(path: string, content: string): none {
+  if exists(path) {
+    existing := try! readText(path)
+    if existing == content { return }
+  }
+  try! writeText(path, content)
+}
+
+function writeBlobIfChanged(path: string, content: readonly byte[]): none {
+  if exists(path) {
+    existing := try! readBlob(path)
+    if blobsEqual(existing, content) { return }
+  }
+  try! writeBlob(path, content)
+}
+
+function blobsEqual(left: readonly byte[], right: readonly byte[]): bool {
+  if left.length != right.length { return false }
+  for index of 0..<left.length { if left[index] != right[index] { return false } }
+  return true
 }
 
 function materializeProject(outputDirectory: string, project: ProjectEmission): none {
   ensureOutputDirectory(outputDirectory)
   for module of project.modules {
-    try! writeText(driverOutputPath(outputDirectory, module.headerName), module.header)
-    try! writeText(driverOutputPath(outputDirectory, module.sourceName), module.source)
+    writeTextIfChanged(driverOutputPath(outputDirectory, module.headerName), module.header)
+    writeTextIfChanged(driverOutputPath(outputDirectory, module.sourceName), module.source)
   }
   for supportFile of project.supportFiles {
     outputPath := driverOutputPath(outputDirectory, supportFile.relativePath)
     ensureOutputDirectory(parentPath(outputPath))
-    try! writeText(outputPath, supportFile.content)
+    writeTextIfChanged(outputPath, supportFile.content)
   }
   for nativeCopy of project.nativeCopies {
     materializeNativeCopy(
@@ -705,105 +701,11 @@ function materializeRuntimeHeader(outputDirectory: string): none {
   runtimeSource := if sourcePath == ""
     then readTextResource("doof_runtime.h")
     else readText(sourcePath)
-  try! writeText(driverOutputPath(outputDirectory, "doof_runtime.hpp"), try! runtimeSource)
+  writeTextIfChanged(driverOutputPath(outputDirectory, "doof_runtime.hpp"), try! runtimeSource)
 }
 
 function buildOutputName(projectName: string): string {
   return projectName.replaceAll("/", "-").replaceAll("\\", "-")
-}
-
-function buildProject(
-  request: CliRequest,
-  outputDirectory: string,
-  outputPath: string,
-  project: ProjectEmission,
-  release: bool = false,
-): int {
-  for packageName of project.nativeBuild.pkgConfigPackages {
-    for mode of ["cflags", "libs"] {
-      pkgConfigResult := runNativeCommand("pkg-config", ["--" + mode, packageName])
-      output := BlobReader(pkgConfigResult.output).readString(long(pkgConfigResult.output.length))
-      applied := applyPkgConfigResult(
-        project.nativeBuild,
-        packageName,
-        mode,
-        PkgConfigCommandResult {
-          exitCode: pkgConfigResult.exitCode,
-          output,
-          error: pkgConfigResult.error,
-        },
-      )
-      _ := applied else error {
-        println("error: " + error)
-        return 1
-      }
-    }
-  }
-  wasm := outputPath.endsWith(".wasm")
-  let compiler = request.compiler
-  if compiler == "" && wasm { compiler = "em++" }
-  if compiler == "" { compiler = environmentValue("CXX") }
-  if compiler == "" { compiler = "c++" }
-  plan := planNativeCompile(compiler, outputDirectory, outputPath, project.modules, project.nativeBuild, release, hostPlatform(), project.wasmExportNames, wasm)
-  let remainingOutputLines = MAX_NATIVE_COMPILER_OUTPUT_LINES
-  let truncationReported = false
-  if plan.precompiledHeaderArguments.length > 0 {
-    pchResult := runNativeCommand(plan.compiler, plan.precompiledHeaderArguments)
-    remainingOutputLines = printNativeCommandOutput(pchResult, remainingOutputLines)
-    if pchResult.truncated {
-      println("... native compiler output capture truncated after " + string(MAX_NATIVE_COMPILER_OUTPUT_BYTES) + " bytes")
-      truncationReported = true
-    }
-    if pchResult.exitCode != 0 {
-      println("error: native compiler failed to build the precompiled runtime header with code " + string(pchResult.exitCode))
-      return pchResult.exitCode
-    }
-  }
-
-  // A bounded set of actor domains prevents large graphs from spawning one
-  // compiler process per translation unit while still overlapping eight jobs.
-  let workers: Actor<NativeCompilerWorker>[] = []
-  let promises: Promise<NativeCompilerBatchResult>[] = []
-  for task of plan.compileTasks {
-    ensureOutputDirectory(parentPath(task.outputPath))
-  }
-  compileBatches := batchNativeCompileTasks(plan.compileTasks)
-  for batch of compileBatches {
-    worker := Actor<NativeCompilerWorker>(batch)
-    workers.push(worker)
-    promises.push(async worker.compile())
-  }
-  let compileExitCode = 0
-  for index of 0..<promises.length {
-    batchResult := try! promises[index].get()
-    retire workers[index]
-    for commandResult of batchResult.outputs {
-      remainingOutputLines = printNativeCommandOutput(commandResult, remainingOutputLines)
-      if commandResult.truncated && !truncationReported {
-        println("... native compiler output capture truncated after " + string(MAX_NATIVE_COMPILER_OUTPUT_BYTES) + " bytes")
-        truncationReported = true
-      }
-    }
-    if compileExitCode == 0 && batchResult.exitCode != 0 { compileExitCode = batchResult.exitCode }
-  }
-  if remainingOutputLines == 0 && !truncationReported {
-    println("... native compiler output truncated after " + string(MAX_NATIVE_COMPILER_OUTPUT_LINES) + " lines")
-    truncationReported = true
-  }
-  if compileExitCode != 0 {
-    println("error: native object compiler exited with code " + string(compileExitCode))
-    return compileExitCode
-  }
-
-  linkResult := runNativeCommand(plan.linker, plan.linkArguments)
-  ignoredRemainingLines := printNativeCommandOutput(linkResult, remainingOutputLines)
-  if linkResult.truncated && !truncationReported {
-    println("... native linker output capture truncated after " + string(MAX_NATIVE_COMPILER_OUTPUT_BYTES) + " bytes")
-  }
-  if linkResult.exitCode != 0 {
-    println("error: native linker exited with code " + string(linkResult.exitCode))
-  }
-  return linkResult.exitCode
 }
 
 function printDiagnostics(diagnostics: Diagnostic[]): none {
@@ -861,16 +763,6 @@ function sortedDiscoveredTests(values: DiscoveredTest[]): DiscoveredTest[] {
     if candidate != none { result.push(candidate!); last = candidate!.id }
   }
   return result
-}
-
-function selectedModuleTests(tests: DiscoveredTest[], modulePath: string): DiscoveredTest[] {
-  let selected: DiscoveredTest[] = []
-  for test of tests { if test.modulePath == modulePath { selected.push(test) } }
-  return selected
-}
-
-function safeTestOutputName(displayPath: string): string {
-  return displayPath.replaceAll("/", "_").replaceAll("\\", "_").replaceAll(".", "_").replaceAll("-", "_")
 }
 
 function mergeCoverageGroup(
@@ -982,22 +874,28 @@ function testRequest(request: CliRequest): int {
     println("error: No tests found under " + target + suffix)
     return 1
   }
+  if request.listOnly {
+    for test of selected { println(test.id) }
+    return 0
+  }
 
   let passed = 0
   let failed = 0
   let coverageModules: CoverageModuleMetadata[] = []
   let coverageHits: int[][] = []
-  for testFile of testFiles {
-    moduleTests := selectedModuleTests(selected, testFile)
-    if moduleTests.length == 0 { continue }
+  groups := groupTestsForCompilation(selected)
+  for group of groups {
+    moduleTests := group.tests
+    testFile := moduleTests[0].modulePath
     project := readProjectSpec(testFile, hostPlatform())
     buildRoot := if request.outputDirectory == ""
       then joinPath(project.rootDirectory, project.buildDirectory)
       else try! absolute(request.outputDirectory)
-    outputDirectory := joinPath(joinPath(buildRoot, ".doof-tests"), safeTestOutputName(testDisplayPath(rootDirectory, testFile)))
+    coverageSuffix := if request.coverage then "-coverage" else ""
+    outputDirectory := joinPath(joinPath(buildRoot, ".doof-tests"), group.outputName + coverageSuffix)
     harnessPath := joinPath(outputDirectory, "__doof_tests__.do")
     ensureOutputDirectory(outputDirectory)
-    try! writeText(harnessPath, generateTestHarness(harnessPath, moduleTests))
+    writeTextIfChanged(harnessPath, generateTestHarness(harnessPath, moduleTests))
 
     stdlibRoot := environmentValue("DOOF_STDLIB_ROOT")
     rootLogicalPrefix := driverRootLogicalPrefix(project.name, project.rootDirectory)
@@ -1015,10 +913,6 @@ function testRequest(request: CliRequest): int {
     result := compileWithLoader([], driverRootLogicalPath(harnessPath, project.rootDirectory, project.name), loader, namespaceMappings, "executable", request.coverage)
     if result.diagnostics.length > 0 { printDiagnostics(result.diagnostics) }
     if hasErrorDiagnostics(result.diagnostics) { return 1 }
-    if request.listOnly {
-      for test of moduleTests { println(test.id) }
-      continue
-    }
     if result.emission == none { panic("test compiler produced no emission") }
     rootManifest := project.manifest
     testExternalTarget := ExternalDependencyTarget { nativeTarget: hostPlatform() }
@@ -1035,8 +929,8 @@ function testRequest(request: CliRequest): int {
     materializeProject(outputDirectory, emission)
     materializeRuntimeHeader(outputDirectory)
     binary := joinPath(outputDirectory, "doof-tests")
-    println("BUILD " + testDisplayPath(rootDirectory, testFile))
-    buildExitCode := buildProject(request, outputDirectory, binary, emission)
+    println("BUILD " + group.outputName)
+    buildExitCode := buildNativeProject(request.compiler, outputDirectory, binary, emission, false, hostPlatform())
     if buildExitCode != 0 { return buildExitCode }
 
     for test of moduleTests {
@@ -1072,7 +966,6 @@ function testRequest(request: CliRequest): int {
       }
     }
   }
-  if request.listOnly { return 0 }
   println("Tests finished: " + string(passed) + " passed, " + string(failed) + " failed")
   if request.coverage && coverageModules.length > 0 {
     report := buildCoverageReport(coverageModules, coverageHits, rootDirectory)
@@ -1150,7 +1043,7 @@ function emitRequest(request: CliRequest): int {
   )
   materializeProject(outputDirectory, emission)
   materializeRuntimeHeader(outputDirectory)
-  try! writeText(
+  writeTextIfChanged(
     driverOutputPath(outputDirectory, "provenance.json"),
     renderBuildProvenance(
       reachedPackageInputs(rootManifest), externalInputs, emission.nativeBuild, configuredDriverSourceState.stdCatalog,
@@ -1170,7 +1063,7 @@ function emitRequest(request: CliRequest): int {
     executableName := if project.target == "wasm" then buildOutputName(project.name) + ".wasm" else if project.macosApp != none then project.macosApp!.executableName else if project.iosApp != none then project.iosApp!.executableName else buildOutputName(project.name)
     outputPath := driverOutputPath(outputDirectory, executableName)
     if project.macosApp == none && project.iosApp == none { materializeExecutableResources(project.resources, outputDirectory) }
-    exitCode := buildProject(request, outputDirectory, outputPath, emission)
+    exitCode := buildNativeProject(request.compiler, outputDirectory, outputPath, emission, false, hostPlatform())
     if exitCode != 0 { return exitCode }
     if project.iosApp != none {
       appPath := assembleIOSApp(outputDirectory, outputPath, project.iosApp!, iosDestination) else error {
@@ -1248,7 +1141,7 @@ function emitRequest(request: CliRequest): int {
     outputPath := if project.macosApp == none && project.iosApp == none
       then driverOutputPath(distDirectory, executableName)
       else driverOutputPath(outputDirectory, executableName)
-    exitCode := buildProject(request, outputDirectory, outputPath, emission, true)
+    exitCode := buildNativeProject(request.compiler, outputDirectory, outputPath, emission, true, hostPlatform())
     if exitCode != 0 { return exitCode }
     if project.macosApp == none && project.iosApp == none {
       materializeExecutableResources(project.resources, distDirectory)

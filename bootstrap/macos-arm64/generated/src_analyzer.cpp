@@ -58,7 +58,7 @@ std::shared_ptr<ModuleInfo> ModuleAnalyzer::analyzeModule(std::string path, std:
         }
         auto location = ::app_src_semantic_::SemanticLocation{parser->errorLine, parser->errorColumn, parser->errorOffset};
         this->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), parser->errorMessage, ::app_src_semantic_::SemanticSpan{location, location}, path, std::string("")));
-        const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(this->inProgress); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+        const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(this->inProgress); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 92, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
         return nullptr;
     }
     const auto program = doof::success_value(_binding_value_2);
@@ -74,7 +74,7 @@ std::shared_ptr<ModuleInfo> ModuleAnalyzer::analyzeModule(std::string path, std:
     resolveImports(info);
     resolveExportLists(info);
     resolveNamedTypes(info);
-    const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(this->inProgress); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+    const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(this->inProgress); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 107, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     const auto& _iterable_3 = info->diagnostics;
     for (const auto& item : *_iterable_3) {
         this->diagnostics->push_back(item);
@@ -520,7 +520,7 @@ std::string relativeModuleSpecifier(std::string fromModule, std::string toModule
 std::shared_ptr<std::vector<std::string>> parentPathComponents(std::string path) {
     const auto components = doof::string_split(path, std::string("/"));
     if (static_cast<int32_t>((components)->size()) > 0) {
-        const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic("try! failed"); return std::move(doof::success_value(_try_value)); }();
+        const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 440, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }
     return components;
 }

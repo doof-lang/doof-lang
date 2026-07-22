@@ -47,21 +47,13 @@ export function testPlansGeneratedAndManifestNativeSources(): none {
     Assert.equal(task.arguments.contains(task.sourcePath), true)
     Assert.equal(task.arguments.contains(task.outputPath), true)
   }
-  let expectedLink: string[] = [
-    "/tmp/generated/.doof-objects/generated-0.o",
-    "/tmp/generated/.doof-objects/native-0.o",
-    "/tmp/generated/.doof-objects/native-1.o",
-    "-L/tmp/generated/vendor/lib",
-    "-lsqlite3",
-    "-framework", "CoreFoundation",
-    "-pthread",
-    "-o", "/tmp/generated/demo",
-  ]
-  Assert.equal(plan.linkArguments.length, expectedLink.length)
-  Assert.equal(plan.precompiledHeaderArguments.length, 0)
-  for index of 0..<expectedLink.length {
-    Assert.equal(plan.linkArguments[index], expectedLink[index])
-  }
+  Assert.equal(plan.linkArguments.length, 10)
+  Assert.equal(plan.linkArguments[0], "/tmp/generated/.doof-objects/generated/main.o")
+  Assert.equal(plan.linkArguments[1].startsWith("/tmp/generated/.doof-objects/native/"), true)
+  Assert.equal(plan.linkArguments[2].startsWith("/tmp/generated/.doof-objects/native/"), true)
+  Assert.equal(plan.linkArguments[3], "-L/tmp/generated/vendor/lib")
+  Assert.equal(plan.linkArguments[9], "/tmp/generated/demo")
+  Assert.equal(plan.precompiledHeaderTask, none)
 }
 
 export function testPreservesAbsoluteNativePaths(): none {
@@ -194,11 +186,12 @@ export function testPlansClangPrecompiledRuntimeForMultiModuleBuilds(): none {
     "macos",
   )
 
-  Assert.equal(plan.precompiledHeaderArguments.contains("c++-header"), true)
-  Assert.equal(plan.precompiledHeaderArguments.contains("/tmp/generated/doof_runtime.hpp"), true)
-  Assert.equal(plan.precompiledHeaderArguments.contains("/tmp/generated/doof_runtime.hpp.pch"), true)
-  Assert.equal(plan.precompiledHeaderArguments.contains("-DDEBUG_BUILD=1"), true)
-  Assert.equal(plan.precompiledHeaderArguments.contains("-Wconversion"), true)
+  Assert.equal(plan.precompiledHeaderTask != none, true)
+  Assert.equal(plan.precompiledHeaderTask!.arguments.contains("c++-header"), true)
+  Assert.equal(plan.precompiledHeaderTask!.arguments.contains("/tmp/generated/doof_runtime.hpp"), true)
+  Assert.equal(plan.precompiledHeaderTask!.arguments.contains("/tmp/generated/doof_runtime.hpp.pch"), true)
+  Assert.equal(plan.precompiledHeaderTask!.arguments.contains("-DDEBUG_BUILD=1"), true)
+  Assert.equal(plan.precompiledHeaderTask!.arguments.contains("-Wconversion"), true)
   Assert.equal(plan.compileTasks[0].arguments.contains("-include-pch"), true)
   Assert.equal(plan.compileTasks[0].arguments.contains("/tmp/generated/doof_runtime.hpp.pch"), true)
   Assert.equal(plan.compileTasks[1].arguments.contains("-include-pch"), true)
@@ -229,6 +222,7 @@ export function testBatchesCompileTasksAcrossAtMostEightWorkers(): none {
   let tasks: NativeCompileTask[] = []
   for index of 0..<19 {
     tasks.push(NativeCompileTask {
+      id: "source-" + string(index),
       compiler: "clang++",
       sourcePath: "/tmp/source-" + string(index) + ".cpp",
       outputPath: "/tmp/source-" + string(index) + ".o",
@@ -251,6 +245,21 @@ export function testBatchesCompileTasksAcrossAtMostEightWorkers(): none {
   Assert.equal(batchNativeCompileTasks([]).length, 0)
 }
 
+export function testUsesStableObjectPathsAndDependencyFiles(): none {
+  first := ModuleEmission { modulePath: "/one.do", header: "", source: "", headerName: "one.hpp", sourceName: "one.cpp" }
+  second := ModuleEmission { modulePath: "/two.do", header: "", source: "", headerName: "two.hpp", sourceName: "two.cpp" }
+  forward := planNativeCompile("clang++", "/tmp/generated", "/tmp/generated/demo", [first, second], NativeBuildPlan {}, false, "macos")
+  reverse := planNativeCompile("clang++", "/tmp/generated", "/tmp/generated/demo", [second, first], NativeBuildPlan {}, false, "macos")
+
+  Assert.equal(forward.compileTasks[0].outputPath, reverse.compileTasks[1].outputPath)
+  Assert.equal(forward.compileTasks[1].outputPath, reverse.compileTasks[0].outputPath)
+  Assert.equal(forward.compileTasks[0].outputPath, "/tmp/generated/.doof-objects/generated/one.o")
+  Assert.equal(forward.compileTasks[0].dependencyFilePath.endsWith("one.o.d"), true)
+  Assert.equal(forward.compileTasks[0].arguments.contains("-MMD"), true)
+  Assert.equal(forward.compileTasks[0].arguments.contains("-MF"), true)
+  Assert.equal(forward.compileTasks[0].usesPrecompiledHeader, true)
+}
+
 export function testPlansGccAdjacentPrecompiledRuntime(): none {
   modules := [
     ModuleEmission { modulePath: "/one.do", header: "", source: "", headerName: "one.hpp", sourceName: "one.cpp" },
@@ -264,7 +273,7 @@ export function testPlansGccAdjacentPrecompiledRuntime(): none {
     NativeBuildPlan {},
   )
 
-  Assert.equal(plan.precompiledHeaderArguments.contains("/tmp/generated/doof_runtime.hpp.gch"), true)
+  Assert.equal(plan.precompiledHeaderTask!.arguments.contains("/tmp/generated/doof_runtime.hpp.gch"), true)
   Assert.equal(plan.compileTasks[0].arguments.contains("-include-pch"), false)
 }
 
@@ -281,7 +290,7 @@ export function testPlansStandaloneEmscriptenWasmLink(): none {
     true,
   )
 
-  Assert.equal(plan.precompiledHeaderArguments.length, 0)
+  Assert.equal(plan.precompiledHeaderTask, none)
   Assert.equal(plan.compileTasks[0].arguments.contains("-Oz"), true)
   Assert.equal(plan.compileTasks[0].arguments.contains("-flto"), true)
   Assert.equal(plan.linkArguments.contains("-sSTANDALONE_WASM=1"), true)
