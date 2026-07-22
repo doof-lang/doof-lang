@@ -473,6 +473,9 @@ export class CaseStatement {
   kind: string
   subject: Expression
   arms: CaseArm[]
+  // Checker-owned control-flow fact consumed by statement lowering. `false`
+  // means evaluation cannot continue after this case statement.
+  resolvedCompletes: bool | none = none
   span: SourceSpan
 }
 

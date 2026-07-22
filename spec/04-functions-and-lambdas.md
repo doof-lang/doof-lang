@@ -31,8 +31,8 @@ Block-bodied functions with a non-`none` return type must not fall through to
 their closing brace. Every reachable path must return a value, call `panic(...)`,
 or otherwise be unable to complete normally (for example, an unconditional
 `while true` loop). A missing `else`, a loop that can `break`, or a `case`
-without a wildcard or known exhaustive Result-arm pattern does not establish a
-return on every path.
+without a wildcard or known exhaustive Result, enum, or nominal-union pattern
+does not establish a return on every path.
 
 ```javascript
 function choose(flag: bool): int {
@@ -45,6 +45,15 @@ function choose(flag: bool): int {
 
 `none` functions may fall through normally. Expression-bodied functions are
 checked against their declared return type.
+
+A function declared with return type `never` must be unable to complete on
+every path. Calls to it terminate the current path and participate as bottom
+expressions in surrounding value contexts.
+
+```doof
+function unavailable(): never => panic("unavailable")
+function port(configured: bool): int => if configured then 8080 else unavailable()
+```
 
 ### Omitted Return Types
 

@@ -20,6 +20,11 @@ export function testRecognizesBuiltinParseErrorAnnotations(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testRecognizesBuiltinNeverAnnotations(): none {
+  result := createAnalyzer([SourceFile { path: "/main.do", source: "function fail(): never => panic(\"failed\")" }]).analyze("/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testRewritesMockImportsFromGeneratedHarnessRoot(): none {
   result := createAnalyzer([
     SourceFile { path: "/build/__doof_tests__.do", source: "import { testScene } from \"../game/tests/scene.test\"\nfunction main(): void { testScene() }" },

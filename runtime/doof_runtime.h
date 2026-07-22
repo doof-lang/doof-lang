@@ -93,6 +93,21 @@ public:
     const std::string& message() const noexcept { return message_; }
 };
 
+// Runtime carrier for Doof's uninhabited `never` type. No value can be
+// constructed; the conversion surface exists only so unreachable expressions
+// remain well-typed when C++ checks their surrounding Doof value context.
+class Never final {
+public:
+    Never() = delete;
+    Never(const Never&) = delete;
+    Never& operator=(const Never&) = delete;
+
+    template <typename T>
+    [[noreturn]] operator T() const {
+        std::abort();
+    }
+};
+
 [[noreturn]] inline void panic(const std::string& msg) {
     throw Panic(msg);
 }

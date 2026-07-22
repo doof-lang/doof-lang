@@ -20,6 +20,7 @@ doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, s
             return doof::Failure<std::string>{ std::string("Parsed value is not a JSON object") };
     }
     }
+    doof::unreachable();
 }
 doof::Result<doof::JsonValue, std::string> parseJsonValue(std::string text) {
     return ::doof_json::parse(text);

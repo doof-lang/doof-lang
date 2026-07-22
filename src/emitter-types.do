@@ -6,7 +6,7 @@
 
 import {
   ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol,
-  NoneType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
+  NeverType, NoneType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { moduleNamespace } from "./emitter-names"
 import { substituteTypeParams } from "./checker-types"
@@ -31,6 +31,7 @@ export function emitContextReturnType(resolvedType: ResolvedType, context: EmitC
 export function emitReturnType(resolvedType: ResolvedType, currentModulePath: string = ""): string {
   case resolvedType {
     _: NoneType -> { return "void" }
+    _: NeverType -> { return "doof::Never" }
     _ -> { return emitType(resolvedType, currentModulePath) }
   }
   return "void"
@@ -160,6 +161,7 @@ export function emitType(resolvedType: ResolvedType, currentModulePath: string =
       }
     }
     _: NoneType -> { return "std::monostate" }
+    _: NeverType -> { return "doof::Never" }
     _: UnknownType -> { panic("Cannot emit unresolved unknown type in " + currentModulePath) }
     parameter: TypeParameterType -> { return parameter.name }
     metadata: ClassMetadataResolvedType -> { return "doof::ClassMetadata<" + emitMetadataInnerType(metadata.classType, currentModulePath) + ">" }

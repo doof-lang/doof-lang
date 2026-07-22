@@ -20,8 +20,13 @@ The checker and emitter are split by concern. Shared semantic contracts live in
 walk. Unknown types, missing decorations, constraints, or dispatch targets
 must suppress emission rather than trigger guessed lowering.
 
+Control-flow lowering follows the same boundary. The checker decorates case
+statements with whether normal execution can continue; the emitter uses that
+fact to preserve proven exhaustiveness in C++ with the runtime's
+`[[noreturn]]` unreachable guard. The emitter does not repeat exhaustiveness
+analysis from patterns.
+
 Closed-world information drives interface variants, generic specialization,
 actor isolation validation, JSON/reflection generation, and stable module
 namespaces. The runtime header supplies intrinsic values, collections, actors,
 JSON, metrics, resource lookup, and other generated-code support.
-

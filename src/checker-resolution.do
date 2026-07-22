@@ -27,7 +27,7 @@ import {
 import {
   actorType, applyDeepReadonly, arrayType, classMetadataType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
-  noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
+  neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
   methodReflectionType, substituteTypeParams, typeParameter, unknownType, weakType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, isGeneratedJsonType } from "./json-semantics"
@@ -47,6 +47,7 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
         if named.name != "none" && named.resolvedType == none { deprecatedNoneAlias(state, named.name, named.span, module.path) }
         return decorateType(state, annotation, noneType())
       }
+      if named.name == "never" { return decorateType(state, annotation, neverType()) }
       if named.name == "JsonValue" { return decorateType(state, annotation, jsonValueType()) }
       if named.name == "JsonObject" { return decorateType(state, annotation, jsonObjectType()) }
       if named.name == "SourceLocation" { return decorateType(state, annotation, builtinSourceLocationType()) }

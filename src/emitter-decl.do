@@ -35,7 +35,7 @@ export function emitFunctionSignature(fn: FunctionDeclaration, name: string = ""
   for typeParam of fn.typeParams { genericParams.push(typeParam) }
   returnType := if defaultContext == none then emitReturnType(functionType.returnType, modulePath) else emitContextReturnType(functionType.returnType, defaultContext!)
   ensureKnown(functionType.returnType, fn.name + " return type")
-  let result = returnType + " " + functionName + "("
+  let result = (if functionType.returnType.kind == "never" then "[[noreturn]] " else "") + returnType + " " + functionName + "("
   for i of 0..<fn.params.length {
     if i > 0 { result = result + ", " }
     parameterType := fn.params[i].resolvedType ?? functionType.params[i].type_
@@ -76,9 +76,14 @@ export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitCon
       result = result + emitExpressionCoverageMark(expression, context)
       returnType := functionReturnType(fn)
       if returnType != none && returnType!.kind == "none" { result = result + "    " + emitExpression(expression, context, returnType) + ";\n" }
+      else if returnType != none && returnType!.kind == "never" { result = result + "    " + emitExpression(expression, context, returnType) + ";\n    doof::panic(\"never function returned\");\n" }
       else { result = result + "    return " + emitExpression(expression, context, returnType) + ";\n" }
     }
-    block: Block -> { result = result + emitBlock(block, 1, context) }
+    block: Block -> {
+      result = result + emitBlock(block, 1, context)
+      returnType := functionReturnType(fn)
+      if returnType != none && returnType!.kind == "never" { result = result + "    doof::panic(\"never function returned\");\n" }
+    }
   }
   context.currentReturnErrorType = previousReturnErrorType
   context.currentFunctionName = previousFunctionName
@@ -106,6 +111,7 @@ export function emitNativeFunctionAdapterDefinition(fn: FunctionDeclaration, emi
   call = call + ")"
   returnType := specializeEmitType(checkedFunctionType(fn).returnType, context)
   if returnType.kind == "none" { return signature + " {\n    " + call + ";\n}\n" }
+  if returnType.kind == "never" { return signature + " {\n    " + call + ";\n    doof::panic(\"native never function returned\");\n}\n" }
   return signature + " {\n    return " + call + ";\n}\n"
 }
 

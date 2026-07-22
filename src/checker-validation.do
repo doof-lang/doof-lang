@@ -88,6 +88,7 @@ export function validateStatement(statement: Statement, module: string, diagnost
       if if_.else_ != none { validateBlock(if_.else_!, module, diagnostics) }
     }
     case_: CaseStatement -> {
+      if case_.resolvedCompletes == none { addValidationError(module, case_.span, "Case statement has no resolved control-flow completion", diagnostics) }
       validateExpression(case_.subject, module, diagnostics)
       for arm of case_.arms {
         for pattern of arm.patterns { validatePattern(pattern, module, diagnostics) }

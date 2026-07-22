@@ -89,6 +89,10 @@ every path. Falling through the closing brace is an error; `panic(...)` and an
 unconditional non-terminating loop count as non-fallthrough paths. `none`
 functions may complete normally.
 
+Use `never` for functions that cannot complete. `never` is a bottom type, so a
+terminating call can appear in any value context without contributing a value
+type. Every path through a `never` function must terminate.
+
 Omitting a named function or method return annotation means `none`, including
 for imported declarations. Functions that return values require an explicit
 return type. Lambda return types may still be inferred from context or their

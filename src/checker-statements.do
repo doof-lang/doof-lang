@@ -40,7 +40,7 @@ import { checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNo
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
 import { typeError, requireBool } from "./checker-common"
-import { decorateAnnotationWithResolved, blockContainsLoopExit, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, isPanicCall, symbolFor, declarationFor } from "./checker-symbols"
+import { decorateAnnotationWithResolved, blockContainsLoopExit, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
@@ -63,23 +63,29 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     }
     _: MockImportDirective -> { return true }
     if_: IfStatement -> {
-      requireBool(state, checkExpression(state, if_.condition, scope, none), if_.condition.span)
+      conditionType := checkExpression(state, if_.condition, scope, none)
+      requireBool(state, conditionType, if_.condition.span)
       thenCompletes := checkBlock(state, if_.body, scope)
       let allComplete = thenCompletes
       for branch of if_.elseIfs {
-        requireBool(state, checkExpression(state, branch.condition, scope, none), branch.condition.span)
-        branchCompletes := checkBlock(state, branch.body, scope)
+        branchConditionType := checkExpression(state, branch.condition, scope, none)
+        requireBool(state, branchConditionType, branch.condition.span)
+        let branchCompletes = checkBlock(state, branch.body, scope)
+        if branchConditionType.kind == "never" { branchCompletes = false }
         allComplete = allComplete || branchCompletes
       }
+      if conditionType.kind == "never" { return false }
       if if_.else_ == none { return true }
       elseCompletes := checkBlock(state, if_.else_!, scope)
       return allComplete || elseCompletes
     }
     case_: CaseStatement -> { return checkCase(state, case_, scope) }
     while_: WhileStatement -> {
-      requireBool(state, checkExpression(state, while_.condition, scope, none), while_.condition.span)
+      conditionType := checkExpression(state, while_.condition, scope, none)
+      requireBool(state, conditionType, while_.condition.span)
       checkBlock(state, while_.body, scope)
       if while_.then_ != none { checkBlock(state, while_.then_!, scope) }
+      if conditionType.kind == "never" { return false }
       case while_.condition {
         literal: BoolLiteral -> {
           if literal.value && !blockContainsLoopExit(while_.body) { return false }
@@ -124,15 +130,17 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     }
     with_: WithStatement -> {
       bodyScope := Scope { parent: scope }
+      let bindingsComplete = true
       for binding of with_.bindings {
         valueType := checkExpression(state, binding.value, bodyScope, none)
+        if valueType.kind == "never" { bindingsComplete = false }
         declaredType := if binding.type_ == none then valueType else resolveType(state, binding.type_!, state.info!, scope)
         binding.resolvedType = optionalResolvedType(declaredType)
         if !isAssignable(valueType, declaredType) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(declaredType), binding.span) }
         declare(bodyScope, Binding { name: binding.name, kind: "with", type_: declaredType, mutable: false, span: checkerSemanticSpan(binding.span), module: state.info!.path })
       }
       checkBlock(state, with_.body, bodyScope)
-      return true
+      return bindingsComplete
     }
     return_: ReturnStatement -> { return checkReturn(state, return_, scope) }
     yield_: YieldStatement -> {
@@ -185,7 +193,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         _: ResultResolvedType -> { typeError(state, "Result value must be handled", expression.span) }
         _ -> { }
       }
-      return !isPanicCall(expression.expression)
+      return expressionType.kind != "never"
     }
     destructuring: DestructuringStatement -> {
       checkDestructuring(state, destructuring, scope, none)
@@ -287,7 +295,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
     if scope.parent == none { declarationSymbol = symbolFor(state.info!, name) }
     declare(scope, Binding { name, kind, type_: declaredType, mutable, span: checkerSemanticSpan(span), module: state.info!.path, symbol: declarationSymbol })
   }
-  return true
+  return valueType.kind != "never"
 }
 
 export function checkFunction(state: CheckerState, fn: FunctionDeclaration, outer: Scope, owner: ClassType | none): ResolvedType {
@@ -321,6 +329,9 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
       actualReturn = checkExpression(state, expression, scope, optionalResolvedType(returnType))
       if fn.returnType == none && !isAssignable(actualReturn, returnType) {
         typeError(state, "Cannot return " + typeName(actualReturn) + " from function returning " + typeName(returnType), expression.span)
+      }
+      if returnType.kind == "never" && actualReturn.kind != "never" {
+        typeError(state, "Cannot return " + typeName(actualReturn) + " from function returning never", expression.span)
       }
       completes = false
     }
@@ -705,15 +716,71 @@ export function checkCase(state: CheckerState, statement: CaseStatement, scope: 
     let armCompletes = true
     case arm.body {
       block: Block -> { armCompletes = checkBlock(state, block, armScope) }
-      expression: Expression -> { checkExpression(state, expression, armScope, none) }
+      expression: Expression -> { armCompletes = checkExpression(state, expression, armScope, none).kind != "never" }
     }
     if armCompletes { allArmsReturn = false }
   }
   case subjectType {
     _: ResultResolvedType -> { if hasSuccessArm && hasFailureArm { exhaustive = true } }
+    enum_: EnumType -> { if enumCaseExhaustive(state, enum_, statement.arms) { exhaustive = true } }
+    union_: UnionResolvedType -> { if unionCaseExhaustive(union_, statement.arms) { exhaustive = true } }
     _ -> { }
   }
-  return !(exhaustive && allArmsReturn)
+  statement.resolvedCompletes = if subjectType.kind == "never" then false else !(exhaustive && allArmsReturn)
+  return statement.resolvedCompletes!
+}
+
+function enumCaseExhaustive(state: CheckerState, enum_: EnumType, arms: CaseArm[]): bool {
+  declaration := declarationFor(state.result, enum_.symbol)
+  if declaration == none { return false }
+  case declaration! {
+    enumDeclaration: EnumDeclaration -> {
+      for variant of enumDeclaration.variants {
+        let found = false
+        for arm of arms {
+          for pattern of arm.patterns {
+            case pattern {
+              value: ValuePattern -> {
+                case value.value {
+                  dot: DotShorthand -> { if dot.name == variant.name { found = true } }
+                  _ -> { }
+                }
+              }
+              _ -> { }
+            }
+          }
+        }
+        if !found { return false }
+      }
+      return true
+    }
+    _ -> { }
+  }
+  return false
+}
+
+function unionCaseExhaustive(union_: UnionResolvedType, arms: CaseArm[]): bool {
+  for member of union_.types {
+    let found = false
+    for arm of arms {
+      for pattern of arm.patterns {
+        case pattern {
+          type_: TypePattern -> {
+            if type_.resolvedType != none && sameType(member, type_.resolvedType!) { found = true }
+          }
+          value: ValuePattern -> {
+            case value.value {
+              _: NoneLiteral -> { if member.kind == "none" { found = true } }
+              _ -> { }
+            }
+          }
+          _ -> { }
+        }
+      }
+    }
+    if !found { return false }
+  }
+  return true
 }
 
 export function inferredReturn(state: CheckerState, block: Block): ResolvedType {

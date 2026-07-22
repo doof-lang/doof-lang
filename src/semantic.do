@@ -163,6 +163,12 @@ export class NoneType {
   kind: string = "none"
 }
 
+// The uninhabited bottom type. Expressions of this type never produce a
+// runtime value and may therefore be used wherever a value is expected.
+export class NeverType {
+  kind: string = "never"
+}
+
 export class UnknownType {
   kind: string = "unknown"
 }
@@ -191,7 +197,7 @@ export class MethodReflectionResolvedType {
 
 export type ResolvedType = PrimitiveType | ClassType | EnumType | InterfaceType | FunctionType |
   ActorType | PromiseType | ArrayResolvedType | MapResolvedType | SetResolvedType | StreamResolvedType | RangeResolvedType | JsonValueResolvedType | ResultResolvedType | TupleResolvedType | UnionResolvedType | WeakResolvedType |
-  NoneType | UnknownType | TypeParameterType | ClassMetadataResolvedType | MethodReflectionResolvedType
+  NoneType | NeverType | UnknownType | TypeParameterType | ClassMetadataResolvedType | MethodReflectionResolvedType
 
 export class TypeSubstitution {
   names: string[] = []

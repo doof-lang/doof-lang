@@ -19,7 +19,7 @@ Use this base file as the entry point. Load only the reference file that matches
 - Keep code idiomatic: immutable by default, explicit types at boundaries, no JavaScript-style coercions.
 - Use intrinsic `Success<T>` / `Failure<E>` arms and their `Result<T, E>` union alias with `case`, `try`, declaration-`else`, `as`, or `!` for fallible flows. Use `panic(...)` only for programmer errors.
 - Plain `if value != none` checks do **not** narrow static types. Use explicit narrowing forms.
-- Block-bodied non-`none` functions must return a value on every reachable path.
+- Block-bodied non-`none` functions must return a value on every reachable path; `never` functions must terminate on every path.
 - Classes and structs are nominal. Interfaces are structural.
 - Prefer `readonly` for deeply immutable values and `:=` for immutable bindings with mutable interiors. `const` is deprecated and remains accepted temporarily with a warning.
 - Prefer `std/<name>` packages before inventing utility modules.
@@ -52,6 +52,7 @@ Key reminders:
 - Runtime counters use `metricsIncrement(name: string, value: long)` and `metricsSnapshotPrometheus()`.
 - Native free functions callable from actor-dispatched code require an explicit `import isolated function` contract.
 - `none` is both the unit/absence type and its sole value. Use `T | none` for optional values; deprecated `void` and `null` aliases warn.
+- `never` is the uninhabited bottom type. `panic(...)` and functions returning `never` terminate their control-flow path.
 
 ## Reference Map
 

@@ -195,6 +195,7 @@ std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> jsonObjectValue
             return nullptr;
     }
     }
+    doof::unreachable();
 }
 std::shared_ptr<std::vector<doof::JsonValue>> jsonArrayValue(std::variant<std::monostate, doof::JsonValue> value) {
     if (doof::is_null(value)) {
@@ -210,6 +211,7 @@ std::shared_ptr<std::vector<doof::JsonValue>> jsonArrayValue(std::variant<std::m
             return std::make_shared<std::vector<doof::JsonValue>>(std::vector<doof::JsonValue>{});
     }
     }
+    doof::unreachable();
 }
 std::string jsonStringValue(std::variant<std::monostate, doof::JsonValue> value) {
     if (doof::is_null(value)) {
@@ -225,6 +227,7 @@ std::string jsonStringValue(std::variant<std::monostate, doof::JsonValue> value)
             return std::string("");
     }
     }
+    doof::unreachable();
 }
 doof::Result<std::shared_ptr<std::vector<std::shared_ptr<IOSDevice>>>, std::string> parseConnectedIOSDevices(std::string rawJson) {
     auto _binding_value_2 = ::doof_json::parse(rawJson);

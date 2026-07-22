@@ -227,11 +227,13 @@ bool markerMatches(std::string path, std::string fingerprint) {
                     return false;
             }
             }
+            doof::unreachable();
     }
     else {
             return false;
     }
     }
+    doof::unreachable();
 }
 bool markerContentMatches(std::string path, std::string expected) {
     if (!::doof_fs::exists(path)) {

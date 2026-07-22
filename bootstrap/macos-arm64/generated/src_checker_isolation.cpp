@@ -57,6 +57,7 @@ std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<
             return statement;
     }
     }
+    doof::unreachable();
 }
 std::shared_ptr<IsolationGraph> collectGraph(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result) {
     const auto graph = std::make_shared<IsolationGraph>(std::make_shared<std::vector<std::shared_ptr<IsolationNode>>>(std::vector<std::shared_ptr<IsolationNode>>{}));

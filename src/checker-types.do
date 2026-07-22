@@ -3,7 +3,7 @@
 import {
   ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType,
   InterfaceType,
-  JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType,
+  JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NeverType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType,
   UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import type {
@@ -17,6 +17,7 @@ export function primitive(name: string): ResolvedType {
 
 export function unknownType(): ResolvedType { return UnknownType {} }
 export function noneType(): ResolvedType { return NoneType {} }
+export function neverType(): ResolvedType { return NeverType {} }
 
 export function arrayType(element: ResolvedType, readonly_: bool = false): ResolvedType {
   return ArrayResolvedType { elementType: element, readonly_ }
@@ -68,13 +69,19 @@ export function unionType(types: ResolvedType[]): ResolvedType {
   let members: ResolvedType[] = []
   for memberType of types {
     case memberType {
+      _: NeverType -> { continue }
       union: UnionResolvedType -> {
-        for member of union.types { pushUniqueType(members, member) }
+        for member of union.types {
+          case member {
+            _: NeverType -> { }
+            _ -> { pushUniqueType(members, member) }
+          }
+        }
       }
       _ -> { pushUniqueType(members, memberType) }
     }
   }
-  if members.length == 0 { return unknownType() }
+  if members.length == 0 { return neverType() }
   if members.length == 1 { return members[0] }
   return UnionResolvedType { types: members }
 }
@@ -248,6 +255,7 @@ export function typeName(resolvedType: ResolvedType): string {
       return result
     }
     _: NoneType -> { return "none" }
+    _: NeverType -> { return "never" }
     _: UnknownType -> { return "unknown" }
     parameter: TypeParameterType -> { return parameter.name }
     metadata: ClassMetadataResolvedType -> { return "ClassMetadata<" + typeName(metadata.classType) + ">" }
@@ -385,6 +393,7 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
 
 export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
   case value {
+    _: NeverType -> { return true }
     parameter: TypeParameterType -> {
       case target {
         _: TypeParameterType -> { return sameType(value, target) }

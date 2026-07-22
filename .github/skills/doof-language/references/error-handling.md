@@ -230,6 +230,8 @@ if index < 0 || index >= array.length {
 ```
 
 Use panic for impossible states, assertion failures, or other programmer bugs.
+`panic(...)` returns `never`, so direct calls and user-defined wrappers are
+recognized as terminating paths and may appear in value-producing expressions.
 
 ### `catchPanic`
 

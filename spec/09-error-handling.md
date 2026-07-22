@@ -552,7 +552,7 @@ case catch {
 
 ## Panic
 
-`panic(message)` terminates normal execution immediately. Use it for programmer
+`panic(message)` has type `never` and terminates normal execution immediately. Use it for programmer
 errors, internal invariants, and states that should be impossible in correct
 code.
 

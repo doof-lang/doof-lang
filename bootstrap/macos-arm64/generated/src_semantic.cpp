@@ -370,6 +370,24 @@ doof::Result<std::shared_ptr<NoneType>, std::string> NoneType::fromJsonValue(con
     return doof::Success<std::shared_ptr<NoneType>>{std::make_shared<NoneType>(_field_kind.value())};
 }
 
+doof::JsonObject NeverType::toJsonObject() const {
+    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
+    (*_json)["kind"] = doof::json_value(this->kind);
+    return _json;
+}
+doof::Result<std::shared_ptr<NeverType>, std::string> NeverType::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
+    const auto* _object = doof::json_as_object(_json);
+    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    std::optional<std::string> _field_kind;
+    if (auto _iterator_kind = _object->find("kind"); _iterator_kind != _object->end()) {
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
+        _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
+    } else {
+        _field_kind = std::string("never");
+    }
+    return doof::Success<std::shared_ptr<NeverType>>{std::make_shared<NeverType>(_field_kind.value())};
+}
+
 doof::JsonObject UnknownType::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
     (*_json)["kind"] = doof::json_value(this->kind);

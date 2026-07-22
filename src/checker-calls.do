@@ -27,7 +27,7 @@ import {
 import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
-  noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
+  neverType, noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
   substituteTypeParams, typeParameter, unknownType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
@@ -77,6 +77,10 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
   }
   calleeType := checkExpression(state, expression.callee, scope, none)
   expression.resolvedFunction = functionDeclarationForCallee(expression.callee, calleeType, state.result)
+  if calleeType.kind == "never" {
+    for argument of expression.args { checkExpression(state, argument.value, scope, none) }
+    return finish(state, expression, neverType())
+  }
   case calleeType {
     resolvedFunction: FunctionType -> {
       let effectiveFunction: FunctionType = resolvedFunction
@@ -172,6 +176,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         }
       }
       validateActorMethodBoundary(state, expression, effectiveFunction)
+      if callArgumentsDiverge(expression) { return finish(state, expression, neverType()) }
       return finish(state, expression, effectiveFunction.returnType)
     }
     class_: ClassType -> {
@@ -237,6 +242,13 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
     _ -> { typeError(state, "Expression of type " + typeName(calleeType) + " is not callable", expression.span); return finish(state, expression, unknownType()) }
   }
   return finish(state, expression, unknownType())
+}
+
+function callArgumentsDiverge(expression: CallExpression): bool {
+  for argument of expression.args {
+    if argument.value.resolvedType != none && argument.value.resolvedType!.kind == "never" { return true }
+  }
+  return false
 }
 
 function inferClassTypeArguments(state: CheckerState, expression: CallExpression, scope: Scope, class_: ClassType, declaration: ClassDeclaration): ResolvedType[] {

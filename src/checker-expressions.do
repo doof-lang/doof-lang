@@ -3,7 +3,7 @@
 import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, Symbol,
+  JsonValueResolvedType, MapResolvedType, NeverType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, Symbol,
   StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
@@ -27,7 +27,7 @@ import {
 import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
-  noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
+  neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
   substituteTypeParams, typeParameter, unknownType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
@@ -63,8 +63,10 @@ export function checkCaseExpression(state: CheckerState, expression: CaseExpress
       block: Block -> {
         armScope.inValueYieldBlock = true
         armScope.yieldType = if armExpected == none then optionalResolvedType(unknownType()) else armExpected
-        if checkBlock(state, block, armScope) { typeError(state, "Block case-expression arms must yield a value on every path", block.span) }
+        completes := checkBlock(state, block, armScope)
+        if completes { typeError(state, "Block case-expression arms must yield a value on every path", block.span) }
         armType = armScope.yieldType ?? unknownType()
+        if !completes && armType.kind == "unknown" { armType = neverType() }
       }
       bodyExpression: Expression -> { armType = checkExpression(state, bodyExpression, armScope, armExpected) }
     }
@@ -132,10 +134,12 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         inValueYieldBlock: true,
         yieldType: if expected == none then optionalResolvedType(unknownType()) else expected,
       }
-      if checkBlock(state, yieldBlock.body, yieldScope) {
+      completes := checkBlock(state, yieldBlock.body, yieldScope)
+      if completes {
         typeError(state, "Yield blocks must yield a value on every path", yieldBlock.body.span)
       }
-      resolved := yieldScope.yieldType ?? unknownType()
+      let resolved = yieldScope.yieldType ?? unknownType()
+      if !completes && resolved.kind == "unknown" { resolved = neverType() }
       return finish(state, yieldBlock, resolved)
     }
     catch_: CatchExpression -> {
@@ -189,7 +193,11 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       return finish(state, expression, primitive("double"))
     }
     string_: StringLiteral -> {
-      for interpolation of string_.interpolations { checkExpression(state, interpolation, scope, none) }
+      let diverges = false
+      for interpolation of string_.interpolations {
+        if checkExpression(state, interpolation, scope, none).kind == "never" { diverges = true }
+      }
+      if diverges { return finish(state, expression, neverType()) }
       return finish(state, expression, primitive("string"))
     }
     _: CharLiteral -> { return finish(state, expression, primitive("char")) }
@@ -241,6 +249,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         }
         return finish(state, expression, namespaceMember!)
       }
+      if objectType.kind == "never" { return finish(state, expression, neverType()) }
       diagnosticCount := state.diagnostics.length
       memberValue := memberType(state, objectType, member.property, member.span)
       if memberValue.kind == "unknown" && objectType.kind != "unknown" && state.diagnostics.length == diagnosticCount {
@@ -250,12 +259,24 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       member.resolvedCallableField = callableField(state, objectType, member.property)
       return finish(state, expression, memberValue)
     }
-    index: IndexExpression -> { return finish(state, expression, indexType(state, checkExpression(state, index.object, scope, none), checkExpression(state, index.index, scope, optionalResolvedType(primitive("int"))), index.span)) }
+    index: IndexExpression -> {
+      objectType := checkExpression(state, index.object, scope, none)
+      indexValueType := checkExpression(state, index.index, scope, optionalResolvedType(primitive("int")))
+      resolved := indexType(state, objectType, indexValueType, index.span)
+      if objectType.kind == "never" || indexValueType.kind == "never" { return finish(state, expression, neverType()) }
+      return finish(state, expression, resolved)
+    }
     call: CallExpression -> { return checkCall(state, call, scope, expected) }
     array: ArrayLiteral -> { return checkArray(state, array, scope, expected) }
     tuple: TupleLiteral -> {
       let elements: ResolvedType[] = []
-      for item of tuple.elements { elements.push(checkExpression(state, item, scope, none)) }
+      let diverges = false
+      for item of tuple.elements {
+        itemType := checkExpression(state, item, scope, none)
+        elements.push(itemType)
+        if itemType.kind == "never" { diverges = true }
+      }
+      if diverges { return finish(state, expression, neverType()) }
       return finish(state, expression, tupleType(elements))
     }
     object: ObjectLiteral -> {
@@ -263,8 +284,12 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     }
     lambda: LambdaExpression -> { return checkLambda(state, lambda, scope, expected) }
     if_: IfExpression -> {
-      requireBool(state, checkExpression(state, if_.condition, scope, optionalResolvedType(primitive("bool"))), if_.condition.span)
-      return finish(state, expression, joinTypes(checkExpression(state, if_.then_, scope, expected), checkExpression(state, if_.else_, scope, expected)))
+      conditionType := checkExpression(state, if_.condition, scope, optionalResolvedType(primitive("bool")))
+      requireBool(state, conditionType, if_.condition.span)
+      thenType := checkExpression(state, if_.then_, scope, expected)
+      elseType := checkExpression(state, if_.else_, scope, expected)
+      if conditionType.kind == "never" { return finish(state, expression, neverType()) }
+      return finish(state, expression, joinTypes(thenType, elseType))
     }
     case_: CaseExpression -> { return finish(state, expression, checkCaseExpression(state, case_, scope, expected)) }
     construct: ConstructExpression -> { return checkConstruct(state, construct, scope, expected) }
@@ -492,6 +517,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
     }
   }
   operator := expression.operator
+  if left.kind == "never" { return finish(state, expression, neverType()) }
   if operator == "&&" || operator == "||" {
     requireBool(state, left, expression.left.span); requireBool(state, right, expression.right.span)
     return finish(state, expression, primitive("bool"))
@@ -499,6 +525,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   if operator == "??" {
     return finish(state, expression, coalescedType(state, left, right))
   }
+  if right.kind == "never" { return finish(state, expression, neverType()) }
   if operator == "..<" || operator == ".." {
     validateRangeOperand(state, operator, "left", left, expression.left.span)
     validateRangeOperand(state, operator, "right", right, expression.right.span)
@@ -552,6 +579,7 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
   // consumes the operand node later, and must not reconstruct its type from
   // the unary state.result (notably for try! over imported Result functions).
         expression.operand.resolvedType = optionalResolvedType(value)
+  if value.kind == "never" { return finish(state, expression, neverType()) }
   if expression.operator == "try!" || expression.operator == "try?" {
     case value {
       result: ResultResolvedType -> {
@@ -585,6 +613,7 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
 export function checkAs(state: CheckerState, expression: AsExpression, scope: Scope): ResolvedType {
   sourceType := checkExpression(state, expression.expression, scope, none)
   targetType := resolveType(state, expression.targetType, state.info!, scope)
+  if sourceType.kind == "never" { return finish(state, expression, neverType()) }
   case sourceType {
     result: ResultResolvedType -> {
       if !isValidAsNarrow(state, result.valueType, targetType) {
@@ -703,5 +732,6 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
     }
     _ -> { typeError(state, "Assignment target must be a binding", expression.target.span) }
   }
+  if targetType.kind == "never" || value.kind == "never" { return finish(state, expression, neverType()) }
   return finish(state, expression, value)
 }

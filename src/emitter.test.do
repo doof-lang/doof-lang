@@ -924,6 +924,21 @@ export function testAvoidsRedundantConditionParentheses(): none {
   Assert.equal(result.source.contains("if ((flag == true))"), false)
 }
 
+export function testEmitsNeverFunctionsAndBottomCoercions(): none {
+  result := emit("function fail(message: string): never => panic(message)\nfunction choose(flag: bool): int => if flag then 42 else fail(\"missing\")\nfunction main(): int => choose(true)")
+  Assert.stringContains(result.header, "[[noreturn]] doof::Never fail")
+  Assert.stringContains(result.source, "doof::panic(message)")
+  Assert.stringContains(result.source, "flag ? 42 : fail(std::string(\"missing\"))")
+}
+
+export function testEmitsUnreachableAfterDivergentExhaustiveCaseStatements(): none {
+  exhaustive := emit("function load(): Result<int, string> => Success { value: 1 }\nfunction answer(): int { case load() { value: Success -> { return value.value }, error: Failure -> { return 0 } } }")
+  Assert.stringContains(exhaustive.source, "doof::unreachable();")
+
+  completing := emit("function inspect(value: int): none { case value { 1 -> { println(\"one\") } } }")
+  Assert.equal(completing.source.contains("doof::unreachable();"), false)
+}
+
 export function testPlansStableModuleNamesAndImportHeaders(): none {
   analysis := createAnalyzer([
     SourceFile { path: "/main.do", source: "import { add } from \"./lib/math\"\nfunction main(): int => add(2, 3)" },

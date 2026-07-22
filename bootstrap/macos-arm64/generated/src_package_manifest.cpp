@@ -1651,6 +1651,7 @@ doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, s
             return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(" must be an object")) };
     }
     }
+    doof::unreachable();
 }
 doof::Result<std::shared_ptr<std::vector<doof::JsonValue>>, std::string> manifestArray(doof::JsonValue value, std::string manifestPath, std::string fieldPath) {
     {
@@ -1663,6 +1664,7 @@ doof::Result<std::shared_ptr<std::vector<doof::JsonValue>>, std::string> manifes
             return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(" must be an array")) };
     }
     }
+    doof::unreachable();
 }
 doof::Result<std::string, std::string> manifestString(doof::JsonValue value, std::string manifestPath, std::string fieldPath) {
     {
@@ -1675,5 +1677,6 @@ doof::Result<std::string, std::string> manifestString(doof::JsonValue value, std
             return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(" must be a string")) };
     }
     }
+    doof::unreachable();
 }
 }

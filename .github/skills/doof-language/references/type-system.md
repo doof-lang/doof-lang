@@ -13,10 +13,16 @@
 | `char` | UTF-8 character |
 | `bool` | boolean |
 | `none` | unit type |
+| `never` | uninhabited bottom type; terminating expressions |
 
 `none` is both the unit/absence type and its sole value. `void` and `null` are
 deprecated source aliases that canonicalize to `none` and produce replacement
 warnings. JSON still spells the corresponding wire value `null`.
+
+`never` has no values and is assignable to every type because evaluation never
+reaches the value-consuming context. `T | never` normalizes to `T`. Functions
+returning `never`, including `panic`, terminate their current control-flow path;
+`never` is not JSON-serializable.
 
 `string[index]` and `string.charAt(index)` return a `char`. Both forms panic
 when the index is negative or outside the string's byte range. Convert the

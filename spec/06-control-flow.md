@@ -42,6 +42,8 @@ print(if isLoggedIn then "Welcome back!" else "Please log in")
 ```
 
 All branches must be present and return compatible types. The `then` keyword is required for expression form to distinguish it from statement form.
+Branches of type `never` do not contribute a value type. If every branch is
+`never`, the complete expression is also `never`.
 
 ### Block Requirement
 
@@ -122,6 +124,14 @@ x <- {
 - `yield` is only valid inside these value-producing blocks.
 - The block cannot affect outer control flow. In particular, `return` and `try` are rejected.
 - `:=` does not accept `<-` block initializers.
+- A block whose reachable paths all evaluate terminating `never` expressions
+  satisfies the non-completion requirement without producing a `yield` value.
+
+For statement-level completion analysis, an `if` with a final `else` is
+exhaustive. A `case` is exhaustive when it has a wildcard, covers both Result
+arms, covers every enum variant, or covers every member of a nominal union.
+When every exhaustive branch returns, yields, loops forever, or evaluates a
+`never` expression, control cannot continue after the statement.
 
 ---
 

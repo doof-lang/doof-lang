@@ -3,7 +3,7 @@
 import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, Symbol,
+  JsonValueResolvedType, MapResolvedType, NeverType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, Symbol,
   StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
@@ -51,7 +51,13 @@ export function deprecatedNoneAlias(state: CheckerState, spelling: string, span:
     replacement: "none",
   })
 }
-export function requireBool(state: CheckerState, resolvedType: ResolvedType, span: SourceSpan): none { if typeName(resolvedType) != "bool" && typeName(resolvedType) != "unknown" { typeError(state, "Expected bool, got " + typeName(resolvedType), span) } }
+export function requireBool(state: CheckerState, resolvedType: ResolvedType, span: SourceSpan): none {
+  case resolvedType {
+    _: NeverType -> { return }
+    _ -> { }
+  }
+  if typeName(resolvedType) != "bool" && typeName(resolvedType) != "unknown" { typeError(state, "Expected bool, got " + typeName(resolvedType), span) }
+}
 
 // Keep the full AST union visible in this module's generated header.
 export function keepAstTypes(state: CheckerState, 

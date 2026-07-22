@@ -2,7 +2,7 @@ import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker, validateCheckedTypes } from "./checker"
 import { CheckResult, Diagnostic, FunctionType, SourceFile } from "./semantic"
-import { AsExpression, AssignmentExpression, Block, ClassDeclaration, ConstructExpression, Expression, ExpressionStatement, Identifier, IfStatement, FunctionDeclaration, ImmutableBinding, LetDeclaration, ObjectLiteral, ReadonlyDeclaration, WithStatement } from "./ast"
+import { AsExpression, AssignmentExpression, Block, CaseStatement, ClassDeclaration, ConstructExpression, Expression, ExpressionStatement, Identifier, IfStatement, FunctionDeclaration, ImmutableBinding, LetDeclaration, ObjectLiteral, ReadonlyDeclaration, WithStatement } from "./ast"
 import { typeName, unknownType } from "./checker-types"
 
 function checkedIncludingDeprecations(source: string): CheckResult {
@@ -921,6 +921,46 @@ export function testAcceptsReturnsFromExhaustiveCase(): none {
 export function testAcceptsReturnsFromExhaustiveResultCase(): none {
   result := checked("function load(): Result<int, string> => Success { value: 1 }\nfunction answer(): Result<int, string> { case load() { success: Success -> { return Success { value: success.value } }, failure: Failure -> { return Failure { error: failure.error } } } }")
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testDecoratesCaseStatementControlFlowCompletion(): none {
+  source := "function load(): Result<int, string> => Success { value: 1 }\nfunction answer(): int { case load() { value: Success -> { return value.value }, error: Failure -> { return 0 } } }"
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
+  case analysis.modules[0].program.statements[1] {
+    fn: FunctionDeclaration -> { case fn.body {
+      block: Block -> { case block.statements[0] {
+        case_: CaseStatement -> { Assert.equal(case_.resolvedCompletes, false) }
+        _ -> { panic("expected case statement") }
+      } }
+      _ -> { panic("expected block body") }
+    } }
+    _ -> { panic("expected function declaration") }
+  }
+  Assert.equal(validateCheckedTypes(analysis).length, 0)
+}
+
+export function testChecksNeverAsBottomTypeAndPropagatesDivergence(): none {
+  result := checked("function fail(message: string): never => panic(message)\nfunction choose(flag: bool): int => if flag then 42 else fail(\"no value\")\nfunction required(): string { return fail(\"missing\") }\ntype Value = int | never\nfunction failure(): Result<never, string> => Failure { error: \"failed\" }")
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testRejectsNeverFunctionsThatCanReturnOrFallThrough(): none {
+  value := checked("function bad(): never => 1")
+  Assert.equal(value.diagnostics.length, 1)
+  Assert.equal(value.diagnostics[0].message, "Cannot return int from function returning never")
+
+  fallthrough := checked("function bad(): never {}")
+  Assert.equal(fallthrough.diagnostics.length, 1)
+  Assert.equal(fallthrough.diagnostics[0].message, "Function 'bad' may complete without returning never")
+}
+
+export function testAcceptsDivergentExhaustiveEnumAndUnionCases(): none {
+  enumResult := checked("enum Direction { North, South }\nfunction failDirection(direction: Direction): never { case direction { .North -> { panic(\"north\") }, .South -> { panic(\"south\") } } }")
+  Assert.equal(enumResult.diagnostics.length, 0)
+
+  unionResult := checked("class Left {}\nclass Right {}\ntype Side = Left | Right\nfunction failSide(side: Side): never { case side { _: Left -> { panic(\"left\") }, _: Right -> { panic(\"right\") } } }")
+  Assert.equal(unionResult.diagnostics.length, 0)
 }
 
 export function testDecoratesTypedResultArmPatterns(): none {

@@ -19,6 +19,7 @@ Doof features a strong, static type system with bidirectional type inference, st
 | `char` | — | UTF-8 character |
 | `bool` | — | Boolean (`true` / `false`) |
 | `none` | — | Unit/absence type and its sole value |
+| `never` | — | Uninhabited bottom type for expressions that cannot complete |
 
 `none` is the canonical spelling in both type and expression positions.
 `T | none` is the canonical optional type. The legacy source spellings `void`
@@ -26,6 +27,22 @@ and `null` are deprecated aliases: both canonicalize to `none` before emission
 and produce a warning with a source span and `none` replacement. These aliases
 do not affect external formats—generated C++ still uses `void` where required,
 and JSON still encodes absence as `null`.
+
+`never` has no values. An expression of type `never` is assignable to every
+type because it cannot reach the point where a value would be consumed. The
+reverse is not true: no inhabited value is assignable to `never`. Union and
+join normalization removes bottom members, so `T | never` is `T`; a union
+containing only `never` remains `never`.
+
+```doof
+function fail(message: string): never => panic(message)
+
+value: int := if ready then 42 else fail("not ready")
+type Value = string | never // string
+```
+
+`never` may appear in compound types such as `Result<never, E>`, but it is not
+JSON-serializable and has no literal or constructor.
 
 ## Built-in Range Type
 

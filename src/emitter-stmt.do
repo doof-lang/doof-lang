@@ -336,6 +336,7 @@ function emitLocalDeclaration(ind: string, name: string, annotation: TypeAnnotat
 }
 
 function emitCase(statement: CaseStatement, level: int, context: EmitContext): string {
+  if statement.resolvedCompletes == none { panic("Case statement has no resolved control-flow completion") }
   ind := indent(level)
   inner := indent(level + 1)
   bodyIndent := indent(level + 2)
@@ -373,10 +374,21 @@ function emitCase(statement: CaseStatement, level: int, context: EmitContext): s
         _: Expression -> { panic("Expression case arm reached statement emitter") }
       }
       previous = true
-      if isWildcard { return result + ind + "}\n" }
+      if isWildcard {
+        result = result + ind + "}\n"
+        return result + emitCaseContinuationGuard(statement, ind)
+      }
     }
   }
-  return result + ind + "}\n"
+  return result + ind + "}\n" + emitCaseContinuationGuard(statement, ind)
+}
+
+// C++ cannot infer Doof's closed Result/enum/union exhaustiveness from an
+// if/else-if chain. Preserve the checker's proof at the lowering boundary so
+// non-void functions ending in an exhaustive case do not appear to fall
+// through. doof::unreachable is [[noreturn]] in the runtime.
+function emitCaseContinuationGuard(statement: CaseStatement, ind: string): string {
+  return if statement.resolvedCompletes! then "" else ind + "doof::unreachable();\n"
 }
 
 function emitRangePatternCondition(pattern: RangePattern, subject: string, context: EmitContext): string {

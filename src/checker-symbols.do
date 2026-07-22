@@ -28,7 +28,7 @@ import {
 import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
-  noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
+  neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
   substituteTypeParams, typeParameter, unknownType, weakType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
@@ -264,6 +264,7 @@ export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, 
   case annotation {
     named: NamedType -> {
       if named.name == "none" || named.name == "void" || named.name == "null" { return noneType() }
+      if named.name == "never" { return neverType() }
       if named.name == "JsonValue" { return jsonValueType() }
       if named.name == "JsonObject" { return jsonObjectType() }
       if named.name == "SourceLocation" { return builtinSourceLocationType() }
@@ -463,24 +464,9 @@ export function isBuiltinCallable(name: string): bool {
   return name == "byte" || name == "string" || name == "int" || name == "long" || name == "float" || name == "double" || name == "bool" || name == "println" || name == "panic" || name == "assert" || name == "catchPanic" || name == "Success" || name == "Failure"
 }
 
-export function isPanicCall(expression: Expression): bool {
-  case expression {
-    call: CallExpression -> {
-      case call.callee {
-        identifier: Identifier -> {
-          return identifier.name == "panic" && identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "builtin"
-        }
-        _ -> { }
-      }
-    }
-    _ -> { }
-  }
-  return false
-}
-
 export function builtinCallable(name: string): ResolvedType {
   if name == "println" { return functionType([FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false }], noneType()) }
-  if name == "panic" { return functionType([FunctionParamType { name: "message", type_: primitive("string"), hasDefault: false }], noneType()) }
+  if name == "panic" { return functionType([FunctionParamType { name: "message", type_: primitive("string"), hasDefault: false }], neverType()) }
   if name == "assert" {
     return functionType([
       FunctionParamType { name: "condition", type_: primitive("bool"), hasDefault: false },
