@@ -276,6 +276,8 @@ export class DotShorthand {
   resolvedShorthandOwnerName: string = ""
   resolvedShorthandOwnerKind: string = ""
   resolvedShorthandOwnerModule: string = ""
+  resolvedShorthandOwnerNative: bool = false
+  resolvedShorthandOwnerCppName: string = ""
   resolvedType: ResolvedType | none = none
   span: SourceSpan
 }

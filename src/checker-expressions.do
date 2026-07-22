@@ -211,10 +211,13 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       let namespaceName = ""
       case member.object {
         identifier: Identifier -> {
-          if isNamespaceImport(state.info!, identifier.name) {
+          // Bindings shadow namespace-like spellings. Resolve capabilities from
+          // the selected binding instead of the identifier text alone.
+          localBinding := lookup(scope, identifier.name)
+          if localBinding == none && isNamespaceImport(state.info!, identifier.name) {
             namespaceName = identifier.name
             namespaceMember = namespaceMemberType(state.info!, identifier.name, member.property, state.result)
-          } else if isBuiltinNamespace(identifier.name) {
+          } else if localBinding == none && isBuiltinNamespace(identifier.name) {
             namespaceName = identifier.name
             identifier.resolvedBinding = Binding {
               name: identifier.name,
@@ -333,23 +336,57 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
 }
 
 export function checkDotShorthand(state: CheckerState, expression: DotShorthand, expected: ResolvedType | none): ResolvedType {
-  if expected == none { return finish(state, expression, unknownType()) }
+  if expected == none {
+    typeError(state, "Cannot resolve shorthand ." + expression.name + " without an expected class or enum type", expression.span)
+    return finish(state, expression, unknownType())
+  }
   case expected! {
     enum_: EnumType -> {
+      declaration := declarationFor(state.result, enum_.symbol)
+      let found = enum_.name == "ParseError" && enum_.symbol.module == "<builtin>" && builtinParseErrorVariant(expression.name)
+      if declaration != none {
+        case declaration! {
+          enumDeclaration: EnumDeclaration -> {
+            for variant of enumDeclaration.variants { if variant.name == expression.name { found = true } }
+          }
+          _ -> { }
+        }
+      }
+      if !found {
+        typeError(state, "Enum \"" + enum_.name + "\" has no variant \"" + expression.name + "\"", expression.span)
+        return finish(state, expression, unknownType())
+      }
       expression.resolvedShorthandOwnerName = enum_.name
       expression.resolvedShorthandOwnerKind = "enum"
       expression.resolvedShorthandOwnerModule = enum_.symbol.module
+      expression.resolvedShorthandOwnerNative = enum_.symbol.native_
+      expression.resolvedShorthandOwnerCppName = enum_.symbol.nativeCppName
       return finish(state, expression, enum_)
     }
     class_: ClassType -> {
+      diagnosticCount := state.diagnostics.length
+      value := memberType(state, class_, expression.name, expression.span)
+      if staticMemberOwner(class_, expression.name, state.result) == none {
+        if state.diagnostics.length == diagnosticCount {
+          typeError(state, "Type \"" + class_.name + "\" has no static member \"" + expression.name + "\"", expression.span)
+        }
+        return finish(state, expression, unknownType())
+      }
       expression.resolvedShorthandOwnerName = class_.name
       expression.resolvedShorthandOwnerKind = "class"
       expression.resolvedShorthandOwnerModule = class_.symbol.module
-      return finish(state, expression, memberType(state, class_, expression.name, expression.span))
+      expression.resolvedShorthandOwnerNative = class_.symbol.native_
+      expression.resolvedShorthandOwnerCppName = class_.symbol.nativeCppName
+      return finish(state, expression, value)
     }
     _ -> { }
   }
+  typeError(state, "Cannot resolve shorthand ." + expression.name + " for expected type \"" + typeName(expected!) + "\"", expression.span)
   return finish(state, expression, unknownType())
+}
+
+function builtinParseErrorVariant(name: string): bool {
+  return name == "InvalidFormat" || name == "Overflow" || name == "Underflow" || name == "EmptyInput"
 }
 
 export function checkIdentifier(state: CheckerState, identifier: Identifier, scope: Scope): ResolvedType {

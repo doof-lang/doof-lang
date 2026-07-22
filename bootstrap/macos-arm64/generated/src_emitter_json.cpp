@@ -433,7 +433,7 @@ std::string emitJsonField(std::string value, std::variant<std::shared_ptr<::app_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject);
-            if (doof::kind(array->elementType) == std::string("json-value")) {
+            if (std::visit([](auto&& _obj) { return _obj->kind; }, array->elementType) == std::string("json-value")) {
                 return ((std::string("doof::json_value(") + value) + std::string(")"));
             }
             const auto element = emitJsonField(std::string("_element"), array->elementType, context);
@@ -452,7 +452,7 @@ std::string emitJsonField(std::string value, std::variant<std::shared_ptr<::app_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
             const auto& map = std::get<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject);
-            if ((doof::kind(map->keyType) == std::string("primitive")) && (doof::kind(map->valueType) == std::string("json-value"))) {
+            if ((std::visit([](auto&& _obj) { return _obj->kind; }, map->keyType) == std::string("primitive")) && (std::visit([](auto&& _obj) { return _obj->kind; }, map->valueType) == std::string("json-value"))) {
                 return ((std::string("doof::json_value(") + value) + std::string(")"));
             }
             const auto entryValue = emitJsonField(std::string("_entry.second"), map->valueType, context);

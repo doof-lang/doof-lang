@@ -1,6 +1,6 @@
 // Conditional and pattern-based expression lowering.
 
-import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, MemberExpression, NamedType, RangePattern, TypePattern, ValuePattern, WildcardPattern, YieldBlockExpression } from "./ast"
+import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, NamedType, RangePattern, TypePattern, ValuePattern, WildcardPattern, YieldBlockExpression } from "./ast"
 import { ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitCaseTypePattern } from "./emitter-case-pattern"
@@ -14,21 +14,17 @@ export function emitDotShorthand(expression: DotShorthand, context: EmitContext)
     panic("Cannot emit unresolved dot shorthand ." + expression.name)
   }
   let owner = expression.resolvedShorthandOwnerName
-  if context.modulePath != "" && expression.resolvedShorthandOwnerModule != "" && expression.resolvedShorthandOwnerModule != context.modulePath {
+  if expression.resolvedShorthandOwnerNative {
+    if expression.resolvedShorthandOwnerCppName != "" { owner = "::" + expression.resolvedShorthandOwnerCppName }
+    else { owner = "::" + owner }
+  } else if context.modulePath != "" && expression.resolvedShorthandOwnerModule != "" && expression.resolvedShorthandOwnerModule != context.modulePath {
     owner = "::" + exprModuleNamespaceFor(expression.resolvedShorthandOwnerModule) + "::" + owner
   }
   return owner + "::" + cppIdentifier(expression.name)
 }
 
 export function emitIfExpression(expression: IfExpression, context: EmitContext): string {
-  let elseValue = emitExpression(expression.else_, context)
-  case expression.else_ {
-    member: MemberExpression -> {
-      if member.property == "alias" { elseValue = elseValue + ".value()" }
-    }
-    _ -> { }
-  }
-  return "(" + emitExpression(expression.condition, context) + " ? " + emitExpression(expression.then_, context) + " : " + elseValue + ")"
+  return "(" + emitExpression(expression.condition, context) + " ? " + emitExpression(expression.then_, context) + " : " + emitExpression(expression.else_, context) + ")"
 }
 
 export function emitYieldBlockExpression(expression: YieldBlockExpression, context: EmitContext, expected: ResolvedType | none): string {

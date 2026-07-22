@@ -13,6 +13,13 @@ function hasDiagnostic(result: AnalysisResult, message: string): bool {
   return false
 }
 
+export function testRecognizesBuiltinParseErrorAnnotations(): none {
+  result := createAnalyzer([SourceFile {
+    path: "/main.do", source: "function parse(): Result<int, ParseError> => Failure { error: .Overflow }",
+  }]).analyze("/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testRewritesMockImportsFromGeneratedHarnessRoot(): none {
   result := createAnalyzer([
     SourceFile { path: "/build/__doof_tests__.do", source: "import { testScene } from \"../game/tests/scene.test\"\nfunction main(): void { testScene() }" },

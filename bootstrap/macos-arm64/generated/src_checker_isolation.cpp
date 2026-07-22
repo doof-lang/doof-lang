@@ -97,7 +97,7 @@ bool sameSpan(::app_src_ast_::SourceSpan left, ::app_src_semantic_::SemanticSpan
     return ((left.start.offset == right.start.offset) && (left.end.offset == right.end.offset));
 }
 std::variant<std::monostate, std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> moduleValueDeclaration(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::shared_ptr<::app_src_semantic_::Binding> binding) {
-    if ((!doof::is_null(binding->symbol)) && ((doof::kind(binding->symbol) == std::string("const")) || (doof::kind(binding->symbol) == std::string("readonly")))) {
+    if ((!doof::is_null(binding->symbol)) && ((binding->symbol->kind == std::string("const")) || (binding->symbol->kind == std::string("readonly")))) {
         return ::app_src_checker_symbols_::declarationFor(result, doof::unwrap_optional(binding->symbol));
     }
     const auto module = findModule(result, binding->module);
@@ -305,11 +305,11 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> callDeclaration(std::shared
         auto _case_subject = call->callee;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
             const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
-            if (doof::is_null(doof::resolved_type(member->object))) {
+            if (doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object))) {
                 return nullptr;
             }
             {
-                auto _case_subject = doof::unwrap_optional(doof::resolved_type(member->object));
+                auto _case_subject = doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object));
                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject)) {
                     const auto& interface_ = std::get<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject);
                     const auto declaration = ::app_src_checker_symbols_::declarationFor(result, interface_->symbol);
@@ -550,8 +550,8 @@ void validateIsolationEffects(std::shared_ptr<::app_src_analyzer_::AnalysisResul
             continue;
         }
         const auto owner = ((node->owner == std::string("")) ? ((std::string("function \"") + node->declaration->name) + std::string("\"")) : ((((std::string("method \"") + node->owner) + std::string(".")) + node->declaration->name) + std::string("\"")));
-        const auto message = ((doof::kind(node->reason) == std::string("call")) ? ((((std::string("Isolated ") + owner) + std::string(" cannot call non-isolated function \"")) + node->reason->name) + std::string("\"")) : (((std::string("Isolated ") + owner) + std::string(" is not isolated: ")) + reasonText(doof::unwrap_optional(node->reason))));
-        pushDiagnostic(diagnostics, module->path, doof::span(node->reason), message);
+        const auto message = ((node->reason->kind == std::string("call")) ? ((((std::string("Isolated ") + owner) + std::string(" cannot call non-isolated function \"")) + node->reason->name) + std::string("\"")) : (((std::string("Isolated ") + owner) + std::string(" is not isolated: ")) + reasonText(doof::unwrap_optional(node->reason))));
+        pushDiagnostic(diagnostics, module->path, node->reason->span, message);
     }
     const auto& _iterable_34 = moduleExpressions(module);
     for (const auto& expression : *_iterable_34) {
@@ -563,9 +563,9 @@ void validateIsolationEffects(std::shared_ptr<::app_src_analyzer_::AnalysisResul
                     auto _case_subject = call->callee;
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
                         const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
-                        if (!doof::is_null(doof::resolved_type(member->object))) {
+                        if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object))) {
                             {
-                                auto _case_subject = doof::unwrap_optional(doof::resolved_type(member->object));
+                                auto _case_subject = doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object));
                                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject)) {
                                     if (!doof::is_null(call->resolvedFunction)) {
                                         const auto target = nodeForDeclaration(graph, doof::unwrap_optional(call->resolvedFunction));

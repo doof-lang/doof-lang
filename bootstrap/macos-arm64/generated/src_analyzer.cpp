@@ -16,7 +16,7 @@ using namespace ::app_src_semantic_;
 using namespace ::app_src_ast_;
 
 
-const auto BUILTIN_TYPES = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("byte"), std::string("int"), std::string("long"), std::string("float"), std::string("double"), std::string("string"), std::string("char"), std::string("bool"), std::string("none"), std::string("void"), std::string("null"), std::string("JsonValue"), std::string("JsonObject"), std::string("SourceLocation"), std::string("Map"), std::string("ReadonlyMap"), std::string("Set"), std::string("ReadonlySet"), std::string("Result"), std::string("Stream"), std::string("Range"), std::string("Tuple"), std::string("Actor"), std::string("Promise")});
+const auto BUILTIN_TYPES = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("byte"), std::string("int"), std::string("long"), std::string("float"), std::string("double"), std::string("string"), std::string("char"), std::string("bool"), std::string("none"), std::string("void"), std::string("null"), std::string("JsonValue"), std::string("JsonObject"), std::string("SourceLocation"), std::string("ParseError"), std::string("Map"), std::string("ReadonlyMap"), std::string("Set"), std::string("ReadonlySet"), std::string("Result"), std::string("Stream"), std::string("Range"), std::string("Tuple"), std::string("Actor"), std::string("Promise")});
 
 std::shared_ptr<AnalysisResult> ModuleAnalyzer::analyze(std::string entry) {
     (this->modules = std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{}));

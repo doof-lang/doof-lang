@@ -1440,7 +1440,7 @@ inline std::string string_repeat(const std::string& s, int32_t count) {
     return result;
 }
 
-// Representation-dependent helpers used by both emitters. Operations whose
+// Representation-dependent helpers used by generated code. Operations whose
 // receiver representation is statically known are lowered directly instead.
 template <typename T>
 bool is_null(const std::shared_ptr<T>& value) {
@@ -1455,38 +1455,6 @@ bool is_null(const std::optional<T>& value) {
 template <typename... T>
 bool is_null(const std::variant<std::monostate, T...>& value) {
     return std::holds_alternative<std::monostate>(value);
-}
-
-template <typename... T>
-std::string kind(const std::variant<std::shared_ptr<T>...>& value) {
-    return std::visit([](const auto& item) { return item->kind; }, value);
-}
-
-template <typename... T>
-std::string kind(const std::variant<std::monostate, std::shared_ptr<T>...>& value) {
-    return std::visit([](const auto& item) {
-        using Item = std::decay_t<decltype(item)>;
-        if constexpr (std::is_same_v<Item, std::monostate>) {
-            return std::string("null");
-        } else {
-            return item->kind;
-        }
-    }, value);
-}
-
-template <typename T>
-auto kind(const std::shared_ptr<T>& value) -> decltype(value->kind) {
-    return value->kind;
-}
-
-template <typename... T>
-auto span(const std::variant<std::shared_ptr<T>...>& value) {
-    return std::visit([](const auto& item) { return item->span; }, value);
-}
-
-template <typename T>
-auto span(const std::shared_ptr<T>& value) {
-    return value->span;
 }
 
 template <typename Candidate, typename Variant>
@@ -1524,16 +1492,6 @@ Target variant_promote(const std::variant<Source...>& value) {
 template <typename Target, typename Source>
 Target variant_promote(const Source& value) {
     return Target{value};
-}
-
-template <typename T>
-decltype(auto) resolved_type(const std::shared_ptr<T>& value) {
-    return (value->resolvedType);
-}
-
-template <typename... T>
-decltype(auto) resolved_type(const std::variant<T...>& value) {
-    return std::visit([](const auto& item) -> decltype(auto) { return (item->resolvedType); }, value);
 }
 
 template <typename... T>

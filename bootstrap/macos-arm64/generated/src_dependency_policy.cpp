@@ -194,7 +194,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>
         const auto& _iterable_4 = owner->manifest->externalDependencies;
         for (const auto& dependency : *_iterable_4) {
             const auto resolution = resolutionForUrl(rootManifest->externalResolutions, dependency->url);
-            if ((!doof::is_null(resolution)) && (doof::kind(resolution) != dependency->kind)) {
+            if ((!doof::is_null(resolution)) && (resolution->kind != dependency->kind)) {
                 return doof::Failure<std::string>{ (((std::string("External resolution for ") + ::app_src_std_catalog_::canonicalDependencyUrl(dependency->url)) + std::string(" must keep kind ")) + dependency->kind) };
             }
             const auto selected = resolvedExternalInput(owner, dependency, resolution);
@@ -242,7 +242,7 @@ std::shared_ptr<ResolvedExternalInput> resolvedExternalInput(std::shared_ptr<Rea
     if (doof::is_null(resolution)) {
         return std::make_shared<ResolvedExternalInput>(owner, dependency, dependency->kind, ::app_src_std_catalog_::canonicalDependencyUrl(dependency->url), dependency->ref, dependency->commit, dependency->sha256, false);
     }
-    return std::make_shared<ResolvedExternalInput>(owner, dependency, doof::kind(resolution), ::app_src_std_catalog_::canonicalDependencyUrl(resolution->url), resolution->ref, resolution->commit, resolution->sha256, ((((doof::kind(resolution) != dependency->kind) || (resolution->ref != dependency->ref)) || (resolution->commit != dependency->commit)) || (resolution->sha256 != dependency->sha256)));
+    return std::make_shared<ResolvedExternalInput>(owner, dependency, resolution->kind, ::app_src_std_catalog_::canonicalDependencyUrl(resolution->url), resolution->ref, resolution->commit, resolution->sha256, ((((resolution->kind != dependency->kind) || (resolution->ref != dependency->ref)) || (resolution->commit != dependency->commit)) || (resolution->sha256 != dependency->sha256)));
 }
 bool sameSelectedExternal(std::shared_ptr<ResolvedExternalInput> left, std::shared_ptr<ResolvedExternalInput> right) {
     if (left->selectedKind != right->selectedKind) {

@@ -188,12 +188,15 @@ export function builtinNamespaceMemberType(namespaceName: string, memberName: st
   return unknownType()
 }
 
-function builtinParseErrorType(): ResolvedType {
+export function builtinParseErrorType(): ResolvedType {
   return enumType("ParseError", Symbol {
     kind: "enum",
     name: "ParseError",
     module: "<builtin>",
     exported: false,
+    native_: true,
+    nativeHeader: "doof_runtime.hpp",
+    nativeCppName: "doof::ParseError",
   })
 }
 
@@ -210,9 +213,9 @@ export function namespaceMemberType(info: ModuleInfo, namespaceName: string, mem
 }
 
 export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisResult): ResolvedType {
-  if symbol.kind == "class" || symbol.kind == "struct" { return classType(symbol.name, symbol) }
-  if symbol.kind == "interface" { return interfaceType(symbol.name, symbol) }
-  if symbol.kind == "enum" { return enumType(symbol.name, symbol) }
+  if symbol.kind == "class" || symbol.kind == "struct" { return classType(declaredSymbolName(symbol), symbol) }
+  if symbol.kind == "interface" { return interfaceType(declaredSymbolName(symbol), symbol) }
+  if symbol.kind == "enum" { return enumType(declaredSymbolName(symbol), symbol) }
   declaration := declarationFor(result, symbol)
   if declaration == none { return unknownType() }
   case declaration! {
@@ -264,6 +267,7 @@ export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, 
       if named.name == "JsonValue" { return jsonValueType() }
       if named.name == "JsonObject" { return jsonObjectType() }
       if named.name == "SourceLocation" { return builtinSourceLocationType() }
+      if named.name == "ParseError" { return builtinParseErrorType() }
       if named.name == "Range" { return rangeType() }
       for typeParam of typeParams { if named.name == typeParam { return typeParameter(named.name) } }
       if named.name == "Tuple" {
@@ -331,12 +335,12 @@ export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, 
       if symbol!.kind == "interface" {
         let typeArgs: ResolvedType[] = []
         for argument of named.typeArgs { typeArgs.push(resolveAnnotation(argument, info, result, typeParams)) }
-        return interfaceType(named.name, symbol!, typeArgs)
+        return interfaceType(declaredSymbolName(symbol!), symbol!, typeArgs)
       }
-      if symbol!.kind == "enum" { return enumType(named.name, symbol!) }
+      if symbol!.kind == "enum" { return enumType(declaredSymbolName(symbol!), symbol!) }
       let typeArgs: ResolvedType[] = []
       for argument of named.typeArgs { typeArgs.push(resolveAnnotation(argument, info, result, typeParams)) }
-      return classType(named.name, symbol!, typeArgs)
+      return classType(declaredSymbolName(symbol!), symbol!, typeArgs)
     }
     array: ArrayType -> { return arrayType(resolveAnnotation(array.elementType, info, result, typeParams), array.readonly_) }
     union: UnionType -> {
@@ -496,7 +500,9 @@ export function builtinCallable(name: string): ResolvedType {
 
 export function isBuiltinPrintlnCall(callee: Expression): bool {
   case callee {
-    identifier: Identifier -> { return identifier.name == "println" }
+    identifier: Identifier -> {
+      return identifier.name == "println" && identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "builtin"
+    }
     _ -> { return false }
   }
 }
@@ -507,13 +513,18 @@ export function symbolFor(info: ModuleInfo, name: string): Symbol | none {
   return none
 }
 
+export function declaredSymbolName(symbol: Symbol): string {
+  return if symbol.originalName == "" then symbol.name else symbol.originalName
+}
+
 export function declarationFor(result: AnalysisResult, symbol: Symbol): Statement | none {
   module := findModule(result, symbol.module)
   if module == none { return none }
+  declarationName := declaredSymbolName(symbol)
   for statement of module!.program.statements {
     if statement.kind == "export-list" { continue }
     candidate := symbolName(statement)
-    if candidate == symbol.name { return statement }
+    if candidate == declarationName { return statement }
   }
   return none
 }

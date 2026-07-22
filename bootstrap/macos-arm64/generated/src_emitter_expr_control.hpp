@@ -16,7 +16,6 @@ namespace app_src_ast_ { struct CaseExpression; }
 namespace app_src_ast_ { struct CatchExpression; }
 namespace app_src_ast_ { struct DotShorthand; }
 namespace app_src_ast_ { struct IfExpression; }
-namespace app_src_ast_ { struct MemberExpression; }
 namespace app_src_ast_ { struct NamedType; }
 namespace app_src_ast_ { struct RangePattern; }
 namespace app_src_ast_ { struct TypePattern; }

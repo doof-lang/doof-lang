@@ -580,7 +580,7 @@ doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisio
                     const auto& parsedCount = std::get<doof::Success<int32_t>>(_case_subject);
                     (provisionedDeviceCount = parsedCount.value);
             }
-            else if (std::holds_alternative<doof::Failure<doof::ParseError>>(_case_subject)) {
+            else if (std::holds_alternative<doof::Failure<::doof::ParseError>>(_case_subject)) {
             }
             }
     }
@@ -619,7 +619,7 @@ doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisio
                     const auto& parsedCount = std::get<doof::Success<int32_t>>(_case_subject);
                     (certificateCount = parsedCount.value);
             }
-            else if (std::holds_alternative<doof::Failure<doof::ParseError>>(_case_subject)) {
+            else if (std::holds_alternative<doof::Failure<::doof::ParseError>>(_case_subject)) {
             }
             }
     }

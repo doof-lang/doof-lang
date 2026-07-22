@@ -180,7 +180,7 @@ std::string emitJsonAs(std::string source, std::variant<std::shared_ptr<::app_sr
 }
 std::string emitAssignment(std::shared_ptr<::app_src_ast_::AssignmentExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
     const auto operator_ = ((expression->operator_ == std::string("\\=")) ? std::string("/=") : expression->operator_);
-    const auto targetType = doof::resolved_type(expression->target);
+    const auto targetType = std::visit([](auto&& _obj) { return _obj->resolvedType; }, expression->target);
     const auto value = ::app_src_emitter_expr_::emitExpression(expression->value, context, targetType);
     return ((((((std::string("(") + emitAssignmentTarget(expression->target, context)) + std::string(" ")) + operator_) + std::string(" ")) + value) + std::string(")"));
 }
@@ -192,7 +192,7 @@ std::string emitAssignmentTarget(std::variant<std::shared_ptr<::app_src_ast_::In
             const auto objectType = ::app_src_emitter_expr_utils_::decoratedExpressionType(member->object);
             if ((!doof::is_null(objectType)) && isVariantCarrier(doof::unwrap_optional(objectType))) {
                 const auto object = ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{});
-                return ((((std::string("std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->") + cppIdentifier(member->property)) + std::string("); }, ")) + object) + std::string(")"));
+                return ((((std::string("std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->") + cppIdentifier(member->property)) + std::string("); }, ")) + ::app_src_emitter_expr_utils_::variantVisitValue(object, doof::unwrap_optional(objectType))) + std::string(")"));
             }
     }
     else {
@@ -211,7 +211,7 @@ bool isVariantCarrier(std::variant<std::shared_ptr<::app_src_semantic_::Primitiv
             auto nonNull = 0;
             const auto& _iterable_2 = union_->types;
             for (const auto& member : *_iterable_2) {
-                if (doof::kind(member) != std::string("none")) {
+                if (std::visit([](auto&& _obj) { return _obj->kind; }, member) != std::string("none")) {
                     (nonNull = (nonNull + 1));
                 }
             }
@@ -223,7 +223,7 @@ bool isVariantCarrier(std::variant<std::shared_ptr<::app_src_semantic_::Primitiv
     return false;
 }
 std::string emitIdentifier(std::shared_ptr<::app_src_ast_::Identifier> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
-    if (((!doof::is_null(expression->resolvedBinding)) && (doof::kind(expression->resolvedBinding) == std::string("field"))) && !context->currentFunctionStatic) {
+    if (((!doof::is_null(expression->resolvedBinding)) && (expression->resolvedBinding->kind == std::string("field"))) && !context->currentFunctionStatic) {
         return (std::string("this->") + cppIdentifier(expression->name));
     }
     const auto& _iterable_3 = context->imports;
@@ -244,7 +244,7 @@ std::string emitIdentifier(std::shared_ptr<::app_src_ast_::Identifier> expressio
             return (((std::string("::") + ::app_src_emitter_expr_utils_::exprModuleNamespaceFor(symbol->module)) + std::string("::")) + cppIdentifier(::app_src_emitter_expr_utils_::emittedSymbolName(symbol)));
         }
     }
-    if ((!doof::is_null(expression->resolvedBinding)) && (doof::kind(expression->resolvedBinding) == std::string("import"))) {
+    if ((!doof::is_null(expression->resolvedBinding)) && (expression->resolvedBinding->kind == std::string("import"))) {
         const auto& _iterable_4 = context->imports;
         for (const auto& imported : *_iterable_4) {
             if ((imported->localName == expression->name) && (!doof::is_null(imported->symbol))) {
@@ -366,7 +366,7 @@ std::string emitUnary(std::shared_ptr<::app_src_ast_::UnaryExpression> expressio
                         std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>> nonNullMembers = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{});
                         const auto& _iterable_5 = union_->types;
                         for (const auto& member : *_iterable_5) {
-                            if (doof::kind(member) != std::string("none")) {
+                            if (std::visit([](auto&& _obj) { return _obj->kind; }, member) != std::string("none")) {
                                 nonNullMembers->push_back(member);
                             }
                         }
@@ -401,11 +401,11 @@ std::string emitBinary(std::shared_ptr<::app_src_ast_::BinaryExpression> express
         const auto right = ::app_src_emitter_expr_::emitExpression(expression->right, context, std::monostate{});
         return ((((((std::string("(doof::is_null(") + left) + std::string(") ? ")) + right) + std::string(" : doof::unwrap_optional(")) + left) + std::string("))"));
     }
-    if (((expression->operator_ == std::string("==")) || (expression->operator_ == std::string("!="))) && (doof::kind(expression->right) == std::string("none-literal"))) {
+    if (((expression->operator_ == std::string("==")) || (expression->operator_ == std::string("!="))) && (std::visit([](auto&& _obj) { return _obj->kind; }, expression->right) == std::string("none-literal"))) {
         auto test = ((std::string("doof::is_null(") + ::app_src_emitter_expr_::emitExpression(expression->left, context, std::monostate{})) + std::string(")"));
         return ((expression->operator_ == std::string("==")) ? test : ((std::string("(!") + test) + std::string(")")));
     }
-    if (((expression->operator_ == std::string("==")) || (expression->operator_ == std::string("!="))) && (doof::kind(expression->left) == std::string("none-literal"))) {
+    if (((expression->operator_ == std::string("==")) || (expression->operator_ == std::string("!="))) && (std::visit([](auto&& _obj) { return _obj->kind; }, expression->left) == std::string("none-literal"))) {
         auto test = ((std::string("doof::is_null(") + ::app_src_emitter_expr_::emitExpression(expression->right, context, std::monostate{})) + std::string(")"));
         return ((expression->operator_ == std::string("==")) ? test : ((std::string("(!") + test) + std::string(")")));
     }
@@ -498,19 +498,7 @@ std::string emitMember(std::shared_ptr<::app_src_ast_::MemberExpression> express
             auto _case_subject = doof::unwrap_optional(staticObjectType);
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                 const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-                if (((class_->name == std::string("Expression")) || (class_->name == std::string("Statement"))) || (class_->name == std::string("TypeAnnotation"))) {
-                    if (expression->property == std::string("kind")) {
-                        return ((std::string("doof::kind(") + object) + std::string(")"));
-                    }
-                    if (expression->property == std::string("resolvedType")) {
-                        return ((std::string("doof::resolved_type(") + object) + std::string(")"));
-                    }
-                    if (expression->property == std::string("span")) {
-                        return ((std::string("doof::span(") + object) + std::string(")"));
-                    }
-                } else {
-                    return ((object + ((class_->symbol->kind == std::string("struct")) ? std::string(".") : std::string("->"))) + cppIdentifier(expression->property));
-                }
+                return ((object + ((class_->symbol->kind == std::string("struct")) ? std::string(".") : std::string("->"))) + cppIdentifier(expression->property));
         }
         else {
         }
@@ -527,14 +515,8 @@ std::string emitMember(std::shared_ptr<::app_src_ast_::MemberExpression> express
         }
         }
     }
-    if (!callableMember && (expression->property == std::string("kind"))) {
-        return ((std::string("doof::kind(") + object) + std::string(")"));
-    }
-    if (!callableMember && (expression->property == std::string("resolvedType"))) {
-        return ((std::string("doof::resolved_type(") + object) + std::string(")"));
-    }
-    if (!callableMember && (expression->property == std::string("span"))) {
-        return ((std::string("doof::span(") + object) + std::string(")"));
+    if ((!callableMember && (!doof::is_null(staticObjectType))) && ::app_src_emitter_types_::usesVariantRepresentation(doof::unwrap_optional(staticObjectType))) {
+        return ((((std::string("std::visit([](auto&& _obj) { return _obj->") + cppIdentifier(expression->property)) + std::string("; }, ")) + ::app_src_emitter_expr_utils_::variantVisitValue(object, doof::unwrap_optional(staticObjectType))) + std::string(")"));
     }
     if (expression->property == std::string("push")) {
         return (object + std::string("->push_back"));

@@ -26,7 +26,7 @@ std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_s
     }
     std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> result = first;
     if (static_cast<int32_t>((types)->size()) > 1) {
-        (result = doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(std::make_shared<::app_src_ast_::UnionType>(std::string("union-type"), types, std::monostate{}, ::app_src_ast_::SourceSpan{doof::span(first).start, doof::span((*types)[(static_cast<int32_t>((types)->size()) - 1)]).end})));
+        (result = doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(std::make_shared<::app_src_ast_::UnionType>(std::string("union-type"), types, std::monostate{}, ::app_src_ast_::SourceSpan{std::visit([](auto&& _obj) { return _obj->span; }, first).start, std::visit([](auto&& _obj) { return _obj->span; }, (*types)[(static_cast<int32_t>((types)->size()) - 1)]).end})));
     }
     return result;
 }
@@ -34,12 +34,12 @@ std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_s
     auto start = parser->location();
     if (parser->match(::app_src_lexer_::TokenType::Weak)) {
         const auto inner = parseTypeAnnotation(parser);
-        return doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(std::make_shared<::app_src_ast_::WeakType>(std::string("weak-type"), inner, std::monostate{}, ::app_src_ast_::SourceSpan{start, doof::span(inner).end}));
+        return doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(std::make_shared<::app_src_ast_::WeakType>(std::string("weak-type"), inner, std::monostate{}, ::app_src_ast_::SourceSpan{start, std::visit([](auto&& _obj) { return _obj->span; }, inner).end}));
     }
     auto readonlyPrefix = parser->match(::app_src_lexer_::TokenType::Readonly);
     auto result = parsePrimaryType(parser);
     while (parser->check(::app_src_lexer_::TokenType::LeftBracket) && (parser->peek(1).kind == ::app_src_lexer_::TokenType::RightBracket)) {
-        auto start = doof::span(result).start;
+        auto start = std::visit([](auto&& _obj) { return _obj->span; }, result).start;
         parser->advance();
         parser->advance();
         (result = doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(std::make_shared<::app_src_ast_::ArrayType>(std::string("array-type"), result, readonlyPrefix, std::monostate{}, ::app_src_ast_::SourceSpan{start, parser->location()})));

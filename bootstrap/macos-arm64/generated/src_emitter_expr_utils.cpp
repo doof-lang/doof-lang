@@ -32,8 +32,8 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
     else {
     }
     }
-    if (!doof::is_null(doof::resolved_type(expression))) {
-        return doof::resolved_type(expression);
+    if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, expression))) {
+        return std::visit([](auto&& _obj) { return _obj->resolvedType; }, expression);
     }
     return std::monostate{};
 }
@@ -78,10 +78,6 @@ bool nullablePromotionSourceUsesVariant(std::variant<std::shared_ptr<::app_src_s
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             return true;
     }
-    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
-            const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-            return isAstVariantClass(class_->name);
-    }
     else {
             return false;
     }
@@ -115,7 +111,7 @@ bool isNullableVariantType(std::variant<std::monostate, std::shared_ptr<::app_sr
             auto nonNoneCount = 0;
             const auto& _iterable_1 = union_->types;
             for (const auto& member : *_iterable_1) {
-                if (doof::kind(member) == std::string("none")) {
+                if (std::visit([](auto&& _obj) { return _obj->kind; }, member) == std::string("none")) {
                     (hasNone = true);
                 } else {
                     (nonNoneCount = (nonNoneCount + 1));
@@ -127,18 +123,6 @@ bool isNullableVariantType(std::variant<std::monostate, std::shared_ptr<::app_sr
             if (nonNoneCount > 1) {
                 return true;
             }
-            const auto& _iterable_2 = union_->types;
-            for (const auto& member : *_iterable_2) {
-                {
-                    auto _case_subject = member;
-                    if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
-                        const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-                        return isAstVariantClass(class_->name);
-                }
-                else {
-                }
-                }
-            }
             return false;
     }
     else {
@@ -146,9 +130,6 @@ bool isNullableVariantType(std::variant<std::monostate, std::shared_ptr<::app_sr
     }
     }
     return false;
-}
-bool isAstVariantClass(std::string name) {
-    return (((name == std::string("Expression")) || (name == std::string("Statement"))) || (name == std::string("TypeAnnotation")));
 }
 bool hasNoneMember(std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> resolvedType) {
     if (doof::is_null(resolvedType)) {
@@ -161,9 +142,9 @@ bool hasNoneMember(std::variant<std::monostate, std::shared_ptr<::app_src_semant
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_3 = union_->types;
-            for (const auto& member : *_iterable_3) {
-                if (doof::kind(member) == std::string("none")) {
+            const auto& _iterable_2 = union_->types;
+            for (const auto& member : *_iterable_2) {
+                if (std::visit([](auto&& _obj) { return _obj->kind; }, member) == std::string("none")) {
                     return true;
                 }
             }
@@ -173,20 +154,26 @@ bool hasNoneMember(std::variant<std::monostate, std::shared_ptr<::app_src_semant
     }
     return false;
 }
-std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> requireExpressionType(std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>> expression, std::string description) {
-    if (doof::is_null(doof::resolved_type(expression))) {
-        doof::panic((((((std::string("Missing resolved type for ") + description) + std::string(" at line ")) + doof::to_string(doof::span(expression).start.line)) + std::string(":")) + doof::to_string(doof::span(expression).start.column)));
+std::string variantVisitValue(std::string value, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> resolvedType) {
+    if (hasNoneMember(doof::optional_value(resolvedType))) {
+        return ((std::string("doof::unwrap_optional(") + value) + std::string(")"));
     }
-    return doof::unwrap_optional(doof::resolved_type(expression));
+    return value;
+}
+std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> requireExpressionType(std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>> expression, std::string description) {
+    if (doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, expression))) {
+        doof::panic((((((std::string("Missing resolved type for ") + description) + std::string(" at line ")) + doof::to_string(std::visit([](auto&& _obj) { return _obj->span; }, expression).start.line)) + std::string(":")) + doof::to_string(std::visit([](auto&& _obj) { return _obj->span; }, expression).start.column)));
+    }
+    return doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, expression));
 }
 bool hasSinglePrimitiveMember(std::shared_ptr<::app_src_semantic_::UnionResolvedType> union_) {
     auto count = 0;
-    const auto& _iterable_4 = union_->types;
-    for (const auto& member : *_iterable_4) {
-        if (doof::kind(member) == std::string("none")) {
+    const auto& _iterable_3 = union_->types;
+    for (const auto& member : *_iterable_3) {
+        if (std::visit([](auto&& _obj) { return _obj->kind; }, member) == std::string("none")) {
             continue;
         }
-        if (doof::kind(member) != std::string("primitive")) {
+        if (std::visit([](auto&& _obj) { return _obj->kind; }, member) != std::string("primitive")) {
             return false;
         }
         (count = (count + 1));
@@ -194,8 +181,8 @@ bool hasSinglePrimitiveMember(std::shared_ptr<::app_src_semantic_::UnionResolved
     return (count == 1);
 }
 std::shared_ptr<::app_src_ast_::ObjectProperty> findProperty(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ObjectProperty>>> properties, std::string name) {
-    const auto& _iterable_5 = properties;
-    for (const auto& property : *_iterable_5) {
+    const auto& _iterable_4 = properties;
+    for (const auto& property : *_iterable_4) {
         if (property->name == name) {
             return property;
         }

@@ -24,6 +24,19 @@ export function testCompilesAnImportedProject(): none {
   Assert.equal(result.emission!.modules[0].header.contains("#include \"math.hpp\""), true)
 }
 
+export function testEmitsRenamedImportedClassFromSymbolIdentity(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "import type { Widget as AstNamedType } from \"./types\"\nfunction keep(value: AstNamedType): AstNamedType => value" },
+    SourceFile { path: "/types.do", source: "export class Widget {}" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.emission != none, true)
+  let mainHeader = ""
+  for module of result.emission!.modules { if module.modulePath == "/main.do" { mainHeader = module.header } }
+  Assert.stringContains(mainHeader, "std::shared_ptr<::app_types_::Widget>")
+  Assert.equal(mainHeader.contains("AstNamedType"), false)
+}
+
 export function testCompilesCanonicalNoneOptionalValue(): none {
   result := compile([SourceFile {
     path: "/main.do",

@@ -1,12 +1,12 @@
 // Call, native-constructor, and class-construction lowering.
 
 import { CallArgument, CallExpression, ClassDeclaration, ConstructExpression, Expression, FunctionDeclaration, Identifier, MemberExpression, ObjectProperty, SourceSpan, ThisExpression } from "./ast"
-import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, Symbol } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, Symbol, UnionResolvedType } from "./semantic"
 import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { decoratedExpressionType, emittedSymbolName, emitExpectedExpression, emitNullableVariantPromotion, exprModuleNamespaceFor, findProperty, needsNullableVariantPromotion, optionalExpectedType } from "./emitter-expr-utils"
-import { emitContextType, emitResultPayloadType, emitType } from "./emitter-types"
+import { decoratedExpressionType, emittedSymbolName, emitExpectedExpression, emitNullableVariantPromotion, exprModuleNamespaceFor, findProperty, needsNullableVariantPromotion, needsVariantPromotion, optionalExpectedType, variantVisitValue } from "./emitter-expr-utils"
+import { emitContextType, emitResultPayloadType, emitType, usesVariantRepresentation } from "./emitter-types"
 import { specializeEmitType } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
@@ -14,7 +14,7 @@ import { emitSyncActorCall } from "./emitter-expr-actor"
 export function emitCall(expression: CallExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   case expression.callee {
     identifier: Identifier -> {
-      if identifier.name == "catchPanic" && expression.args.length == 1 {
+      if isBuiltinIdentifier(identifier, "catchPanic") && expression.args.length == 1 {
         case expression.resolvedType! {
           result: ResultResolvedType -> {
             callback := emitExpression(expression.args[0].value, context)
@@ -32,7 +32,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   }
   case expression.callee {
     identifier: Identifier -> {
-      if identifier.name == "Success" || identifier.name == "Failure" {
+      if (identifier.name == "Success" || identifier.name == "Failure") && isBuiltinIdentifier(identifier, identifier.name) {
         let resultType: ResolvedType | none = none
         if expected != none { resultType = expected! }
         else if expression.resolvedType != none { resultType = expression.resolvedType! }
@@ -161,9 +161,10 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         case arrayObjectType! {
           _: InterfaceType -> {
             if member.property == "fromJsonValue" { return emitInterfaceJsonCall(member, expression, context) }
-            return emitInterfaceCall(member, expression, context)
+            return emitVariantMemberCall(member, expression, context)
           }
           _: StreamResolvedType -> { return emitInterfaceCall(member, expression, context) }
+          union_: UnionResolvedType -> { if usesVariantRepresentation(union_) { return emitVariantMemberCall(member, expression, context) } }
           _: ArrayResolvedType -> {
             if member.property == "buildReadonly" { return "doof::array_buildReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "cloneMutable" { return "doof::array_cloneMutable(" + emitExpression(member.object, context) + ", \"\", 0)" }
@@ -245,7 +246,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       }
       case member.object {
         identifier: Identifier -> {
-          if member.property == "parse" && isNumericTypeNamespace(identifier.name) {
+          if member.property == "parse" && isBuiltinTypeNamespace(identifier) {
             return "doof::parse_" + identifier.name + "(" + emitExpression(expression.args[0].value, context) + ")"
           }
         }
@@ -273,7 +274,9 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   let callee = emitExpression(expression.callee, context)
   if expression.callee.kind == "identifier" {
     case expression.callee {
-      identifier: Identifier -> { if isBuiltinName(identifier.name) { callee = builtinName(identifier.name) } }
+      identifier: Identifier -> {
+        if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "builtin" && isBuiltinName(identifier.name) { callee = builtinName(identifier.name) }
+      }
       _ -> { }
     }
   }
@@ -345,7 +348,9 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   }
   let invokesCallback = false
   case expression.callee {
-    identifier: Identifier -> { invokesCallback = !isBuiltinName(identifier.name) && functionType != none && functionDeclaration == none }
+    identifier: Identifier -> {
+      invokesCallback = !(identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "builtin" && isBuiltinName(identifier.name)) && functionType != none && functionDeclaration == none
+    }
     member: MemberExpression -> { invokesCallback = member.resolvedCallableField && functionType != none }
     _ -> { invokesCallback = functionType != none && functionDeclaration == none }
   }
@@ -383,7 +388,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if functionType != none && i < functionType!.params.length { expected = optionalExpectedType(functionType!.params[i].type_) }
       if expected == none && functionDeclaration != none && i < functionDeclaration!.params.length { expected = functionDeclaration!.params[i].resolvedType }
       case expression.callee {
-        identifier: Identifier -> { if identifier.name == "println" || isBuiltinConversionName(identifier.name) { expected = none } }
+        identifier: Identifier -> { if isBuiltinIdentifier(identifier, "println") || isBuiltinConversionIdentifier(identifier) { expected = none } }
         _ -> { }
       }
       let argument = emitExpectedExpression(expression.args[i].value, context, expected)
@@ -402,12 +407,20 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   return result + ")"
 }
 
-function isNumericTypeNamespace(name: string): bool {
+function isBuiltinTypeNamespace(identifier: Identifier): bool {
+  if identifier.resolvedBinding == none || identifier.resolvedBinding!.kind != "builtin-type-namespace" { return false }
+  name := identifier.name
   return name == "byte" || name == "int" || name == "long" || name == "float" || name == "double"
 }
 
-function isBuiltinConversionName(name: string): bool {
+function isBuiltinConversionIdentifier(identifier: Identifier): bool {
+  if identifier.resolvedBinding == none || identifier.resolvedBinding!.kind != "builtin" { return false }
+  name := identifier.name
   return name == "string" || name == "byte" || name == "int" || name == "long" || name == "float" || name == "double" || name == "char" || name == "bool"
+}
+
+function isBuiltinIdentifier(identifier: Identifier, name: string): bool {
+  return identifier.name == name && identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "builtin"
 }
 
 function isClassCallee(callee: Expression): bool {
@@ -446,6 +459,19 @@ function emitInterfaceCall(member: MemberExpression, call: CallExpression, conte
     args = args + emitExpression(call.args[i].value, context)
   }
   return "std::visit([&](auto&& _obj) { return _obj->" + cppIdentifier(member.property) + "(" + args + "); }, " + object + ")"
+}
+
+function emitVariantMemberCall(member: MemberExpression, call: CallExpression, context: EmitContext): string {
+  object := emitExpression(member.object, context)
+  objectType := decoratedExpressionType(member.object)
+  if objectType == none { panic("Variant member call has no resolved object type") }
+  let args = ""
+  for i of 0..<call.args.length {
+    if i > 0 { args = args + ", " }
+    args = args + emitExpression(call.args[i].value, context)
+  }
+  invocation := if member.resolvedCallableField then ".call(" else "("
+  return "std::visit([&](auto&& _obj) { return _obj->" + cppIdentifier(member.property) + invocation + args + "); }, " + variantVisitValue(object, objectType!) + ")"
 }
 
 function emitInterfaceJsonCall(member: MemberExpression, call: CallExpression, context: EmitContext): string {
@@ -561,18 +587,10 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
         }
       } else if field.defaultValue != none { value = emitDefaultExpression(field.defaultValue!, context, field.resolvedType, expression.span) }
       else { panic("Construction of '" + expression.type_ + "' is missing required field '" + name + "'") }
-      if expression.type_ == "FunctionDeclaration" && name == "body" {
-        value = "doof::variant_promote<" + emitContextType(field.resolvedType!, context) + ">(" + value + ")"
-      }
-      if expression.type_ == "LambdaExpression" && name == "body" && property != none {
-        value = "doof::variant_promote<" + emitContextType(field.resolvedType!, context) + ">(" + value + ")"
-      }
-      if expression.type_ == "AsyncExpression" && name == "expression" && property != none {
-        value = "doof::variant_promote<" + emitContextType(field.resolvedType!, context) + ">(" + value + ")"
-      }
       // Shorthand fields have no expression node, so they cannot pass their
       // expected type through emitExpression's central promotion path.
       if property != none && property!.value == none && needsNullableVariantPromotion(property!.resolvedType, field.resolvedType) { value = emitNullableVariantPromotion(value, property!.resolvedType, field.resolvedType, context.modulePath) }
+      else if property != none && property!.value == none && needsVariantPromotion(property!.resolvedType, field.resolvedType) { value = "doof::variant_promote<" + emitContextType(field.resolvedType!, context) + ">(" + value + ")" }
       values = values + value
     }
   }

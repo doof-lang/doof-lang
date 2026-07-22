@@ -198,10 +198,10 @@ std::shared_ptr<HeaderPlan> planHeaders(std::shared_ptr<std::vector<std::shared_
     }
     const auto& _iterable_3 = context->imports;
     for (const auto& imported : *_iterable_3) {
-        if (((!doof::is_null(imported->symbol)) && ((doof::kind(imported->symbol) == std::string("class")) || (doof::kind(imported->symbol) == std::string("struct")))) && !surfaceSymbolIsGeneric(context, doof::unwrap_optional(imported->symbol))) {
+        if (((!doof::is_null(imported->symbol)) && ((imported->symbol->kind == std::string("class")) || (imported->symbol->kind == std::string("struct")))) && !surfaceSymbolIsGeneric(context, doof::unwrap_optional(imported->symbol))) {
             const auto declaration = ((((std::string("namespace ") + ::app_src_emitter_names_::moduleNamespace(imported->symbol->module)) + std::string(" { struct ")) + imported->symbol->name) + std::string("; }\n"));
             addUnique(plan->typeOnlyForwardDeclarations, declaration);
-        } else if ((!doof::is_null(imported->symbol)) && (doof::kind(imported->symbol) == std::string("enum"))) {
+        } else if ((!doof::is_null(imported->symbol)) && (imported->symbol->kind == std::string("enum"))) {
             const auto declaration = ((((std::string("namespace ") + ::app_src_emitter_names_::moduleNamespace(imported->symbol->module)) + std::string(" { enum class ")) + imported->symbol->name) + std::string("; }\n"));
             addUnique(plan->typeOnlyForwardDeclarations, declaration);
         }
@@ -216,7 +216,7 @@ std::shared_ptr<HeaderPlan> planHeaders(std::shared_ptr<std::vector<std::shared_
             const auto& _iterable_5 = context->imports;
             for (const auto& imported : *_iterable_5) {
                 if (!doof::is_null(imported->symbol)) {
-                    if (doof::kind(imported->symbol) == std::string("function")) {
+                    if (imported->symbol->kind == std::string("function")) {
                         if (imported->symbol->native_ || !surfaceFunctionIsGeneric(context, doof::unwrap_optional(imported->symbol))) {
                             const auto target = (imported->symbol->native_ ? imported->symbol->nativeCppName : ((::app_src_emitter_names_::moduleNamespace(imported->symbol->module) + std::string("::")) + imported->symbol->name));
                             addUnique(plan->nativeAliases, ((((std::string("namespace ") + namespace_) + std::string(" { using ::")) + target) + std::string("; }\n")));

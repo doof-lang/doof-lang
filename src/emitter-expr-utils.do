@@ -4,7 +4,7 @@
 // expression dispatcher and its focused lowering modules stay small.
 
 import { Expression, Identifier, ObjectProperty } from "./ast"
-import { ClassType, InterfaceType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, Symbol, UnionResolvedType } from "./semantic"
+import { InterfaceType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, Symbol, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { moduleNamespace } from "./emitter-names"
@@ -49,7 +49,6 @@ function nullablePromotionSourceUsesVariant(source: ResolvedType): bool {
     _: InterfaceType -> { return true }
     _: ResultResolvedType -> { return true }
     _: UnionResolvedType -> { return true }
-    class_: ClassType -> { return isAstVariantClass(class_.name) }
     _ -> { return false }
   }
   return false
@@ -80,21 +79,11 @@ export function isNullableVariantType(resolvedType: ResolvedType | none): bool {
       }
       if !hasNone { return false }
       if nonNoneCount > 1 { return true }
-      for member of union_.types {
-        case member {
-          class_: ClassType -> { return isAstVariantClass(class_.name) }
-          _ -> { }
-        }
-      }
       return false
     }
     _ -> { return false }
   }
   return false
-}
-
-function isAstVariantClass(name: string): bool {
-  return name == "Expression" || name == "Statement" || name == "TypeAnnotation"
 }
 
 export function hasNoneMember(resolvedType: ResolvedType | none): bool {
@@ -107,6 +96,16 @@ export function hasNoneMember(resolvedType: ResolvedType | none): bool {
     _ -> { }
   }
   return false
+}
+
+// A nullable multi-arm union is represented as variant<monostate, ...>.
+// Remove the absence arm before emitting a visitor whose checked member is
+// only shared by the present alternatives. The runtime unwrap supplies the
+// same failure boundary as other forced nullable access and keeps the visitor
+// valid for every C++ alternative.
+export function variantVisitValue(value: string, resolvedType: ResolvedType): string {
+  if hasNoneMember(resolvedType) { return "doof::unwrap_optional(" + value + ")" }
+  return value
 }
 
 export function requireExpressionType(expression: Expression, description: string): ResolvedType {

@@ -11,7 +11,6 @@ export function emitNoneLiteral(expected: ResolvedType | none): string {
   if expected == none { return "nullptr" }
   case expected! {
     class_: ClassType -> {
-      if class_.name == "Expression" || class_.name == "Statement" || class_.name == "TypeAnnotation" { return "std::monostate{}" }
       return "nullptr"
     }
     _: JsonValueResolvedType -> { return "doof::json_value(nullptr)" }
@@ -24,7 +23,6 @@ export function emitNoneLiteral(expected: ResolvedType | none): string {
           case member {
             _: PrimitiveType -> { return "std::nullopt" }
             class_: ClassType -> {
-              if class_.name == "Expression" || class_.name == "Statement" || class_.name == "TypeAnnotation" { return "std::monostate{}" }
               if class_.symbol.kind == "struct" { return "std::nullopt" }
               return "nullptr"
             }

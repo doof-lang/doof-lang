@@ -389,6 +389,28 @@ export function testEmitsTrimStartAssignmentInsideConditional(): none {
   Assert.equal(result.source.contains("result = doof::string_trimStart(result)"), true)
 }
 
+export function testEmitsShadowedBuiltinCallsFromResolvedBindings(): none {
+  result := emit("class Parser { parse(value: string): int => value.length }\nfunction println(value: int): int => value + 1\nfunction catchPanic(value: int): int => value + 2\nfunction Success(value: int): int => value + 3\nfunction main(): int { byte := Parser {}\nreturn println(1) + catchPanic(2) + Success(3) + byte.parse(\"ok\") }")
+  Assert.stringContains(result.source, "println(1)")
+  Assert.stringContains(result.source, "catchPanic(2)")
+  Assert.stringContains(result.source, "Success(3)")
+  Assert.stringContains(result.source, "byte->parse")
+  Assert.equal(result.source.contains("doof::println(1)"), false)
+  Assert.equal(result.source.contains("doof::Success<int32_t>{ 3 }"), false)
+  Assert.equal(result.source.contains("doof::parse_byte"), false)
+}
+
+export function testDoesNotHardwireAliasFieldInIfExpressions(): none {
+  result := emit("class Label { alias: string }\nfunction choose(label: Label, first: bool): string => if first then \"first\" else label.alias")
+  Assert.stringContains(result.source, "label->alias)")
+  Assert.equal(result.source.contains("label->alias.value()"), false)
+}
+
+export function testEmitsNameableBuiltinParseErrorVariant(): none {
+  result := emit("function overflow(): Result<int, ParseError> => Failure { error: .Overflow }")
+  Assert.stringContains(result.source, "::doof::ParseError::Overflow")
+}
+
 export function testKeepsNullableNativePseudoFieldNamesAsMethodCalls(): none {
   result := emit("import class NativeNode from \"native.hpp\" as native::Node { kind(): string resolvedType(): string span(): int }\nfunction describe(node: NativeNode | none): string { if node != none { return node!.kind() + node!.resolvedType() + string(node!.span()) }\nreturn \"\" }")
   Assert.stringContains(result.source, "node->kind()")
@@ -397,6 +419,28 @@ export function testKeepsNullableNativePseudoFieldNamesAsMethodCalls(): none {
   Assert.equal(result.source.contains("doof::kind(node)"), false)
   Assert.equal(result.source.contains("doof::resolved_type(node)"), false)
   Assert.equal(result.source.contains("doof::span(node)"), false)
+}
+
+export function testTreatsCompilerAstSpellingsAsOrdinaryNominalTypes(): none {
+  result := emit("class Expression { kind: string\nresolvedType: string\nspan: int }\nfunction describe(value: Expression): string => value.kind + value.resolvedType + string(value.span)\nfunction missing(): Expression | none => none")
+  Assert.stringContains(result.header, "std::shared_ptr<Expression>")
+  Assert.stringContains(result.source, "value->kind")
+  Assert.stringContains(result.source, "value->resolvedType")
+  Assert.stringContains(result.source, "value->span")
+  Assert.equal(result.header.contains("using Expression = std::variant"), false)
+}
+
+export function testPromotesShorthandConstructionFieldsByResolvedTypes(): none {
+  result := emit("class Leaf {}\nclass Branch {}\ntype Node = Leaf | Branch\nclass Envelope { body: Node }\nfunction wrap(body: Leaf): Envelope => Envelope { body }")
+  Assert.stringContains(result.source, "doof::variant_promote<std::variant<std::shared_ptr<Leaf>, std::shared_ptr<Branch>>>(body)")
+}
+
+export function testEmitsArbitrarySharedUnionMembersFromResolvedTypes(): none {
+  result := emit("class Left { value: int\nread(): int => value }\nclass Right { value: int\nread(): int => value }\ntype Either = Left | Right\ntype MaybeEither = Left | Right | none\nfunction total(item: Either): int => item.value + item.read()\nfunction maybeTotal(item: MaybeEither): int => item.value + item.read()")
+  Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, item)")
+  Assert.stringContains(result.source, "std::visit([&](auto&& _obj) { return _obj->read(); }, item)")
+  Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, doof::unwrap_optional(item))")
+  Assert.stringContains(result.source, "std::visit([&](auto&& _obj) { return _obj->read(); }, doof::unwrap_optional(item))")
 }
 
 export function testEmitsMapSizeAsContainerCall(): none {
@@ -834,8 +878,8 @@ export function testKeepsImmutableStructBindingInteriorMutable(): none {
 
 export function testUsesBuiltinParseErrorForNumericParseCasePatterns(): none {
   result := emit("function parsed(value: string): bool => case int.parse(value) { success: Success -> true, failure: Failure -> false }")
-  Assert.equal(result.source.contains("std::holds_alternative<doof::Failure<doof::ParseError>>"), true)
-  Assert.equal(result.source.contains("std::get<doof::Failure<doof::ParseError>>"), true)
+  Assert.equal(result.source.contains("std::holds_alternative<doof::Failure<::doof::ParseError>>"), true)
+  Assert.equal(result.source.contains("std::get<doof::Failure<::doof::ParseError>>"), true)
 }
 
 export function testEmitsEveryNumericParseNamespace(): none {

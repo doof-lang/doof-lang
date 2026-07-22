@@ -360,7 +360,7 @@ doof::Result<void, std::string> signAndArchiveIOSApp(std::string appPath, std::s
                     const auto& parsedCount = std::get<doof::Success<int32_t>>(_case_subject);
                     (keychainGroupCount = parsedCount.value);
             }
-            else if (std::holds_alternative<doof::Failure<doof::ParseError>>(_case_subject)) {
+            else if (std::holds_alternative<doof::Failure<::doof::ParseError>>(_case_subject)) {
             }
             }
     }

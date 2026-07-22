@@ -4,7 +4,7 @@ import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Ident
 import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
-import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType } from "./emitter-expr-utils"
+import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
 import { emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { isNumeric, sameType } from "./checker-types"
 
@@ -131,7 +131,7 @@ function emitAssignmentTarget(target: Expression, context: EmitContext): string 
       objectType := decoratedExpressionType(member.object)
       if objectType != none && isVariantCarrier(objectType!) {
         object := emitExpression(member.object, context)
-        return "std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->" + cppIdentifier(member.property) + "); }, " + object + ")"
+        return "std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->" + cppIdentifier(member.property) + "); }, " + variantVisitValue(object, objectType!) + ")"
       }
     }
     _ -> { }
@@ -351,21 +351,11 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   if staticObjectType != none {
     case staticObjectType! {
       class_: ClassType -> {
-        if class_.name == "Expression" || class_.name == "Statement" || class_.name == "TypeAnnotation" {
-          if expression.property == "kind" { return "doof::kind(" + object + ")" }
-          if expression.property == "resolvedType" { return "doof::resolved_type(" + object + ")" }
-          if expression.property == "span" { return "doof::span(" + object + ")" }
-        } else {
-          return object + (if class_.symbol.kind == "struct" then "." else "->") + cppIdentifier(expression.property)
-        }
+        return object + (if class_.symbol.kind == "struct" then "." else "->") + cppIdentifier(expression.property)
       }
       _ -> { }
     }
   }
-  // AST union pseudo-fields use runtime visitors, but callable members with
-  // the same names remain ordinary nominal methods. Nullable native classes
-  // are a common example: `node!.kind()` must emit `node->kind()`, not
-  // `doof::kind(node)()`.
   let callableMember = false
   if expression.resolvedType != none {
     case expression.resolvedType! {
@@ -373,9 +363,9 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       _ -> { }
     }
   }
-  if !callableMember && expression.property == "kind" { return "doof::kind(" + object + ")" }
-  if !callableMember && expression.property == "resolvedType" { return "doof::resolved_type(" + object + ")" }
-  if !callableMember && expression.property == "span" { return "doof::span(" + object + ")" }
+  if !callableMember && staticObjectType != none && usesVariantRepresentation(staticObjectType!) {
+    return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(expression.property) + "; }, " + variantVisitValue(object, staticObjectType!) + ")"
+  }
   if expression.property == "push" { return object + "->push_back" }
   if expression.property == "value" && object.contains("::") { return "static_cast<int32_t>(" + object + ")" }
   objectType := decoratedExpressionType(expression.object)

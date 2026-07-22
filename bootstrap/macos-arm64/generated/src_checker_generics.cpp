@@ -232,7 +232,7 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> functionDeclarationForCalle
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
             const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
-            const auto objectType = doof::resolved_type(member->object);
+            const auto objectType = std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object);
             if (!doof::is_null(objectType)) {
                 {
                     auto _case_subject = doof::unwrap_optional(objectType);

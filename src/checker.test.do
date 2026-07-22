@@ -144,6 +144,16 @@ export function testReportsUnknownImportedNamespaceMember(): none {
   Assert.equal(result.diagnostics[0].message, "Namespace \"tools\" has no member \"missing\"")
 }
 
+export function testValueBindingsShadowBuiltinTypeNamespaces(): none {
+  result := checked("class Parser { parse(value: string): int => value.length }\nfunction read(): int { byte := Parser {}\nreturn byte.parse(\"ok\") }")
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testFunctionBindingsShadowIntrinsicConstructorNames(): none {
+  result := checked("function Success(value: int): int => value + 1\nfunction Failure(value: int): int => value + 2\nfunction main(): int => Success(1) + Failure(2)")
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testRequiresMembersOnEveryPresentUnionType(): none {
   result := checked("class Named { name: string }\nclass Counted { count: int }\nfunction bad(value: Named | Counted): string => value.name")
   Assert.equal(result.diagnostics.length, 1)
@@ -385,6 +395,27 @@ export function testChecksNamedStaticConstructorAndEnumShorthand(): none {
 export function testContextuallyTypesEnumShorthandInBinaryComparisons(): none {
   result := checked("enum Compression { Store, Deflate }\nfunction stored(compression: Compression): bool => compression == .Store\nfunction deflated(compression: Compression): bool => .Deflate == compression")
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testRejectsUnresolvedAndMissingDotShorthandMembers(): none {
+  missingEnum := checked("enum Direction { North }\nfunction direction(): Direction => .South")
+  Assert.equal(missingEnum.diagnostics.length, 1)
+  Assert.equal(missingEnum.diagnostics[0].message, "Enum \"Direction\" has no variant \"South\"")
+
+  instanceMember := checked("class Widget { value: int }\nfunction widget(): Widget => .value")
+  Assert.equal(instanceMember.diagnostics.length, 1)
+  Assert.equal(instanceMember.diagnostics[0].message, "Type \"Widget\" has no static member \"value\"")
+
+  noContext := checked("value := .Missing")
+  Assert.equal(noContext.diagnostics.length, 1)
+  Assert.equal(noContext.diagnostics[0].message, "Cannot resolve shorthand .Missing without an expected class or enum type")
+
+  builtinVariant := checked("function overflow(): Result<int, ParseError> => Failure { error: .Overflow }")
+  Assert.equal(builtinVariant.diagnostics.length, 0)
+
+  missingBuiltinVariant := checked("function overflow(): Result<int, ParseError> => Failure { error: .NotAParseError }")
+  Assert.equal(missingBuiltinVariant.diagnostics.length, 1)
+  Assert.equal(missingBuiltinVariant.diagnostics[0].message, "Enum \"ParseError\" has no variant \"NotAParseError\"")
 }
 
 export function testChecksBlockBodiedCaseExpressionArms(): none {
@@ -1228,7 +1259,7 @@ export function testChecksYieldBlockDeclarationsAndReassignment(): none {
 }
 
 export function testChecksCatchExpressionErrorUnionsAndNesting(): none {
-  valid := checked("enum ReadError { Missing }\nenum ParseError { Invalid }\nfunction read(): Result<int, ReadError> => Failure { error: .Missing }\nfunction parse(): Result<int, ParseError> => Failure { error: .Invalid }\nfunction main(): void { error := catch { try read()\ninner := catch { try parse() } }\ncase error { _: ReadError -> println(\"read\"), _ -> println(\"ok\") } }")
+  valid := checked("enum ReadError { Missing }\nenum DecodeError { Invalid }\nfunction read(): Result<int, ReadError> => Failure { error: .Missing }\nfunction parse(): Result<int, DecodeError> => Failure { error: .Invalid }\nfunction main(): void { error := catch { try read()\ninner := catch { try parse() } }\ncase error { _: ReadError -> println(\"read\"), _ -> println(\"ok\") } }")
   for diagnostic of valid.diagnostics { println(diagnostic.message) }
   Assert.equal(valid.diagnostics.length, 0)
 

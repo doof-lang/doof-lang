@@ -56,9 +56,9 @@ std::string emitAsyncActorCall(std::shared_ptr<::app_src_ast_::AsyncExpression> 
                         auto _case_subject = call->callee;
                         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
                             const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
-                            if (!doof::is_null(doof::resolved_type(member->object))) {
+                            if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object))) {
                                 {
-                                    auto _case_subject = doof::unwrap_optional(doof::resolved_type(member->object));
+                                    auto _case_subject = doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object));
                                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject)) {
                                         const auto& actor = std::get<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject);
                                         return emitActorMethodCall(call, member, actor, true, context);

@@ -88,12 +88,12 @@ bool checkStatement(std::shared_ptr<::app_src_checker_state_::CheckerState> stat
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::IfStatement>>(_case_subject)) {
             const auto& if_ = std::get<std::shared_ptr<::app_src_ast_::IfStatement>>(_case_subject);
-            ::app_src_checker_common_::requireBool(state, ::app_src_checker_expressions_::checkExpression(state, if_->condition, scope, std::monostate{}), doof::span(if_->condition));
+            ::app_src_checker_common_::requireBool(state, ::app_src_checker_expressions_::checkExpression(state, if_->condition, scope, std::monostate{}), std::visit([](auto&& _obj) { return _obj->span; }, if_->condition));
             const auto thenCompletes = checkBlock(state, if_->body, scope);
             auto allComplete = thenCompletes;
             const auto& _iterable_1 = if_->elseIfs;
             for (const auto& branch : *_iterable_1) {
-                ::app_src_checker_common_::requireBool(state, ::app_src_checker_expressions_::checkExpression(state, branch->condition, scope, std::monostate{}), doof::span(branch->condition));
+                ::app_src_checker_common_::requireBool(state, ::app_src_checker_expressions_::checkExpression(state, branch->condition, scope, std::monostate{}), std::visit([](auto&& _obj) { return _obj->span; }, branch->condition));
                 const auto branchCompletes = checkBlock(state, branch->body, scope);
                 (allComplete = (allComplete || branchCompletes));
             }
@@ -109,7 +109,7 @@ bool checkStatement(std::shared_ptr<::app_src_checker_state_::CheckerState> stat
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::WhileStatement>>(_case_subject)) {
             const auto& while_ = std::get<std::shared_ptr<::app_src_ast_::WhileStatement>>(_case_subject);
-            ::app_src_checker_common_::requireBool(state, ::app_src_checker_expressions_::checkExpression(state, while_->condition, scope, std::monostate{}), doof::span(while_->condition));
+            ::app_src_checker_common_::requireBool(state, ::app_src_checker_expressions_::checkExpression(state, while_->condition, scope, std::monostate{}), std::visit([](auto&& _obj) { return _obj->span; }, while_->condition));
             checkBlock(state, while_->body, scope);
             if (!doof::is_null(while_->then_)) {
                 checkBlock(state, doof::unwrap_optional(while_->then_), scope);
@@ -134,7 +134,7 @@ bool checkStatement(std::shared_ptr<::app_src_checker_state_::CheckerState> stat
             }
             if (!doof::is_null(for_->condition)) {
                 const auto condition = doof::unwrap_optional(for_->condition);
-                ::app_src_checker_common_::requireBool(state, ::app_src_checker_expressions_::checkExpression(state, condition, scope, std::monostate{}), doof::span(condition));
+                ::app_src_checker_common_::requireBool(state, ::app_src_checker_expressions_::checkExpression(state, condition, scope, std::monostate{}), std::visit([](auto&& _obj) { return _obj->span; }, condition));
             }
             const auto& _iterable_2 = for_->update;
             for (const auto& update : *_iterable_2) {
@@ -302,8 +302,8 @@ bool checkStatement(std::shared_ptr<::app_src_checker_state_::CheckerState> stat
 bool checkValueDeclaration(std::shared_ptr<::app_src_checker_state_::CheckerState> state, std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> declaration, std::shared_ptr<::app_src_semantic_::Scope> scope, std::string kind, bool mutable_) {
     auto name = std::string("");
     std::variant<std::monostate, std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> annotation = std::monostate{};
-    std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>> value = doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(std::make_shared<::app_src_ast_::NoneLiteral>(std::string("none-literal"), std::string("none"), std::monostate{}, doof::span(declaration)));
-    auto span = doof::span(declaration);
+    std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>> value = doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(std::make_shared<::app_src_ast_::NoneLiteral>(std::string("none-literal"), std::string("none"), std::monostate{}, std::visit([](auto&& _obj) { return _obj->span; }, declaration)));
+    auto span = std::visit([](auto&& _obj) { return _obj->span; }, declaration);
     std::shared_ptr<::app_src_ast_::Block> elseBlock = nullptr;
     std::optional<std::string> failureName = std::nullopt;
     {
@@ -342,7 +342,7 @@ bool checkValueDeclaration(std::shared_ptr<::app_src_checker_state_::CheckerStat
         auto _case_subject = value;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::YieldBlockExpression>>(_case_subject)) {
             if (doof::is_null(scope->parent)) {
-                ::app_src_checker_common_::typeError(state, std::string("'<-' yield blocks are only allowed in local declarations"), doof::span(declaration));
+                ::app_src_checker_common_::typeError(state, std::string("'<-' yield blocks are only allowed in local declarations"), std::visit([](auto&& _obj) { return _obj->span; }, declaration));
             }
     }
     else {
@@ -411,7 +411,7 @@ bool checkValueDeclaration(std::shared_ptr<::app_src_checker_state_::CheckerStat
         }
         const auto handlerCompletes = checkBlock(state, doof::unwrap_optional(elseBlock), elseScope);
         if ((name != std::string("_")) && handlerCompletes) {
-            ::app_src_checker_common_::typeError(state, std::string("Declaration-else block must exit scope"), doof::span(elseBlock));
+            ::app_src_checker_common_::typeError(state, std::string("Declaration-else block must exit scope"), elseBlock->span);
         }
     } else if (!::app_src_checker_types_::isAssignable(valueType, declaredType)) {
         ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(valueType)) + std::string(" to ")) + ::app_src_checker_types_::typeName(declaredType)), span);
@@ -491,7 +491,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             const auto expression = doof::variant_narrow<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(_case_subject);
             (actualReturn = ::app_src_checker_expressions_::checkExpression(state, expression, scope, ::app_src_checker_symbols_::optionalResolvedType(returnType)));
             if (doof::is_null(fn->returnType) && !::app_src_checker_types_::isAssignable(actualReturn, returnType)) {
-                ::app_src_checker_common_::typeError(state, (((std::string("Cannot return ") + ::app_src_checker_types_::typeName(actualReturn)) + std::string(" from function returning ")) + ::app_src_checker_types_::typeName(returnType)), doof::span(expression));
+                ::app_src_checker_common_::typeError(state, (((std::string("Cannot return ") + ::app_src_checker_types_::typeName(actualReturn)) + std::string(" from function returning ")) + ::app_src_checker_types_::typeName(returnType)), std::visit([](auto&& _obj) { return _obj->span; }, expression));
             }
             (completes = false);
     }
@@ -501,7 +501,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             (actualReturn = inferredReturn(state, block));
     }
     }
-    if ((completes && (doof::kind(returnType) != std::string("none"))) && (doof::kind(returnType) != std::string("unknown"))) {
+    if ((completes && (std::visit([](auto&& _obj) { return _obj->kind; }, returnType) != std::string("none"))) && (std::visit([](auto&& _obj) { return _obj->kind; }, returnType) != std::string("unknown"))) {
         ::app_src_checker_common_::typeError(state, (((std::string("Function '") + fn->name) + std::string("' may complete without returning ")) + ::app_src_checker_types_::typeName(returnType)), fn->span);
     }
     if (!doof::is_null(fn->returnType)) {
@@ -571,7 +571,7 @@ void checkClass(std::shared_ptr<::app_src_checker_state_::CheckerState> state, s
     }
     if (!doof::is_null(class_->destructor_)) {
         if (class_->struct_) {
-            ::app_src_checker_common_::typeError(state, ((std::string("Struct \"") + class_->name) + std::string("\" cannot declare a destructor")), doof::span(class_->destructor_));
+            ::app_src_checker_common_::typeError(state, ((std::string("Struct \"") + class_->name) + std::string("\" cannot declare a destructor")), class_->destructor_->span);
         } else {
             const auto destructorScope = std::make_shared<::app_src_semantic_::Scope>(classScope, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>{}), doof::optional_value(::app_src_checker_types_::noneType()), doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(owner), (class_->name + std::string(".destructor")), false, std::monostate{}, false, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}));
             addClassFields(state, destructorScope, owner);
@@ -752,7 +752,7 @@ bool checkReturn(std::shared_ptr<::app_src_checker_state_::CheckerState> state, 
     const auto returnType = doof::unwrap_optional(target->returnType);
     (statement->resolvedExpectedType = ::app_src_checker_symbols_::optionalResolvedType(returnType));
     if (doof::is_null(statement->value)) {
-        if ((doof::kind(returnType) != std::string("none")) && (doof::kind(returnType) != std::string("unknown"))) {
+        if ((std::visit([](auto&& _obj) { return _obj->kind; }, returnType) != std::string("none")) && (std::visit([](auto&& _obj) { return _obj->kind; }, returnType) != std::string("unknown"))) {
             ::app_src_checker_common_::typeError(state, (std::string("Expected a return value of type ") + ::app_src_checker_types_::typeName(returnType)), statement->span);
         }
     } else {
@@ -859,7 +859,7 @@ bool checkTry(std::shared_ptr<::app_src_checker_state_::CheckerState> state, std
             }
     }
     else {
-            ::app_src_checker_common_::typeError(state, std::string("try requires a Result expression"), doof::span(value));
+            ::app_src_checker_common_::typeError(state, std::string("try requires a Result expression"), std::visit([](auto&& _obj) { return _obj->span; }, value));
     }
     }
     return true;
@@ -878,11 +878,11 @@ void checkDestructuring(std::shared_ptr<::app_src_checker_state_::CheckerState> 
                 }
         }
         else {
-                ::app_src_checker_common_::typeError(state, ((std::string("Array destructuring requires a T[] value, but got \"") + ::app_src_checker_types_::typeName(valueType)) + std::string("\"")), doof::span(statement->value));
+                ::app_src_checker_common_::typeError(state, ((std::string("Array destructuring requires a T[] value, but got \"") + ::app_src_checker_types_::typeName(valueType)) + std::string("\"")), std::visit([](auto&& _obj) { return _obj->span; }, statement->value));
         }
         }
     } else if (doof::string_startsWith(statement->kind, std::string("positional-destructuring"))) {
-        (bindingTypes = positionalDestructuringTypes(state, valueType, doof::span(statement->value)));
+        (bindingTypes = positionalDestructuringTypes(state, valueType, std::visit([](auto&& _obj) { return _obj->span; }, statement->value)));
         if (static_cast<int32_t>((bindingTypes)->size()) < static_cast<int32_t>((statement->bindings)->size())) {
             ::app_src_checker_common_::typeError(state, (((std::string("Positional destructuring expected at least ") + doof::to_string(static_cast<int32_t>((statement->bindings)->size()))) + std::string(" values, but got ")) + doof::to_string(static_cast<int32_t>((bindingTypes)->size()))), statement->span);
         }
@@ -892,7 +892,7 @@ void checkDestructuring(std::shared_ptr<::app_src_checker_state_::CheckerState> 
         for (const auto& named : *_iterable_23) {
             const auto localName = (doof::is_null(named->alias) ? named->name : doof::unwrap_optional(named->alias));
             const auto fieldType = ::app_src_checker_resolution_::memberType(state, valueType, named->name, named->span);
-            if (doof::kind(fieldType) == std::string("unknown")) {
+            if (std::visit([](auto&& _obj) { return _obj->kind; }, fieldType) == std::string("unknown")) {
                 ::app_src_checker_common_::typeError(state, ((((std::string("Type \"") + ::app_src_checker_types_::typeName(valueType)) + std::string("\" has no field \"")) + named->name) + std::string("\"")), named->span);
             }
             if (doof::string_endsWith(statement->kind, std::string("-assignment"))) {
@@ -1073,7 +1073,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     return ::app_src_checker_types_::noneType();
                 }
                 const auto value = doof::unwrap_optional(return_->value);
-                return (doof::is_null(doof::resolved_type(value)) ? ::app_src_checker_types_::unknownType() : doof::unwrap_optional(doof::resolved_type(value)));
+                return (doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, value)) ? ::app_src_checker_types_::unknownType() : doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, value)));
         }
         else {
         }

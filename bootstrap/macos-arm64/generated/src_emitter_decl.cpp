@@ -117,7 +117,7 @@ std::string emitFunctionDefinition(std::shared_ptr<::app_src_ast_::FunctionDecla
             const auto expression = doof::variant_narrow<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(_case_subject);
             (result = (result + emitExpressionCoverageMark(expression, context)));
             const auto returnType = functionReturnType(fn);
-            if ((!doof::is_null(returnType)) && (doof::kind(returnType) == std::string("none"))) {
+            if ((!doof::is_null(returnType)) && (std::visit([](auto&& _obj) { return _obj->kind; }, doof::unwrap_optional(returnType)) == std::string("none"))) {
                 (result = (((result + std::string("    ")) + ::app_src_emitter_expr_::emitExpression(expression, context, returnType)) + std::string(";\n")));
             } else {
                 (result = (((result + std::string("    return ")) + ::app_src_emitter_expr_::emitExpression(expression, context, returnType)) + std::string(";\n")));
@@ -149,7 +149,7 @@ std::string emitNativeFunctionAdapterDefinition(std::shared_ptr<::app_src_ast_::
     }
     (call = (call + std::string(")")));
     const auto returnType = ::app_src_emitter_types_::specializeEmitType(checkedFunctionType(fn)->returnType, context);
-    if (doof::kind(returnType) == std::string("none")) {
+    if (std::visit([](auto&& _obj) { return _obj->kind; }, returnType) == std::string("none")) {
         return (((signature + std::string(" {\n    ")) + call) + std::string(";\n}\n"));
     }
     return (((signature + std::string(" {\n    return ")) + call) + std::string(";\n}\n"));
@@ -681,7 +681,7 @@ std::string emitExpressionCoverageMark(std::variant<std::shared_ptr<::app_src_as
     if (!context->coverageEnabled || (context->coverageModuleId < 0)) {
         return std::string("");
     }
-    const auto line = doof::span(expression).start.line;
+    const auto line = std::visit([](auto&& _obj) { return _obj->span; }, expression).start.line;
     ::app_src_emitter_context_::recordCoverageLine(context, line);
     return ((((std::string("    doof::coverage::cov_mark(") + doof::to_string(context->coverageModuleId)) + std::string(", ")) + doof::to_string(line)) + std::string(");\n"));
 }

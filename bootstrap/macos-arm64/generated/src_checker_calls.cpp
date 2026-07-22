@@ -43,7 +43,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
         auto _case_subject = expression->callee;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
             const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
-            if ((identifier->name == std::string("Success")) || (identifier->name == std::string("Failure"))) {
+            if (((identifier->name == std::string("Success")) || (identifier->name == std::string("Failure"))) && doof::is_null(::app_src_checker_symbols_::lookup(scope, identifier->name))) {
                 std::shared_ptr<::app_src_semantic_::ResultResolvedType> expectedResult = nullptr;
                 if (!doof::is_null(expected)) {
                     {
@@ -245,7 +245,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             }
             const auto constructorMethod = expression->resolvedConstructor;
             if (!doof::is_null(constructorMethod)) {
-                auto constructorType = (doof::is_null(doof::resolved_type(constructorMethod)) ? ::app_src_checker_symbols_::methodSignature(doof::unwrap_optional(constructorMethod), ::app_src_checker_interfaces_::classModuleFor(state->result, class_->symbol), state->result) : doof::unwrap_optional(doof::resolved_type(constructorMethod)));
+                auto constructorType = (doof::is_null(constructorMethod->resolvedType) ? ::app_src_checker_symbols_::methodSignature(doof::unwrap_optional(constructorMethod), ::app_src_checker_interfaces_::classModuleFor(state->result, class_->symbol), state->result) : doof::unwrap_optional(constructorMethod->resolvedType));
                 if (!doof::is_null(declaration)) {
                     {
                         auto _case_subject = doof::unwrap_optional(declaration);
@@ -311,7 +311,7 @@ std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::Pr
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>> patterns = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{});
     const auto constructor = ::app_src_checker_generics_::constructorForClass(class_, state->result);
     if (!doof::is_null(constructor)) {
-        const auto signature = (doof::is_null(doof::resolved_type(constructor)) ? ::app_src_checker_symbols_::methodSignature(doof::unwrap_optional(constructor), ::app_src_checker_interfaces_::classModuleFor(state->result, class_->symbol), state->result) : doof::unwrap_optional(doof::resolved_type(constructor)));
+        const auto signature = (doof::is_null(constructor->resolvedType) ? ::app_src_checker_symbols_::methodSignature(doof::unwrap_optional(constructor), ::app_src_checker_interfaces_::classModuleFor(state->result, class_->symbol), state->result) : doof::unwrap_optional(constructor->resolvedType));
         {
             auto _case_subject = signature;
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
@@ -391,9 +391,9 @@ void validateActorMethodBoundary(std::shared_ptr<::app_src_checker_state_::Check
         auto _case_subject = expression->callee;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
             const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
-            if (!doof::is_null(doof::resolved_type(member->object))) {
+            if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object))) {
                 {
-                    auto _case_subject = doof::unwrap_optional(doof::resolved_type(member->object));
+                    auto _case_subject = doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object));
                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject)) {
                         const auto& actorType_ = std::get<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject);
                         (actor = actorType_);
@@ -532,7 +532,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
     const auto constructorMethod = ::app_src_checker_generics_::constructorForClass(constructed, state->result);
     if ((!doof::is_null(constructorMethod)) && !::app_src_checker_generics_::insideConstructorFactory(scope, constructed)) {
         (expression->resolvedConstructor = constructorMethod);
-        const auto constructorType = (doof::is_null(doof::resolved_type(constructorMethod)) ? ::app_src_checker_symbols_::methodSignature(doof::unwrap_optional(constructorMethod), ::app_src_checker_interfaces_::classModuleFor(state->result, doof::unwrap_optional(symbol)), state->result) : doof::unwrap_optional(doof::resolved_type(constructorMethod)));
+        const auto constructorType = (doof::is_null(constructorMethod->resolvedType) ? ::app_src_checker_symbols_::methodSignature(doof::unwrap_optional(constructorMethod), ::app_src_checker_interfaces_::classModuleFor(state->result, doof::unwrap_optional(symbol)), state->result) : doof::unwrap_optional(constructorMethod->resolvedType));
         {
             auto _case_subject = constructorType;
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {

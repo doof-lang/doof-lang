@@ -26,7 +26,7 @@ using namespace ::app_src_checker_symbols_;
     const auto& _iterable_1 = info->program->statements;
     for (const auto& statement : *_iterable_1) {
         if (::app_src_checker_symbols_::symbolName(statement) == name) {
-            return doof::span(statement);
+            return std::visit([](auto&& _obj) { return _obj->span; }, statement);
         }
     }
     return info->program->span;
@@ -213,7 +213,7 @@ bool classSatisfiesConcreteInterface(std::shared_ptr<::app_src_analyzer_::Analys
                 if (required->readonly_ && !actualField->readonly_) {
                     return false;
                 }
-                const auto actualBase = (doof::is_null(doof::resolved_type(actualField)) ? ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional(actualField->type_), classModuleFor(result, classType_->symbol), result, class_->typeParams) : doof::unwrap_optional(doof::resolved_type(actualField)));
+                const auto actualBase = (doof::is_null(actualField->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional(actualField->type_), classModuleFor(result, classType_->symbol), result, class_->typeParams) : doof::unwrap_optional(actualField->resolvedType));
                 const auto requiredBase = (doof::is_null(required->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(required->type_, classModuleFor(result, interfaceType_->symbol), result, interface_->typeParams) : doof::unwrap_optional(required->resolvedType));
                 const auto actual = ::app_src_checker_types_::substituteTypeParams(actualBase, class_->typeParams, classType_->typeArgs);
                 const auto expected = ::app_src_checker_types_::substituteTypeParams(requiredBase, interface_->typeParams, interfaceType_->typeArgs);
@@ -227,7 +227,7 @@ bool classSatisfiesConcreteInterface(std::shared_ptr<::app_src_analyzer_::Analys
                 if (doof::is_null(actualMethod)) {
                     return false;
                 }
-                const auto actualBase = (doof::is_null(doof::resolved_type(actualMethod)) ? ::app_src_checker_symbols_::methodSignature(doof::unwrap_optional(actualMethod), classModuleFor(result, classType_->symbol), result) : doof::unwrap_optional(doof::resolved_type(actualMethod)));
+                const auto actualBase = (doof::is_null(actualMethod->resolvedType) ? ::app_src_checker_symbols_::methodSignature(doof::unwrap_optional(actualMethod), classModuleFor(result, classType_->symbol), result) : doof::unwrap_optional(actualMethod->resolvedType));
                 const auto requiredBase = (doof::is_null(requiredMethod->resolvedType) ? ::app_src_checker_symbols_::methodSignature(requiredMethod, classModuleFor(result, interfaceType_->symbol), result) : doof::unwrap_optional(requiredMethod->resolvedType));
                 const auto actual = ::app_src_checker_types_::substituteTypeParams(actualBase, class_->typeParams, classType_->typeArgs);
                 const auto expected = ::app_src_checker_types_::substituteTypeParams(requiredBase, interface_->typeParams, interfaceType_->typeArgs);
@@ -266,7 +266,7 @@ bool classSatisfiesInterface(std::shared_ptr<::app_src_analyzer_::AnalysisResult
                         if (required->readonly_ && !classField->readonly_) {
                             return false;
                         }
-                        const auto actual = (doof::is_null(doof::resolved_type(classField)) ? ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional(classField->type_), classModuleFor(result, classSymbol), result, std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : doof::unwrap_optional(doof::resolved_type(classField)));
+                        const auto actual = (doof::is_null(classField->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional(classField->type_), classModuleFor(result, classSymbol), result, std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : doof::unwrap_optional(classField->resolvedType));
                         const auto expected = (doof::is_null(required->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(required->type_, classModuleFor(result, interfaceSymbol), result, std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : doof::unwrap_optional(required->resolvedType));
                         if (!::app_src_checker_types_::isAssignable(actual, expected)) {
                             return false;

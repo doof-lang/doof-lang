@@ -26,9 +26,6 @@ std::string emitNoneLiteral(std::variant<std::monostate, std::shared_ptr<::app_s
         auto _case_subject = doof::unwrap_optional(expected);
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-            if (((class_->name == std::string("Expression")) || (class_->name == std::string("Statement"))) || (class_->name == std::string("TypeAnnotation"))) {
-                return std::string("std::monostate{}");
-            }
             return std::string("nullptr");
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>>(_case_subject)) {
@@ -42,7 +39,7 @@ std::string emitNoneLiteral(std::variant<std::monostate, std::shared_ptr<::app_s
             auto nonNone = 0;
             const auto& _iterable_1 = union_->types;
             for (const auto& member : *_iterable_1) {
-                if (doof::kind(member) != std::string("none")) {
+                if (std::visit([](auto&& _obj) { return _obj->kind; }, member) != std::string("none")) {
                     (nonNone = (nonNone + 1));
                 }
             }
@@ -56,9 +53,6 @@ std::string emitNoneLiteral(std::variant<std::monostate, std::shared_ptr<::app_s
                     }
                     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                             const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-                            if (((class_->name == std::string("Expression")) || (class_->name == std::string("Statement"))) || (class_->name == std::string("TypeAnnotation"))) {
-                                return std::string("std::monostate{}");
-                            }
                             if (class_->symbol->kind == std::string("struct")) {
                                 return std::string("std::nullopt");
                             }
@@ -247,8 +241,8 @@ std::string emitClassObject(std::shared_ptr<::app_src_ast_::ObjectLiteral> expre
             auto value = std::string("{}");
             if (!doof::is_null(property)) {
                 (value = (doof::is_null(property->value) ? ::app_src_emitter_expr_::cppIdentifier(name) : ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(property->value), context, field->resolvedType)));
-                if (doof::is_null(property->value) && ::app_src_emitter_expr_utils_::needsNullableVariantPromotion(doof::resolved_type(property), field->resolvedType)) {
-                    (value = ::app_src_emitter_expr_utils_::emitNullableVariantPromotion(value, doof::resolved_type(property), field->resolvedType, context->modulePath));
+                if (doof::is_null(property->value) && ::app_src_emitter_expr_utils_::needsNullableVariantPromotion(property->resolvedType, field->resolvedType)) {
+                    (value = ::app_src_emitter_expr_utils_::emitNullableVariantPromotion(value, property->resolvedType, field->resolvedType, context->modulePath));
                 }
             } else if (!doof::is_null(field->defaultValue)) {
                 (value = ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(field->defaultValue), context, field->resolvedType));

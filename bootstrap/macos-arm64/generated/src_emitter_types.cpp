@@ -186,27 +186,6 @@ std::string emitType(std::variant<std::shared_ptr<::app_src_semantic_::Primitive
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-            if (class_->name == std::string("Expression")) {
-                return ((std::string("std::variant<") + expressionAlternatives(class_->symbol->module, currentModulePath)) + std::string(">"));
-            }
-            if (class_->name == std::string("Statement")) {
-                return ((std::string("std::variant<") + statementAlternatives(class_->symbol->module, currentModulePath)) + std::string(">"));
-            }
-            if (class_->name == std::string("TypeAnnotation")) {
-                return ((((((((((std::string("std::variant<std::shared_ptr<") + ownedName(std::string("NamedType"), class_->symbol->module, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ArrayType"), class_->symbol->module, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("UnionType"), class_->symbol->module, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("AstFunctionType"), class_->symbol->module, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("WeakType"), class_->symbol->module, currentModulePath)) + std::string(">>"));
-            }
-            if (class_->name == std::string("AstNamedType")) {
-                return ((std::string("std::shared_ptr<") + ownedName(std::string("NamedType"), class_->symbol->module, currentModulePath)) + std::string(">"));
-            }
-            if (class_->name == std::string("AstArrayType")) {
-                return ((std::string("std::shared_ptr<") + ownedName(std::string("ArrayType"), class_->symbol->module, currentModulePath)) + std::string(">"));
-            }
-            if (class_->name == std::string("AstUnionType")) {
-                return ((std::string("std::shared_ptr<") + ownedName(std::string("UnionType"), class_->symbol->module, currentModulePath)) + std::string(">"));
-            }
-            if (class_->name == std::string("SemanticFunctionType")) {
-                return ((std::string("std::shared_ptr<") + ownedName(std::string("FunctionType"), class_->symbol->module, currentModulePath)) + std::string(">"));
-            }
             if (class_->symbol->kind == std::string("struct")) {
                 return emitClassInnerType(class_, currentModulePath);
             }
@@ -214,8 +193,8 @@ std::string emitType(std::variant<std::shared_ptr<::app_src_semantic_::Primitive
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject)) {
             const auto& enum_ = std::get<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject);
-            if ((enum_->name == std::string("ParseError")) && (enum_->symbol->module == std::string("<builtin>"))) {
-                return std::string("doof::ParseError");
+            if (enum_->symbol->native_) {
+                return nativeCppName(enum_->symbol);
             }
             return ownedName(enum_->name, enum_->symbol->module, currentModulePath);
     }
@@ -338,12 +317,6 @@ std::string emitClassInnerType(std::shared_ptr<::app_src_semantic_::ClassType> c
 std::string nativeCppName(std::shared_ptr<::app_src_semantic_::Symbol> symbol) {
     return (std::string("::") + ((symbol->nativeCppName == std::string("")) ? symbol->name : symbol->nativeCppName));
 }
-std::string expressionAlternatives(std::string ownerModule, std::string currentModulePath) {
-    return ((((((((((((((((((((((((((((((((((((((((((((((((((((std::string("std::shared_ptr<") + ownedName(std::string("IntLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("LongLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("FloatLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("DoubleLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("StringLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("CharLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("BoolLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("NoneLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("Identifier"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("BinaryExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("UnaryExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("AssignmentExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("MemberExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("IndexExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("CallExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ArrayLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ObjectLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("TupleLiteral"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("LambdaExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("IfExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("CaseExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ConstructExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("DotShorthand"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ThisExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("CallerExpression"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("AsExpression"), ownerModule, currentModulePath)) + std::string(">"));
-}
-std::string statementAlternatives(std::string ownerModule, std::string currentModulePath) {
-    return ((((((((((((((((((((((((((((((((((((((((((((((((((((((std::string("std::shared_ptr<") + ownedName(std::string("ConstDeclaration"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ReadonlyDeclaration"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ImmutableBinding"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("LetDeclaration"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("FunctionDeclaration"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ClassDeclaration"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("InterfaceDeclaration"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("EnumDeclaration"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("TypeAliasDeclaration"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ImportDeclaration"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("MockImportDirective"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ExportDeclaration"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ExportList"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("IfStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("CaseStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("WhileStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ForStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ForOfStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("WithStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ReturnStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("YieldStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("BreakStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ContinueStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("ExpressionStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("DestructuringStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("TryStatement"), ownerModule, currentModulePath)) + std::string(">, std::shared_ptr<")) + ownedName(std::string("Block"), ownerModule, currentModulePath)) + std::string(">"));
-}
 std::string emitPrimitive(std::string name) {
     if (name == std::string("byte")) {
         return std::string("uint8_t");
@@ -401,7 +374,7 @@ std::string emitUnionType(std::shared_ptr<::app_src_semantic_::UnionResolvedType
     auto hasNone = false;
     const auto& _iterable_7 = flattened;
     for (const auto& member : *_iterable_7) {
-        if (doof::kind(member) == std::string("none")) {
+        if (std::visit([](auto&& _obj) { return _obj->kind; }, member) == std::string("none")) {
             (hasNone = true);
         } else {
             nonNone->push_back(member);
@@ -488,7 +461,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
             auto hasNone = false;
             const auto& _iterable_9 = flattened;
             for (const auto& member : *_iterable_9) {
-                if (doof::kind(member) == std::string("none")) {
+                if (std::visit([](auto&& _obj) { return _obj->kind; }, member) == std::string("none")) {
                     (hasNone = true);
                 } else {
                     nonNone->push_back(member);

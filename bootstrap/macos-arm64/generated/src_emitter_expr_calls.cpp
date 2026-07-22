@@ -29,14 +29,14 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
         auto _case_subject = expression->callee;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
             const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
-            if ((identifier->name == std::string("catchPanic")) && (static_cast<int32_t>((expression->args)->size()) == 1)) {
+            if (isBuiltinIdentifier(identifier, std::string("catchPanic")) && (static_cast<int32_t>((expression->args)->size()) == 1)) {
                 {
                     auto _case_subject = doof::unwrap_optional(expression->resolvedType);
                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject)) {
                         const auto& result = std::get<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject);
                         const auto callback = ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{});
                         const auto successType = ::app_src_emitter_types_::emitResultPayloadType(result->valueType, context->modulePath);
-                        if (doof::kind(result->valueType) == std::string("none")) {
+                        if (std::visit([](auto&& _obj) { return _obj->kind; }, result->valueType) == std::string("none")) {
                             return ((std::string("[&]() -> doof::Result<void, std::string> { try { ") + callback) + std::string(".call(); return doof::Success<void>{}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }()"));
                         }
                         return ((((((std::string("[&]() -> doof::Result<") + successType) + std::string(", std::string> { try { return doof::Success<")) + successType) + std::string(">{")) + callback) + std::string(".call()}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }()"));
@@ -54,7 +54,7 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
         auto _case_subject = expression->callee;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
             const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
-            if ((identifier->name == std::string("Success")) || (identifier->name == std::string("Failure"))) {
+            if (((identifier->name == std::string("Success")) || (identifier->name == std::string("Failure"))) && isBuiltinIdentifier(identifier, identifier->name)) {
                 std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> resultType = std::monostate{};
                 if (!doof::is_null(expected)) {
                     (resultType = doof::optional_value(doof::unwrap_optional(expected)));
@@ -88,9 +88,9 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
         auto _case_subject = expression->callee;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
             const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
-            if (!doof::is_null(doof::resolved_type(member->object))) {
+            if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object))) {
                 {
-                    auto _case_subject = doof::unwrap_optional(doof::resolved_type(member->object));
+                    auto _case_subject = doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object));
                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject)) {
                         const auto& actor = std::get<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject);
                         return ::app_src_emitter_expr_actor_::emitSyncActorCall(expression, member, actor, context);
@@ -128,9 +128,9 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
     else {
     }
     }
-    if ((nativeConstructorCall && (!doof::is_null(expression->resolvedConstructor))) && (!doof::is_null(doof::resolved_type(expression->callee)))) {
+    if ((nativeConstructorCall && (!doof::is_null(expression->resolvedConstructor))) && (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, expression->callee)))) {
         {
-            auto _case_subject = doof::unwrap_optional(doof::resolved_type(expression->callee));
+            auto _case_subject = doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, expression->callee));
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                 const auto& owner = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
                 return emitConstructorFactoryCall(owner, doof::unwrap_optional(expression->resolvedConstructor), expression->args, context, expression->span);
@@ -253,10 +253,16 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
                         if (member->property == std::string("fromJsonValue")) {
                             return emitInterfaceJsonCall(member, expression, context);
                         }
-                        return emitInterfaceCall(member, expression, context);
+                        return emitVariantMemberCall(member, expression, context);
                 }
                 else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::StreamResolvedType>>(_case_subject)) {
                         return emitInterfaceCall(member, expression, context);
+                }
+                else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
+                        const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
+                        if (::app_src_emitter_types_::usesVariantRepresentation(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(union_))) {
+                            return emitVariantMemberCall(member, expression, context);
+                        }
                 }
                 else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
                         if (member->property == std::string("buildReadonly")) {
@@ -429,7 +435,7 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
                 auto _case_subject = member->object;
                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
                     const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
-                    if ((member->property == std::string("parse")) && isNumericTypeNamespace(identifier->name)) {
+                    if ((member->property == std::string("parse")) && isBuiltinTypeNamespace(identifier)) {
                         return ((((std::string("doof::parse_") + identifier->name) + std::string("(")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(")"));
                     }
             }
@@ -463,12 +469,12 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
     }
     }
     auto callee = ::app_src_emitter_expr_::emitExpression(expression->callee, context, std::monostate{});
-    if (doof::kind(expression->callee) == std::string("identifier")) {
+    if (std::visit([](auto&& _obj) { return _obj->kind; }, expression->callee) == std::string("identifier")) {
         {
             auto _case_subject = expression->callee;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
                 const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
-                if (isBuiltinName(identifier->name)) {
+                if (((!doof::is_null(identifier->resolvedBinding)) && (identifier->resolvedBinding->kind == std::string("builtin"))) && isBuiltinName(identifier->name)) {
                     (callee = builtinName(identifier->name));
                 }
         }
@@ -477,9 +483,9 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
         }
     }
     std::shared_ptr<::app_src_semantic_::FunctionType> functionType = nullptr;
-    if (!doof::is_null(doof::resolved_type(expression->callee))) {
+    if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, expression->callee))) {
         {
-            auto _case_subject = doof::unwrap_optional(doof::resolved_type(expression->callee));
+            auto _case_subject = doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, expression->callee));
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
                 const auto& resolved = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
                 (functionType = resolved);
@@ -524,9 +530,9 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
                 const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
-                if (!doof::is_null(doof::resolved_type(member->object))) {
+                if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object))) {
                     {
-                        auto _case_subject = ::app_src_emitter_types_::specializeEmitType(doof::unwrap_optional(doof::resolved_type(member->object)), context);
+                        auto _case_subject = ::app_src_emitter_types_::specializeEmitType(doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object)), context);
                         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                             const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
                             (targetModule = class_->symbol->module);
@@ -577,7 +583,7 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
         auto _case_subject = expression->callee;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
             const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
-            (invokesCallback = ((!isBuiltinName(identifier->name) && (!doof::is_null(functionType))) && doof::is_null(functionDeclaration)));
+            (invokesCallback = ((!(((!doof::is_null(identifier->resolvedBinding)) && (identifier->resolvedBinding->kind == std::string("builtin"))) && isBuiltinName(identifier->name)) && (!doof::is_null(functionType))) && doof::is_null(functionDeclaration)));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
             const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
@@ -642,7 +648,7 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
                 auto _case_subject = expression->callee;
                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
                     const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
-                    if ((identifier->name == std::string("println")) || isBuiltinConversionName(identifier->name)) {
+                    if (isBuiltinIdentifier(identifier, std::string("println")) || isBuiltinConversionIdentifier(identifier)) {
                         (expected = std::monostate{});
                     }
             }
@@ -666,11 +672,22 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
     }
     return (result + std::string(")"));
 }
-bool isNumericTypeNamespace(std::string name) {
+bool isBuiltinTypeNamespace(std::shared_ptr<::app_src_ast_::Identifier> identifier) {
+    if (doof::is_null(identifier->resolvedBinding) || (identifier->resolvedBinding->kind != std::string("builtin-type-namespace"))) {
+        return false;
+    }
+    const auto name = identifier->name;
     return (((((name == std::string("byte")) || (name == std::string("int"))) || (name == std::string("long"))) || (name == std::string("float"))) || (name == std::string("double")));
 }
-bool isBuiltinConversionName(std::string name) {
+bool isBuiltinConversionIdentifier(std::shared_ptr<::app_src_ast_::Identifier> identifier) {
+    if (doof::is_null(identifier->resolvedBinding) || (identifier->resolvedBinding->kind != std::string("builtin"))) {
+        return false;
+    }
+    const auto name = identifier->name;
     return ((((((((name == std::string("string")) || (name == std::string("byte"))) || (name == std::string("int"))) || (name == std::string("long"))) || (name == std::string("float"))) || (name == std::string("double"))) || (name == std::string("char"))) || (name == std::string("bool")));
+}
+bool isBuiltinIdentifier(std::shared_ptr<::app_src_ast_::Identifier> identifier, std::string name) {
+    return (((identifier->name == name) && (!doof::is_null(identifier->resolvedBinding))) && (identifier->resolvedBinding->kind == std::string("builtin")));
 }
 bool isClassCallee(std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>> callee) {
     {
@@ -685,7 +702,7 @@ bool isClassCallee(std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std
                 return true;
             }
             if ((binding->kind == std::string("import")) && (!doof::is_null(binding->symbol))) {
-                return ((doof::kind(binding->symbol) == std::string("class")) || (doof::kind(binding->symbol) == std::string("struct")));
+                return ((binding->symbol->kind == std::string("class")) || (binding->symbol->kind == std::string("struct")));
             }
             return false;
     }
@@ -721,6 +738,22 @@ std::string emitInterfaceCall(std::shared_ptr<::app_src_ast_::MemberExpression> 
         (args = (args + ::app_src_emitter_expr_::emitExpression((*call->args)[i]->value, context, std::monostate{})));
     }
     return ((((((std::string("std::visit([&](auto&& _obj) { return _obj->") + ::app_src_emitter_expr_::cppIdentifier(member->property)) + std::string("(")) + args) + std::string("); }, ")) + object) + std::string(")"));
+}
+std::string emitVariantMemberCall(std::shared_ptr<::app_src_ast_::MemberExpression> member, std::shared_ptr<::app_src_ast_::CallExpression> call, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+    const auto object = ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{});
+    const auto objectType = ::app_src_emitter_expr_utils_::decoratedExpressionType(member->object);
+    if (doof::is_null(objectType)) {
+        doof::panic(std::string("Variant member call has no resolved object type"));
+    }
+    auto args = std::string("");
+    for (int32_t i = 0; i < static_cast<int32_t>((call->args)->size()); ++i) {
+        if (i > 0) {
+            (args = (args + std::string(", ")));
+        }
+        (args = (args + ::app_src_emitter_expr_::emitExpression((*call->args)[i]->value, context, std::monostate{})));
+    }
+    const auto invocation = (member->resolvedCallableField ? std::string(".call(") : std::string("("));
+    return ((((((std::string("std::visit([&](auto&& _obj) { return _obj->") + ::app_src_emitter_expr_::cppIdentifier(member->property)) + invocation) + args) + std::string("); }, ")) + ::app_src_emitter_expr_utils_::variantVisitValue(object, doof::unwrap_optional(objectType))) + std::string(")"));
 }
 std::string emitInterfaceJsonCall(std::shared_ptr<::app_src_ast_::MemberExpression> member, std::shared_ptr<::app_src_ast_::CallExpression> call, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
     auto args = std::string("");
@@ -907,17 +940,10 @@ std::string emitConstruct(std::shared_ptr<::app_src_ast_::ConstructExpression> e
             } else {
                 doof::panic(((((std::string("Construction of '") + expression->type_) + std::string("' is missing required field '")) + name) + std::string("'")));
             }
-            if ((expression->type_ == std::string("FunctionDeclaration")) && (name == std::string("body"))) {
+            if (((!doof::is_null(property)) && doof::is_null(property->value)) && ::app_src_emitter_expr_utils_::needsNullableVariantPromotion(property->resolvedType, field->resolvedType)) {
+                (value = ::app_src_emitter_expr_utils_::emitNullableVariantPromotion(value, property->resolvedType, field->resolvedType, context->modulePath));
+            } else if (((!doof::is_null(property)) && doof::is_null(property->value)) && ::app_src_emitter_expr_utils_::needsVariantPromotion(property->resolvedType, field->resolvedType)) {
                 (value = ((((std::string("doof::variant_promote<") + ::app_src_emitter_types_::emitContextType(doof::unwrap_optional(field->resolvedType), context)) + std::string(">(")) + value) + std::string(")")));
-            }
-            if (((expression->type_ == std::string("LambdaExpression")) && (name == std::string("body"))) && (!doof::is_null(property))) {
-                (value = ((((std::string("doof::variant_promote<") + ::app_src_emitter_types_::emitContextType(doof::unwrap_optional(field->resolvedType), context)) + std::string(">(")) + value) + std::string(")")));
-            }
-            if (((expression->type_ == std::string("AsyncExpression")) && (name == std::string("expression"))) && (!doof::is_null(property))) {
-                (value = ((((std::string("doof::variant_promote<") + ::app_src_emitter_types_::emitContextType(doof::unwrap_optional(field->resolvedType), context)) + std::string(">(")) + value) + std::string(")")));
-            }
-            if (((!doof::is_null(property)) && doof::is_null(property->value)) && ::app_src_emitter_expr_utils_::needsNullableVariantPromotion(doof::resolved_type(property), field->resolvedType)) {
-                (value = ::app_src_emitter_expr_utils_::emitNullableVariantPromotion(value, doof::resolved_type(property), field->resolvedType, context->modulePath));
             }
             (values = (values + value));
         }

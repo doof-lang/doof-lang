@@ -101,13 +101,13 @@ std::string emitMethodReflection(std::shared_ptr<::app_src_ast_::ClassDeclaratio
             const auto& resultType = std::get<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject);
             (result = (((((result + std::string("                auto _result = _instance.")) + ::app_src_emitter_expr_::cppIdentifier(method->name)) + std::string("(")) + arguments) + std::string(");\n")));
             (result = (result + std::string("                if (doof::is_failure(_result)) {\n")));
-            if (doof::kind(resultType->errorType) == std::string("json-value")) {
+            if (std::visit([](auto&& _obj) { return _obj->kind; }, resultType->errorType) == std::string("json-value")) {
                 (result = (result + std::string("                    return doof::Failure<doof::JsonValue>{doof::failure_error(_result)};\n")));
             } else {
                 (result = (((result + std::string("                    return ")) + metadataFailure(500, std::string("\"An error occurred\""))) + std::string(";\n")));
             }
             (result = (result + std::string("                }\n")));
-            if (doof::kind(resultType->valueType) == std::string("none")) {
+            if (std::visit([](auto&& _obj) { return _obj->kind; }, resultType->valueType) == std::string("none")) {
                 (result = (((result + std::string("                return ")) + metadataSuccess(std::string("doof::json_value(nullptr)"))) + std::string(";\n")));
             } else {
                 (result = (result + std::string("                auto _success = doof::success_value(_result);\n")));

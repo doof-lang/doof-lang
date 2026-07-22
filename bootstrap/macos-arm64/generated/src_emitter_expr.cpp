@@ -69,7 +69,7 @@ std::string emitExpression(std::variant<std::shared_ptr<::app_src_ast_::IntLiter
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CallerExpression>>(_case_subject)) {
             const auto& caller = std::get<std::shared_ptr<::app_src_ast_::CallerExpression>>(_case_subject);
             const auto functionName = ((context->currentFunctionName == std::string("")) ? std::string("<module>") : context->currentFunctionName);
-            auto span = (doof::is_null(context->sourceLocationSpanOverride) ? caller->span : doof::span(context->sourceLocationSpanOverride));
+            auto span = (doof::is_null(context->sourceLocationSpanOverride) ? caller->span : context->sourceLocationSpanOverride->span);
             const auto fileName = ::app_src_emitter_names_::moduleDiagnosticPath(context->modulePath, true);
             (value = ((((((std::string("std::make_shared<doof::SourceLocation>(std::string(\"") + fileName) + std::string("\"), ")) + doof::to_string(span.start.line)) + std::string(", std::string(\"")) + functionName) + std::string("\"))")));
     }
@@ -180,7 +180,7 @@ std::string emitExpression(std::variant<std::shared_ptr<::app_src_ast_::IntLiter
             }
     }
     else {
-            doof::panic((std::string("Unsupported expression in initial C++ emitter: ") + doof::kind(expression)));
+            doof::panic((std::string("Unsupported expression in initial C++ emitter: ") + std::visit([](auto&& _obj) { return _obj->kind; }, expression)));
     }
     }
     const auto sourceType = ::app_src_emitter_expr_utils_::decoratedExpressionType(expression);

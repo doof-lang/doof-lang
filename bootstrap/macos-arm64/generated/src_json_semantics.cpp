@@ -232,7 +232,7 @@ bool isGeneratedJsonSerializationType(std::variant<std::shared_ptr<::app_src_sem
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject);
-            if (doof::kind(array->elementType) == std::string("json-value")) {
+            if (std::visit([](auto&& _obj) { return _obj->kind; }, array->elementType) == std::string("json-value")) {
                 return true;
             }
             return isGeneratedJsonSerializationType(array->elementType, programs, visited);
@@ -299,7 +299,7 @@ bool isGeneratedJsonSerializationType(std::variant<std::shared_ptr<::app_src_sem
                 auto _case_subject = map->keyType;
                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
                     const auto& key = std::get<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject);
-                    return ((key->name == std::string("string")) && (doof::kind(map->valueType) == std::string("json-value")));
+                    return ((key->name == std::string("string")) && (std::visit([](auto&& _obj) { return _obj->kind; }, map->valueType) == std::string("json-value")));
             }
             else {
                     return false;
@@ -390,8 +390,8 @@ bool isGeneratedJsonSerializationField(std::shared_ptr<::app_src_ast_::ClassFiel
     return isGeneratedJsonDeserializationField(field, programs, visited);
 }
 bool isGeneratedJsonDeserializationAnnotation(std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> annotation, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs, std::shared_ptr<std::vector<std::string>> visited) {
-    if (!doof::is_null(doof::resolved_type(annotation))) {
-        return isGeneratedJsonType(doof::unwrap_optional(doof::resolved_type(annotation)), programs, visited);
+    if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, annotation))) {
+        return isGeneratedJsonType(doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, annotation)), programs, visited);
     }
     {
         auto _case_subject = annotation;
@@ -430,10 +430,10 @@ bool isGeneratedJsonDeserializationAnnotation(std::variant<std::shared_ptr<::app
             if (((static_cast<int32_t>((named->typeArgs)->size()) != 0) || doof::is_null(named->resolvedSymbol)) || named->resolvedSymbol->native_) {
                 return false;
             }
-            if (doof::kind(named->resolvedSymbol) == std::string("enum")) {
+            if (named->resolvedSymbol->kind == std::string("enum")) {
                 return true;
             }
-            if ((doof::kind(named->resolvedSymbol) != std::string("class")) && (doof::kind(named->resolvedSymbol) != std::string("struct"))) {
+            if ((named->resolvedSymbol->kind != std::string("class")) && (named->resolvedSymbol->kind != std::string("struct"))) {
                 return false;
             }
             const auto declaration = findJsonClassDeclaration(programs, doof::unwrap_optional(named->resolvedSymbol));
@@ -481,8 +481,8 @@ bool isGeneratedJsonDeserializationAnnotation(std::variant<std::shared_ptr<::app
     return false;
 }
 bool isGeneratedJsonSerializationAnnotation(std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> annotation, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs, std::shared_ptr<std::vector<std::string>> visited) {
-    if (!doof::is_null(doof::resolved_type(annotation))) {
-        return isGeneratedJsonSerializationType(doof::unwrap_optional(doof::resolved_type(annotation)), programs, visited);
+    if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, annotation))) {
+        return isGeneratedJsonSerializationType(doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, annotation)), programs, visited);
     }
     {
         auto _case_subject = annotation;
@@ -515,7 +515,7 @@ bool isGeneratedJsonSerializationAnnotation(std::variant<std::shared_ptr<::app_s
                 }
                 }
             }
-            if ((!doof::is_null(named->resolvedSymbol)) && ((doof::kind(named->resolvedSymbol) == std::string("class")) || (doof::kind(named->resolvedSymbol) == std::string("struct")))) {
+            if ((!doof::is_null(named->resolvedSymbol)) && ((named->resolvedSymbol->kind == std::string("class")) || (named->resolvedSymbol->kind == std::string("struct")))) {
                 const auto declaration = findJsonClassDeclaration(programs, doof::unwrap_optional(named->resolvedSymbol));
                 if (doof::is_null(declaration)) {
                     return (static_cast<int32_t>((programs)->size()) == 0);

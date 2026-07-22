@@ -80,7 +80,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                 }
                 else {
                         ::app_src_checker_expressions_::checkExpression(state, expression, scope, std::monostate{});
-                        ::app_src_checker_common_::typeError(state, ((std::string("Omitted type arguments for ") + named->name) + std::string(" require a same-site non-empty set literal")), doof::span(expression));
+                        ::app_src_checker_common_::typeError(state, ((std::string("Omitted type arguments for ") + named->name) + std::string(" require a same-site non-empty set literal")), std::visit([](auto&& _obj) { return _obj->span; }, expression));
                         return doof::optional_value(::app_src_checker_types_::setType(::app_src_checker_types_::unknownType(), (named->name == std::string("ReadonlySet"))));
                 }
                 }
@@ -143,7 +143,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                 }
                 else {
                         ::app_src_checker_expressions_::checkExpression(state, expression, scope, std::monostate{});
-                        ::app_src_checker_common_::typeError(state, ((std::string("Omitted type arguments for ") + named->name) + std::string(" require a same-site non-empty map literal")), doof::span(expression));
+                        ::app_src_checker_common_::typeError(state, ((std::string("Omitted type arguments for ") + named->name) + std::string(" require a same-site non-empty map literal")), std::visit([](auto&& _obj) { return _obj->span; }, expression));
                         return doof::optional_value(::app_src_checker_types_::mapType(::app_src_checker_types_::unknownType(), ::app_src_checker_types_::unknownType(), (named->name == std::string("ReadonlyMap"))));
                 }
                 }
@@ -163,7 +163,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                 for (const auto& item : *_iterable_2) {
                     const auto actual = ::app_src_checker_expressions_::checkExpression(state, item, scope, ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::jsonValueType()));
                     if (!::app_src_checker_types_::isAssignable(actual, ::app_src_checker_types_::jsonValueType())) {
-                        ::app_src_checker_common_::typeError(state, ((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(actual)) + std::string(" to JsonValue")), doof::span(item));
+                        ::app_src_checker_common_::typeError(state, ((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(actual)) + std::string(" to JsonValue")), std::visit([](auto&& _obj) { return _obj->span; }, item));
                     }
                 }
                 return ::app_src_checker_common_::finish(state, doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(expression), doof::unwrap_optional(expected));
@@ -175,7 +175,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     for (const auto& item : *_iterable_3) {
                         const auto actual = ::app_src_checker_expressions_::checkExpression(state, item, scope, ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::jsonValueType()));
                         if (!::app_src_checker_types_::isAssignable(actual, ::app_src_checker_types_::jsonValueType())) {
-                            ::app_src_checker_common_::typeError(state, ((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(actual)) + std::string(" to JsonValue")), doof::span(item));
+                            ::app_src_checker_common_::typeError(state, ((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(actual)) + std::string(" to JsonValue")), std::visit([](auto&& _obj) { return _obj->span; }, item));
                         }
                     }
                     return ::app_src_checker_common_::finish(state, doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(expression), ::app_src_checker_types_::jsonValueType());
@@ -219,7 +219,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
         for (const auto& item : *_iterable_4) {
             const auto actual = ::app_src_checker_expressions_::checkExpression(state, item, scope, ::app_src_checker_symbols_::optionalResolvedType(doof::unwrap_optional(expectedElement)));
             if (!::app_src_checker_types_::isAssignable(actual, doof::unwrap_optional(expectedElement))) {
-                ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(actual)) + std::string(" to ")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(expectedElement))), doof::span(item));
+                ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(actual)) + std::string(" to ")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(expectedElement))), std::visit([](auto&& _obj) { return _obj->span; }, item));
             }
         }
         {

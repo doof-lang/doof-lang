@@ -37,7 +37,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 
 import { CheckerState } from "./checker-state"
 import { deprecatedNoneAlias, typeError } from "./checker-common"
-import { builtinSourceLocationType, optionalResolvedType, methodSignature, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
+import { builtinParseErrorType, builtinSourceLocationType, declaredSymbolName, optionalResolvedType, methodSignature, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
 import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor } from "./checker-interfaces"
 
 export function resolveType(state: CheckerState, annotation: TypeAnnotation, module: ModuleInfo, scope: Scope): ResolvedType {
@@ -50,6 +50,7 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
       if named.name == "JsonValue" { return decorateType(state, annotation, jsonValueType()) }
       if named.name == "JsonObject" { return decorateType(state, annotation, jsonObjectType()) }
       if named.name == "SourceLocation" { return decorateType(state, annotation, builtinSourceLocationType()) }
+      if named.name == "ParseError" { return decorateType(state, annotation, builtinParseErrorType()) }
       if named.name == "Range" { return decorateType(state, annotation, rangeType()) }
       if hasTypeParam(scope, named.name) { return decorateType(state, annotation, typeParameter(named.name, typeParamConstraintName(scope, named.name), typeParamConstraint(scope, named.name))) }
       if named.name == "Tuple" {
@@ -136,11 +137,11 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
             _ -> { }
           }
         }
-        concreteInterface := interfaceType(named.name, symbol!, typeArgs)
+        concreteInterface := interfaceType(declaredSymbolName(symbol!), symbol!, typeArgs)
         if concreteTypes(typeArgs) { registerConcreteInterfaceImplementations(state.result, concreteInterface) }
         return decorateType(state, annotation, concreteInterface)
       }
-      if symbol!.kind == "enum" { return decorateType(state, annotation, enumType(named.name, symbol!)) }
+      if symbol!.kind == "enum" { return decorateType(state, annotation, enumType(declaredSymbolName(symbol!), symbol!)) }
       let typeArgs: ResolvedType[] = []
       for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope)) }
       declaration := declarationFor(state.result, symbol!)
@@ -152,7 +153,7 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
           _ -> { }
         }
       }
-      return decorateType(state, annotation, classType(named.name, symbol!, typeArgs))
+      return decorateType(state, annotation, classType(declaredSymbolName(symbol!), symbol!, typeArgs))
     }
     array: ArrayType -> { return decorateType(state, annotation, arrayType(resolveType(state, array.elementType, module, scope), array.readonly_)) }
     union: UnionType -> {

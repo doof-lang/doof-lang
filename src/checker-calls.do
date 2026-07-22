@@ -48,7 +48,7 @@ import { checkerSemanticSpan } from "./checker-validation"
 export function checkCall(state: CheckerState, expression: CallExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   case expression.callee {
     identifier: Identifier -> {
-      if identifier.name == "Success" || identifier.name == "Failure" {
+      if (identifier.name == "Success" || identifier.name == "Failure") && lookup(scope, identifier.name) == none {
         let expectedResult: ResultResolvedType | none = none
         if expected != none {
           case expected! {
