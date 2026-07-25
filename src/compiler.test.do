@@ -24,6 +24,35 @@ export function testCompilesAnImportedProject(): none {
   Assert.equal(result.emission!.modules[0].header.contains("#include \"math.hpp\""), true)
 }
 
+export function testLowersNativeEntryScriptBeforeOptionalMain(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "let count = arguments.length\nfunction current(): int => count\nprintln(string(current()))\nfunction main(arguments: string[]): int => arguments.length + current()",
+  }], "/main.do")
+
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "std::optional<int32_t> __doof_script_storage_count")
+  Assert.stringContains(source, "int32_t& __doof_script_get_count()")
+  Assert.stringContains(source, "void __doof_run_script(std::shared_ptr<std::vector<std::string>> arguments)")
+  Assert.stringContains(source, "__doof_script_storage_count.emplace(count)")
+  Assert.stringContains(source, "__doof_run_script(arguments); return app_main_::doof_main(arguments)")
+}
+
+export function testLowersTopLevelTryFailureToPanic(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "function load(): Result<int, string> => Failure { error: \"missing\" }\ntry value := load()\nprintln(string(value))",
+  }], "/main.do")
+
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::panic_at")
+  Assert.stringContains(source, "std::string(\"try failed\") + std::string(\": \")")
+  Assert.stringContains(source, "std::abort();")
+}
+
 export function testValidatesIsolationOnceAfterCheckingImportedGraph(): none {
   result := compile([
     SourceFile { path: "/main.do", source: "import { Worker } from \"./worker\"\nfunction main(): none { worker := Actor<Worker>()\nworker.run() }" },

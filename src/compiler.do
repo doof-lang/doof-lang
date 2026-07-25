@@ -48,7 +48,7 @@ function compileInternal(
   for diagnostic of analysis.diagnostics { diagnostics.push(diagnostic) }
 
   if !hasErrorDiagnostics(diagnostics) {
-    checker := createChecker(analysis)
+    checker := createChecker(analysis, entry, entryMode)
     let checkedPaths: string[] = []
     let visitingPaths: string[] = []
     for module of analysis.modules {

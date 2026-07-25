@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { exists, mkdir, writeText } from "std/fs"
-import { readProjectSpec } from "./project"
+import { projectEntryRequestError, readProjectSpec } from "./project"
 
 export function testReadsRootProjectNativeBuildThroughPackageManifestModel(): none {
   root := "/tmp/doof-compiler-project-native-test"
@@ -47,10 +47,17 @@ export function testFallsBackWhenNoProjectManifestExists(): none {
 
   project := readProjectSpec(entry, "macos")
   Assert.equal(project.hasManifest, false)
+  Assert.equal(project.explicitEntry, true)
+  Assert.equal(projectEntryRequestError(project, entry), "")
   Assert.equal(project.rootDirectory, root)
   Assert.equal(project.entry, "standalone.do")
   Assert.equal(project.name, "doof-compiler-project-no-manifest-test")
 
   wasmProject := readProjectSpec(entry, "macos", "wasm")
   Assert.equal(wasmProject.target, "wasm")
+
+  directoryProject := readProjectSpec(root, "macos")
+  Assert.equal(directoryProject.hasManifest, false)
+  Assert.equal(directoryProject.explicitEntry, false)
+  Assert.equal(projectEntryRequestError(directoryProject, root), "no doof.json found; pass an explicit .do entry file")
 }

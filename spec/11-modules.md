@@ -322,7 +322,7 @@ export class B {
 }
 ```
 
-`readonly` and `:=` declarations follow strict declaration order. Functions hoist. Module bindings are not reassignable, preventing initialization order issues while still allowing `:=` to reference values with mutable interiors. Deprecated `const` declarations remain accepted temporarily with a warning.
+`readonly`, `:=`, and `let` declarations follow strict declaration order. Functions hoist. `readonly` and `:=` module bindings are not reassignable; `let` explicitly opts into module-wide mutable state and is rejected when isolation rules would make access unsafe. Deprecated `const` declarations remain accepted temporarily with a warning.
 
 ---
 
@@ -387,6 +387,21 @@ export function processData(): string {
 - The `main()` function **must not be exported**
 - Only one `main()` function can exist per module
 
+### Native Script Entries
+
+The selected native entry module may contain executable top-level statements.
+Direct bindings remain private module bindings, but their initializers and the
+statements execute in source order. The implicit `arguments: string[]` binding
+is available only in this execution scope; declared functions do not capture
+it. An optional `main(arguments: string[])` receives the same array through its
+ordinary parameter and runs after the top-level body.
+
+Top-level execution has no return value. Statement-level `try` panics on
+failure, and `return` is invalid. A native entry using executable statements
+cannot export or re-export declarations. Imported reference modules cannot
+contain executable statements, although module-level `let` is supported as
+explicit mutable state subject to isolation checking.
+
 ### WebAssembly Library Exports
 
 When a package is built with `build.target = "wasm"` or `--target wasm`, exported top-level functions in the entry module become host-callable WebAssembly exports. The generated export name is `doof_export_<functionName>`.
@@ -394,6 +409,11 @@ When a package is built with `build.target = "wasm"` or `--target wasm`, exporte
 The wasm export ABI is JSON-text based: the host passes a UTF-8 JSON object string with parameters by name, and the wrapper returns an allocated UTF-8 JSON envelope string. The envelope is `{"ok":true,"value":...}` on success or `{"ok":false,"error":...}` on failure. Hosts must call the exported `doof_free` after reading returned strings.
 
 Generic functions and functions whose parameter or return types cannot be serialized by the supported JSON ABI are compile-time errors for wasm exports. `main()` remains non-exported and is not used as a wasm entry point.
+
+WebAssembly entry modules retain declarative library semantics, including when
+built directly from a manifestless `.do` file with `--target wasm`. They cannot
+use native entry statements, implicit `arguments`, relaxed entry initializers,
+or `main` execution.
 
 ### Compilation Model
 

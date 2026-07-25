@@ -2,6 +2,9 @@
 
 The compiler accepts a source file or a package directory. Package commands
 discover the nearest `doof.json` and use `build.entry` when present.
+An explicit `.do` file overrides that entry. Without a `doof.json`, source
+commands require an explicit `.do` file; directory/default discovery is not
+available.
 
 ```text
 doof check <path>
@@ -18,6 +21,15 @@ doof test <path> [filter] [--list] [--coverage]
 from its package root. `package` creates an optimized release artifact and
 records provenance. `test` discovers and runs exported test functions.
 
+Manifestless WebAssembly libraries use an explicit source and target:
+
+```text
+doof build library.do --target wasm
+```
+
+Their entry modules remain declarative libraries: exported functions use the
+JSON ABI, while native script statements and `arguments` are unavailable.
+
 The compiler supports native executables, macOS applications, iOS simulator
 and device applications, and WebAssembly libraries. Platform signing and target
 options are read from `doof.json`; command-line overrides take precedence.
@@ -25,4 +37,3 @@ options are read from `doof.json`; command-line overrides take precedence.
 Every command honors `DOOF_STDLIB_ROOT` as an explicit mutable standard-library
 checkout. The override is required for compiler development until clean remote
 standard-package acquisition is part of the supported bootstrap contract.
-

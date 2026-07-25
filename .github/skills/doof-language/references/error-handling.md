@@ -58,6 +58,9 @@ Result values cannot be silently discarded. Ignoring a `Result` is a compile err
 
 Statement-level `try` unwraps the success payload or propagates the failure from the enclosing function. It only works inside functions that themselves return `Result<..., ...>`.
 
+The native entry-script scope is the exception: because top-level execution
+has no return channel, statement-level `try` panics on failure.
+
 ```doof
 function loadConfig(): Result<Config, Error> {
     try content := readFile("config.json")

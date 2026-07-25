@@ -7,7 +7,7 @@ import {
 import {
   ActorCreationExpression, Block, CallExpression, ClassDeclaration, ConstDeclaration,
   ExportDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding,
-  InterfaceDeclaration, MemberExpression, ReadonlyDeclaration, SourceSpan, Statement,
+  InterfaceDeclaration, LetDeclaration, MemberExpression, ReadonlyDeclaration, SourceSpan, Statement,
 } from "./ast"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import {
@@ -85,6 +85,7 @@ function moduleValueDeclaration(result: AnalysisResult, binding: Binding): State
       value: ConstDeclaration -> { if sameSpan(value.span, binding.span) { return value } }
       value: ReadonlyDeclaration -> { if sameSpan(value.span, binding.span) { return value } }
       value: ImmutableBinding -> { if sameSpan(value.span, binding.span) { return value } }
+      value: LetDeclaration -> { if sameSpan(value.span, binding.span) { return value } }
       _ -> { }
     }
   }
@@ -99,6 +100,7 @@ function mutableModuleReason(result: AnalysisResult, expression: Expression): Is
       if declaration == none { return none }
       case declaration! {
         _: ReadonlyDeclaration -> { return none }
+        _: LetDeclaration -> { return IsolationReason { kind: "module", name: identifier.name, span: identifier.span } }
         _: ConstDeclaration -> { }
         _: ImmutableBinding -> { }
         _ -> { return none }

@@ -24,7 +24,9 @@ function main(args: string[]): none
 function main(args: string[]): int
 ```
 
-`main()` must not be exported.
+`main()` must not be exported. A native entry can also execute top-level
+statements before optional `main`; that execution scope receives implicit
+`arguments: string[]`.
 
 ## Variables and Bindings
 
@@ -32,7 +34,7 @@ function main(args: string[]): int
 | --- | --- | --- |
 | `readonly` | no | deeply immutable value; allowed globally or locally |
 | `:=` | no | immutable binding, value may still have mutable interior; allowed globally or locally |
-| `let` | yes | mutable local binding |
+| `let` | yes | mutable local or module binding; module access is non-isolated |
 
 ```doof
 readonly MAX = 100
@@ -41,7 +43,7 @@ items := [1, 2, 3]
 let total = 0
 ```
 
-Prefer `readonly` for deeply immutable values and `:=` for immutable bindings with mutable interiors. `const` is deprecated and remains accepted temporarily with a warning. Global scope allows `readonly`, `:=`, deprecated `const`, and `function`. Functions hoist. `readonly` and `:=` do not.
+Prefer `readonly` for deeply immutable values and `:=` for immutable bindings with mutable interiors. `const` is deprecated and remains accepted temporarily with a warning. Global scope allows `readonly`, `:=`, `let`, deprecated `const`, and `function`. Functions hoist; value bindings do not.
 
 ### `with` Scoped Bindings
 

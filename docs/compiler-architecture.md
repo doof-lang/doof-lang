@@ -18,6 +18,11 @@ inputs. `native-build.do` creates stable compile/link tasks;
 header dependencies, persists versioned state, skips clean PCH/object/link
 work, and executes dirty tasks with bounded parallelism.
 
+Native entry scripts are lowered within the entry translation unit. Private
+deferred binding storage and one generated runner preserve source order without
+introducing a graph-wide initialization protocol. Reference modules and
+WebAssembly libraries retain ordinary namespace-scope initialization.
+
 The checker and emitter are split by concern. Shared semantic contracts live in
 `semantic.do`, checker state/types modules, and the emit-readiness validation
 walk. Unknown types, missing decorations, constraints, or dispatch targets

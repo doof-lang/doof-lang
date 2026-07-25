@@ -58,13 +58,15 @@ Remote package entries use exact `{ url, ref, commit }` coordinates. `ref` is de
 
 ### Global Scope
 
-Only `readonly`, deprecated `const`, and `function` declarations are allowed. Prefer `readonly` for module constants; `const` remains accepted temporarily with a warning.
+`readonly`, `:=`, `let`, deprecated `const`, and function declarations are
+allowed. Prefer immutable module bindings; module `let` is mutable global state
+and cannot be reached from isolated or actor-dispatched code.
 
 | Declaration | Hoists? |
 |-------------|---------|
 | `function` | Yes |
 | `readonly` | No |
-| `:=` / `let` | Not allowed globally |
+| `:=` / `let` | No |
 
 ### Nested Scope
 
@@ -86,6 +88,11 @@ function main(args: string[]): int { /* ... */ }
 ### Module Initialization
 
 Module-scope `readonly` values initialize before `main()`. Imported modules initialize depth-first.
+
+A native entry may execute top-level statements before optional `main` and
+receives implicit `arguments: string[]`. Such a script entry cannot export.
+WebAssembly entries remain declarative libraries; a manifestless build uses an
+explicit `.do` file and `--target wasm`.
 
 ### WebAssembly Library Exports
 

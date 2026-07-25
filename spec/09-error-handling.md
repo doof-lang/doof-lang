@@ -179,7 +179,8 @@ The must-use rule prevents accidental loss of recoverable failures.
 ### `try` Statement
 
 Statement-level `try` unwraps the success payload or propagates the failure from
-the current function.
+the current function. In a native entry script's top-level execution scope,
+there is no return channel, so failure raises a source-attributed panic instead.
 
 ```doof
 function loadConfig(path: string): Result<Config, string> {
@@ -194,7 +195,8 @@ function loadConfig(path: string): Result<Config, string> {
 
 Rules:
 
-- `try` can only be used in a function that returns `Result<_, E>`.
+- `try` can only be used in a function that returns `Result<_, E>` or in native
+  entry-script top-level execution.
 - The tried expression must have type `Result<T, F>`.
 - `F` must be assignable to the enclosing function's error type `E`.
 - The binding receives the success payload type `T`, not `Result<T, F>`.

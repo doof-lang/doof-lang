@@ -5,14 +5,18 @@
 // header/source pair; there is no project-wide emission mode.
 
 import {
-  ClassDeclaration, ConstDeclaration, ExportDeclaration, FunctionDeclaration,
-  ImmutableBinding, InterfaceDeclaration, LetDeclaration, Program, ReadonlyDeclaration, Statement, TypeAliasDeclaration,
+  ClassDeclaration, ConstDeclaration, EnumDeclaration, ExportDeclaration, ExportList, FunctionDeclaration,
+  ImmutableBinding, ImportDeclaration, InterfaceDeclaration, LetDeclaration, MockImportDirective, Program,
+  ReadonlyDeclaration, Statement, TryStatement, TypeAliasDeclaration,
 } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { createEmitContext, createEmitContextForModule, EmitContext, EmitModuleSurface } from "./emitter-context"
 import { emitClassDeclaration, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions, emitValueDeclaration } from "./emitter-decl"
 import { emitGeneratedJsonMethods, emitInterfaceJsonDefinition } from "./emitter-json"
 import { emitMetadataDefinition } from "./emitter-metadata"
+import { emitStatement } from "./emitter-stmt"
+import { emitContextType } from "./emitter-types"
+import { cppIdentifier } from "./emitter-expr"
 import { HeaderPlan, planHeader, renderHeader } from "./emitter-header"
 import { buildInstantiationPlan, ClassInstantiation, FunctionInstantiation, InstantiationPlan, MethodInstantiation, nativeTemplateClassKey } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
@@ -104,6 +108,7 @@ export class CxxModuleEmitter {
     }
     if instantiations != none { configureInstantiationRegistry(context, instantiations!) }
     plan := planHeader(program, context)
+    context.scriptEntry = (entryMode == "executable" || entryMode == "ios-app") && hasScriptStatements([program])
     if instantiations != none { addConcreteHeaderDeclarations(plan, context, instantiations!) }
     return emitPlanned([program], context, plan, entryMode, moduleIncludes)
   }
@@ -120,25 +125,144 @@ export class CxxModuleEmitter {
     source = source + "\n"
     source = source + "namespace " + namespaceName + " {\n"
     source = source + emitImportedNamespaces(context)
+    if context.scriptEntry { source = source + emitScriptStorage(programs, context) }
     for program of programs {
       for statement of program.statements {
-        source = source + emitSourceStatement(statement, context)
+        if !(context.scriptEntry && scriptGlobalDeclaration(statement) != none) {
+          source = source + emitSourceStatement(statement, context)
+        }
       }
     }
+    if context.scriptEntry { source = source + emitScriptRunner(programs, context) }
     if instantiations != none { source = source + emitConcreteFunctions(context, instantiations!) }
     source = source + "}\n"
     nativeMethods := emitNativeClassMethods(programs, context)
     if nativeMethods != "" {
       source = source + "\nusing namespace ::" + namespaceName + ";\n\n" + nativeMethods
     }
-    if entryMode == "executable" && plan.hasMain { source = source + emitMainWrapper(namespaceName, plan) }
-    if entryMode == "ios-app" && plan.hasMain { source = source + emitAppEntryWrapper(namespaceName, plan) }
+    if entryMode == "executable" && (plan.hasMain || context.scriptEntry) { source = source + emitMainWrapper(namespaceName, plan, context.scriptEntry) }
+    if entryMode == "ios-app" && (plan.hasMain || context.scriptEntry) { source = source + emitAppEntryWrapper(namespaceName, plan, context.scriptEntry) }
     return ModuleEmission {
       modulePath: context.modulePath, header, source, headerName, sourceName,
       coverageModuleId: context.coverageModuleId,
       instrumentedLines: sortedCoverageLines(context.coverageInstrumentedLines),
     }
   }
+}
+
+function hasScriptStatements(programs: Program[]): bool {
+  for program of programs { for statement of program.statements {
+    if !isModuleDeclaration(statement) { return true }
+  } }
+  return false
+}
+
+function isValueDeclaration(statement: Statement): bool {
+  case statement {
+    _: ConstDeclaration -> { return true }
+    _: ReadonlyDeclaration -> { return true }
+    _: ImmutableBinding -> { return true }
+    _: LetDeclaration -> { return true }
+    _ -> { return false }
+  }
+  return false
+}
+
+function isModuleDeclaration(statement: Statement): bool {
+  if isValueDeclaration(statement) { return true }
+  case statement {
+    _: FunctionDeclaration -> { return true }
+    _: ClassDeclaration -> { return true }
+    _: InterfaceDeclaration -> { return true }
+    _: EnumDeclaration -> { return true }
+    _: TypeAliasDeclaration -> { return true }
+    _: ImportDeclaration -> { return true }
+    _: MockImportDirective -> { return true }
+    _: ExportDeclaration -> { return true }
+    _: ExportList -> { return true }
+    _ -> { return false }
+  }
+  return false
+}
+
+function scriptGlobalDeclaration(statement: Statement): Statement | none {
+  if isValueDeclaration(statement) { return statement }
+  case statement {
+    try_: TryStatement -> { case try_.binding {
+      value: ConstDeclaration -> { return value }
+      value: ReadonlyDeclaration -> { return value }
+      value: ImmutableBinding -> { return value }
+      value: LetDeclaration -> { return value }
+      _ -> { }
+    } }
+    _ -> { }
+  }
+  return none
+}
+
+function scriptDeclarationName(statement: Statement): string {
+  case statement {
+    value: ConstDeclaration -> { return value.name }
+    value: ReadonlyDeclaration -> { return value.name }
+    value: ImmutableBinding -> { return value.name }
+    value: LetDeclaration -> { return value.name }
+    _ -> { return "" }
+  }
+  return ""
+}
+
+function scriptDeclarationType(statement: Statement): ResolvedType | none {
+  case statement {
+    value: ConstDeclaration -> { return value.resolvedType }
+    value: ReadonlyDeclaration -> { return value.resolvedType }
+    value: ImmutableBinding -> { return value.resolvedType }
+    value: LetDeclaration -> { return value.resolvedType }
+    _ -> { return none }
+  }
+  return none
+}
+
+function scriptDeclarationMutable(statement: Statement): bool {
+  case statement {
+    _: LetDeclaration -> { return true }
+    _ -> { return false }
+  }
+  return false
+}
+
+function emitScriptStorage(programs: Program[], context: EmitContext): string {
+  let source = "\n"
+  for program of programs { for statement of program.statements {
+    declaration := scriptGlobalDeclaration(statement)
+    if declaration == none { continue }
+    name := scriptDeclarationName(declaration!)
+    type_ := scriptDeclarationType(declaration!)
+    if name == "" || name == "_" || type_ == none { continue }
+    cppName := cppIdentifier(name)
+    typeText := emitContextType(type_!, context)
+    source = source + "std::optional<" + typeText + "> __doof_script_storage_" + cppName + ";\n"
+    returnType := if scriptDeclarationMutable(declaration!) then typeText + "&" else "const " + typeText + "&"
+    source = source + returnType + " __doof_script_get_" + cppName + "() { if (!__doof_script_storage_" + cppName + ".has_value()) doof::panic(\"Entry binding '" + name + "' was accessed before initialization\"); return *__doof_script_storage_" + cppName + "; }\n"
+  } }
+  return source + "\n"
+}
+
+function emitScriptRunner(programs: Program[], context: EmitContext): string {
+  previousTryPanics := context.tryPanics
+  context.tryPanics = true
+  let source = "\nvoid __doof_run_script(std::shared_ptr<std::vector<std::string>> arguments) {\n"
+  for program of programs { for statement of program.statements {
+    declaration := scriptGlobalDeclaration(statement)
+    if declaration != none {
+      source = source + emitStatement(statement, 1, context)
+      name := scriptDeclarationName(declaration!)
+      if name != "" && name != "_" { source = source + "    __doof_script_storage_" + cppIdentifier(name) + ".emplace(" + cppIdentifier(name) + ");\n" }
+    } else if !isModuleDeclaration(statement) {
+      source = source + emitStatement(statement, 1, context)
+    }
+  } }
+  context.tryPanics = previousTryPanics
+  return source + "}\n"
 }
 
 // Interface variants only require forward declarations in headers, which
@@ -460,21 +584,42 @@ function emitNativeClassMethodsForStatement(statement: Statement, context: EmitC
 }
 
 // Translate an uncaught Doof panic into a stable process-boundary diagnostic.
-function emitMainWrapper(moduleName: string, plan: HeaderPlan): string {
-  signature := if plan.mainAcceptsArgs then "int main(int argc, char** argv)" else "int main()"
-  argumentSetup := if plan.mainAcceptsArgs then "std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); " else ""
-  call := if plan.mainAcceptsArgs then moduleName + "::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))" else moduleName + "::doof_main()"
-  success := if plan.mainReturnsInt then "return " + call + ";" else call + "; return 0;"
+function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool = false): string {
+  if !hasScript {
+    signature := if plan.mainAcceptsArgs then "int main(int argc, char** argv)" else "int main()"
+    argumentSetup := if plan.mainAcceptsArgs then "std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); " else ""
+    call := if plan.mainAcceptsArgs then moduleName + "::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))" else moduleName + "::doof_main()"
+    success := if plan.mainReturnsInt then "return " + call + ";" else call + "; return 0;"
+    panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
+    actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
+    return "\n" + signature + " { try { " + actorSetup + argumentSetup + success + " } " + panicHandler + " }\n"
+  }
+  needsArguments := plan.mainAcceptsArgs || hasScript
+  signature := if needsArguments then "int main(int argc, char** argv)" else "int main()"
+  argumentSetup := if needsArguments then "std::vector<std::string> raw_arguments; for (int i = 1; i < argc; ++i) raw_arguments.emplace_back(argv[i]); auto arguments = std::make_shared<std::vector<std::string>>(std::move(raw_arguments)); " else ""
+  scriptCall := if hasScript then moduleName + "::__doof_run_script(arguments); " else ""
+  call := if plan.mainAcceptsArgs then moduleName + "::doof_main(arguments)" else moduleName + "::doof_main()"
+  success := if !plan.hasMain then scriptCall + "return 0;" else if plan.mainReturnsInt then scriptCall + "return " + call + ";" else scriptCall + call + "; return 0;"
   panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
   actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
   return "\n" + signature + " { try { " + actorSetup + argumentSetup + success + " } " + panicHandler + " }\n"
 }
 
 // App targets provide their own platform main and enter Doof through this C ABI.
-function emitAppEntryWrapper(moduleName: string, plan: HeaderPlan): string {
-  argumentSetup := if plan.mainAcceptsArgs then "std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); " else "(void)argc; (void)argv; "
-  call := if plan.mainAcceptsArgs then moduleName + "::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))" else moduleName + "::doof_main()"
-  success := if plan.mainReturnsInt then "return " + call + ";" else call + "; return 0;"
+function emitAppEntryWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool = false): string {
+  if !hasScript {
+    argumentSetup := if plan.mainAcceptsArgs then "std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); " else "(void)argc; (void)argv; "
+    call := if plan.mainAcceptsArgs then moduleName + "::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))" else moduleName + "::doof_main()"
+    success := if plan.mainReturnsInt then "return " + call + ";" else call + "; return 0;"
+    panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
+    actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
+    return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + argumentSetup + success + " } " + panicHandler + " }\n"
+  }
+  needsArguments := plan.mainAcceptsArgs || hasScript
+  argumentSetup := if needsArguments then "std::vector<std::string> raw_arguments; for (int i = 1; i < argc; ++i) raw_arguments.emplace_back(argv[i]); auto arguments = std::make_shared<std::vector<std::string>>(std::move(raw_arguments)); " else "(void)argc; (void)argv; "
+  scriptCall := if hasScript then moduleName + "::__doof_run_script(arguments); " else ""
+  call := if plan.mainAcceptsArgs then moduleName + "::doof_main(arguments)" else moduleName + "::doof_main()"
+  success := if !plan.hasMain then scriptCall + "return 0;" else if plan.mainReturnsInt then scriptCall + "return " + call + ";" else scriptCall + call + "; return 0;"
   panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
   actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
   return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + argumentSetup + success + " } " + panicHandler + " }\n"

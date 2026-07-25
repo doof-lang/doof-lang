@@ -25,3 +25,10 @@ Actors, promises, escaping mutable captures, `Result`, checked narrowing,
 destructuring, JSON serialization, metadata/invoke, and WebAssembly wrappers
 have dedicated lowering modules. Representation changes require focused emitter
 tests and generated-C++ compile/runtime coverage in the release gate.
+
+Native entries containing top-level statements receive a private
+`__doof_run_script` function. Direct bindings use optional storage and checked
+accessors so entry functions can refer to them while initialization follows
+source order. The native boundary constructs `arguments`, runs the script once,
+then invokes optional `main`. Imported modules keep their existing static
+initialization; this is not a graph-wide idempotence or cycle protocol.

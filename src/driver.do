@@ -29,7 +29,7 @@ import { iosPackageArchiveName, iosTargetTriple } from "./ios-app"
 import { assembleIOSApp, configureIOSNativeBuild, signAndArchiveIOSApp } from "./ios-app-driver"
 import { resolveIOSDeviceIdentifier, resolveIOSDeviceSigningOptions, signIOSDeviceApp } from "./ios-device"
 import { Parser } from "./parser"
-import { environmentValue, fileName, joinPath, parentPath, readProjectSpec } from "./project"
+import { environmentValue, fileName, joinPath, parentPath, projectEntryRequestError, readProjectSpec } from "./project"
 import { renderBuildProvenance } from "./provenance"
 import { SourceLoader } from "./resolver"
 import {
@@ -984,6 +984,11 @@ function testRequest(request: CliRequest): int {
 
 function emitRequest(request: CliRequest): int {
   let project = readProjectSpec(request.entry, hostPlatform(), request.targetOverride)
+  entryError := projectEntryRequestError(project, request.entry)
+  if entryError != "" {
+    println("error: " + entryError)
+    return 1
+  }
   iosDestination := if request.command == "package" then "device" else request.iosDestination
   nativePlatform := if project.iosApp == none then hostPlatform() else "ios-" + iosDestination
   if project.iosApp != none { project = readProjectSpec(request.entry, nativePlatform, request.targetOverride) }

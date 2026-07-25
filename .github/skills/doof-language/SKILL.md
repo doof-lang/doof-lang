@@ -42,7 +42,7 @@ value := source as string else { return "" }
 
 Key reminders:
 
-- `main()` may return `none` or `int`, and may optionally accept `args: string[]`.
+- `main()` may return `none` or `int`, and may optionally accept `arguments: string[]`.
 - Named calls use `callee{ ... }` with no whitespace before `{`.
 - `if` expressions use `then`: `if ready then start() else wait()`.
 - `for-of` evaluates its iterable once and retains returned temporaries through the loop.

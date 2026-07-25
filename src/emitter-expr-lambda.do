@@ -48,7 +48,9 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
 
   previousReturnErrorType := context.currentReturnErrorType
   previousFunctionName := context.currentFunctionName
+  previousTryPanics := context.tryPanics
   context.currentFunctionName = previousFunctionName + ".<lambda>"
+  context.tryPanics = false
   case functionType.returnType {
     result: ResultResolvedType -> { context.currentReturnErrorType = emitType(result.errorType, context.modulePath) }
     _ -> { context.currentReturnErrorType = "" }
@@ -63,6 +65,7 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
 
   context.currentReturnErrorType = previousReturnErrorType
   context.currentFunctionName = previousFunctionName
+  context.tryPanics = previousTryPanics
   return emitType(functionType, context.modulePath) + "(" + lambda + ")"
 }
 
@@ -377,6 +380,7 @@ function collectIdentifierCapture(identifier: Identifier, bodyStart: int, bodyEn
     if !mutableOnly { addUnique(result, "this") }
     return
   }
+  if binding.kind == "script-global" || binding.kind == "script-arguments" { return }
   if binding.symbol != none || binding.kind == "builtin" || binding.kind == "import" { return }
   bindingStart := binding.span.start.offset
   if bindingStart >= bodyStart && bindingStart <= bodyEnd { return }

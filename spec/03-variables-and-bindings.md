@@ -242,11 +242,12 @@ z := [1, 2]                  // int[] (mutable content, immutable binding)
 
 ### Global Scope
 
-- **Allowed: `readonly`, `:=`, deprecated `const`, and `function` declarations**
+- **Allowed: `readonly`, `:=`, `let`, deprecated `const`, and `function` declarations**
 - `function` declarations **hoist** (available anywhere in file)
 - `readonly` and `:=` do **not** hoist (strict declaration order)
 - `<-` yield-block initializers are **not** allowed at global scope
-- No `let` at global scope
+- Module `let` is explicit mutable global state and is unavailable to isolated
+  or actor-dispatched call paths
 
 ```javascript
 // ✅ Valid — module constants
@@ -265,8 +266,10 @@ bar(5)  // Works — functions hoist
 function greet(name: string): none => print("Hello, " + name)
 function bar(x: int): int => x * 12
 
-// ❌ Invalid at global scope
-let counter = 0            // Error: let not allowed globally
+// ✅ Mutable module state (prefer encapsulating it behind functions)
+let counter = 0
+
+// ❌ Invalid in an ordinary reference module
 readonly value <- { yield 1 } // Error: <- blocks are local-only
 
 // ❌ Hoisting error for readonly and :=
@@ -317,7 +320,7 @@ function scopes() {
 | Global | `function` | ✅ Yes |
 | Global | `readonly` | ❌ No |
 | Global | `:=` | ❌ No |
-| Global | `let` | ❌ Not allowed |
+| Global | `let` | ❌ No |
 | Nested | `function` | ❌ No |
 | Nested | `readonly` | ❌ No |
 | Nested | `:=` | ❌ No |
@@ -337,10 +340,9 @@ function scopes() {
 2. Prevents initialization order issues
 3. Consistent with local scope semantics
 
-**Why not allow `let` globally?**
-1. `let` would introduce reassignable global state — use classes or modules for stateful patterns
-2. Module-level `:=` covers immutable references to values with mutable interiors
-3. Simpler mental model — module bindings are not reassignable
+Module-level `let` makes mutable global state explicit. Ordinary functions in
+the defining module may use it, while isolation analysis prevents unsafe actor
+or isolated access.
 
 **Why not hoist nested declarations?**
 1. Prevents access to uninitialized variables

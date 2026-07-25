@@ -13,7 +13,7 @@ import {
   MockImportDirective, ClassDeclaration, ExportDeclaration,
 } from "./ast"
 import type { TypeAnnotation } from "./ast"
-import { ArrayResolvedType, ClassType, InterfaceType, RangeResolvedType, ResolvedType, ResultResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, InterfaceType, PrimitiveType, RangeResolvedType, ResolvedType, ResultResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable, recordCoverageLine } from "./emitter-context"
 import { emitCaseTypePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -305,9 +305,32 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
       }
       return output
   }
+  if context.tryPanics {
+      let output = ind + "auto " + temporaryName + " = " + emitExpression(value, context) + ";\n"
+      let failureMessage = "std::string(\"try failed\")"
+      case resultValueType(value) {
+        result: ResultResolvedType -> { case result.errorType {
+          primitive: PrimitiveType -> { if primitive.name == "string" { failureMessage = failureMessage + " + std::string(\": \") + doof::failure_error(" + temporaryName + ")" } }
+          _ -> { }
+        } }
+        _ -> { }
+      }
+      output = output + ind + "if (doof::is_failure(" + temporaryName + ")) doof::panic_at(" + quote(context.modulePath) + ", " + string(statement.span.start.line) + ", " + failureMessage + ");\n"
+      case statement.binding {
+        declaration: ConstDeclaration -> { output = output + ind + "const auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n" }
+        declaration: ReadonlyDeclaration -> { output = output + ind + "const auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n" }
+        binding: ImmutableBinding -> { output = output + ind + "const auto " + cppIdentifier(binding.name) + " = doof::success_value(" + temporaryName + ");\n" }
+        declaration: LetDeclaration -> { output = output + ind + "auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n" }
+        _: ExpressionStatement -> { }
+        destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
+      }
+      return output
+  }
   panic("try expression is outside a Result-returning function")
   return ""
 }
+
+function resultValueType(expression: Expression): ResolvedType | none => expression.resolvedType
 
 function emitTryDestructuring(statement: DestructuringStatement, temporaryName: string, level: int, context: EmitContext): string {
   let successType: ResolvedType | none = none

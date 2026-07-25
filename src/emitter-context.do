@@ -58,6 +58,9 @@ export class EmitContext {
   // declarations are heap-boxed and every identifier use dereferences the box.
   capturedMutables: string[] = []
   tryCounter: int = 0
+  // Native entry scripts lower direct bindings into private deferred storage.
+  scriptEntry: bool = false
+  tryPanics: bool = false
   // Coverage is configured per source module by the graph emitter.
   coverageEnabled: bool = false
   coverageModuleId: int = -1

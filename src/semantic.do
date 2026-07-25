@@ -228,6 +228,7 @@ export class Scope {
   yieldType: ResolvedType | none = none
   capturesTryErrors: bool = false
   catchErrorTypes: ResolvedType[] = []
+  tryPanics: bool = false
 }
 
 export class ResolvedTypeConstraint {

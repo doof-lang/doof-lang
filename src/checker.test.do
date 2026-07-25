@@ -27,6 +27,52 @@ function checked(source: string): CheckResult {
   return CheckResult { diagnostics }
 }
 
+function checkedEntry(source: string, entryMode: string = "executable"): CheckResult {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  return createChecker(analysis, "/main.do", entryMode).check("/main.do")
+}
+
+export function testChecksNativeEntryScriptScopeAndArguments(): none {
+  result := checkedEntry("let count = arguments.length\nfunction current(): int => count\ncount = count + 1\nprintln(string(current()))")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+
+  conflict := checkedEntry("arguments := [\"shadow\"]\nprintln(arguments[0])")
+  Assert.equal(conflict.diagnostics.length > 0, true)
+  Assert.stringContains(conflict.diagnostics[0].message, "reserved")
+}
+
+export function testChecksNativeEntryTryAsPanicAndRejectsExports(): none {
+  valid := checkedEntry("function load(): Result<int, string> => Success { value: 4 }\ntry value := load()\nprintln(string(value))")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  exported := checkedEntry("export function helper(): int => 1\nprintln(string(helper()))")
+  Assert.equal(exported.diagnostics.length, 1)
+  Assert.stringContains(exported.diagnostics[0].message, "cannot export")
+}
+
+export function testRejectsExecutableStatementsForWasmAndReferenceModules(): none {
+  wasm := checkedEntry("export function add(a: int, b: int): int => a + b\nprintln(\"ready\")", "wasm")
+  Assert.equal(wasm.diagnostics.length, 1)
+  Assert.stringContains(wasm.diagnostics[0].message, "WebAssembly entry modules")
+
+  sources := [
+    SourceFile { path: "/main.do", source: "import { value } from \"./lib\"\nfunction main(): int => value" },
+    SourceFile { path: "/lib.do", source: "export readonly value = 1\nprintln(\"bad\")" },
+  ]
+  analysis := createAnalyzer(sources).analyze("/main.do")
+  checker := createChecker(analysis, "/main.do", "executable")
+  dependency := checker.check("/lib.do")
+  Assert.equal(dependency.diagnostics.length, 1)
+  Assert.stringContains(dependency.diagnostics[0].message, "only allowed in a native entry module")
+}
+
+export function testRejectsModuleLetFromIsolatedFunctions(): none {
+  result := checked("let count = 0\nisolated function read(): int => count")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "mutable module binding")
+}
+
 function checkedSources(sources: SourceFile[], entry: string): CheckResult {
   analysis := createAnalyzer(sources).analyze(entry)
   checker := createChecker(analysis)
@@ -697,27 +743,27 @@ export function testRejectsSameBindingUseAfterRetireButAllowsShadowing(): none {
 }
 
 export function testValidatesActorBoundaryPayloads(): none {
-  mutableResult := checked("class Payload { value: int }\nclass Worker { function accept(payload: Payload): void {} }\nworker := Actor<Worker>()\npayload := Payload { value: 1 }\nworker.accept(payload)")
+  mutableResult := checked("class Payload { value: int }\nclass Worker { function accept(payload: Payload): void {} }\nfunction main(): none { worker := Actor<Worker>()\npayload := Payload { value: 1 }\nworker.accept(payload) }")
   Assert.equal(mutableResult.diagnostics.length > 0, true)
   Assert.equal(mutableResult.diagnostics[0].message.contains("field \"value\" is mutable"), true)
 
-  readonlyResult := checked("class Payload { readonly value: int }\nclass Worker { function accept(payload: Payload): int => payload.value }\nworker := Actor<Worker>()\npayload := Payload { value: 1 }\nvalue := worker.accept(payload)")
+  readonlyResult := checked("class Payload { readonly value: int }\nclass Worker { function accept(payload: Payload): int => payload.value }\nfunction main(): none { worker := Actor<Worker>()\npayload := Payload { value: 1 }\nvalue := worker.accept(payload) }")
   Assert.equal(readonlyResult.diagnostics.length, 0)
 
-  mutableSet := checked("class Worker { function accept(values: Set<int>): void {} }\nworker := Actor<Worker>()\nvalues: Set<int> := [1]\nworker.accept(values)")
+  mutableSet := checked("class Worker { function accept(values: Set<int>): void {} }\nfunction main(): none { worker := Actor<Worker>()\nvalues: Set<int> := [1]\nworker.accept(values) }")
   Assert.equal(mutableSet.diagnostics.length > 0, true)
   Assert.equal(mutableSet.diagnostics[0].message.contains("set type \"Set<int>\" is mutable"), true)
 
-  readonlySet := checked("class Worker { function accept(values: ReadonlySet<int>): int => values.size }\nworker := Actor<Worker>()\nvalues: Set<int> := [1]\nfrozen := values.buildReadonly()\nvalue := worker.accept(frozen)")
+  readonlySet := checked("class Worker { function accept(values: ReadonlySet<int>): int => values.size }\nfunction main(): none { worker := Actor<Worker>()\nvalues: Set<int> := [1]\nfrozen := values.buildReadonly()\nvalue := worker.accept(frozen) }")
   Assert.equal(readonlySet.diagnostics.length, 0)
 }
 
 export function testValidatesNestedAndGenericActorBoundaryPayloads(): none {
-  nested := checked("class Worker { function accept(payload: Payload): void {} }\nclass Payload { readonly actor: Actor<Worker> }\nworker := Actor<Worker>()\npayload := Payload { actor: worker }\nworker.accept(payload)")
+  nested := checked("class Worker { function accept(payload: Payload): void {} }\nclass Payload { readonly actor: Actor<Worker> }\nfunction main(): none { worker := Actor<Worker>()\npayload := Payload { actor: worker }\nworker.accept(payload) }")
   Assert.equal(nested.diagnostics.length > 0, true)
   Assert.equal(nested.diagnostics[0].message.contains("Actor<T> references"), true)
 
-  generic := checked("class Worker { function echo<T>(value: T): T => value }\nworker := Actor<Worker>()\nother := Actor<Worker>()\nresult := worker.echo<Actor<Worker> >(other)")
+  generic := checked("class Worker { function echo<T>(value: T): T => value }\nfunction main(): none { worker := Actor<Worker>()\nother := Actor<Worker>()\nresult := worker.echo<Actor<Worker> >(other) }")
   Assert.equal(generic.diagnostics.length > 0, true)
   Assert.equal(generic.diagnostics[0].message.contains("Actor<T> references"), true)
 }
@@ -865,7 +911,7 @@ export function testChecksExplicitGenericNamedCall(): none {
 }
 
 export function testSubstitutesExplicitGenericTupleReturn(): none {
-  result := checked("function pair<T>(value: T): Tuple<T, T> => (value, value)\n(first, second) := pair<int>(1)\nfunction total(): int => first + second\n")
+  result := checked("function pair<T>(value: T): Tuple<T, T> => (value, value)\nfunction total(): int { (first, second) := pair<int>(1)\nreturn first + second }\n")
   Assert.equal(result.diagnostics.length, 0)
 }
 

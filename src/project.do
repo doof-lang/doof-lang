@@ -40,6 +40,7 @@ export class ProjectSpec {
   entry: string
   buildDirectory: string
   hasManifest: bool
+  explicitEntry: bool = false
   manifest: PackageManifest
   resources: PackageResource[] = []
   externalDependencies: ExternalDependency[] = []
@@ -49,6 +50,13 @@ export class ProjectSpec {
   iosApp: IOSAppConfig | none = none
   packageConfig: MacOSPackageConfig | none = none
   iosPackageConfig: IOSPackageConfig | none = none
+}
+
+export function projectEntryRequestError(project: ProjectSpec, requestedPath: string): string {
+  if !project.hasManifest && (!project.explicitEntry || !requestedPath.endsWith(".do")) {
+    return "no doof.json found; pass an explicit .do entry file"
+  }
+  return ""
 }
 
 export function readProjectSpec(requestedPath: string, platform: string = "", targetOverride: string = ""): ProjectSpec {
@@ -64,6 +72,7 @@ export function readProjectSpec(requestedPath: string, platform: string = "", ta
       entry: fallbackEntry,
       buildDirectory: "build",
       hasManifest: false,
+      explicitEntry: !isDirectory(absolutePath),
       manifest: PackageManifest {
         name: fileName(directory), manifestPath: "", rootDirectory: directory, nativeBuild: NativeBuildPlan {},
       },
@@ -97,6 +106,7 @@ export function readProjectSpec(requestedPath: string, platform: string = "", ta
     entry,
     buildDirectory,
     hasManifest: true,
+    explicitEntry: !isDirectory(absolutePath),
     manifest: packageManifest,
     resources: packageManifest.resources,
     externalDependencies: packageManifest.externalDependencies,

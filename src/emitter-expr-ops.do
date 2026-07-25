@@ -155,6 +155,9 @@ function isVariantCarrier(resolvedType: ResolvedType): bool {
 }
 
 export function emitIdentifier(expression: Identifier, context: EmitContext): string {
+  if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "script-global" {
+    return "__doof_script_get_" + cppIdentifier(expression.name) + "()"
+  }
   if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "field" && !context.currentFunctionStatic {
     return "this->" + cppIdentifier(expression.name)
   }
