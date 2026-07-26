@@ -59,12 +59,17 @@ in the bundle. Use `./install.sh --prefix /absolute/path` to select a different
 prefix. Existing compiler files or symlinks are replaced; an existing
 directory at any managed path is left untouched and reported as an error.
 
-Language behavior is defined by [spec/](spec/). Current operational and
-compatibility limitations are tracked in [ROADMAP.md](ROADMAP.md).
+Language behavior is defined by the [language specification](spec/01-overview.md).
+Compiler contributors should start with the [documentation map](docs/README.md),
+then use [source structure](docs/source-structure.md) for vertical file
+ownership or [compiler architecture](docs/compiler-architecture.md) for
+horizontal concepts spanning phases. Current operational and compatibility
+limitations are tracked in [ROADMAP.md](ROADMAP.md).
 
 ## Source layout
 
 - `src/` — compiler, CLI, native build drivers, and adjacent Doof tests
+- `docs/` — contributor maps, operational contracts, and lowering notes
 - `runtime/` — canonical generated-program runtime header
 - `resources/` — immutable resources embedded in compiler releases
 - `bootstrap/macos-arm64/` — trusted generated-C++ stage-0 source snapshot
