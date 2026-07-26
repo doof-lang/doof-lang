@@ -8,6 +8,7 @@ import { decodeBase64, sha1Hex } from "std/crypto"
 import { exists, isDirectory, mkdir, readBlob, readDir, readText, remove, writeBlob, writeText } from "std/fs"
 import { parseJsonValue } from "std/json"
 import { ExecOptions, platform, run } from "std/os"
+import { parseInt } from "std/parse"
 import { absolute, dirname, homeDirectory, join } from "std/path"
 import { Instant } from "std/time"
 import { iosCodesignArguments } from "./ios-app"
@@ -404,7 +405,7 @@ export function parseProvisioningProfile(profilePath: string, workDirectory: str
     "reading provisioning profile device count",
   ) {
     success: Success -> {
-      case int.parse(success.value) {
+      case parseInt(success.value) {
         parsedCount: Success -> { provisionedDeviceCount = parsedCount.value }
         _: Failure -> { }
       }
@@ -434,7 +435,7 @@ export function parseProvisioningProfile(profilePath: string, workDirectory: str
     "reading provisioning profile certificate count",
   ) {
     success: Success -> {
-      case int.parse(success.value) {
+      case parseInt(success.value) {
         parsedCount: Success -> { certificateCount = parsedCount.value }
         _: Failure -> { }
       }

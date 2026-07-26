@@ -29,6 +29,7 @@ namespace app_src_ast_ { struct FunctionDeclaration; }
 namespace app_src_ast_ { struct Identifier; }
 namespace app_src_ast_ { struct ImmutableBinding; }
 namespace app_src_ast_ { struct InterfaceDeclaration; }
+namespace app_src_ast_ { struct LetDeclaration; }
 namespace app_src_ast_ { struct MemberExpression; }
 namespace app_src_ast_ { struct ReadonlyDeclaration; }
 namespace app_src_ast_ { struct SourceSpan; }

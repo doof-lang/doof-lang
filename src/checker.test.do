@@ -179,9 +179,9 @@ export function testReportsUnknownMembersAcrossResolvedTypes(): none {
   Assert.equal(interfaceResult.diagnostics.length, 2)
   Assert.equal(interfaceResult.diagnostics[0].message, "Type \"Drawable\" has no member \"missing\"")
 
-  builtinNamespaceResult := checked("function bad(): int => int.missing(1)")
-  Assert.equal(builtinNamespaceResult.diagnostics.length, 1)
-  Assert.equal(builtinNamespaceResult.diagnostics[0].message, "Namespace \"int\" has no member \"missing\"")
+  builtinCallableResult := checked("function bad(): int => int.missing(1)")
+  Assert.equal(builtinCallableResult.diagnostics.length, 1)
+  Assert.equal(builtinCallableResult.diagnostics[0].message, "Type \"function\" has no member \"missing\"")
 }
 
 export function testReportsUnknownImportedNamespaceMember(): none {
@@ -193,7 +193,7 @@ export function testReportsUnknownImportedNamespaceMember(): none {
   Assert.equal(result.diagnostics[0].message, "Namespace \"tools\" has no member \"missing\"")
 }
 
-export function testValueBindingsShadowBuiltinTypeNamespaces(): none {
+export function testValueBindingsShadowBuiltinConversionNames(): none {
   result := checked("class Parser { parse(value: string): int => value.length }\nfunction read(): int { byte := Parser {}\nreturn byte.parse(\"ok\") }")
   Assert.equal(result.diagnostics.length, 0)
 }
@@ -459,12 +459,12 @@ export function testRejectsUnresolvedAndMissingDotShorthandMembers(): none {
   Assert.equal(noContext.diagnostics.length, 1)
   Assert.equal(noContext.diagnostics[0].message, "Cannot resolve shorthand .Missing without an expected class or enum type")
 
-  builtinVariant := checked("function overflow(): Result<int, ParseError> => Failure { error: .Overflow }")
-  Assert.equal(builtinVariant.diagnostics.length, 0)
+}
 
-  missingBuiltinVariant := checked("function overflow(): Result<int, ParseError> => Failure { error: .NotAParseError }")
-  Assert.equal(missingBuiltinVariant.diagnostics.length, 1)
-  Assert.equal(missingBuiltinVariant.diagnostics[0].message, "Enum \"ParseError\" has no variant \"NotAParseError\"")
+export function testRejectsRemovedNumericParseIntrinsicsWithMigrationDiagnostic(): none {
+  result := checked("function parsed(value: string): int => int.parse(value)!")
+  Assert.equal(result.diagnostics.length > 0, true)
+  Assert.equal(result.diagnostics[0].message, "int.parse was removed; import parseInt from \"std/parse\"")
 }
 
 export function testChecksBlockBodiedCaseExpressionArms(): none {

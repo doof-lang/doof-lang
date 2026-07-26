@@ -26,4 +26,9 @@ Other maintained inputs:
 - `tests/release-fixtures/` — native and platform acceptance packages
 - `bootstrap/macos-arm64/generated/` — generated stage-0 trust root
 
+Primitive string parsing is a standard-library concern owned by `std/parse`.
+The checker provides only an actionable migration diagnostic for removed
+numeric `.parse` intrinsics; the emitter and runtime contain no parsing
+lowering or `ParseError` compatibility implementation.
+
 Keep files focused and make ownership changes explicit in this document.

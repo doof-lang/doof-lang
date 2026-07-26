@@ -30,6 +30,7 @@ the override and provenance records it as mutable input.
 | `std/math` | Math constants, native functions, and numeric helpers |
 | `std/multiplayer` | Apple local peer discovery, invitations, and messages |
 | `std/os` | Environment/process information and child processes |
+| `std/parse` | Strict boolean and numeric string parsing with typed errors |
 | `std/path` | POSIX path strings plus app/resource directory discovery |
 | `std/postgres` | `libpq` PostgreSQL wrapper with prepared statements and row streams |
 | `std/random` | Secure random doubles and integers/ranges |

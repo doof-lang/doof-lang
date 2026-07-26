@@ -33,10 +33,12 @@ namespace app_src_checker_state_ {
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     struct CheckerState : public std::enable_shared_from_this<CheckerState> {
     std::shared_ptr<::app_src_analyzer_::AnalysisResult> result;
+    std::string entry = std::string("");
+    std::string entryMode = std::string("executable");
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics;
     std::shared_ptr<::app_src_analyzer_::ModuleInfo> info = nullptr;
     std::shared_ptr<::app_src_semantic_::Scope> moduleScope = nullptr;
-    CheckerState(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics, std::shared_ptr<::app_src_analyzer_::ModuleInfo> info, std::shared_ptr<::app_src_semantic_::Scope> moduleScope) : result(result), diagnostics(diagnostics), info(info), moduleScope(moduleScope) {}
+    CheckerState(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string entry, std::string entryMode, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics, std::shared_ptr<::app_src_analyzer_::ModuleInfo> info, std::shared_ptr<::app_src_semantic_::Scope> moduleScope) : result(result), entry(entry), entryMode(entryMode), diagnostics(diagnostics), info(info), moduleScope(moduleScope) {}
 };
 }
 

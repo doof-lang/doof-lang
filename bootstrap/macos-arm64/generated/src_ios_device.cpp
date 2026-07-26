@@ -4,6 +4,7 @@
 #include "std_fs_index.hpp"
 #include "std_json_index.hpp"
 #include "std_os_index.hpp"
+#include "std_parse_index.hpp"
 #include "std_path_index.hpp"
 #include "std_time_index.hpp"
 #include "src_ios_app.hpp"
@@ -16,6 +17,7 @@ using namespace ::std_::crypto::index;
 using namespace ::std_::fs::index;
 using namespace ::std_::json::index;
 using namespace ::std_::os::index;
+using namespace ::std_::parse::index;
 using namespace ::std_::path::index;
 using namespace ::std_::time::index;
 using namespace ::app_src_ios_app_;
@@ -465,19 +467,19 @@ void ensureDirectory(std::string path) {
     if (parent != path) {
         ensureDirectory(parent);
     }
-    [&]() -> void { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 307, std::string("try! failed"));  }();
+    [&]() -> void { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 308, std::string("try! failed"));  }();
 }
 void removeTree(std::string path) {
     if (!::doof_fs::exists(path)) {
         return;
     }
     if (::doof_fs::isDirectory(path)) {
-        const auto& _iterable_10 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 313, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
+        const auto& _iterable_10 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 314, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_10) {
             removeTree(devicePath(path, entry->name));
         }
     }
-    [&]() -> void { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 315, std::string("try! failed"));  }();
+    [&]() -> void { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 316, std::string("try! failed"));  }();
 }
 std::shared_ptr<IOSDeviceCommandResult> runDeviceCommand(std::string command, std::shared_ptr<std::vector<std::string>> arguments) {
     auto _binding_value_11 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, MAX_IOS_DEVICE_COMMAND_OUTPUT_BYTES, nullptr));
@@ -500,7 +502,7 @@ doof::Result<std::string, std::string> deviceCommandText(std::string command, st
 doof::Result<void, std::string> decodeProvisioningProfile(std::string profilePath, std::string decodedPath) {
     const auto securityResult = runDeviceCommand(std::string("security"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("cms"), std::string("-D"), std::string("-i"), profilePath}));
     if (securityResult->exitCode == 0) {
-        [&]() -> void { auto _try_value = ::doof_fs::writeText(decodedPath, securityResult->output); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 340, std::string("try! failed"));  }();
+        [&]() -> void { auto _try_value = ::doof_fs::writeText(decodedPath, securityResult->output); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 341, std::string("try! failed"));  }();
         return doof::Success<void>{};
     }
     const auto opensslResult = runDeviceCommand(std::string("openssl"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("smime"), std::string("-inform"), std::string("der"), std::string("-verify"), std::string("-noverify"), std::string("-in"), profilePath, std::string("-out"), decodedPath}));
@@ -513,12 +515,12 @@ doof::Result<void, std::string> decodeProvisioningProfile(std::string profilePat
 }
 std::string resolveUserPath(std::string path) {
     if (path == std::string("~")) {
-        return [&]() -> std::string { auto _try_value = ::std_::path::index::homeDirectory(); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 358, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+        return [&]() -> std::string { auto _try_value = ::std_::path::index::homeDirectory(); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 359, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }
     if (doof::string_startsWith(path, std::string("~/"))) {
-        return devicePath([&]() -> std::string { auto _try_value = ::std_::path::index::homeDirectory(); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 359, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }(), doof::string_substring(path, 2, static_cast<int32_t>(path.size())));
+        return devicePath([&]() -> std::string { auto _try_value = ::std_::path::index::homeDirectory(); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 360, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }(), doof::string_substring(path, 2, static_cast<int32_t>(path.size())));
     }
-    return [&]() -> std::string { auto _try_value = ::std_::path::index::absolute(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 360, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    return [&]() -> std::string { auto _try_value = ::std_::path::index::absolute(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 361, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
 }
 void appendUnique(std::shared_ptr<std::vector<std::string>> values, std::string value) {
     if (!doof::array_contains(values, value, "", 0)) {
@@ -578,12 +580,12 @@ doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisio
         if (std::holds_alternative<doof::Success<std::string>>(_case_subject)) {
             const auto& success = std::get<doof::Success<std::string>>(_case_subject);
             {
-                auto _case_subject = doof::parse_int(success.value);
+                auto _case_subject = ::doof_parse::parseInt(success.value);
                 if (std::holds_alternative<doof::Success<int32_t>>(_case_subject)) {
                     const auto& parsedCount = std::get<doof::Success<int32_t>>(_case_subject);
                     (provisionedDeviceCount = parsedCount.value);
             }
-            else if (std::holds_alternative<doof::Failure<::doof::ParseError>>(_case_subject)) {
+            else if (std::holds_alternative<doof::Failure<::std_::parse::types::ParsingError>>(_case_subject)) {
             }
             }
     }
@@ -617,12 +619,12 @@ doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisio
         if (std::holds_alternative<doof::Success<std::string>>(_case_subject)) {
             const auto& success = std::get<doof::Success<std::string>>(_case_subject);
             {
-                auto _case_subject = doof::parse_int(success.value);
+                auto _case_subject = ::doof_parse::parseInt(success.value);
                 if (std::holds_alternative<doof::Success<int32_t>>(_case_subject)) {
                     const auto& parsedCount = std::get<doof::Success<int32_t>>(_case_subject);
                     (certificateCount = parsedCount.value);
             }
-            else if (std::holds_alternative<doof::Failure<::doof::ParseError>>(_case_subject)) {
+            else if (std::holds_alternative<doof::Failure<::std_::parse::types::ParsingError>>(_case_subject)) {
             }
             }
     }
@@ -658,7 +660,7 @@ std::shared_ptr<std::vector<std::string>> collectProvisioningProfilePaths(std::s
         if (!::doof_fs::isDirectory(expanded)) {
             continue;
         }
-        const auto& _iterable_18 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(expanded); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 473, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
+        const auto& _iterable_18 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(expanded); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 474, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_18) {
             if (doof::string_endsWith(entry->name, std::string(".mobileprovision"))) {
                 appendUnique(paths, devicePath(expanded, entry->name));
@@ -717,7 +719,7 @@ doof::Result<std::string, std::string> resolveIOSDeviceIdentifier(std::string ov
     ensureDirectory(workDirectory);
     const auto devicesPath = devicePath(workDirectory, std::string("devices.json"));
     if (::doof_fs::exists(devicesPath)) {
-        [&]() -> void { auto _try_value = ::doof_fs::remove(devicesPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 535, std::string("try! failed"));  }();
+        [&]() -> void { auto _try_value = ::doof_fs::remove(devicesPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 536, std::string("try! failed"));  }();
     }
     auto _binding_value_24 = deviceCommandText(std::string("xcrun"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("devicectl"), std::string("list"), std::string("devices"), std::string("--json-output"), devicesPath}), std::string("listing connected iOS devices"));
     if (doof::is_failure(_binding_value_24)) {
@@ -738,7 +740,7 @@ doof::Result<std::string, std::string> resolveIOSDeviceIdentifier(std::string ov
     }
     const auto devices = doof::success_value(_binding_value_26);
     if (::doof_fs::exists(devicesPath)) {
-        [&]() -> void { auto _try_value = ::doof_fs::remove(devicesPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 542, std::string("try! failed"));  }();
+        [&]() -> void { auto _try_value = ::doof_fs::remove(devicesPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 543, std::string("try! failed"));  }();
     }
     return selectIOSDeviceIdentifier(std::string(""), devices);
 }
@@ -751,7 +753,7 @@ void collectNestedIOSCode(std::string path, std::shared_ptr<std::vector<std::str
             results->push_back(path);
             return;
         }
-        const auto& _iterable_27 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 550, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
+        const auto& _iterable_27 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 551, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_27) {
             collectNestedIOSCode(devicePath(path, entry->name), results);
         }
@@ -784,7 +786,7 @@ doof::Result<void, std::string> signIOSDeviceApp(std::string appPath, std::strin
     auto _try_value_30 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), std::string("Entitlements"), std::string("xml1"), std::string("-o"), entitlementsPath, decodedPath}), std::string("extracting iOS signing entitlements"));
     if (doof::is_failure(_try_value_30)) return doof::Failure<std::string>{doof::failure_error(_try_value_30)};
     const auto ignored = doof::success_value(_try_value_30);
-    [&]() -> void { auto _try_value = ::doof_fs::writeBlob(devicePath(appPath, std::string("embedded.mobileprovision")), [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(options->provisioningProfilePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 587, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 587, std::string("try! failed"));  }();
+    [&]() -> void { auto _try_value = ::doof_fs::writeBlob(devicePath(appPath, std::string("embedded.mobileprovision")), [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(options->provisioningProfilePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 588, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 588, std::string("try! failed"));  }();
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     collectNestedIOSCode(devicePath(appPath, std::string("Frameworks")), nested);
     collectNestedIOSCode(devicePath(appPath, std::string("PlugIns")), nested);

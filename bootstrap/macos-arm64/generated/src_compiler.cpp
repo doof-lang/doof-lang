@@ -59,7 +59,7 @@ std::shared_ptr<Compilation> compileInternal(std::shared_ptr<std::vector<std::sh
         diagnostics->push_back(diagnostic);
     }
     if (!::app_src_diagnostics_::hasErrorDiagnostics(diagnostics)) {
-        const auto checker = ::app_src_checker_::createChecker(analysis);
+        const auto checker = ::app_src_checker_::createChecker(analysis, entry, entryMode);
         std::shared_ptr<std::vector<std::string>> checkedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
         std::shared_ptr<std::vector<std::string>> visitingPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
         const auto& _iterable_2 = analysis->modules;

@@ -56,13 +56,13 @@ DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" package "$local_fixture" -o "$verify
 run_binary "$release_root" "$local_fixture/dist/doof-release-local-dependency"
 
 DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" build "$script_fixture" -o "$verify_root/manifestless-script"
-run_binary "$release_root" "$verify_root/manifestless-script/manifestless-script"
+run_binary "$release_root" "$verify_root/manifestless-script/doof"
 
 DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" emit "$wasm_fixture" --target wasm -o "$verify_root/manifestless-wasm-emit"
 grep -q "doof_export_add" "$verify_root/manifestless-wasm-emit/doof_wasm.cpp"
 if command -v em++ >/dev/null 2>&1; then
   DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" build "$wasm_fixture" --target wasm -o "$verify_root/manifestless-wasm"
-  test -f "$verify_root/manifestless-wasm/manifestless-wasm.wasm"
+  test -f "$verify_root/manifestless-wasm/doof.wasm"
 fi
 
 platform_fixture="$fixtures_root/platform-framework"

@@ -175,31 +175,6 @@ export function isNamespaceImport(info: ModuleInfo, name: string): bool {
   return false
 }
 
-export function isBuiltinNamespace(name: string): bool {
-  return name == "byte" || name == "int" || name == "long" || name == "float" || name == "double"
-}
-
-export function builtinNamespaceMemberType(namespaceName: string, memberName: string): ResolvedType {
-  if memberName == "parse" {
-    return functionType([
-      FunctionParamType { name: "value", type_: primitive("string"), hasDefault: false },
-    ], resultType(primitive(namespaceName), builtinParseErrorType()))
-  }
-  return unknownType()
-}
-
-export function builtinParseErrorType(): ResolvedType {
-  return enumType("ParseError", Symbol {
-    kind: "enum",
-    name: "ParseError",
-    module: "<builtin>",
-    exported: false,
-    native_: true,
-    nativeHeader: "doof_runtime.hpp",
-    nativeCppName: "doof::ParseError",
-  })
-}
-
 export function namespaceMemberType(info: ModuleInfo, namespaceName: string, memberName: string, result: AnalysisResult): ResolvedType {
   for imported of info.namespaceImports {
     if imported.localName != namespaceName { continue }
@@ -268,7 +243,6 @@ export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, 
       if named.name == "JsonValue" { return jsonValueType() }
       if named.name == "JsonObject" { return jsonObjectType() }
       if named.name == "SourceLocation" { return builtinSourceLocationType() }
-      if named.name == "ParseError" { return builtinParseErrorType() }
       if named.name == "Range" { return rangeType() }
       for typeParam of typeParams { if named.name == typeParam { return typeParameter(named.name) } }
       if named.name == "Tuple" {

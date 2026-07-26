@@ -228,6 +228,9 @@ bool isVariantCarrier(std::variant<std::shared_ptr<::app_src_semantic_::Primitiv
     return false;
 }
 std::string emitIdentifier(std::shared_ptr<::app_src_ast_::Identifier> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+    if ((!doof::is_null(expression->resolvedBinding)) && (expression->resolvedBinding->kind == std::string("script-global"))) {
+        return ((std::string("__doof_script_get_") + cppIdentifier(expression->name)) + std::string("()"));
+    }
     if (((!doof::is_null(expression->resolvedBinding)) && (expression->resolvedBinding->kind == std::string("field"))) && !context->currentFunctionStatic) {
         return (std::string("this->") + cppIdentifier(expression->name));
     }

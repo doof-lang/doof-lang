@@ -6,6 +6,9 @@
 #include "src_emitter_decl.hpp"
 #include "src_emitter_json.hpp"
 #include "src_emitter_metadata.hpp"
+#include "src_emitter_stmt.hpp"
+#include "src_emitter_types.hpp"
+#include "src_emitter_expr.hpp"
 #include "src_emitter_header.hpp"
 #include "src_emitter_monomorphize.hpp"
 #include "src_emitter_names.hpp"
@@ -22,6 +25,9 @@ using namespace ::app_src_emitter_context_;
 using namespace ::app_src_emitter_decl_;
 using namespace ::app_src_emitter_json_;
 using namespace ::app_src_emitter_metadata_;
+using namespace ::app_src_emitter_stmt_;
+using namespace ::app_src_emitter_types_;
+using namespace ::app_src_emitter_expr_;
 using namespace ::app_src_emitter_header_;
 using namespace ::app_src_emitter_monomorphize_;
 using namespace ::app_src_emitter_names_;
@@ -248,6 +254,7 @@ std::shared_ptr<ModuleEmission> CxxModuleEmitter::emit(std::shared_ptr<::app_src
         configureInstantiationRegistry(context, doof::unwrap_optional(this->instantiations));
     }
     const auto plan = ::app_src_emitter_header_::planHeader(program, context);
+    (context->scriptEntry = (((entryMode == std::string("executable")) || (entryMode == std::string("ios-app"))) && hasScriptStatements(std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{program}))));
     if (!doof::is_null(this->instantiations)) {
         addConcreteHeaderDeclarations(plan, context, doof::unwrap_optional(this->instantiations));
     }
@@ -270,12 +277,20 @@ std::shared_ptr<ModuleEmission> CxxModuleEmitter::emitPlanned(std::shared_ptr<st
     (source = (source + std::string("\n")));
     (source = (((source + std::string("namespace ")) + namespaceName) + std::string(" {\n")));
     (source = (source + emitImportedNamespaces(context)));
+    if (context->scriptEntry) {
+        (source = (source + emitScriptStorage(programs, context)));
+    }
     const auto& _iterable_7 = programs;
     for (const auto& program : *_iterable_7) {
         const auto& _iterable_8 = program->statements;
         for (const auto& statement : *_iterable_8) {
-            (source = (source + emitSourceStatement(statement, context)));
+            if (!(context->scriptEntry && (!doof::is_null(scriptGlobalDeclaration(statement))))) {
+                (source = (source + emitSourceStatement(statement, context)));
+            }
         }
+    }
+    if (context->scriptEntry) {
+        (source = (source + emitScriptRunner(programs, context)));
     }
     if (!doof::is_null(this->instantiations)) {
         (source = (source + emitConcreteFunctions(context, doof::unwrap_optional(this->instantiations))));
@@ -285,23 +300,244 @@ std::shared_ptr<ModuleEmission> CxxModuleEmitter::emitPlanned(std::shared_ptr<st
     if (nativeMethods != std::string("")) {
         (source = ((((source + std::string("\nusing namespace ::")) + namespaceName) + std::string(";\n\n")) + nativeMethods));
     }
-    if ((entryMode == std::string("executable")) && plan->hasMain) {
-        (source = (source + emitMainWrapper(namespaceName, plan)));
+    if ((entryMode == std::string("executable")) && (plan->hasMain || context->scriptEntry)) {
+        (source = (source + emitMainWrapper(namespaceName, plan, context->scriptEntry)));
     }
-    if ((entryMode == std::string("ios-app")) && plan->hasMain) {
-        (source = (source + emitAppEntryWrapper(namespaceName, plan)));
+    if ((entryMode == std::string("ios-app")) && (plan->hasMain || context->scriptEntry)) {
+        (source = (source + emitAppEntryWrapper(namespaceName, plan, context->scriptEntry)));
     }
     return std::make_shared<ModuleEmission>(context->modulePath, header, source, headerName, sourceName, context->coverageModuleId, sortedCoverageLines(context->coverageInstrumentedLines));
 }
+bool hasScriptStatements(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs) {
+    const auto& _iterable_9 = programs;
+    for (const auto& program : *_iterable_9) {
+        const auto& _iterable_10 = program->statements;
+        for (const auto& statement : *_iterable_10) {
+            if (!isModuleDeclaration(statement)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+bool isValueDeclaration(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> statement) {
+    {
+        auto _case_subject = statement;
+        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else {
+            return false;
+    }
+    }
+    doof::unreachable();
+    return false;
+}
+bool isModuleDeclaration(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> statement) {
+    if (isValueDeclaration(statement)) {
+        return true;
+    }
+    {
+        auto _case_subject = statement;
+        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::EnumDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExportDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExportList>>(_case_subject)) {
+            return true;
+    }
+    else {
+            return false;
+    }
+    }
+    doof::unreachable();
+    return false;
+}
+std::variant<std::monostate, std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> scriptGlobalDeclaration(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> statement) {
+    if (isValueDeclaration(statement)) {
+        return doof::optional_value(statement);
+    }
+    {
+        auto _case_subject = statement;
+        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TryStatement>>(_case_subject)) {
+            const auto& try_ = std::get<std::shared_ptr<::app_src_ast_::TryStatement>>(_case_subject);
+            {
+                auto _case_subject = try_->binding;
+                if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
+                    const auto& value = std::get<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject);
+                    return doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>(value);
+            }
+            else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject)) {
+                    const auto& value = std::get<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject);
+                    return doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>(value);
+            }
+            else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject)) {
+                    const auto& value = std::get<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject);
+                    return doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>(value);
+            }
+            else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject)) {
+                    const auto& value = std::get<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject);
+                    return doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>(value);
+            }
+            else {
+            }
+            }
+    }
+    else {
+    }
+    }
+    return std::monostate{};
+}
+std::string scriptDeclarationName(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> statement) {
+    {
+        auto _case_subject = statement;
+        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
+            const auto& value = std::get<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject);
+            return value->name;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject)) {
+            const auto& value = std::get<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject);
+            return value->name;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject)) {
+            const auto& value = std::get<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject);
+            return value->name;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject)) {
+            const auto& value = std::get<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject);
+            return value->name;
+    }
+    else {
+            return std::string("");
+    }
+    }
+    doof::unreachable();
+    return std::string("");
+}
+std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> scriptDeclarationType(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> statement) {
+    {
+        auto _case_subject = statement;
+        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
+            const auto& value = std::get<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject);
+            return value->resolvedType;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject)) {
+            const auto& value = std::get<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject);
+            return value->resolvedType;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject)) {
+            const auto& value = std::get<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject);
+            return value->resolvedType;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject)) {
+            const auto& value = std::get<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject);
+            return value->resolvedType;
+    }
+    else {
+            return std::monostate{};
+    }
+    }
+    doof::unreachable();
+    return std::monostate{};
+}
+bool scriptDeclarationMutable(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> statement) {
+    {
+        auto _case_subject = statement;
+        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject)) {
+            return true;
+    }
+    else {
+            return false;
+    }
+    }
+    doof::unreachable();
+    return false;
+}
+std::string emitScriptStorage(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+    auto source = std::string("\n");
+    const auto& _iterable_11 = programs;
+    for (const auto& program : *_iterable_11) {
+        const auto& _iterable_12 = program->statements;
+        for (const auto& statement : *_iterable_12) {
+            const auto declaration = scriptGlobalDeclaration(statement);
+            if (doof::is_null(declaration)) {
+                continue;
+            }
+            const auto name = scriptDeclarationName(doof::unwrap_optional(declaration));
+            const auto type_ = scriptDeclarationType(doof::unwrap_optional(declaration));
+            if (((name == std::string("")) || (name == std::string("_"))) || doof::is_null(type_)) {
+                continue;
+            }
+            const auto cppName = ::app_src_emitter_expr_::cppIdentifier(name);
+            const auto typeText = ::app_src_emitter_types_::emitContextType(doof::unwrap_optional(type_), context);
+            (source = (((((source + std::string("std::optional<")) + typeText) + std::string("> __doof_script_storage_")) + cppName) + std::string(";\n")));
+            const auto returnType = (scriptDeclarationMutable(doof::unwrap_optional(declaration)) ? (typeText + std::string("&")) : ((std::string("const ") + typeText) + std::string("&")));
+            (source = ((((((((((source + returnType) + std::string(" __doof_script_get_")) + cppName) + std::string("() { if (!__doof_script_storage_")) + cppName) + std::string(".has_value()) doof::panic(\"Entry binding '")) + name) + std::string("' was accessed before initialization\"); return *__doof_script_storage_")) + cppName) + std::string("; }\n")));
+        }
+    }
+    return (source + std::string("\n"));
+}
+std::string emitScriptRunner(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+    const auto previousTryPanics = context->tryPanics;
+    (context->tryPanics = true);
+    auto source = std::string("\nvoid __doof_run_script(std::shared_ptr<std::vector<std::string>> arguments) {\n");
+    const auto& _iterable_13 = programs;
+    for (const auto& program : *_iterable_13) {
+        const auto& _iterable_14 = program->statements;
+        for (const auto& statement : *_iterable_14) {
+            const auto declaration = scriptGlobalDeclaration(statement);
+            if (!doof::is_null(declaration)) {
+                (source = (source + ::app_src_emitter_stmt_::emitStatement(statement, 1, context)));
+                const auto name = scriptDeclarationName(doof::unwrap_optional(declaration));
+                if ((name != std::string("")) && (name != std::string("_"))) {
+                    (source = (((((source + std::string("    __doof_script_storage_")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(".emplace(")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(");\n")));
+                }
+            } else if (!isModuleDeclaration(statement)) {
+                (source = (source + ::app_src_emitter_stmt_::emitStatement(statement, 1, context)));
+            }
+        }
+    }
+    (context->tryPanics = previousTryPanics);
+    return (source + std::string("}\n"));
+}
 std::string concreteImplementationIncludes(std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan> plan, std::shared_ptr<std::vector<std::string>> existingIncludes) {
     std::shared_ptr<std::vector<std::string>> includes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_9 = plan->interfaces;
-    for (const auto& interface_ : *_iterable_9) {
+    const auto& _iterable_15 = plan->interfaces;
+    for (const auto& interface_ : *_iterable_15) {
         if ((interface_->name != std::string("Stream")) && (interface_->modulePath != context->modulePath)) {
             continue;
         }
-        const auto& _iterable_10 = interface_->implementations;
-        for (const auto& implementation : *_iterable_10) {
+        const auto& _iterable_16 = interface_->implementations;
+        for (const auto& implementation : *_iterable_16) {
             if (implementation->modulePath == context->modulePath) {
                 continue;
             }
@@ -312,15 +548,15 @@ std::string concreteImplementationIncludes(std::shared_ptr<::app_src_emitter_con
         }
     }
     auto result = std::string("");
-    const auto& _iterable_11 = includes;
-    for (const auto& include : *_iterable_11) {
+    const auto& _iterable_17 = includes;
+    for (const auto& include : *_iterable_17) {
         (result = (((result + std::string("#include \"")) + include) + std::string("\"\n")));
     }
     return result;
 }
 bool containsString(std::shared_ptr<std::vector<std::string>> values, std::string value) {
-    const auto& _iterable_12 = values;
-    for (const auto& existing : *_iterable_12) {
+    const auto& _iterable_18 = values;
+    for (const auto& existing : *_iterable_18) {
         if (existing == value) {
             return true;
         }
@@ -329,26 +565,26 @@ bool containsString(std::shared_ptr<std::vector<std::string>> values, std::strin
 }
 std::string emitImportedNamespaces(std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
     std::shared_ptr<std::vector<std::string>> namespaces = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_13 = context->imports;
-    for (const auto& imported : *_iterable_13) {
+    const auto& _iterable_19 = context->imports;
+    for (const auto& imported : *_iterable_19) {
         const auto namespace_ = ::app_src_emitter_names_::moduleNamespace(imported->sourceModule);
         addNamespace(namespaces, namespace_);
     }
-    const auto& _iterable_14 = context->namespaceImports;
-    for (const auto& imported : *_iterable_14) {
+    const auto& _iterable_20 = context->namespaceImports;
+    for (const auto& imported : *_iterable_20) {
         const auto namespace_ = ::app_src_emitter_names_::moduleNamespace(imported->sourceModule);
         addNamespace(namespaces, namespace_);
     }
     auto result = std::string("");
-    const auto& _iterable_15 = namespaces;
-    for (const auto& namespace_ : *_iterable_15) {
+    const auto& _iterable_21 = namespaces;
+    for (const auto& namespace_ : *_iterable_21) {
         (result = (((result + std::string("using namespace ::")) + namespace_) + std::string(";\n")));
     }
     return result;
 }
 void addNamespace(std::shared_ptr<std::vector<std::string>> namespaces, std::string namespace_) {
-    const auto& _iterable_16 = namespaces;
-    for (const auto& existing : *_iterable_16) {
+    const auto& _iterable_22 = namespaces;
+    for (const auto& existing : *_iterable_22) {
         if (existing == namespace_) {
             return;
         }
@@ -360,8 +596,8 @@ std::shared_ptr<ModuleGraphEmission> emitModuleGraph(std::shared_ptr<::app_src_a
     const auto concretePlan = (doof::is_null(instantiations) ? ::app_src_emitter_monomorphize_::buildInstantiationPlan(result) : doof::unwrap_optional(instantiations));
     const auto plan = planModuleGraph(result);
     auto nextCoverageModuleId = 0;
-    const auto& _iterable_17 = plan->modules;
-    for (const auto& module : *_iterable_17) {
+    const auto& _iterable_23 = plan->modules;
+    for (const auto& module : *_iterable_23) {
         const auto info = findGraphModule(result, module->path);
         if (doof::is_null(info)) {
             continue;
@@ -388,8 +624,8 @@ std::shared_ptr<std::vector<int32_t>> sortedCoverageLines(std::shared_ptr<std::v
     auto last = -1;
     for (int32_t count = 0; count < static_cast<int32_t>((lines)->size()); ++count) {
         std::optional<int32_t> candidate = std::nullopt;
-        const auto& _iterable_18 = lines;
-        for (const auto& line : *_iterable_18) {
+        const auto& _iterable_24 = lines;
+        for (const auto& line : *_iterable_24) {
             if ((line > last) && (doof::is_null(candidate) || (line < candidate.value()))) {
                 (candidate = line);
             }
@@ -402,40 +638,40 @@ std::shared_ptr<std::vector<int32_t>> sortedCoverageLines(std::shared_ptr<std::v
     return result;
 }
 void configureInstantiationRegistry(std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan> plan) {
-    const auto& _iterable_19 = plan->nativeTemplateClassKeys;
-    for (const auto& key : *_iterable_19) {
+    const auto& _iterable_25 = plan->nativeTemplateClassKeys;
+    for (const auto& key : *_iterable_25) {
         context->nativeTemplateClassKeys->push_back(key);
     }
-    const auto& _iterable_20 = plan->functions;
-    for (const auto& instantiation : *_iterable_20) {
+    const auto& _iterable_26 = plan->functions;
+    for (const auto& instantiation : *_iterable_26) {
         context->concreteFunctionKeys->push_back(instantiation->key);
         context->concreteFunctionNames->push_back(instantiation->emittedName);
     }
-    const auto& _iterable_21 = plan->classes;
-    for (const auto& instantiation : *_iterable_21) {
+    const auto& _iterable_27 = plan->classes;
+    for (const auto& instantiation : *_iterable_27) {
         context->concreteClassKeys->push_back(instantiation->key);
         context->concreteClassNames->push_back(instantiation->emittedName);
     }
-    const auto& _iterable_22 = plan->methods;
-    for (const auto& instantiation : *_iterable_22) {
+    const auto& _iterable_28 = plan->methods;
+    for (const auto& instantiation : *_iterable_28) {
         context->concreteMethodKeys->push_back(instantiation->key);
         context->concreteMethodNames->push_back(instantiation->emittedName);
     }
-    const auto& _iterable_23 = plan->interfaces;
-    for (const auto& instantiation : *_iterable_23) {
+    const auto& _iterable_29 = plan->interfaces;
+    for (const auto& instantiation : *_iterable_29) {
         context->concreteInterfaceKeys->push_back(instantiation->key);
         context->concreteInterfaceNames->push_back(instantiation->emittedName);
     }
 }
 void addConcreteHeaderDeclarations(std::shared_ptr<::app_src_emitter_header_::HeaderPlan> plan, std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan> instantiations) {
-    const auto& _iterable_24 = instantiations->interfaces;
-    for (const auto& interface_ : *_iterable_24) {
+    const auto& _iterable_30 = instantiations->interfaces;
+    for (const auto& interface_ : *_iterable_30) {
         if ((interface_->name != std::string("Stream")) && (interface_->modulePath != context->modulePath)) {
             continue;
         }
         auto alternatives = std::string("");
-        const auto& _iterable_25 = interface_->implementations;
-        for (const auto& implementation : *_iterable_25) {
+        const auto& _iterable_31 = interface_->implementations;
+        for (const auto& implementation : *_iterable_31) {
             if (alternatives != std::string("")) {
                 (alternatives = (alternatives + std::string(", ")));
             }
@@ -452,20 +688,20 @@ void addConcreteHeaderDeclarations(std::shared_ptr<::app_src_emitter_header_::He
         }
         plan->interfaceAliases->push_back(((((std::string("using ") + interface_->emittedName) + std::string(" = std::variant<")) + alternatives) + std::string(">;\n")));
     }
-    const auto& _iterable_26 = instantiations->classes;
-    for (const auto& instantiation : *_iterable_26) {
+    const auto& _iterable_32 = instantiations->classes;
+    for (const auto& instantiation : *_iterable_32) {
         if (instantiation->modulePath != context->modulePath) {
             continue;
         }
-        const auto& _iterable_27 = instantiation->substitution->arguments;
-        for (const auto& argument : *_iterable_27) {
+        const auto& _iterable_33 = instantiation->substitution->arguments;
+        for (const auto& argument : *_iterable_33) {
             addConcreteTypeForwardDeclarations(plan, context, argument);
         }
         plan->classForwardDeclarations->push_back(((std::string("struct ") + instantiation->emittedName) + std::string(";\n")));
         (context->substitution = instantiation->substitution);
         std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>> methods = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>>(std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>{});
-        const auto& _iterable_28 = instantiations->methods;
-        for (const auto& method : *_iterable_28) {
+        const auto& _iterable_34 = instantiations->methods;
+        for (const auto& method : *_iterable_34) {
             if (method->ownerKey == instantiation->key) {
                 methods->push_back(method);
             }
@@ -473,13 +709,13 @@ void addConcreteHeaderDeclarations(std::shared_ptr<::app_src_emitter_header_::He
         plan->classDefinitions->push_back(::app_src_emitter_decl_::emitClassDeclaration(instantiation->declaration, context, instantiation->emittedName, methods));
         clearInstantiation(context);
     }
-    const auto& _iterable_29 = instantiations->functions;
-    for (const auto& instantiation : *_iterable_29) {
+    const auto& _iterable_35 = instantiations->functions;
+    for (const auto& instantiation : *_iterable_35) {
         if (instantiation->modulePath != context->modulePath) {
             continue;
         }
-        const auto& _iterable_30 = instantiation->substitution->arguments;
-        for (const auto& argument : *_iterable_30) {
+        const auto& _iterable_36 = instantiation->substitution->arguments;
+        for (const auto& argument : *_iterable_36) {
             addConcreteTypeForwardDeclarations(plan, context, argument);
         }
         (context->substitution = instantiation->substitution);
@@ -503,15 +739,15 @@ void addConcreteTypeForwardDeclarations(std::shared_ptr<::app_src_emitter_header
                     plan->typeOnlyForwardDeclarations->push_back(declaration);
                 }
             }
-            const auto& _iterable_31 = class_->typeArgs;
-            for (const auto& argument : *_iterable_31) {
+            const auto& _iterable_37 = class_->typeArgs;
+            for (const auto& argument : *_iterable_37) {
                 addConcreteTypeForwardDeclarations(plan, context, argument);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject)) {
             const auto& interface_ = std::get<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject);
-            const auto& _iterable_32 = interface_->typeArgs;
-            for (const auto& argument : *_iterable_32) {
+            const auto& _iterable_38 = interface_->typeArgs;
+            for (const auto& argument : *_iterable_38) {
                 addConcreteTypeForwardDeclarations(plan, context, argument);
             }
     }
@@ -539,15 +775,15 @@ void addConcreteTypeForwardDeclarations(std::shared_ptr<::app_src_emitter_header
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_33 = tuple->elements;
-            for (const auto& element : *_iterable_33) {
+            const auto& _iterable_39 = tuple->elements;
+            for (const auto& element : *_iterable_39) {
                 addConcreteTypeForwardDeclarations(plan, context, element);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_34 = union_->types;
-            for (const auto& member : *_iterable_34) {
+            const auto& _iterable_40 = union_->types;
+            for (const auto& member : *_iterable_40) {
                 addConcreteTypeForwardDeclarations(plan, context, member);
             }
     }
@@ -557,8 +793,8 @@ void addConcreteTypeForwardDeclarations(std::shared_ptr<::app_src_emitter_header
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_35 = function_->params;
-            for (const auto& parameter : *_iterable_35) {
+            const auto& _iterable_41 = function_->params;
+            for (const auto& parameter : *_iterable_41) {
                 addConcreteTypeForwardDeclarations(plan, context, parameter->type_);
             }
             addConcreteTypeForwardDeclarations(plan, context, function_->returnType);
@@ -569,8 +805,8 @@ void addConcreteTypeForwardDeclarations(std::shared_ptr<::app_src_emitter_header
 }
 std::string emitConcreteFunctions(std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan> instantiations) {
     auto result = std::string("");
-    const auto& _iterable_36 = instantiations->functions;
-    for (const auto& instantiation : *_iterable_36) {
+    const auto& _iterable_42 = instantiations->functions;
+    for (const auto& instantiation : *_iterable_42) {
         if (instantiation->modulePath != context->modulePath) {
             continue;
         }
@@ -592,12 +828,12 @@ void clearInstantiation(std::shared_ptr<::app_src_emitter_context_::EmitContext>
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>> emitModuleSurfaces(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>> surfaces = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>>(std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>{});
-    const auto& _iterable_37 = result->modules;
-    for (const auto& module : *_iterable_37) {
+    const auto& _iterable_43 = result->modules;
+    for (const auto& module : *_iterable_43) {
         std::shared_ptr<std::vector<std::string>> genericTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
         std::shared_ptr<std::vector<std::string>> genericFunctions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-        const auto& _iterable_38 = module->program->statements;
-        for (const auto& statement : *_iterable_38) {
+        const auto& _iterable_44 = module->program->statements;
+        for (const auto& statement : *_iterable_44) {
             collectGenericSurfaceSymbols(statement, genericTypes, genericFunctions);
         }
         surfaces->push_back(std::make_shared<::app_src_emitter_context_::EmitModuleSurface>(module->path, module->exports, module->imports, genericTypes, genericFunctions));
@@ -641,15 +877,15 @@ void collectGenericSurfaceSymbols(std::variant<std::shared_ptr<::app_src_ast_::C
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{});
-    const auto& _iterable_39 = result->modules;
-    for (const auto& module : *_iterable_39) {
+    const auto& _iterable_45 = result->modules;
+    for (const auto& module : *_iterable_45) {
         programs->push_back(module->program);
     }
     return programs;
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> infoNamespaceImports(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string path) {
-    const auto& _iterable_40 = result->modules;
-    for (const auto& module : *_iterable_40) {
+    const auto& _iterable_46 = result->modules;
+    for (const auto& module : *_iterable_46) {
         if (module->path == path) {
             return module->namespaceImports;
         }
@@ -657,8 +893,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBindin
     return std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{});
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> infoImports(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string path) {
-    const auto& _iterable_41 = result->modules;
-    for (const auto& module : *_iterable_41) {
+    const auto& _iterable_47 = result->modules;
+    for (const auto& module : *_iterable_47) {
         if (module->path == path) {
             return module->imports;
         }
@@ -666,8 +902,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>
     return std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{});
 }
 std::shared_ptr<::app_src_analyzer_::ModuleInfo> findGraphModule(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string path) {
-    const auto& _iterable_42 = result->modules;
-    for (const auto& module : *_iterable_42) {
+    const auto& _iterable_48 = result->modules;
+    for (const auto& module : *_iterable_48) {
         if (module->path == path) {
             return module;
         }
@@ -695,8 +931,8 @@ std::string emitSourceStatement(std::variant<std::shared_ptr<::app_src_ast_::Con
             }
             auto result = (std::string("\n") + ::app_src_emitter_decl_::emitStaticClassFieldDefinitions(class_, context));
             if (static_cast<int32_t>((class_->typeParams)->size()) == 0) {
-                const auto& _iterable_43 = class_->methods;
-                for (const auto& method : *_iterable_43) {
+                const auto& _iterable_49 = class_->methods;
+                for (const auto& method : *_iterable_49) {
                     (result = (result + ::app_src_emitter_decl_::emitClassMethodDefinition(class_, method, context)));
                 }
             }
@@ -737,10 +973,10 @@ std::string emitSourceStatement(std::variant<std::shared_ptr<::app_src_ast_::Con
 }
 std::string emitNativeClassMethods(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
     auto result = std::string("");
-    const auto& _iterable_44 = programs;
-    for (const auto& program : *_iterable_44) {
-        const auto& _iterable_45 = program->statements;
-        for (const auto& statement : *_iterable_45) {
+    const auto& _iterable_50 = programs;
+    for (const auto& program : *_iterable_50) {
+        const auto& _iterable_51 = program->statements;
+        for (const auto& statement : *_iterable_51) {
             (result = (result + emitNativeClassMethodsForStatement(statement, context)));
         }
     }
@@ -755,8 +991,8 @@ std::string emitNativeClassMethodsForStatement(std::variant<std::shared_ptr<::ap
                 return std::string("");
             }
             auto result = std::string("");
-            const auto& _iterable_46 = class_->methods;
-            for (const auto& method : *_iterable_46) {
+            const auto& _iterable_52 = class_->methods;
+            for (const auto& method : *_iterable_52) {
                 if (!method->bodyless) {
                     (result = (result + ::app_src_emitter_decl_::emitClassMethodDefinition(class_, method, context)));
                 }
@@ -774,19 +1010,40 @@ std::string emitNativeClassMethodsForStatement(std::variant<std::shared_ptr<::ap
     doof::unreachable();
     return std::string("");
 }
-std::string emitMainWrapper(std::string moduleName, std::shared_ptr<::app_src_emitter_header_::HeaderPlan> plan) {
-    const auto signature = (plan->mainAcceptsArgs ? std::string("int main(int argc, char** argv)") : std::string("int main()"));
-    const auto argumentSetup = (plan->mainAcceptsArgs ? std::string("std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); ") : std::string(""));
-    const auto call = (plan->mainAcceptsArgs ? (moduleName + std::string("::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))")) : (moduleName + std::string("::doof_main()")));
-    const auto success = (plan->mainReturnsInt ? ((std::string("return ") + call) + std::string(";")) : (call + std::string("; return 0;")));
+std::string emitMainWrapper(std::string moduleName, std::shared_ptr<::app_src_emitter_header_::HeaderPlan> plan, bool hasScript) {
+    if (!hasScript) {
+        const auto signature = (plan->mainAcceptsArgs ? std::string("int main(int argc, char** argv)") : std::string("int main()"));
+        const auto argumentSetup = (plan->mainAcceptsArgs ? std::string("std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); ") : std::string(""));
+        const auto call = (plan->mainAcceptsArgs ? (moduleName + std::string("::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))")) : (moduleName + std::string("::doof_main()")));
+        const auto success = (plan->mainReturnsInt ? ((std::string("return ") + call) + std::string(";")) : (call + std::string("; return 0;")));
+        const auto panicHandler = std::string("catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }");
+        const auto actorSetup = std::string("auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); ");
+        return ((((((((std::string("\n") + signature) + std::string(" { try { ")) + actorSetup) + argumentSetup) + success) + std::string(" } ")) + panicHandler) + std::string(" }\n"));
+    }
+    const auto needsArguments = (plan->mainAcceptsArgs || hasScript);
+    const auto signature = (needsArguments ? std::string("int main(int argc, char** argv)") : std::string("int main()"));
+    const auto argumentSetup = (needsArguments ? std::string("std::vector<std::string> raw_arguments; for (int i = 1; i < argc; ++i) raw_arguments.emplace_back(argv[i]); auto arguments = std::make_shared<std::vector<std::string>>(std::move(raw_arguments)); ") : std::string(""));
+    const auto scriptCall = (hasScript ? (moduleName + std::string("::__doof_run_script(arguments); ")) : std::string(""));
+    const auto call = (plan->mainAcceptsArgs ? (moduleName + std::string("::doof_main(arguments)")) : (moduleName + std::string("::doof_main()")));
+    const auto success = (!plan->hasMain ? (scriptCall + std::string("return 0;")) : (plan->mainReturnsInt ? (((scriptCall + std::string("return ")) + call) + std::string(";")) : ((scriptCall + call) + std::string("; return 0;"))));
     const auto panicHandler = std::string("catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }");
     const auto actorSetup = std::string("auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); ");
     return ((((((((std::string("\n") + signature) + std::string(" { try { ")) + actorSetup) + argumentSetup) + success) + std::string(" } ")) + panicHandler) + std::string(" }\n"));
 }
-std::string emitAppEntryWrapper(std::string moduleName, std::shared_ptr<::app_src_emitter_header_::HeaderPlan> plan) {
-    const auto argumentSetup = (plan->mainAcceptsArgs ? std::string("std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); ") : std::string("(void)argc; (void)argv; "));
-    const auto call = (plan->mainAcceptsArgs ? (moduleName + std::string("::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))")) : (moduleName + std::string("::doof_main()")));
-    const auto success = (plan->mainReturnsInt ? ((std::string("return ") + call) + std::string(";")) : (call + std::string("; return 0;")));
+std::string emitAppEntryWrapper(std::string moduleName, std::shared_ptr<::app_src_emitter_header_::HeaderPlan> plan, bool hasScript) {
+    if (!hasScript) {
+        const auto argumentSetup = (plan->mainAcceptsArgs ? std::string("std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); ") : std::string("(void)argc; (void)argv; "));
+        const auto call = (plan->mainAcceptsArgs ? (moduleName + std::string("::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))")) : (moduleName + std::string("::doof_main()")));
+        const auto success = (plan->mainReturnsInt ? ((std::string("return ") + call) + std::string(";")) : (call + std::string("; return 0;")));
+        const auto panicHandler = std::string("catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }");
+        const auto actorSetup = std::string("auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); ");
+        return ((((((std::string("\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { ") + actorSetup) + argumentSetup) + success) + std::string(" } ")) + panicHandler) + std::string(" }\n"));
+    }
+    const auto needsArguments = (plan->mainAcceptsArgs || hasScript);
+    const auto argumentSetup = (needsArguments ? std::string("std::vector<std::string> raw_arguments; for (int i = 1; i < argc; ++i) raw_arguments.emplace_back(argv[i]); auto arguments = std::make_shared<std::vector<std::string>>(std::move(raw_arguments)); ") : std::string("(void)argc; (void)argv; "));
+    const auto scriptCall = (hasScript ? (moduleName + std::string("::__doof_run_script(arguments); ")) : std::string(""));
+    const auto call = (plan->mainAcceptsArgs ? (moduleName + std::string("::doof_main(arguments)")) : (moduleName + std::string("::doof_main()")));
+    const auto success = (!plan->hasMain ? (scriptCall + std::string("return 0;")) : (plan->mainReturnsInt ? (((scriptCall + std::string("return ")) + call) + std::string(";")) : ((scriptCall + call) + std::string("; return 0;"))));
     const auto panicHandler = std::string("catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }");
     const auto actorSetup = std::string("auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); ");
     return ((((((std::string("\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { ") + actorSetup) + argumentSetup) + success) + std::string(" } ")) + panicHandler) + std::string(" }\n"));

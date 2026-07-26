@@ -179,24 +179,28 @@ let ratio: string = string(3.5)
 
 `string(...)` accepts exactly one primitive argument of type `byte`, `int`, `long`, `float`, `double`, `string`, `char`, or `bool` and returns a `string`.
 
-### Numeric Parse Methods
+### Numeric Parsing
 
-Numeric types expose a static `.parse()` method for fallible string parsing:
+Fallible string parsing is provided by `std/parse`:
 
-```javascript
-count := int.parse("42")                // Result<int, ParseError>
-channel := byte.parse("255")            // Result<byte, ParseError>
-total := long.parse("9007199254740991") // Result<long, ParseError>
-ratio := double.parse("3.14159")        // Result<double, ParseError>
+```doof
+import { parseByte, parseDouble, parseInt, parseLong } from "std/parse"
+
+count := parseInt("42")                // Result<int, ParsingError>
+channel := parseByte("255")            // Result<byte, ParsingError>
+total := parseLong("9007199254740991") // Result<long, ParsingError>
+ratio := parseDouble("3.14159")        // Result<double, ParsingError>
 ```
 
-These methods return `Result<T, ParseError>` with the following builtin error cases:
+The package also exports `parseBool` and `parseFloat`. Numeric parse functions
+return `Result<T, ParsingError>` with the following error cases:
 
-```javascript
-enum ParseError { InvalidFormat, Overflow, Underflow, EmptyInput }
+```doof
+enum ParsingError { InvalidFormat, Overflow, Underflow, EmptyInput }
 ```
 
-Parsing is explicit and separate from numeric casts: `int("42")` is still invalid, while `int.parse("42")` returns `Success(42)`.
+Parsing is explicit and separate from numeric casts: `int("42")` is still
+invalid, while `parseInt("42")` returns `Success(42)`.
 
 ### String Properties and Methods
 
@@ -302,7 +306,7 @@ name: string | none := "Alice"
 println(name!)                  // ✅ Asserts presence, type is string
 greet(name!)                    // ✅ Works in function argument position
 
-parsed: Result<int, ParseError> := int.parse("12")
+parsed: Result<int, ParsingError> := parseInt("12")
 println(parsed! + 2)            // ✅ Unwraps Success, type is int
 
 node.next!.value                // ✅ Alternative: !. force-unwrap member access
@@ -1542,7 +1546,7 @@ Use `expr!` when you want an assertion rather than a typed failure path:
 name: string | none := maybeName()
 println(name!)  // panics at runtime if name is none
 
-parsed: Result<int, ParseError> := int.parse("12")
+parsed: Result<int, ParsingError> := parseInt("12")
 println(parsed! + 2)  // panics at runtime if parsed is Failure
 ```
 

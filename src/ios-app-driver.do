@@ -12,6 +12,7 @@ import { NativeBuildPlan } from "./package-manifest"
 import { BlobReader } from "std/blob"
 import { exists, isDirectory, mkdir, readBlob, readDir, remove, writeBlob, writeText } from "std/fs"
 import { ExecOptions, platform, run } from "std/os"
+import { parseInt } from "std/parse"
 import { basename, dirname, join } from "std/path"
 import { Instant } from "std/time"
 
@@ -296,7 +297,7 @@ export function signAndArchiveIOSApp(
   let keychainGroupCount = 0
   case keychainGroupCountResult {
     success: Success -> {
-      case int.parse(success.value) {
+      case parseInt(success.value) {
         parsedCount: Success -> { keychainGroupCount = parsedCount.value }
         _: Failure -> { }
       }

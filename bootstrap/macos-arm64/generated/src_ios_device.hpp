@@ -32,6 +32,7 @@ namespace app_src_ios_device_ {
 #include "std_fs_index.hpp"
 #include "std_json_index.hpp"
 #include "std_os_index.hpp"
+#include "std_parse_index.hpp"
 #include "std_path_index.hpp"
 #include "std_time_index.hpp"
 #include "src_ios_app.hpp"

@@ -47,6 +47,7 @@ namespace app_src_project_ {
     std::string entry;
     std::string buildDirectory;
     bool hasManifest;
+    bool explicitEntry = false;
     std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependency>>> externalDependencies;
@@ -56,7 +57,7 @@ namespace app_src_project_ {
     std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp = nullptr;
     std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr;
     std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr;
-    ProjectSpec(std::string rootDirectory, std::string manifestPath, std::string name, std::string entry, std::string buildDirectory, bool hasManifest, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependency>>> externalDependencies, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::string target = std::string(""), std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp = nullptr, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp = nullptr, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr) : rootDirectory(rootDirectory), manifestPath(manifestPath), name(name), entry(entry), buildDirectory(buildDirectory), hasManifest(hasManifest), manifest(manifest), resources(resources), externalDependencies(externalDependencies), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
+    ProjectSpec(std::string rootDirectory, std::string manifestPath, std::string name, std::string entry, std::string buildDirectory, bool hasManifest, bool explicitEntry, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependency>>> externalDependencies, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::string target = std::string(""), std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp = nullptr, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp = nullptr, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr) : rootDirectory(rootDirectory), manifestPath(manifestPath), name(name), entry(entry), buildDirectory(buildDirectory), hasManifest(hasManifest), explicitEntry(explicitEntry), manifest(manifest), resources(resources), externalDependencies(externalDependencies), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ProjectSpec>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
@@ -65,6 +66,7 @@ namespace app_src_project_ {
     std::string fileName(std::string path);
     std::string parentPath(std::string path);
     std::string joinPath(std::string directory, std::string name);
+    std::string projectEntryRequestError(std::shared_ptr<ProjectSpec> project, std::string requestedPath);
     std::shared_ptr<ProjectSpec> readProjectSpec(std::string requestedPath, std::string platform = std::string(""), std::string targetOverride = std::string(""));
 }
 

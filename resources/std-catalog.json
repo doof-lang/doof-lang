@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "compilerVersion": "0.1.0",
-  "digest": "3d9911f2716faaaf8f2750bcc814bb77475dbe2cebceb61e3ffceed3867700a7",
+  "digest": "592e4f3b6b7721afd0eda582e0119e09f6192651f5c011e07d4f47bae4d507b8",
   "packages": [
     {
       "name": "std/apple-intelligence",
@@ -142,6 +142,13 @@
       "ref": "d1b5611",
       "version": "0.1.0",
       "commit": "d1b5611ae097908f7aa8354ecbbcbf58cb51d162"
+    },
+    {
+      "name": "std/parse",
+      "url": "https://github.com/doof-lang/parse",
+      "ref": "5a2fcfc",
+      "version": "0.1.0",
+      "commit": "5a2fcfc68c7602283b221395a28f26017b0bfe99"
     },
     {
       "name": "std/path",

@@ -13,11 +13,12 @@ function hasDiagnostic(result: AnalysisResult, message: string): bool {
   return false
 }
 
-export function testRecognizesBuiltinParseErrorAnnotations(): none {
+export function testRejectsRemovedBuiltinParseErrorAnnotations(): none {
   result := createAnalyzer([SourceFile {
     path: "/main.do", source: "function parse(): Result<int, ParseError> => Failure { error: .Overflow }",
   }]).analyze("/main.do")
-  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Unknown type 'ParseError'")
 }
 
 export function testRecognizesBuiltinNeverAnnotations(): none {

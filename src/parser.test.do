@@ -246,6 +246,21 @@ export function testParsesLongLiteralsWithoutIntTruncation(): none {
   }
 }
 
+export function testParsesMinimumIntWithoutOverflowingBeforeNegation(): none {
+  case first("-2147483648") {
+    statement: ExpressionStatement -> { assertInt(statement.expression, -2147483647 - 1) }
+    _ -> { panic("expected expression statement") }
+  }
+  case first("-2_147_483_648") {
+    statement: ExpressionStatement -> { assertInt(statement.expression, -2147483647 - 1) }
+    _ -> { panic("expected expression statement") }
+  }
+  case first("-0x80000000") {
+    statement: ExpressionStatement -> { assertInt(statement.expression, -2147483647 - 1) }
+    _ -> { panic("expected expression statement") }
+  }
+}
+
 export function testParsesLargeDoubleLiteralsWithoutIntTruncation(): none {
   case first("86400000000000.0") {
     statement: ExpressionStatement -> { assertDouble(statement.expression, 86400000000000.0) }

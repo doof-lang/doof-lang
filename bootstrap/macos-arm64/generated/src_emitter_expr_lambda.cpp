@@ -55,7 +55,9 @@ std::string emitLambdaExpression(std::shared_ptr<::app_src_ast_::LambdaExpressio
     }
     const auto previousReturnErrorType = context->currentReturnErrorType;
     const auto previousFunctionName = context->currentFunctionName;
+    const auto previousTryPanics = context->tryPanics;
     (context->currentFunctionName = (previousFunctionName + std::string(".<lambda>")));
+    (context->tryPanics = false);
     {
         auto _case_subject = functionType->returnType;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject)) {
@@ -81,6 +83,7 @@ std::string emitLambdaExpression(std::shared_ptr<::app_src_ast_::LambdaExpressio
     }
     (context->currentReturnErrorType = previousReturnErrorType);
     (context->currentFunctionName = previousFunctionName);
+    (context->tryPanics = previousTryPanics);
     return (((::app_src_emitter_types_::emitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(functionType), context->modulePath) + std::string("(")) + lambda) + std::string(")"));
 }
 std::shared_ptr<std::vector<std::string>> scanCapturedMutablesInBlock(std::shared_ptr<::app_src_ast_::Block> body) {
@@ -781,6 +784,9 @@ void collectIdentifierCapture(std::shared_ptr<::app_src_ast_::Identifier> identi
         if (!mutableOnly) {
             addUnique(result, std::string("this"));
         }
+        return;
+    }
+    if ((binding->kind == std::string("script-global")) || (binding->kind == std::string("script-arguments"))) {
         return;
     }
     if (((!doof::is_null(binding->symbol)) || (binding->kind == std::string("builtin"))) || (binding->kind == std::string("import"))) {

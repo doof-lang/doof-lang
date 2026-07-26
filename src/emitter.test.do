@@ -93,6 +93,12 @@ export function testEmitsIntegerMapKeys(): none {
   Assert.stringContains(result.source, "{2LL, std::string(\"two\")}")
 }
 
+export function testEmitsMinimumIntWithoutDoubleNegation(): none {
+  result := emit("function minimum(): int => -2147483648")
+  Assert.stringContains(result.source, "return -2147483648;")
+  Assert.equal(result.source.contains("--2147483648"), false)
+}
+
 export function testEmitsArrayCloneMutableAndEnumFromValue(): none {
   result := emit("enum Suit { Spades = 0, Hearts = 1 }\nfunction clone(values: int[]): int[] => values.cloneMutable()\nfunction suit(index: int): Suit => Suit.fromValue(index) ?? .Spades")
   Assert.stringContains(result.source, "doof::array_cloneMutable(values")
@@ -405,18 +411,12 @@ export function testEmitsShadowedBuiltinCallsFromResolvedBindings(): none {
   Assert.stringContains(result.source, "byte->parse")
   Assert.equal(result.source.contains("doof::println(1)"), false)
   Assert.equal(result.source.contains("doof::Success<int32_t>{ 3 }"), false)
-  Assert.equal(result.source.contains("doof::parse_byte"), false)
 }
 
 export function testDoesNotHardwireAliasFieldInIfExpressions(): none {
   result := emit("class Label { alias: string }\nfunction choose(label: Label, first: bool): string => if first then \"first\" else label.alias")
   Assert.stringContains(result.source, "label->alias)")
   Assert.equal(result.source.contains("label->alias.value()"), false)
-}
-
-export function testEmitsNameableBuiltinParseErrorVariant(): none {
-  result := emit("function overflow(): Result<int, ParseError> => Failure { error: .Overflow }")
-  Assert.stringContains(result.source, "::doof::ParseError::Overflow")
 }
 
 export function testKeepsNullableNativePseudoFieldNamesAsMethodCalls(): none {
@@ -882,17 +882,6 @@ export function testKeepsImmutableStructBindingInteriorMutable(): none {
   result := emit("struct Point { x: int\nsum(): int => x }\nfunction read(): int { point := Point(4)\nreturn point.sum() }")
   Assert.equal(result.source.contains("auto point ="), true)
   Assert.equal(result.source.contains("const auto point"), false)
-}
-
-export function testUsesBuiltinParseErrorForNumericParseCasePatterns(): none {
-  result := emit("function parsed(value: string): bool => case int.parse(value) { success: Success -> true, failure: Failure -> false }")
-  Assert.equal(result.source.contains("std::holds_alternative<doof::Failure<::doof::ParseError>>"), true)
-  Assert.equal(result.source.contains("std::get<doof::Failure<::doof::ParseError>>"), true)
-}
-
-export function testEmitsEveryNumericParseNamespace(): none {
-  result := emit("function parsed(value: string): bool => case double.parse(value) { _: Success -> true, _: Failure -> false }")
-  Assert.equal(result.source.contains("doof::parse_double(value)"), true)
 }
 
 export function testEmitsEnumsAndTypeAliases(): none {

@@ -313,8 +313,10 @@ name := (try! result).name
 The postfix `!` operator on a `Result<T, E>` does the same unwrap-or-panic step when you want the success value itself:
 
 ```javascript
-value := int.parse("12")!      // int
-sum := int.parse("12")! + 2    // int
+import { parseInt } from "std/parse"
+
+value := parseInt("12")!      // int
+sum := parseInt("12")! + 2    // int
 ```
 
 Applying postfix `!` to a value that is neither nullable nor a `Result` is a compile error.

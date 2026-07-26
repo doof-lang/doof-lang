@@ -851,45 +851,6 @@ inline std::optional<Target> checked_numeric_as(Source value) {
 }
 
 // ============================================================================
-// ParseError — builtin parse failure classification
-// ============================================================================
-
-enum class ParseError {
-    InvalidFormat,
-    Overflow,
-    Underflow,
-    EmptyInput,
-};
-
-inline const char* ParseError_name(ParseError value) {
-    switch (value) {
-        case ParseError::InvalidFormat: return "InvalidFormat";
-        case ParseError::Overflow: return "Overflow";
-        case ParseError::Underflow: return "Underflow";
-        case ParseError::EmptyInput: return "EmptyInput";
-        default: return "InvalidFormat";
-    }
-}
-
-inline std::optional<ParseError> ParseError_fromName(std::string_view value) {
-    if (value == "InvalidFormat") return ParseError::InvalidFormat;
-    if (value == "Overflow") return ParseError::Overflow;
-    if (value == "Underflow") return ParseError::Underflow;
-    if (value == "EmptyInput") return ParseError::EmptyInput;
-    return std::nullopt;
-}
-
-inline std::optional<ParseError> ParseError_fromValue(int32_t value) {
-    switch (static_cast<ParseError>(value)) {
-        case ParseError::InvalidFormat: return ParseError::InvalidFormat;
-        case ParseError::Overflow: return ParseError::Overflow;
-        case ParseError::Underflow: return ParseError::Underflow;
-        case ParseError::EmptyInput: return ParseError::EmptyInput;
-        default: return std::nullopt;
-    }
-}
-
-// ============================================================================
 // JsonValue — first-class JSON runtime value
 // ============================================================================
 
@@ -1217,11 +1178,6 @@ inline std::string to_string(const std::variant<Ts...>& val) {
     }, val);
 }
 
-inline std::string to_string(ParseError val) {
-    return ParseError_name(val);
-}
-
-
 // Variadic string concatenation for string interpolation
 inline std::string concat() { return ""; }
 
@@ -1233,97 +1189,6 @@ inline std::string concat(const T& val) {
 template <typename T, typename... Args>
 inline std::string concat(const T& first, const Args&... rest) {
     return to_string(first) + concat(rest...);
-}
-
-inline bool string_has_outer_whitespace(const std::string& s) {
-    if (s.empty()) return false;
-    const auto first = static_cast<unsigned char>(s.front());
-    const auto last = static_cast<unsigned char>(s.back());
-    return std::isspace(first) || std::isspace(last);
-}
-
-inline Result<int32_t, ParseError> parse_int(const std::string& s) {
-    if (s.empty()) return Failure<ParseError>{ParseError::EmptyInput};
-    if (string_has_outer_whitespace(s)) return Failure<ParseError>{ParseError::InvalidFormat};
-
-    errno = 0;
-    char* end = nullptr;
-    const long long value = std::strtoll(s.c_str(), &end, 10);
-    if (end == s.c_str() || (end != nullptr && *end != 0)) {
-        return Failure<ParseError>{ParseError::InvalidFormat};
-    }
-    if (errno == ERANGE || value > std::numeric_limits<int32_t>::max()) {
-        return Failure<ParseError>{ParseError::Overflow};
-    }
-    if (errno == ERANGE || value < std::numeric_limits<int32_t>::min()) {
-        return Failure<ParseError>{ParseError::Underflow};
-    }
-    return Success<int32_t>{static_cast<int32_t>(value)};
-}
-
-inline Result<uint8_t, ParseError> parse_byte(const std::string& s) {
-    const auto parsed = parse_int(s);
-    if (is_failure(parsed)) {
-        return Failure<ParseError>{failure_error(parsed)};
-    }
-
-    const int32_t value = success_value(parsed);
-    if (value < 0) {
-        return Failure<ParseError>{ParseError::Underflow};
-    }
-    if (value > 255) {
-        return Failure<ParseError>{ParseError::Overflow};
-    }
-
-    return Success<uint8_t>{static_cast<uint8_t>(value)};
-}
-
-inline Result<int64_t, ParseError> parse_long(const std::string& s) {
-    if (s.empty()) return Failure<ParseError>{ParseError::EmptyInput};
-    if (string_has_outer_whitespace(s)) return Failure<ParseError>{ParseError::InvalidFormat};
-
-    errno = 0;
-    char* end = nullptr;
-    const long long value = std::strtoll(s.c_str(), &end, 10);
-    if (end == s.c_str() || (end != nullptr && *end != 0)) {
-        return Failure<ParseError>{ParseError::InvalidFormat};
-    }
-    if (errno == ERANGE) {
-        return Failure<ParseError>{value < 0 ? ParseError::Underflow : ParseError::Overflow};
-    }
-    return Success<int64_t>{static_cast<int64_t>(value)};
-}
-
-inline Result<float, ParseError> parse_float(const std::string& s) {
-    if (s.empty()) return Failure<ParseError>{ParseError::EmptyInput};
-    if (string_has_outer_whitespace(s)) return Failure<ParseError>{ParseError::InvalidFormat};
-
-    errno = 0;
-    char* end = nullptr;
-    const float value = std::strtof(s.c_str(), &end);
-    if (end == s.c_str() || (end != nullptr && *end != 0)) {
-        return Failure<ParseError>{ParseError::InvalidFormat};
-    }
-    if (errno == ERANGE) {
-        return Failure<ParseError>{value == 0.0f ? ParseError::Underflow : ParseError::Overflow};
-    }
-    return Success<float>{value};
-}
-
-inline Result<double, ParseError> parse_double(const std::string& s) {
-    if (s.empty()) return Failure<ParseError>{ParseError::EmptyInput};
-    if (string_has_outer_whitespace(s)) return Failure<ParseError>{ParseError::InvalidFormat};
-
-    errno = 0;
-    char* end = nullptr;
-    const double value = std::strtod(s.c_str(), &end);
-    if (end == s.c_str() || (end != nullptr && *end != 0)) {
-        return Failure<ParseError>{ParseError::InvalidFormat};
-    }
-    if (errno == ERANGE) {
-        return Failure<ParseError>{value == 0.0 ? ParseError::Underflow : ParseError::Overflow};
-    }
-    return Success<double>{value};
 }
 
 // ============================================================================

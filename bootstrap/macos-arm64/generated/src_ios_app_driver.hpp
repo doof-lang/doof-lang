@@ -33,6 +33,7 @@ namespace app_src_ios_app_driver_ {
 #include "std_blob_index.hpp"
 #include "std_fs_index.hpp"
 #include "std_os_index.hpp"
+#include "std_parse_index.hpp"
 #include "std_path_index.hpp"
 #include "std_time_index.hpp"
 

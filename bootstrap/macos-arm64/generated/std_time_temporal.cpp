@@ -1,5 +1,6 @@
 #include "std_time_temporal.hpp"
 #include <cmath>
+#include "std_parse_index.hpp"
 #include "std_time_duration.hpp"
 #include "std_fs_index.hpp"
 #include "std_http_index.hpp"
@@ -7,6 +8,7 @@
 #include "std_stream_index.hpp"
 
 namespace std_::time::temporal {
+using namespace ::std_::parse::index;
 using namespace ::std_::time::duration;
 
 std::shared_ptr<Instant> Instant::EPOCH = std::make_shared<Instant>(0LL);
@@ -80,7 +82,7 @@ doof::Result<std::shared_ptr<Instant>, std::string> Instant::parseHttpDate(std::
     if (((((((doof::string_substring(s, 3, 5) != std::string(", ")) || (doof::string_at(s, 7, "", 0) != U'\u0020')) || (doof::string_at(s, 11, "", 0) != U'\u0020')) || (doof::string_at(s, 16, "", 0) != U'\u0020')) || (doof::string_at(s, 19, "", 0) != U'\u003A')) || (doof::string_at(s, 22, "", 0) != U'\u003A')) || (doof::string_slice(s, 25) != std::string(" GMT"))) {
         return doof::Failure<std::string>{ std::string("HTTP date must use IMF-fixdate format") };
     }
-    auto _binding_value_1 = [&]() -> std::optional<int32_t> { auto _try_value = doof::parse_int(doof::string_substring(s, 5, 7)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 72, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
+    auto _binding_value_1 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 5, 7)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 74, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
     if (doof::is_null(_binding_value_1)) {
         const auto& day = _binding_value_1;
         return doof::Failure<std::string>{ std::string("HTTP date day is invalid") };
@@ -92,25 +94,25 @@ doof::Result<std::shared_ptr<Instant>, std::string> Instant::parseHttpDate(std::
         return doof::Failure<std::string>{ std::string("HTTP date month is invalid") };
     }
     const auto month = doof::unwrap_optional(_binding_value_2);
-    auto _binding_value_3 = [&]() -> std::optional<int32_t> { auto _try_value = doof::parse_int(doof::string_substring(s, 12, 16)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 78, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
+    auto _binding_value_3 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 12, 16)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 80, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
     if (doof::is_null(_binding_value_3)) {
         const auto& year = _binding_value_3;
         return doof::Failure<std::string>{ std::string("HTTP date year is invalid") };
     }
     const auto year = doof::unwrap_optional(_binding_value_3);
-    auto _binding_value_4 = [&]() -> std::optional<int32_t> { auto _try_value = doof::parse_int(doof::string_substring(s, 17, 19)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 81, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
+    auto _binding_value_4 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 17, 19)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 83, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
     if (doof::is_null(_binding_value_4)) {
         const auto& hour = _binding_value_4;
         return doof::Failure<std::string>{ std::string("HTTP date hour is invalid") };
     }
     const auto hour = doof::unwrap_optional(_binding_value_4);
-    auto _binding_value_5 = [&]() -> std::optional<int32_t> { auto _try_value = doof::parse_int(doof::string_substring(s, 20, 22)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 84, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
+    auto _binding_value_5 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 20, 22)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 86, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
     if (doof::is_null(_binding_value_5)) {
         const auto& minute = _binding_value_5;
         return doof::Failure<std::string>{ std::string("HTTP date minute is invalid") };
     }
     const auto minute = doof::unwrap_optional(_binding_value_5);
-    auto _binding_value_6 = [&]() -> std::optional<int32_t> { auto _try_value = doof::parse_int(doof::string_substring(s, 23, 25)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 87, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
+    auto _binding_value_6 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 23, 25)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 89, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
     if (doof::is_null(_binding_value_6)) {
         const auto& second = _binding_value_6;
         return doof::Failure<std::string>{ std::string("HTTP date second is invalid") };

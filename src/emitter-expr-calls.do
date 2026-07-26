@@ -244,14 +244,6 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         }
         return object + "->toJsonObject()"
       }
-      case member.object {
-        identifier: Identifier -> {
-          if member.property == "parse" && isBuiltinTypeNamespace(identifier) {
-            return "doof::parse_" + identifier.name + "(" + emitExpression(expression.args[0].value, context) + ")"
-          }
-        }
-        _ -> { }
-      }
       if member.property == "fromJsonValue" && (!nominalReceiver || member.resolvedStaticOwner != none) {
         object := emitExpression(member.object, context)
         let args = ""
@@ -405,12 +397,6 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     }
   }
   return result + ")"
-}
-
-function isBuiltinTypeNamespace(identifier: Identifier): bool {
-  if identifier.resolvedBinding == none || identifier.resolvedBinding!.kind != "builtin-type-namespace" { return false }
-  name := identifier.name
-  return name == "byte" || name == "int" || name == "long" || name == "float" || name == "double"
 }
 
 function isBuiltinConversionIdentifier(identifier: Identifier): bool {

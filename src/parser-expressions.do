@@ -99,6 +99,16 @@ function contains(values: TokenType[], value: TokenType): bool {
 }
 
 export function parseUnary(parser: Parser): Expression {
+  // The positive magnitude of int.min is one greater than int.max, so parsing
+  // it as an IntLiteral first would wrap before unary negation is represented.
+  // Fold this boundary spelling while its magnitude can still be read as long.
+  if parser.check(TokenType.Minus) && parser.peek(1).kind == TokenType.IntLiteral
+      && parseLongValue(parser, parser.text(parser.peek(1))) == 2147483648L {
+    start := parser.location()
+    parser.advance()
+    value := int(-parseLongValue(parser, parser.text(parser.advance())))
+    return IntLiteral { kind: "int-literal", value, span: parser.span(start) }
+  }
   if parser.check(TokenType.Identifier) && (parser.text(parser.current()) == "try!" || parser.text(parser.current()) == "try?") {
     start := parser.location()
     operator := parser.text(parser.advance())

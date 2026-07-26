@@ -70,15 +70,18 @@ codePoint := int('A')
 ### String Conversion and Parse Helpers
 
 ```doof
+import { parseDouble, parseInt, parseLong } from "std/parse"
+
 label := string(42)
 ok := string(true)
 
-parsed := int.parse("42")
-big := long.parse("9007199254740991")
-ratio := double.parse("3.14")
+parsed := parseInt("42")
+big := parseLong("9007199254740991")
+ratio := parseDouble("3.14")
 ```
 
-`string(...)` accepts primitive values. Numeric parse helpers return `Result<T, ParseError>`.
+`string(...)` accepts primitive values. The `std/parse` helpers return
+`Result<T, ParsingError>`.
 
 ## Generic Constraints
 

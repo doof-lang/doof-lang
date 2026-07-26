@@ -432,17 +432,6 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
                 }
                 return (object + std::string("->toJsonObject()"));
             }
-            {
-                auto _case_subject = member->object;
-                if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
-                    const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
-                    if ((member->property == std::string("parse")) && isBuiltinTypeNamespace(identifier)) {
-                        return ((((std::string("doof::parse_") + identifier->name) + std::string("(")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(")"));
-                    }
-            }
-            else {
-            }
-            }
             if ((member->property == std::string("fromJsonValue")) && (!nominalReceiver || (!doof::is_null(member->resolvedStaticOwner)))) {
                 const auto object = ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{});
                 auto args = std::string("");
@@ -672,13 +661,6 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
         }
     }
     return (result + std::string(")"));
-}
-bool isBuiltinTypeNamespace(std::shared_ptr<::app_src_ast_::Identifier> identifier) {
-    if (doof::is_null(identifier->resolvedBinding) || (identifier->resolvedBinding->kind != std::string("builtin-type-namespace"))) {
-        return false;
-    }
-    const auto name = identifier->name;
-    return (((((name == std::string("byte")) || (name == std::string("int"))) || (name == std::string("long"))) || (name == std::string("float"))) || (name == std::string("double")));
 }
 bool isBuiltinConversionIdentifier(std::shared_ptr<::app_src_ast_::Identifier> identifier) {
     if (doof::is_null(identifier->resolvedBinding) || (identifier->resolvedBinding->kind != std::string("builtin"))) {

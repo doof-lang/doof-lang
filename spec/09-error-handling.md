@@ -41,7 +41,7 @@ the two arms may appear in either order.
 a class, enum, primitive, collection, nullable type, or union:
 
 ```doof
-Result<int, ParseError>
+Result<int, ParsingError>
 Result<Config, string>
 Result<Data, IOError | NetworkError>
 ```
@@ -93,21 +93,19 @@ Likewise, `Failure()` and `Failure {}` construct `Failure<none>`. That arm has
 no `.error` member, cannot be captured by `else error` or a failure case binding,
 and propagation or panic paths do not attempt to format an error payload.
 
-### Built-in ParseError
+### ParsingError
 
-Numeric parse helpers return `Result<T, ParseError>`:
+The parsing helpers from `std/parse` return `Result<T, ParsingError>`:
 
 ```doof
-enum ParseError {
-    InvalidFormat,
-    Overflow,
-    Underflow,
-    EmptyInput,
-}
+import { ParsingError, parseDouble, parseInt } from "std/parse"
 
-count := int.parse("123")      // Result<int, ParseError>
-ratio := double.parse("3.14")  // Result<double, ParseError>
+count := parseInt("123")      // Result<int, ParsingError>
+ratio := parseDouble("3.14")  // Result<double, ParsingError>
 ```
+
+`ParsingError` has `InvalidFormat`, `Overflow`, `Underflow`, and `EmptyInput`
+variants.
 
 ---
 
@@ -119,7 +117,7 @@ a `Failure` pattern matches the failure state and exposes the error payload as
 `.error`.
 
 ```doof
-case int.parse(input) {
+case parseInt(input) {
     s: Success -> println("count=${s.value}")
     f: Failure -> println("invalid count: ${f.error.name}")
 }
@@ -129,10 +127,10 @@ The `.value` and `.error` members exist only on the narrowed case-arm binding.
 They are not fields on the `Result` value itself:
 
 ```doof
-result: Result<int, string> := int.parse(input)
+result: Result<int, ParsingError> := parseInt(input)
 
-value := result.value  // Error: Result<int, string> has no field "value"
-error := result.error  // Error: Result<int, string> has no field "error"
+value := result.value  // Error: Result<int, ParsingError> has no field "value"
+error := result.error  // Error: Result<int, ParsingError> has no field "error"
 ```
 
 The type checker must first know which state is present.
@@ -521,13 +519,13 @@ The type is the union of all captured error types plus `none`:
 
 ```doof
 // readHeader(): Result<none, IOError>
-// parseHeader(): Result<Header, ParseError>
+// parseHeader(): Result<Header, HeaderParseError>
 
 err := catch {
     try readHeader()
     try header := parseHeader()
 }
-// IOError | ParseError | none
+// IOError | HeaderParseError | none
 ```
 
 Rules:

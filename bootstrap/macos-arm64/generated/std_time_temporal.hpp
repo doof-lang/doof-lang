@@ -19,6 +19,7 @@ namespace std_::time::temporal { struct Date; }
 namespace std_::time::temporal { struct Time; }
 namespace std_::time::temporal { enum class DayOfWeek; }
 namespace std_::time::duration { struct Duration; }
+namespace std_::parse::types { enum class ParsingError; }
 namespace std_::time::duration { struct Thread; }
 namespace std_::fs::index { struct BlockReadStream; }
 namespace std_::http::index { struct BodyChunkStream; }
@@ -35,6 +36,7 @@ namespace std_::time::temporal {
     struct ZonedDateTime;
 }
 
+#include "std_parse_index.hpp"
 #include "std_time_duration.hpp"
 
 namespace doof_time { using Instant = ::std_::time::temporal::Instant; }
@@ -44,6 +46,8 @@ namespace doof_time { using ZonedDateTime = ::std_::time::temporal::ZonedDateTim
 namespace doof_time { using Date = ::std_::time::temporal::Date; }
 namespace doof_time { using Time = ::std_::time::temporal::Time; }
 namespace doof_time { using DayOfWeek = ::std_::time::temporal::DayOfWeek; }
+namespace doof_time { using ::doof_parse::parseInt; }
+namespace doof_time { using ParsingError = ::std_::parse::types::ParsingError; }
 namespace doof_time { using Duration = ::std_::time::duration::Duration; }
 namespace doof_time { using Thread = ::std_::time::duration::Thread; }
 #include "doof_time.hpp"

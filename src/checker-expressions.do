@@ -41,7 +41,7 @@ import { checkCall, checkLambda, checkConstruct, callableField } from "./checker
 import { checkArray, checkObject } from "./checker-literals"
 import { resolveType, memberType, indexType } from "./checker-resolution"
 import { deprecatedNoneAlias, finish, typeError, requireBool } from "./checker-common"
-import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, isBuiltinNamespace, builtinNamespaceMemberType, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
+import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
 import { constructorForClass, staticMemberOwner } from "./checker-generics"
 import { checkerSemanticSpan } from "./checker-validation"
 
@@ -225,18 +225,6 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
           if localBinding == none && isNamespaceImport(state.info!, identifier.name) {
             namespaceName = identifier.name
             namespaceMember = namespaceMemberType(state.info!, identifier.name, member.property, state.result)
-          } else if localBinding == none && isBuiltinNamespace(identifier.name) {
-            namespaceName = identifier.name
-            identifier.resolvedBinding = Binding {
-              name: identifier.name,
-              kind: "builtin-type-namespace",
-              type_: primitive(identifier.name),
-              mutable: false,
-              span: checkerSemanticSpan(identifier.span),
-              module: state.info!.path,
-            }
-            identifier.resolvedType = optionalResolvedType(primitive(identifier.name))
-            namespaceMember = builtinNamespaceMemberType(identifier.name, member.property)
           } else {
             objectType = checkExpression(state, member.object, scope, none)
           }
@@ -250,6 +238,19 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         return finish(state, expression, namespaceMember!)
       }
       if objectType.kind == "never" { return finish(state, expression, neverType()) }
+      case member.object {
+        identifier: Identifier -> {
+          if member.property == "parse" && legacyNumericParseType(identifier) {
+            replacement := if identifier.name == "byte" then "parseByte" else
+              if identifier.name == "int" then "parseInt" else
+              if identifier.name == "long" then "parseLong" else
+              if identifier.name == "float" then "parseFloat" else "parseDouble"
+            typeError(state, identifier.name + ".parse was removed; import " + replacement + " from \"std/parse\"", member.span)
+            return finish(state, expression, unknownType())
+          }
+        }
+        _ -> { }
+      }
       diagnosticCount := state.diagnostics.length
       memberValue := memberType(state, objectType, member.property, member.span)
       if memberValue.kind == "unknown" && objectType.kind != "unknown" && state.diagnostics.length == diagnosticCount {
@@ -368,7 +369,7 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
   case expected! {
     enum_: EnumType -> {
       declaration := declarationFor(state.result, enum_.symbol)
-      let found = enum_.name == "ParseError" && enum_.symbol.module == "<builtin>" && builtinParseErrorVariant(expression.name)
+      let found = false
       if declaration != none {
         case declaration! {
           enumDeclaration: EnumDeclaration -> {
@@ -410,10 +411,6 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
   return finish(state, expression, unknownType())
 }
 
-function builtinParseErrorVariant(name: string): bool {
-  return name == "InvalidFormat" || name == "Overflow" || name == "Underflow" || name == "EmptyInput"
-}
-
 export function checkIdentifier(state: CheckerState, identifier: Identifier, scope: Scope): ResolvedType {
   let binding: Binding | none = lookup(scope, identifier.name)
   if binding == none && hasTypeParam(scope, identifier.name) {
@@ -432,6 +429,12 @@ export function checkIdentifier(state: CheckerState, identifier: Identifier, sco
   }
   identifier.resolvedBinding = binding
   return finish(state, identifier, binding.type_)
+}
+
+function legacyNumericParseType(identifier: Identifier): bool {
+  if identifier.resolvedBinding == none || identifier.resolvedBinding!.kind != "builtin" { return false }
+  name := identifier.name
+  return name == "byte" || name == "int" || name == "long" || name == "float" || name == "double"
 }
 
 export function implicitMethod(state: CheckerState, scope: Scope, name: string, span: SourceSpan): Binding | none {
