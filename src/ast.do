@@ -370,6 +370,7 @@ export class ConstDeclaration {
   value: Expression
   exported: bool
   resolvedType: ResolvedType | none = none
+  moduleInitializerChecked: bool = false
   span: SourceSpan
 }
 
@@ -381,6 +382,7 @@ export class ReadonlyDeclaration {
   value: Expression
   exported: bool
   resolvedType: ResolvedType | none = none
+  moduleInitializerChecked: bool = false
   span: SourceSpan
 }
 
@@ -393,6 +395,7 @@ export class ImmutableBinding {
   else_: Block | none = none
   failureName: string | none = none
   resolvedType: ResolvedType | none = none
+  moduleInitializerChecked: bool = false
   span: SourceSpan
 }
 
@@ -402,6 +405,7 @@ export class LetDeclaration {
   type_: TypeAnnotation | none
   value: Expression
   resolvedType: ResolvedType | none = none
+  moduleInitializerChecked: bool = false
   span: SourceSpan
 }
 
@@ -646,6 +650,7 @@ export class ClassField {
   weak_: bool = false
   private_: bool
   resolvedType: ResolvedType | none = none
+  moduleInitializerChecked: bool = false
   span: SourceSpan
 }
 

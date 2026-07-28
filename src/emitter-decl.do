@@ -125,6 +125,25 @@ export function emitValueDeclaration(statement: ConstDeclaration | ReadonlyDecla
   return ""
 }
 
+/** Emits default-initialized direct storage for a module binding. */
+export function emitModuleValueStorage(
+  statement: ConstDeclaration | ReadonlyDeclaration | ImmutableBinding | LetDeclaration,
+  context: EmitContext,
+  initializer: string = "",
+): string {
+  let name = ""
+  let type_: ResolvedType | none = none
+  case statement {
+    value: ConstDeclaration -> { name = value.name; type_ = value.resolvedType }
+    value: ReadonlyDeclaration -> { name = value.name; type_ = value.resolvedType }
+    value: ImmutableBinding -> { name = value.name; type_ = value.resolvedType }
+    value: LetDeclaration -> { name = value.name; type_ = value.resolvedType }
+  }
+  if name == "" || name == "_" || type_ == none { return "" }
+  return emitContextType(type_!, context) + " " + cppIdentifier(name) +
+    (if initializer == "" then "" else " = " + initializer) + ";\n"
+}
+
 function valuePrefix(name: string, resolvedType: ResolvedType, mutable: bool, context: EmitContext): string {
   case resolvedType {
     _: InterfaceType -> { return (if mutable then "" else "const ") + emitContextType(resolvedType, context) + " " + cppIdentifier(name) }
@@ -202,7 +221,10 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
       fieldType := fieldTypeTextForEmission(field, effectiveType, context)
       ensureKnown(effectiveType, decl.name + "." + name)
       result = result + emitDescriptionComment(description, "    ")
-      result = result + "    " + (if field.static_ then "static " else if field.const_ then "const " else "") + fieldType + " " + cppIdentifier(name)
+      // Doof enforces literal-valued fields semantically. Struct backing fields
+      // remain assignable so ordered module initialization can assign a fully
+      // constructed struct into its default-created static storage.
+      result = result + "    " + (if field.static_ then "static " else if field.const_ && !decl.struct_ then "const " else "") + fieldType + " " + cppIdentifier(name)
       if field.defaultValue != none && !field.static_ {
         defaultText := emitExpression(field.defaultValue!, context, effectiveType)
         if !defaultNeedsImportedDefinition(defaultText, context) { result = result + " = " + defaultText }
@@ -264,6 +286,9 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
       }
     }
     result = result + " {}\n"
+    if decl.struct_ && lastRequiredParameter >= 0 {
+      result = result + "    " + className + "() {}\n"
+    }
   } else if !decl.struct_ {
     result = result + "    " + className + "() {}\n"
   }
@@ -342,7 +367,7 @@ export function emitStaticClassFieldDefinitions(owner: ClassDeclaration, context
     if !field.static_ || field.defaultValue == none { continue }
     for name of field.names {
       resolvedType := fieldTypeForEmission(field)
-      result = result + fieldTypeTextForEmission(field, resolvedType, context) + " " + owner.name + "::" + cppIdentifier(name) + " = " + emitExpression(field.defaultValue!, context, resolvedType) + ";\n"
+      result = result + fieldTypeTextForEmission(field, resolvedType, context) + " " + owner.name + "::" + cppIdentifier(name) + ";\n"
     }
   }
   return result

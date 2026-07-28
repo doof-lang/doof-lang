@@ -87,7 +87,17 @@ function main(args: string[]): int { /* ... */ }
 
 ### Module Initialization
 
-Module-scope `readonly` values initialize before `main()`. Imported modules initialize depth-first.
+Module-scope values and static fields initialize explicitly before `main()`.
+Non-type imports initialize depth-first in source order, followed by bindings
+and static fields in declaration order. Declarative initializers are restricted
+to literal trees and direct non-native construction whose applied field values
+are also literal trees. Calls, binding reads, operators, interpolation, native
+construction, actors, async work, and other executable initializer expressions
+must move into `main()` or an explicitly called function.
+
+Generated C++ uses direct typed storage. Safe scalar constants may initialize
+that storage directly. Only modules with deferred assignments emit a plain
+runtime initializer; stateless and constant-only modules emit none.
 
 A native entry may execute top-level statements before optional `main` and
 receives implicit `arguments: string[]`. Such a script entry cannot export.
@@ -96,7 +106,7 @@ explicit `.do` file and `--target wasm`.
 
 ### WebAssembly Library Exports
 
-With `build.target = "wasm"` or `--target wasm`, exported top-level functions in the entry module become host-callable C ABI exports named `doof_export_<functionName>`. The host passes a UTF-8 JSON object string with parameters by name and receives an allocated UTF-8 JSON envelope string. Call the exported `doof_free` after reading the result. Generic exports and types outside the supported JSON ABI are rejected.
+With `build.target = "wasm"` or `--target wasm`, exported top-level functions in the entry module become host-callable C ABI exports named `doof_export_<functionName>`. The host must call Emscripten `_initialize`, then `doof_initialize`, before calling them. The host passes a UTF-8 JSON object string with parameters by name and receives an allocated UTF-8 JSON envelope string. Call the exported `doof_free` after reading every envelope. Generic exports and types outside the supported JSON ABI are rejected.
 
 ## Extern C++ Interop
 

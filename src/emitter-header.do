@@ -12,7 +12,7 @@ import { EmitContext, EmitModuleSurface } from "./emitter-context"
 import { emitClassDeclaration, emitDescriptionComment, emitFunctionDeclaration, emitFunctionDefinition, emitInterfaceAlias } from "./emitter-decl"
 import { emitExpression } from "./emitter-expr"
 import { emitInterfaceJsonDeclaration } from "./emitter-json"
-import { emitType } from "./emitter-types"
+import { emitContextType, emitType } from "./emitter-types"
 import {
   ArrayResolvedType, ClassType, EnumType, FunctionType, ImportBinding, InterfaceType,
   MapResolvedType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType,
@@ -140,8 +140,8 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext): 
     // Generic aliases are erased after checker substitution. Concrete uses
     // lower directly to their substituted concrete type.
     alias: TypeAliasDeclaration -> { if alias.typeParams.length == 0 { plan.typeAliases.push(emitTypeAlias(alias, context)) } }
-    const_: ConstDeclaration -> { if const_.exported { plan.exportedValueDefinitions.push(emitDescriptionComment(const_.description, "") + emitExportedValue(const_.name, const_.value, context)) } }
-    readonly_: ReadonlyDeclaration -> { if readonly_.exported { plan.exportedValueDefinitions.push(emitDescriptionComment(readonly_.description, "") + emitExportedValue(readonly_.name, readonly_.value, context)) } }
+    const_: ConstDeclaration -> { if const_.exported { plan.exportedValueDefinitions.push(emitDescriptionComment(const_.description, "") + emitExportedValue(const_.name, const_.resolvedType!, context)) } }
+    readonly_: ReadonlyDeclaration -> { if readonly_.exported { plan.exportedValueDefinitions.push(emitDescriptionComment(readonly_.description, "") + emitExportedValue(readonly_.name, readonly_.resolvedType!, context)) } }
     fn: FunctionDeclaration -> {
       if fn.native_ {
         if fn.nativeHeader != "" { addUnique(plan.nativeIncludes, moduleNativeHeaderPath(context.modulePath, fn.nativeHeader)) }
@@ -327,8 +327,8 @@ export function renderHeader(plan: HeaderPlan, guardName: string): string {
   return result + "}\n"
 }
 
-function emitExportedValue(name: string, value: Expression, context: EmitContext): string {
-  return "inline const auto " + name + " = " + emitExpression(value, context) + ";\n"
+function emitExportedValue(name: string, type_: ResolvedType, context: EmitContext): string {
+  return "extern " + emitContextType(type_, context) + " " + name + ";\n"
 }
 
 function addUnique(values: string[], value: string): none {

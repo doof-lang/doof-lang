@@ -19,6 +19,7 @@ import {
 } from "./ast"
 import { arrayType, primitive } from "./checker-types"
 import { typeError } from "./checker-common"
+import { validateModuleInitializerStatement } from "./checker-module-initialization"
 
 export class ModuleChecker {
   state: CheckerState
@@ -82,6 +83,7 @@ function checkModule(state: CheckerState, entry: string): CheckResult {
         typeError(state, "Top-level executable statements are only allowed in a native entry module", statement.span)
       }
       checkStatement(state, statement, state.moduleScope!)
+      if !scriptEntry { validateModuleInitializerStatement(state, statement) }
     }
     reportRetiredActorUses(statement, retiredActors, state.info!.path, state.diagnostics)
     collectRetiredActorBindings(statement, retiredActors)

@@ -11,7 +11,7 @@ namespace std_::time::temporal {
 using namespace ::std_::parse::index;
 using namespace ::std_::time::duration;
 
-std::shared_ptr<Instant> Instant::EPOCH = std::make_shared<Instant>(0LL);
+std::shared_ptr<Instant> Instant::EPOCH;
 std::shared_ptr<Instant> Instant::now() {
     return std::make_shared<Instant>(::doof_time::system_nanos_epoch());
 }
@@ -145,8 +145,8 @@ doof::Result<std::shared_ptr<Instant>, std::string> Instant::fromJsonValue(const
     return doof::Success<std::shared_ptr<Instant>>{std::make_shared<Instant>(_field_epochNanos)};
 }
 
-std::shared_ptr<Date> Date::MIN = std::make_shared<Date>(1, 1, 1);
-std::shared_ptr<Date> Date::MAX = std::make_shared<Date>(9999, 12, 31);
+std::shared_ptr<Date> Date::MIN;
+std::shared_ptr<Date> Date::MAX;
 doof::Result<std::shared_ptr<Date>, std::string> Date::create(int32_t year, int32_t month, int32_t day) {
     return ::doof_time::validate_date(year, month, day);
 }
@@ -241,8 +241,8 @@ doof::Result<std::shared_ptr<Date>, std::string> Date::fromJsonValue(const doof:
     return doof::Success<std::shared_ptr<Date>>{std::make_shared<Date>(_field_year, _field_month, _field_day)};
 }
 
-std::shared_ptr<Time> Time::MIDNIGHT = std::make_shared<Time>(0, 0, 0, 0);
-std::shared_ptr<Time> Time::NOON = std::make_shared<Time>(12, 0, 0, 0);
+std::shared_ptr<Time> Time::MIDNIGHT;
+std::shared_ptr<Time> Time::NOON;
 doof::Result<std::shared_ptr<Time>, std::string> Time::create(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond) {
     return ::doof_time::validate_time(hour, minute, second, nanosecond);
 }
@@ -409,7 +409,7 @@ doof::Result<std::shared_ptr<DateTime>, std::string> DateTime::fromJsonValue(con
     return doof::Success<std::shared_ptr<DateTime>>{std::make_shared<DateTime>(_field_date, _field_time)};
 }
 
-std::shared_ptr<TimeZone> TimeZone::UTC = std::make_shared<TimeZone>(std::string("UTC"));
+std::shared_ptr<TimeZone> TimeZone::UTC;
 doof::Result<std::shared_ptr<TimeZone>, std::string> TimeZone::lookup(std::string id) {
     return ::doof_time::lookup_timezone(id);
 }
@@ -623,6 +623,15 @@ std::optional<int32_t> httpMonthNumber(std::string text) {
     }
     throw std::runtime_error("non-exhaustive case expression");
 }();
+}
+
+void __doof_initialize_module() {
+        Instant::EPOCH = std::make_shared<Instant>(0LL);
+        Date::MIN = std::make_shared<Date>(1, 1, 1);
+        Date::MAX = std::make_shared<Date>(9999, 12, 31);
+        Time::MIDNIGHT = std::make_shared<Time>(0, 0, 0, 0);
+        Time::NOON = std::make_shared<Time>(12, 0, 0, 0);
+        TimeZone::UTC = std::make_shared<TimeZone>(std::string("UTC"));
 }
 int64_t _systemNanosEpoch() {
     return ::doof_time::system_nanos_epoch();

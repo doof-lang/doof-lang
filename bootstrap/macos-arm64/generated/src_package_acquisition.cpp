@@ -16,8 +16,8 @@ using namespace ::std_::json::index;
 using namespace ::std_::os::index;
 using namespace ::std_::path::index;
 using namespace ::app_src_std_catalog_;
-const auto PACKAGE_ACQUISITION_RECEIPT = std::string(".doof-acquisition.json");
-const auto PACKAGE_ACQUISITION_SCHEMA_VERSION = 1;
+std::string PACKAGE_ACQUISITION_RECEIPT;
+int32_t PACKAGE_ACQUISITION_SCHEMA_VERSION = 1;
 
 doof::JsonObject ExactPackageSource::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
@@ -341,5 +341,9 @@ doof::Result<void, std::string> removePackageTree(std::string path) {
         return doof::Failure<std::string>{ (std::string("Could not remove ") + path) };
     }
     return doof::Success<void>{};
+}
+
+void __doof_initialize_module() {
+        PACKAGE_ACQUISITION_RECEIPT = std::string(".doof-acquisition.json");
 }
 }

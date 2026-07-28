@@ -20,8 +20,8 @@ using namespace ::std_::blob::index;
 using namespace ::std_::crypto::index;
 using namespace ::std_::fs::index;
 using namespace ::std_::os::index;
-const auto MAX_NATIVE_OUTPUT_LINES = 40;
-const auto MAX_NATIVE_OUTPUT_BYTES = 262144LL;
+int32_t MAX_NATIVE_OUTPUT_LINES = 40;
+int64_t MAX_NATIVE_OUTPUT_BYTES = 262144LL;
 
 doof::JsonObject NativeCommandResult::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();

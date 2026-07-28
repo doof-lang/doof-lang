@@ -26,9 +26,18 @@ destructuring, JSON serialization, metadata/invoke, and WebAssembly wrappers
 have dedicated lowering modules. Representation changes require focused emitter
 tests and generated-C++ compile/runtime coverage in the release gate.
 
-Native entries containing top-level statements receive a private
-`__doof_run_script` function. Direct bindings use optional storage and checked
-accessors so entry functions can refer to them while initialization follows
-source order. The native boundary constructs `arguments`, runs the script once,
-then invokes optional `main`. Imported modules keep their existing static
-initialization; this is not a graph-wide idempotence or cycle protocol.
+Declarative module bindings and static fields use direct typed storage. Scalar
+constant expressions may initialize storage directly; strings, collections,
+classes, and other constructed values are assigned by generated
+`__doof_initialize_module` functions. Only modules with deferred assignments
+emit such a function, and it contains assignments without a per-module state
+machine. Native entry boundaries call those functions dependency-first after
+installing `ActiveActorScope`. WebAssembly exposes the same graph protocol
+through `doof_initialize`. Generated non-native structs have an internal
+default constructor, and their literal-valued backing fields remain mutable in
+C++; these representation details let ordered initialization assign whole
+struct values while the Doof checker continues to enforce source immutability.
+
+Native entries containing top-level statements retain a private
+`__doof_run_script` function and checked script storage. The native boundary
+runs declarative module initialization, then the script, then optional `main`.

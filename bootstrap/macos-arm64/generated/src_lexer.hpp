@@ -30,6 +30,7 @@ namespace app_src_lexer_ {
     int32_t line;
     int32_t column;
     LexerDiagnostic(std::string severity, std::string message, int32_t line, int32_t column) : severity(severity), message(message), line(line), column(column) {}
+    LexerDiagnostic() {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<LexerDiagnostic, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
@@ -524,6 +525,7 @@ inline std::ostream& operator<<(std::ostream& output, TokenType value) { return 
     int32_t column;
     int32_t offset;
     Token(TokenType kind, int32_t length, int32_t valueOffset, int32_t valueLength, bool needsDecode, int32_t line, int32_t column, int32_t offset) : kind(kind), length(length), valueOffset(valueOffset), valueLength(valueLength), needsDecode(needsDecode), line(line), column(column), offset(offset) {}
+    Token() {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<Token, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };

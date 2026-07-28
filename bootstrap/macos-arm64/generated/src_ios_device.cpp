@@ -22,7 +22,7 @@ using namespace ::std_::path::index;
 using namespace ::std_::time::index;
 using namespace ::app_src_ios_app_;
 using namespace ::std_::blob::index;
-const auto MAX_IOS_DEVICE_COMMAND_OUTPUT_BYTES = 262144LL;
+int64_t MAX_IOS_DEVICE_COMMAND_OUTPUT_BYTES = 262144LL;
 
 doof::JsonObject IOSDevice::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();

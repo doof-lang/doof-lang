@@ -8,7 +8,7 @@ import { typeName, unknownType } from "./checker-types"
 function checkedIncludingDeprecations(source: string): CheckResult {
   sources := [SourceFile { path: "/main.do", source }]
   analysis := createAnalyzer(sources).analyze("/main.do")
-  checker := createChecker(analysis)
+  checker := createChecker(analysis, "/main.do")
   semantic := checker.check("/main.do")
   diagnostics := semantic.diagnostics
   for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
@@ -73,9 +73,87 @@ export function testRejectsModuleLetFromIsolatedFunctions(): none {
   Assert.stringContains(result.diagnostics[0].message, "mutable module binding")
 }
 
+export function testAcceptsLiteralTreeModuleInitializers(): none {
+  result := checked(
+    "class Config { name: string\nvalues: int[] }\n" +
+    "readonly label = \"ready\"\n" +
+    "readonly values = [2, 3, 5, 7]\n" +
+    "readonly config = Config { name: \"demo\", values: [1, 2] }\n" +
+    "class Globals { static message = \"hello\" }",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testRejectsExecutableModuleInitializers(): none {
+  call := checked("function load(): string => \"ready\"\nreadonly value = load()")
+  Assert.equal(call.diagnostics.length, 1)
+  Assert.stringContains(call.diagnostics[0].message, "must be a literal tree")
+
+  interpolation := checked("readonly value = \"value: \${1}\"")
+  Assert.equal(interpolation.diagnostics.length, 1)
+  Assert.stringContains(interpolation.diagnostics[0].message, "must be a literal tree")
+
+  staticCall := checked("function load(): string => \"ready\"\nclass Globals { static value = load() }")
+  Assert.equal(staticCall.diagnostics.length, 1)
+  Assert.stringContains(staticCall.diagnostics[0].message, "Static field initializer")
+
+  customConstructor := checked(
+    "struct Value { number: int\nstatic constructor(number: int): Value => Value { number }\n" +
+    "static zero = Value(0) }",
+  )
+  Assert.equal(customConstructor.diagnostics.length, 1)
+  Assert.stringContains(customConstructor.diagnostics[0].message, "must be a literal tree")
+}
+
+export function testAcceptsStructModuleAndStaticInitializers(): none {
+  result := checked(
+    "struct Point { x: int\ny: int\n" +
+    "static zero = Point { x: 0, y: 0 }\n" +
+    "static left = Point { x: -1, y: 0 } }\n" +
+    "struct Color { r: double\ng: double\nb: double\na: double = 1.0\n" +
+    "static black = Color(0.0, 0.0, 0.0) }\n" +
+    "readonly origin = Point { x: 0, y: 0 }",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testAcceptsPureModuleConstantExpressions(): none {
+  result := checkedSources([
+    SourceFile {
+      path: "/main.do",
+      source: "import { PI } from \"./math\"\nreadonly TAU = PI * 2.0\nreadonly text = \"a\" + \"b\"",
+    },
+    SourceFile { path: "/math.do", source: "export readonly PI = 3.141592653589793" },
+  ], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+
+  dynamicRead := checkedSources([
+    SourceFile {
+      path: "/main.do",
+      source: "import { label } from \"./values\"\nreadonly copied = label",
+    },
+    SourceFile { path: "/values.do", source: "export readonly label = \"a\" + \"b\"" },
+  ], "/main.do")
+  Assert.equal(dynamicRead.diagnostics.length, 1)
+  Assert.stringContains(dynamicRead.diagnostics[0].message, "must be a literal tree")
+}
+
+export function testRejectsDependencySensitiveCallInitializer(): none {
+  result := checkedSources([
+    SourceFile { path: "/main.do", source: "import { combined } from \"./b\"\nfunction main(): int => combined.length" },
+    SourceFile { path: "/a.do", source: "readonly value = \"ready\"\nexport function getValue(): string => value" },
+    SourceFile { path: "/b.do", source: "import { getValue } from \"./a\"\nexport readonly combined = getValue()" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "must be a literal tree")
+}
+
 function checkedSources(sources: SourceFile[], entry: string): CheckResult {
   analysis := createAnalyzer(sources).analyze(entry)
-  checker := createChecker(analysis)
+  checker := createChecker(analysis, entry)
   let diagnostics: Diagnostic[] = []
   for i of 0..<analysis.modules.length {
     module := analysis.modules[analysis.modules.length - 1 - i]
@@ -96,7 +174,7 @@ export function testWarnsForLegacyNoneAliasesWithReplacementAndExactSpans(): non
   Assert.equal(voidAlias.diagnostics[0].span.start.column, 20)
   Assert.equal(voidAlias.diagnostics[0].span.end.column, 24)
 
-  nullTypeAlias := checkedIncludingDeprecations("value: string | null := none")
+  nullTypeAlias := checkedIncludingDeprecations("value: string | null := none\nprintln(\"\")")
   Assert.equal(nullTypeAlias.diagnostics.length, 1)
   Assert.equal(nullTypeAlias.diagnostics[0].message, "'null' is deprecated; replace it with 'none'")
   Assert.equal(nullTypeAlias.diagnostics[0].replacement, "none")
@@ -246,7 +324,7 @@ export function testArrayPopReturnsResult(): none {
 export function testDecoratesArrayCloneMutableAndEnumLookupHelpers(): none {
   source := "enum Suit { Spades = 0, Hearts = 1 }\nclass Pile { cardIndices: int[] = [] }\nfunction clonePile(pile: Pile): Pile { return Pile { cardIndices: pile.cardIndices.cloneMutable() } }\nfunction foundationSuit(index: int): Suit { return Suit.fromValue(index) ?? .Spades }"
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
-  Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   diagnostics := validateCheckedTypes(analysis)
   for diagnostic of diagnostics { println(diagnostic.message) }
   Assert.equal(diagnostics.length, 0)
@@ -255,7 +333,7 @@ export function testDecoratesArrayCloneMutableAndEnumLookupHelpers(): none {
 export function testDecoratesReadonlyMapConstructionAndSizeMember(): none {
   source := "class RouteMatch { params: readonly Map<string, string> }\nfunction equal<T>(actual: T, expected: T): none {}\nfunction match(params: Map<string, string>): RouteMatch { return RouteMatch { params: params.buildReadonly() } }\nfunction verify(matched: RouteMatch | none): none { equal(matched!.params.size, 0) }"
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
-  Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   diagnostics := validateCheckedTypes(analysis)
   for diagnostic of diagnostics { println(diagnostic.message) }
   Assert.equal(diagnostics.length, 0)
@@ -312,9 +390,9 @@ export function testCompleteDecorationGateTraversesAsSourceAndTarget(): none {
 }
 
 export function testCompleteDecorationGateRequiresConstructionAttachments(): none {
-  source := "class Widget { value: int\nstatic constructor(value: int): Widget => Widget { value } }\nwidget := Widget { value: 1 }"
+  source := "class Widget { value: int\nstatic constructor(value: int): Widget => Widget { value } }\nwidget := Widget { value: 1 }\nprintln(\"\")"
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
-  Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   case analysis.modules[0].program.statements[1] {
     binding: ImmutableBinding -> {
       case binding.value {
@@ -455,7 +533,7 @@ export function testRejectsUnresolvedAndMissingDotShorthandMembers(): none {
   Assert.equal(instanceMember.diagnostics.length, 1)
   Assert.equal(instanceMember.diagnostics[0].message, "Type \"Widget\" has no static member \"value\"")
 
-  noContext := checked("value := .Missing")
+  noContext := checked("function test(): none { value := .Missing }")
   Assert.equal(noContext.diagnostics.length, 1)
   Assert.equal(noContext.diagnostics[0].message, "Cannot resolve shorthand .Missing without an expected class or enum type")
 
@@ -503,31 +581,31 @@ export function testValidatesStaticGenericMethodsWithCallerDefaults(): none {
 }
 
 export function testRejectsMissingRequiredPositionalFunctionArguments(): none {
-  result := checked("function combine(first: int, second: string, suffix: string = \"!\"): string => string(first) + second + suffix\nvalue := combine(1)")
+  result := checked("function combine(first: int, second: string, suffix: string = \"!\"): string => string(first) + second + suffix\nvalue := combine(1)\nprintln(\"\")")
   Assert.equal(result.diagnostics.length, 1)
   Assert.equal(result.diagnostics[0].message, "Expected 2-3 argument(s) but got 1")
 }
 
 export function testValidatesFieldConstructorPositionalArguments(): none {
-  missing := checked("class Config { host: string\nport: int = 8080 }\nconfig := Config()")
+  missing := checked("class Config { host: string\nport: int = 8080 }\nconfig := Config()\nprintln(\"\")")
   Assert.equal(missing.diagnostics.length, 1)
   Assert.equal(missing.diagnostics[0].message, "Class \"Config\" expects 1-2 constructor argument(s) but got 0")
 
-  excess := checked("class Point { x, y: int }\npoint := Point(1, 2, 3)")
+  excess := checked("class Point { x, y: int }\npoint := Point(1, 2, 3)\nprintln(\"\")")
   Assert.equal(excess.diagnostics.length, 1)
   Assert.equal(excess.diagnostics[0].message, "Class \"Point\" expects 2 constructor argument(s) but got 3")
 
-  incompatible := checked("class Point { x: int\ny: string }\npoint := Point(1, 2)")
+  incompatible := checked("class Point { x: int\ny: string }\npoint := Point(1, 2)\nprintln(\"\")")
   Assert.equal(incompatible.diagnostics.length, 1)
   Assert.equal(incompatible.diagnostics[0].message, "Argument 2 has type int; expected string")
 }
 
 export function testValidatesDedicatedConstructorPositionalArguments(): none {
-  missing := checked("class Widget { value: int\nstatic constructor(value: int, label: string = \"widget\"): Widget => Widget { value } }\nwidget := Widget()")
+  missing := checked("class Widget { value: int\nstatic constructor(value: int, label: string = \"widget\"): Widget => Widget { value } }\nwidget := Widget()\nprintln(\"\")")
   Assert.equal(missing.diagnostics.length, 1)
   Assert.equal(missing.diagnostics[0].message, "Class \"Widget\" expects 1-2 constructor argument(s) but got 0")
 
-  incompatible := checked("class Widget { value: int\nstatic constructor(value: int): Widget => Widget { value } }\nwidget := Widget(\"bad\")")
+  incompatible := checked("class Widget { value: int\nstatic constructor(value: int): Widget => Widget { value } }\nwidget := Widget(\"bad\")\nprintln(\"\")")
   Assert.equal(incompatible.diagnostics.length, 1)
   Assert.equal(incompatible.diagnostics[0].message, "Argument 1 has type string; expected int")
 }
@@ -638,7 +716,7 @@ export function testAcceptsLenientJsonDeserialization(): none {
 }
 
 export function testChecksMetadataSchemaAndInvokeSurface(): none {
-  result := checked("class Tool \"A tool.\" { function run \"Runs.\"(input \"Payload.\": string): string => input }\nmetadata := Tool.metadata\nname := metadata.name\nmethods := metadata.methods\ninvoked := metadata.invoke(Tool {}, \"run\", { input: \"ok\" })\nmethodInvoked := methods[0].invoke(Tool {}, { input: \"ok\" })")
+  result := checked("class Tool \"A tool.\" { function run \"Runs.\"(input \"Payload.\": string): string => input }\nmetadata := Tool.metadata\nname := metadata.name\nmethods := metadata.methods\ninvoked := metadata.invoke(Tool {}, \"run\", { input: \"ok\" })\nmethodInvoked := methods[0].invoke(Tool {}, { input: \"ok\" })\nprintln(\"\")")
   Assert.equal(result.diagnostics.length, 0)
 }
 
@@ -660,38 +738,38 @@ export function testRejectsNonClassReflectableTypeArgument(): none {
 }
 
 export function testEnforcesOrdinaryGenericFunctionConstraints(): none {
-  valid := checked("function keep<T: int | long>(value: T): T => value\nfirst := keep<int>(1)\nsecond := keep(2L)")
+  valid := checked("function keep<T: int | long>(value: T): T => value\nfirst := keep<int>(1)\nsecond := keep(2L)\nprintln(\"\")")
   Assert.equal(valid.diagnostics.length, 0)
 
-  explicitInvalid := checked("function keep<T: int | long>(value: T): T => value\nvalue := keep<string>(\"no\")")
+  explicitInvalid := checked("function keep<T: int | long>(value: T): T => value\nvalue := keep<string>(\"no\")\nprintln(\"\")")
   Assert.equal(explicitInvalid.diagnostics.length, 1)
   Assert.equal(explicitInvalid.diagnostics[0].message.contains("does not satisfy constraint \"int | long\""), true)
 
-  inferredInvalid := checked("function keep<T: int | long>(value: T): T => value\nvalue := keep(\"no\")")
+  inferredInvalid := checked("function keep<T: int | long>(value: T): T => value\nvalue := keep(\"no\")\nprintln(\"\")")
   Assert.equal(inferredInvalid.diagnostics.length, 1)
   Assert.equal(inferredInvalid.diagnostics[0].message.contains("does not satisfy constraint \"int | long\""), true)
 }
 
 export function testEnforcesOrdinaryGenericNominalAndAliasConstraints(): none {
-  valid := checked("class Box<T: int | long> { value: T }\ntype NumberBox<T: int | long> = Box<T>\nbox: NumberBox<long> := Box<long> { value: 1L }\ninferred := Box(1)")
+  valid := checked("class Box<T: int | long> { value: T }\ntype NumberBox<T: int | long> = Box<T>\nbox: NumberBox<long> := Box<long> { value: 1L }\ninferred := Box(1)\nprintln(\"\")")
   Assert.equal(valid.diagnostics.length, 0)
 
-  invalidClass := checked("class Box<T: int | long> { value: T }\nbox := Box<string> { value: \"no\" }")
+  invalidClass := checked("class Box<T: int | long> { value: T }\nbox := Box<string> { value: \"no\" }\nprintln(\"\")")
   Assert.equal(invalidClass.diagnostics.length > 0, true)
   Assert.equal(invalidClass.diagnostics[0].message.contains("does not satisfy constraint \"int | long\""), true)
 
-  inferredInvalidClass := checked("class Box<T: int | long> { value: T }\nbox := Box(\"no\")")
+  inferredInvalidClass := checked("class Box<T: int | long> { value: T }\nbox := Box(\"no\")\nprintln(\"\")")
   Assert.equal(inferredInvalidClass.diagnostics.length > 0, true)
   Assert.equal(inferredInvalidClass.diagnostics[0].message.contains("does not satisfy constraint \"int | long\""), true)
 
-  invalidAlias := checked("type Numeric<T: int | long> = T\nvalue: Numeric<string> := \"no\"")
+  invalidAlias := checked("type Numeric<T: int | long> = T\nvalue: Numeric<string> := \"no\"\nprintln(\"\")")
   Assert.equal(invalidAlias.diagnostics.length > 0, true)
   Assert.equal(invalidAlias.diagnostics[0].message.contains("does not satisfy constraint \"int | long\""), true)
 }
 
 export function testEnforcesImportedOrdinaryGenericConstraints(): none {
   result := checkedSources([
-    SourceFile { path: "/main.do", source: "import { keep } from \"./numbers\"\nvalue := keep(\"no\")" },
+    SourceFile { path: "/main.do", source: "import { keep } from \"./numbers\"\nvalue := keep(\"no\")\nprintln(\"\")" },
     SourceFile { path: "/numbers.do", source: "export function keep<T: int | long>(value: T): T => value" },
   ], "/main.do")
   Assert.equal(result.diagnostics.length, 1)

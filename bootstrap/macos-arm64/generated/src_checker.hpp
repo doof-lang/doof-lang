@@ -53,6 +53,7 @@ namespace app_src_checker_ {
 #include "src_ast.hpp"
 #include "src_checker_types.hpp"
 #include "src_checker_common.hpp"
+#include "src_checker_module_initialization.hpp"
 
 namespace app_src_checker_ {
     using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;

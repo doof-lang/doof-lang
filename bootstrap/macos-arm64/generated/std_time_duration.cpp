@@ -7,7 +7,7 @@
 
 namespace std_::time::duration {
 
-std::shared_ptr<Duration> Duration::ZERO = std::make_shared<Duration>(0LL);
+std::shared_ptr<Duration> Duration::ZERO;
 std::shared_ptr<Duration> Duration::ofNanos(int64_t n) {
     return std::make_shared<Duration>(n);
 }
@@ -297,6 +297,10 @@ doof::Result<std::shared_ptr<Thread>, std::string> Thread::fromJsonValue(const d
     const auto* _object = doof::json_as_object(_json);
     if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     return doof::Success<std::shared_ptr<Thread>>{std::make_shared<Thread>()};
+}
+
+void __doof_initialize_module() {
+        Duration::ZERO = std::make_shared<Duration>(0LL);
 }
 void _threadSleepNanos(int64_t nanos) {
     ::doof_time::thread_sleep_nanos(nanos);

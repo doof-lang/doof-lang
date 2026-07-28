@@ -62,6 +62,7 @@ namespace app_src_semantic_ {
     int32_t column;
     int32_t offset;
     SemanticLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
+    SemanticLocation() {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<SemanticLocation, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
@@ -74,6 +75,7 @@ namespace app_src_semantic_ {
     SemanticLocation start;
     SemanticLocation end;
     SemanticSpan(SemanticLocation start, SemanticLocation end) : start(start), end(end) {}
+    SemanticSpan() {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<SemanticSpan, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };

@@ -286,7 +286,7 @@ export function testPlansStandaloneEmscriptenWasmLink(): none {
     NativeBuildPlan { sourceFiles: ["doof_wasm.cpp"], linkerFlags: ["-sINITIAL_MEMORY=33554432"] },
     false,
     "linux",
-    ["doof_export_add"],
+    ["doof_initialize", "doof_export_add"],
     true,
   )
 
@@ -295,6 +295,6 @@ export function testPlansStandaloneEmscriptenWasmLink(): none {
   Assert.equal(plan.compileTasks[0].arguments.contains("-flto"), true)
   Assert.equal(plan.linkArguments.contains("-sSTANDALONE_WASM=1"), true)
   Assert.equal(plan.linkArguments.contains("--no-entry"), true)
-  Assert.equal(plan.linkArguments.contains("-sEXPORTED_FUNCTIONS=[\"_malloc\",\"_free\",\"_doof_free\",\"_doof_export_add\"]"), true)
+  Assert.equal(plan.linkArguments.contains("-sEXPORTED_FUNCTIONS=[\"_malloc\",\"_free\",\"_doof_free\",\"_doof_initialize\",\"_doof_export_add\"]"), true)
   Assert.equal(plan.linkArguments.contains("-sINITIAL_MEMORY=33554432"), true)
 }

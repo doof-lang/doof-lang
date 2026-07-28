@@ -8,6 +8,7 @@
 
 namespace app_src_native_build_state_ {
 using namespace ::std_::json::index;
+int32_t NATIVE_BUILD_STATE_VERSION = 1;
 
 doof::JsonObject NativeInputSignature::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();

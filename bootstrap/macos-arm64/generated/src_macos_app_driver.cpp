@@ -14,7 +14,7 @@ using namespace ::std_::blob::index;
 using namespace ::std_::fs::index;
 using namespace ::std_::os::index;
 using namespace ::std_::path::index;
-const auto MAX_MACOS_COMMAND_OUTPUT_BYTES = 262144LL;
+int64_t MAX_MACOS_COMMAND_OUTPUT_BYTES = 262144LL;
 
 doof::JsonObject MacOSCommandResult::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();

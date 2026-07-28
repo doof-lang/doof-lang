@@ -51,7 +51,7 @@ the row from left to right.
 | JSON and reflection | annotations/declarations in AST; eligibility in `json-semantics.do` | checker advertises only supported synthetic members and records metadata demand | `emitter-json.do`, `emitter-metadata.do`, and `emitter-wasm.do` generate definitions/adapters |
 | Actors and isolation | actor/promise types and actor syntax | `checker-actor-boundary.do`, `checker-actor-lifecycle.do`, and `checker-isolation.do` own call boundaries, retirement diagnostics, and graph-wide effects | `emitter-expr-actor.do` and lambda/call emitters lower checked operations; runtime schedules them |
 | Closures and mutable capture | lambda/binding AST and checker bindings | checker establishes callable types and resolved captures | `emitter-expr-lambda.do` finds escaping captures and boxes mutable storage |
-| Native module initialization | top-level checked declarations/statements and compiler entry mode | checker proves entry bodies emit-ready | `emitter-module.do`, `emitter-header.do`, and `emitter-decl.do` plan storage and source-order execution |
+| Module initialization | top-level checked declarations/statements and compiler entry mode | `checker-module-initialization.do` validates construction-only expressions and direct storage | `emitter-module.do`, `emitter-header.do`, and `emitter-decl.do` emit direct storage and graph-ordered execution |
 | Packages and reproducible inputs | manifests/catalog in `package-manifest.do` and `std-catalog.do` | `dependency-policy.do` selects exact reached inputs | acquisition modules materialize; `provenance.do` records; `emitter-project.do` collates |
 | Incremental native builds | normalized native plan and emitted modules | `native-build.do` creates stable tasks; `pkg-config.do` normalizes flags | `native-build-driver.do` fingerprints arguments/dependencies, persists state, and runs dirty work |
 | Tests, mocks, and coverage | `test-runner.do` discovers tests and generates harnesses | analyzer rewrites mock imports; emitter inserts stable coverage markers | driver groups, builds, isolates, runs, merges, and renders reports |
@@ -72,10 +72,15 @@ control-flow facts, or unresolved dispatch targets suppress emission. A panic
 in the emitter is reserved for violation of this internal contract, not for a
 user program error.
 
-Native entry scripts are lowered within the entry translation unit. Private
-deferred binding storage and one generated runner preserve source order without
-introducing a graph-wide initialization protocol. Reference modules and
-WebAssembly libraries retain ordinary namespace-scope initialization.
+Declarative module values use direct typed C++ storage. Safe scalar constants
+retain C++ constant initialization; constructed values are assigned by one
+plain generated initializer for each module that has deferred assignments.
+Stateless and constant-only modules emit no initializer. The entry emitter
+computes a deterministic dependency-first order and calls those initializers
+after installing the application actor scope; initializer functions contain no
+per-module lifecycle state. Native entry scripts retain their separate
+source-order runner. Standalone WebAssembly exposes the graph protocol through
+`doof_initialize` after the host calls Emscripten `_initialize`.
 
 Closed-world information drives interface variants, generic specialization,
 actor isolation validation, JSON/reflection generation, and stable module

@@ -5,18 +5,18 @@
 // header/source pair; there is no project-wide emission mode.
 
 import {
-  ClassDeclaration, ConstDeclaration, EnumDeclaration, ExportDeclaration, ExportList, FunctionDeclaration,
+  BoolLiteral, CharLiteral, ClassDeclaration, ConstDeclaration, DotShorthand, DoubleLiteral, EnumDeclaration, ExportDeclaration, ExportList, Expression, FloatLiteral, FunctionDeclaration,
   ImmutableBinding, ImportDeclaration, InterfaceDeclaration, LetDeclaration, MockImportDirective, Program,
-  ReadonlyDeclaration, Statement, TryStatement, TypeAliasDeclaration,
+  IntLiteral, LongLiteral, ReadonlyDeclaration, Statement, TryStatement, TypeAliasDeclaration,
 } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { createEmitContext, createEmitContextForModule, EmitContext, EmitModuleSurface } from "./emitter-context"
-import { emitClassDeclaration, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions, emitValueDeclaration } from "./emitter-decl"
+import { emitClassDeclaration, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitModuleValueStorage, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions, emitValueDeclaration } from "./emitter-decl"
 import { emitGeneratedJsonMethods, emitInterfaceJsonDefinition } from "./emitter-json"
 import { emitMetadataDefinition } from "./emitter-metadata"
 import { emitStatement } from "./emitter-stmt"
 import { emitContextType } from "./emitter-types"
-import { cppIdentifier } from "./emitter-expr"
+import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { HeaderPlan, planHeader, renderHeader } from "./emitter-header"
 import { buildInstantiationPlan, ClassInstantiation, FunctionInstantiation, InstantiationPlan, MethodInstantiation, nativeTemplateClassKey } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
@@ -96,6 +96,7 @@ export class CxxModuleEmitter {
   moduleSurfaces: EmitModuleSurface[] = []
   instantiations: InstantiationPlan | none = none
   coverageModuleId: int = -1
+  initializationModuleNamespaces: string[] = []
 
   function emit(program: Program, moduleIncludes: string[] = [], entryMode: string = "executable"): ModuleEmission {
     context := if modulePath == "" then createEmitContext(program) else createEmitContextForModule(program, modulePath, allPrograms)
@@ -123,6 +124,10 @@ export class CxxModuleEmitter {
     for include of moduleIncludes { source = source + "#include \"" + include + "\"\n" }
     if instantiations != none { source = source + concreteImplementationIncludes(context, instantiations!, moduleIncludes) }
     source = source + "\n"
+    for namespace of initializationModuleNamespaces {
+      source = source + "namespace " + namespace + " { void __doof_initialize_module(); }\n"
+    }
+    if initializationModuleNamespaces.length > 0 { source = source + "\n" }
     source = source + "namespace " + namespaceName + " {\n"
     source = source + emitImportedNamespaces(context)
     if context.scriptEntry { source = source + emitScriptStorage(programs, context) }
@@ -133,6 +138,7 @@ export class CxxModuleEmitter {
         }
       }
     }
+    source = source + emitModuleInitializer(programs, context, !context.scriptEntry)
     if context.scriptEntry { source = source + emitScriptRunner(programs, context) }
     if instantiations != none { source = source + emitConcreteFunctions(context, instantiations!) }
     source = source + "}\n"
@@ -140,8 +146,9 @@ export class CxxModuleEmitter {
     if nativeMethods != "" {
       source = source + "\nusing namespace ::" + namespaceName + ";\n\n" + nativeMethods
     }
-    if entryMode == "executable" && (plan.hasMain || context.scriptEntry) { source = source + emitMainWrapper(namespaceName, plan, context.scriptEntry) }
-    if entryMode == "ios-app" && (plan.hasMain || context.scriptEntry) { source = source + emitAppEntryWrapper(namespaceName, plan, context.scriptEntry) }
+    initializationCall := emitGraphInitializationCall(initializationModuleNamespaces)
+    if entryMode == "executable" && (plan.hasMain || context.scriptEntry) { source = source + emitMainWrapper(namespaceName, plan, context.scriptEntry, initializationCall) }
+    if entryMode == "ios-app" && (plan.hasMain || context.scriptEntry) { source = source + emitAppEntryWrapper(namespaceName, plan, context.scriptEntry, initializationCall) }
     return ModuleEmission {
       modulePath: context.modulePath, header, source, headerName, sourceName,
       coverageModuleId: context.coverageModuleId,
@@ -320,6 +327,7 @@ export function emitModuleGraph(
   graph := ModuleGraphEmission {}
   concretePlan := instantiations ?? buildInstantiationPlan(result)
   plan := planModuleGraph(result)
+  initializationOrder := planModuleInitializationOrder(result, entry, entryMode)
   let nextCoverageModuleId = 0
   for module of plan.modules {
     info := findGraphModule(result, module.path)
@@ -341,6 +349,7 @@ export function emitModuleGraph(
       moduleSurfaces: emitModuleSurfaces(result),
       instantiations: concretePlan,
       coverageModuleId,
+      initializationModuleNamespaces: if module.path == entry then moduleInitializationNamespaces(initializationOrder) else [],
     }
     emitted := emitter.emit(
       info!.program,
@@ -525,6 +534,51 @@ function findGraphModule(result: AnalysisResult, path: string): ModuleInfo | non
   return none
 }
 
+export function planModuleInitializationOrder(
+  result: AnalysisResult,
+  entry: string,
+  entryMode: string = "executable",
+): string[] {
+  let order: string[] = []
+  let visiting: string[] = []
+  let visited: string[] = []
+  visitInitializationModule(result, entry, entry, entryMode, visiting, visited, order)
+  return order
+}
+
+function visitInitializationModule(
+  result: AnalysisResult,
+  path: string,
+  entry: string,
+  entryMode: string,
+  visiting: string[],
+  visited: string[],
+  order: string[],
+): none {
+  if containsString(visited, path) || containsString(visiting, path) { return }
+  info := findGraphModule(result, path)
+  if info == none { return }
+  visiting.push(path)
+  for imported of info!.imports {
+    if !imported.typeOnly { visitInitializationModule(result, imported.sourceModule, entry, entryMode, visiting, visited, order) }
+  }
+  for imported of info!.namespaceImports {
+    if !imported.typeOnly { visitInitializationModule(result, imported.sourceModule, entry, entryMode, visiting, visited, order) }
+  }
+  for reExport of info!.reExports { visitInitializationModule(result, reExport, entry, entryMode, visiting, visited, order) }
+  let ignored = try! visiting.pop()
+  visited.push(path)
+  scriptEntry := path == entry && (entryMode == "executable" || entryMode == "ios-app") &&
+    hasScriptStatements([info!.program])
+  if !scriptEntry && moduleHasDeferredInitialization(info!.program) { order.push(path) }
+}
+
+function moduleInitializationNamespaces(paths: string[]): string[] {
+  let result: string[] = []
+  for path of paths { result.push(moduleNamespace(path)) }
+  return result
+}
+
 export function emitModule(program: Program, moduleName: string = "main"): ModuleEmission {
   let emptyIncludes: string[] = []
   return CxxModuleEmitter { moduleName }.emit(program, emptyIncludes, "executable")
@@ -547,14 +601,127 @@ function emitSourceStatement(statement: Statement, context: EmitContext): string
       return result
     }
     interface_: InterfaceDeclaration -> { return emitInterfaceJsonDefinition(interface_, context) }
-    const_: ConstDeclaration -> { return if const_.exported then "" else emitValueDeclaration(const_, context) }
-    readonly_: ReadonlyDeclaration -> { return if readonly_.exported then "" else emitValueDeclaration(readonly_, context) }
-    binding: ImmutableBinding -> { return emitValueDeclaration(binding, context) }
-    let_: LetDeclaration -> { return emitValueDeclaration(let_, context) }
+    const_: ConstDeclaration -> { return emitModuleStorage(const_, const_.value, context) }
+    readonly_: ReadonlyDeclaration -> { return emitModuleStorage(readonly_, readonly_.value, context) }
+    binding: ImmutableBinding -> { return emitModuleStorage(binding, binding.value, context) }
+    let_: LetDeclaration -> { return emitModuleStorage(let_, let_.value, context) }
     export_: ExportDeclaration -> { return emitSourceStatement(export_.declaration, context) }
     _ -> { return "" }
   }
   return ""
+}
+
+function emitModuleStorage(
+  declaration: ConstDeclaration | ReadonlyDeclaration | ImmutableBinding | LetDeclaration,
+  value: Expression,
+  context: EmitContext,
+): string {
+  initializer := if isCxxConstantInitializer(value) then emitExpression(value, context, moduleValueType(declaration)) else ""
+  return emitModuleValueStorage(declaration, context, initializer)
+}
+
+function moduleValueType(
+  declaration: ConstDeclaration | ReadonlyDeclaration | ImmutableBinding | LetDeclaration,
+): ResolvedType | none {
+  case declaration {
+    value: ConstDeclaration -> { return value.resolvedType }
+    value: ReadonlyDeclaration -> { return value.resolvedType }
+    value: ImmutableBinding -> { return value.resolvedType }
+    value: LetDeclaration -> { return value.resolvedType }
+  }
+  return none
+}
+
+function isCxxConstantInitializer(value: Expression): bool {
+  case value {
+    _: IntLiteral -> { return true }
+    _: LongLiteral -> { return true }
+    _: FloatLiteral -> { return true }
+    _: DoubleLiteral -> { return true }
+    _: CharLiteral -> { return true }
+    _: BoolLiteral -> { return true }
+    dot: DotShorthand -> { return dot.resolvedShorthandOwnerKind == "enum" }
+    _ -> { return false }
+  }
+  return false
+}
+
+function moduleHasDeferredInitialization(program: Program): bool {
+  for statement of program.statements {
+    if statementHasDeferredInitialization(statement) { return true }
+  }
+  return false
+}
+
+function statementHasDeferredInitialization(statement: Statement): bool {
+  case statement {
+    value: ConstDeclaration -> { return !isCxxConstantInitializer(value.value) }
+    value: ReadonlyDeclaration -> { return !isCxxConstantInitializer(value.value) }
+    value: ImmutableBinding -> { return !isCxxConstantInitializer(value.value) }
+    value: LetDeclaration -> { return !isCxxConstantInitializer(value.value) }
+    class_: ClassDeclaration -> {
+      if class_.native_ || class_.typeParams.length > 0 { return false }
+      for field of class_.fields { if field.static_ && field.defaultValue != none { return true } }
+      return false
+    }
+    export_: ExportDeclaration -> { return statementHasDeferredInitialization(export_.declaration) }
+    _ -> { return false }
+  }
+  return false
+}
+
+function emitModuleInitializer(programs: Program[], context: EmitContext, includeValues: bool = true): string {
+  let assignments = ""
+  if includeValues {
+    for program of programs {
+      for statement of program.statements {
+        assignments = assignments + emitModuleInitializerStatement(statement, context)
+      }
+    }
+  }
+  if assignments == "" { return "" }
+  return "\nvoid __doof_initialize_module() {\n" + assignments + "}\n"
+}
+
+function emitModuleInitializerStatement(statement: Statement, context: EmitContext): string {
+  case statement {
+    value: ConstDeclaration -> { return emitModuleValueAssignment(value, value.value, context) }
+    value: ReadonlyDeclaration -> { return emitModuleValueAssignment(value, value.value, context) }
+    value: ImmutableBinding -> { return emitModuleValueAssignment(value, value.value, context) }
+    value: LetDeclaration -> { return emitModuleValueAssignment(value, value.value, context) }
+    class_: ClassDeclaration -> {
+      let result = ""
+      if class_.native_ || class_.typeParams.length > 0 { return result }
+      for field of class_.fields {
+        if !field.static_ || field.defaultValue == none { continue }
+        for name of field.names {
+          result = result + "        " + class_.name + "::" + cppIdentifier(name) + " = " +
+            emitExpression(field.defaultValue!, context, field.resolvedType) + ";\n"
+        }
+      }
+      return result
+    }
+    export_: ExportDeclaration -> { return emitModuleInitializerStatement(export_.declaration, context) }
+    _ -> { return "" }
+  }
+  return ""
+}
+
+function emitModuleValueAssignment(
+  declaration: ConstDeclaration | ReadonlyDeclaration | ImmutableBinding | LetDeclaration,
+  value: Expression,
+  context: EmitContext,
+): string {
+  if isCxxConstantInitializer(value) { return "" }
+  name := scriptDeclarationName(declaration)
+  if name == "" || name == "_" { return "" }
+  return "        " + cppIdentifier(name) + " = " + emitExpression(value, context, moduleValueType(declaration)) + ";\n"
+}
+
+function emitGraphInitializationCall(namespaces: string[]): string {
+  let result = ""
+  for namespace of namespaces { result = result + "::" + namespace + "::__doof_initialize_module(); " }
+  return result
 }
 
 function emitNativeClassMethods(programs: Program[], context: EmitContext): string {
@@ -584,7 +751,7 @@ function emitNativeClassMethodsForStatement(statement: Statement, context: EmitC
 }
 
 // Translate an uncaught Doof panic into a stable process-boundary diagnostic.
-function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool = false): string {
+function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool = false, initializationCall: string = ""): string {
   if !hasScript {
     signature := if plan.mainAcceptsArgs then "int main(int argc, char** argv)" else "int main()"
     argumentSetup := if plan.mainAcceptsArgs then "std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); " else ""
@@ -592,7 +759,7 @@ function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool =
     success := if plan.mainReturnsInt then "return " + call + ";" else call + "; return 0;"
     panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
     actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
-    return "\n" + signature + " { try { " + actorSetup + argumentSetup + success + " } " + panicHandler + " }\n"
+    return "\n" + signature + " { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
   }
   needsArguments := plan.mainAcceptsArgs || hasScript
   signature := if needsArguments then "int main(int argc, char** argv)" else "int main()"
@@ -602,18 +769,18 @@ function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool =
   success := if !plan.hasMain then scriptCall + "return 0;" else if plan.mainReturnsInt then scriptCall + "return " + call + ";" else scriptCall + call + "; return 0;"
   panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
   actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
-  return "\n" + signature + " { try { " + actorSetup + argumentSetup + success + " } " + panicHandler + " }\n"
+  return "\n" + signature + " { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
 }
 
 // App targets provide their own platform main and enter Doof through this C ABI.
-function emitAppEntryWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool = false): string {
+function emitAppEntryWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool = false, initializationCall: string = ""): string {
   if !hasScript {
     argumentSetup := if plan.mainAcceptsArgs then "std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); " else "(void)argc; (void)argv; "
     call := if plan.mainAcceptsArgs then moduleName + "::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))" else moduleName + "::doof_main()"
     success := if plan.mainReturnsInt then "return " + call + ";" else call + "; return 0;"
     panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
     actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
-    return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + argumentSetup + success + " } " + panicHandler + " }\n"
+    return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
   }
   needsArguments := plan.mainAcceptsArgs || hasScript
   argumentSetup := if needsArguments then "std::vector<std::string> raw_arguments; for (int i = 1; i < argc; ++i) raw_arguments.emplace_back(argv[i]); auto arguments = std::make_shared<std::vector<std::string>>(std::move(raw_arguments)); " else "(void)argc; (void)argv; "
@@ -622,5 +789,5 @@ function emitAppEntryWrapper(moduleName: string, plan: HeaderPlan, hasScript: bo
   success := if !plan.hasMain then scriptCall + "return 0;" else if plan.mainReturnsInt then scriptCall + "return " + call + ";" else scriptCall + call + "; return 0;"
   panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
   actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
-  return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + argumentSetup + success + " } " + panicHandler + " }\n"
+  return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
 }

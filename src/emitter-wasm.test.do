@@ -14,9 +14,12 @@ export function testEmitsJsonAbiWrappersForExportedFunctions(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
   Assert.equal(result.emission != none, true)
-  Assert.equal(result.emission!.wasmExportNames.length, 1)
-  Assert.equal(result.emission!.wasmExportNames[0], "doof_export_add")
+  Assert.equal(result.emission!.wasmExportNames.length, 2)
+  Assert.equal(result.emission!.wasmExportNames[0], "doof_initialize")
+  Assert.equal(result.emission!.wasmExportNames[1], "doof_export_add")
   Assert.stringContains(result.emission!.wasmSupportSource, "extern \"C\" void doof_free(char* ptr)")
+  Assert.stringContains(result.emission!.wasmSupportSource, "extern \"C\" char* doof_initialize()")
+  Assert.stringContains(result.emission!.wasmSupportSource, "Call doof_initialize before invoking Doof exports")
   Assert.stringContains(result.emission!.wasmSupportSource, "extern \"C\" char* doof_export_add(const char* params_json)")
   Assert.stringContains(result.emission!.wasmSupportSource, "::app_main_::add(a, b)")
   Assert.equal(result.emission!.modules[0].source.contains("int main("), false)
@@ -48,5 +51,5 @@ export function testIncludesFunctionsExportedByASeparateList(): none {
   ], "/main.do", noSourceLoader, [], "wasm")
 
   Assert.equal(result.diagnostics.length, 0)
-  Assert.equal(result.emission!.wasmExportNames[0], "doof_export_add")
+  Assert.equal(result.emission!.wasmExportNames[1], "doof_export_add")
 }

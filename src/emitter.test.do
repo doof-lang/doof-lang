@@ -15,7 +15,7 @@ function emit(source: string): ModuleEmission {
 function emitSources(sources: SourceFile[], entry: string): ModuleEmission {
   analysis := createAnalyzer(sources).analyze(entry)
   Assert.equal(analysis.diagnostics.length, 0)
-  checked := createChecker(analysis).check("/main.do")
+  checked := createChecker(analysis, entry).check(entry)
   Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
   program := findProgram(analysis, entry)
   return emitModule(program!, "main")
@@ -38,6 +38,72 @@ export function testEmitsIOSAppEntryWithoutNativeMain(): none {
   source := emitModuleGraph(analysis, "/main.do", none, "ios-app").modules[0].source
   Assert.stringContains(source, "extern \"C\" int doof_entry_main")
   Assert.equal(source.contains("int main("), false)
+}
+
+export function testEmitsDirectModuleStorageAndExplicitAssignments(): none {
+  result := emit(
+    "export readonly label = \"ready\"\n" +
+    "export readonly primes = [2, 3, 5, 7]\n" +
+    "readonly answer = 3\n" +
+    "class Globals { static message = \"hello\" }\n" +
+    "function main(): int => answer",
+  )
+  Assert.stringContains(result.header, "extern std::string label;")
+  Assert.stringContains(result.header, "extern std::shared_ptr<std::vector<int32_t>> primes;")
+  Assert.equal(result.header.contains("inline const auto"), false)
+  Assert.stringContains(result.source, "std::string label;")
+  Assert.stringContains(result.source, "int32_t answer = 3;")
+  Assert.stringContains(result.source, "std::shared_ptr<std::vector<int32_t>> primes;")
+  Assert.stringContains(result.source, "primes = std::make_shared<std::vector<int32_t>>")
+  Assert.stringContains(result.source, "Globals::message = std::string(\"hello\");")
+  Assert.equal(result.source.contains("__doof_module_initialization_state"), false)
+  Assert.equal(result.source.contains("__doof_script_get_"), false)
+  Assert.equal(result.source.contains("std::optional<"), false)
+}
+
+export function testEmitsAssignableDefaultConstructedStructStaticStorage(): none {
+  result := emit(
+    "struct Vec3 { const kind = \"vec3\"\nx: double\ny: double\nz: double\n" +
+    "static zero = Vec3 { x: 0.0, y: 0.0, z: 0.0 } }\n" +
+    "struct Defaults { value: int = 0\nstatic zero = Defaults {} }\n" +
+    "readonly origin = Vec3 { x: 0.0, y: 0.0, z: 0.0 }\n" +
+    "function main(): int => 0",
+  )
+  Assert.stringContains(result.header, "std::string kind = std::string(\"vec3\");")
+  Assert.equal(result.header.contains("const std::string kind"), false)
+  Assert.stringContains(result.header, "Vec3() {}")
+  Assert.stringContains(result.header, "Defaults(int32_t value = 0)")
+  Assert.equal(result.header.contains("Defaults() {}"), false)
+  Assert.stringContains(result.source, "Vec3 Vec3::zero;")
+  Assert.stringContains(result.source, "Vec3 origin;")
+  Assert.stringContains(result.source, "Vec3::zero = Vec3{")
+  Assert.stringContains(result.source, "origin = Vec3{")
+}
+
+export function testOmitsInitializerForModulesWithoutDeferredState(): none {
+  result := emit("export readonly answer = 3\nfunction main(): int => answer")
+  Assert.stringContains(result.source, "int32_t answer = 3;")
+  Assert.equal(result.source.contains("__doof_initialize_module"), false)
+}
+
+export function testEmitsDependencyFirstInitializationCallsInsideActorScope(): none {
+  sources := [
+    SourceFile { path: "/main.do", source: "import { b } from \"./b\"\nfunction main(): int => b.length" },
+    SourceFile { path: "/b.do", source: "import { a } from \"./a\"\nexport readonly b = \"b\"" },
+    SourceFile { path: "/a.do", source: "export readonly a = \"a\"" },
+  ]
+  analysis := createAnalyzer(sources).analyze("/main.do")
+  checker := createChecker(analysis, "/main.do")
+  for module of analysis.modules { Assert.equal(hasErrorDiagnostics(checker.check(module.path).diagnostics), false) }
+  graph := emitModuleGraph(analysis, "/main.do")
+  source := graph.modules[0].source
+  actor := source.indexOf("ActiveActorScope __doof_application_scope")
+  initializeA := source.indexOf("::app_a_::__doof_initialize_module();")
+  initializeB := source.indexOf("::app_b_::__doof_initialize_module();")
+  Assert.isTrue(actor >= 0)
+  Assert.isTrue(actor < initializeA)
+  Assert.isTrue(initializeA < initializeB)
+  Assert.equal(source.contains("::app_main_::__doof_initialize_module();"), false)
 }
 
 export function testEmitsWeakFieldsAsWeakPointers(): none {
@@ -256,9 +322,9 @@ function findProgram(analysis: AnalysisResult, path: string): Program | none {
 }
 
 export function testConstructionPanicsWhenConstructorAttachmentIsMissing(): none {
-  source := "class Widget { value: int\nstatic constructor(value: int): Widget => Widget { value } }\nwidget := Widget { value: 1 }"
+  source := "class Widget { value: int\nstatic constructor(value: int): Widget => Widget { value } }\nwidget := Widget { value: 1 }\nprintln(\"\")"
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
-  Assert.equal(hasErrorDiagnostics(createChecker(analysis).check("/main.do").diagnostics), false)
+  Assert.equal(hasErrorDiagnostics(createChecker(analysis, "/main.do").check("/main.do").diagnostics), false)
   program := findProgram(analysis, "/main.do")!
   case program.statements[1] {
     binding: ImmutableBinding -> {
@@ -692,7 +758,7 @@ export function testEmitsDiscriminatedInterfaceJsonDeserialization(): none {
 }
 
 export function testEmitsDescriptionsMetadataSchemasAndInvoke(): none {
-  result := emit("class Tool \"A tool.\" { count \"Current count.\": int = 0\nfunction run \"Runs it.\"(input \"The input.\": string): string => input }\nmetadata := Tool.metadata\nfunction invoke(tool: Tool, params: JsonValue): Result<JsonValue, JsonValue> => metadata.invoke(tool, \"run\", params)")
+  result := emit("class Tool \"A tool.\" { count \"Current count.\": int = 0\nfunction run \"Runs it.\"(input \"The input.\": string): string => input }\nfunction invoke(tool: Tool, params: JsonValue): Result<JsonValue, JsonValue> => Tool.metadata.invoke(tool, \"run\", params)")
   Assert.equal(result.header.contains("// A tool."), true)
   Assert.equal(result.header.contains("// Current count."), true)
   Assert.equal(result.header.contains("// Runs it."), true)

@@ -12,6 +12,14 @@ namespace std_::http::websocket {
 using namespace ::std_::blob::index;
 using namespace ::std_::event::index;
 using namespace ::std_::http::types;
+int32_t WEBSOCKET_CLOSE_NORMAL = 1000;
+int32_t WEBSOCKET_CLOSE_GOING_AWAY = 1001;
+int32_t WEBSOCKET_CLOSE_PROTOCOL_ERROR = 1002;
+int32_t WEBSOCKET_CLOSE_UNSUPPORTED_DATA = 1003;
+int32_t WEBSOCKET_CLOSE_INVALID_PAYLOAD = 1007;
+int32_t WEBSOCKET_CLOSE_POLICY_VIOLATION = 1008;
+int32_t WEBSOCKET_CLOSE_MESSAGE_TOO_BIG = 1009;
+int32_t WEBSOCKET_CLOSE_INTERNAL_ERROR = 1011;
 
 doof::JsonObject WebSocketOptions::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();

@@ -63,5 +63,5 @@ namespace app_src_native_build_state_ {
 }
 
 namespace app_src_native_build_state_ {
-    inline const auto NATIVE_BUILD_STATE_VERSION = 1;
+    extern int32_t NATIVE_BUILD_STATE_VERSION;
 }

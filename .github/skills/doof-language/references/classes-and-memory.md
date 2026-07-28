@@ -129,6 +129,16 @@ Rules:
 - Access statics with `.` through a named class or interface type.
 - Access statics with `::` through an instance or interface value.
 - `rect.kind` and `rect.describe()` are invalid for statics.
+- Static field defaults at module scope must satisfy the construction-only
+  initializer rules and run in module/declaration order.
+- Construction-only non-native struct values may initialize module bindings
+  and static fields; source-level readonly and literal-valued field rules still
+  apply after initialization.
+- This subset includes named and positional construction and signed numeric
+  literals, pure arithmetic/string concatenation, and references to immutable
+  module bindings initialized directly from scalar constants. It excludes
+  custom constructors, ordinary function calls, and reads of dynamically
+  initialized bindings.
 
 ## Private Members
 

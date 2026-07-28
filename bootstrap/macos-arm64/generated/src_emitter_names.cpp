@@ -34,7 +34,7 @@ doof::Result<std::shared_ptr<ModuleNamespaceMapping>, std::string> ModuleNamespa
     }
     return doof::Success<std::shared_ptr<ModuleNamespaceMapping>>{std::make_shared<ModuleNamespaceMapping>(_field_logicalPrefix, _field_packageName, _field_outputRoot.value())};
 }
-auto configuredModuleNamespaceMappings = std::make_shared<std::vector<std::shared_ptr<ModuleNamespaceMapping>>>(std::vector<std::shared_ptr<ModuleNamespaceMapping>>{});
+std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>> configuredModuleNamespaceMappings;
 void configureModuleNamespaces(std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>> mappings) {
     (configuredModuleNamespaceMappings = mappings);
 }
@@ -168,5 +168,9 @@ std::string moduleHeaderName(std::string path) {
 }
 std::string moduleSourceName(std::string path) {
     return (moduleStem(path) + std::string(".cpp"));
+}
+
+void __doof_initialize_module() {
+        configuredModuleNamespaceMappings = std::make_shared<std::vector<std::shared_ptr<ModuleNamespaceMapping>>>(std::vector<std::shared_ptr<ModuleNamespaceMapping>>{});
 }
 }

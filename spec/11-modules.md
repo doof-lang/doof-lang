@@ -408,6 +408,15 @@ When a package is built with `build.target = "wasm"` or `--target wasm`, exporte
 
 The wasm export ABI is JSON-text based: the host passes a UTF-8 JSON object string with parameters by name, and the wrapper returns an allocated UTF-8 JSON envelope string. The envelope is `{"ok":true,"value":...}` on success or `{"ok":false,"error":...}` on failure. Hosts must call the exported `doof_free` after reading returned strings.
 
+Standalone Wasm output is a reactor. A host must first call the standard
+Emscripten `_initialize` export and then call Doof's `doof_initialize()` export
+before invoking any `doof_export_*` function. `doof_initialize()` takes no
+parameters and returns an allocated JSON envelope; release it with `doof_free`.
+It initializes every reached Doof module once and is idempotent after success.
+An ordinary export called too early returns a 503 envelope. Initialization
+panics and native exceptions become 500 envelopes and leave initialization in
+a sticky failed state.
+
 Generic functions and functions whose parameter or return types cannot be serialized by the supported JSON ABI are compile-time errors for wasm exports. `main()` remains non-exported and is not used as a wasm entry point.
 
 WebAssembly entry modules retain declarative library semantics, including when
@@ -544,22 +553,47 @@ state. Listing tests performs discovery only and does not compile them.
 Code at module scope executes during module initialization, **before** `main()` runs:
 
 ```javascript
-import { loadConfig } from "./config"
-
-// Executes during initialization
-readonly config = loadConfig()
-print("Config loaded")
+readonly config = { name: "default" }
 
 function main(): none {
-    // Executes after all modules are initialized
+    // Executes after declarative modules are initialized
     print("Starting app with config: ${config.name}")
 }
 ```
 
 **Initialization order:**
-1. All imported modules are initialized depth-first
-2. Module-level `readonly` and `:=` bindings are evaluated in declaration order
-3. Once all modules are initialized, `main()` is invoked
+1. Non-type imports and re-exports are traversed depth-first in source order
+2. Import back-edges are skipped and each reached module initializes once
+3. Module-level `readonly`, `:=`, `let`, and deprecated `const` bindings are evaluated in declaration order
+4. Static fields initialize at their class declaration position and in field order
+5. Once all modules are initialized, native entry statements and then `main()` are invoked
+
+Declarative module and static-field initializers use a construction-only
+subset: primitive, non-interpolated string, `none`, and enum literals, including
+unary `+` or `-` applied directly to a numeric literal; pure `+`, `-`, `*`,
+`/`, `\`, and `%` expressions recursively composed from accepted values;
+recursively composed array, set, map/object, and tuple literals; and direct
+non-native named or positional class construction without a custom
+`constructor` when every
+supplied or defaulted field is construction-only. Calls, binding reads,
+operators, interpolation, native/custom construction, actors, async operations,
+and control flow are rejected. The sole binding-read exception is an immutable
+module binding whose own initializer is a scalar C++ constant initializer;
+this permits expressions such as an imported literal `PI * 2.0` without
+depending on dynamic module initialization. Values whose native representation cannot be
+safely default-created and assigned are also rejected. Non-native structs are
+default-created as compiler backing storage and may be assigned a
+construction-only value during this ordered initialization.
+
+Generated C++ uses direct typed variables. Doof `readonly` remains enforced by
+the Doof checker even though the backing C++ variable is assigned by generated
+initialization code. Native consumers of generated headers must not mutate
+readonly exports or access exported values before the Doof entry boundary has
+completed initialization. A module whose values are all safely initialized
+directly by C++, or which has no module state, emits no runtime initializer.
+Modules with deferred assignments emit a plain initializer containing those
+assignments; ordering and error handling belong to the entry boundary rather
+than a per-module state machine.
 
 ### Error Handling in `main()`
 

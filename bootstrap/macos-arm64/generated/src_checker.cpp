@@ -12,6 +12,7 @@
 #include "src_ast.hpp"
 #include "src_checker_types.hpp"
 #include "src_checker_common.hpp"
+#include "src_checker_module_initialization.hpp"
 #include "std_fs_index.hpp"
 #include "std_http_index.hpp"
 #include "std_os_index.hpp"
@@ -30,6 +31,7 @@ using namespace ::app_src_checker_isolation_;
 using namespace ::app_src_ast_;
 using namespace ::app_src_checker_types_;
 using namespace ::app_src_checker_common_;
+using namespace ::app_src_checker_module_initialization_;
 
 std::shared_ptr<::app_src_semantic_::CheckResult> ModuleChecker::check(std::string entry) {
     return checkModule(this->state, entry);
@@ -91,6 +93,9 @@ std::shared_ptr<::app_src_semantic_::CheckResult> checkModule(std::shared_ptr<::
                 ::app_src_checker_common_::typeError(state, std::string("Top-level executable statements are only allowed in a native entry module"), std::visit([](auto&& _obj) { return _obj->span; }, statement));
             }
             ::app_src_checker_statements_::checkStatement(state, statement, doof::unwrap_optional(state->moduleScope));
+            if (!scriptEntry) {
+                ::app_src_checker_module_initialization_::validateModuleInitializerStatement(state, statement);
+            }
         }
         ::app_src_checker_actor_lifecycle_::reportRetiredActorUses(statement, retiredActors, state->info->path, state->diagnostics);
         ::app_src_checker_actor_lifecycle_::collectRetiredActorBindings(statement, retiredActors);

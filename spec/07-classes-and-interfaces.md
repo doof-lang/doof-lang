@@ -121,6 +121,10 @@ class Counter implements Stream<int> {
 
 Members declared with `static` belong to the class itself, not to instances. Static methods have no `this` binding and cannot access instance fields or methods. Static fields are shared class state and are not part of instance construction or other instance-shaped operations.
 
+Static field defaults in declarative modules follow the construction-only
+module initializer rules. They execute explicitly at the class declaration's
+position in module initialization order.
+
 ```javascript
 class MathUtils {
     static version = "1.0"

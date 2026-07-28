@@ -10,6 +10,7 @@ import { createEmitContextForModule, EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitJsonField, emitJsonRead, emitJsonTypeCheck, jsonTypeName } from "./emitter-json"
 import { moduleHeaderName, moduleNamespace } from "./emitter-names"
+import { planModuleInitializationOrder } from "./emitter-module"
 import { emitContextType } from "./emitter-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, nullableJsonMember } from "./json-semantics"
 import {
@@ -27,30 +28,32 @@ export function emitWasmSupport(result: AnalysisResult, entry: string): Result<W
   if info == none { return Failure("Module not found: " + entry) }
   let exports: FunctionDeclaration[] = []
   collectExportedFunctions(info!, exports)
-  let names: string[] = []
+  let names: string[] = ["doof_initialize"]
+  let functionNames: string[] = []
   for fn of exports {
     if fn.name == "main" { continue }
     try validateWasmFunction(fn, result)
     name := "doof_export_" + cppIdentifier(fn.name)
-    for index of 0..<names.length {
-      if names[index] == name {
+    for existing of functionNames {
+      if existing == name {
         return Failure("WebAssembly export name collision for " + fn.name + " at " + name)
       }
     }
-    names.push(name)
+    functionNames.push(name)
   }
 
   programs := allPrograms(result)
   context := createEmitContextForModule(info!.program, entry, programs)
   context.imports = info!.imports
   context.namespaceImports = info!.namespaceImports
-  let source = wasmPreamble(info!)
+  let source = wasmPreamble(info!, result, entry)
   let exportIndex = 0
   for fn of exports {
     if fn.name == "main" { continue }
-    source = source + emitWasmWrapper(fn, names[exportIndex], context)
+    source = source + emitWasmWrapper(fn, functionNames[exportIndex], context)
     exportIndex += 1
   }
+  for name of functionNames { names.push(name) }
   return Success(WasmEmission { source, exportNames: names })
 }
 
@@ -130,22 +133,46 @@ function isWasmJsonType(type_: ResolvedType, analysis: AnalysisResult): bool {
   return false
 }
 
-function wasmPreamble(info: ModuleInfo): string {
+function wasmPreamble(info: ModuleInfo, result: AnalysisResult, entry: string): string {
+  let declarations = ""
+  let calls = ""
+  for path of planModuleInitializationOrder(result, entry, "wasm") {
+    namespace := moduleNamespace(path)
+    declarations = declarations + "namespace " + namespace + " { void __doof_initialize_module(); }\n"
+    calls = calls + "        ::" + namespace + "::__doof_initialize_module();\n"
+  }
   return "#include \"" + moduleHeaderName(info.path) + "\"\n" +
     "#include \"doof_runtime.hpp\"\n#include \"std/json/native_json.hpp\"\n#include <cstring>\n\n" +
+    declarations + "\n" +
     "namespace {\n" +
+    "int __doof_wasm_initialization_state = 0;\n" +
     "char* __doof_wasm_return_text(const std::string& text) { auto* out = static_cast<char*>(std::malloc(text.size() + 1)); if (out == nullptr) return nullptr; std::memcpy(out, text.c_str(), text.size() + 1); return out; }\n" +
     "doof::JsonValue __doof_wasm_object(std::initializer_list<std::pair<std::string, doof::JsonValue>> values) { return doof::json_value(std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(values)); }\n" +
     "char* __doof_wasm_success(const doof::JsonValue& value) { return __doof_wasm_return_text(doof_json::format(__doof_wasm_object({{\"ok\", doof::json_value(true)}, {\"value\", value}}))); }\n" +
     "char* __doof_wasm_failure(const doof::JsonValue& error) { return __doof_wasm_return_text(doof_json::format(__doof_wasm_object({{\"ok\", doof::json_value(false)}, {\"error\", error}}))); }\n" +
     "char* __doof_wasm_failure_message(int32_t code, const std::string& message) { return __doof_wasm_failure(doof::json_error(code, message)); }\n" +
-    "}\n\nextern \"C\" void doof_free(char* ptr) { std::free(ptr); }\n\n"
+    "}\n\nextern \"C\" void doof_free(char* ptr) { std::free(ptr); }\n\n" +
+    "extern \"C\" char* doof_initialize() {\n" +
+    "    try {\n" +
+    "        if (__doof_wasm_initialization_state == 2) return __doof_wasm_success(doof::json_value(nullptr));\n" +
+    "        if (__doof_wasm_initialization_state == 1) return __doof_wasm_failure_message(500, \"Doof module initialization is already in progress\");\n" +
+    "        if (__doof_wasm_initialization_state == 3) return __doof_wasm_failure_message(500, \"Doof module initialization previously failed\");\n" +
+    "        __doof_wasm_initialization_state = 1;\n" +
+    "        auto& __domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __scope(&__domain);\n" +
+    calls +
+    "        __doof_wasm_initialization_state = 2;\n" +
+    "        return __doof_wasm_success(doof::json_value(nullptr));\n" +
+    "    } catch (const doof::Panic& error) { __doof_wasm_initialization_state = 3; return __doof_wasm_failure_message(500, std::string(\"panic: \") + error.what()); }\n" +
+    "      catch (const std::exception& error) { __doof_wasm_initialization_state = 3; return __doof_wasm_failure_message(500, error.what()); }\n" +
+    "}\n\n"
 }
 
 function emitWasmWrapper(fn: FunctionDeclaration, exportName: string, context: EmitContext): string {
   resolved := fn.resolvedType else { panic("checked wasm function lost its resolved type") }
   type_ := resolved as FunctionType else { panic("checked wasm function lost its function type") }
   let source = "extern \"C\" char* " + exportName + "(const char* params_json) {\n    try {\n"
+  source = source + "        if (__doof_wasm_initialization_state == 3) return __doof_wasm_failure_message(500, \"Doof module initialization previously failed\");\n"
+  source = source + "        if (__doof_wasm_initialization_state != 2) return __doof_wasm_failure_message(503, \"Call doof_initialize before invoking Doof exports\");\n"
   source = source + "        const bool _lenient = false;\n"
   source = source + "        auto& __domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __scope(&__domain);\n"
   source = source + "        auto __parsed = doof_json::parse(params_json == nullptr ? std::string(\"{}\") : std::string(params_json));\n"

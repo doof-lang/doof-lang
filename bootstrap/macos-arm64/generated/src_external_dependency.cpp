@@ -19,8 +19,8 @@ using namespace ::std_::http::index;
 using namespace ::std_::json::index;
 using namespace ::std_::os::index;
 using namespace ::std_::path::index;
-const auto EXTERNAL_SOURCE_MARKER = std::string(".doof-external.json");
-const auto MAX_EXTERNAL_COMMAND_OUTPUT_BYTES = 1048576LL;
+std::string EXTERNAL_SOURCE_MARKER;
+int64_t MAX_EXTERNAL_COMMAND_OUTPUT_BYTES = 1048576LL;
 
 doof::JsonObject ExternalDependencyTarget::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
@@ -573,5 +573,9 @@ doof::Result<void, std::string> acquirePackageExternalDependencies(std::shared_p
         }
     }
     return doof::Success<void>{};
+}
+
+void __doof_initialize_module() {
+        EXTERNAL_SOURCE_MARKER = std::string(".doof-external.json");
 }
 }

@@ -57,6 +57,7 @@ modules own the following decisions:
 | `checker-interfaces.do` | Structural conformance and closed-world implementation discovery |
 | `checker-actor-boundary.do` | Deep payload validation at actor call sites |
 | `checker-actor-lifecycle.do` | Conservative straight-line use-after-retire diagnostics and AST traversal helpers |
+| `checker-module-initialization.do` | Construction-only declarative initializer validation and direct-storage eligibility |
 | `checker-isolation.do` | Graph-wide transitive mutable-global effect validation |
 | `checker-validation.do` | Final graph walk proving the AST is decorated and safe to emit |
 | `json-semantics.do` | Shared eligibility contract for generated JSON methods |

@@ -189,12 +189,12 @@ inline std::ostream& operator<<(std::ostream& output, WebSocketState value) { re
 }
 
 namespace std_::http::websocket {
-    inline const auto WEBSOCKET_CLOSE_NORMAL = 1000;
-    inline const auto WEBSOCKET_CLOSE_GOING_AWAY = 1001;
-    inline const auto WEBSOCKET_CLOSE_PROTOCOL_ERROR = 1002;
-    inline const auto WEBSOCKET_CLOSE_UNSUPPORTED_DATA = 1003;
-    inline const auto WEBSOCKET_CLOSE_INVALID_PAYLOAD = 1007;
-    inline const auto WEBSOCKET_CLOSE_POLICY_VIOLATION = 1008;
-    inline const auto WEBSOCKET_CLOSE_MESSAGE_TOO_BIG = 1009;
-    inline const auto WEBSOCKET_CLOSE_INTERNAL_ERROR = 1011;
+    extern int32_t WEBSOCKET_CLOSE_NORMAL;
+    extern int32_t WEBSOCKET_CLOSE_GOING_AWAY;
+    extern int32_t WEBSOCKET_CLOSE_PROTOCOL_ERROR;
+    extern int32_t WEBSOCKET_CLOSE_UNSUPPORTED_DATA;
+    extern int32_t WEBSOCKET_CLOSE_INVALID_PAYLOAD;
+    extern int32_t WEBSOCKET_CLOSE_POLICY_VIOLATION;
+    extern int32_t WEBSOCKET_CLOSE_MESSAGE_TOO_BIG;
+    extern int32_t WEBSOCKET_CLOSE_INTERNAL_ERROR;
 }
