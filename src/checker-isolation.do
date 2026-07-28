@@ -394,7 +394,32 @@ function validateModuleIsolationEffects(result: AnalysisResult, graph: Isolation
                 "Async block is not isolated: " + reasonText(reason!))
             }
           }
-          _ -> { }
+          inner: Expression -> {
+            let actorCall = false
+            case inner {
+              call: CallExpression -> {
+                case call.callee {
+                  member: MemberExpression -> {
+                    if member.object.resolvedType != none {
+                      case member.object.resolvedType! {
+                        _: ActorType -> { actorCall = true }
+                        _ -> { }
+                      }
+                    }
+                  }
+                  _ -> { }
+                }
+              }
+              _ -> { }
+            }
+            if !actorCall {
+              reason := probeReason(result, graph, inner)
+              if reason != none {
+                pushDiagnostic(diagnostics, module.path, reason!.span,
+                  "Async call is not isolated: " + reasonText(reason!))
+              }
+            }
+          }
         }
       }
       call: CallExpression -> {

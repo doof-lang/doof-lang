@@ -4,6 +4,7 @@
 // Source template for the generated doof_runtime.hpp header.
 
 #include <algorithm>
+#include <chrono>
 #include <cerrno>
 #include <cctype>
 #include <climits>
@@ -281,6 +282,264 @@ private:
 
 inline detail::CallbackDomain* current_actor_domain() {
     return detail::active_actor_domain;
+}
+
+// ============================================================================
+// Runtime scheduler — bounded CPU execution for async and actor work
+// ============================================================================
+
+struct RuntimeSchedulerOptions {
+    std::size_t maximum_cpu_parallelism;
+    std::size_t retained_worker_count;
+    std::chrono::milliseconds excess_worker_idle_timeout;
+
+    RuntimeSchedulerOptions()
+        : maximum_cpu_parallelism([] {
+              const auto detected = std::thread::hardware_concurrency();
+              return static_cast<std::size_t>(detected == 0 ? 1 : detected);
+          }()),
+          retained_worker_count(maximum_cpu_parallelism),
+          excess_worker_idle_timeout(std::chrono::seconds(30)) {}
+};
+
+namespace detail {
+
+struct RuntimeSchedulerSnapshot {
+    std::size_t active_cpu_tokens;
+    std::size_t live_worker_threads;
+    std::size_t idle_worker_threads;
+    std::size_t pending_jobs;
+    std::size_t reacquire_waiters;
+};
+
+class RuntimeScheduler {
+    std::mutex mutex_;
+    std::condition_variable ready_;
+    std::queue<std::function<void()>> jobs_;
+    RuntimeSchedulerOptions options_;
+    bool started_ = false;
+    std::size_t active_cpu_tokens_ = 0;
+    std::size_t live_worker_threads_ = 0;
+    std::size_t starting_worker_threads_ = 0;
+    std::size_t idle_worker_threads_ = 0;
+    std::size_t reacquire_waiters_ = 0;
+
+    static thread_local RuntimeScheduler* current_worker_scheduler_;
+    static thread_local bool current_worker_holds_token_;
+
+    bool can_claim_job_locked() const {
+        return !jobs_.empty()
+            && active_cpu_tokens_ < options_.maximum_cpu_parallelism
+            && reacquire_waiters_ == 0;
+    }
+
+    void start_workers_locked() {
+        if (jobs_.empty() || reacquire_waiters_ != 0) {
+            return;
+        }
+
+        const auto token_capacity = options_.maximum_cpu_parallelism - active_cpu_tokens_;
+        const auto desired = std::min(token_capacity, jobs_.size());
+        while (idle_worker_threads_ + starting_worker_threads_ < desired) {
+            ++live_worker_threads_;
+            ++starting_worker_threads_;
+            try {
+                std::thread([this] { worker_loop(); }).detach();
+            } catch (...) {
+                --starting_worker_threads_;
+                --live_worker_threads_;
+                throw;
+            }
+        }
+        ready_.notify_all();
+    }
+
+    void worker_loop() {
+        std::unique_lock<std::mutex> lock(mutex_);
+        --starting_worker_threads_;
+
+        while (true) {
+            ++idle_worker_threads_;
+            if (live_worker_threads_ > options_.retained_worker_count) {
+                const bool ready = ready_.wait_for(
+                    lock,
+                    options_.excess_worker_idle_timeout,
+                    [this] { return can_claim_job_locked(); });
+                if (!ready
+                    && live_worker_threads_ > options_.retained_worker_count
+                    && !can_claim_job_locked()) {
+                    --idle_worker_threads_;
+                    --live_worker_threads_;
+                    ready_.notify_all();
+                    return;
+                }
+            } else {
+                ready_.wait(lock, [this] { return can_claim_job_locked(); });
+            }
+            --idle_worker_threads_;
+
+            if (!can_claim_job_locked()) {
+                continue;
+            }
+
+            auto job = std::move(jobs_.front());
+            jobs_.pop();
+            ++active_cpu_tokens_;
+            start_workers_locked();
+
+            current_worker_scheduler_ = this;
+            current_worker_holds_token_ = true;
+            lock.unlock();
+            try {
+                job();
+            } catch (...) {
+                // Every language-facing submission boundary records failures.
+                // Keep an unexpected native exception from destroying a worker.
+            }
+            lock.lock();
+
+            if (!current_worker_holds_token_) {
+                ++reacquire_waiters_;
+                ready_.wait(lock, [this] {
+                    return active_cpu_tokens_ < options_.maximum_cpu_parallelism;
+                });
+                --reacquire_waiters_;
+                ++active_cpu_tokens_;
+                current_worker_holds_token_ = true;
+            }
+
+            --active_cpu_tokens_;
+            current_worker_holds_token_ = false;
+            current_worker_scheduler_ = nullptr;
+            start_workers_locked();
+            ready_.notify_all();
+        }
+    }
+
+public:
+    static RuntimeScheduler& shared() {
+        // The scheduler intentionally has process lifetime. Detached workers may
+        // still reference it while ordinary program shutdown is in progress.
+        static auto* scheduler = new RuntimeScheduler();
+        return *scheduler;
+    }
+
+    void configure(const RuntimeSchedulerOptions& options) {
+        if (options.maximum_cpu_parallelism == 0) {
+            doof::panic("runtime scheduler maximum CPU parallelism must be at least 1");
+        }
+        if (options.retained_worker_count > options.maximum_cpu_parallelism) {
+            doof::panic("runtime scheduler retained worker count cannot exceed maximum CPU parallelism");
+        }
+        if (options.excess_worker_idle_timeout.count() < 0) {
+            doof::panic("runtime scheduler excess-worker idle timeout cannot be negative");
+        }
+
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (started_) {
+            doof::panic("runtime scheduler cannot be configured after work has started");
+        }
+        options_ = options;
+    }
+
+    void submit(std::function<void()> job) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        started_ = true;
+        jobs_.push(std::move(job));
+        start_workers_locked();
+    }
+
+    bool relinquish_current_worker_token() {
+        if (current_worker_scheduler_ != this || !current_worker_holds_token_) {
+            return false;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            --active_cpu_tokens_;
+            current_worker_holds_token_ = false;
+            start_workers_locked();
+        }
+        ready_.notify_all();
+        return true;
+    }
+
+    void reacquire_current_worker_token() {
+        if (current_worker_scheduler_ != this || current_worker_holds_token_) {
+            return;
+        }
+
+        std::unique_lock<std::mutex> lock(mutex_);
+        ++reacquire_waiters_;
+        ready_.wait(lock, [this] {
+            return active_cpu_tokens_ < options_.maximum_cpu_parallelism;
+        });
+        --reacquire_waiters_;
+        ++active_cpu_tokens_;
+        current_worker_holds_token_ = true;
+        ready_.notify_all();
+    }
+
+    RuntimeSchedulerSnapshot snapshot() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return RuntimeSchedulerSnapshot {
+            active_cpu_tokens_,
+            live_worker_threads_,
+            idle_worker_threads_,
+            jobs_.size(),
+            reacquire_waiters_,
+        };
+    }
+};
+
+inline thread_local RuntimeScheduler* RuntimeScheduler::current_worker_scheduler_ = nullptr;
+inline thread_local bool RuntimeScheduler::current_worker_holds_token_ = false;
+
+} // namespace detail
+
+inline void configure_runtime_scheduler(const RuntimeSchedulerOptions& options) {
+    detail::RuntimeScheduler::shared().configure(options);
+}
+
+class CpuTokenRelease {
+    detail::RuntimeScheduler* scheduler_ = nullptr;
+    bool released_ = false;
+
+public:
+    CpuTokenRelease()
+        : scheduler_(&detail::RuntimeScheduler::shared()),
+          released_(scheduler_->relinquish_current_worker_token()) {}
+
+    CpuTokenRelease(const CpuTokenRelease&) = delete;
+    CpuTokenRelease& operator=(const CpuTokenRelease&) = delete;
+
+    CpuTokenRelease(CpuTokenRelease&& other) noexcept
+        : scheduler_(other.scheduler_), released_(other.released_) {
+        other.released_ = false;
+    }
+
+    CpuTokenRelease& operator=(CpuTokenRelease&&) = delete;
+
+    void reacquire() {
+        if (!released_) {
+            return;
+        }
+        scheduler_->reacquire_current_worker_token();
+        released_ = false;
+    }
+
+    ~CpuTokenRelease() {
+        reacquire();
+    }
+};
+
+template <typename Future>
+void wait_with_cpu_token_released(Future& future) {
+    if (future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+        return;
+    }
+    CpuTokenRelease release;
+    future.wait();
 }
 
 template <typename T>
@@ -1784,6 +2043,7 @@ public:
 
     doof::Result<T, std::string> get() const {
         try {
+            doof::wait_with_cpu_token_released(future_);
             return doof::Success<T>{future_.get()};
         } catch (const doof::Panic&) {
             throw;
@@ -1805,6 +2065,7 @@ public:
 
     doof::Result<void, std::string> get() const {
         try {
+            doof::wait_with_cpu_token_released(future_);
             future_.get();
             return doof::Success<void>{};
         } catch (const doof::Panic&) {
@@ -1817,25 +2078,26 @@ public:
     }
 };
 
-// Central async-task submission boundary. The language does not expose a
-// scheduling policy; this detached implementation avoids fixed-pool starvation
-// when an async task synchronously waits for nested async work.
+// Central async-task submission boundary. CPU execution is bounded by the
+// runtime scheduler, while waits may relinquish their token so nested work
+// cannot starve.
 template <typename R, typename F>
 doof::Promise<R> submit_async(F&& f) {
     auto prom = std::make_shared<std::promise<R>>();
     auto fut = prom->get_future();
-    std::thread([prom, task = std::forward<F>(f)]() mutable {
+    auto task = std::make_shared<std::decay_t<F>>(std::forward<F>(f));
+    doof::detail::RuntimeScheduler::shared().submit([prom, task]() mutable {
         try {
             if constexpr (std::is_void_v<R>) {
-                task();
+                (*task)();
                 prom->set_value();
             } else {
-                prom->set_value(task());
+                prom->set_value((*task)());
             }
         } catch (...) {
             prom->set_exception(std::current_exception());
         }
-    }).detach();
+    });
     return doof::Promise<R>(std::move(fut));
 }
 
@@ -1870,7 +2132,7 @@ doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
 }
 
 // ============================================================================
-// Actor<T> — single-threaded message queue actor
+// Actor<T> — serial message queue actor
 // ============================================================================
 
 template <typename T>
@@ -1878,70 +2140,86 @@ class Actor : public std::enable_shared_from_this<Actor<T>>, public detail::Call
     // Actor state remains reachable only through this actor until retirement,
     // but class methods require shared ownership for Doof's `this` lowering.
     std::shared_ptr<T> instance_;
-    std::thread thread_;
     std::queue<std::function<void()>> mailbox_;
     std::mutex mutex_;
-    std::condition_variable cv_;
     bool accepting_ = true;
-    bool stopped_ = false;
+    bool scheduled_ = false;
 
-    void run() {
-        while (true) {
-            std::function<void()> task;
-            {
-                std::unique_lock<std::mutex> lock(mutex_);
-                cv_.wait(lock, [this] { return !mailbox_.empty() || stopped_; });
-                if (stopped_ && mailbox_.empty()) return;
-                task = std::move(mailbox_.front());
-                mailbox_.pop();
-            }
+    void schedule_locked() {
+        if (scheduled_ || mailbox_.empty()) {
+            return;
+        }
+        scheduled_ = true;
+        auto self = this->shared_from_this();
+        doof::detail::RuntimeScheduler::shared().submit([self] {
+            self->run_one();
+        });
+    }
+
+    void run_one() {
+        std::function<void()> task;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            task = std::move(mailbox_.front());
+            mailbox_.pop();
+        }
+
+        try {
             doof::detail::ActiveActorScope active(this);
             task();
+        } catch (...) {
+            // Language-facing actor and callback submissions capture their own
+            // failures. Preserve mailbox progress if native code enqueues a
+            // task that unexpectedly throws.
         }
+
+        std::lock_guard<std::mutex> lock(mutex_);
+        scheduled_ = false;
+        schedule_locked();
     }
 
 public:
     template <typename... Args>
     explicit Actor(Args&&... args)
-        : instance_(std::make_shared<T>(std::forward<Args>(args)...)) {
-        thread_ = std::thread(&Actor::run, this);
-    }
+        : instance_(std::make_shared<T>(std::forward<Args>(args)...)) {}
 
     // Synchronous call — enqueue and block until complete
     template <typename R, typename F>
     R call_sync(F&& f) {
         if constexpr (std::is_void_v<R>) {
-            std::promise<void> prom;
-            auto fut = prom.get_future();
+            auto prom = std::make_shared<std::promise<void>>();
+            auto fut = prom->get_future();
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 if (!accepting_) doof::panic("actor is retiring or retired");
-                mailbox_.push([this, f = std::forward<F>(f), &prom]() {
+                mailbox_.push([this, f = std::forward<F>(f), prom]() {
                     try {
                         f(*instance_);
-                        prom.set_value();
+                        prom->set_value();
                     } catch (...) {
-                        prom.set_exception(std::current_exception());
+                        prom->set_exception(std::current_exception());
                     }
                 });
+                schedule_locked();
             }
-            cv_.notify_one();
+            doof::wait_with_cpu_token_released(fut);
             return fut.get();
         } else {
-            std::promise<R> prom;
-            auto fut = prom.get_future();
+            auto prom = std::make_shared<std::promise<R>>();
+            auto fut = prom->get_future();
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 if (!accepting_) doof::panic("actor is retiring or retired");
-                mailbox_.push([this, f = std::forward<F>(f), &prom]() {
+                mailbox_.push([this, f = std::forward<F>(f), prom]() {
                     try {
-                        prom.set_value(f(*instance_));
+                        prom->set_value(f(*instance_));
                     } catch (...) {
-                        prom.set_exception(std::current_exception());
+                        prom->set_exception(std::current_exception());
                     }
                 });
+                schedule_locked();
             }
-            cv_.notify_one();
+            doof::wait_with_cpu_token_released(fut);
             return fut.get();
         }
     }
@@ -1972,8 +2250,8 @@ public:
                     }
                 });
             }
+            schedule_locked();
         }
-        cv_.notify_one();
         return doof::Promise<R>(std::move(fut));
     }
 
@@ -1982,47 +2260,56 @@ public:
             std::lock_guard<std::mutex> lock(mutex_);
             if (!accepting_) doof::panic("actor is retiring or retired");
             mailbox_.push(std::move(task));
+            schedule_locked();
         }
-        cv_.notify_one();
     }
 
     // Retire the actor — drain accepted work, stop, and return owned state.
     std::shared_ptr<T> retire() {
-        std::promise<std::shared_ptr<T>> prom;
-        auto fut = prom.get_future();
+        auto prom = std::make_shared<std::promise<std::shared_ptr<T>>>();
+        auto fut = prom->get_future();
         {
             std::lock_guard<std::mutex> lock(mutex_);
             if (!accepting_) doof::panic("actor is already retiring or retired");
             accepting_ = false;
-            mailbox_.push([this, &prom]() {
+            mailbox_.push([this, prom]() {
                 try {
                     if (!instance_) doof::panic("actor is already retired");
-                    prom.set_value(std::move(instance_));
-                    stopped_ = true;
+                    prom->set_value(std::move(instance_));
                 } catch (...) {
-                    prom.set_exception(std::current_exception());
+                    prom->set_exception(std::current_exception());
                 }
             });
+            schedule_locked();
         }
-        cv_.notify_one();
+        doof::wait_with_cpu_token_released(fut);
         std::shared_ptr<T> value = fut.get();
-        if (thread_.joinable()) thread_.join();
         return value;
     }
 
-    // Stop the actor — drain the queue and join the thread
+    // Stop accepting work and drain the already accepted mailbox.
     void stop() {
+        auto prom = std::make_shared<std::promise<void>>();
+        auto fut = prom->get_future();
         {
             std::lock_guard<std::mutex> lock(mutex_);
+            if (!accepting_) {
+                return;
+            }
             accepting_ = false;
-            stopped_ = true;
+            mailbox_.push([prom] {
+                prom->set_value();
+            });
+            schedule_locked();
         }
-        cv_.notify_one();
-        if (thread_.joinable()) thread_.join();
+        doof::wait_with_cpu_token_released(fut);
+        fut.get();
     }
 
     ~Actor() {
-        stop();
+        // Queued scheduler closures retain the actor until its mailbox drains.
+        // Destruction therefore observes no accepted work requiring a join.
+        accepting_ = false;
     }
 };
 

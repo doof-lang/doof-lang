@@ -428,6 +428,14 @@ export function testEmitsNoneAsyncBlocksAsVoidTasks(): none {
   Assert.stringContains(result.source, "return;")
 }
 
+export function testEmitsIsolatedAsyncFunctionCalls(): none {
+  result := emit("function compute(value: int): int => value * 2\nfunction run(value: int): Promise<int> => async compute(value)")
+  Assert.stringContains(result.source, "doof::submit_async<int32_t>([=]() -> int32_t { return compute(value); })")
+
+  noneResult := emit("function notify(value: int): none { println(value) }\nfunction run(value: int): Promise<none> => async notify(value)")
+  Assert.stringContains(noneResult.source, "doof::submit_async<void>([=]() { notify(value); })")
+}
+
 export function testTryBangPanicIncludesOriginAndStringFailure(): none {
   result := emitMonomorphized("function load(): Result<int, string> => Failure { error: \"disk failed\" }\nfunction main(): int => try! load()")
   Assert.stringContains(result.source, "doof::panic_at(\"main\", 2, std::string(\"try! failed\") + std::string(\": \") + doof::failure_error(_try_value))")

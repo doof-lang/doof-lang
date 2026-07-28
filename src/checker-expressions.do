@@ -323,8 +323,10 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         inner: Expression -> {
           innerType := checkExpression(state, inner, scope, none)
           let actorCall = false
+          let isolatedCall = false
           case inner {
             call: CallExpression -> {
+              isolatedCall = call.resolvedFunction != none
               case call.callee {
                 member: MemberExpression -> {
                   if member.object.resolvedType != none {
@@ -336,10 +338,46 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
                 }
                 _ -> { }
               }
+              if !actorCall && isolatedCall {
+                for i of 0..<call.args.length {
+                  argumentType := call.args[i].value.resolvedType
+                  if argumentType == none { continue }
+                  violation := findActorBoundaryViolation(state.result, argumentType!)
+                  if violation != none {
+                    typeError(state,
+                      "Async call argument " + string(i + 1) + " of type \"" + typeName(argumentType!) + "\" cannot cross to the worker: " + violation!.reason,
+                      call.args[i].span,
+                    )
+                  }
+                }
+                case call.callee {
+                  member: MemberExpression -> {
+                    if member.resolvedStaticOwner == none && member.object.resolvedType != none {
+                      receiverViolation := findActorBoundaryViolation(state.result, member.object.resolvedType!)
+                      if receiverViolation != none {
+                        typeError(state,
+                          "Async call receiver of type \"" + typeName(member.object.resolvedType!) + "\" cannot cross to the worker: " + receiverViolation!.reason,
+                          member.object.span,
+                        )
+                      }
+                    }
+                  }
+                  _ -> { }
+                }
+                resultViolation := asyncResultViolation(state.result, innerType)
+                if resultViolation != none {
+                  typeError(state,
+                    "Async call result type \"" + typeName(innerType) + "\" cannot cross from the worker: " + resultViolation!,
+                    async_.span,
+                  )
+                }
+              }
             }
             _ -> { }
           }
-          if !actorCall { typeError(state, "`async` is only valid for actor method calls; use a temporary actor for background work", async_.span) }
+          if !actorCall && !isolatedCall {
+            typeError(state, "`async` requires an actor method call or an inferrably isolated function call", async_.span)
+          }
           return finish(state, expression, promiseType(innerType))
         }
       }

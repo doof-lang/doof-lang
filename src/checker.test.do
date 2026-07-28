@@ -847,12 +847,30 @@ export function testAllowsNestedAsyncWorkOwnedByTheOuterBlock(): none {
 }
 
 export function testRejectsNonActorAsyncAndRetire(): none {
-  asyncResult := checked("function value(): int => 1\npromise := async value()")
-  Assert.equal(asyncResult.diagnostics.length > 0, true)
-  Assert.equal(asyncResult.diagnostics[0].message.contains("actor method calls"), true)
+  asyncResult := checked("function value(): int => 1\nfunction run(): Promise<int> => async value()")
+  Assert.equal(asyncResult.diagnostics.length, 0)
   retireResult := checked("value := retire 1")
   Assert.equal(retireResult.diagnostics.length > 0, true)
   Assert.equal(retireResult.diagnostics[0].message.contains("Cannot retire non-actor"), true)
+}
+
+export function testChecksIsolatedAsyncFunctionCallBoundaries(): none {
+  valid := checked("function copyFirst(values: readonly int[]): int[] => [values[0]]\nfunction run(values: readonly int[]): Promise<int[]> => async copyFirst(values)")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  unsafeArgument := checked("function length(values: int[]): int => values.length\nfunction run(values: int[]): Promise<int> => async length(values)")
+  Assert.equal(unsafeArgument.diagnostics.length, 1)
+  Assert.equal(unsafeArgument.diagnostics[0].message.contains("Async call argument 1"), true)
+
+  nonIsolated := checked("let shared = 0\nfunction next(): int { shared = shared + 1\nreturn shared }\nfunction run(): Promise<int> => async next()")
+  let foundIsolation = false
+  for diagnostic of nonIsolated.diagnostics { if diagnostic.message.contains("Async call is not isolated") { foundIsolation = true } }
+  Assert.equal(foundIsolation, true)
+
+  unsafeResult := checked("function callback(): (): int => (): int => 1\nfunction run(): Promise<(): int> => async callback()")
+  let foundResult = false
+  for diagnostic of unsafeResult.diagnostics { if diagnostic.message.contains("Async call result type") { foundResult = true } }
+  Assert.equal(foundResult, true)
 }
 
 export function testRejectsSameBindingUseAfterRetireButAllowsShadowing(): none {

@@ -41,13 +41,30 @@ export function emitAsyncExpression(expression: AsyncExpression, context: EmitCo
             }
             _ -> { }
           }
+          if call.resolvedFunction != none { return emitIsolatedFunctionCall(expression, call, context) }
         }
         _ -> { }
       }
     }
   }
-  panic("Cannot emit non-actor async expression; async is only valid for actor method calls")
+  panic("Cannot emit async expression without an actor method or isolated function call")
   return ""
+}
+
+function emitIsolatedFunctionCall(expression: AsyncExpression, call: CallExpression, context: EmitContext): string {
+  if expression.resolvedType == none { panic("Async call is missing its resolved Promise type") }
+  let valueType: ResolvedType | none = none
+  case expression.resolvedType! {
+    promise: PromiseType -> { valueType = promise.valueType }
+    _ -> { panic("Async call does not have Promise<T> type") }
+  }
+  if valueType == none { return "" }
+  cppReturn := emitContextReturnType(valueType!, context)
+  invocation := emitExpression(call, context)
+  if cppReturn == "void" {
+    return "doof::submit_async<void>([=]() { " + invocation + "; })"
+  }
+  return "doof::submit_async<" + cppReturn + ">([=]() -> " + cppReturn + " { return " + invocation + "; })"
 }
 
 function emitAsyncBlock(expression: AsyncExpression, block: Block, context: EmitContext): string {

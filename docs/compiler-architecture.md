@@ -49,7 +49,7 @@ the row from left to right.
 | Generics | type parameters in AST and resolved types | checker infers/substitutes concrete arguments | `emitter-monomorphize.do` discovers a fixed point; emitters output concrete forms |
 | Interfaces | interface/class declarations and resolved nominal types | `checker-interfaces.do` validates structural conformance and discovers the closed implementor set | `emitter-types.do` and declaration/JSON emitters lower interface variants |
 | JSON and reflection | annotations/declarations in AST; eligibility in `json-semantics.do` | checker advertises only supported synthetic members and records metadata demand | `emitter-json.do`, `emitter-metadata.do`, and `emitter-wasm.do` generate definitions/adapters |
-| Actors and isolation | actor/promise types and actor syntax | `checker-actor-boundary.do`, `checker-actor-lifecycle.do`, and `checker-isolation.do` own call boundaries, retirement diagnostics, and graph-wide effects | `emitter-expr-actor.do` and lambda/call emitters lower checked operations; runtime schedules them |
+| Actors and isolation | actor/promise types and actor syntax | `checker-actor-boundary.do`, `checker-actor-lifecycle.do`, and `checker-isolation.do` own call boundaries, retirement diagnostics, and graph-wide effects | `emitter-expr-actor.do` and lambda/call emitters lower checked operations; the bounded runtime scheduler executes isolated function calls, async blocks, and serial actor messages |
 | Closures and mutable capture | lambda/binding AST and checker bindings | checker establishes callable types and resolved captures | `emitter-expr-lambda.do` finds escaping captures and boxes mutable storage |
 | Module initialization | top-level checked declarations/statements and compiler entry mode | `checker-module-initialization.do` validates construction-only expressions and direct storage | `emitter-module.do`, `emitter-header.do`, and `emitter-decl.do` emit direct storage and graph-ordered execution |
 | Packages and reproducible inputs | manifests/catalog in `package-manifest.do` and `std-catalog.do` | `dependency-policy.do` selects exact reached inputs | acquisition modules materialize; `provenance.do` records; `emitter-project.do` collates |
@@ -85,7 +85,10 @@ source-order runner. Standalone WebAssembly exposes the graph protocol through
 Closed-world information drives interface variants, generic specialization,
 actor isolation validation, JSON/reflection generation, and stable module
 namespaces. The runtime header supplies intrinsic values, collections, actors,
-JSON, metrics, resource lookup, and other generated-code support.
+the process-wide CPU-token scheduler, JSON, metrics, resource lookup, and other
+generated-code support. Actor identity is independent of worker-thread
+identity; the runtime admits one message per actor while sharing workers across
+domains.
 
 ## Side-effect boundary
 

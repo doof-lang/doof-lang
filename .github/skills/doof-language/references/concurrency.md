@@ -35,8 +35,10 @@ counter.increment(5)
 now := counter.get()
 ```
 
-Each actor processes one method call at a time. A caller that does not use
-`async` blocks until the method completes.
+Each actor processes one method call at a time. Actors are serial execution
+domains rather than dedicated threads, so consecutive messages may run on
+different shared runtime workers. A caller that does not use `async` blocks
+until the method completes.
 
 ## Async Actor Calls
 
@@ -48,10 +50,11 @@ p := async worker.increment(10)
 try! p.get()
 ```
 
-Ordinary functions are not dispatched directly:
+Ordinary functions may be dispatched directly when they are inferred isolated
+and their arguments satisfy actor-call boundary rules:
 
 ```doof
-async compute()   // error: not an actor method call
+promise := async compute(input)
 ```
 
 ## Async Blocks
@@ -80,14 +83,30 @@ or occur recursively in the yielded graph. Async-block code may invoke only
 transitively isolated code and cannot access mutable module/static state.
 
 Nested async blocks and async calls on locally created actors are allowed, but
-their handles must be consumed before yielding. Runtime scheduling is
+their handles must be consumed before yielding. Worker identity and timing are
 deliberately unspecified.
+
+The runtime uses a process-wide FIFO scheduler. Pending work is unbounded, but
+CPU execution is limited to the host hardware-concurrency count by default
+(falling back to one). The application/UI thread is outside this token limit.
+One actor message at a time is eligible from each FIFO actor mailbox.
+
+Worker waits in `Promise.get()`, synchronous actor calls, and actor retirement
+automatically relinquish their CPU token. This lets nested work progress at a
+one-token limit. Blocking native C++ integrations may use
+`doof::CpuTokenRelease`; ordinary Doof code has no token-control API. Blocked
+workers can be replaced by compensating threads, so blocked OS-thread count is
+not hard-capped. Excess idle workers retire after 30 seconds by default.
+
+Native hosts can configure the CPU limit, retained workers, and idle timeout
+with `doof::RuntimeSchedulerOptions` and
+`doof::configure_runtime_scheduler(...)` before the first scheduled job.
 
 `isolated` is an enforced transitive effect. Isolated code cannot access mutable
 module/static state or call non-isolated code. It may mutate `this`, parameters,
 locals, and freshly created values. Ordinary functions are inferred isolated
 when they meet the same rules. The modifier does not create worker-pool
-execution and does not make non-actor calls eligible for `async`.
+execution by itself; use `async functionCall(args)` or an async block.
 
 Bodyless native code needs an explicit trusted contract because the compiler
 cannot inspect its implementation. Use `import isolated function` for native
@@ -132,9 +151,10 @@ class Promise<T> {
 }
 ```
 
-`Promise<T>` is produced by async actor calls and async blocks. `get()` blocks
-until the queued work completes and reports thrown runtime failures as
-`Result<T, string>`.
+`Promise<T>` is produced by async actor calls, isolated function calls, and
+async blocks. `get()` blocks until the queued work completes, relinquishing a
+runtime worker's CPU token during the wait, and reports thrown runtime failures
+as `Result<T, string>`.
 
 ## Actor Boundary Summary
 

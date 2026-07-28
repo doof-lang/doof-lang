@@ -97,9 +97,12 @@ place to hide a missing checker rule or an emitter decision.
 
 Async-block capture decoration and transfer restrictions belong to
 `checker-async.do`; transitive callable effects remain owned by
-`checker-isolation.do`. `emitter-expr-actor.do` lowers both actor async calls and
-decorated async blocks through the runtime's scheduling-policy-neutral
-submission boundary.
+`checker-isolation.do`. `emitter-expr-actor.do` lowers actor async calls,
+decorated isolated calls, and async blocks through the runtime's
+scheduling-policy-neutral submission boundary. `runtime/doof_runtime.h` owns
+the process-wide bounded scheduler, CPU-token release around blocking waits,
+and per-actor serial mailbox admission; compiler lowering does not select
+threads or reconstruct scheduling policy.
 
 ## Packages, native builds, and command boundaries
 

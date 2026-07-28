@@ -57,6 +57,34 @@ function asyncBlockResult(): int {
   return values[0] + values[1] + values[2]
 }
 
+function queuedActorResult(): int {
+  worker := Actor<Accumulator>(0)
+  let promises: Promise<int>[] = []
+  for index of 0..<32 {
+    promises.push(async worker.add(1))
+  }
+  let total = 0
+  for promise of promises {
+    total = total + try! promise.get()
+  }
+  state := retire worker
+  return total + state.value
+}
+
+function queuedAsyncResult(): int {
+  let promises: Promise<int>[] = []
+  for value of 0..<32 {
+    promises.push(async {
+      yield value
+    })
+  }
+  let total = 0
+  for promise of promises {
+    total = total + try! promise.get()
+  }
+  return total
+}
+
 function values(): int[] => [1, 2, 3]
 
 function iterableResult(): int {
@@ -154,5 +182,7 @@ function main(): int {
   if yieldCatchResult() != 8 { return 7 }
   if metadataResult() != 16 { return 8 }
   if asyncBlockResult() != 15 { return 9 }
+  if queuedActorResult() != 560 { return 10 }
+  if queuedAsyncResult() != 496 { return 11 }
   return 0
 }
