@@ -297,6 +297,7 @@ export class CallerExpression {
 export class AsyncExpression {
   kind: string
   expression: Expression | Block
+  resolvedCaptureNames: string[] = []
   resolvedType: ResolvedType | none = none
   span: SourceSpan
 }

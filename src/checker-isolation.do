@@ -5,11 +5,12 @@ import {
   ActorType, Binding, Diagnostic, InterfaceType, ResolvedType, SemanticLocation, SemanticSpan,
 } from "./semantic"
 import {
-  ActorCreationExpression, Block, CallExpression, ClassDeclaration, ConstDeclaration,
+  ActorCreationExpression, AsyncExpression, Block, CallExpression, ClassDeclaration, ConstDeclaration,
   ExportDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding,
   InterfaceDeclaration, LetDeclaration, MemberExpression, ReadonlyDeclaration, SourceSpan, Statement,
 } from "./ast"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
+import { validateAsyncBlock } from "./checker-async"
 import {
   collectBlockExpressions, collectNestedExpressions, collectStatementExpressions,
 } from "./checker-actor-lifecycle"
@@ -383,6 +384,19 @@ function validateModuleIsolationEffects(result: AnalysisResult, graph: Isolation
 
   for expression of moduleExpressions(module) {
     case expression {
+      async_: AsyncExpression -> {
+        case async_.expression {
+          _: Block -> {
+            validateAsyncBlock(result, async_, module.path, diagnostics)
+            reason := probeReason(result, graph, async_)
+            if reason != none {
+              pushDiagnostic(diagnostics, module.path, reason!.span,
+                "Async block is not isolated: " + reasonText(reason!))
+            }
+          }
+          _ -> { }
+        }
+      }
       call: CallExpression -> {
         case call.callee {
           member: MemberExpression -> {

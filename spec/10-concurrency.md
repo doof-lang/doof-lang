@@ -57,15 +57,49 @@ try! p.get()
 `async actor.method(args)` returns `Promise<T>`, where `T` is the actor method's
 return type.
 
-`async` is valid only for actor method calls. Async blocks and worker-pool
-function dispatch are not part of the core concurrency model:
+`async` is also valid with a value-producing block:
 
 ```doof
-async compute()   // error
-async { 42 }      // error
+input := 21
+promise := async {
+    let values = [input * 2]
+    values.push(43)
+    yield values
+}
+values := try! promise.get()
 ```
 
-Use a temporary actor for background work that needs a separate mutable domain.
+`async { ... }` executes outside the caller's actor domain and returns
+`Promise<T>`, where `T` is the yielded type. Every reachable path must `yield`.
+The runtime owns scheduling policy; programs must not rely on a fresh thread or
+a particular worker pool.
+
+Values captured from the enclosing scope are copied into the task. A capture
+must use an immutable binding and its type must be deeply immutable and safe to
+cross a thread boundary. Actor, promise, callback, weak-reference, and stream
+handles cannot be captured. Mutable locals and freshly constructed mutable
+graphs are allowed inside the task.
+
+Async-block code is isolated. It may call only transitively isolated functions,
+methods, constructors, and native contracts, and cannot access mutable
+module/static state.
+
+An async block may yield an owned mutable object or collection. Its worker has
+no persistent mutable domain after completion, so ownership transfers to the
+promise consumer. Actor, promise, callback, weak-reference, and stream handles
+cannot occur recursively in the yielded graph.
+
+Nested async blocks and async calls on actors created inside the block are
+allowed. Handles from those operations must be consumed before yielding the
+outer result.
+
+`async functionCall()` remains invalid for ordinary functions; use an async
+block:
+
+```doof
+async compute()           // error: ordinary call
+async { yield compute() } // valid when compute is isolated
+```
 
 ---
 
@@ -156,7 +190,7 @@ not a lifecycle operation. Use `retire actor` to stop an actor domain.
 
 ## Promises
 
-Promises represent asynchronous actor-call completion:
+Promises represent asynchronous actor-call or async-block completion:
 
 ```doof
 class Promise<T> {
@@ -238,18 +272,19 @@ through `Actor<T>` requires its inferred effect to be isolated and is rejected
 otherwise. This prevents actor code from reaching root-domain mutable globals
 either directly or through helper calls.
 
-`isolated` does not create a worker-pool execution domain. `async` remains valid
-only for actor method calls.
+`isolated` does not schedule work by itself. Use an async block to execute
+isolated work outside the current actor domain.
 
 ---
 
 ## Summary
 
-- Actors are the only concurrent mutable execution domains.
+- Actors are persistent concurrent mutable domains; async blocks are temporary
+  isolated execution domains.
 - Actor construction and actor method calls enforce domain boundaries.
 - Actor-dispatched methods cannot reach mutable module/static state.
 - Actor calls are synchronous unless marked `async`.
-- `async` is actor-call-only.
+- `async` supports actor calls and value-producing isolated blocks.
 - `retire actor` drains accepted work and returns the actor state.
 - Immutable values may cross domains.
 - Mutable state crosses domains only by retiring its owning actor.

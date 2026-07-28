@@ -445,13 +445,13 @@ export function testParsesActorConcurrencyExpressions(): none {
   }
 }
 
-export function testParsesAsyncBlockForSemanticDiagnostic(): none {
-  case first("async { return 42 }") {
+export function testParsesAsyncValueBlock(): none {
+  case first("async { value := 42\nyield value }") {
     statement: ExpressionStatement -> {
       case statement.expression {
         async_: AsyncExpression -> {
           case async_.expression {
-            block: Block -> { Assert.equal(block.kind, "block") }
+            block: Block -> { Assert.equal(block.kind, "block"); Assert.equal(block.statements.length, 2) }
             _ -> { panic("expected async block") }
           }
         }

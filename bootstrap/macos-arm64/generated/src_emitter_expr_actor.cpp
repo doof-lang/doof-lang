@@ -4,6 +4,7 @@
 #include "src_semantic.hpp"
 #include "src_emitter_context.hpp"
 #include "src_emitter_expr.hpp"
+#include "src_emitter_stmt.hpp"
 #include "src_emitter_types.hpp"
 #include "std_fs_index.hpp"
 #include "std_http_index.hpp"
@@ -15,6 +16,7 @@ using namespace ::app_src_ast_;
 using namespace ::app_src_semantic_;
 using namespace ::app_src_emitter_context_;
 using namespace ::app_src_emitter_expr_;
+using namespace ::app_src_emitter_stmt_;
 using namespace ::app_src_emitter_types_;
 std::string emitActorCreation(std::shared_ptr<::app_src_ast_::ActorCreationExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
     if (doof::is_null(expression->resolvedType)) {
@@ -41,11 +43,12 @@ std::string emitActorCreation(std::shared_ptr<::app_src_ast_::ActorCreationExpre
     doof::unreachable();
     return std::string("");
 }
-std::string emitAsyncActorCall(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitAsyncExpression(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
     {
         auto _case_subject = expression->expression;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
-            doof::panic(std::string("Cannot emit async block; async is only valid for actor method calls"));
+            const auto& block = std::get<std::shared_ptr<::app_src_ast_::Block>>(_case_subject);
+            return emitAsyncBlock(expression, block, context);
     }
     else if (doof::variant_is<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(_case_subject)) {
             const auto inner = doof::variant_narrow<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(_case_subject);
@@ -80,6 +83,41 @@ std::string emitAsyncActorCall(std::shared_ptr<::app_src_ast_::AsyncExpression> 
     }
     doof::panic(std::string("Cannot emit non-actor async expression; async is only valid for actor method calls"));
     return std::string("");
+}
+std::string emitAsyncBlock(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_ast_::Block> block, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+    if (doof::is_null(expression->resolvedType)) {
+        doof::panic(std::string("Async block is missing its resolved Promise type"));
+    }
+    std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> valueType = std::monostate{};
+    {
+        auto _case_subject = doof::unwrap_optional(expression->resolvedType);
+        if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PromiseType>>(_case_subject)) {
+            const auto& promise = std::get<std::shared_ptr<::app_src_semantic_::PromiseType>>(_case_subject);
+            (valueType = doof::optional_value(promise->valueType));
+    }
+    else {
+            doof::panic(std::string("Async block does not have Promise<T> type"));
+    }
+    }
+    if (doof::is_null(valueType)) {
+        return std::string("");
+    }
+    const auto cppReturn = ::app_src_emitter_types_::emitContextReturnType(doof::unwrap_optional(valueType), context);
+    auto captures = std::string("");
+    for (int32_t i = 0; i < static_cast<int32_t>((expression->resolvedCaptureNames)->size()); ++i) {
+        if (i > 0) {
+            (captures = (captures + std::string(", ")));
+        }
+        (captures = (captures + ::app_src_emitter_expr_::cppIdentifier((*expression->resolvedCaptureNames)[i])));
+    }
+    const auto previousYieldState = context->inValueYieldBlock;
+    const auto previousVoidState = context->valueYieldReturnsVoid;
+    (context->inValueYieldBlock = true);
+    (context->valueYieldReturnsVoid = (cppReturn == std::string("void")));
+    const auto body = ::app_src_emitter_stmt_::emitBlock(block, 1, context);
+    (context->inValueYieldBlock = previousYieldState);
+    (context->valueYieldReturnsVoid = previousVoidState);
+    return ((((((((std::string("doof::submit_async<") + cppReturn) + std::string(">([")) + captures) + std::string("]() -> ")) + cppReturn) + std::string(" {\n")) + body) + std::string("})"));
 }
 std::string emitRetireActor(std::shared_ptr<::app_src_ast_::RetireExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
     return (::app_src_emitter_expr_::emitExpression(expression->actor, context, std::monostate{}) + std::string("->retire()"));

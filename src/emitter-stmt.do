@@ -48,6 +48,9 @@ export function emitStatement(statement: Statement, level: int = 1, context: Emi
     return_: ReturnStatement -> { return coverageMark + ind + emitReturn(return_, context) }
     yield_: YieldStatement -> {
       if !context.inValueYieldBlock { panic("yield statement is outside a value-producing block") }
+      if context.valueYieldReturnsVoid {
+        return coverageMark + ind + emitExpression(yield_.value, context) + ";\n" + ind + "return;\n"
+      }
       return coverageMark + ind + "return " + emitExpression(yield_.value, context) + ";\n"
     }
     expression: ExpressionStatement -> { return coverageMark + ind + emitExpression(expression.expression, context) + ";\n" }

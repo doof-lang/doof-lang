@@ -35,13 +35,15 @@ namespace app_src_emitter_expr_actor_ {
 #include "src_semantic.hpp"
 #include "src_emitter_context.hpp"
 #include "src_emitter_expr.hpp"
+#include "src_emitter_stmt.hpp"
 #include "src_emitter_types.hpp"
 
 namespace app_src_emitter_expr_actor_ {
     using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     std::string emitActorCreation(std::shared_ptr<::app_src_ast_::ActorCreationExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
-    std::string emitAsyncActorCall(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
+    std::string emitAsyncExpression(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
+    std::string emitAsyncBlock(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_ast_::Block> block, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
     std::string emitRetireActor(std::shared_ptr<::app_src_ast_::RetireExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
     std::string emitSyncActorCall(std::shared_ptr<::app_src_ast_::CallExpression> expression, std::shared_ptr<::app_src_ast_::MemberExpression> member, std::shared_ptr<::app_src_semantic_::ActorType> actor, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
     std::string emitActorMethodCall(std::shared_ptr<::app_src_ast_::CallExpression> expression, std::shared_ptr<::app_src_ast_::MemberExpression> member, std::shared_ptr<::app_src_semantic_::ActorType> actor, bool async_, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);

@@ -14,7 +14,7 @@ import { emitCaseExpression, emitCatchExpression, emitDotShorthand, emitIfExpres
 import { emitLambdaExpression } from "./emitter-expr-lambda"
 import { decoratedExpressionType, emitNullableVariantPromotion, needsNullableVariantPromotion, needsVariantPromotion } from "./emitter-expr-utils"
 import { emitClassInnerType, emitType } from "./emitter-types"
-import { emitActorCreation, emitAsyncActorCall, emitRetireActor } from "./emitter-expr-actor"
+import { emitActorCreation, emitAsyncExpression, emitRetireActor } from "./emitter-expr-actor"
 import { moduleDiagnosticPath } from "./emitter-names"
 
 export function emitExpression(expression: Expression, context: EmitContext, expected: ResolvedType | none = none): string {
@@ -51,7 +51,7 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     yieldBlock: YieldBlockExpression -> { value = emitYieldBlockExpression(yieldBlock, context, expected) }
     catch_: CatchExpression -> { value = emitCatchExpression(catch_, context) }
     construct: ConstructExpression -> { value = emitConstruct(construct, context) }
-    async_: AsyncExpression -> { value = emitAsyncActorCall(async_, context) }
+    async_: AsyncExpression -> { value = emitAsyncExpression(async_, context) }
     retire_: RetireExpression -> { value = emitRetireActor(retire_, context) }
     actor: ActorCreationExpression -> { value = emitActorCreation(actor, context) }
     dot: DotShorthand -> { value = emitDotShorthand(dot, context) }

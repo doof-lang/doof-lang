@@ -4,6 +4,7 @@ import { ActorCreationExpression, AsyncExpression, Block, CallExpression, Expres
 import { ActorType, FunctionType, PromiseType, ResolvedType, NoneType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { emitBlock } from "./emitter-stmt"
 import { emitClassInnerType, emitContextReturnType } from "./emitter-types"
 
 export function emitActorCreation(expression: ActorCreationExpression, context: EmitContext): string {
@@ -23,9 +24,9 @@ export function emitActorCreation(expression: ActorCreationExpression, context: 
   return ""
 }
 
-export function emitAsyncActorCall(expression: AsyncExpression, context: EmitContext): string {
+export function emitAsyncExpression(expression: AsyncExpression, context: EmitContext): string {
   case expression.expression {
-    _: Block -> { panic("Cannot emit async block; async is only valid for actor method calls") }
+    block: Block -> { return emitAsyncBlock(expression, block, context) }
     inner: Expression -> {
       case inner {
         call: CallExpression -> {
@@ -47,6 +48,30 @@ export function emitAsyncActorCall(expression: AsyncExpression, context: EmitCon
   }
   panic("Cannot emit non-actor async expression; async is only valid for actor method calls")
   return ""
+}
+
+function emitAsyncBlock(expression: AsyncExpression, block: Block, context: EmitContext): string {
+  if expression.resolvedType == none { panic("Async block is missing its resolved Promise type") }
+  let valueType: ResolvedType | none = none
+  case expression.resolvedType! {
+    promise: PromiseType -> { valueType = promise.valueType }
+    _ -> { panic("Async block does not have Promise<T> type") }
+  }
+  if valueType == none { return "" }
+  cppReturn := emitContextReturnType(valueType!, context)
+  let captures = ""
+  for i of 0..<expression.resolvedCaptureNames.length {
+    if i > 0 { captures = captures + ", " }
+    captures = captures + cppIdentifier(expression.resolvedCaptureNames[i])
+  }
+  previousYieldState := context.inValueYieldBlock
+  previousVoidState := context.valueYieldReturnsVoid
+  context.inValueYieldBlock = true
+  context.valueYieldReturnsVoid = cppReturn == "void"
+  body := emitBlock(block, 1, context)
+  context.inValueYieldBlock = previousYieldState
+  context.valueYieldReturnsVoid = previousVoidState
+  return "doof::submit_async<" + cppReturn + ">([" + captures + "]() -> " + cppReturn + " {\n" + body + "})"
 }
 
 export function emitRetireActor(expression: RetireExpression, context: EmitContext): string {

@@ -802,6 +802,50 @@ export function testChecksActorCreationSyncAsyncPromiseAndRetire(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testChecksAsyncBlocksWithImmutableCapturesAndMutableResults(): none {
+  result := checked("function run(input: int): int { offset := 2\npromise: Promise<int[]> := async { let values = [input, offset]\nvalues.push(5)\nyield values }\nvalues := try! promise.get()\nreturn values.length }\n")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+
+  missingYield := checked("function run(): Promise<int> => async { if true { yield 1 } }")
+  Assert.equal(missingYield.diagnostics.length > 0, true)
+  Assert.equal(missingYield.diagnostics[0].message.contains("must yield a value on every path"), true)
+}
+
+export function testRejectsUnsafeAsyncBlockCaptures(): none {
+  mutableBinding := checked("function run(): Promise<int> { let value = 1\nreturn async { yield value } }")
+  Assert.equal(mutableBinding.diagnostics.length > 0, true)
+  Assert.equal(mutableBinding.diagnostics[0].message.contains("must come from an immutable binding"), true)
+
+  mutableInterior := checked("function run(): Promise<int> { values := [1]\nreturn async { yield values.length } }")
+  Assert.equal(mutableInterior.diagnostics.length > 0, true)
+  Assert.equal(mutableInterior.diagnostics[0].message.contains("array type"), true)
+
+  callback := checked("function run(callback: (): int): Promise<int> => async { yield callback() }")
+  Assert.equal(callback.diagnostics.length > 0, true)
+  let foundCallback = false
+  for diagnostic of callback.diagnostics { if diagnostic.message.contains("actor-affine callbacks") { foundCallback = true } }
+  Assert.equal(foundCallback, true)
+}
+
+export function testRejectsNonIsolatedAsyncBlocksAndUnsafeResults(): none {
+  nonIsolated := checked("let shared = 0\nfunction mutate(): int { shared = shared + 1\nreturn shared }\nfunction run(): Promise<int> => async { yield mutate() }")
+  let foundIsolation = false
+  for diagnostic of nonIsolated.diagnostics { if diagnostic.message.contains("Async block is not isolated") { foundIsolation = true } }
+  Assert.equal(foundIsolation, true)
+
+  promiseResult := checked("function run(): Promise<(): int> { return async { yield (): int => 1 } }")
+  let foundResult = false
+  for diagnostic of promiseResult.diagnostics { if diagnostic.message.contains("callback") && diagnostic.message.contains("cannot cross from the worker") { foundResult = true } }
+  Assert.equal(foundResult, true)
+}
+
+export function testAllowsNestedAsyncWorkOwnedByTheOuterBlock(): none {
+  result := checked("class Job { function value(): int => 7 }\nfunction run(): Promise<int> => async { worker := Actor<Job>()\nnested := async worker.value()\nvalue := try! nested.get()\nretire worker\nyield value }")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testRejectsNonActorAsyncAndRetire(): none {
   asyncResult := checked("function value(): int => 1\npromise := async value()")
   Assert.equal(asyncResult.diagnostics.length > 0, true)

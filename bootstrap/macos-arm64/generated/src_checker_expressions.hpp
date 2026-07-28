@@ -131,6 +131,7 @@ namespace app_src_checker_expressions_ {
 #include "src_checker_types.hpp"
 #include "src_json_semantics.hpp"
 #include "src_checker_actor_boundary.hpp"
+#include "src_checker_async.hpp"
 #include "src_checker_actor_lifecycle.hpp"
 #include "src_checker_state.hpp"
 #include "src_checker_statements.hpp"

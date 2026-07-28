@@ -69,6 +69,9 @@ std::string emitStatement(std::variant<std::shared_ptr<::app_src_ast_::ConstDecl
             if (!context->inValueYieldBlock) {
                 doof::panic(std::string("yield statement is outside a value-producing block"));
             }
+            if (context->valueYieldReturnsVoid) {
+                return (((((coverageMark + ind) + ::app_src_emitter_expr_::emitExpression(yield_->value, context, std::monostate{})) + std::string(";\n")) + ind) + std::string("return;\n"));
+            }
             return ((((coverageMark + ind) + std::string("return ")) + ::app_src_emitter_expr_::emitExpression(yield_->value, context, std::monostate{})) + std::string(";\n"));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExpressionStatement>>(_case_subject)) {

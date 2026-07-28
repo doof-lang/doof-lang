@@ -95,6 +95,12 @@ decoration to `ast.do`, populate it in the owning checker module, require it in
 `runtime/doof_runtime.h` owns reusable generated-program behavior. It is not a
 place to hide a missing checker rule or an emitter decision.
 
+Async-block capture decoration and transfer restrictions belong to
+`checker-async.do`; transitive callable effects remain owned by
+`checker-isolation.do`. `emitter-expr-actor.do` lowers both actor async calls and
+decorated async blocks through the runtime's scheduling-policy-neutral
+submission boundary.
+
 ## Packages, native builds, and command boundaries
 
 | File | Responsibility |

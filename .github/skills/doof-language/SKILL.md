@@ -2,7 +2,7 @@
 name: doof-language
 description: Write, read, and reason about Doof programming language code. Doof is a statically-typed language with familiar curly-brace syntax that transpiles to C++. Use when writing .do files, designing Doof APIs, implementing Doof classes/functions, writing .test.do files, using assert or the doof test runner, handling errors with Result types, or working with Doof's module system, pattern matching, concurrency, or JSON serialization.
 metadata:
-    version: "1.7"
+    version: "1.8"
     languageVersion: "0.1"
 ---
 

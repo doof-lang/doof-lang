@@ -11,7 +11,7 @@ Core rules:
 - Immutable values may cross actor boundaries freely.
 - Cross-domain mutable interaction happens through actor method calls.
 - Actor method calls are synchronous by default.
-- `async` is valid only for actor method calls.
+- `async` supports actor method calls and isolated value-producing blocks.
 - `retire actor` drains accepted work, stops the actor, and returns the inner
   state.
 
@@ -48,15 +48,40 @@ p := async worker.increment(10)
 try! p.get()
 ```
 
-`async` blocks and worker-pool function dispatch are not part of the actor-only
-model:
+Ordinary functions are not dispatched directly:
 
 ```doof
 async compute()   // error: not an actor method call
-async { 42 }      // error: async blocks are not supported
 ```
 
-Use a temporary actor for background mutable work.
+## Async Blocks
+
+An async block runs outside the caller's actor domain and yields its result
+through `Promise<T>`:
+
+```doof
+base := 20
+promise := async {
+    let values = [base + 1]
+    values.push(22)
+    yield values
+}
+values := try! promise.get()
+```
+
+Every reachable path must `yield`. Captures are copied and must come from
+immutable bindings with deeply immutable, thread-safe types. Mutable locals and
+fresh mutable values are allowed inside the block. The yielded graph may be
+mutable because the temporary worker domain ends before the caller receives
+it.
+
+Actor, promise, callback, weak-reference, and stream handles cannot be captured
+or occur recursively in the yielded graph. Async-block code may invoke only
+transitively isolated code and cannot access mutable module/static state.
+
+Nested async blocks and async calls on locally created actors are allowed, but
+their handles must be consumed before yielding. Runtime scheduling is
+deliberately unspecified.
 
 `isolated` is an enforced transitive effect. Isolated code cannot access mutable
 module/static state or call non-isolated code. It may mutate `this`, parameters,
@@ -107,8 +132,8 @@ class Promise<T> {
 }
 ```
 
-`Promise<T>` is currently produced by async actor calls. `get()` blocks until the
-queued actor method completes and reports thrown runtime failures as
+`Promise<T>` is produced by async actor calls and async blocks. `get()` blocks
+until the queued work completes and reports thrown runtime failures as
 `Result<T, string>`.
 
 ## Actor Boundary Summary
@@ -161,6 +186,18 @@ parameter and return payload types must also be boundary-safe. Function-typed
 parameters in native imports lower to `doof::callback`; native C++ must choose
 local call or posting behavior explicitly instead of receiving an erased
 `std::function`.
+
+## Common Pattern: Isolated Background Work
+
+```doof
+promise := async {
+    yield compute()
+}
+answer := try! promise.get()
+```
+
+Use a temporary actor instead when the background work needs a persistent
+mutable domain or sequential mailbox behavior.
 
 ## Common Pattern: Temporary Actor
 

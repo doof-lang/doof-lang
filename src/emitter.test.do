@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
-import { createChecker } from "./checker"
+import { createChecker, validateIsolationEffects } from "./checker"
 import { AnalysisResult } from "./analyzer"
 import { ConstructExpression, ImmutableBinding, Program } from "./ast"
 import { SourceFile } from "./semantic"
@@ -401,6 +401,31 @@ export function testEmitsActorCreationCallsPromiseAndRetirement(): none {
   Assert.equal(result.source.contains("->template call_async<int32_t>"), true)
   Assert.equal(result.source.contains("promise.get()"), true)
   Assert.equal(result.source.contains("worker->retire()"), true)
+}
+
+export function testEmitsAsyncValueBlocksWithDecoratedCaptures(): none {
+  source := "function run(input: int): Promise<int[]> { offset := 2\nreturn async { let values = [input, offset]\nvalues.push(5)\nyield values } }"
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  Assert.equal(analysis.diagnostics.length, 0)
+  checked := createChecker(analysis, "/main.do").check("/main.do")
+  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
+  isolation := validateIsolationEffects(analysis)
+  Assert.equal(hasErrorDiagnostics(isolation), false)
+  result := emitModule(findProgram(analysis, "/main.do")!, "main")
+  Assert.stringContains(result.header, "doof::Promise<std::shared_ptr<std::vector<int32_t>>> run")
+  Assert.stringContains(result.source, "doof::submit_async<std::shared_ptr<std::vector<int32_t>>>([input, offset]()")
+  Assert.stringContains(result.source, "return values;")
+}
+
+export function testEmitsNoneAsyncBlocksAsVoidTasks(): none {
+  source := "function run(): Promise<none> => async { println(\"done\")\nyield none }"
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  checked := createChecker(analysis, "/main.do").check("/main.do")
+  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
+  Assert.equal(hasErrorDiagnostics(validateIsolationEffects(analysis)), false)
+  result := emitModule(findProgram(analysis, "/main.do")!, "main")
+  Assert.stringContains(result.source, "doof::submit_async<void>([]() -> void")
+  Assert.stringContains(result.source, "return;")
 }
 
 export function testTryBangPanicIncludesOriginAndStringFailure(): none {

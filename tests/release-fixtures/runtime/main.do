@@ -42,6 +42,21 @@ function actorResult(): int {
   return first + second + state.value
 }
 
+function asyncBlockResult(): int {
+  base := 4
+  promise: Promise<int[]> := async {
+    let values = [base]
+    nested := async {
+      yield base + 1
+    }
+    values.push(try! nested.get())
+    yield values
+  }
+  values := try! promise.get()
+  values.push(6)
+  return values[0] + values[1] + values[2]
+}
+
 function values(): int[] => [1, 2, 3]
 
 function iterableResult(): int {
@@ -138,5 +153,6 @@ function main(): int {
   if setResult() != 9 { return 6 }
   if yieldCatchResult() != 8 { return 7 }
   if metadataResult() != 16 { return 8 }
+  if asyncBlockResult() != 15 { return 9 }
   return 0
 }

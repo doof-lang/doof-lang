@@ -143,7 +143,7 @@ std::string emitExpression(std::variant<std::shared_ptr<::app_src_ast_::IntLiter
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::AsyncExpression>>(_case_subject)) {
             const auto& async_ = std::get<std::shared_ptr<::app_src_ast_::AsyncExpression>>(_case_subject);
-            (value = ::app_src_emitter_expr_actor_::emitAsyncActorCall(async_, context));
+            (value = ::app_src_emitter_expr_actor_::emitAsyncExpression(async_, context));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::RetireExpression>>(_case_subject)) {
             const auto& retire_ = std::get<std::shared_ptr<::app_src_ast_::RetireExpression>>(_case_subject);

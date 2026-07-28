@@ -20,6 +20,7 @@ namespace app_src_semantic_ { struct InterfaceType; }
 namespace app_src_semantic_ { struct SemanticLocation; }
 namespace app_src_semantic_ { struct SemanticSpan; }
 namespace app_src_ast_ { struct ActorCreationExpression; }
+namespace app_src_ast_ { struct AsyncExpression; }
 namespace app_src_ast_ { struct Block; }
 namespace app_src_ast_ { struct CallExpression; }
 namespace app_src_ast_ { struct ClassDeclaration; }
@@ -50,6 +51,7 @@ namespace app_src_checker_isolation_ {
 #include "src_semantic.hpp"
 #include "src_ast.hpp"
 #include "src_checker_actor_boundary.hpp"
+#include "src_checker_async.hpp"
 #include "src_checker_actor_lifecycle.hpp"
 #include "src_checker_symbols.hpp"
 

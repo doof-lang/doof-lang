@@ -32,6 +32,7 @@ import {
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
+import { asyncResultViolation } from "./checker-async"
 import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
 
 
@@ -297,9 +298,27 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     async_: AsyncExpression -> {
       case async_.expression {
         block: Block -> {
-          checkBlock(state, block, scope)
-          typeError(state, "`async` is only valid for actor method calls; use a temporary actor for background work", async_.span)
-          return finish(state, expression, promiseType(unknownType()))
+          let expectedValue: ResolvedType | none = none
+          if expected != none {
+            case expected! {
+              promise: PromiseType -> { expectedValue = promise.valueType }
+              _ -> { }
+            }
+          }
+          asyncScope := Scope {
+            parent: scope,
+            inValueYieldBlock: true,
+            yieldType: if expectedValue == none then optionalResolvedType(unknownType()) else expectedValue,
+          }
+          completes := checkBlock(state, block, asyncScope)
+          if completes { typeError(state, "Async blocks must yield a value on every path", block.span) }
+          let valueType = asyncScope.yieldType ?? unknownType()
+          if !completes && valueType.kind == "unknown" { valueType = neverType() }
+          violation := asyncResultViolation(state.result, valueType)
+          if violation != none {
+            typeError(state, "Async block result type \"" + typeName(valueType) + "\" cannot cross from the worker: " + violation!, async_.span)
+          }
+          return finish(state, expression, promiseType(valueType))
         }
         inner: Expression -> {
           innerType := checkExpression(state, inner, scope, none)

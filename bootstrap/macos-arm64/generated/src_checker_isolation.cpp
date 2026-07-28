@@ -4,6 +4,7 @@
 #include "src_semantic.hpp"
 #include "src_ast.hpp"
 #include "src_checker_actor_boundary.hpp"
+#include "src_checker_async.hpp"
 #include "src_checker_actor_lifecycle.hpp"
 #include "src_checker_symbols.hpp"
 #include "std_fs_index.hpp"
@@ -16,6 +17,7 @@ using namespace ::app_src_analyzer_;
 using namespace ::app_src_semantic_;
 using namespace ::app_src_ast_;
 using namespace ::app_src_checker_actor_boundary_;
+using namespace ::app_src_checker_async_;
 using namespace ::app_src_checker_actor_lifecycle_;
 using namespace ::app_src_checker_symbols_;
 
@@ -565,7 +567,22 @@ void validateModuleIsolationEffects(std::shared_ptr<::app_src_analyzer_::Analysi
     for (const auto& expression : *_iterable_34) {
         {
             auto _case_subject = expression;
-            if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject)) {
+            if (std::holds_alternative<std::shared_ptr<::app_src_ast_::AsyncExpression>>(_case_subject)) {
+                const auto& async_ = std::get<std::shared_ptr<::app_src_ast_::AsyncExpression>>(_case_subject);
+                {
+                    auto _case_subject = async_->expression;
+                    if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
+                        ::app_src_checker_async_::validateAsyncBlock(result, async_, module->path, diagnostics);
+                        const auto reason = probeReason(result, graph, doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(async_));
+                        if (!doof::is_null(reason)) {
+                            pushDiagnostic(diagnostics, module->path, reason->span, (std::string("Async block is not isolated: ") + reasonText(doof::unwrap_optional(reason))));
+                        }
+                }
+                else {
+                }
+                }
+        }
+        else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject)) {
                 const auto& call = std::get<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject);
                 {
                     auto _case_subject = call->callee;

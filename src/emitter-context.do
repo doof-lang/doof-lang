@@ -37,6 +37,7 @@ export class EmitContext {
   currentReturnErrorType: string = ""
   currentFunctionName: string = ""
   inValueYieldBlock: bool = false
+  valueYieldReturnsVoid: bool = false
   catchVarName: string = ""
   catchResultType: ResolvedType | none = none
   // Call-site override used while materializing defaults such as @caller.

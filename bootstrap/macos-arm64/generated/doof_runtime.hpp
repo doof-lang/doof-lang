@@ -1817,6 +1817,28 @@ public:
     }
 };
 
+// Central async-task submission boundary. The language does not expose a
+// scheduling policy; this detached implementation avoids fixed-pool starvation
+// when an async task synchronously waits for nested async work.
+template <typename R, typename F>
+doof::Promise<R> submit_async(F&& f) {
+    auto prom = std::make_shared<std::promise<R>>();
+    auto fut = prom->get_future();
+    std::thread([prom, task = std::forward<F>(f)]() mutable {
+        try {
+            if constexpr (std::is_void_v<R>) {
+                task();
+                prom->set_value();
+            } else {
+                prom->set_value(task());
+            }
+        } catch (...) {
+            prom->set_exception(std::current_exception());
+        }
+    }).detach();
+    return doof::Promise<R>(std::move(fut));
+}
+
 template <typename R, typename... Args>
 doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
     if (!fn_) {
