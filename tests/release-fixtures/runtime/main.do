@@ -1,3 +1,5 @@
+import { producePromise } from "./promise-producer"
+
 class Accumulator {
   value: int
 
@@ -83,6 +85,11 @@ function queuedAsyncResult(): int {
     total = total + try! promise.get()
   }
   return total
+}
+
+function crossModulePromiseResult(): int {
+  promise := producePromise(41)
+  return try! promise.get()
 }
 
 function values(): int[] => [1, 2, 3]
@@ -184,5 +191,6 @@ function main(): int {
   if asyncBlockResult() != 15 { return 9 }
   if queuedActorResult() != 560 { return 10 }
   if queuedAsyncResult() != 496 { return 11 }
+  if crossModulePromiseResult() != 42 { return 12 }
   return 0
 }

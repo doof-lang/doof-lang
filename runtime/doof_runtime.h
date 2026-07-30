@@ -324,8 +324,10 @@ class RuntimeScheduler {
     std::size_t idle_worker_threads_ = 0;
     std::size_t reacquire_waiters_ = 0;
 
-    static thread_local RuntimeScheduler* current_worker_scheduler_;
-    static thread_local bool current_worker_holds_token_;
+    // Keep these initialized inline in-class. Apple Clang otherwise emits a
+    // strong TLS wrapper in every generated translation unit.
+    inline static thread_local RuntimeScheduler* current_worker_scheduler_ = nullptr;
+    inline static thread_local bool current_worker_holds_token_ = false;
 
     bool can_claim_job_locked() const {
         return !jobs_.empty()
@@ -491,9 +493,6 @@ public:
         };
     }
 };
-
-inline thread_local RuntimeScheduler* RuntimeScheduler::current_worker_scheduler_ = nullptr;
-inline thread_local bool RuntimeScheduler::current_worker_holds_token_ = false;
 
 } // namespace detail
 
