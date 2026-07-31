@@ -498,7 +498,7 @@ doof::Result<void, std::string> runExternalCommands(std::shared_ptr<::app_src_pa
         for (const auto& argument : *_iterable_52) {
             arguments->push_back(applyExternalDependencySubstitutions(argument, packageRoot, destination, target));
         }
-        auto _binding_value_53 = commandOutput(program, arguments, std::make_shared<::std_::os::index::ExecOptions>(workingDirectory, doof::map_buildReadonly(environment, "", 0), true, false, true, false, MAX_EXTERNAL_COMMAND_OUTPUT_BYTES, nullptr));
+        auto _binding_value_53 = commandOutput(program, arguments, std::make_shared<::std_::os::index::ExecOptions>(workingDirectory, doof::map_drainToReadonly(environment, "", 0), true, false, true, false, MAX_EXTERNAL_COMMAND_OUTPUT_BYTES, nullptr));
         if (doof::is_failure(_binding_value_53)) {
             const auto error = doof::failure_error(_binding_value_53);
             return doof::Failure<std::string>{ (((((std::string("External dependency ") + dependency->name) + std::string(" command ")) + doof::to_string((index + 1))) + std::string(" failed: ")) + error) };

@@ -241,10 +241,13 @@ Common APIs:
 | `.filter(pred)` | preserves mutability |
 | `.map(mapper)` | preserves mutability |
 | `.slice(start, end)` | shallow slice |
-| `.buildReadonly()` | mutable array only; move-drains into readonly and leaves the source empty |
+| `.drainToReadonly()` | mutable array only; move-drains into readonly and leaves the source empty |
+| `.cloneReadonly()` | mutable array only; shallow-copies into readonly and preserves the source |
 | `.cloneMutable()` | shallow copy into a new mutable array |
 
 `readonly T[]` and `ReadonlyArray<T>` are readonly collection types. Mutable and readonly arrays are distinct and do not implicitly convert between each other.
+
+Deprecated `.buildReadonly()` remains accepted on mutable arrays with a replacement warning and behaves exactly like `.drainToReadonly()`. Readonly arrays expose neither readonly-producing method.
 
 ### Tuples
 
@@ -284,10 +287,13 @@ Common APIs:
 | `.keys()` | `K[]` | insertion order |
 | `.values()` | `V[]` | insertion order |
 | `.size` | `int` | entry count |
-| `.buildReadonly()` | `ReadonlyMap<K, V>` | mutable maps only; move-drains and leaves the source empty |
+| `.drainToReadonly()` | `ReadonlyMap<K, V>` | mutable maps only; move-drains and leaves the source empty |
+| `.cloneReadonly()` | `ReadonlyMap<K, V>` | mutable maps only; shallow-copies and preserves the source |
 | `.cloneMutable()` | `Map<K, V>` | shallow copy into a new mutable map |
 
 Index access reads and writes directly. `ReadonlyMap<K, V>` is the readonly variant.
+
+Deprecated `.buildReadonly()` remains accepted on mutable maps with a replacement warning and behaves exactly like `.drainToReadonly()`. Readonly maps expose neither readonly-producing method.
 
 ### Sets
 
@@ -309,9 +315,9 @@ Rules:
 - Omitted `Set` or `ReadonlySet` type arguments work only for same-site non-empty homogeneous literals.
 - `:=` is a shallow immutable binding, `readonly Set` is a readonly collection type, and a `readonly` declaration deep-freezes an inferred `Set` to `ReadonlySet<T>`.
 
-Common APIs: `.size`, `.has()`, `.add()`, `.delete()`, `.values()`, `.buildReadonly()`, `.cloneMutable()`.
+Common APIs: `.size`, `.has()`, `.add()`, `.delete()`, `.values()`, `.drainToReadonly()`, `.cloneReadonly()`, `.cloneMutable()`.
 
-`.add()`, `.delete()`, and `.buildReadonly()` are mutable-set-only APIs. `buildReadonly()` move-drains the set into a readonly set and leaves the source empty. `cloneMutable()` works on both `Set<T>` and `ReadonlySet<T>` and returns a shallow mutable copy.
+`.add()`, `.delete()`, `.drainToReadonly()`, and `.cloneReadonly()` are mutable-set-only APIs. `drainToReadonly()` move-drains the set into a readonly set and leaves the source empty. `cloneReadonly()` shallow-copies into a readonly set and preserves the source. Deprecated `.buildReadonly()` remains accepted on mutable sets with a replacement warning and behaves exactly like `.drainToReadonly()`. `cloneMutable()` works on both `Set<T>` and `ReadonlySet<T>` and returns a shallow mutable copy.
 
 `Set<T>` and `ReadonlySet<T>` are distinct collection types.
 

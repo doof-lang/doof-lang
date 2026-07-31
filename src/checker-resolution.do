@@ -36,7 +36,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 
 
 import { CheckerState } from "./checker-state"
-import { deprecatedNoneAlias, typeError } from "./checker-common"
+import { deprecatedBuildReadonly, deprecatedNoneAlias, typeError } from "./checker-common"
 import { builtinSourceLocationType, declaredSymbolName, optionalResolvedType, methodSignature, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
 import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor } from "./checker-interfaces"
 
@@ -280,7 +280,12 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
         return functionType([FunctionParamType { name: "mapper", type_: mapper, hasDefault: false }], arrayType(mapped, array.readonly_), ["U"])
       }
       if property == "slice" { return functionType([FunctionParamType { name: "start", type_: primitive("int"), hasDefault: false }, FunctionParamType { name: "end", type_: primitive("int"), hasDefault: false }], arrayType(array.elementType, array.readonly_)) }
-      if property == "buildReadonly" { return functionType([], arrayType(array.elementType, true)) }
+      if array.readonly_ && (property == "buildReadonly" || property == "drainToReadonly" || property == "cloneReadonly") {
+        typeError(state, "Method \"" + property + "\" is not available on readonly array", span)
+        return unknownType()
+      }
+      if property == "buildReadonly" { deprecatedBuildReadonly(state, span); return functionType([], arrayType(array.elementType, true)) }
+      if property == "drainToReadonly" || property == "cloneReadonly" { return functionType([], arrayType(array.elementType, true)) }
       if property == "cloneMutable" { return functionType([], arrayType(array.elementType)) }
       return unknownType()
     }
@@ -291,7 +296,12 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
       if property == "set" { return functionType([FunctionParamType { name: "key", type_: map.keyType, hasDefault: false }, FunctionParamType { name: "value", type_: map.valueType, hasDefault: false }], noneType()) }
       if property == "keys" { return functionType([], arrayType(map.keyType)) }
       if property == "values" { return functionType([], arrayType(map.valueType)) }
-      if property == "buildReadonly" { return functionType([], mapType(map.keyType, map.valueType, true)) }
+      if map.readonly_ && (property == "buildReadonly" || property == "drainToReadonly" || property == "cloneReadonly") {
+        typeError(state, "Method \"" + property + "\" is not available on readonly map", span)
+        return unknownType()
+      }
+      if property == "buildReadonly" { deprecatedBuildReadonly(state, span); return functionType([], mapType(map.keyType, map.valueType, true)) }
+      if property == "drainToReadonly" || property == "cloneReadonly" { return functionType([], mapType(map.keyType, map.valueType, true)) }
       if property == "cloneMutable" { return functionType([], mapType(map.keyType, map.valueType)) }
       return unknownType()
     }
@@ -303,8 +313,12 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
       if set.readonly_ && property == "delete" { typeError(state, "Method \"delete\" is not available on readonly set", span); return unknownType() }
       if property == "delete" { return functionType([FunctionParamType { name: "value", type_: set.elementType, hasDefault: false }], noneType()) }
       if property == "values" { return functionType([], arrayType(set.elementType)) }
-      if set.readonly_ && property == "buildReadonly" { typeError(state, "Method \"buildReadonly\" is not available on readonly set", span); return unknownType() }
-      if property == "buildReadonly" { return functionType([], setType(set.elementType, true)) }
+      if set.readonly_ && (property == "buildReadonly" || property == "drainToReadonly" || property == "cloneReadonly") {
+        typeError(state, "Method \"" + property + "\" is not available on readonly set", span)
+        return unknownType()
+      }
+      if property == "buildReadonly" { deprecatedBuildReadonly(state, span); return functionType([], setType(set.elementType, true)) }
+      if property == "drainToReadonly" || property == "cloneReadonly" { return functionType([], setType(set.elementType, true)) }
       if property == "cloneMutable" { return functionType([], setType(set.elementType)) }
       return unknownType()
     }

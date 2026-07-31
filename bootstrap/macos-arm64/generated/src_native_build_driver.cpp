@@ -131,10 +131,10 @@ std::shared_ptr<NativeCompilerBatchResult> NativeCompilerWorker::compile() {
         const auto result = runBuildCommand(task->compiler, mutableArguments(task->arguments));
         outputs->push_back(result);
         if (result->exitCode != 0) {
-            return std::make_shared<NativeCompilerBatchResult>(result->exitCode, doof::array_buildReadonly(outputs, "", 0));
+            return std::make_shared<NativeCompilerBatchResult>(result->exitCode, doof::array_drainToReadonly(outputs, "", 0));
         }
     }
-    return std::make_shared<NativeCompilerBatchResult>(0, doof::array_buildReadonly(outputs, "", 0));
+    return std::make_shared<NativeCompilerBatchResult>(0, doof::array_drainToReadonly(outputs, "", 0));
 }
 doof::JsonObject NativeCompilerWorker::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();

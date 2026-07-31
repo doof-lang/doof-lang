@@ -236,7 +236,7 @@ std::shared_ptr<TimerSummary> Stopwatch::summary() {
     for (const auto& [name, bucket] : *_iterable_7) {
         entries->push_back(std::make_shared<TimerStats>(name, bucket->count, bucket->total(), bucket->mean(), bucket->min(), bucket->max(), bucket->p95()));
     }
-    return std::make_shared<TimerSummary>(doof::array_buildReadonly(entries, "", 0));
+    return std::make_shared<TimerSummary>(doof::array_drainToReadonly(entries, "", 0));
 }
 void Stopwatch::record(std::string name, std::shared_ptr<::std_::time::duration::Duration> duration) {
     auto bucket = (doof::is_null(bucketFor(name)) ? std::make_shared<TimerBucket>(0, 0LL, 0LL, 0LL, std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{})) : doof::unwrap_optional(bucketFor(name)));

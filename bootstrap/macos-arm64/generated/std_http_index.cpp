@@ -294,7 +294,7 @@ std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> parseCookieHeader(std::str
         }
         cookies->push_back(std::make_shared<Cookie>(name, doof::string_trim(doof::string_slice(part, (separator + 1)))));
     }
-    return doof::array_buildReadonly(cookies, "", 0);
+    return doof::array_drainToReadonly(cookies, "", 0);
 }
 std::string renderCookieHeader(std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> cookies) {
     auto text = std::string("");
@@ -443,7 +443,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> p
         }
         headers->push_back(std::make_shared<::std_::http::types::HttpHeader>(doof::string_trim(doof::string_substring(line, 0, separator)), doof::string_trim(doof::string_slice(line, (separator + 1)))));
     }
-    return doof::array_buildReadonly(headers, "", 0);
+    return doof::array_drainToReadonly(headers, "", 0);
 }
 std::shared_ptr<::std_::http::types::HttpError> parseError(std::string raw) {
     const auto firstSeparator = doof::string_indexOf(raw, std::string("|"));

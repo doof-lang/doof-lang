@@ -1820,14 +1820,27 @@ std::shared_ptr<std::vector<T>> array_slice(const std::shared_ptr<std::vector<T>
 }
 
 template <typename T>
-std::shared_ptr<std::vector<T>> array_buildReadonly(const std::shared_ptr<std::vector<T>>& arr, const char* file, int32_t line) {
+std::shared_ptr<std::vector<T>> array_drainToReadonly(const std::shared_ptr<std::vector<T>>& arr, const char* file, int32_t line) {
     if (!arr) {
-        panic_at(file, line, "Attempted to buildReadonly from null array");
+        panic_at(file, line, "Attempted to drainToReadonly from null array");
     }
     // Move-drain: transfer contents to a new allocation; original vector is left empty.
     auto result = std::make_shared<std::vector<T>>(std::move(*arr));
     arr->clear();
     return result;
+}
+
+template <typename T>
+std::shared_ptr<std::vector<T>> array_buildReadonly(const std::shared_ptr<std::vector<T>>& arr, const char* file, int32_t line) {
+    return array_drainToReadonly(arr, file, line);
+}
+
+template <typename T>
+std::shared_ptr<std::vector<T>> array_cloneReadonly(const std::shared_ptr<std::vector<T>>& arr, const char* file, int32_t line) {
+    if (!arr) {
+        panic_at(file, line, "Attempted to cloneReadonly from null array");
+    }
+    return std::make_shared<std::vector<T>>(*arr);
 }
 
 template <typename T>
@@ -1905,15 +1918,29 @@ std::shared_ptr<std::vector<V>> map_values(const std::shared_ptr<ordered_map<K, 
 }
 
 template <typename K, typename V>
-std::shared_ptr<ordered_map<K, V>> map_buildReadonly(const std::shared_ptr<ordered_map<K, V>>& m, const char* file, int32_t line) {
+std::shared_ptr<ordered_map<K, V>> map_drainToReadonly(const std::shared_ptr<ordered_map<K, V>>& m, const char* file, int32_t line) {
     if (!m) {
-        panic_at(file, line, "Attempted to buildReadonly from null map");
+        panic_at(file, line, "Attempted to drainToReadonly from null map");
     }
-    m->validate_invariants("map_buildReadonly source");
+    m->validate_invariants("map_drainToReadonly source");
     auto result = std::make_shared<ordered_map<K, V>>(std::move(*m));
     m->clear();
-    result->validate_invariants("map_buildReadonly result");
+    result->validate_invariants("map_drainToReadonly result");
     return result;
+}
+
+template <typename K, typename V>
+std::shared_ptr<ordered_map<K, V>> map_buildReadonly(const std::shared_ptr<ordered_map<K, V>>& m, const char* file, int32_t line) {
+    return map_drainToReadonly(m, file, line);
+}
+
+template <typename K, typename V>
+std::shared_ptr<ordered_map<K, V>> map_cloneReadonly(const std::shared_ptr<ordered_map<K, V>>& m, const char* file, int32_t line) {
+    if (!m) {
+        panic_at(file, line, "Attempted to cloneReadonly from null map");
+    }
+    m->validate_invariants("map_cloneReadonly");
+    return std::make_shared<ordered_map<K, V>>(*m);
 }
 
 template <typename K, typename V>
@@ -1938,15 +1965,29 @@ std::shared_ptr<std::vector<T>> set_values(const std::shared_ptr<ordered_set<T>>
 }
 
 template <typename T>
-std::shared_ptr<ordered_set<T>> set_buildReadonly(const std::shared_ptr<ordered_set<T>>& s, const char* file, int32_t line) {
+std::shared_ptr<ordered_set<T>> set_drainToReadonly(const std::shared_ptr<ordered_set<T>>& s, const char* file, int32_t line) {
     if (!s) {
-        panic_at(file, line, "Attempted to buildReadonly from null set");
+        panic_at(file, line, "Attempted to drainToReadonly from null set");
     }
-    s->validate_invariants("set_buildReadonly source");
+    s->validate_invariants("set_drainToReadonly source");
     auto result = std::make_shared<ordered_set<T>>(std::move(*s));
     s->clear();
-    result->validate_invariants("set_buildReadonly result");
+    result->validate_invariants("set_drainToReadonly result");
     return result;
+}
+
+template <typename T>
+std::shared_ptr<ordered_set<T>> set_buildReadonly(const std::shared_ptr<ordered_set<T>>& s, const char* file, int32_t line) {
+    return set_drainToReadonly(s, file, line);
+}
+
+template <typename T>
+std::shared_ptr<ordered_set<T>> set_cloneReadonly(const std::shared_ptr<ordered_set<T>>& s, const char* file, int32_t line) {
+    if (!s) {
+        panic_at(file, line, "Attempted to cloneReadonly from null set");
+    }
+    s->validate_invariants("set_cloneReadonly");
+    return std::make_shared<ordered_set<T>>(*s);
 }
 
 template <typename T>

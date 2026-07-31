@@ -331,7 +331,7 @@ export function testDecoratesArrayCloneMutableAndEnumLookupHelpers(): none {
 }
 
 export function testDecoratesReadonlyMapConstructionAndSizeMember(): none {
-  source := "class RouteMatch { params: readonly Map<string, string> }\nfunction equal<T>(actual: T, expected: T): none {}\nfunction match(params: Map<string, string>): RouteMatch { return RouteMatch { params: params.buildReadonly() } }\nfunction verify(matched: RouteMatch | none): none { equal(matched!.params.size, 0) }"
+  source := "class RouteMatch { params: readonly Map<string, string> }\nfunction equal<T>(actual: T, expected: T): none {}\nfunction match(params: Map<string, string>): RouteMatch { return RouteMatch { params: params.drainToReadonly() } }\nfunction verify(matched: RouteMatch | none): none { equal(matched!.params.size, 0) }"
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
   Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
   diagnostics := validateCheckedTypes(analysis)
@@ -894,7 +894,7 @@ export function testValidatesActorBoundaryPayloads(): none {
   Assert.equal(mutableSet.diagnostics.length > 0, true)
   Assert.equal(mutableSet.diagnostics[0].message.contains("set type \"Set<int>\" is mutable"), true)
 
-  readonlySet := checked("class Worker { function accept(values: ReadonlySet<int>): int => values.size }\nfunction main(): none { worker := Actor<Worker>()\nvalues: Set<int> := [1]\nfrozen := values.buildReadonly()\nvalue := worker.accept(frozen) }")
+  readonlySet := checked("class Worker { function accept(values: ReadonlySet<int>): int => values.size }\nfunction main(): none { worker := Actor<Worker>()\nvalues: Set<int> := [1]\nfrozen := values.drainToReadonly()\nvalue := worker.accept(frozen) }")
   Assert.equal(readonlySet.diagnostics.length, 0)
 }
 
@@ -1352,9 +1352,27 @@ export function testResolvesMapKeyAndValueArrays(): none {
 }
 
 export function testChecksSetAndReadonlySetMembers(): none {
-  result := checked("enum Flag { One, Two }\nfunction bytes(values: Set<byte>): int => values.size\nfunction count(values: ReadonlySet<Flag>): int { let total = 0\nfor value of values { if values.has(value) { total = total + 1 } }\nreturn total + values.values().length }\nfunction main(): int { let values: Set<Flag> = [Flag.One, Flag.Two, Flag.One]\nvalues.add(Flag.Two)\nvalues.delete(Flag.One)\nfrozen := values.buildReadonly()\ncopy := frozen.cloneMutable()\ncopy.add(Flag.One)\nreturn count(frozen) + copy.size }")
+  result := checked("enum Flag { One, Two }\nfunction bytes(values: Set<byte>): int => values.size\nfunction count(values: ReadonlySet<Flag>): int { let total = 0\nfor value of values { if values.has(value) { total = total + 1 } }\nreturn total + values.values().length }\nfunction main(): int { let values: Set<Flag> = [Flag.One, Flag.Two, Flag.One]\nvalues.add(Flag.Two)\nvalues.delete(Flag.One)\nsnapshot := values.cloneReadonly()\nfrozen := values.drainToReadonly()\ncopy := frozen.cloneMutable()\ncopy.add(Flag.One)\nreturn count(snapshot) + count(frozen) + copy.size }")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testChecksReadonlyCollectionConversions(): none {
+  result := checked(
+    "function arrays(values: int[]): readonly int[] { snapshot: readonly int[] := values.cloneReadonly()\nreturn values.drainToReadonly() }\n" +
+    "function maps(values: Map<string, int>): ReadonlyMap<string, int> { snapshot: ReadonlyMap<string, int> := values.cloneReadonly()\nreturn values.drainToReadonly() }\n" +
+    "function sets(values: Set<int>): ReadonlySet<int> { snapshot: ReadonlySet<int> := values.cloneReadonly()\nreturn values.drainToReadonly() }",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testWarnsForDeprecatedBuildReadonly(): none {
+  result := checkedIncludingDeprecations("function freeze(values: int[]): readonly int[] => values.buildReadonly()")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].severity, "warning")
+  Assert.equal(result.diagnostics[0].message, "'buildReadonly' is deprecated; replace it with 'drainToReadonly'")
+  Assert.equal(result.diagnostics[0].replacement, "drainToReadonly")
 }
 
 export function testInfersOmittedCollectionTypeArgumentsFromLiterals(): none {
@@ -1435,20 +1453,31 @@ export function testRejectsInvalidOmittedCollectionInferenceSites(): none {
   Assert.equal(emptyMap.diagnostics[0].message.contains("empty map literal"), true)
 }
 
-export function testRejectsReadonlySetMutation(): none {
-  result := checked("function mutate(values: ReadonlySet<int>): void { values.add(1)\nvalues.delete(1)\nvalues.buildReadonly() }")
-  Assert.equal(result.diagnostics.length >= 3, true)
-  let add = false
-  let delete = false
-  let build = false
+export function testRejectsReadonlyCollectionConversions(): none {
+  result := checked(
+    "function arrayConversions(values: readonly int[]): none { values.buildReadonly()\nvalues.drainToReadonly()\nvalues.cloneReadonly() }\n" +
+    "function mapConversions(values: ReadonlyMap<string, int>): none { values.buildReadonly()\nvalues.drainToReadonly()\nvalues.cloneReadonly() }\n" +
+    "function setConversions(values: ReadonlySet<int>): none { values.buildReadonly()\nvalues.drainToReadonly()\nvalues.cloneReadonly() }",
+  )
+  Assert.equal(result.diagnostics.length, 9)
+  let arrayErrors = 0
+  let mapErrors = 0
+  let setErrors = 0
   for diagnostic of result.diagnostics {
-    if diagnostic.message.contains("Method \"add\" is not available on readonly set") { add = true }
-    if diagnostic.message.contains("Method \"delete\" is not available on readonly set") { delete = true }
-    if diagnostic.message.contains("Method \"buildReadonly\" is not available on readonly set") { build = true }
+    if diagnostic.message.contains("not available on readonly array") { arrayErrors = arrayErrors + 1 }
+    if diagnostic.message.contains("not available on readonly map") { mapErrors = mapErrors + 1 }
+    if diagnostic.message.contains("not available on readonly set") { setErrors = setErrors + 1 }
   }
-  Assert.equal(add, true)
-  Assert.equal(delete, true)
-  Assert.equal(build, true)
+  Assert.equal(arrayErrors, 3)
+  Assert.equal(mapErrors, 3)
+  Assert.equal(setErrors, 3)
+}
+
+export function testRejectsReadonlySetMutation(): none {
+  result := checked("function mutate(values: ReadonlySet<int>): void { values.add(1)\nvalues.delete(1) }")
+  Assert.equal(result.diagnostics.length, 2)
+  Assert.stringContains(result.diagnostics[0].message, "not available on readonly set")
+  Assert.stringContains(result.diagnostics[1].message, "not available on readonly set")
 }
 
 export function testRejectsUnsupportedSetElementTypes(): none {

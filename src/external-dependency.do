@@ -336,7 +336,7 @@ function runExternalCommands(
       arguments.push(applyExternalDependencySubstitutions(argument, packageRoot, destination, target))
     }
     _ := commandOutput(program, arguments, ExecOptions {
-      cwd: workingDirectory, env: environment.buildReadonly(), withStdin: false, mergeStderrIntoStdout: true,
+      cwd: workingDirectory, env: environment.drainToReadonly(), withStdin: false, mergeStderrIntoStdout: true,
       maxOutputBytes: MAX_EXTERNAL_COMMAND_OUTPUT_BYTES,
     }) else error {
       return Failure("External dependency " + dependency.name + " command " + string(index + 1) + " failed: " + error)

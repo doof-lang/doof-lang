@@ -443,7 +443,15 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             if (property == std::string("slice")) {
                 return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{std::make_shared<::app_src_semantic_::FunctionParamType>(std::string("start"), ::app_src_checker_types_::primitive(std::string("int")), false), std::make_shared<::app_src_semantic_::FunctionParamType>(std::string("end"), ::app_src_checker_types_::primitive(std::string("int")), false)}), ::app_src_checker_types_::arrayType(array->elementType, array->readonly_), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
             }
+            if (array->readonly_ && (((property == std::string("buildReadonly")) || (property == std::string("drainToReadonly"))) || (property == std::string("cloneReadonly")))) {
+                ::app_src_checker_common_::typeError(state, ((std::string("Method \"") + property) + std::string("\" is not available on readonly array")), span);
+                return ::app_src_checker_types_::unknownType();
+            }
             if (property == std::string("buildReadonly")) {
+                ::app_src_checker_common_::deprecatedBuildReadonly(state, span);
+                return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{}), ::app_src_checker_types_::arrayType(array->elementType, true), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+            }
+            if ((property == std::string("drainToReadonly")) || (property == std::string("cloneReadonly"))) {
                 return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{}), ::app_src_checker_types_::arrayType(array->elementType, true), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
             }
             if (property == std::string("cloneMutable")) {
@@ -471,7 +479,15 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             if (property == std::string("values")) {
                 return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{}), ::app_src_checker_types_::arrayType(map->valueType, false), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
             }
+            if (map->readonly_ && (((property == std::string("buildReadonly")) || (property == std::string("drainToReadonly"))) || (property == std::string("cloneReadonly")))) {
+                ::app_src_checker_common_::typeError(state, ((std::string("Method \"") + property) + std::string("\" is not available on readonly map")), span);
+                return ::app_src_checker_types_::unknownType();
+            }
             if (property == std::string("buildReadonly")) {
+                ::app_src_checker_common_::deprecatedBuildReadonly(state, span);
+                return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{}), ::app_src_checker_types_::mapType(map->keyType, map->valueType, true), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+            }
+            if ((property == std::string("drainToReadonly")) || (property == std::string("cloneReadonly"))) {
                 return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{}), ::app_src_checker_types_::mapType(map->keyType, map->valueType, true), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
             }
             if (property == std::string("cloneMutable")) {
@@ -504,11 +520,15 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             if (property == std::string("values")) {
                 return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{}), ::app_src_checker_types_::arrayType(set->elementType, false), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
             }
-            if (set->readonly_ && (property == std::string("buildReadonly"))) {
-                ::app_src_checker_common_::typeError(state, std::string("Method \"buildReadonly\" is not available on readonly set"), span);
+            if (set->readonly_ && (((property == std::string("buildReadonly")) || (property == std::string("drainToReadonly"))) || (property == std::string("cloneReadonly")))) {
+                ::app_src_checker_common_::typeError(state, ((std::string("Method \"") + property) + std::string("\" is not available on readonly set")), span);
                 return ::app_src_checker_types_::unknownType();
             }
             if (property == std::string("buildReadonly")) {
+                ::app_src_checker_common_::deprecatedBuildReadonly(state, span);
+                return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{}), ::app_src_checker_types_::setType(set->elementType, true), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+            }
+            if ((property == std::string("drainToReadonly")) || (property == std::string("cloneReadonly"))) {
                 return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{}), ::app_src_checker_types_::setType(set->elementType, true), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
             }
             if (property == std::string("cloneMutable")) {

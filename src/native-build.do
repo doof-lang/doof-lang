@@ -43,8 +43,8 @@ export function batchNativeCompileTasks(
   while batches.length < workerCount { batches.push([]) }
   for index of 0..<tasks.length { batches[index % workerCount].push(tasks[index]) }
   let readonlyBatches: NativeCompileTaskBatch[] = []
-  for batch of batches { readonlyBatches.push(batch.buildReadonly()) }
-  return readonlyBatches.buildReadonly()
+  for batch of batches { readonlyBatches.push(batch.drainToReadonly()) }
+  return readonlyBatches.drainToReadonly()
 }
 
 /**
@@ -108,7 +108,7 @@ export function planNativeCompile(
       sourcePath: runtimeHeader,
       outputPath: pchPath,
       dependencyFilePath: dependencyFile,
-      arguments: pchArguments.buildReadonly(),
+      arguments: pchArguments.drainToReadonly(),
     }
     if clangPch { clangPchPath = pchPath }
   }
@@ -137,7 +137,7 @@ export function planNativeCompile(
       outputPath: objectPath,
       dependencyFilePath: dependencyFile,
       usesPrecompiledHeader: precompiledHeaderTask != none,
-      arguments: arguments.buildReadonly(),
+      arguments: arguments.drainToReadonly(),
     })
     objectPaths.push(objectPath)
   }
@@ -161,7 +161,7 @@ export function planNativeCompile(
       sourcePath,
       outputPath: objectPath,
       dependencyFilePath: dependencyFile,
-      arguments: arguments.buildReadonly(),
+      arguments: arguments.drainToReadonly(),
     })
     objectPaths.push(objectPath)
   }

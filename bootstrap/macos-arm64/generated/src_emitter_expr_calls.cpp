@@ -266,8 +266,11 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
                         }
                 }
                 else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
-                        if (member->property == std::string("buildReadonly")) {
-                            return ((std::string("doof::array_buildReadonly(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
+                        if ((member->property == std::string("buildReadonly")) || (member->property == std::string("drainToReadonly"))) {
+                            return ((std::string("doof::array_drainToReadonly(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
+                        }
+                        if (member->property == std::string("cloneReadonly")) {
+                            return ((std::string("doof::array_cloneReadonly(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                         if (member->property == std::string("cloneMutable")) {
                             return ((std::string("doof::array_cloneMutable(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
@@ -308,8 +311,11 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
                         if (member->property == std::string("values")) {
                             return ((std::string("doof::map_values(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
-                        if (member->property == std::string("buildReadonly")) {
-                            return ((std::string("doof::map_buildReadonly(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
+                        if ((member->property == std::string("buildReadonly")) || (member->property == std::string("drainToReadonly"))) {
+                            return ((std::string("doof::map_drainToReadonly(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
+                        }
+                        if (member->property == std::string("cloneReadonly")) {
+                            return ((std::string("doof::map_cloneReadonly(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                         if (member->property == std::string("cloneMutable")) {
                             return ((std::string("doof::map_cloneMutable(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
@@ -328,8 +334,11 @@ std::string emitCall(std::shared_ptr<::app_src_ast_::CallExpression> expression,
                         if (member->property == std::string("values")) {
                             return ((std::string("doof::set_values(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
-                        if (member->property == std::string("buildReadonly")) {
-                            return ((std::string("doof::set_buildReadonly(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
+                        if ((member->property == std::string("buildReadonly")) || (member->property == std::string("drainToReadonly"))) {
+                            return ((std::string("doof::set_drainToReadonly(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
+                        }
+                        if (member->property == std::string("cloneReadonly")) {
+                            return ((std::string("doof::set_cloneReadonly(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                         if (member->property == std::string("cloneMutable")) {
                             return ((std::string("doof::set_cloneMutable(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));

@@ -43,6 +43,7 @@ namespace app_src_emitter_expr_actor_ {
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     std::string emitActorCreation(std::shared_ptr<::app_src_ast_::ActorCreationExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
     std::string emitAsyncExpression(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
+    std::string emitIsolatedFunctionCall(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_ast_::CallExpression> call, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
     std::string emitAsyncBlock(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_ast_::Block> block, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
     std::string emitRetireActor(std::shared_ptr<::app_src_ast_::RetireExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);
     std::string emitSyncActorCall(std::shared_ptr<::app_src_ast_::CallExpression> expression, std::shared_ptr<::app_src_ast_::MemberExpression> member, std::shared_ptr<::app_src_semantic_::ActorType> actor, std::shared_ptr<::app_src_emitter_context_::EmitContext> context);

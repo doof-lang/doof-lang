@@ -143,13 +143,38 @@ function interfaceResult(): int {
 function setResult(): int {
   let values: Set<int> = [3, 1, 3, 2]
   values.delete(1)
-  frozen := values.buildReadonly()
-  if values.size != 0 || frozen.size != 2 || !frozen.has(3) { return 90 }
+  snapshot := values.cloneReadonly()
+  if values.size != 2 || snapshot.size != 2 { return 90 }
+  values.add(4)
+  if snapshot.has(4) { return 91 }
+  frozen := values.drainToReadonly()
+  if values.size != 0 || frozen.size != 3 || !frozen.has(3) { return 92 }
   copy := frozen.cloneMutable()
-  copy.add(4)
   let total = 0
   for value of copy { total = total + value }
   return total
+}
+
+function arrayAndMapReadonlyConversionResult(): int {
+  let values: int[] = [2, 3]
+  snapshot := values.cloneReadonly()
+  values.push(5)
+  if snapshot.length != 2 || values.length != 3 { return 90 }
+  frozen := values.drainToReadonly()
+  if values.length != 0 || frozen.length != 3 { return 91 }
+
+  let empty: int[] = []
+  emptySnapshot := empty.cloneReadonly()
+  emptyFrozen := empty.drainToReadonly()
+  if empty.length != 0 || emptySnapshot.length != 0 || emptyFrozen.length != 0 { return 92 }
+
+  let scores: Map<string, int> = { "Ada": 2 }
+  scoreSnapshot := scores.cloneReadonly()
+  scores.set("Grace", 3)
+  if scoreSnapshot.size != 1 || scores.size != 2 { return 93 }
+  frozenScores := scores.drainToReadonly()
+  if scores.size != 0 || frozenScores.size != 2 { return 94 }
+  return snapshot.length + frozen.length + scoreSnapshot.size + frozenScores.size
 }
 
 enum LoadError { Missing }
@@ -186,11 +211,12 @@ function main(): int {
   if jsonResult() != 10 { return 4 }
   if interfaceResult() != 18 { return 5 }
   if setResult() != 9 { return 6 }
-  if yieldCatchResult() != 8 { return 7 }
-  if metadataResult() != 16 { return 8 }
-  if asyncBlockResult() != 15 { return 9 }
-  if queuedActorResult() != 560 { return 10 }
-  if queuedAsyncResult() != 496 { return 11 }
-  if crossModulePromiseResult() != 42 { return 12 }
+  if arrayAndMapReadonlyConversionResult() != 8 { return 7 }
+  if yieldCatchResult() != 8 { return 8 }
+  if metadataResult() != 16 { return 9 }
+  if asyncBlockResult() != 15 { return 10 }
+  if queuedActorResult() != 560 { return 11 }
+  if queuedAsyncResult() != 496 { return 12 }
+  if crossModulePromiseResult() != 42 { return 13 }
   return 0
 }

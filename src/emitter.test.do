@@ -165,8 +165,10 @@ export function testEmitsMinimumIntWithoutDoubleNegation(): none {
   Assert.equal(result.source.contains("--2147483648"), false)
 }
 
-export function testEmitsArrayCloneMutableAndEnumFromValue(): none {
-  result := emit("enum Suit { Spades = 0, Hearts = 1 }\nfunction clone(values: int[]): int[] => values.cloneMutable()\nfunction suit(index: int): Suit => Suit.fromValue(index) ?? .Spades")
+export function testEmitsArrayCollectionConversionsAndEnumFromValue(): none {
+  result := emit("enum Suit { Spades = 0, Hearts = 1 }\nfunction drain(values: int[]): readonly int[] => values.drainToReadonly()\nfunction snapshot(values: int[]): readonly int[] => values.cloneReadonly()\nfunction clone(values: int[]): int[] => values.cloneMutable()\nfunction suit(index: int): Suit => Suit.fromValue(index) ?? .Spades")
+  Assert.stringContains(result.source, "doof::array_drainToReadonly(values")
+  Assert.stringContains(result.source, "doof::array_cloneReadonly(values")
   Assert.stringContains(result.source, "doof::array_cloneMutable(values")
   Assert.stringContains(result.source, "Suit_fromValue(index)")
   Assert.stringContains(result.header, "Suit_fromValue(int32_t value)")
@@ -208,12 +210,13 @@ export function testEmitsCaseStatementRangePatterns(): none {
 }
 
 export function testEmitsSetAndReadonlySetOperations(): none {
-  result := emit("enum Flag { One, Two }\nfunction count(values: ReadonlySet<Flag>): int { let total = 0\nfor value of values { total = total + 1 }\nreturn total }\nfunction main(): int { let values: Set<Flag> = [Flag.One, Flag.Two, Flag.One]\nvalues.add(Flag.Two)\nvalues.delete(Flag.One)\nfrozen := values.buildReadonly()\ncopy := frozen.cloneMutable()\nreturn count(frozen) + copy.values().length + copy.size }")
+  result := emit("enum Flag { One, Two }\nfunction count(values: ReadonlySet<Flag>): int { let total = 0\nfor value of values { total = total + 1 }\nreturn total }\nfunction main(): int { let values: Set<Flag> = [Flag.One, Flag.Two, Flag.One]\nvalues.add(Flag.Two)\nvalues.delete(Flag.One)\nsnapshot := values.cloneReadonly()\nfrozen := values.drainToReadonly()\ncopy := frozen.cloneMutable()\nreturn count(snapshot) + count(frozen) + copy.values().length + copy.size }")
   Assert.equal(result.header.contains("std::shared_ptr<doof::ordered_set<Flag>>"), true)
   Assert.equal(result.source.contains("std::make_shared<doof::ordered_set<Flag>>"), true)
   Assert.equal(result.source.contains("->insert(Flag::Two)"), true)
   Assert.equal(result.source.contains("->erase(Flag::One)"), true)
-  Assert.equal(result.source.contains("doof::set_buildReadonly"), true)
+  Assert.equal(result.source.contains("doof::set_drainToReadonly"), true)
+  Assert.equal(result.source.contains("doof::set_cloneReadonly"), true)
   Assert.equal(result.source.contains("doof::set_cloneMutable"), true)
   Assert.equal(result.source.contains("doof::set_values"), true)
   Assert.equal(result.source.contains("->size()"), true)
@@ -551,10 +554,16 @@ export function testEmitsArbitrarySharedUnionMembersFromResolvedTypes(): none {
 }
 
 export function testEmitsMapSizeAsContainerCall(): none {
-  result := emit("function size(values: readonly Map<string, int>): int => values.size\nfunction keys(values: Map<string, int>): string[] => values.keys()\nfunction freeze(values: Map<string, int>): readonly Map<string, int> => values.buildReadonly()")
+  result := emit("function size(values: readonly Map<string, int>): int => values.size\nfunction keys(values: Map<string, int>): string[] => values.keys()\nfunction snapshot(values: Map<string, int>): readonly Map<string, int> => values.cloneReadonly()\nfunction freeze(values: Map<string, int>): readonly Map<string, int> => values.drainToReadonly()")
   Assert.equal(result.source.contains("values->size()"), true)
   Assert.equal(result.source.contains("doof::map_keys(values"), true)
-  Assert.equal(result.source.contains("doof::map_buildReadonly(values"), true)
+  Assert.equal(result.source.contains("doof::map_cloneReadonly(values"), true)
+  Assert.equal(result.source.contains("doof::map_drainToReadonly(values"), true)
+}
+
+export function testEmitsDeprecatedBuildReadonlyThroughDrainHelper(): none {
+  result := emit("function freeze(values: int[]): readonly int[] => values.buildReadonly()")
+  Assert.stringContains(result.source, "doof::array_drainToReadonly(values")
 }
 
 export function testWrapsMapSetArgumentsForJsonValueMaps(): none {

@@ -51,6 +51,15 @@ export function deprecatedNoneAlias(state: CheckerState, spelling: string, span:
     replacement: "none",
   })
 }
+export function deprecatedBuildReadonly(state: CheckerState, span: SourceSpan): none {
+  state.diagnostics.push(Diagnostic {
+    severity: "warning",
+    message: "'buildReadonly' is deprecated; replace it with 'drainToReadonly'",
+    span: checkerSemanticSpan(span),
+    module: state.info!.path,
+    replacement: "drainToReadonly",
+  })
+}
 export function requireBool(state: CheckerState, resolvedType: ResolvedType, span: SourceSpan): none {
   case resolvedType {
     _: NeverType -> { return }

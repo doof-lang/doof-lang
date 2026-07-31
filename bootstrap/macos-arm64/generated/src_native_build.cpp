@@ -130,9 +130,9 @@ std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCo
     std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> readonlyBatches = std::make_shared<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>>(std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>{});
     const auto& _iterable_1 = batches;
     for (const auto& batch : *_iterable_1) {
-        readonlyBatches->push_back(doof::array_buildReadonly(batch, "", 0));
+        readonlyBatches->push_back(doof::array_drainToReadonly(batch, "", 0));
     }
-    return doof::array_buildReadonly(readonlyBatches, "", 0);
+    return doof::array_drainToReadonly(readonlyBatches, "", 0);
 }
 std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::string outputDirectory, std::string outputPath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native, bool release, std::string platform, std::shared_ptr<std::vector<std::string>> wasmExportNames, bool wasm) {
     std::shared_ptr<std::vector<std::string>> compileArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-std=c++17")});
@@ -179,7 +179,7 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::
         pchArguments->push_back(runtimeHeader);
         pchArguments->push_back(std::string("-o"));
         pchArguments->push_back(pchPath);
-        (precompiledHeaderTask = std::make_shared<NativeCompileTask>((std::string("pch:") + pchPath), compiler, runtimeHeader, pchPath, dependencyFile, false, doof::array_buildReadonly(pchArguments, "", 0)));
+        (precompiledHeaderTask = std::make_shared<NativeCompileTask>((std::string("pch:") + pchPath), compiler, runtimeHeader, pchPath, dependencyFile, false, doof::array_drainToReadonly(pchArguments, "", 0)));
         if (clangPch) {
             (clangPchPath = pchPath);
         }
@@ -199,7 +199,7 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::
         arguments->push_back(std::string("-MF"));
         arguments->push_back(dependencyFile);
         appendObjectArguments(arguments, sourcePath, objectPath);
-        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, (!doof::is_null(precompiledHeaderTask)), doof::array_buildReadonly(arguments, "", 0)));
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, (!doof::is_null(precompiledHeaderTask)), doof::array_drainToReadonly(arguments, "", 0)));
         objectPaths->push_back(objectPath);
     }
     for (int32_t index = 0; index < static_cast<int32_t>((native->sourceFiles)->size()); ++index) {
@@ -216,7 +216,7 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::
             appendObjectArguments(arguments, sourcePath, objectPath);
         }
         const auto taskCompiler = (swiftSource ? std::string("swiftc") : (cSource ? deriveCCompiler(compiler) : compiler));
-        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), taskCompiler, sourcePath, objectPath, dependencyFile, false, doof::array_buildReadonly(arguments, "", 0)));
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), taskCompiler, sourcePath, objectPath, dependencyFile, false, doof::array_drainToReadonly(arguments, "", 0)));
         objectPaths->push_back(objectPath);
     }
     std::shared_ptr<std::vector<std::string>> linkArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});

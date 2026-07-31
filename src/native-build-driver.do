@@ -70,10 +70,10 @@ class NativeCompilerWorker {
       result := runBuildCommand(task.compiler, mutableArguments(task.arguments))
       outputs.push(result)
       if result.exitCode != 0 {
-        return NativeCompilerBatchResult { exitCode: result.exitCode, outputs: outputs.buildReadonly() }
+        return NativeCompilerBatchResult { exitCode: result.exitCode, outputs: outputs.drainToReadonly() }
       }
     }
-    return NativeCompilerBatchResult { exitCode: 0, outputs: outputs.buildReadonly() }
+    return NativeCompilerBatchResult { exitCode: 0, outputs: outputs.drainToReadonly() }
   }
 }
 

@@ -258,10 +258,11 @@ Arrays support a `.length` property and the following built-in methods:
 | `.filter(predicate)` | both | `((it: T): bool): T[]` or `readonly T[]` | Keep elements matching predicate (preserves mutability) |
 | `.map(mapper)` | both | `<U>((it: T): U): U[]` or `readonly U[]` | Transform elements (preserves mutability) |
 | `.slice(start, end)` | both | `(int, int): T[]` or `readonly T[]` | Sub-array (preserves mutability) |
-| `.buildReadonly()` | mutable only | `(): readonly T[]` | Move-drain the array into a new readonly array (source is left empty) |
+| `.drainToReadonly()` | mutable only | `(): readonly T[]` | Move-drain the array into a new readonly array (source is left empty) |
+| `.cloneReadonly()` | mutable only | `(): readonly T[]` | Shallow-copy into a new readonly array without changing the source |
 | `.cloneMutable()` | both | `(): T[]` | Shallow-copy into a new mutable array |
 
-`push`, `reserve`, and `pop` are rejected on `readonly T[]` arrays at compile time. `buildReadonly` is also rejected on readonly arrays — use `cloneMutable` then `buildReadonly` if needed.
+`push`, `reserve`, `pop`, `drainToReadonly`, and `cloneReadonly` are rejected on `readonly T[]` arrays at compile time. The deprecated `buildReadonly()` spelling remains accepted on mutable arrays with a warning and has the same draining behavior as `drainToReadonly()`.
 
 ```javascript
 nums := [1, 2, 3, 4]
@@ -284,7 +285,8 @@ labels := nums.map((it: int): string => "#${string(it)}") // ["#1", "#2", "#3", 
 let builder: int[] = []
 builder.push(1)
 builder.push(2)
-result := builder.buildReadonly() // readonly int[], builder is now empty
+snapshot := builder.cloneReadonly() // readonly int[], builder is unchanged
+result := builder.drainToReadonly() // readonly int[], builder is now empty
 
 // Clone into a mutable copy
 let frozen: readonly int[] = [1, 2, 3]
@@ -1083,7 +1085,8 @@ Adding a value that is already present does not move it. Deleting a value and th
 | `.add(value)` | mutable only | `none` | Insert value |
 | `.delete(value)` | mutable only | `none` | Remove value |
 | `.values()` | both | `T[]` | Array of all values |
-| `.buildReadonly()` | mutable only | `ReadonlySet<T>` | Move-drain the set into a new readonly set (source is left empty) |
+| `.drainToReadonly()` | mutable only | `ReadonlySet<T>` | Move-drain the set into a new readonly set (source is left empty) |
+| `.cloneReadonly()` | mutable only | `ReadonlySet<T>` | Shallow-copy into a new readonly set without changing the source |
 | `.cloneMutable()` | both | `Set<T>` | Shallow-copy into a new mutable set |
 
 ```javascript
@@ -1093,9 +1096,12 @@ print(unique.has(2))
 unique.delete(1)
 print(unique.size)
 
-frozen := unique.buildReadonly() // ReadonlySet<int>, unique is now empty
+snapshot := unique.cloneReadonly() // ReadonlySet<int>, unique is unchanged
+frozen := unique.drainToReadonly() // ReadonlySet<int>, unique is now empty
 copy := frozen.cloneMutable()    // Set<int>
 ```
+
+The deprecated `buildReadonly()` spelling remains accepted on mutable sets with a warning and drains exactly like `drainToReadonly()`. All three readonly-producing methods are rejected on readonly receivers.
 
 #### Map Methods
 
@@ -1108,7 +1114,8 @@ copy := frozen.cloneMutable()    // Set<int>
 | `.delete(key)` | mutable only | `none` | Remove entry by key |
 | `.keys()` | both | `K[]` | Array of all keys |
 | `.values()` | both | `V[]` | Array of all values |
-| `.buildReadonly()` | mutable only | `ReadonlyMap<K, V>` | Move-drain the map into a new readonly map (source is left empty) |
+| `.drainToReadonly()` | mutable only | `ReadonlyMap<K, V>` | Move-drain the map into a new readonly map (source is left empty) |
+| `.cloneReadonly()` | mutable only | `ReadonlyMap<K, V>` | Shallow-copy into a new readonly map without changing the source |
 | `.cloneMutable()` | both | `Map<K, V>` | Shallow-copy into a new mutable map |
 
 ```javascript
@@ -1126,9 +1133,12 @@ for key, value of m {
   print("${key} = ${value}")
 }
 
-frozen := m.buildReadonly()  // ReadonlyMap<string, int>, m is now empty
+snapshot := m.cloneReadonly() // ReadonlyMap<string, int>, m is unchanged
+frozen := m.drainToReadonly() // ReadonlyMap<string, int>, m is now empty
 copy := frozen.cloneMutable() // Map<string, int>
 ```
+
+The deprecated `buildReadonly()` spelling remains accepted on mutable maps with a warning and drains exactly like `drainToReadonly()`. All three readonly-producing methods are rejected on readonly receivers.
 
 #### Map Index Access
 

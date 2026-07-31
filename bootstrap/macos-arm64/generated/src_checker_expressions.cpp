@@ -457,10 +457,12 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     const auto inner = doof::variant_narrow<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(_case_subject);
                     const auto innerType = checkExpression(state, inner, scope, std::monostate{});
                     auto actorCall = false;
+                    auto isolatedCall = false;
                     {
                         auto _case_subject = inner;
                         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject)) {
                             const auto& call = std::get<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject);
+                            (isolatedCall = (!doof::is_null(call->resolvedFunction)));
                             {
                                 auto _case_subject = call->callee;
                                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
@@ -479,12 +481,42 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                             else {
                             }
                             }
+                            if (!actorCall && isolatedCall) {
+                                for (int32_t i = 0; i < static_cast<int32_t>((call->args)->size()); ++i) {
+                                    const auto argumentType = std::visit([](auto&& _obj) { return _obj->resolvedType; }, (*call->args)[i]->value);
+                                    if (doof::is_null(argumentType)) {
+                                        continue;
+                                    }
+                                    const auto violation = ::app_src_checker_actor_boundary_::findActorBoundaryViolation(state->result, doof::unwrap_optional(argumentType));
+                                    if (!doof::is_null(violation)) {
+                                        ::app_src_checker_common_::typeError(state, (((((std::string("Async call argument ") + doof::to_string((i + 1))) + std::string(" of type \"")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(argumentType))) + std::string("\" cannot cross to the worker: ")) + violation->reason), (*call->args)[i]->span);
+                                    }
+                                }
+                                {
+                                    auto _case_subject = call->callee;
+                                    if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
+                                        const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
+                                        if (doof::is_null(member->resolvedStaticOwner) && (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object)))) {
+                                            const auto receiverViolation = ::app_src_checker_actor_boundary_::findActorBoundaryViolation(state->result, doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object)));
+                                            if (!doof::is_null(receiverViolation)) {
+                                                ::app_src_checker_common_::typeError(state, (((std::string("Async call receiver of type \"") + ::app_src_checker_types_::typeName(doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object)))) + std::string("\" cannot cross to the worker: ")) + receiverViolation->reason), std::visit([](auto&& _obj) { return _obj->span; }, member->object));
+                                            }
+                                        }
+                                }
+                                else {
+                                }
+                                }
+                                const auto resultViolation = ::app_src_checker_async_::asyncResultViolation(state->result, innerType);
+                                if (!doof::is_null(resultViolation)) {
+                                    ::app_src_checker_common_::typeError(state, (((std::string("Async call result type \"") + ::app_src_checker_types_::typeName(innerType)) + std::string("\" cannot cross from the worker: ")) + resultViolation.value()), async_->span);
+                                }
+                            }
                     }
                     else {
                     }
                     }
-                    if (!actorCall) {
-                        ::app_src_checker_common_::typeError(state, std::string("`async` is only valid for actor method calls; use a temporary actor for background work"), async_->span);
+                    if (!actorCall && !isolatedCall) {
+                        ::app_src_checker_common_::typeError(state, std::string("`async` requires an actor method call or an inferrably isolated function call"), async_->span);
                     }
                     return ::app_src_checker_common_::finish(state, expression, ::app_src_checker_types_::promiseType(innerType));
             }
