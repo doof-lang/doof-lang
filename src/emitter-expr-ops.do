@@ -63,7 +63,10 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
           if member != none {
             if sameType(member!, target) {
               case target {
-                _: ClassType -> {
+                class_: ClassType -> {
+                  if class_.symbol.kind == "struct" {
+                    return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
+                  }
                   return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value) return " + success + "{_as_value}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
                 }
                 _: ArrayResolvedType -> {

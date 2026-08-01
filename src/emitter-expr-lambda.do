@@ -6,7 +6,7 @@
 // values and those boxes into the actor-affine doof::callback wrapper.
 
 import {
-  ActorCreationExpression, ArrayLiteral, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression,
+  ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression,
   CaseExpression, CaseStatement, ConstDeclaration, ConstructExpression, Expression,
   ExpressionStatement, ForOfStatement, ForStatement, Identifier, IfExpression,
   IfStatement, ImmutableBinding, IndexExpression, LambdaExpression,
@@ -193,6 +193,7 @@ function scanStatementForLambdas(statement: Statement, result: string[]): none {
 
 function scanExpressionForLambdas(expression: Expression, result: string[]): none {
   case expression {
+    as_: AsExpression -> { scanExpressionForLambdas(as_.expression, result) }
     binary: BinaryExpression -> { scanExpressionForLambdas(binary.left, result)
       scanExpressionForLambdas(binary.right, result) }
     unary: UnaryExpression -> { scanExpressionForLambdas(unary.operand, result) }
@@ -318,6 +319,7 @@ function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyE
   case expression {
     identifier: Identifier -> { collectIdentifierCapture(identifier, bodyStart, bodyEnd, result, mutableOnly) }
     _: ThisExpression -> { if !mutableOnly { addUnique(result, "this") } }
+    as_: AsExpression -> { collectExpressionCaptures(as_.expression, bodyStart, bodyEnd, result, mutableOnly) }
     binary: BinaryExpression -> { collectExpressionCaptures(binary.left, bodyStart, bodyEnd, result, mutableOnly)
       collectExpressionCaptures(binary.right, bodyStart, bodyEnd, result, mutableOnly) }
     unary: UnaryExpression -> { collectExpressionCaptures(unary.operand, bodyStart, bodyEnd, result, mutableOnly) }

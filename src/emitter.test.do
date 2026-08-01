@@ -141,6 +141,27 @@ export function testLambdaCapturesThisForImplicitMethodCalls(): none {
   Assert.equal(result.source.contains("return handle(value)"), true)
 }
 
+struct CapturedOptionalPoint {
+  x: int
+  y: int
+}
+
+function invokeMovement(callback: (point: CapturedOptionalPoint): int, point: CapturedOptionalPoint): int {
+  return callback(point)
+}
+
+export function testNarrowsCapturedMutableOptionalStructInCallback(): none {
+  let pressPoint: CapturedOptionalPoint | none = none
+  callback := (point: CapturedOptionalPoint): int => {
+    start := pressPoint as CapturedOptionalPoint else { return -1 }
+    return start.x + point.y
+  }
+
+  Assert.equal(invokeMovement(callback, CapturedOptionalPoint { x: 2, y: 3 }), -1)
+  pressPoint = CapturedOptionalPoint { x: 4, y: 5 }
+  Assert.equal(invokeMovement(callback, CapturedOptionalPoint { x: 6, y: 3 }), 7)
+}
+
 export function testEmitsJsonValueAsNarrowing(): none {
   result := emit("function read(raw: JsonValue): bool { value := raw as bool else { return false }\nreturn value }")
   Assert.equal(result.source.contains("doof::json_is_boolean(_as_value)"), true)
