@@ -213,6 +213,9 @@ export class Binding {
   module: string
   symbol: Symbol | none = none
   casePattern: string = ""
+  fieldMode: string = ""
+  fieldOwner: string = ""
+  fieldGroupSize: int = 1
 }
 
 export class Scope {

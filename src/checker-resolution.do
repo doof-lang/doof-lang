@@ -39,6 +39,7 @@ import { CheckerState } from "./checker-state"
 import { deprecatedBuildReadonly, deprecatedNoneAlias, typeError } from "./checker-common"
 import { builtinSourceLocationType, declaredSymbolName, optionalResolvedType, methodSignature, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
 import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor } from "./checker-interfaces"
+import { checkerSemanticSpan } from "./checker-validation"
 
 export function resolveType(state: CheckerState, annotation: TypeAnnotation, module: ModuleInfo, scope: Scope): ResolvedType {
   case annotation {
@@ -550,6 +551,65 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
     _ -> { }
   }
   return unknownType()
+}
+
+export function fieldAssignmentBinding(state: CheckerState, object: ResolvedType, property: string, fieldType: ResolvedType): Binding | none {
+  case object {
+    actor: ActorType -> { return fieldAssignmentBinding(state, actor.innerClass, property, fieldType) }
+    class_: ClassType -> {
+      declaration := declarationFor(state.result, class_.symbol)
+      if declaration == none { return none }
+      case declaration! {
+        classDeclaration: ClassDeclaration -> {
+          for field of classDeclaration.fields {
+            for name of field.names {
+              if name == property {
+                return Binding {
+                  name,
+                  kind: "field",
+                  type_: fieldType,
+                  mutable: !field.readonly_ && !field.const_,
+                  span: checkerSemanticSpan(field.span),
+                  module: class_.symbol.module,
+                  symbol: class_.symbol,
+                  fieldMode: if field.readonly_ then "readonly" else if field.const_ then "const" else if field.let_ then "let" else "implicit",
+                  fieldOwner: classDeclaration.name,
+                  fieldGroupSize: field.names.length,
+                }
+              }
+            }
+          }
+        }
+        _ -> { }
+      }
+    }
+    interfaceType_: InterfaceType -> {
+      declaration := declarationFor(state.result, interfaceType_.symbol)
+      if declaration == none { return none }
+      case declaration! {
+        interface_: InterfaceDeclaration -> {
+          for field of interface_.fields {
+            if field.name == property {
+              return Binding {
+                name: property,
+                kind: "field",
+                type_: fieldType,
+                mutable: !field.readonly_,
+                span: checkerSemanticSpan(field.span),
+                module: interfaceType_.symbol.module,
+                symbol: interfaceType_.symbol,
+                fieldMode: if field.readonly_ then "readonly" else if field.let_ then "let" else "implicit",
+                fieldOwner: interface_.name,
+              }
+            }
+          }
+        }
+        _ -> { }
+      }
+    }
+    _ -> { }
+  }
+  return none
 }
 
 function jsonPrograms(result: AnalysisResult): Program[] {

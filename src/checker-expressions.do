@@ -40,8 +40,8 @@ import { CheckerState } from "./checker-state"
 import { checkFunction, checkBlock } from "./checker-statements"
 import { checkCall, checkLambda, checkConstruct, callableField } from "./checker-calls"
 import { checkArray, checkObject } from "./checker-literals"
-import { resolveType, memberType, indexType } from "./checker-resolution"
-import { deprecatedNoneAlias, finish, typeError, requireBool } from "./checker-common"
+import { fieldAssignmentBinding, resolveType, memberType, indexType } from "./checker-resolution"
+import { deprecatedNoneAlias, finish, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
 import { constructorForClass, staticMemberOwner } from "./checker-generics"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -764,7 +764,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       target := lookup(scope, identifier.name)
       if target == none { typeError(state, "Unknown assignment target '" + identifier.name + "'", identifier.span) }
       else {
-        if !target!.mutable { typeError(state, "Cannot assign to immutable binding '" + identifier.name + "'", identifier.span) }
+        validateAssignmentBinding(state, target!, identifier.span)
         if expression.operator == "=" && !isAssignable(value, target!.type_) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(target!.type_), expression.span) }
       }
     }
@@ -786,8 +786,10 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       }
     }
     member: MemberExpression -> {
-      checkExpression(state, member.object, scope, none)
-      targetType := memberType(state, checkExpression(state, member.object, scope, none), member.property, member.span)
+      objectType := checkExpression(state, member.object, scope, none)
+      targetType := memberType(state, objectType, member.property, member.span)
+      fieldBinding := fieldAssignmentBinding(state, objectType, member.property, targetType)
+      if fieldBinding != none { validateAssignmentBinding(state, fieldBinding!, member.span) }
       if expression.operator == "=" && !isAssignable(value, targetType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(targetType), expression.span) }
     }
     _ -> { typeError(state, "Assignment target must be a binding", expression.target.span) }

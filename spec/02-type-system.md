@@ -855,6 +855,16 @@ class BadPoint implements Thing2D {  // ❌ Compile error
 }
 ```
 
+Interface fields use the same three mutability modes as class fields. A `let`
+interface field requires an implementing `let` field and exposes field-slot
+assignment. A bare interface field is a shallow read-only view and may be
+implemented by bare, `let`, or `readonly` storage when the types are
+compatible. A `readonly` interface field still requires a `readonly`
+implementation so widening cannot conceal mutable storage as deeply immutable.
+
+During the compatibility release, writes through a bare interface field are
+accepted with the same declaration warning as writes to bare nominal fields.
+
 ### Type Construction with Interfaces
 
 ```javascript

@@ -290,11 +290,23 @@ function parseNamedType(parser: Parser): NamedType {
 
 function parseClassField(parser: Parser, static_: bool, private_: bool): ClassField {
   start := parser.location()
-  let staticValue = static_
+  if parser.check(TokenType.Private) || parser.check(TokenType.Static) {
+    parser.fail("Field modifiers must use '[private] [static] [let|readonly|const] [weak] name' order without duplicates")
+  }
   const_ := parser.match(TokenType.Const)
+  let_ := parser.match(TokenType.Let)
   readonly_ := parser.match(TokenType.Readonly)
-  if parser.match(TokenType.Static) { staticValue = true }
+  if (if const_ then 1 else 0) + (if let_ then 1 else 0) + (if readonly_ then 1 else 0) > 1 {
+    parser.fail("Field declarations accept only one of 'let', 'readonly', or 'const'")
+  }
+  if parser.check(TokenType.Const) || parser.check(TokenType.Let) || parser.check(TokenType.Readonly) {
+    parser.fail("Field declarations accept only one of 'let', 'readonly', or 'const'")
+  }
+  if parser.check(TokenType.Private) || parser.check(TokenType.Static) {
+    parser.fail("Field modifiers must use '[private] [static] [let|readonly|const] [weak] name' order without duplicates")
+  }
   weak_ := parser.match(TokenType.Weak)
+  if parser.check(TokenType.Weak) { parser.fail("Field declarations accept 'weak' at most once") }
   let names: string[] = []
   let descriptions: string[] = []
   names.push(parser.text(parser.expect(TokenType.Identifier)))
@@ -308,7 +320,7 @@ function parseClassField(parser: Parser, static_: bool, private_: bool): ClassFi
   if parser.match(TokenType.Equal) { defaultValue = parser.parseExpression() }
   if const_ && defaultValue == none { parser.fail("Const class fields require a fixed value") }
   parser.consumeSemicolon()
-  return ClassField { kind: "class-field", names, descriptions, type_: typeValue, defaultValue, static_: staticValue, const_, readonly_, weak_, private_, span: parser.span(start) }
+  return ClassField { kind: "class-field", names, descriptions, type_: typeValue, defaultValue, static_, const_, let_, readonly_, weak_, private_, span: parser.span(start) }
 }
 
 export function parseInterface(parser: Parser, exported: bool): Statement {
@@ -323,7 +335,11 @@ export function parseInterface(parser: Parser, exported: bool): Statement {
   let methods: FunctionDeclaration[] = []
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
     memberStart := parser.location()
+    let_ := parser.match(TokenType.Let)
     readonly_ := parser.match(TokenType.Readonly)
+    if parser.check(TokenType.Let) || parser.check(TokenType.Readonly) {
+      parser.fail("Interface fields accept only one of 'let' or 'readonly'")
+    }
     memberName := parser.text(parser.expect(TokenType.Identifier))
     memberDescription := parseDescription(parser)
     if parser.check(TokenType.LeftParen) {
@@ -343,7 +359,7 @@ export function parseInterface(parser: Parser, exported: bool): Statement {
       parser.expect(TokenType.Colon)
       typeValue := parser.parseTypeAnnotation()
       parser.consumeSemicolon()
-      fields.push(InterfaceField { kind: "interface-field", name: memberName, description: memberDescription, type_: typeValue, readonly_, span: parser.span(memberStart) })
+      fields.push(InterfaceField { kind: "interface-field", name: memberName, description: memberDescription, type_: typeValue, let_, readonly_, span: parser.span(memberStart) })
     }
   }
   parser.expect(TokenType.RightBrace)
@@ -459,6 +475,8 @@ function parseNativeClass(parser: Parser, exported: bool, start: AstLocation): C
         (parser.check(TokenType.Isolated) && parser.peek(1).kind == TokenType.Identifier && parser.peek(2).kind == TokenType.LeftParen) ||
         (parser.check(TokenType.Isolated) && parser.peek(1).kind == TokenType.Static && parser.peek(2).kind == TokenType.Identifier && parser.peek(3).kind == TokenType.LeftParen) {
       methods.push(parseNativeMethod(parser))
+    } else if parser.match(TokenType.Static) {
+      fields.push(parseClassField(parser, true, false))
     } else {
       fields.push(parseClassField(parser, false, false))
     }

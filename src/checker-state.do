@@ -10,4 +10,5 @@ export class CheckerState {
   diagnostics: Diagnostic[] = []
   info: ModuleInfo | none = none
   moduleScope: Scope | none = none
+  warnedImplicitFieldDeclarations: string[] = []
 }

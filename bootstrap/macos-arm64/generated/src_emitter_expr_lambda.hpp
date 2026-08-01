@@ -13,6 +13,7 @@
 #include <vector>
 namespace app_src_ast_ { struct ActorCreationExpression; }
 namespace app_src_ast_ { struct ArrayLiteral; }
+namespace app_src_ast_ { struct AsExpression; }
 namespace app_src_ast_ { struct AssignmentExpression; }
 namespace app_src_ast_ { struct AsyncExpression; }
 namespace app_src_ast_ { struct BinaryExpression; }

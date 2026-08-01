@@ -134,7 +134,7 @@ void checkCasePatterns(std::shared_ptr<::app_src_checker_state_::CheckerState> s
                 }
                 (type_->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(resolved));
                 if (type_->name != std::string("_")) {
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(type_->name, std::string("case-binding"), resolved, false, ::app_src_checker_validation_::checkerSemanticSpan(type_->span), state->info->path, nullptr, ::app_src_checker_symbols_::casePatternName(type_)));
+                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(type_->name, std::string("case-binding"), resolved, false, ::app_src_checker_validation_::checkerSemanticSpan(type_->span), state->info->path, nullptr, ::app_src_checker_symbols_::casePatternName(type_), std::string(""), std::string(""), 1));
                 }
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ValuePattern>>(_case_subject)) {
@@ -637,13 +637,13 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
 std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> checkIdentifier(std::shared_ptr<::app_src_checker_state_::CheckerState> state, std::shared_ptr<::app_src_ast_::Identifier> identifier, std::shared_ptr<::app_src_semantic_::Scope> scope) {
     std::shared_ptr<::app_src_semantic_::Binding> binding = ::app_src_checker_symbols_::lookup(scope, identifier->name);
     if (doof::is_null(binding) && ::app_src_checker_symbols_::hasTypeParam(scope, identifier->name)) {
-        (binding = std::make_shared<::app_src_semantic_::Binding>(identifier->name, std::string("type-parameter"), ::app_src_checker_types_::typeParameter(identifier->name, ::app_src_checker_symbols_::typeParamConstraintName(scope, identifier->name), ::app_src_checker_symbols_::typeParamConstraint(scope, identifier->name)), false, ::app_src_checker_validation_::checkerSemanticSpan(identifier->span), state->info->path, nullptr, std::string("")));
+        (binding = std::make_shared<::app_src_semantic_::Binding>(identifier->name, std::string("type-parameter"), ::app_src_checker_types_::typeParameter(identifier->name, ::app_src_checker_symbols_::typeParamConstraintName(scope, identifier->name), ::app_src_checker_symbols_::typeParamConstraint(scope, identifier->name)), false, ::app_src_checker_validation_::checkerSemanticSpan(identifier->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
     }
     if (doof::is_null(binding)) {
         (binding = implicitMethod(state, scope, identifier->name, identifier->span));
     }
     if (doof::is_null(binding) && ::app_src_checker_symbols_::isBuiltinCallable(identifier->name)) {
-        (binding = std::make_shared<::app_src_semantic_::Binding>(identifier->name, std::string("builtin"), ::app_src_checker_symbols_::builtinCallable(identifier->name), false, ::app_src_checker_validation_::checkerSemanticSpan(identifier->span), state->info->path, nullptr, std::string("")));
+        (binding = std::make_shared<::app_src_semantic_::Binding>(identifier->name, std::string("builtin"), ::app_src_checker_symbols_::builtinCallable(identifier->name), false, ::app_src_checker_validation_::checkerSemanticSpan(identifier->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
     }
     if (doof::is_null(binding)) {
         ::app_src_checker_common_::typeError(state, ((std::string("Unknown identifier '") + identifier->name) + std::string("'")), identifier->span);
@@ -676,7 +676,7 @@ std::shared_ptr<::app_src_semantic_::Binding> implicitMethod(std::shared_ptr<::a
                     for (const auto& method : *_iterable_9) {
                         if (method->name == name) {
                             const auto methodType = (doof::is_null(method->resolvedType) ? ::app_src_checker_statements_::checkFunction(state, method, scope, owner) : doof::unwrap_optional(method->resolvedType));
-                            return std::make_shared<::app_src_semantic_::Binding>(name, std::string("method"), methodType, false, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, owner->symbol, std::string(""));
+                            return std::make_shared<::app_src_semantic_::Binding>(name, std::string("method"), methodType, false, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, owner->symbol, std::string(""), std::string(""), std::string(""), 1);
                         }
                     }
             }
@@ -722,7 +722,7 @@ void addClassMethods(std::shared_ptr<::app_src_checker_state_::CheckerState> sta
                     const auto returnType = (doof::is_null(method->returnType) ? ::app_src_checker_types_::noneType() : ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional(method->returnType), doof::unwrap_optional(state->info), state->result, methodTypeParams));
                     (methodType = ::app_src_checker_types_::functionType(parameters, returnType, method->typeParams));
                 }
-                ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(method->name, std::string("method"), methodType, false, ::app_src_checker_validation_::checkerSemanticSpan(method->span), state->info->path, owner->symbol, std::string("")));
+                ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(method->name, std::string("method"), methodType, false, ::app_src_checker_validation_::checkerSemanticSpan(method->span), state->info->path, owner->symbol, std::string(""), std::string(""), std::string(""), 1));
             }
     }
     else {
@@ -1036,9 +1036,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             if (doof::is_null(target)) {
                 ::app_src_checker_common_::typeError(state, ((std::string("Unknown assignment target '") + identifier->name) + std::string("'")), identifier->span);
             } else {
-                if (!target->mutable_) {
-                    ::app_src_checker_common_::typeError(state, ((std::string("Cannot assign to immutable binding '") + identifier->name) + std::string("'")), identifier->span);
-                }
+                ::app_src_checker_common_::validateAssignmentBinding(state, doof::unwrap_optional(target), identifier->span);
                 if ((expression->operator_ == std::string("=")) && !::app_src_checker_types_::isAssignable(value, target->type_)) {
                     ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(value)) + std::string(" to ")) + ::app_src_checker_types_::typeName(target->type_)), expression->span);
                 }
@@ -1079,8 +1077,12 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
             const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
-            checkExpression(state, member->object, scope, std::monostate{});
-            const auto targetType = ::app_src_checker_resolution_::memberType(state, checkExpression(state, member->object, scope, std::monostate{}), member->property, member->span);
+            const auto objectType = checkExpression(state, member->object, scope, std::monostate{});
+            const auto targetType = ::app_src_checker_resolution_::memberType(state, objectType, member->property, member->span);
+            const auto fieldBinding = ::app_src_checker_resolution_::fieldAssignmentBinding(state, objectType, member->property, targetType);
+            if (!doof::is_null(fieldBinding)) {
+                ::app_src_checker_common_::validateAssignmentBinding(state, doof::unwrap_optional(fieldBinding), member->span);
+            }
             if ((expression->operator_ == std::string("=")) && !::app_src_checker_types_::isAssignable(value, targetType)) {
                 ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(value)) + std::string(" to ")) + ::app_src_checker_types_::typeName(targetType)), expression->span);
             }

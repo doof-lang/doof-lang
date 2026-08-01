@@ -203,20 +203,27 @@ readonly configName <- {
 
 ### Class Fields
 
-`readonly` marks class fields that are set once at construction and never reassigned:
+Fields are shallow immutable by default, `let` opts into field-slot
+reassignment, and `readonly` provides deep immutability:
 
 ```javascript
 class Entity {
-    readonly id: int                        // Set once, never changes
+    id: int                                 // Shallow immutable field
     readonly tags: string[]                 // Treated as readonly string[]
-    name: string                            // Mutable field
+    let name: string                        // Mutable field
 }
 
 let e = Entity { id: 123, tags: ["new"], name: "Widget" }
-e.id = 456              // ❌ Error: readonly field
+e.id = 456              // ⚠️ Compatibility warning; becomes an error after migration
 e.tags.push("old")      // ❌ Error: readonly array
 e.name = "Gadget"       // ✅ OK
 ```
+
+During the compatibility release, assignment to a legacy bare field remains
+accepted with one warning per declaration. Add `let` only to declarations
+that are actually assigned after construction. Mutation through the interior
+of a bare field remains valid; for example, `items: int[]` prevents replacing
+`items` but does not prevent `items.push(value)`.
 
 ### Collection Initializer Modifier
 

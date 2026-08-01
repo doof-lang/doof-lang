@@ -21,6 +21,7 @@ Use this base file as the entry point. Load only the reference file that matches
 - Plain `if value != none` checks do **not** narrow static types. Use explicit narrowing forms.
 - Block-bodied non-`none` functions must return a value on every reachable path; `never` functions must terminate on every path.
 - Classes and structs are nominal. Interfaces are structural.
+- Fields are shallow immutable by default; use `let` for reassignable fields and `readonly` for deep immutability. Legacy writes to bare fields warn during migration.
 - Prefer `readonly` for deeply immutable values and `:=` for immutable bindings with mutable interiors. `const` is deprecated and remains accepted temporarily with a warning.
 - Prefer `std/<name>` packages before inventing utility modules.
 

@@ -14,8 +14,8 @@ class Point {
 }
 
 class User {
-    readonly id: int          // Set once at construction
-    name: string              // Mutable field
+    id: int                   // Shallow immutable field
+    let name: string          // Mutable field
     email: string | none      // Nullable field
     role: string = "user"     // Field with default value
 }
@@ -54,9 +54,20 @@ class Model {
 
 | Modifier | Behaviour |
 |----------|-----------|
-| (none) | Mutable field |
-| `readonly` | Set once at construction, cannot be reassigned |
+| (none) | Shallow immutable field; its interior may remain mutable |
+| `let` | Reassignable field |
+| `readonly` | Deeply immutable field |
 | literal value after `:` | Compile-time constant, must match on initialisation |
+
+The compatibility release still permits assignment to a bare field, but emits
+one warning at that declaration asking for `let`. This temporary exception is
+conservative for actor and isolation analysis. Construction, defaults, JSON
+decoding, and raw construction inside a dedicated static constructor continue
+to initialize bare fields without warnings.
+
+Canonical modifier order is `[private] [static] let [weak] name` or
+`[private] [static] readonly [weak] name`. `let`, `readonly`, and deprecated
+field `const` are mutually exclusive.
 
 ### Literal-Valued Fields
 
@@ -80,7 +91,7 @@ type Result = Success | Failure
 
 ```javascript
 class Counter {
-    count = 0
+    let count = 0
     
     increment(amount: int): none {
         count += amount
@@ -98,9 +109,9 @@ Classes can explicitly implement `Stream<T>`. A class satisfies `Stream<T>` when
 
 ```javascript
 class Counter implements Stream<int> {
-    current = 0
+    let current = 0
     end: int
-    currentValue: int = 0
+    let currentValue: int = 0
 
     next(): bool {
         if this.current < this.end {
@@ -162,7 +173,7 @@ as `Transform.zero`, and `transform: Transform = .identity()` lowers as
 
 ```javascript
 class Counter {
-    count = 0
+    let count = 0
     
     increment(): none { count += 1; }
     

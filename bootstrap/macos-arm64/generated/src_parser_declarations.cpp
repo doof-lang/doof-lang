@@ -310,13 +310,25 @@ std::shared_ptr<::app_src_ast_::NamedType> parseNamedType(std::shared_ptr<::app_
 }
 std::shared_ptr<::app_src_ast_::ClassField> parseClassField(std::shared_ptr<::app_src_parser_::Parser> parser, bool static_, bool private_) {
     auto start = parser->location();
-    auto staticValue = static_;
+    if (parser->check(::app_src_lexer_::TokenType::Private) || parser->check(::app_src_lexer_::TokenType::Static)) {
+        parser->fail(std::string("Field modifiers must use '[private] [static] [let|readonly|const] [weak] name' order without duplicates"));
+    }
     const auto const_ = parser->match(::app_src_lexer_::TokenType::Const);
+    const auto let_ = parser->match(::app_src_lexer_::TokenType::Let);
     const auto readonly_ = parser->match(::app_src_lexer_::TokenType::Readonly);
-    if (parser->match(::app_src_lexer_::TokenType::Static)) {
-        (staticValue = true);
+    if ((((const_ ? 1 : 0) + (let_ ? 1 : 0)) + (readonly_ ? 1 : 0)) > 1) {
+        parser->fail(std::string("Field declarations accept only one of 'let', 'readonly', or 'const'"));
+    }
+    if ((parser->check(::app_src_lexer_::TokenType::Const) || parser->check(::app_src_lexer_::TokenType::Let)) || parser->check(::app_src_lexer_::TokenType::Readonly)) {
+        parser->fail(std::string("Field declarations accept only one of 'let', 'readonly', or 'const'"));
+    }
+    if (parser->check(::app_src_lexer_::TokenType::Private) || parser->check(::app_src_lexer_::TokenType::Static)) {
+        parser->fail(std::string("Field modifiers must use '[private] [static] [let|readonly|const] [weak] name' order without duplicates"));
     }
     const auto weak_ = parser->match(::app_src_lexer_::TokenType::Weak);
+    if (parser->check(::app_src_lexer_::TokenType::Weak)) {
+        parser->fail(std::string("Field declarations accept 'weak' at most once"));
+    }
     std::shared_ptr<std::vector<std::string>> names = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> descriptions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     names->push_back(parser->text(parser->expect(::app_src_lexer_::TokenType::Identifier, std::string(""))));
@@ -334,7 +346,7 @@ std::shared_ptr<::app_src_ast_::ClassField> parseClassField(std::shared_ptr<::ap
         parser->fail(std::string("Const class fields require a fixed value"));
     }
     parser->consumeSemicolon();
-    return std::make_shared<::app_src_ast_::ClassField>(std::string("class-field"), names, descriptions, typeValue, defaultValue, staticValue, const_, readonly_, weak_, private_, std::monostate{}, false, parser->span(start));
+    return std::make_shared<::app_src_ast_::ClassField>(std::string("class-field"), names, descriptions, typeValue, defaultValue, static_, const_, let_, readonly_, weak_, private_, std::monostate{}, false, parser->span(start));
 }
 std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> parseInterface(std::shared_ptr<::app_src_parser_::Parser> parser, bool exported) {
     auto start = parser->location();
@@ -348,7 +360,11 @@ std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>> methods = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>>(std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>{});
     while (!parser->check(::app_src_lexer_::TokenType::RightBrace) && !parser->atEnd()) {
         auto memberStart = parser->location();
+        const auto let_ = parser->match(::app_src_lexer_::TokenType::Let);
         const auto readonly_ = parser->match(::app_src_lexer_::TokenType::Readonly);
+        if (parser->check(::app_src_lexer_::TokenType::Let) || parser->check(::app_src_lexer_::TokenType::Readonly)) {
+            parser->fail(std::string("Interface fields accept only one of 'let' or 'readonly'"));
+        }
         const auto memberName = parser->text(parser->expect(::app_src_lexer_::TokenType::Identifier, std::string("")));
         const auto memberDescription = parseDescription(parser);
         if (parser->check(::app_src_lexer_::TokenType::LeftParen)) {
@@ -362,7 +378,7 @@ std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<
             parser->expect(::app_src_lexer_::TokenType::Colon, std::string(""));
             const auto typeValue = parser->parseTypeAnnotation();
             parser->consumeSemicolon();
-            fields->push_back(std::make_shared<::app_src_ast_::InterfaceField>(std::string("interface-field"), memberName, memberDescription, typeValue, readonly_, std::monostate{}, parser->span(memberStart)));
+            fields->push_back(std::make_shared<::app_src_ast_::InterfaceField>(std::string("interface-field"), memberName, memberDescription, typeValue, let_, readonly_, std::monostate{}, parser->span(memberStart)));
         }
     }
     parser->expect(::app_src_lexer_::TokenType::RightBrace, std::string(""));
@@ -488,6 +504,8 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> parseNativeClass(std::shared_p
     while (!parser->check(::app_src_lexer_::TokenType::RightBrace) && !parser->atEnd()) {
         if ((((parser->check(::app_src_lexer_::TokenType::Identifier) && (parser->peek(1).kind == ::app_src_lexer_::TokenType::LeftParen)) || ((parser->check(::app_src_lexer_::TokenType::Static) && (parser->peek(1).kind == ::app_src_lexer_::TokenType::Identifier)) && (parser->peek(2).kind == ::app_src_lexer_::TokenType::LeftParen))) || ((parser->check(::app_src_lexer_::TokenType::Isolated) && (parser->peek(1).kind == ::app_src_lexer_::TokenType::Identifier)) && (parser->peek(2).kind == ::app_src_lexer_::TokenType::LeftParen))) || (((parser->check(::app_src_lexer_::TokenType::Isolated) && (parser->peek(1).kind == ::app_src_lexer_::TokenType::Static)) && (parser->peek(2).kind == ::app_src_lexer_::TokenType::Identifier)) && (parser->peek(3).kind == ::app_src_lexer_::TokenType::LeftParen))) {
             methods->push_back(parseNativeMethod(parser));
+        } else if (parser->match(::app_src_lexer_::TokenType::Static)) {
+            fields->push_back(parseClassField(parser, true, false));
         } else {
             fields->push_back(parseClassField(parser, false, false));
         }

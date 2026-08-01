@@ -132,6 +132,73 @@ export function testParsesFixedConstClassFields(): none {
   }
 }
 
+export function testParsesLetFieldsAcrossNominalInterfaceAndNativeDeclarations(): none {
+  program := parse("class State { let value: int\nprivate static let shared = 0\nlet weak parent: State | none }\nstruct Pair { let left, right: int }\ninterface Mutable { let value: int\nreadonly id: int\nname: string }\nimport class Native from \"native.hpp\" { static let count: int\nlet value: int }")
+  case program.statements[0] {
+    class_: ClassDeclaration -> {
+      Assert.equal(class_.fields[0].let_, true)
+      Assert.equal(class_.fields[1].let_, true)
+      Assert.equal(class_.fields[1].static_, true)
+      Assert.equal(class_.fields[1].private_, true)
+      Assert.equal(class_.fields[2].let_, true)
+      Assert.equal(class_.fields[2].weak_, true)
+    }
+    _ -> { panic("expected class declaration") }
+  }
+  case program.statements[1] {
+    struct_: ClassDeclaration -> {
+      Assert.equal(struct_.struct_, true)
+      Assert.equal(struct_.fields[0].let_, true)
+      Assert.equal(struct_.fields[0].names.length, 2)
+    }
+    _ -> { panic("expected struct declaration") }
+  }
+  case program.statements[2] {
+    interface_: InterfaceDeclaration -> {
+      Assert.equal(interface_.fields[0].let_, true)
+      Assert.equal(interface_.fields[1].readonly_, true)
+      Assert.equal(interface_.fields[2].let_, false)
+      Assert.equal(interface_.fields[2].readonly_, false)
+    }
+    _ -> { panic("expected interface declaration") }
+  }
+  case program.statements[3] {
+    native_: ClassDeclaration -> {
+      Assert.equal(native_.native_, true)
+      Assert.equal(native_.fields[0].static_, true)
+      Assert.equal(native_.fields[0].let_, true)
+      Assert.equal(native_.fields[1].let_, true)
+    }
+    _ -> { panic("expected native class declaration") }
+  }
+}
+
+export function testRejectsConflictingFieldMutabilityModifiers(): none {
+  parser := Parser { source: "class Bad { let readonly value: int }" }
+  result := catchPanic(=> parser.parse())
+  case result {
+    _: Failure<string> -> { }
+    _ -> { panic("expected parse failure") }
+  }
+  Assert.equal(parser.errorMessage, "Field declarations accept only one of 'let', 'readonly', or 'const'")
+
+  interfaceParser := Parser { source: "interface Bad { readonly let value: int }" }
+  interfaceResult := catchPanic(=> interfaceParser.parse())
+  case interfaceResult {
+    _: Failure<string> -> { }
+    _ -> { panic("expected interface parse failure") }
+  }
+  Assert.equal(interfaceParser.errorMessage, "Interface fields accept only one of 'let' or 'readonly'")
+
+  duplicateParser := Parser { source: "class Bad { static static value: int }" }
+  duplicateResult := catchPanic(=> duplicateParser.parse())
+  case duplicateResult {
+    _: Failure<string> -> { }
+    _ -> { panic("expected duplicate modifier parse failure") }
+  }
+  Assert.stringContains(duplicateParser.errorMessage, "without duplicates")
+}
+
 export function testRetainsDeclarationDescriptions(): none {
   program := parse("class Tool \"A tool.\" { x \"x-axis\", y: int\nfunction run \"Runs.\"(input \"Payload.\": string): string => input }\ninterface Named \"A name.\" { value \"Value.\": string\nread \"Reads.\"(): string }\nenum State \"State.\" { Ready \"Ready now.\", Done }\ntype Label \"Label.\" = string\nreadonly version \"Version.\" = 1")
   case program.statements[0] {

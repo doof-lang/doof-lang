@@ -39,7 +39,7 @@ import { CheckerState } from "./checker-state"
 import { checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
-import { typeError, requireBool } from "./checker-common"
+import { typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { decorateAnnotationWithResolved, blockContainsLoopExit, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -178,9 +178,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         typeError(state, "Undefined identifier \"" + assignment.name + "\"", assignment.span)
         return true
       }
-      if !binding!.mutable {
-        typeError(state, "Cannot assign to \"" + assignment.name + "\" because it is immutable", assignment.span)
-      }
+      validateAssignmentBinding(state, binding!, assignment.span)
       if !isAssignable(valueType, binding!.type_) {
         typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(binding!.type_), assignment.span)
       }
@@ -667,7 +665,7 @@ function declareDestructuredBinding(state: CheckerState, scope: Scope, name: str
 function validateDestructuringTarget(state: CheckerState, scope: Scope, name: string, valueType: ResolvedType, span: SourceSpan): none {
   target := lookup(scope, name)
   if target == none { typeError(state, "Destructuring assignment target \"" + name + "\" is not defined", span); return }
-  if !target!.mutable { typeError(state, "Cannot assign to \"" + name + "\" because it is immutable", span) }
+  validateAssignmentBinding(state, target!, span)
   if !isAssignable(valueType, target!.type_) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(target!.type_), span) }
 }
 
@@ -811,6 +809,9 @@ export function addClassFields(state: CheckerState, scope: Scope, owner: ClassTy
             mutable: !field.readonly_ && !field.const_,
             span: checkerSemanticSpan(field.span),
             module: state.info!.path,
+            fieldMode: if field.readonly_ then "readonly" else if field.const_ then "const" else if field.let_ then "let" else "implicit",
+            fieldOwner: class_.name,
+            fieldGroupSize: field.names.length,
           })
         }
       }

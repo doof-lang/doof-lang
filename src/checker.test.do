@@ -798,7 +798,7 @@ export function testChecksByteCastBuiltin(): none {
 }
 
 export function testChecksActorCreationSyncAsyncPromiseAndRetire(): none {
-  result := checked("class Worker { value: int\nfunction add(amount: int): int { this.value = this.value + amount\nreturn this.value } }\nfunction run(): int { worker: Actor<Worker> := Actor<Worker>(1)\nvalue := worker.add(2)\npromise: Promise<int> := async worker.add(3)\nasyncValue := try! promise.get()\nstate: Worker := retire worker\nreturn value + asyncValue + state.value }")
+  result := checked("class Worker { let value: int\nfunction add(amount: int): int { this.value = this.value + amount\nreturn this.value } }\nfunction run(): int { worker: Actor<Worker> := Actor<Worker>(1)\nvalue := worker.add(2)\npromise: Promise<int> := async worker.add(3)\nasyncValue := try! promise.get()\nstate: Worker := retire worker\nreturn value + asyncValue + state.value }")
   Assert.equal(result.diagnostics.length, 0)
 }
 
@@ -952,7 +952,7 @@ export function testRejectsActorMethodsThatTransitivelyAccessImportedMutableStat
 }
 
 export function testAllowsActorLocalMutationAndRecursiveIsolatedCalls(): none {
-  result := checked("readonly SCALE = 2\nfunction multiply(value: int): int => value * SCALE\nclass Worker { value: int\nfunction step(remaining: int): void { if remaining <= 0 { return }\nthis.value = multiply(this.value)\nstep(remaining - 1) } }\nfunction main(): void { worker := Actor<Worker>(1)\nworker.step(3) }")
+  result := checked("readonly SCALE = 2\nfunction multiply(value: int): int => value * SCALE\nclass Worker { let value: int\nfunction step(remaining: int): void { if remaining <= 0 { return }\nthis.value = multiply(this.value)\nstep(remaining - 1) } }\nfunction main(): void { worker := Actor<Worker>(1)\nworker.step(3) }")
   Assert.equal(result.diagnostics.length, 0)
 }
 
@@ -1287,6 +1287,48 @@ export function testChecksTryValueDeclarations(): none {
 export function testChecksExplicitAndStructuralInterfaceImplementations(): none {
   result := checked("interface Drawable { value: int\nrender(): int }\nclass Point implements Drawable { readonly value: int\nfunction render(): int => value }\nclass Other { value: int\nfunction render(): int => value }\nfunction read(shape: Drawable): int => shape.render()\nfunction main(): int { point := Point { value: 3 }\nother := Other { value: 4 }\nfirst := read(point)\nsecond := read(other)\nreturn first + second }")
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testWarnsOncePerImplicitlyImmutableFieldDeclaration(): none {
+  result := checked("class Counter { value: int\nfunction update(): none { value += 1\nthis.value = value + 1 } }\nfunction updateOutside(counter: Counter): none { counter.value = 3 }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].severity, "warning")
+  Assert.equal(result.diagnostics[0].message, "Field 'Counter.value' is implicitly immutable; add 'let' because it is assigned after construction")
+  Assert.equal(result.diagnostics[0].span.start.line, 1)
+}
+
+export function testChecksExplicitFieldMutabilityModes(): none {
+  mutable := checked("class Counter { let value: int\nfunction update(): none { value += 1\nthis.value = value + 1 } }\nfunction updateOutside(counter: Counter): none { counter.value = 3 }")
+  Assert.equal(mutable.diagnostics.length, 0)
+
+  frozen := checked("class Counter { readonly value: int }\nfunction update(counter: Counter): none { counter.value = 3 }")
+  Assert.equal(frozen.diagnostics.length, 1)
+  Assert.equal(frozen.diagnostics[0].severity, "error")
+  Assert.stringContains(frozen.diagnostics[0].message, "immutable field 'Counter.value'")
+
+  interior := checked("class Buffer { values: int[] }\nfunction append(buffer: Buffer): none { buffer.values.push(1) }")
+  Assert.equal(interior.diagnostics.length, 0)
+}
+
+export function testWarnsForGroupedStaticStructAndNativeFieldWrites(): none {
+  grouped := checked("class Point { x, y: int\nfunction move(): none { x += 1\ny += 1 } }\nstruct State { value: int }\nclass Globals { static count: int = 0 }\nimport class Native from \"native.hpp\" { value: int }\nfunction update(state: State, native: Native): none { state.value = 1\nGlobals.count += 1\nnative.value = 2 }")
+  Assert.equal(grouped.diagnostics.length, 4)
+  Assert.stringContains(grouped.diagnostics[0].message, "add 'let' to the group or split the declaration")
+  for diagnostic of grouped.diagnostics { Assert.equal(diagnostic.severity, "warning") }
+}
+
+export function testChecksInterfaceFieldMutabilityContracts(): none {
+  valid := checked("interface Mutable { let value: int }\nclass Counter implements Mutable { let value: int }\nfunction update(counter: Mutable): none { counter.value += 1 }")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  missingLet := checked("interface Mutable { let value: int }\nclass Counter implements Mutable { value: int }")
+  Assert.equal(missingLet.diagnostics.length > 0, true)
+  Assert.stringContains(missingLet.diagnostics[0].message, "does not satisfy interface")
+
+  legacy := checked("interface View { value: int }\nclass Counter implements View { let value: int }\nfunction update(view: View): none { view.value = 1 }")
+  Assert.equal(legacy.diagnostics.length, 1)
+  Assert.equal(legacy.diagnostics[0].severity, "warning")
+  Assert.stringContains(legacy.diagnostics[0].message, "Field 'View.value' is implicitly immutable")
 }
 
 export function testRejectsClassesThatDoNotSatisfyInterfaces(): none {

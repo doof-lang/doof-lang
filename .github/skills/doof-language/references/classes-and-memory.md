@@ -5,7 +5,7 @@
 ```doof
 class User {
     readonly id: int
-    name: string
+    let name: string
     email: string | none = none
     role: string = "user"
     version: 1
@@ -48,10 +48,17 @@ Current v1 restrictions:
 
 | Modifier | Behavior |
 | --- | --- |
-| none | mutable field |
-| `readonly` | set once at construction |
+| none | shallow immutable field; mutable interiors remain usable |
+| `let` | reassignable field |
+| `readonly` | deeply immutable field |
 | literal value after `:` | compile-time constant, for example `kind: "circle"` or `version: 1` |
 | `private` | file-scoped visibility |
+
+During the compatibility release, assigning a legacy bare field still works
+but warns once at its declaration. Add `let` to fields that are reassigned;
+leave other bare fields unchanged so they become shallow immutable at the
+enforcement cutover. Bare collection fields still allow interior operations
+such as `.push(...)`.
 
 ## Construction
 
@@ -93,7 +100,7 @@ result2: Result = { kind: "Success", value: 42 }
 
 ```doof
 class Counter {
-    count = 0
+    let count = 0
 
     increment(n: int): none { count += n }
     getCount(): int => count

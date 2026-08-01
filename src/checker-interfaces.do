@@ -135,6 +135,7 @@ export function classSatisfiesConcreteInterface(result: AnalysisResult, class_: 
         actualField := findClassField(class_.fields, required.name)
         if actualField == none || actualField!.type_ == none { return false }
         if required.readonly_ && !actualField!.readonly_ { return false }
+        if required.let_ && !actualField!.let_ { return false }
         actualBase := if actualField!.resolvedType == none then resolveAnnotation(actualField!.type_!, classModuleFor(result, classType_.symbol), result, class_.typeParams) else actualField!.resolvedType!
         requiredBase := if required.resolvedType == none then resolveAnnotation(required.type_, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams) else required.resolvedType!
         actual := substituteTypeParams(actualBase, class_.typeParams, classType_.typeArgs)
@@ -169,6 +170,7 @@ export function classSatisfiesInterface(result: AnalysisResult, classSymbol: Sym
             classField := findClassField(class_.fields, required.name)
             if classField == none { return false }
             if required.readonly_ && !classField!.readonly_ { return false }
+            if required.let_ && !classField!.let_ { return false }
             actual := if classField!.resolvedType == none then resolveAnnotation(classField!.type_!, classModuleFor(result, classSymbol), result) else classField!.resolvedType!
             expected := if required.resolvedType == none then resolveAnnotation(required.type_, classModuleFor(result, interfaceSymbol), result) else required.resolvedType!
             if !isAssignable(actual, expected) { return false }

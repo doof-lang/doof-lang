@@ -213,6 +213,9 @@ bool classSatisfiesConcreteInterface(std::shared_ptr<::app_src_analyzer_::Analys
                 if (required->readonly_ && !actualField->readonly_) {
                     return false;
                 }
+                if (required->let_ && !actualField->let_) {
+                    return false;
+                }
                 const auto actualBase = (doof::is_null(actualField->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional(actualField->type_), classModuleFor(result, classType_->symbol), result, class_->typeParams) : doof::unwrap_optional(actualField->resolvedType));
                 const auto requiredBase = (doof::is_null(required->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(required->type_, classModuleFor(result, interfaceType_->symbol), result, interface_->typeParams) : doof::unwrap_optional(required->resolvedType));
                 const auto actual = ::app_src_checker_types_::substituteTypeParams(actualBase, class_->typeParams, classType_->typeArgs);
@@ -265,6 +268,9 @@ bool classSatisfiesInterface(std::shared_ptr<::app_src_analyzer_::AnalysisResult
                             return false;
                         }
                         if (required->readonly_ && !classField->readonly_) {
+                            return false;
+                        }
+                        if (required->let_ && !classField->let_) {
                             return false;
                         }
                         const auto actual = (doof::is_null(classField->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional(classField->type_), classModuleFor(result, classSymbol), result, std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : doof::unwrap_optional(classField->resolvedType));

@@ -647,6 +647,7 @@ export class ClassField {
   defaultValue: Expression | none
   static_: bool
   const_: bool = false
+  let_: bool = false
   readonly_: bool
   weak_: bool = false
   private_: bool
@@ -674,6 +675,7 @@ export class InterfaceField {
   name: string
   description: string = ""
   type_: TypeAnnotation
+  let_: bool = false
   readonly_: bool = false
   resolvedType: ResolvedType | none = none
   span: SourceSpan

@@ -30,6 +30,13 @@ function emitMonomorphized(source: string): ModuleEmission {
   return graph.modules[0]
 }
 
+export function testKeepsLetFieldLoweringRepresentationNeutral(): none {
+  bare := emit("class State { value: int }\nfunction main(): int => State { value: 1 }.value")
+  mutable := emit("class State { let value: int }\nfunction main(): int => State { value: 1 }.value")
+  Assert.equal(mutable.header, bare.header)
+  Assert.equal(mutable.source, bare.source)
+}
+
 export function testEmitsIOSAppEntryWithoutNativeMain(): none {
   analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function main(): void {}" }]).analyze("/main.do")
   Assert.equal(analysis.diagnostics.length, 0)

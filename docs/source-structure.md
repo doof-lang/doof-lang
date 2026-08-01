@@ -48,7 +48,7 @@ modules own the following decisions:
 | `checker-symbols.do` | Scope/binding operations, builtins, annotation resolution, symbol/declaration lookup |
 | `checker-types.do` | Resolved-type construction, comparison, assignability, substitution, and display |
 | `checker-resolution.do` | Type annotations, members, indexing, callable fields, and type-argument constraints |
-| `checker-common.do` | State-aware diagnostics and expression type decoration |
+| `checker-common.do` | State-aware diagnostics, expression type decoration, and centralized assignment-binding validation |
 | `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, and control-flow continuation |
 | `checker-expressions.do` | Expression dispatch, operators, narrowing, assignment, and case expressions |
 | `checker-calls.do` | Calls, construction, lambdas, generic calls, and actor-call boundaries |
@@ -65,6 +65,11 @@ modules own the following decisions:
 When a check produces information needed for lowering, add an explicit
 decoration to `ast.do`, populate it in the owning checker module, require it in
 `checker-validation.do`, and consume it in the focused emitter.
+
+Field mutability provenance is carried from the AST into semantic bindings.
+Implicit, explicit member, destructuring, and yield-block writes must use the
+shared assignment validator rather than reconstructing field policy in an
+emitter or individual expression branch.
 
 ## C++ emission
 

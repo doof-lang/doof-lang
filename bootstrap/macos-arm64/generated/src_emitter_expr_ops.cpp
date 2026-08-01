@@ -96,6 +96,10 @@ std::string emitAs(std::shared_ptr<::app_src_ast_::AsExpression> expression, std
                             {
                                 auto _case_subject = target;
                                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
+                                    const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
+                                    if (class_->symbol->kind == std::string("struct")) {
+                                        return ((((((((std::string("[&]() -> ") + resultCpp) + std::string(" { auto _as_value = ")) + source) + std::string("; if (_as_value.has_value()) return ")) + success) + std::string("{_as_value.value()}; return ")) + failure) + std::string("{\"Nullable narrowing failed\"}; }()"));
+                                    }
                                     return ((((((((std::string("[&]() -> ") + resultCpp) + std::string(" { auto _as_value = ")) + source) + std::string("; if (_as_value) return ")) + success) + std::string("{_as_value}; return ")) + failure) + std::string("{\"Nullable narrowing failed\"}; }()"));
                             }
                             else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
