@@ -57,6 +57,8 @@ namespace app_src_native_build_ {
     using NativeCompileTaskBatch = std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>;
     std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>> tasks, int32_t maximumWorkers = 8);
     std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::string outputDirectory, std::string outputPath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native, bool release = false, std::string platform = std::string(""), std::shared_ptr<std::vector<std::string>> wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool wasm = false);
+    void appendReleaseLinkerArguments(std::shared_ptr<std::vector<std::string>> arguments, std::string platform, bool swiftLink);
+    void appendLinkerOption(std::shared_ptr<std::vector<std::string>> arguments, std::string option, bool swiftLink);
     std::string replaceSourceExtension(std::string path, std::string extension);
     std::shared_ptr<std::vector<std::string>> copyArguments(std::shared_ptr<std::vector<std::string>> source);
     std::shared_ptr<std::vector<std::string>> copyNativeCompileArguments(std::shared_ptr<std::vector<std::string>> source, bool cSource);

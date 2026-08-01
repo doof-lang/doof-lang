@@ -162,13 +162,49 @@ export function testAddsReleaseDefaultsBeforeManifestFlags(): none {
       compilerFlags: ["-O3"],
     },
     true,
+    "macos",
   )
   Assert.equal(plan.compileTasks[0].arguments[0], "-std=c++17")
   Assert.equal(plan.compileTasks[0].arguments[1], "-O2")
   Assert.equal(plan.compileTasks[0].arguments[2], "-DNDEBUG")
-  Assert.equal(plan.compileTasks[0].arguments[3], "-DAPP_RELEASE=1")
+  Assert.equal(plan.compileTasks[0].arguments[3], "-ffunction-sections")
+  Assert.equal(plan.compileTasks[0].arguments[4], "-fdata-sections")
+  Assert.equal(plan.compileTasks[0].arguments[5], "-flto")
+  Assert.equal(plan.compileTasks[0].arguments[6], "-DAPP_RELEASE=1")
   Assert.equal(plan.compileTasks[0].arguments.contains("-O3"), true)
+  Assert.equal(plan.linkArguments.contains("-flto"), true)
+  Assert.equal(plan.linkArguments.contains("-Wl,-dead_strip"), true)
+  Assert.equal(plan.linkArguments.contains("-Wl,-S"), true)
+  Assert.equal(plan.linkArguments.contains("-Wl,-x"), true)
   Assert.equal(plan.outputPath, "/tmp/dist/demo")
+}
+
+export function testAddsElfReleaseLinkerDefaultsOnlyForReleaseBuilds(): none {
+  release := planNativeCompile(
+    "g++", "/tmp/generated", "/tmp/dist/demo", [],
+    NativeBuildPlan { linkerFlags: ["-pthread"] }, true, "linux",
+  )
+  Assert.equal(release.linkArguments.contains("-Wl,--gc-sections"), true)
+  Assert.equal(release.linkArguments.contains("-Wl,--strip-all"), true)
+  Assert.equal(release.linkArguments.indexOf("-Wl,--strip-all") < release.linkArguments.indexOf("-pthread"), true)
+
+  debug := planNativeCompile("g++", "/tmp/generated", "/tmp/generated/demo", [], NativeBuildPlan {}, false, "linux")
+  Assert.equal(debug.linkArguments.contains("-Wl,--gc-sections"), false)
+  Assert.equal(debug.linkArguments.contains("-Wl,--strip-all"), false)
+}
+
+export function testUsesSwiftLinkerSpellingForAppleReleaseDefaults(): none {
+  plan := planNativeCompile(
+    "clang++", "/tmp/generated", "/tmp/dist/demo", [],
+    NativeBuildPlan { sourceFiles: ["native/bridge.swift"] }, true, "macos",
+  )
+  Assert.equal(plan.linker, "swiftc")
+  Assert.equal(plan.compileTasks[0].arguments.contains("-flto"), false)
+  Assert.equal(plan.linkArguments.contains("-flto"), false)
+  Assert.equal(plan.linkArguments.contains("-Wl,-dead_strip"), false)
+  Assert.equal(plan.linkArguments.contains("-dead_strip"), true)
+  Assert.equal(plan.linkArguments.contains("-S"), true)
+  Assert.equal(plan.linkArguments.contains("-x"), true)
 }
 
 export function testPlansClangPrecompiledRuntimeForMultiModuleBuilds(): none {

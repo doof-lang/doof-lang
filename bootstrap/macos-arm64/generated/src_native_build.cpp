@@ -135,10 +135,16 @@ std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCo
     return doof::array_drainToReadonly(readonlyBatches, "", 0);
 }
 std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::string outputDirectory, std::string outputPath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native, bool release, std::string platform, std::shared_ptr<std::vector<std::string>> wasmExportNames, bool wasm) {
+    const auto swiftLink = hasSwiftSource(native->sourceFiles);
     std::shared_ptr<std::vector<std::string>> compileArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-std=c++17")});
     if (release) {
         compileArguments->push_back(std::string("-O2"));
         compileArguments->push_back(std::string("-DNDEBUG"));
+        compileArguments->push_back(std::string("-ffunction-sections"));
+        compileArguments->push_back(std::string("-fdata-sections"));
+        if (!wasm && !swiftLink) {
+            compileArguments->push_back(std::string("-flto"));
+        }
     }
     if (wasm) {
         compileArguments->push_back(std::string("-Oz"));
@@ -237,10 +243,15 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::
         linkArguments->push_back(std::string("-framework"));
         linkArguments->push_back(framework);
     }
-    const auto swiftLink = hasSwiftSource(native->sourceFiles);
     if (swiftLink && (platform == std::string("macos"))) {
         linkArguments->push_back(std::string("-Xlinker"));
         linkArguments->push_back(std::string("-lc++"));
+    }
+    if (release && !wasm) {
+        if (!swiftLink) {
+            linkArguments->push_back(std::string("-flto"));
+        }
+        appendReleaseLinkerArguments(linkArguments, platform, swiftLink);
     }
     if (!wasm) {
         const auto& _iterable_10 = native->linkerFlags;
@@ -266,6 +277,24 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::
     linkArguments->push_back(std::string("-o"));
     linkArguments->push_back(outputPath);
     return std::make_shared<NativeCompilePlan>(compiler, (swiftLink ? std::string("swiftc") : compiler), precompiledHeaderTask, compileTasks, linkArguments, outputPath);
+}
+void appendReleaseLinkerArguments(std::shared_ptr<std::vector<std::string>> arguments, std::string platform, bool swiftLink) {
+    if ((platform == std::string("macos")) || doof::string_startsWith(platform, std::string("ios-"))) {
+        appendLinkerOption(arguments, std::string("-dead_strip"), swiftLink);
+        appendLinkerOption(arguments, std::string("-S"), swiftLink);
+        appendLinkerOption(arguments, std::string("-x"), swiftLink);
+        return;
+    }
+    appendLinkerOption(arguments, std::string("--gc-sections"), swiftLink);
+    appendLinkerOption(arguments, std::string("--strip-all"), swiftLink);
+}
+void appendLinkerOption(std::shared_ptr<std::vector<std::string>> arguments, std::string option, bool swiftLink) {
+    if (swiftLink) {
+        arguments->push_back(std::string("-Xlinker"));
+        arguments->push_back(option);
+    } else {
+        arguments->push_back((std::string("-Wl,") + option));
+    }
 }
 std::string replaceSourceExtension(std::string path, std::string extension) {
     if (doof::string_endsWith(path, std::string(".cpp"))) {

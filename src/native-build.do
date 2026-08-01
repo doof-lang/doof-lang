@@ -64,12 +64,22 @@ export function planNativeCompile(
   wasmExportNames: string[] = [],
   wasm: bool = false,
 ): NativeCompilePlan {
+  swiftLink := hasSwiftSource(native.sourceFiles)
   let compileArguments: string[] = ["-std=c++17"]
   // Release defaults precede manifest flags so packages can intentionally
   // override optimization while still receiving the NDEBUG contract.
   if release {
     compileArguments.push("-O2")
     compileArguments.push("-DNDEBUG")
+    // Keep generated and native functions independently discardable. Apple
+    // and GNU-compatible linkers use different flags below, but both need
+    // section granularity to reliably remove unreachable code and data.
+    compileArguments.push("-ffunction-sections")
+    compileArguments.push("-fdata-sections")
+    // Full LTO is supported by both Clang and GCC-compatible drivers and is
+    // especially valuable for generated template-heavy C++. Keep mixed Swift
+    // builds on ordinary objects for portability across Swift linker drivers.
+    if !wasm && !swiftLink { compileArguments.push("-flto") }
   }
   if wasm {
     compileArguments.push("-Oz")
@@ -176,10 +186,13 @@ export function planNativeCompile(
     linkArguments.push("-framework")
     linkArguments.push(framework)
   }
-  swiftLink := hasSwiftSource(native.sourceFiles)
   if swiftLink && platform == "macos" {
     linkArguments.push("-Xlinker")
     linkArguments.push("-lc++")
+  }
+  if release && !wasm {
+    if !swiftLink { linkArguments.push("-flto") }
+    appendReleaseLinkerArguments(linkArguments, platform, swiftLink)
   }
   if !wasm { for flag of native.linkerFlags { linkArguments.push(flag) } }
   if wasm {
@@ -203,6 +216,27 @@ export function planNativeCompile(
     compileTasks,
     linkArguments,
     outputPath,
+  }
+}
+
+/** Adds release-only dead-code elimination and symbol stripping. */
+function appendReleaseLinkerArguments(arguments: string[], platform: string, swiftLink: bool): none {
+  if platform == "macos" || platform.startsWith("ios-") {
+    appendLinkerOption(arguments, "-dead_strip", swiftLink)
+    appendLinkerOption(arguments, "-S", swiftLink)
+    appendLinkerOption(arguments, "-x", swiftLink)
+    return
+  }
+  appendLinkerOption(arguments, "--gc-sections", swiftLink)
+  appendLinkerOption(arguments, "--strip-all", swiftLink)
+}
+
+function appendLinkerOption(arguments: string[], option: string, swiftLink: bool): none {
+  if swiftLink {
+    arguments.push("-Xlinker")
+    arguments.push(option)
+  } else {
+    arguments.push("-Wl," + option)
   }
 }
 
