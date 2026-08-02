@@ -84,16 +84,16 @@ doof::Result<std::shared_ptr<AcquiredPackage>, std::string> AcquiredPackage::fro
     }
     return doof::Success<std::shared_ptr<AcquiredPackage>>{std::make_shared<AcquiredPackage>(_field_source, _field_rootDirectory, _field_mutable_.value())};
 }
-std::string workspacePackageAcquisitionRoot(std::string workspaceRoot) {
+std::string workspacePackageAcquisitionRoot(const std::string& workspaceRoot) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{workspaceRoot, std::string(".doof"), std::string("packages")}));
 }
-std::string packageAcquisitionPath(std::string packagesRoot, std::string packageName) {
+std::string packageAcquisitionPath(const std::string& packagesRoot, const std::string& packageName) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{packagesRoot, packageName}));
 }
-std::string packageAcquisitionReceiptPath(std::string packageRoot) {
+std::string packageAcquisitionReceiptPath(const std::string& packageRoot) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{packageRoot, PACKAGE_ACQUISITION_RECEIPT}));
 }
-doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPackage(std::shared_ptr<ExactPackageSource> source, std::string packagesRoot) {
+doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPackage(const std::shared_ptr<ExactPackageSource>& source, const std::string& packagesRoot) {
     if (static_cast<int32_t>(source->commit.size()) != 40) {
         return doof::Failure<std::string>{ ((std::string("Exact package ") + source->name) + std::string(" requires a 40-character commit")) };
     }
@@ -167,7 +167,7 @@ doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPacka
     }
     return doof::Success<std::shared_ptr<AcquiredPackage>>{ std::make_shared<AcquiredPackage>(source, root, false) };
 }
-bool validPackageAcquisitionName(std::string name) {
+bool validPackageAcquisitionName(const std::string& name) {
     if (((name == std::string("")) || doof::string_startsWith(name, std::string("/"))) || doof::string_contains(name, std::string("\\"))) {
         return false;
     }
@@ -179,7 +179,7 @@ bool validPackageAcquisitionName(std::string name) {
     }
     return true;
 }
-bool reusableAcquiredPackage(std::string root, std::shared_ptr<ExactPackageSource> source) {
+bool reusableAcquiredPackage(const std::string& root, const std::shared_ptr<ExactPackageSource>& source) {
     if (!::doof_fs::isDirectory(root) || !acquisitionReceiptMatches(packageAcquisitionReceiptPath(root), source)) {
         return false;
     }
@@ -189,7 +189,7 @@ bool reusableAcquiredPackage(std::string root, std::shared_ptr<ExactPackageSourc
     }
     return true;
 }
-bool acquisitionReceiptMatches(std::string path, std::shared_ptr<ExactPackageSource> source) {
+bool acquisitionReceiptMatches(const std::string& path, const std::shared_ptr<ExactPackageSource>& source) {
     auto _binding_value_19 = ::doof_fs::readText(path);
     if (doof::is_failure(_binding_value_19)) {
         const auto& receiptSource = _binding_value_19;
@@ -215,7 +215,7 @@ bool acquisitionReceiptMatches(std::string path, std::shared_ptr<ExactPackageSou
     const auto commit = acquisitionReceiptString(object, std::string("commit"));
     return (((((schemaVersion == PACKAGE_ACQUISITION_SCHEMA_VERSION) && (name == source->name)) && (url == ::app_src_std_catalog_::canonicalDependencyUrl(source->url))) && (ref == source->ref)) && (commit == doof::string_toLowerCase(source->commit)));
 }
-std::optional<std::string> acquisitionReceiptString(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name) {
+std::optional<std::string> acquisitionReceiptString(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
     auto _binding_value_22 = doof::map_get(object, name, "", 0);
     if (doof::is_failure(_binding_value_22)) {
         const auto& value = _binding_value_22;
@@ -230,7 +230,7 @@ std::optional<std::string> acquisitionReceiptString(std::shared_ptr<doof::ordere
     const auto text = doof::success_value(_binding_value_23);
     return text;
 }
-std::optional<int32_t> acquisitionReceiptInt(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name) {
+std::optional<int32_t> acquisitionReceiptInt(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
     auto _binding_value_24 = doof::map_get(object, name, "", 0);
     if (doof::is_failure(_binding_value_24)) {
         const auto& value = _binding_value_24;
@@ -245,7 +245,7 @@ std::optional<int32_t> acquisitionReceiptInt(std::shared_ptr<doof::ordered_map<s
     const auto number = doof::success_value(_binding_value_25);
     return number;
 }
-std::string renderAcquisitionReceipt(std::shared_ptr<ExactPackageSource> source) {
+std::string renderAcquisitionReceipt(const std::shared_ptr<ExactPackageSource>& source) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> receipt = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     doof::map_set(receipt, std::string("schemaVersion"), doof::json_value(PACKAGE_ACQUISITION_SCHEMA_VERSION), "", 0);
     doof::map_set(receipt, std::string("name"), doof::json_value(source->name), "", 0);
@@ -254,7 +254,7 @@ std::string renderAcquisitionReceipt(std::shared_ptr<ExactPackageSource> source)
     doof::map_set(receipt, std::string("commit"), doof::json_value(doof::string_toLowerCase(source->commit)), "", 0);
     return (::doof_json::format(doof::json_value(receipt)) + std::string("\n"));
 }
-doof::Result<void, std::string> validateAcquiredPackage(std::string root, std::shared_ptr<ExactPackageSource> source) {
+doof::Result<void, std::string> validateAcquiredPackage(const std::string& root, const std::shared_ptr<ExactPackageSource>& source) {
     const auto manifestPath = ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{root, std::string("doof.json")}));
     auto _binding_value_26 = ::doof_fs::readText(manifestPath);
     if (doof::is_failure(_binding_value_26)) {
@@ -291,7 +291,7 @@ doof::Result<void, std::string> validateAcquiredPackage(std::string root, std::s
     }
     return doof::Success<void>{};
 }
-doof::Result<std::string, std::string> packageCommand(std::string command, std::shared_ptr<std::vector<std::string>> arguments) {
+doof::Result<std::string, std::string> packageCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments) {
     auto _binding_value_31 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, std::nullopt, nullptr));
     if (doof::is_failure(_binding_value_31)) {
         const auto error = doof::failure_error(_binding_value_31);
@@ -304,7 +304,7 @@ doof::Result<std::string, std::string> packageCommand(std::string command, std::
     }
     return doof::Success<std::string>{ output };
 }
-doof::Result<void, std::string> ensurePackageDirectory(std::string path) {
+doof::Result<void, std::string> ensurePackageDirectory(const std::string& path) {
     if ((path == std::string("")) || ::doof_fs::exists(path)) {
         return doof::Success<void>{};
     }
@@ -319,7 +319,7 @@ doof::Result<void, std::string> ensurePackageDirectory(std::string path) {
     }
     return doof::Success<void>{};
 }
-doof::Result<void, std::string> removePackageTree(std::string path) {
+doof::Result<void, std::string> removePackageTree(const std::string& path) {
     if (!::doof_fs::exists(path)) {
         return doof::Success<void>{};
     }

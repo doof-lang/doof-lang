@@ -46,11 +46,11 @@ namespace app_src_std_catalog_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<StdCatalog>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::string canonicalDependencyUrl(std::string value);
-    doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(std::string source);
-    std::shared_ptr<StdCatalogPackage> stdCatalogPackage(std::shared_ptr<StdCatalog> catalog, std::string name);
-    doof::Result<std::string, std::string> catalogString(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name);
-    doof::Result<int32_t, std::string> catalogInt(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name);
+    std::string canonicalDependencyUrl(const std::string& value);
+    doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(const std::string& source);
+    std::shared_ptr<StdCatalogPackage> stdCatalogPackage(const std::shared_ptr<StdCatalog>& catalog, const std::string& name);
+    doof::Result<std::string, std::string> catalogString(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name);
+    doof::Result<int32_t, std::string> catalogInt(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name);
 }
 
 namespace app_src_std_catalog_ {

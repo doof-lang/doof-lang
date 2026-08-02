@@ -448,7 +448,7 @@ items.forEach()
 
 ## Function Types
 
-Function types include parameter names as part of the type signature:
+Function types record parameter names as part of the signature:
 
 ```javascript
 type Callback = (value: int, description: string): none
@@ -456,6 +456,11 @@ type Predicate<T> = (item: T): bool
 type Transform = (input: int): int
 type BinaryOp = (left: int, right: int): int
 ```
+
+Parameter names support named calls, diagnostics, and reflection, but they do
+not affect function-type compatibility. Compatibility compares parameter count
+and parameter types in declaration order, plus the return type. For example,
+`(value: int): string` is compatible with `(item: int): string`.
 
 ---
 

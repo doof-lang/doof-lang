@@ -18,7 +18,7 @@ using namespace ::app_src_ast_;
 
 std::shared_ptr<std::vector<std::string>> BUILTIN_TYPES;
 
-std::shared_ptr<AnalysisResult> ModuleAnalyzer::analyze(std::string entry) {
+std::shared_ptr<AnalysisResult> ModuleAnalyzer::analyze(const std::string& entry) {
     (this->modules = std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{}));
     (this->diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}));
     (this->inProgress = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
@@ -32,7 +32,7 @@ std::shared_ptr<AnalysisResult> ModuleAnalyzer::analyze(std::string entry) {
     }
     return std::make_shared<AnalysisResult>(modules, diagnostics);
 }
-std::shared_ptr<ModuleInfo> ModuleAnalyzer::analyzeModule(std::string path, std::optional<std::string> inheritedMockRootPath) {
+std::shared_ptr<ModuleInfo> ModuleAnalyzer::analyzeModule(const std::string& path, const std::optional<std::string>& inheritedMockRootPath) {
     const auto existing = findModule(path);
     if (!doof::is_null(existing)) {
         return existing;
@@ -81,7 +81,7 @@ std::shared_ptr<ModuleInfo> ModuleAnalyzer::analyzeModule(std::string path, std:
     }
     return info;
 }
-void ModuleAnalyzer::collectSymbols(std::shared_ptr<ModuleInfo> info) {
+void ModuleAnalyzer::collectSymbols(const std::shared_ptr<ModuleInfo>& info) {
     const auto& _iterable_4 = info->program->statements;
     for (const auto& statement : *_iterable_4) {
         const auto symbol = symbolFor(statement, info->path);
@@ -95,7 +95,7 @@ void ModuleAnalyzer::collectSymbols(std::shared_ptr<ModuleInfo> info) {
         }
     }
 }
-void ModuleAnalyzer::decorateDeclarationSymbol(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> statement, std::shared_ptr<::app_src_semantic_::Symbol> symbol) {
+void ModuleAnalyzer::decorateDeclarationSymbol(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>& statement, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol) {
     {
         auto _case_subject = statement;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
@@ -110,7 +110,7 @@ void ModuleAnalyzer::decorateDeclarationSymbol(std::variant<std::shared_ptr<::ap
     }
     }
 }
-std::shared_ptr<::app_src_semantic_::Symbol> ModuleAnalyzer::symbolFor(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> statement, std::string module) {
+std::shared_ptr<::app_src_semantic_::Symbol> ModuleAnalyzer::symbolFor(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>& statement, const std::string& module) {
     {
         auto _case_subject = statement;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
@@ -152,10 +152,10 @@ std::shared_ptr<::app_src_semantic_::Symbol> ModuleAnalyzer::symbolFor(std::vari
     doof::unreachable();
     return nullptr;
 }
-std::shared_ptr<::app_src_semantic_::Symbol> ModuleAnalyzer::exportedSymbol(std::shared_ptr<::app_src_semantic_::Symbol> symbol, std::string exportedName) {
+std::shared_ptr<::app_src_semantic_::Symbol> ModuleAnalyzer::exportedSymbol(const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::string& exportedName) {
     return std::make_shared<::app_src_semantic_::Symbol>(symbol->kind, exportedName, symbol->module, true, ((symbol->originalName == std::string("")) ? symbol->name : symbol->originalName), symbol->native_, symbol->nativeHeader, symbol->nativeCppName, symbol->implementations, symbol->implementedInterfaceTypes);
 }
-void ModuleAnalyzer::resolveImports(std::shared_ptr<ModuleInfo> info) {
+void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
     const auto& _iterable_5 = info->program->statements;
     for (const auto& statement : *_iterable_5) {
         {
@@ -200,7 +200,7 @@ void ModuleAnalyzer::resolveImports(std::shared_ptr<ModuleInfo> info) {
         }
     }
 }
-void ModuleAnalyzer::resolveExportLists(std::shared_ptr<ModuleInfo> info) {
+void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info) {
     const auto& _iterable_7 = info->program->statements;
     for (const auto& statement : *_iterable_7) {
         {
@@ -246,13 +246,13 @@ void ModuleAnalyzer::resolveExportLists(std::shared_ptr<ModuleInfo> info) {
         }
     }
 }
-void ModuleAnalyzer::resolveNamedTypes(std::shared_ptr<ModuleInfo> info) {
+void ModuleAnalyzer::resolveNamedTypes(const std::shared_ptr<ModuleInfo>& info) {
     const auto& _iterable_10 = info->program->statements;
     for (const auto& statement : *_iterable_10) {
         visitStatementTypes(statement, info);
     }
 }
-void ModuleAnalyzer::visitStatementTypes(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> statement, std::shared_ptr<ModuleInfo> info) {
+void ModuleAnalyzer::visitStatementTypes(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>& statement, const std::shared_ptr<ModuleInfo>& info) {
     {
         auto _case_subject = statement;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
@@ -322,7 +322,7 @@ void ModuleAnalyzer::visitStatementTypes(std::variant<std::shared_ptr<::app_src_
     }
     }
 }
-void ModuleAnalyzer::visitFunctionTypes(std::shared_ptr<::app_src_ast_::FunctionDeclaration> fn, std::shared_ptr<ModuleInfo> info, std::shared_ptr<std::vector<std::string>> ownerTypeParams) {
+void ModuleAnalyzer::visitFunctionTypes(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn, const std::shared_ptr<ModuleInfo>& info, const std::shared_ptr<std::vector<std::string>>& ownerTypeParams) {
     std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_16 = ownerTypeParams;
     for (const auto& parameter : *_iterable_16) {
@@ -343,7 +343,7 @@ void ModuleAnalyzer::visitFunctionTypes(std::shared_ptr<::app_src_ast_::Function
         visitType(doof::unwrap_optional(fn->returnType), info, typeParams);
     }
 }
-void ModuleAnalyzer::visitTypeParameterConstraints(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::TypeParameterConstraint>>> constraints, std::shared_ptr<ModuleInfo> info, std::shared_ptr<std::vector<std::string>> typeParams) {
+void ModuleAnalyzer::visitTypeParameterConstraints(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::TypeParameterConstraint>>>& constraints, const std::shared_ptr<ModuleInfo>& info, const std::shared_ptr<std::vector<std::string>>& typeParams) {
     const auto& _iterable_19 = constraints;
     for (const auto& constraint : *_iterable_19) {
         if (!doof::is_null(constraint->type_)) {
@@ -351,7 +351,7 @@ void ModuleAnalyzer::visitTypeParameterConstraints(std::shared_ptr<std::vector<s
         }
     }
 }
-void ModuleAnalyzer::visitType(std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> annotation, std::shared_ptr<ModuleInfo> info, std::shared_ptr<std::vector<std::string>> typeParams) {
+void ModuleAnalyzer::visitType(const std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>& annotation, const std::shared_ptr<ModuleInfo>& info, const std::shared_ptr<std::vector<std::string>>& typeParams) {
     {
         auto _case_subject = annotation;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
@@ -405,7 +405,7 @@ void ModuleAnalyzer::visitType(std::variant<std::shared_ptr<::app_src_ast_::Name
     }
     }
 }
-bool ModuleAnalyzer::containsTypeParam(std::shared_ptr<std::vector<std::string>> typeParams, std::string name) {
+bool ModuleAnalyzer::containsTypeParam(const std::shared_ptr<std::vector<std::string>>& typeParams, const std::string& name) {
     const auto& _iterable_24 = typeParams;
     for (const auto& typeParam : *_iterable_24) {
         if (typeParam == name) {
@@ -414,7 +414,7 @@ bool ModuleAnalyzer::containsTypeParam(std::shared_ptr<std::vector<std::string>>
     }
     return false;
 }
-std::shared_ptr<ModuleInfo> ModuleAnalyzer::findModule(std::string path) {
+std::shared_ptr<ModuleInfo> ModuleAnalyzer::findModule(const std::string& path) {
     const auto& _iterable_25 = this->modules;
     for (const auto& module : *_iterable_25) {
         if (module->path == path) {
@@ -423,9 +423,9 @@ std::shared_ptr<ModuleInfo> ModuleAnalyzer::findModule(std::string path) {
     }
     return nullptr;
 }
-void ModuleAnalyzer::keepStatementTypes(std::shared_ptr<::app_src_ast_::Block> block, std::shared_ptr<::app_src_ast_::ExportDeclaration> export_, std::shared_ptr<::app_src_ast_::ImportDeclaration> import_, std::shared_ptr<::app_src_ast_::MockImportDirective> mockImport, std::shared_ptr<::app_src_ast_::IfStatement> if_, std::shared_ptr<::app_src_ast_::CaseStatement> case_, std::shared_ptr<::app_src_ast_::WhileStatement> while_, std::shared_ptr<::app_src_ast_::ForStatement> for_, std::shared_ptr<::app_src_ast_::ForOfStatement> forOf, std::shared_ptr<::app_src_ast_::WithStatement> with_, std::shared_ptr<::app_src_ast_::ReturnStatement> return_, std::shared_ptr<::app_src_ast_::YieldStatement> yield_, std::shared_ptr<::app_src_ast_::BreakStatement> break_, std::shared_ptr<::app_src_ast_::ContinueStatement> continue_, std::shared_ptr<::app_src_ast_::ExpressionStatement> expression, std::shared_ptr<::app_src_ast_::DestructuringStatement> destructuring) {
+void ModuleAnalyzer::keepStatementTypes(const std::shared_ptr<::app_src_ast_::Block>& block, const std::shared_ptr<::app_src_ast_::ExportDeclaration>& export_, const std::shared_ptr<::app_src_ast_::ImportDeclaration>& import_, const std::shared_ptr<::app_src_ast_::MockImportDirective>& mockImport, const std::shared_ptr<::app_src_ast_::IfStatement>& if_, const std::shared_ptr<::app_src_ast_::CaseStatement>& case_, const std::shared_ptr<::app_src_ast_::WhileStatement>& while_, const std::shared_ptr<::app_src_ast_::ForStatement>& for_, const std::shared_ptr<::app_src_ast_::ForOfStatement>& forOf, const std::shared_ptr<::app_src_ast_::WithStatement>& with_, const std::shared_ptr<::app_src_ast_::ReturnStatement>& return_, const std::shared_ptr<::app_src_ast_::YieldStatement>& yield_, const std::shared_ptr<::app_src_ast_::BreakStatement>& break_, const std::shared_ptr<::app_src_ast_::ContinueStatement>& continue_, const std::shared_ptr<::app_src_ast_::ExpressionStatement>& expression, const std::shared_ptr<::app_src_ast_::DestructuringStatement>& destructuring) {
 }
-std::string ModuleAnalyzer::resolveImportPath(std::shared_ptr<ModuleInfo> info, std::string specifier) {
+std::string ModuleAnalyzer::resolveImportPath(const std::shared_ptr<ModuleInfo>& info, const std::string& specifier) {
     if (doof::is_null(info->mockRootPath)) {
         return this->resolver->resolve(info->path, specifier);
     }
@@ -440,7 +440,7 @@ std::string ModuleAnalyzer::resolveImportPath(std::shared_ptr<ModuleInfo> info, 
     }
     return this->resolver->resolve(doof::unwrap_optional(info->mockRootPath), replacement.value());
 }
-void ModuleAnalyzer::validateMockImportDirectives(std::shared_ptr<ModuleInfo> info, std::optional<std::string> inheritedMockRootPath) {
+void ModuleAnalyzer::validateMockImportDirectives(const std::shared_ptr<ModuleInfo>& info, const std::optional<std::string>& inheritedMockRootPath) {
     if (static_cast<int32_t>((info->mockImportDirectives)->size()) == 0) {
         return;
     }
@@ -482,7 +482,7 @@ void ModuleAnalyzer::validateMockImportDirectives(std::shared_ptr<ModuleInfo> in
         }
     }
 }
-std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> collectMockImportDirectives(std::shared_ptr<::app_src_ast_::Program> program) {
+std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> collectMockImportDirectives(const std::shared_ptr<::app_src_ast_::Program>& program) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> directives = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>>(std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>{});
     const auto& _iterable_31 = program->statements;
     for (const auto& statement : *_iterable_31) {
@@ -498,7 +498,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>
     }
     return directives;
 }
-std::string relativeModuleSpecifier(std::string fromModule, std::string toModule) {
+std::string relativeModuleSpecifier(const std::string& fromModule, const std::string& toModule) {
     const auto fromComponents = parentPathComponents(doof::string_replaceAll(fromModule, std::string("\\"), std::string("/")));
     const auto toComponents = doof::string_split(moduleSpecifierPath(doof::string_replaceAll(toModule, std::string("\\"), std::string("/"))), std::string("/"));
     auto common = 0;
@@ -517,14 +517,14 @@ std::string relativeModuleSpecifier(std::string fromModule, std::string toModule
     }
     return (doof::string_startsWith(result, std::string(".")) ? result : (std::string("./") + result));
 }
-std::shared_ptr<std::vector<std::string>> parentPathComponents(std::string path) {
+std::shared_ptr<std::vector<std::string>> parentPathComponents(const std::string& path) {
     const auto components = doof::string_split(path, std::string("/"));
     if (static_cast<int32_t>((components)->size()) > 0) {
         const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 440, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }
     return components;
 }
-std::string moduleSpecifierPath(std::string path) {
+std::string moduleSpecifierPath(const std::string& path) {
     if (doof::string_endsWith(path, std::string("/index.do"))) {
         return doof::string_substring(path, 0, (static_cast<int32_t>(path.size()) - 9));
     }
@@ -533,7 +533,7 @@ std::string moduleSpecifierPath(std::string path) {
     }
     return path;
 }
-std::optional<std::string> findMockReplacement(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> directives, std::string sourceSpecifier, std::string dependencySpecifier) {
+std::optional<std::string> findMockReplacement(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>>& directives, const std::string& sourceSpecifier, const std::string& dependencySpecifier) {
     const auto& _iterable_32 = directives;
     for (const auto& directive : *_iterable_32) {
         if (directive->sourcePattern != sourceSpecifier) {
@@ -548,13 +548,13 @@ std::optional<std::string> findMockReplacement(std::shared_ptr<std::vector<std::
     }
     return std::nullopt;
 }
-std::shared_ptr<ModuleAnalyzer> createAnalyzer(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sources) {
+std::shared_ptr<ModuleAnalyzer> createAnalyzer(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources) {
     return std::make_shared<ModuleAnalyzer>(std::make_shared<::app_src_resolver_::ModuleResolver>(sources, ::app_src_resolver_::noSourceLoader, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{})), std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
 }
-std::shared_ptr<ModuleAnalyzer> createAnalyzerWithLoader(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sources, doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)> loader) {
+std::shared_ptr<ModuleAnalyzer> createAnalyzerWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader) {
     return std::make_shared<ModuleAnalyzer>(std::make_shared<::app_src_resolver_::ModuleResolver>(sources, loader, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{})), std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
 }
-std::shared_ptr<::app_src_semantic_::Symbol> findSymbol(std::shared_ptr<ModuleInfo> info, std::string name) {
+std::shared_ptr<::app_src_semantic_::Symbol> findSymbol(const std::shared_ptr<ModuleInfo>& info, const std::string& name) {
     const auto& _iterable_34 = info->symbols;
     for (const auto& symbol : *_iterable_34) {
         if (symbol->name == name) {
@@ -563,7 +563,7 @@ std::shared_ptr<::app_src_semantic_::Symbol> findSymbol(std::shared_ptr<ModuleIn
     }
     return nullptr;
 }
-std::shared_ptr<::app_src_semantic_::Symbol> findExport(std::shared_ptr<ModuleInfo> info, std::string name) {
+std::shared_ptr<::app_src_semantic_::Symbol> findExport(const std::shared_ptr<ModuleInfo>& info, const std::string& name) {
     const auto& _iterable_35 = info->exports;
     for (const auto& symbol : *_iterable_35) {
         if (symbol->name == name) {
@@ -572,7 +572,7 @@ std::shared_ptr<::app_src_semantic_::Symbol> findExport(std::shared_ptr<ModuleIn
     }
     return nullptr;
 }
-bool isBuiltin(std::string name) {
+bool isBuiltin(const std::string& name) {
     if ((name == std::string("JsonSerializable")) || (name == std::string("Reflectable"))) {
         return true;
     }
@@ -584,7 +584,7 @@ bool isBuiltin(std::string name) {
     }
     return false;
 }
-bool contains(std::shared_ptr<std::vector<std::string>> values, std::string value) {
+bool contains(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
     const auto& _iterable_37 = values;
     for (const auto& item : *_iterable_37) {
         if (item == value) {
@@ -593,7 +593,7 @@ bool contains(std::shared_ptr<std::vector<std::string>> values, std::string valu
     }
     return false;
 }
-void addError(std::shared_ptr<ModuleInfo> info, std::string message, ::app_src_ast_::SourceSpan span) {
+void addError(const std::shared_ptr<ModuleInfo>& info, const std::string& message, ::app_src_ast_::SourceSpan span) {
     info->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, semanticSpan(span), info->path, std::string("")));
 }
 ::app_src_semantic_::SemanticSpan semanticSpan(::app_src_ast_::SourceSpan span) {

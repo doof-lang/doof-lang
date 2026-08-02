@@ -58,7 +58,7 @@ namespace app_src_cli_ {
     static doof::Result<std::shared_ptr<CliParseResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     std::string cliUsage();
-    std::shared_ptr<CliParseResult> parseCli(std::shared_ptr<std::vector<std::string>> args);
+    std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::string>>& args);
 }
 
 namespace app_src_cli_ {

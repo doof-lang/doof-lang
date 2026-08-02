@@ -62,19 +62,19 @@ namespace app_src_ios_app_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<IOSPackageConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::string iosPackageArchiveName(std::string executableName, std::string version);
-    doof::Result<std::string, std::string> iosExactApplicationIdentifier(std::string profileApplicationIdentifier, std::string bundleId);
-    doof::Result<std::string, std::string> iosTargetTriple(std::string minimumDeploymentTarget, std::string destination, std::string architecture);
-    std::shared_ptr<std::vector<std::string>> iosCodesignArguments(std::string targetPath, std::string identity, std::string entitlementsPath = std::string(""));
-    std::string renderIOSInfoPlist(std::shared_ptr<IOSAppConfig> config);
-    std::string renderIOSMainSource(std::string executableName);
+    std::string iosPackageArchiveName(const std::string& executableName, const std::string& version);
+    doof::Result<std::string, std::string> iosExactApplicationIdentifier(const std::string& profileApplicationIdentifier, const std::string& bundleId);
+    doof::Result<std::string, std::string> iosTargetTriple(const std::string& minimumDeploymentTarget, const std::string& destination, const std::string& architecture);
+    std::shared_ptr<std::vector<std::string>> iosCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& entitlementsPath = std::string(""));
+    std::string renderIOSInfoPlist(const std::shared_ptr<IOSAppConfig>& config);
+    std::string renderIOSMainSource(const std::string& executableName);
     std::string renderIOSIconSetContents();
-    std::string objectiveCIdentifier(std::string value);
-    std::string escapeObjectiveCString(std::string value);
-    std::string plistString(std::string key, std::string value);
+    std::string objectiveCIdentifier(const std::string& value);
+    std::string escapeObjectiveCString(const std::string& value);
+    std::string plistString(const std::string& key, const std::string& value);
     std::string plistIndent(int32_t depth);
-    std::string renderPlistValue(doof::JsonValue value, int32_t depth);
-    std::string escapePlistText(std::string value);
+    std::string renderPlistValue(const doof::JsonValue& value, int32_t depth);
+    std::string escapePlistText(const std::string& value);
 }
 
 namespace app_src_ios_app_ {

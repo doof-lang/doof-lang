@@ -116,7 +116,7 @@ bool DecodedLineStream::next() {
 std::string DecodedLineStream::value() {
     return this->currentValue.value();
 }
-Stream__string blobStreamToLineStream(Stream__readonly_array_byte source) {
+Stream__string blobStreamToLineStream(const Stream__readonly_array_byte& source) {
     Stream__string stream = std::make_shared<DecodedLineStream>(source, ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian), ::doof_blob::NativeBlobReader::constructor(std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), ::std_::blob::types::Endian::LittleEndian), std::nullopt, std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{10, 13}), false, false);
     return stream;
 }

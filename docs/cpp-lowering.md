@@ -21,6 +21,13 @@ builtin types use the same native-symbol metadata as declared native types.
 Generated headers own declaration ordering and dependency includes; sources own
 definitions and executable entry wrappers.
 
+Named functions and methods borrow immutable parameters with `const&` when the
+C++ carrier is reference-like or variant-heavy. Cheap scalar carriers,
+direct-value structs, and unresolved generic parameters stay by value so Doof
+value semantics are preserved. Function-valued callback signatures stay by
+value because callbacks may queue or actor-dispatch arguments beyond the
+caller's stack frame.
+
 Actors, promises, escaping mutable captures, `Result`, checked narrowing,
 destructuring, JSON serialization, metadata/invoke, and WebAssembly wrappers
 have dedicated lowering modules. Representation changes require focused emitter

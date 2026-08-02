@@ -159,7 +159,7 @@ void WebSocketConnection::close() {
     this->commands->close();
     this->events->close();
 }
-doof::Result<std::shared_ptr<WebSocketConnection>, std::shared_ptr<::std_::http::types::HttpError>> connectWebSocket(std::string url, std::shared_ptr<WebSocketOptions> options) {
+doof::Result<std::shared_ptr<WebSocketConnection>, std::shared_ptr<::std_::http::types::HttpError>> connectWebSocket(const std::string& url, const std::shared_ptr<WebSocketOptions>& options) {
     if ((options->commandCapacity <= 0) || (options->eventCapacity <= 0)) {
         doof::panic(std::string("WebSocket channel capacities must be positive"));
     }
@@ -192,7 +192,7 @@ doof::Result<std::shared_ptr<WebSocketConnection>, std::shared_ptr<::std_::http:
     actualConnection->native->start();
     return doof::Success<std::shared_ptr<WebSocketConnection>>{ actualConnection };
 }
-void emitLocalWebSocketEvent(std::shared_ptr<WebSocketConnection> connection, std::variant<std::shared_ptr<WebSocketOpen>, std::shared_ptr<WebSocketText>, std::shared_ptr<WebSocketBinary>, std::shared_ptr<WebSocketWritable>, std::shared_ptr<WebSocketClose>, std::shared_ptr<WebSocketError>> event) {
+void emitLocalWebSocketEvent(const std::shared_ptr<WebSocketConnection>& connection, const std::variant<std::shared_ptr<WebSocketOpen>, std::shared_ptr<WebSocketText>, std::shared_ptr<WebSocketBinary>, std::shared_ptr<WebSocketWritable>, std::shared_ptr<WebSocketClose>, std::shared_ptr<WebSocketError>>& event) {
     const auto ignored = connection->eventSender->send(event, std::nullopt);
 }
 WebSocketState nativeStateToPublic(int32_t state) {
@@ -216,7 +216,7 @@ WebSocketState nativeStateToPublic(int32_t state) {
     throw std::runtime_error("non-exhaustive case expression");
 }();
 }
-std::shared_ptr<::std_::http::types::HttpError> parseWebSocketError(std::string raw) {
+std::shared_ptr<::std_::http::types::HttpError> parseWebSocketError(const std::string& raw) {
     const auto firstSeparator = doof::string_indexOf(raw, std::string("|"));
     if (firstSeparator < 0) {
         return std::make_shared<::std_::http::types::HttpError>(std::string("transport"), std::string("0"), raw);
@@ -228,7 +228,7 @@ std::shared_ptr<::std_::http::types::HttpError> parseWebSocketError(std::string 
     }
     return std::make_shared<::std_::http::types::HttpError>(doof::string_substring(raw, 0, firstSeparator), doof::string_substring(remainder, 0, secondSeparator), doof::string_slice(remainder, (secondSeparator + 1)));
 }
-std::string renderHeaders(std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers) {
+std::string renderHeaders(const std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>& headers) {
     auto text = std::string("");
     const auto& _iterable_3 = headers;
     for (const auto& header : *_iterable_3) {

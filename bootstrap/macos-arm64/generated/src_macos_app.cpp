@@ -180,7 +180,7 @@ doof::Result<std::shared_ptr<MacOSPackageConfig>, std::string> MacOSPackageConfi
     }
     return doof::Success<std::shared_ptr<MacOSPackageConfig>>{std::make_shared<MacOSPackageConfig>(_field_distDirectory.value(), _field_signing.value(), _field_identity.value(), _field_sandbox.value(), _field_entitlementsPath.value())};
 }
-std::string macOSPackageArchiveName(std::string executableName, std::string version) {
+std::string macOSPackageArchiveName(const std::string& executableName, const std::string& version) {
     auto safeVersion = std::string("");
     const auto allowed = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-");
     for (int32_t index = 0; index < static_cast<int32_t>(version.size()); ++index) {
@@ -189,7 +189,7 @@ std::string macOSPackageArchiveName(std::string executableName, std::string vers
     }
     return (((executableName + std::string("-")) + safeVersion) + std::string("-macos.zip"));
 }
-std::string renderMacOSInfoPlist(std::shared_ptr<MacOSAppConfig> config) {
+std::string renderMacOSInfoPlist(const std::shared_ptr<MacOSAppConfig>& config) {
     auto body = std::string("");
     (body = (body + plistString(std::string("CFBundleDevelopmentRegion"), std::string("en"))));
     (body = (body + plistString(std::string("CFBundleDisplayName"), config->displayName)));
@@ -215,7 +215,7 @@ std::string renderMacOSInfoPlist(std::shared_ptr<MacOSAppConfig> config) {
     }
     return ((((std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n") + std::string("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n")) + std::string("<plist version=\"1.0\">\n<dict>\n")) + body) + std::string("</dict>\n</plist>\n"));
 }
-std::shared_ptr<std::vector<std::string>> macOSCodesignArguments(std::string targetPath, std::string identity, std::string signing, std::string entitlementsPath) {
+std::shared_ptr<std::vector<std::string>> macOSCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& signing, const std::string& entitlementsPath) {
     auto arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("--force"), std::string("--sign"), identity});
     if (signing != std::string("ad-hoc")) {
         arguments->push_back(std::string("--options"));
@@ -229,7 +229,7 @@ std::shared_ptr<std::vector<std::string>> macOSCodesignArguments(std::string tar
     arguments->push_back(targetPath);
     return arguments;
 }
-std::string plistString(std::string key, std::string value) {
+std::string plistString(const std::string& key, const std::string& value) {
     return ((((std::string("\t<key>") + escapePlistText(key)) + std::string("</key>\n\t<string>")) + escapePlistText(value)) + std::string("</string>\n"));
 }
 std::string plistIndent(int32_t depth) {
@@ -239,7 +239,7 @@ std::string plistIndent(int32_t depth) {
     }
     return result;
 }
-std::string renderPlistValue(doof::JsonValue value, int32_t depth) {
+std::string renderPlistValue(const doof::JsonValue& value, int32_t depth) {
     const auto indent = plistIndent(depth);
     {
         auto _case_subject = value;
@@ -292,7 +292,7 @@ std::string renderPlistValue(doof::JsonValue value, int32_t depth) {
     }
     doof::panic(std::string("unhandled plist value"));
 }
-std::string escapePlistText(std::string value) {
+std::string escapePlistText(const std::string& value) {
     return doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(value, std::string("&"), std::string("&amp;")), std::string("<"), std::string("&lt;")), std::string(">"), std::string("&gt;")), std::string("\""), std::string("&quot;")), std::string("'"), std::string("&apos;"));
 }
 }

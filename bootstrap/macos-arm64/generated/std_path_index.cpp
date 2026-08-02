@@ -6,7 +6,7 @@
 #include "std_stream_index.hpp"
 
 namespace std_::path::index {
-doof::Result<std::string, std::string> normalizePathResult(doof::Result<std::string, std::string> result) {
+doof::Result<std::string, std::string> normalizePathResult(const doof::Result<std::string, std::string>& result) {
     return [&]() -> doof::Result<std::string, std::string> {
     auto _case_subject = result;
     if (std::holds_alternative<doof::Success<std::string>>(_case_subject)) {
@@ -26,22 +26,22 @@ doof::Result<std::string, std::string> homeDirectory() {
 std::string tempDirectory() {
     return join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{::doof_path::tempDirectory()}));
 }
-doof::Result<std::string, std::string> dataDirectory(std::optional<std::string> appId) {
+doof::Result<std::string, std::string> dataDirectory(const std::optional<std::string>& appId) {
     return normalizePathResult(::doof_path::dataDirectory(appId));
 }
-doof::Result<std::string, std::string> cacheDirectory(std::optional<std::string> appId) {
+doof::Result<std::string, std::string> cacheDirectory(const std::optional<std::string>& appId) {
     return normalizePathResult(::doof_path::cacheDirectory(appId));
 }
 doof::Result<std::string, std::string> currentWorkingDirectory() {
     return normalizePathResult(::doof_path::currentWorkingDirectory());
 }
-doof::Result<std::string, std::string> absolute(std::string path) {
+doof::Result<std::string, std::string> absolute(const std::string& path) {
     return normalizePathResult(::doof_path::absolute(path));
 }
 doof::Result<std::string, std::string> resourcesDirectory() {
     return normalizePathResult(::doof_path::resourcesDirectory());
 }
-doof::Result<std::string, std::string> resourcePath(std::string path) {
+doof::Result<std::string, std::string> resourcePath(const std::string& path) {
     auto _try_value_1 = resourcesDirectory();
     if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
     const auto resources = doof::success_value(_try_value_1);
@@ -51,7 +51,7 @@ doof::Result<std::string, std::string> resourcePath(std::string path) {
     }
     return doof::Failure<std::string>{ std::string("Resource path cannot escape the resources directory") };
 }
-std::string join(std::shared_ptr<std::vector<std::string>> parts) {
+std::string join(const std::shared_ptr<std::vector<std::string>>& parts) {
     auto absolute = false;
     std::shared_ptr<std::vector<std::string>> segments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_2 = parts;
@@ -82,7 +82,7 @@ std::string join(std::shared_ptr<std::vector<std::string>> parts) {
     }
     return renderPath(segments, absolute);
 }
-std::string dirname(std::string path) {
+std::string dirname(const std::string& path) {
     const auto normalized = join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{path}));
     if (normalized == std::string("/")) {
         return std::string("/");
@@ -96,7 +96,7 @@ std::string dirname(std::string path) {
     }
     return doof::string_substring(normalized, 0, separator);
 }
-std::string basename(std::string path) {
+std::string basename(const std::string& path) {
     const auto normalized = join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{path}));
     if (normalized == std::string("/")) {
         return std::string("");
@@ -107,7 +107,7 @@ std::string basename(std::string path) {
     }
     return doof::string_slice(normalized, (separator + 1));
 }
-std::string stem(std::string path) {
+std::string stem(const std::string& path) {
     const auto name = basename(path);
     if (((name == std::string("")) || (name == std::string("."))) || (name == std::string(".."))) {
         return name;
@@ -118,7 +118,7 @@ std::string stem(std::string path) {
     }
     return doof::string_substring(name, 0, dotIndex);
 }
-std::string extension(std::string path) {
+std::string extension(const std::string& path) {
     const auto name = basename(path);
     if (((name == std::string("")) || (name == std::string("."))) || (name == std::string(".."))) {
         return std::string("");
@@ -129,10 +129,10 @@ std::string extension(std::string path) {
     }
     return doof::string_slice(name, dotIndex);
 }
-bool isAbsolute(std::string path) {
+bool isAbsolute(const std::string& path) {
     return doof::string_startsWith(path, std::string("/"));
 }
-std::string renderPath(std::shared_ptr<std::vector<std::string>> segments, bool absolute) {
+std::string renderPath(const std::shared_ptr<std::vector<std::string>>& segments, bool absolute) {
     if (static_cast<int32_t>((segments)->size()) == 0) {
         return (absolute ? std::string("/") : std::string("."));
     }
@@ -145,7 +145,7 @@ std::string renderPath(std::shared_ptr<std::vector<std::string>> segments, bool 
     }
     return output;
 }
-int32_t lastSeparatorIndex(std::string path) {
+int32_t lastSeparatorIndex(const std::string& path) {
     auto index = (static_cast<int32_t>(path.size()) - 1);
     while (index >= 0) {
         if (doof::string_at(path, index, "", 0) == U'\u002F') {
@@ -155,7 +155,7 @@ int32_t lastSeparatorIndex(std::string path) {
     }
     return -1;
 }
-int32_t lastDotIndex(std::string path) {
+int32_t lastDotIndex(const std::string& path) {
     auto index = (static_cast<int32_t>(path.size()) - 1);
     while (index >= 0) {
         if (doof::string_at(path, index, "", 0) == U'\u002E') {
@@ -171,16 +171,16 @@ doof::Result<std::string, std::string> _homeDirectory() {
 std::string _tempDirectory() {
     return ::doof_path::tempDirectory();
 }
-doof::Result<std::string, std::string> _dataDirectory(std::optional<std::string> appId) {
+doof::Result<std::string, std::string> _dataDirectory(const std::optional<std::string>& appId) {
     return ::doof_path::dataDirectory(appId);
 }
-doof::Result<std::string, std::string> _cacheDirectory(std::optional<std::string> appId) {
+doof::Result<std::string, std::string> _cacheDirectory(const std::optional<std::string>& appId) {
     return ::doof_path::cacheDirectory(appId);
 }
 doof::Result<std::string, std::string> _currentWorkingDirectory() {
     return ::doof_path::currentWorkingDirectory();
 }
-doof::Result<std::string, std::string> _absolute(std::string path) {
+doof::Result<std::string, std::string> _absolute(const std::string& path) {
     return ::doof_path::absolute(path);
 }
 doof::Result<std::string, std::string> _resourcesDirectory() {

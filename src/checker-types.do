@@ -265,8 +265,14 @@ export function typeName(resolvedType: ResolvedType): string {
 }
 
 export function sameType(left: ResolvedType, right: ResolvedType): bool {
-  if typeName(left) == typeName(right) { return true }
+  if left.kind != right.kind { return false }
   case left {
+    leftPrimitive: PrimitiveType -> {
+      case right {
+        rightPrimitive: PrimitiveType -> { return leftPrimitive.name == rightPrimitive.name }
+        _ -> { return false }
+      }
+    }
     leftArray: ArrayResolvedType -> {
       case right {
         rightArray: ArrayResolvedType -> {
@@ -338,9 +344,18 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
         rightFunction: FunctionType -> {
           if leftFunction.params.length != rightFunction.params.length { return false }
           for i of 0..<leftFunction.params.length {
+            if leftFunction.params[i].name != rightFunction.params[i].name { return false }
             if !sameType(leftFunction.params[i].type_, rightFunction.params[i].type_) { return false }
           }
           return sameType(leftFunction.returnType, rightFunction.returnType)
+        }
+        _ -> { return false }
+      }
+    }
+    leftEnum: EnumType -> {
+      case right {
+        rightEnum: EnumType -> {
+          return leftEnum.symbol.module == rightEnum.symbol.module && leftEnum.symbol.name == rightEnum.symbol.name
         }
         _ -> { return false }
       }
@@ -386,6 +401,29 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
         _ -> { return false }
       }
     }
+    leftParameter: TypeParameterType -> {
+      case right {
+        rightParameter: TypeParameterType -> { return leftParameter.name == rightParameter.name }
+        _ -> { return false }
+      }
+    }
+    leftMetadata: ClassMetadataResolvedType -> {
+      case right {
+        rightMetadata: ClassMetadataResolvedType -> { return sameType(leftMetadata.classType, rightMetadata.classType) }
+        _ -> { return false }
+      }
+    }
+    leftReflection: MethodReflectionResolvedType -> {
+      case right {
+        rightReflection: MethodReflectionResolvedType -> { return sameType(leftReflection.classType, rightReflection.classType) }
+        _ -> { return false }
+      }
+    }
+    _: RangeResolvedType -> { return true }
+    _: JsonValueResolvedType -> { return true }
+    _: NoneType -> { return true }
+    _: NeverType -> { return true }
+    _: UnknownType -> { return true }
     _ -> { return false }
   }
   return false
@@ -459,6 +497,18 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
     valuePromise: PromiseType -> {
       case target {
         targetPromise: PromiseType -> { return isAssignable(valuePromise.valueType, targetPromise.valueType) }
+        _ -> { }
+      }
+    }
+    valueFunction: FunctionType -> {
+      case target {
+        targetFunction: FunctionType -> {
+          if valueFunction.params.length != targetFunction.params.length { return false }
+          for i of 0..<valueFunction.params.length {
+            if !sameType(valueFunction.params[i].type_, targetFunction.params[i].type_) { return false }
+          }
+          return isAssignable(valueFunction.returnType, targetFunction.returnType)
+        }
         _ -> { }
       }
     }

@@ -22,7 +22,7 @@ using namespace ::app_src_json_semantics_;
 using namespace ::app_src_checker_actor_boundary_;
 using namespace ::app_src_checker_actor_lifecycle_;
 using namespace ::app_src_checker_symbols_;
-::app_src_ast_::SourceSpan symbolSpan(std::shared_ptr<::app_src_analyzer_::ModuleInfo> info, std::string name) {
+::app_src_ast_::SourceSpan symbolSpan(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& name) {
     const auto& _iterable_1 = info->program->statements;
     for (const auto& statement : *_iterable_1) {
         if (::app_src_checker_symbols_::symbolName(statement) == name) {
@@ -31,7 +31,7 @@ using namespace ::app_src_checker_symbols_;
     }
     return info->program->span;
 }
-std::shared_ptr<::app_src_analyzer_::ModuleInfo> findModule(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string path) {
+std::shared_ptr<::app_src_analyzer_::ModuleInfo> findModule(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path) {
     const auto& _iterable_2 = result->modules;
     for (const auto& module : *_iterable_2) {
         if (module->path == path) {
@@ -40,7 +40,7 @@ std::shared_ptr<::app_src_analyzer_::ModuleInfo> findModule(std::shared_ptr<::ap
     }
     return nullptr;
 }
-void discoverInterfaceImplementations(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result) {
+void discoverInterfaceImplementations(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     const auto& _iterable_3 = result->modules;
     for (const auto& interfaceModule : *_iterable_3) {
         const auto& _iterable_4 = interfaceModule->symbols;
@@ -65,7 +65,7 @@ void discoverInterfaceImplementations(std::shared_ptr<::app_src_analyzer_::Analy
         }
     }
 }
-bool containsImplementation(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>> implementations, std::shared_ptr<::app_src_semantic_::Symbol> candidate) {
+bool containsImplementation(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>& implementations, const std::shared_ptr<::app_src_semantic_::Symbol>& candidate) {
     const auto& _iterable_7 = implementations;
     for (const auto& implementation : *_iterable_7) {
         if ((implementation->module == candidate->module) && (implementation->name == candidate->name)) {
@@ -74,7 +74,7 @@ bool containsImplementation(std::shared_ptr<std::vector<std::shared_ptr<::app_sr
     }
     return false;
 }
-void addImplementedInterfaceType(std::shared_ptr<::app_src_semantic_::Symbol> symbol, std::string name) {
+void addImplementedInterfaceType(const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::string& name) {
     const auto& _iterable_8 = symbol->implementedInterfaceTypes;
     for (const auto& existing : *_iterable_8) {
         if (existing == name) {
@@ -83,7 +83,7 @@ void addImplementedInterfaceType(std::shared_ptr<::app_src_semantic_::Symbol> sy
     }
     symbol->implementedInterfaceTypes->push_back(name);
 }
-void registerConcreteInterfaceImplementations(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::shared_ptr<::app_src_semantic_::InterfaceType> interface_) {
+void registerConcreteInterfaceImplementations(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::InterfaceType>& interface_) {
     const auto& _iterable_9 = result->modules;
     for (const auto& module : *_iterable_9) {
         const auto& _iterable_10 = module->symbols;
@@ -109,7 +109,7 @@ void registerConcreteInterfaceImplementations(std::shared_ptr<::app_src_analyzer
         }
     }
 }
-bool concreteTypes(std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>> types) {
+bool concreteTypes(const std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>& types) {
     const auto& _iterable_11 = types;
     for (const auto& type_ : *_iterable_11) {
         {
@@ -195,7 +195,7 @@ bool concreteTypes(std::shared_ptr<std::vector<std::variant<std::shared_ptr<::ap
     }
     return true;
 }
-bool classSatisfiesConcreteInterface(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::shared_ptr<::app_src_ast_::ClassDeclaration> class_, std::shared_ptr<::app_src_semantic_::ClassType> classType_, std::shared_ptr<::app_src_semantic_::InterfaceType> interfaceType_) {
+bool classSatisfiesConcreteInterface(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::shared_ptr<::app_src_semantic_::ClassType>& classType_, const std::shared_ptr<::app_src_semantic_::InterfaceType>& interfaceType_) {
     const auto declaration = ::app_src_checker_symbols_::declarationFor(result, interfaceType_->symbol);
     if (doof::is_null(declaration)) {
         return false;
@@ -247,7 +247,7 @@ bool classSatisfiesConcreteInterface(std::shared_ptr<::app_src_analyzer_::Analys
     doof::unreachable();
     return false;
 }
-bool classSatisfiesInterface(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::shared_ptr<::app_src_semantic_::Symbol> classSymbol, std::shared_ptr<::app_src_semantic_::Symbol> interfaceSymbol) {
+bool classSatisfiesInterface(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::Symbol>& classSymbol, const std::shared_ptr<::app_src_semantic_::Symbol>& interfaceSymbol) {
     const auto classDeclaration = ::app_src_checker_symbols_::declarationFor(result, classSymbol);
     const auto interfaceDeclaration = ::app_src_checker_symbols_::declarationFor(result, interfaceSymbol);
     if (doof::is_null(classDeclaration) || doof::is_null(interfaceDeclaration)) {
@@ -304,7 +304,7 @@ bool classSatisfiesInterface(std::shared_ptr<::app_src_analyzer_::AnalysisResult
     doof::unreachable();
     return false;
 }
-bool sameConcreteMethodType(std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> actual, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> expected) {
+bool sameConcreteMethodType(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& actual, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& expected) {
     {
         auto _case_subject = actual;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
@@ -336,7 +336,7 @@ bool sameConcreteMethodType(std::variant<std::shared_ptr<::app_src_semantic_::Pr
     doof::unreachable();
     return false;
 }
-std::shared_ptr<::app_src_ast_::ClassField> findClassField(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ClassField>>> fields, std::string name) {
+std::shared_ptr<::app_src_ast_::ClassField> findClassField(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ClassField>>>& fields, const std::string& name) {
     const auto& _iterable_17 = fields;
     for (const auto& field : *_iterable_17) {
         const auto& _iterable_18 = field->names;
@@ -348,7 +348,7 @@ std::shared_ptr<::app_src_ast_::ClassField> findClassField(std::shared_ptr<std::
     }
     return nullptr;
 }
-std::shared_ptr<::app_src_ast_::FunctionDeclaration> findClassMethod(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>> methods, std::string name, bool static_) {
+std::shared_ptr<::app_src_ast_::FunctionDeclaration> findClassMethod(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>>& methods, const std::string& name, bool static_) {
     const auto& _iterable_19 = methods;
     for (const auto& method : *_iterable_19) {
         if ((method->name == name) && (method->static_ == static_)) {
@@ -357,7 +357,7 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> findClassMethod(std::shared
     }
     return nullptr;
 }
-bool sameFunctionSignature(std::shared_ptr<::app_src_ast_::FunctionDeclaration> classMethod, std::shared_ptr<::app_src_ast_::FunctionDeclaration> interfaceMethod, std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::shared_ptr<::app_src_semantic_::Symbol> classSymbol, std::shared_ptr<::app_src_semantic_::Symbol> interfaceSymbol) {
+bool sameFunctionSignature(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& classMethod, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& interfaceMethod, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::Symbol>& classSymbol, const std::shared_ptr<::app_src_semantic_::Symbol>& interfaceSymbol) {
     const auto classModule = classModuleFor(result, classSymbol);
     const auto interfaceModule = classModuleFor(result, interfaceSymbol);
     for (int32_t i = 0; i < static_cast<int32_t>((classMethod->params)->size()); ++i) {
@@ -371,7 +371,7 @@ bool sameFunctionSignature(std::shared_ptr<::app_src_ast_::FunctionDeclaration> 
     const auto interfaceReturn = (doof::is_null(interfaceMethod->returnType) ? ::app_src_checker_types_::noneType() : ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional(interfaceMethod->returnType), interfaceModule, result, std::make_shared<std::vector<std::string>>(std::vector<std::string>{})));
     return ::app_src_checker_types_::isAssignable(classReturn, interfaceReturn);
 }
-std::shared_ptr<::app_src_analyzer_::ModuleInfo> classModuleFor(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::shared_ptr<::app_src_semantic_::Symbol> symbol) {
+std::shared_ptr<::app_src_analyzer_::ModuleInfo> classModuleFor(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol) {
     const auto module = findModule(result, symbol->module);
     if (doof::is_null(module)) {
         doof::panic((std::string("Missing module for symbol ") + symbol->name));

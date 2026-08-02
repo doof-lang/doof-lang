@@ -26,7 +26,7 @@ namespace app_src_diagnostics_ {
 namespace app_src_diagnostics_ {
     using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
-    bool hasErrorDiagnostics(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics);
+    bool hasErrorDiagnostics(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
 }
 
 namespace app_src_diagnostics_ {

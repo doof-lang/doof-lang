@@ -78,7 +78,7 @@ namespace std_::http::index {
     int32_t timeoutMs = 30000;
     bool followRedirects = true;
     HttpRequest(std::string method, std::string url, std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers, std::shared_ptr<std::vector<uint8_t>> body, int32_t timeoutMs, bool followRedirects) : method(method), url(url), headers(headers), body(body), timeoutMs(timeoutMs), followRedirects(followRedirects) {}
-    std::optional<std::string> header(std::string name);
+    std::optional<std::string> header(const std::string& name);
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<HttpRequest>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
@@ -89,7 +89,7 @@ namespace std_::http::index {
     std::shared_ptr<std::vector<uint8_t>> body;
     HttpResponse(int32_t status, std::string statusText, std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers, std::shared_ptr<std::vector<uint8_t>> body) : status(status), statusText(statusText), headers(headers), body(body) {}
     bool ok();
-    std::optional<std::string> header(std::string name);
+    std::optional<std::string> header(const std::string& name);
     std::shared_ptr<std::vector<uint8_t>> getBlob();
     std::string getText();
     Stream__string getLineStream();
@@ -102,18 +102,18 @@ namespace std_::http::index {
     HttpClient(std::shared_ptr<::NativeHttpClient> native) : native(native) {}
 };
     std::shared_ptr<HttpClient> createClient();
-    std::shared_ptr<HttpRequest> newRequest(std::string method, std::string url);
-    doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> get(std::shared_ptr<HttpClient> client, std::string url);
-    doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> postJsonValue(std::shared_ptr<HttpClient> client, std::string url, doof::JsonValue body);
-    std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> parseCookieHeader(std::string header);
-    std::string renderCookieHeader(std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> cookies);
-    std::shared_ptr<SetCookie> parseSetCookieHeader(std::string header);
-    std::string renderSetCookieHeader(std::shared_ptr<SetCookie> cookie);
-    std::optional<std::string> cookieValue(std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> cookies, std::string name);
-    doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> send(std::shared_ptr<HttpClient> client, std::shared_ptr<HttpRequest> request);
-    std::string renderHeaders(std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers);
-    std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> parseHeaders(std::string headerText);
-    std::shared_ptr<::std_::http::types::HttpError> parseError(std::string raw);
+    std::shared_ptr<HttpRequest> newRequest(const std::string& method, const std::string& url);
+    doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> get(const std::shared_ptr<HttpClient>& client, const std::string& url);
+    doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> postJsonValue(const std::shared_ptr<HttpClient>& client, const std::string& url, const doof::JsonValue& body);
+    std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> parseCookieHeader(const std::string& header);
+    std::string renderCookieHeader(const std::shared_ptr<std::vector<std::shared_ptr<Cookie>>>& cookies);
+    std::shared_ptr<SetCookie> parseSetCookieHeader(const std::string& header);
+    std::string renderSetCookieHeader(const std::shared_ptr<SetCookie>& cookie);
+    std::optional<std::string> cookieValue(const std::shared_ptr<std::vector<std::shared_ptr<Cookie>>>& cookies, const std::string& name);
+    doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> send(const std::shared_ptr<HttpClient>& client, const std::shared_ptr<HttpRequest>& request);
+    std::string renderHeaders(const std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>& headers);
+    std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> parseHeaders(const std::string& headerText);
+    std::shared_ptr<::std_::http::types::HttpError> parseError(const std::string& raw);
 }
 
 namespace std_::http::index {

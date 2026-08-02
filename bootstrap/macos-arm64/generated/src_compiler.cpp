@@ -44,13 +44,13 @@ doof::Result<std::shared_ptr<Compilation>, std::string> Compilation::fromJsonVal
     auto _field_diagnostics = [&]() { const auto* _array = doof::json_as_array(_iterator_diagnostics->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(::app_src_semantic_::Diagnostic::fromJsonValue(_element, _lenient))); } return _values; }();
     return doof::Success<std::shared_ptr<Compilation>>{std::make_shared<Compilation>(_field_emission, _field_diagnostics)};
 }
-std::shared_ptr<Compilation> compile(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sources, std::string entry, bool coverage) {
+std::shared_ptr<Compilation> compile(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const std::string& entry, bool coverage) {
     return compileInternal(sources, entry, ::app_src_resolver_::noSourceLoader, std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>(std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>{}), std::string("executable"), coverage);
 }
-std::shared_ptr<Compilation> compileWithLoader(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sources, std::string entry, doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)> loader, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>> namespaceMappings, std::string entryMode, bool coverage) {
+std::shared_ptr<Compilation> compileWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const std::string& entry, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>& namespaceMappings, const std::string& entryMode, bool coverage) {
     return compileInternal(sources, entry, loader, namespaceMappings, entryMode, coverage);
 }
-std::shared_ptr<Compilation> compileInternal(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sources, std::string entry, doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)> loader, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>> namespaceMappings, std::string entryMode, bool coverage) {
+std::shared_ptr<Compilation> compileInternal(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const std::string& entry, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>& namespaceMappings, const std::string& entryMode, bool coverage) {
     ::app_src_emitter_names_::configureModuleNamespaces(namespaceMappings);
     const auto analysis = ::app_src_analyzer_::createAnalyzerWithLoader(sources, loader)->analyze(entry);
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{});
@@ -111,7 +111,7 @@ std::shared_ptr<Compilation> compileInternal(std::shared_ptr<std::vector<std::sh
     }
     return std::make_shared<Compilation>(emission, diagnostics);
 }
-void checkModuleDependencies(std::string path, std::shared_ptr<::app_src_analyzer_::AnalysisResult> analysis, std::shared_ptr<::app_src_checker_::ModuleChecker> checker, std::shared_ptr<std::vector<std::string>> checkedPaths, std::shared_ptr<std::vector<std::string>> visitingPaths, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics) {
+void checkModuleDependencies(const std::string& path, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& analysis, const std::shared_ptr<::app_src_checker_::ModuleChecker>& checker, const std::shared_ptr<std::vector<std::string>>& checkedPaths, const std::shared_ptr<std::vector<std::string>>& visitingPaths, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics) {
     if (containsPath(checkedPaths, path) || containsPath(visitingPaths, path)) {
         return;
     }
@@ -136,7 +136,7 @@ void checkModuleDependencies(std::string path, std::shared_ptr<::app_src_analyze
     }
     checkedPaths->push_back(path);
 }
-bool containsPath(std::shared_ptr<std::vector<std::string>> paths, std::string path) {
+bool containsPath(const std::shared_ptr<std::vector<std::string>>& paths, const std::string& path) {
     const auto& _iterable_11 = paths;
     for (const auto& existing : *_iterable_11) {
         if (existing == path) {
@@ -145,7 +145,7 @@ bool containsPath(std::shared_ptr<std::vector<std::string>> paths, std::string p
     }
     return false;
 }
-std::shared_ptr<::app_src_analyzer_::ModuleInfo> findAnalysisModule(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string path) {
+std::shared_ptr<::app_src_analyzer_::ModuleInfo> findAnalysisModule(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path) {
     const auto& _iterable_12 = result->modules;
     for (const auto& module : *_iterable_12) {
         if (module->path == path) {

@@ -114,7 +114,7 @@ doof::Result<std::shared_ptr<NativeBuildState>, std::string> NativeBuildState::f
     }
     return doof::Success<std::shared_ptr<NativeBuildState>>{std::make_shared<NativeBuildState>(_field_version.value(), _field_tasks.value(), _field_managedOutputs.value())};
 }
-std::shared_ptr<NativeBuildState> parseNativeBuildState(std::string source) {
+std::shared_ptr<NativeBuildState> parseNativeBuildState(const std::string& source) {
     auto _binding_value_1 = ::doof_json::parse(source);
     if (doof::is_failure(_binding_value_1)) {
         const auto& value = _binding_value_1;
@@ -132,10 +132,10 @@ std::shared_ptr<NativeBuildState> parseNativeBuildState(std::string source) {
     }
     return state;
 }
-std::string renderNativeBuildState(std::shared_ptr<NativeBuildState> state) {
+std::string renderNativeBuildState(const std::shared_ptr<NativeBuildState>& state) {
     return (::doof_json::format(doof::json_value(state->toJsonObject())) + std::string("\n"));
 }
-std::shared_ptr<NativeTaskState> findNativeTaskState(std::shared_ptr<NativeBuildState> state, std::string id) {
+std::shared_ptr<NativeTaskState> findNativeTaskState(const std::shared_ptr<NativeBuildState>& state, const std::string& id) {
     const auto& _iterable_3 = state->tasks;
     for (const auto& task : *_iterable_3) {
         if (task->id == id) {
@@ -144,7 +144,7 @@ std::shared_ptr<NativeTaskState> findNativeTaskState(std::shared_ptr<NativeBuild
     }
     return nullptr;
 }
-std::shared_ptr<std::vector<std::string>> parseMakeDependencies(std::string source) {
+std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::string& source) {
     const auto flattened = doof::string_replaceAll(doof::string_replaceAll(source, std::string("\\\r\n"), std::string(" ")), std::string("\\\n"), std::string(" "));
     auto colon = -1;
     auto escaped = false;
@@ -194,7 +194,7 @@ std::shared_ptr<std::vector<std::string>> parseMakeDependencies(std::string sour
     }
     return result;
 }
-void appendUnique(std::shared_ptr<std::vector<std::string>> values, std::string value) {
+void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
     const auto& _iterable_4 = values;
     for (const auto& existing : *_iterable_4) {
         if (existing == value) {

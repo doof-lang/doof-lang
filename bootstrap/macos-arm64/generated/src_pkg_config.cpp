@@ -39,7 +39,7 @@ doof::Result<std::shared_ptr<PkgConfigCommandResult>, std::string> PkgConfigComm
     }
     return doof::Success<std::shared_ptr<PkgConfigCommandResult>>{std::make_shared<PkgConfigCommandResult>(_field_exitCode, _field_output.value(), _field_error.value())};
 }
-doof::Result<void, std::string> applyPkgConfigResult(std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native, std::string packageName, std::string mode, std::shared_ptr<PkgConfigCommandResult> result) {
+doof::Result<void, std::string> applyPkgConfigResult(const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, const std::string& packageName, const std::string& mode, const std::shared_ptr<PkgConfigCommandResult>& result) {
     if (result->exitCode == -1) {
         const auto detail = ((result->error == std::string("")) ? std::string("the executable could not be started") : result->error);
         return doof::Failure<std::string>{ ((((std::string("Failed to run pkg-config while resolving package \"") + packageName) + std::string("\": ")) + detail) + std::string(". Install pkg-config, or remove the package from build.native.pkgConfigPackages.")) };
@@ -52,7 +52,7 @@ doof::Result<void, std::string> applyPkgConfigResult(std::shared_ptr<::app_src_p
     applyPkgConfigTokens(native, pkgConfigTokens(result->output), mode);
     return doof::Success<void>{};
 }
-std::shared_ptr<std::vector<std::string>> pkgConfigTokens(std::string output) {
+std::shared_ptr<std::vector<std::string>> pkgConfigTokens(const std::string& output) {
     const auto normalized = doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(output, std::string("\n"), std::string(" ")), std::string("\r"), std::string(" ")), std::string("\t"), std::string(" "));
     std::shared_ptr<std::vector<std::string>> tokens = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_1 = doof::string_split(normalized, std::string(" "));
@@ -63,7 +63,7 @@ std::shared_ptr<std::vector<std::string>> pkgConfigTokens(std::string output) {
     }
     return tokens;
 }
-void applyPkgConfigTokens(std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native, std::shared_ptr<std::vector<std::string>> tokens, std::string mode) {
+void applyPkgConfigTokens(const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, const std::shared_ptr<std::vector<std::string>>& tokens, const std::string& mode) {
     auto index = 0;
     while (index < static_cast<int32_t>((tokens)->size())) {
         const auto token = (*tokens)[index];
@@ -110,7 +110,7 @@ void applyPkgConfigTokens(std::shared_ptr<::app_src_package_manifest_::NativeBui
         (index += 1);
     }
 }
-void appendUnique(std::shared_ptr<std::vector<std::string>> target, std::string value) {
+void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const std::string& value) {
     const auto& _iterable_2 = target;
     for (const auto& existing : *_iterable_2) {
         if (existing == value) {

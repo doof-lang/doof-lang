@@ -92,13 +92,13 @@ inline std::optional<SendError> SendError_fromValue(int32_t value) {
 inline std::ostream& operator<<(std::ostream& output, SendError value) { return output << SendError_name(value); }
     void _runMainEventLoop();
     int32_t _drainMainEventLoop();
-    void _setMainEventWakeHandler(doof::callback<void()> handler);
+    void _setMainEventWakeHandler(const doof::callback<void()>& handler);
     void _clearMainEventWakeHandler();
     template <typename T>
 struct ChannelSender : public std::enable_shared_from_this<ChannelSender<T>> {
     std::shared_ptr<::doof_event::NativeChannel> native;
     ChannelSender(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
-    doof::Result<Backpressure, SendError> send(T value, std::optional<std::string> key = std::nullopt) {
+    doof::Result<Backpressure, SendError> send(T value, const std::optional<std::string>& key = std::nullopt) {
         const auto code = (doof::is_null(key) ? ::doof_event::trySendChannelMessage<T>(this->native, value, false, std::string("")) : ::doof_event::trySendChannelMessage<T>(this->native, value, true, key.value()));
         return [&]() -> doof::Result<Backpressure, SendError> {
     auto _case_subject = code;
@@ -117,10 +117,10 @@ struct ChannelSender : public std::enable_shared_from_this<ChannelSender<T>> {
     throw std::runtime_error("non-exhaustive case expression");
 }();
     }
-    void onReady(doof::callback<void()> handler) {
+    void onReady(const doof::callback<void()>& handler) {
         this->native->registerSenderReady(handler);
     }
-    void onClosed(doof::callback<void()> handler) {
+    void onClosed(const doof::callback<void()>& handler) {
         this->native->registerSenderClosed(handler);
     }
     void close() {
@@ -131,10 +131,10 @@ struct ChannelSender : public std::enable_shared_from_this<ChannelSender<T>> {
 struct ChannelReceiver : public std::enable_shared_from_this<ChannelReceiver<T>> {
     std::shared_ptr<::doof_event::NativeChannel> native;
     ChannelReceiver(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
-    void onMessage(doof::callback<void(T)> handler) {
+    void onMessage(const doof::callback<void(T)>& handler) {
         ::doof_event::registerChannelReceiverMessage<T>(this->native, handler);
     }
-    void onClosed(doof::callback<void()> handler) {
+    void onClosed(const doof::callback<void()>& handler) {
         this->native->registerReceiverClosed(handler);
     }
     void close() {
@@ -146,11 +146,11 @@ struct ChannelReceiver : public std::enable_shared_from_this<ChannelReceiver<T>>
     Timer(std::shared_ptr<::doof_event::NativeTimer> native) : native(native) {}
     bool cancel();
 };
-    std::shared_ptr<Timer> setTimeout(std::shared_ptr<::std_::time::duration::Duration> delay, doof::callback<void()> handler, bool keepsAlive = true);
-    std::shared_ptr<Timer> setInterval(std::shared_ptr<::std_::time::duration::Duration> interval, doof::callback<void()> handler, bool keepsAlive = true);
+    std::shared_ptr<Timer> setTimeout(const std::shared_ptr<::std_::time::duration::Duration>& delay, const doof::callback<void()>& handler, bool keepsAlive = true);
+    std::shared_ptr<Timer> setInterval(const std::shared_ptr<::std_::time::duration::Duration>& interval, const doof::callback<void()>& handler, bool keepsAlive = true);
     void runMainEventLoop();
     int32_t drainMainEventLoop();
-    void setMainEventWakeHandler(doof::callback<void()> handler);
+    void setMainEventWakeHandler(const doof::callback<void()>& handler);
     void clearMainEventWakeHandler();
     std::tuple<std::shared_ptr<ChannelSender<std::variant<std::shared_ptr<::std_::http::websocket::WebSocketOpen>, std::shared_ptr<::std_::http::websocket::WebSocketText>, std::shared_ptr<::std_::http::websocket::WebSocketBinary>, std::shared_ptr<::std_::http::websocket::WebSocketWritable>, std::shared_ptr<::std_::http::websocket::WebSocketClose>, std::shared_ptr<::std_::http::websocket::WebSocketError>>>>, std::shared_ptr<ChannelReceiver<std::variant<std::shared_ptr<::std_::http::websocket::WebSocketOpen>, std::shared_ptr<::std_::http::websocket::WebSocketText>, std::shared_ptr<::std_::http::websocket::WebSocketBinary>, std::shared_ptr<::std_::http::websocket::WebSocketWritable>, std::shared_ptr<::std_::http::websocket::WebSocketClose>, std::shared_ptr<::std_::http::websocket::WebSocketError>>>>> createChannel__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(int32_t capacity = 256, int32_t highWater = 0, int32_t lowWater = -1, bool keepsAlive = true);
     std::tuple<std::shared_ptr<ChannelSender<std::variant<std::shared_ptr<::std_::http::websocket::WebSocketSendText>, std::shared_ptr<::std_::http::websocket::WebSocketSendBinary>, std::shared_ptr<::std_::http::websocket::WebSocketPing>, std::shared_ptr<::std_::http::websocket::WebSocketCloseCommand>>>>, std::shared_ptr<ChannelReceiver<std::variant<std::shared_ptr<::std_::http::websocket::WebSocketSendText>, std::shared_ptr<::std_::http::websocket::WebSocketSendBinary>, std::shared_ptr<::std_::http::websocket::WebSocketPing>, std::shared_ptr<::std_::http::websocket::WebSocketCloseCommand>>>>> createChannel__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(int32_t capacity = 256, int32_t highWater = 0, int32_t lowWater = -1, bool keepsAlive = true);

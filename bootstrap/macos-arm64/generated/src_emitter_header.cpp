@@ -184,10 +184,10 @@ doof::Result<std::shared_ptr<HeaderPlan>, std::string> HeaderPlan::fromJsonValue
     }
     return doof::Success<std::shared_ptr<HeaderPlan>>{std::make_shared<HeaderPlan>(_field_functionSignatures.value(), _field_nativeAdapterSignatures.value(), _field_genericFunctionDefinitions.value(), _field_exportedValueDefinitions.value(), _field_earlyClassDefinitions.value(), _field_classDefinitions.value(), _field_interfaceAliases.value(), _field_enumDefinitions.value(), _field_typeAliases.value(), _field_classForwardDeclarations.value(), _field_typeOnlyForwardDeclarations.value(), _field_typeOnlyModuleIncludes.value(), _field_moduleIncludes.value(), _field_nativeIncludes.value(), _field_nativeAliases.value(), _field_nativeNamespaces.value(), _field_hasMain.value(), _field_mainReturnsInt.value(), _field_mainAcceptsArgs.value())};
 }
-std::shared_ptr<HeaderPlan> planHeader(std::shared_ptr<::app_src_ast_::Program> program, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::shared_ptr<HeaderPlan> planHeader(const std::shared_ptr<::app_src_ast_::Program>& program, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     return planHeaders(std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{program}), context);
 }
-std::shared_ptr<HeaderPlan> planHeaders(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::shared_ptr<HeaderPlan> planHeaders(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     const auto plan = std::make_shared<HeaderPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, false, false);
     const auto& _iterable_1 = programs;
     for (const auto& program : *_iterable_1) {
@@ -231,7 +231,7 @@ std::shared_ptr<HeaderPlan> planHeaders(std::shared_ptr<std::vector<std::shared_
     }
     return plan;
 }
-void collectNativeModuleSurfaceAliases(std::string modulePath, std::string namespace_, std::shared_ptr<HeaderPlan> plan, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+void collectNativeModuleSurfaceAliases(const std::string& modulePath, const std::string& namespace_, const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     const auto& _iterable_6 = context->moduleSurfaces;
     for (const auto& surface : *_iterable_6) {
         if (surface->path != modulePath) {
@@ -252,7 +252,7 @@ void collectNativeModuleSurfaceAliases(std::string modulePath, std::string names
         return;
     }
 }
-bool surfaceTypeIsGeneric(std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface> surface, std::string name) {
+bool surfaceTypeIsGeneric(const std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>& surface, const std::string& name) {
     const auto& _iterable_9 = surface->genericTypes;
     for (const auto& genericName : *_iterable_9) {
         if (genericName == name) {
@@ -261,10 +261,10 @@ bool surfaceTypeIsGeneric(std::shared_ptr<::app_src_emitter_context_::EmitModule
     }
     return false;
 }
-bool isNativeAliasType(std::shared_ptr<::app_src_semantic_::Symbol> symbol) {
+bool isNativeAliasType(const std::shared_ptr<::app_src_semantic_::Symbol>& symbol) {
     return (((((symbol->kind == std::string("class")) || (symbol->kind == std::string("struct"))) || (symbol->kind == std::string("enum"))) || (symbol->kind == std::string("interface"))) || (symbol->kind == std::string("type-alias")));
 }
-void collect(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> statement, std::shared_ptr<HeaderPlan> plan, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+void collect(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>& statement, const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     {
         auto _case_subject = statement;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
@@ -351,7 +351,7 @@ void collect(std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std
     }
     }
 }
-bool classCanEmitBeforeModuleIncludes(std::shared_ptr<::app_src_ast_::ClassDeclaration> class_) {
+bool classCanEmitBeforeModuleIncludes(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_) {
     if (!class_->struct_ || (static_cast<int32_t>((class_->typeParams)->size()) > 0)) {
         return false;
     }
@@ -363,7 +363,7 @@ bool classCanEmitBeforeModuleIncludes(std::shared_ptr<::app_src_ast_::ClassDecla
     }
     return true;
 }
-bool typeNeedsCompleteNominalDefinition(std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_) {
+bool typeNeedsCompleteNominalDefinition(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
     {
         auto _case_subject = type_;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
@@ -453,7 +453,7 @@ bool typeNeedsCompleteNominalDefinition(std::variant<std::shared_ptr<::app_src_s
     }
     doof::unreachable();
 }
-bool isNativeTemplateClass(std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::string name) {
+bool isNativeTemplateClass(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& name) {
     const auto key = ((context->modulePath + std::string("::")) + name);
     const auto& _iterable_16 = context->nativeTemplateClassKeys;
     for (const auto& existing : *_iterable_16) {
@@ -463,7 +463,7 @@ bool isNativeTemplateClass(std::shared_ptr<::app_src_emitter_context_::EmitConte
     }
     return false;
 }
-void collectNativeClassAliases(std::shared_ptr<::app_src_ast_::ClassDeclaration> class_, std::string namespace_, std::shared_ptr<HeaderPlan> plan, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+void collectNativeClassAliases(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::string& namespace_, const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     const auto& _iterable_17 = class_->fields;
     for (const auto& field : *_iterable_17) {
         if (!doof::is_null(field->resolvedType)) {
@@ -477,7 +477,7 @@ void collectNativeClassAliases(std::shared_ptr<::app_src_ast_::ClassDeclaration>
         }
     }
 }
-void collectNativeTypeAliases(std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_, std::string namespace_, std::shared_ptr<HeaderPlan> plan, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+void collectNativeTypeAliases(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::string& namespace_, const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     {
         auto _case_subject = type_;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
@@ -552,7 +552,7 @@ void collectNativeTypeAliases(std::variant<std::shared_ptr<::app_src_semantic_::
     }
     }
 }
-bool surfaceSymbolIsGeneric(std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::shared_ptr<::app_src_semantic_::Symbol> symbol) {
+bool surfaceSymbolIsGeneric(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol) {
     const auto& _iterable_23 = context->moduleSurfaces;
     for (const auto& surface : *_iterable_23) {
         if (surface->path == symbol->module) {
@@ -561,7 +561,7 @@ bool surfaceSymbolIsGeneric(std::shared_ptr<::app_src_emitter_context_::EmitCont
     }
     return false;
 }
-bool surfaceFunctionIsGeneric(std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::shared_ptr<::app_src_semantic_::Symbol> symbol) {
+bool surfaceFunctionIsGeneric(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol) {
     const auto& _iterable_24 = context->moduleSurfaces;
     for (const auto& surface : *_iterable_24) {
         if (surface->path == symbol->module) {
@@ -576,7 +576,7 @@ bool surfaceFunctionIsGeneric(std::shared_ptr<::app_src_emitter_context_::EmitCo
     }
     return false;
 }
-void addNativeSymbolAlias(std::shared_ptr<::app_src_semantic_::Symbol> symbol, std::string namespace_, std::shared_ptr<HeaderPlan> plan) {
+void addNativeSymbolAlias(const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::string& namespace_, const std::shared_ptr<HeaderPlan>& plan) {
     if (symbol->native_ || (symbol->module == std::string(""))) {
         return;
     }
@@ -588,7 +588,7 @@ void addNativeSymbolAlias(std::shared_ptr<::app_src_semantic_::Symbol> symbol, s
     const auto alias = ((((((std::string("using ") + symbol->name) + std::string(" = ::")) + ::app_src_emitter_names_::moduleNamespace(symbol->module)) + std::string("::")) + symbol->name) + std::string(";"));
     addUnique(plan->nativeAliases, ((namespace_ == std::string("")) ? (alias + std::string("\n")) : ((((std::string("namespace ") + namespace_) + std::string(" { ")) + alias) + std::string(" }\n"))));
 }
-std::string renderHeader(std::shared_ptr<HeaderPlan> plan, std::string guardName) {
+std::string renderHeader(const std::shared_ptr<HeaderPlan>& plan, const std::string& guardName) {
     auto result = std::string("#pragma once\n");
     (result = (result + std::string("#include \"doof_runtime.hpp\"\n")));
     (result = (result + std::string("#include <cstdint>\n#include <cmath>\n#include <functional>\n")));
@@ -676,10 +676,10 @@ std::string renderHeader(std::shared_ptr<HeaderPlan> plan, std::string guardName
     }
     return (result + std::string("}\n"));
 }
-std::string emitExportedValue(std::string name, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitExportedValue(const std::string& name, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     return ((((std::string("extern ") + ::app_src_emitter_types_::emitContextType(type_, context)) + std::string(" ")) + name) + std::string(";\n"));
 }
-void addUnique(std::shared_ptr<std::vector<std::string>> values, std::string value) {
+void addUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
     const auto& _iterable_40 = values;
     for (const auto& existing : *_iterable_40) {
         if (existing == value) {
@@ -688,7 +688,7 @@ void addUnique(std::shared_ptr<std::vector<std::string>> values, std::string val
     }
     values->push_back(value);
 }
-bool hasNonTypeOnlyImport(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> imports, std::string sourceModule) {
+bool hasNonTypeOnlyImport(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>& imports, const std::string& sourceModule) {
     const auto& _iterable_41 = imports;
     for (const auto& imported : *_iterable_41) {
         if ((imported->sourceModule == sourceModule) && !imported->typeOnly) {
@@ -697,7 +697,7 @@ bool hasNonTypeOnlyImport(std::shared_ptr<std::vector<std::shared_ptr<::app_src_
     }
     return false;
 }
-bool containsValue(std::shared_ptr<std::vector<std::string>> values, std::string value) {
+bool containsValue(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
     const auto& _iterable_42 = values;
     for (const auto& existing : *_iterable_42) {
         if (existing == value) {
@@ -706,7 +706,7 @@ bool containsValue(std::shared_ptr<std::vector<std::string>> values, std::string
     }
     return false;
 }
-std::string nativeNamespace(std::string cppName) {
+std::string nativeNamespace(const std::string& cppName) {
     auto separator = -1;
     for (int32_t i = 0; i < static_cast<int32_t>(cppName.size()); ++i) {
         if (((i + 1) < static_cast<int32_t>(cppName.size())) && (doof::string_substring(cppName, i, (i + 2)) == std::string("::"))) {
@@ -718,7 +718,7 @@ std::string nativeNamespace(std::string cppName) {
     }
     return doof::string_substring(cppName, 0, separator);
 }
-std::string emitEnumDeclaration(std::shared_ptr<::app_src_ast_::EnumDeclaration> declaration, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitEnumDeclaration(const std::shared_ptr<::app_src_ast_::EnumDeclaration>& declaration, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     auto result = (((::app_src_emitter_decl_::emitDescriptionComment(declaration->description, std::string("")) + std::string("enum class ")) + declaration->name) + std::string(" {\n"));
     for (int32_t i = 0; i < static_cast<int32_t>((declaration->variants)->size()); ++i) {
         const auto variant = (*declaration->variants)[i];
@@ -754,13 +754,13 @@ std::string emitEnumDeclaration(std::shared_ptr<::app_src_ast_::EnumDeclaration>
     (result = (result + std::string("    default: return std::nullopt;\n  }\n}\n")));
     return (((((result + std::string("inline std::ostream& operator<<(std::ostream& output, ")) + declaration->name) + std::string(" value) { return output << ")) + declaration->name) + std::string("_name(value); }\n"));
 }
-std::string emitTypeAlias(std::shared_ptr<::app_src_ast_::TypeAliasDeclaration> alias, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitTypeAlias(const std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>& alias, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (doof::is_null(alias->resolvedType)) {
         doof::panic(((std::string("Type alias ") + alias->name) + std::string(" was not checked before emission")));
     }
     return (((((::app_src_emitter_decl_::emitDescriptionComment(alias->description, std::string("")) + std::string("using ")) + alias->name) + std::string(" = ")) + ::app_src_emitter_types_::emitType(doof::unwrap_optional(alias->resolvedType), context->modulePath)) + std::string(";\n"));
 }
-bool functionReturnsInt(std::shared_ptr<::app_src_ast_::FunctionDeclaration> fn) {
+bool functionReturnsInt(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn) {
     {
         auto _case_subject = doof::unwrap_optional(fn->resolvedType);
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {

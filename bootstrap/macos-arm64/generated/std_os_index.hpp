@@ -34,7 +34,7 @@ namespace doof_os { using Thread = ::std_::time::duration::Thread; }
 namespace std_::os::index {
     using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<ExecStdoutStream>, std::shared_ptr<ExecStderrStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
-    doof::Result<std::string, std::string> _env(std::string name);
+    doof::Result<std::string, std::string> _env(const std::string& name);
     int32_t _pid();
     std::string _platform();
     std::string _architecture();
@@ -68,12 +68,12 @@ namespace std_::os::index {
     struct Exec : public std::enable_shared_from_this<Exec> {
     std::shared_ptr<::NativeExecProcess> native;
     Exec(std::shared_ptr<::NativeExecProcess> native) : native(native) {}
-    static doof::Result<std::shared_ptr<Exec>, std::string> spawn(std::string command, std::shared_ptr<std::vector<std::string>> args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<ExecOptions> options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, std::nullopt, nullptr));
+    static doof::Result<std::shared_ptr<Exec>, std::string> spawn(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, std::nullopt, nullptr));
     Stream__readonly_array_byte stdoutStream();
     Stream__readonly_array_byte stderrStream();
     std::shared_ptr<std::vector<uint8_t>> nextStdoutChunk();
     std::shared_ptr<std::vector<uint8_t>> nextStderrChunk();
-    doof::Result<void, std::string> writeStdinText(std::string value);
+    doof::Result<void, std::string> writeStdinText(const std::string& value);
     doof::Result<void, std::string> closeStdin();
     bool isRunning();
     doof::Result<int32_t, std::string> wait();
@@ -91,12 +91,12 @@ namespace std_::os::index {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ExecResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    doof::Result<std::string, std::string> env(std::string name);
+    doof::Result<std::string, std::string> env(const std::string& name);
     int32_t pid();
     std::string platform();
     std::string architecture();
-    doof::Result<std::shared_ptr<::NativeExecProcess>, std::string> spawnNative(std::string command, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<ExecOptions> options);
-    doof::Result<std::shared_ptr<ExecResult>, std::string> run(std::string command, std::shared_ptr<std::vector<std::string>> args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<ExecOptions> options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, std::nullopt, nullptr));
+    doof::Result<std::shared_ptr<::NativeExecProcess>, std::string> spawnNative(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options);
+    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, std::nullopt, nullptr));
 }
 
 namespace std_::os::index {

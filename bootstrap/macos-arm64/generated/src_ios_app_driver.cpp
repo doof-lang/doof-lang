@@ -54,20 +54,20 @@ doof::Result<std::shared_ptr<IOSCommandResult>, std::string> IOSCommandResult::f
     }
     return doof::Success<std::shared_ptr<IOSCommandResult>>{std::make_shared<IOSCommandResult>(_field_exitCode, _field_output.value(), _field_error.value())};
 }
-std::string outputPath(std::string directory, std::string name) {
+std::string outputPath(const std::string& directory, const std::string& name) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{directory, name}));
 }
-std::string parentPath(std::string path) {
+std::string parentPath(const std::string& path) {
     return ::std_::path::index::dirname(path);
 }
-std::string fileName(std::string path) {
+std::string fileName(const std::string& path) {
     return ::std_::path::index::basename(path);
 }
 std::string hostPlatform() {
     const auto value = ::std_::os::index::platform();
     return ((value == std::string("darwin")) ? std::string("macos") : value);
 }
-std::shared_ptr<IOSCommandResult> runIOSCommand(std::string command, std::shared_ptr<std::vector<std::string>> arguments) {
+std::shared_ptr<IOSCommandResult> runIOSCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments) {
     auto _binding_value_1 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, MAX_IOS_COMMAND_OUTPUT_BYTES, nullptr));
     if (doof::is_failure(_binding_value_1)) {
         const auto error = doof::failure_error(_binding_value_1);
@@ -76,7 +76,7 @@ std::shared_ptr<IOSCommandResult> runIOSCommand(std::string command, std::shared
     const auto executed = doof::success_value(_binding_value_1);
     return std::make_shared<IOSCommandResult>(executed->exitCode, executed->stdout, std::string(""));
 }
-doof::Result<std::string, std::string> commandText(std::string command, std::shared_ptr<std::vector<std::string>> arguments, std::string description) {
+doof::Result<std::string, std::string> commandText(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& description) {
     const auto result = runIOSCommand(command, arguments);
     const auto output = ((result->error != std::string("")) ? result->error : doof::string_trim(::doof_blob::NativeBlobReader::constructor(result->output, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((result->output)->size())))));
     if (result->exitCode != 0) {
@@ -84,13 +84,13 @@ doof::Result<std::string, std::string> commandText(std::string command, std::sha
     }
     return doof::Success<std::string>{ output };
 }
-doof::Result<void, std::string> runRequiredCommand(std::string command, std::shared_ptr<std::vector<std::string>> arguments, std::string description) {
+doof::Result<void, std::string> runRequiredCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& description) {
     auto _try_value_2 = commandText(command, arguments, description);
     if (doof::is_failure(_try_value_2)) return doof::Failure<std::string>{doof::failure_error(_try_value_2)};
     const auto ignored = doof::success_value(_try_value_2);
     return doof::Success<void>{};
 }
-void ensureDirectory(std::string path) {
+void ensureDirectory(const std::string& path) {
     if ((path == std::string("")) || ::doof_fs::exists(path)) {
         return;
     }
@@ -100,7 +100,7 @@ void ensureDirectory(std::string path) {
     }
     [&]() -> void { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 63, std::string("try! failed"));  }();
 }
-void copyPath(std::string sourcePath, std::string destinationPath) {
+void copyPath(const std::string& sourcePath, const std::string& destinationPath) {
     if (::doof_fs::isDirectory(sourcePath)) {
         ensureDirectory(destinationPath);
         const auto& _iterable_3 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(sourcePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 69, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
@@ -112,7 +112,7 @@ void copyPath(std::string sourcePath, std::string destinationPath) {
     ensureDirectory(parentPath(destinationPath));
     [&]() -> void { auto _try_value = ::doof_fs::writeBlob(destinationPath, [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(sourcePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 75, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 75, std::string("try! failed"));  }();
 }
-void removeTree(std::string path) {
+void removeTree(const std::string& path) {
     if (!::doof_fs::exists(path)) {
         return;
     }
@@ -124,12 +124,12 @@ void removeTree(std::string path) {
     }
     [&]() -> void { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 83, std::string("try! failed"));  }();
 }
-void appendUnique(std::shared_ptr<std::vector<std::string>> values, std::string value) {
+void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
     if (!doof::array_contains(values, value, "", 0)) {
         values->push_back(value);
     }
 }
-doof::Result<void, std::string> configureIOSNativeBuild(std::string outputDirectory, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> config, std::string destination, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native) {
+doof::Result<void, std::string> configureIOSNativeBuild(const std::string& outputDirectory, const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& destination, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native) {
     if (hostPlatform() != std::string("macos")) {
         return doof::Failure<std::string>{ std::string("iOS app builds are only supported on macOS") };
     }
@@ -157,7 +157,7 @@ doof::Result<void, std::string> configureIOSNativeBuild(std::string outputDirect
     }
     return doof::Success<void>{};
 }
-std::string globBaseDirectory(std::string pattern) {
+std::string globBaseDirectory(const std::string& pattern) {
     auto wildcard = static_cast<int32_t>(pattern.size());
     for (int32_t index = 0; index < static_cast<int32_t>(pattern.size()); ++index) {
         if (doof::string_substring(pattern, index, (index + 1)) == std::string("*")) {
@@ -174,7 +174,7 @@ std::string globBaseDirectory(std::string pattern) {
     }
     return ((slash <= 1) ? std::string("/") : doof::string_substring(pattern, 0, (slash - 1)));
 }
-bool globMatches(std::string pattern, std::string value, int32_t patternIndex, int32_t valueIndex) {
+bool globMatches(const std::string& pattern, const std::string& value, int32_t patternIndex, int32_t valueIndex) {
     if (patternIndex == static_cast<int32_t>(pattern.size())) {
         return (valueIndex == static_cast<int32_t>(value.size()));
     }
@@ -195,7 +195,7 @@ bool globMatches(std::string pattern, std::string value, int32_t patternIndex, i
     }
     return globMatches(pattern, value, patternIndex, (valueIndex + 1));
 }
-void collectResourceFiles(std::string path, std::string baseDirectory, std::string pattern, std::shared_ptr<std::vector<std::string>> results) {
+void collectResourceFiles(const std::string& path, const std::string& baseDirectory, const std::string& pattern, const std::shared_ptr<std::vector<std::string>>& results) {
     if (::doof_fs::isDirectory(path)) {
         const auto& _iterable_9 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 144, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_9) {
@@ -210,7 +210,7 @@ void collectResourceFiles(std::string path, std::string baseDirectory, std::stri
         results->push_back(path);
     }
 }
-doof::Result<void, std::string> copyIOSResources(std::shared_ptr<::app_src_ios_app_::IOSAppConfig> config, std::string appPath) {
+doof::Result<void, std::string> copyIOSResources(const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& appPath) {
     std::shared_ptr<std::vector<std::string>> destinations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_10 = config->resources;
     for (const auto& resource : *_iterable_10) {
@@ -245,7 +245,7 @@ doof::Result<void, std::string> copyIOSResources(std::shared_ptr<::app_src_ios_a
     }
     return doof::Success<void>{};
 }
-doof::Result<void, std::string> compileIOSIcon(std::shared_ptr<::app_src_ios_app_::IOSAppConfig> config, std::string appPath, std::string destination, std::string buildDirectory) {
+doof::Result<void, std::string> compileIOSIcon(const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& appPath, const std::string& destination, const std::string& buildDirectory) {
     if (config->iconPath == std::string("")) {
         return doof::Success<void>{};
     }
@@ -272,7 +272,7 @@ doof::Result<void, std::string> compileIOSIcon(std::shared_ptr<::app_src_ios_app
     }
     return doof::Success<void>{};
 }
-doof::Result<std::string, std::string> assembleIOSApp(std::string buildDirectory, std::string executablePath, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> config, std::string destination) {
+doof::Result<std::string, std::string> assembleIOSApp(const std::string& buildDirectory, const std::string& executablePath, const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& destination) {
     if (hostPlatform() != std::string("macos")) {
         return doof::Failure<std::string>{ std::string("iOS app builds are only supported on macOS") };
     }
@@ -298,7 +298,7 @@ doof::Result<std::string, std::string> assembleIOSApp(std::string buildDirectory
     if (doof::is_failure(_try_value_17)) return doof::Failure<std::string>{doof::failure_error(_try_value_17)};
     return doof::Success<std::string>{ appPath };
 }
-void collectNestedCode(std::string path, std::shared_ptr<std::vector<std::string>> results) {
+void collectNestedCode(const std::string& path, const std::shared_ptr<std::vector<std::string>>& results) {
     if (!::doof_fs::exists(path)) {
         return;
     }
@@ -316,7 +316,7 @@ void collectNestedCode(std::string path, std::shared_ptr<std::vector<std::string
         results->push_back(path);
     }
 }
-doof::Result<void, std::string> signAndArchiveIOSApp(std::string appPath, std::string archivePath, std::string bundleId, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> config, std::string buildDirectory) {
+doof::Result<void, std::string> signAndArchiveIOSApp(const std::string& appPath, const std::string& archivePath, const std::string& bundleId, const std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>& config, const std::string& buildDirectory) {
     if (hostPlatform() != std::string("macos")) {
         return doof::Failure<std::string>{ std::string("iOS Ad Hoc packaging is only supported on macOS") };
     }

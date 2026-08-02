@@ -26,7 +26,7 @@ doof::Result<std::shared_ptr<ModuleAcquisition>, std::string> ModuleAcquisition:
     auto _field_diskRoot = (_lenient ? doof::json_as_string_lenient(_iterator_diskRoot->second) : doof::json_as_string(_iterator_diskRoot->second));
     return doof::Success<std::shared_ptr<ModuleAcquisition>>{std::make_shared<ModuleAcquisition>(_field_logicalPrefix, _field_diskRoot)};
 }
-std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(std::string logicalPath, std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>> acquisitions) {
+std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions) {
     const auto selected = selectedAcquisition(logicalPath, acquisitions);
     if (doof::is_null(selected)) {
         return nullptr;
@@ -56,7 +56,7 @@ std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(std::string logicalP
     }
     return std::make_shared<ModuleAcquisition>(acquisitionJoinPath(selected->logicalPrefix, packageName), acquisitionJoinPath(selected->diskRoot, packageName));
 }
-std::optional<std::string> acquiredModuleDiskPath(std::string logicalPath, std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>> acquisitions) {
+std::optional<std::string> acquiredModuleDiskPath(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions) {
     const auto selected = selectedAcquisition(logicalPath, acquisitions);
     if (doof::is_null(selected)) {
         return std::nullopt;
@@ -67,13 +67,13 @@ std::optional<std::string> acquiredModuleDiskPath(std::string logicalPath, std::
     }
     return acquisitionJoinPath(selected->diskRoot, suffix);
 }
-std::string acquiredManifestPath(std::shared_ptr<ModuleAcquisition> acquisition) {
+std::string acquiredManifestPath(const std::shared_ptr<ModuleAcquisition>& acquisition) {
     return acquisitionJoinPath(acquisition->diskRoot, std::string("doof.json"));
 }
-bool acquisitionMatches(std::string prefix, std::string logicalPath) {
+bool acquisitionMatches(const std::string& prefix, const std::string& logicalPath) {
     return ((logicalPath == prefix) || doof::string_startsWith(logicalPath, (prefix + std::string("/"))));
 }
-std::shared_ptr<ModuleAcquisition> selectedAcquisition(std::string logicalPath, std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>> acquisitions) {
+std::shared_ptr<ModuleAcquisition> selectedAcquisition(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions) {
     std::shared_ptr<ModuleAcquisition> selected = nullptr;
     const auto& _iterable_1 = acquisitions;
     for (const auto& acquisition : *_iterable_1) {
@@ -85,7 +85,7 @@ std::shared_ptr<ModuleAcquisition> selectedAcquisition(std::string logicalPath, 
     }
     return selected;
 }
-std::string acquisitionJoinPath(std::string directory, std::string suffix) {
+std::string acquisitionJoinPath(const std::string& directory, const std::string& suffix) {
     if (suffix == std::string("")) {
         return directory;
     }

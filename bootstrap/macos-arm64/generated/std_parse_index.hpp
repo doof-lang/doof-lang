@@ -29,7 +29,7 @@ namespace doof_parse { using ParsingError = ::std_::parse::types::ParsingError; 
 namespace std_::parse::index {
     using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
-    doof::Result<int32_t, ::std_::parse::types::ParsingError> parseInt(std::string value);
+    doof::Result<int32_t, ::std_::parse::types::ParsingError> parseInt(const std::string& value);
 }
 
 namespace std_::parse::index {

@@ -33,7 +33,7 @@ namespace doof_blob { using EncodingError = ::std_::blob::types::EncodingError; 
 namespace std_::blob::index {
     using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
-    doof::Result<std::string, ::std_::blob::types::EncodingError> decodeUtf8(std::shared_ptr<std::vector<uint8_t>> data);
+    doof::Result<std::string, ::std_::blob::types::EncodingError> decodeUtf8(const std::shared_ptr<std::vector<uint8_t>>& data);
 }
 
 namespace std_::blob::index {

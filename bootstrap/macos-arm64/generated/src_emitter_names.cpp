@@ -35,10 +35,10 @@ doof::Result<std::shared_ptr<ModuleNamespaceMapping>, std::string> ModuleNamespa
     return doof::Success<std::shared_ptr<ModuleNamespaceMapping>>{std::make_shared<ModuleNamespaceMapping>(_field_logicalPrefix, _field_packageName, _field_outputRoot.value())};
 }
 std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>> configuredModuleNamespaceMappings;
-void configureModuleNamespaces(std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>> mappings) {
+void configureModuleNamespaces(const std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>>& mappings) {
     (configuredModuleNamespaceMappings = mappings);
 }
-std::string moduleStem(std::string path) {
+std::string moduleStem(const std::string& path) {
     auto normalized = doof::string_replaceAll(path, std::string("\\"), std::string("/"));
     const auto mapping = namespaceMappingForPath(normalized);
     if (!doof::is_null(mapping)) {
@@ -55,7 +55,7 @@ std::string moduleStem(std::string path) {
     const auto result = doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(withoutRoot, std::string("/"), std::string("_")), std::string(".do"), std::string("")), std::string("-"), std::string("_")), std::string("."), std::string("_"));
     return ((result == std::string("")) ? std::string("module") : result);
 }
-std::string moduleNamespace(std::string path) {
+std::string moduleNamespace(const std::string& path) {
     const auto mapping = namespaceMappingForPath(path);
     if (!doof::is_null(mapping)) {
         auto relativePath = doof::string_substring(path, static_cast<int32_t>(mapping->logicalPrefix.size()), static_cast<int32_t>(path.size()));
@@ -73,7 +73,7 @@ std::string moduleNamespace(std::string path) {
     }
     return ((std::string("app_") + moduleStem(path)) + std::string("_"));
 }
-std::string moduleDiagnosticPath(std::string path, bool stripExtension) {
+std::string moduleDiagnosticPath(const std::string& path, bool stripExtension) {
     auto normalized = doof::string_replaceAll(path, std::string("\\"), std::string("/"));
     const auto mapping = namespaceMappingForPath(normalized);
     if (!doof::is_null(mapping)) {
@@ -87,7 +87,7 @@ std::string moduleDiagnosticPath(std::string path, bool stripExtension) {
     }
     return ((normalized == std::string("")) ? std::string("<module>") : normalized);
 }
-std::string moduleNativeHeaderPath(std::string modulePath, std::string headerPath) {
+std::string moduleNativeHeaderPath(const std::string& modulePath, const std::string& headerPath) {
     if (!doof::string_startsWith(headerPath, std::string("./")) && !doof::string_startsWith(headerPath, std::string("../"))) {
         return headerPath;
     }
@@ -127,7 +127,7 @@ std::string moduleNativeHeaderPath(std::string modulePath, std::string headerPat
     }
     return result;
 }
-std::shared_ptr<ModuleNamespaceMapping> namespaceMappingForPath(std::string path) {
+std::shared_ptr<ModuleNamespaceMapping> namespaceMappingForPath(const std::string& path) {
     std::shared_ptr<ModuleNamespaceMapping> selected = nullptr;
     const auto& _iterable_3 = configuredModuleNamespaceMappings;
     for (const auto& mapping : *_iterable_3) {
@@ -139,7 +139,7 @@ std::shared_ptr<ModuleNamespaceMapping> namespaceMappingForPath(std::string path
     }
     return selected;
 }
-std::string namespacePath(std::string path) {
+std::string namespacePath(const std::string& path) {
     const auto components = doof::string_split(doof::string_replaceAll(path, std::string("\\"), std::string("/")), std::string("/"));
     auto result = std::string("");
     const auto& _iterable_4 = components;
@@ -156,17 +156,17 @@ std::string namespacePath(std::string path) {
     }
     return ((result == std::string("")) ? std::string("module") : result);
 }
-std::string namespaceComponent(std::string value) {
+std::string namespaceComponent(const std::string& value) {
     const auto result = doof::string_replaceAll(doof::string_replaceAll(value, std::string("-"), std::string("_")), std::string("."), std::string("_"));
     if (((result == std::string("std")) || (result == std::string("doof"))) || (result == std::string("main"))) {
         return (result + std::string("_"));
     }
     return result;
 }
-std::string moduleHeaderName(std::string path) {
+std::string moduleHeaderName(const std::string& path) {
     return (moduleStem(path) + std::string(".hpp"));
 }
-std::string moduleSourceName(std::string path) {
+std::string moduleSourceName(const std::string& path) {
     return (moduleStem(path) + std::string(".cpp"));
 }
 

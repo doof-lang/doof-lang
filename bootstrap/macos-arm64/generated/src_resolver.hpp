@@ -35,15 +35,15 @@ namespace app_src_resolver_ {
     std::shared_ptr<std::vector<std::string>> failedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics;
     ModuleResolver(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sources, doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)> loader, std::shared_ptr<std::vector<std::string>> loadedPaths, std::shared_ptr<std::vector<std::string>> failedPaths, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics) : sources(sources), loader(loader), loadedPaths(loadedPaths), failedPaths(failedPaths), diagnostics(diagnostics) {}
-    std::shared_ptr<::app_src_semantic_::SourceFile> find(std::string path);
-    bool failed(std::string path);
-    std::string resolve(std::string importer, std::string specifier);
+    std::shared_ptr<::app_src_semantic_::SourceFile> find(const std::string& path);
+    bool failed(const std::string& path);
+    std::string resolve(const std::string& importer, const std::string& specifier);
 };
     using SourceLoader = doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>;
-    doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>> noSourceLoader(std::string path);
-    std::string withExtension(std::string path);
-    std::string relativeBase(std::string importer, std::string specifier);
-    std::string parentDirectory(std::string path);
+    doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>> noSourceLoader(const std::string& path);
+    std::string withExtension(const std::string& path);
+    std::string relativeBase(const std::string& importer, const std::string& specifier);
+    std::string parentDirectory(const std::string& path);
 }
 
 namespace app_src_resolver_ {

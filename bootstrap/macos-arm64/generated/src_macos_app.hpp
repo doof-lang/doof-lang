@@ -66,13 +66,13 @@ namespace app_src_macos_app_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<MacOSPackageConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::string macOSPackageArchiveName(std::string executableName, std::string version);
-    std::string renderMacOSInfoPlist(std::shared_ptr<MacOSAppConfig> config);
-    std::shared_ptr<std::vector<std::string>> macOSCodesignArguments(std::string targetPath, std::string identity, std::string signing, std::string entitlementsPath = std::string(""));
-    std::string plistString(std::string key, std::string value);
+    std::string macOSPackageArchiveName(const std::string& executableName, const std::string& version);
+    std::string renderMacOSInfoPlist(const std::shared_ptr<MacOSAppConfig>& config);
+    std::shared_ptr<std::vector<std::string>> macOSCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& signing, const std::string& entitlementsPath = std::string(""));
+    std::string plistString(const std::string& key, const std::string& value);
     std::string plistIndent(int32_t depth);
-    std::string renderPlistValue(doof::JsonValue value, int32_t depth);
-    std::string escapePlistText(std::string value);
+    std::string renderPlistValue(const doof::JsonValue& value, int32_t depth);
+    std::string escapePlistText(const std::string& value);
 }
 
 namespace app_src_macos_app_ {

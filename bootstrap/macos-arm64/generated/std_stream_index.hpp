@@ -45,7 +45,7 @@ namespace std_::stream::index {
     bool next();
     std::string value();
 };
-    Stream__string blobStreamToLineStream(Stream__readonly_array_byte source);
+    Stream__string blobStreamToLineStream(const Stream__readonly_array_byte& source);
 }
 
 namespace std_::stream::index {

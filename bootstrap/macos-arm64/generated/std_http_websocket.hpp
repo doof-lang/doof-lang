@@ -181,11 +181,11 @@ inline std::ostream& operator<<(std::ostream& output, WebSocketState value) { re
 };
     using WebSocketEvent = std::variant<std::shared_ptr<WebSocketOpen>, std::shared_ptr<WebSocketText>, std::shared_ptr<WebSocketBinary>, std::shared_ptr<WebSocketWritable>, std::shared_ptr<WebSocketClose>, std::shared_ptr<WebSocketError>>;
     using WebSocketCommand = std::variant<std::shared_ptr<WebSocketSendText>, std::shared_ptr<WebSocketSendBinary>, std::shared_ptr<WebSocketPing>, std::shared_ptr<WebSocketCloseCommand>>;
-    doof::Result<std::shared_ptr<WebSocketConnection>, std::shared_ptr<::std_::http::types::HttpError>> connectWebSocket(std::string url, std::shared_ptr<WebSocketOptions> options = std::make_shared<WebSocketOptions>(1024, 1024, std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{}), 30000));
-    void emitLocalWebSocketEvent(std::shared_ptr<WebSocketConnection> connection, std::variant<std::shared_ptr<WebSocketOpen>, std::shared_ptr<WebSocketText>, std::shared_ptr<WebSocketBinary>, std::shared_ptr<WebSocketWritable>, std::shared_ptr<WebSocketClose>, std::shared_ptr<WebSocketError>> event);
+    doof::Result<std::shared_ptr<WebSocketConnection>, std::shared_ptr<::std_::http::types::HttpError>> connectWebSocket(const std::string& url, const std::shared_ptr<WebSocketOptions>& options = std::make_shared<WebSocketOptions>(1024, 1024, std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{}), 30000));
+    void emitLocalWebSocketEvent(const std::shared_ptr<WebSocketConnection>& connection, const std::variant<std::shared_ptr<WebSocketOpen>, std::shared_ptr<WebSocketText>, std::shared_ptr<WebSocketBinary>, std::shared_ptr<WebSocketWritable>, std::shared_ptr<WebSocketClose>, std::shared_ptr<WebSocketError>>& event);
     WebSocketState nativeStateToPublic(int32_t state);
-    std::shared_ptr<::std_::http::types::HttpError> parseWebSocketError(std::string raw);
-    std::string renderHeaders(std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers);
+    std::shared_ptr<::std_::http::types::HttpError> parseWebSocketError(const std::string& raw);
+    std::string renderHeaders(const std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>& headers);
 }
 
 namespace std_::http::websocket {

@@ -8,11 +8,11 @@
 
 namespace app_src_resolver_ {
 using namespace ::app_src_semantic_;
-doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>> noSourceLoader(std::string path) {
+doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>> noSourceLoader(const std::string& path) {
     return doof::Success<std::shared_ptr<::app_src_semantic_::SourceFile>>{ nullptr };
 }
 
-std::shared_ptr<::app_src_semantic_::SourceFile> ModuleResolver::find(std::string path) {
+std::shared_ptr<::app_src_semantic_::SourceFile> ModuleResolver::find(const std::string& path) {
     const auto& _iterable_1 = this->sources;
     for (const auto& source : *_iterable_1) {
         if (source->path == path) {
@@ -40,7 +40,7 @@ std::shared_ptr<::app_src_semantic_::SourceFile> ModuleResolver::find(std::strin
     }
     return nullptr;
 }
-bool ModuleResolver::failed(std::string path) {
+bool ModuleResolver::failed(const std::string& path) {
     const auto& _iterable_4 = this->failedPaths;
     for (const auto& failed : *_iterable_4) {
         if (failed == path) {
@@ -49,7 +49,7 @@ bool ModuleResolver::failed(std::string path) {
     }
     return false;
 }
-std::string ModuleResolver::resolve(std::string importer, std::string specifier) {
+std::string ModuleResolver::resolve(const std::string& importer, const std::string& specifier) {
     const auto base = (doof::string_startsWith(specifier, std::string(".")) ? relativeBase(importer, specifier) : (std::string("/") + specifier));
     const auto exact = withExtension(base);
     if (doof::string_endsWith(base, std::string(".do"))) {
@@ -64,13 +64,13 @@ std::string ModuleResolver::resolve(std::string importer, std::string specifier)
     }
     return exact;
 }
-std::string withExtension(std::string path) {
+std::string withExtension(const std::string& path) {
     if (doof::string_endsWith(path, std::string(".do"))) {
         return path;
     }
     return (path + std::string(".do"));
 }
-std::string relativeBase(std::string importer, std::string specifier) {
+std::string relativeBase(const std::string& importer, const std::string& specifier) {
     auto directory = parentDirectory(importer);
     auto remaining = specifier;
     while (doof::string_startsWith(remaining, std::string("../"))) {
@@ -85,7 +85,7 @@ std::string relativeBase(std::string importer, std::string specifier) {
     }
     return ((directory + std::string("/")) + remaining);
 }
-std::string parentDirectory(std::string path) {
+std::string parentDirectory(const std::string& path) {
     auto end = (static_cast<int32_t>(path.size()) - 1);
     while ((end >= 0) && (path[end] == U'\u002F')) {
         (end = (end - 1));

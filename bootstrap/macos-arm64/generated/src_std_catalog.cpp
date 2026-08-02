@@ -73,7 +73,7 @@ doof::Result<std::shared_ptr<StdCatalog>, std::string> StdCatalog::fromJsonValue
     auto _field_packages = [&]() { const auto* _array = doof::json_as_array(_iterator_packages->second); auto _values = std::make_shared<std::vector<std::shared_ptr<StdCatalogPackage>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(StdCatalogPackage::fromJsonValue(_element, _lenient))); } return _values; }();
     return doof::Success<std::shared_ptr<StdCatalog>>{std::make_shared<StdCatalog>(_field_schemaVersion, _field_compilerVersion, _field_digest, _field_packages)};
 }
-std::string canonicalDependencyUrl(std::string value) {
+std::string canonicalDependencyUrl(const std::string& value) {
     auto result = doof::string_trim(value);
     while (doof::string_endsWith(result, std::string("/"))) {
         (result = doof::string_substring(result, 0, (static_cast<int32_t>(result.size()) - 1)));
@@ -94,7 +94,7 @@ std::string canonicalDependencyUrl(std::string value) {
     const auto host = doof::string_toLowerCase(doof::string_substring(remainder, 0, slash));
     return (((scheme + std::string("://")) + host) + doof::string_substring(remainder, slash, static_cast<int32_t>(remainder.size())));
 }
-doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(std::string source) {
+doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(const std::string& source) {
     auto _try_value_1 = ::doof_json::parse(source);
     if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
     const auto parsed = doof::success_value(_try_value_1);
@@ -164,7 +164,7 @@ doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(std::stri
     }
     return doof::Success<std::shared_ptr<StdCatalog>>{ std::make_shared<StdCatalog>(schemaVersion, compilerVersion, doof::string_toLowerCase(digest), result) };
 }
-std::shared_ptr<StdCatalogPackage> stdCatalogPackage(std::shared_ptr<StdCatalog> catalog, std::string name) {
+std::shared_ptr<StdCatalogPackage> stdCatalogPackage(const std::shared_ptr<StdCatalog>& catalog, const std::string& name) {
     const auto& _iterable_13 = catalog->packages;
     for (const auto& package : *_iterable_13) {
         if (package->name == name) {
@@ -173,7 +173,7 @@ std::shared_ptr<StdCatalogPackage> stdCatalogPackage(std::shared_ptr<StdCatalog>
     }
     return nullptr;
 }
-doof::Result<std::string, std::string> catalogString(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name) {
+doof::Result<std::string, std::string> catalogString(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
     auto _binding_value_14 = doof::map_get(object, name, "", 0);
     if (doof::is_failure(_binding_value_14)) {
         const auto& value = _binding_value_14;
@@ -191,7 +191,7 @@ doof::Result<std::string, std::string> catalogString(std::shared_ptr<doof::order
     }
     return doof::Success<std::string>{ text };
 }
-doof::Result<int32_t, std::string> catalogInt(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name) {
+doof::Result<int32_t, std::string> catalogInt(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
     auto _binding_value_16 = doof::map_get(object, name, "", 0);
     if (doof::is_failure(_binding_value_16)) {
         const auto& value = _binding_value_16;

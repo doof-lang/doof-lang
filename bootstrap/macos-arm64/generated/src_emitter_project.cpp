@@ -125,7 +125,7 @@ doof::Result<std::shared_ptr<ProjectEmission>, std::string> ProjectEmission::fro
     }
     return doof::Success<std::shared_ptr<ProjectEmission>>{std::make_shared<ProjectEmission>(_field_modules.value(), _field_supportFiles.value(), _field_nativeCopies.value(), _field_nativeBuild.value(), _field_wasmExportNames.value())};
 }
-std::shared_ptr<ProjectEmission> planProjectEmission(std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission> graph, std::shared_ptr<std::vector<std::shared_ptr<NativePackageInput>>> packages) {
+std::shared_ptr<ProjectEmission> planProjectEmission(const std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission>& graph, const std::shared_ptr<std::vector<std::shared_ptr<NativePackageInput>>>& packages) {
     const auto project = std::make_shared<ProjectEmission>(graph->modules, std::make_shared<std::vector<std::shared_ptr<ProjectSupportFile>>>(std::vector<std::shared_ptr<ProjectSupportFile>>{}), std::make_shared<std::vector<std::shared_ptr<ProjectNativeCopy>>>(std::vector<std::shared_ptr<ProjectNativeCopy>>{}), std::make_shared<::app_src_package_manifest_::NativeBuildPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{})), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     if (graph->wasmSupportSource != std::string("")) {
         project->supportFiles->push_back(std::make_shared<ProjectSupportFile>(std::string("doof_wasm.cpp"), graph->wasmSupportSource));
@@ -139,7 +139,7 @@ std::shared_ptr<ProjectEmission> planProjectEmission(std::shared_ptr<::app_src_e
     }
     return project;
 }
-void planPackageSupportFiles(std::shared_ptr<ProjectEmission> project, std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission> graph, std::shared_ptr<NativePackageInput> package_) {
+void planPackageSupportFiles(const std::shared_ptr<ProjectEmission>& project, const std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission>& graph, const std::shared_ptr<NativePackageInput>& package_) {
     const auto& _iterable_2 = graph->modules;
     for (const auto& module : *_iterable_2) {
         const auto relativeModulePath = logicalSuffix(module->modulePath, package_->logicalPrefix);
@@ -150,7 +150,7 @@ void planPackageSupportFiles(std::shared_ptr<ProjectEmission> project, std::shar
         addSupportFile(project->supportFiles, std::make_shared<ProjectSupportFile>(projectJoinPath(package_->outputRoot, relativeHeaderPath), ((std::string("#pragma once\n#include \"") + module->headerName) + std::string("\"\n"))));
     }
 }
-void planPackageNativeBuild(std::shared_ptr<ProjectEmission> project, std::shared_ptr<NativePackageInput> package_) {
+void planPackageNativeBuild(const std::shared_ptr<ProjectEmission>& project, const std::shared_ptr<NativePackageInput>& package_) {
     const auto native = package_->manifest->nativeBuild;
     auto copiedAny = false;
     const auto& _iterable_3 = native->includePaths;
@@ -190,7 +190,7 @@ void planPackageNativeBuild(std::shared_ptr<ProjectEmission> project, std::share
     appendUniqueValues(project->nativeBuild->compilerFlags, native->compilerFlags);
     appendUniqueValues(project->nativeBuild->linkerFlags, native->linkerFlags);
 }
-std::string addNativeCopy(std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>> copies, std::shared_ptr<NativePackageInput> package_, std::string sourcePath) {
+std::string addNativeCopy(const std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>>& copies, const std::shared_ptr<NativePackageInput>& package_, const std::string& sourcePath) {
     const auto relativeWithinPackage = diskSuffix(sourcePath, package_->manifest->rootDirectory);
     const auto relativePath = projectJoinPath(package_->outputRoot, relativeWithinPackage);
     const auto& _iterable_7 = copies;
@@ -205,7 +205,7 @@ std::string addNativeCopy(std::shared_ptr<std::vector<std::shared_ptr<ProjectNat
     copies->push_back(std::make_shared<ProjectNativeCopy>(sourcePath, relativePath));
     return relativePath;
 }
-std::optional<std::string> logicalSuffix(std::string path, std::string prefix) {
+std::optional<std::string> logicalSuffix(const std::string& path, const std::string& prefix) {
     if (path == prefix) {
         return std::string("");
     }
@@ -215,7 +215,7 @@ std::optional<std::string> logicalSuffix(std::string path, std::string prefix) {
     }
     return doof::string_substring(path, static_cast<int32_t>(boundary.size()), static_cast<int32_t>(path.size()));
 }
-std::string diskSuffix(std::string path, std::string root) {
+std::string diskSuffix(const std::string& path, const std::string& root) {
     if (path == root) {
         return std::string("");
     }
@@ -225,13 +225,13 @@ std::string diskSuffix(std::string path, std::string root) {
     }
     return doof::string_substring(path, static_cast<int32_t>(boundary.size()), static_cast<int32_t>(path.size()));
 }
-std::string replaceDoExtension(std::string path) {
+std::string replaceDoExtension(const std::string& path) {
     if (doof::string_endsWith(path, std::string(".do"))) {
         return (doof::string_substring(path, 0, (static_cast<int32_t>(path.size()) - 3)) + std::string(".hpp"));
     }
     return (path + std::string(".hpp"));
 }
-std::string projectJoinPath(std::string directory, std::string suffix) {
+std::string projectJoinPath(const std::string& directory, const std::string& suffix) {
     if (directory == std::string("")) {
         return suffix;
     }
@@ -243,7 +243,7 @@ std::string projectJoinPath(std::string directory, std::string suffix) {
     }
     return ((directory + std::string("/")) + suffix);
 }
-std::string projectParentPath(std::string path) {
+std::string projectParentPath(const std::string& path) {
     auto separator = -1;
     auto index = 0;
     while (index < static_cast<int32_t>(path.size())) {
@@ -257,7 +257,7 @@ std::string projectParentPath(std::string path) {
     }
     return doof::string_substring(path, 0, separator);
 }
-void addSupportFile(std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>> files, std::shared_ptr<ProjectSupportFile> file) {
+void addSupportFile(const std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>>& files, const std::shared_ptr<ProjectSupportFile>& file) {
     const auto& _iterable_8 = files;
     for (const auto& existing : *_iterable_8) {
         if (existing->relativePath == file->relativePath) {
@@ -269,13 +269,13 @@ void addSupportFile(std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFi
     }
     files->push_back(file);
 }
-void appendUniqueValues(std::shared_ptr<std::vector<std::string>> target, std::shared_ptr<std::vector<std::string>> values) {
+void appendUniqueValues(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<std::vector<std::string>>& values) {
     const auto& _iterable_9 = values;
     for (const auto& value : *_iterable_9) {
         appendUnique(target, value);
     }
 }
-void appendUnique(std::shared_ptr<std::vector<std::string>> target, std::string value) {
+void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const std::string& value) {
     const auto& _iterable_10 = target;
     for (const auto& existing : *_iterable_10) {
         if (existing == value) {

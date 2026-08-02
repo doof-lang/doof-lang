@@ -34,22 +34,22 @@ doof::Result<std::shared_ptr<RunInvocation>, std::string> RunInvocation::fromJso
     auto _field_directory = (_lenient ? doof::json_as_string_lenient(_iterator_directory->second) : doof::json_as_string(_iterator_directory->second));
     return doof::Success<std::shared_ptr<RunInvocation>>{std::make_shared<RunInvocation>(_field_command, _field_arguments.value(), _field_directory)};
 }
-std::shared_ptr<RunInvocation> planNativeProgramRun(std::string executablePath, std::shared_ptr<std::vector<std::string>> programArguments, std::string packageRoot) {
+std::shared_ptr<RunInvocation> planNativeProgramRun(const std::string& executablePath, const std::shared_ptr<std::vector<std::string>>& programArguments, const std::string& packageRoot) {
     return std::make_shared<RunInvocation>(executablePath, programArguments, packageRoot);
 }
-std::shared_ptr<RunInvocation> planMacOSAppRun(std::string appPath, std::string packageRoot) {
+std::shared_ptr<RunInvocation> planMacOSAppRun(const std::string& appPath, const std::string& packageRoot) {
     return std::make_shared<RunInvocation>(std::string("open"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-n"), appPath}), packageRoot);
 }
-std::shared_ptr<RunInvocation> planIOSSimulatorInstall(std::string appPath, std::string packageRoot) {
+std::shared_ptr<RunInvocation> planIOSSimulatorInstall(const std::string& appPath, const std::string& packageRoot) {
     return std::make_shared<RunInvocation>(std::string("xcrun"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("simctl"), std::string("install"), std::string("booted"), appPath}), packageRoot);
 }
-std::shared_ptr<RunInvocation> planIOSSimulatorLaunch(std::string bundleId, std::string packageRoot) {
+std::shared_ptr<RunInvocation> planIOSSimulatorLaunch(const std::string& bundleId, const std::string& packageRoot) {
     return std::make_shared<RunInvocation>(std::string("xcrun"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("simctl"), std::string("launch"), std::string("booted"), bundleId}), packageRoot);
 }
-std::shared_ptr<RunInvocation> planIOSDeviceInstall(std::string appPath, std::string deviceIdentifier, std::string packageRoot) {
+std::shared_ptr<RunInvocation> planIOSDeviceInstall(const std::string& appPath, const std::string& deviceIdentifier, const std::string& packageRoot) {
     return std::make_shared<RunInvocation>(std::string("xcrun"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("devicectl"), std::string("device"), std::string("install"), std::string("app"), std::string("--device"), deviceIdentifier, appPath}), packageRoot);
 }
-std::shared_ptr<RunInvocation> planIOSDeviceLaunch(std::string bundleId, std::string deviceIdentifier, std::string packageRoot) {
+std::shared_ptr<RunInvocation> planIOSDeviceLaunch(const std::string& bundleId, const std::string& deviceIdentifier, const std::string& packageRoot) {
     return std::make_shared<RunInvocation>(std::string("xcrun"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("devicectl"), std::string("device"), std::string("process"), std::string("launch"), std::string("--device"), deviceIdentifier, std::string("--terminate-existing"), bundleId}), packageRoot);
 }
 }

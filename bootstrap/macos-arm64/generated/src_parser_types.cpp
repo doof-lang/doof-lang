@@ -12,13 +12,13 @@ namespace app_src_parser_types_ {
 using namespace ::app_src_parser_;
 using namespace ::app_src_lexer_;
 using namespace ::app_src_ast_;
-std::variant<std::monostate, std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseOptionalType(std::shared_ptr<::app_src_parser_::Parser> parser) {
+std::variant<std::monostate, std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseOptionalType(const std::shared_ptr<::app_src_parser_::Parser>& parser) {
     if (!parser->match(::app_src_lexer_::TokenType::Colon)) {
         return std::monostate{};
     }
     return doof::optional_value(parseTypeAnnotation(parser));
 }
-std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseTypeAnnotation(std::shared_ptr<::app_src_parser_::Parser> parser) {
+std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseTypeAnnotation(const std::shared_ptr<::app_src_parser_::Parser>& parser) {
     const auto first = parseTypeMember(parser);
     std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>> types = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>{first});
     while (parser->match(::app_src_lexer_::TokenType::Pipe)) {
@@ -30,7 +30,7 @@ std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_s
     }
     return result;
 }
-std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseTypeMember(std::shared_ptr<::app_src_parser_::Parser> parser) {
+std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseTypeMember(const std::shared_ptr<::app_src_parser_::Parser>& parser) {
     auto start = parser->location();
     if (parser->match(::app_src_lexer_::TokenType::Weak)) {
         const auto inner = parseTypeAnnotation(parser);
@@ -70,7 +70,7 @@ std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_s
     }
     return result;
 }
-std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parsePrimaryType(std::shared_ptr<::app_src_parser_::Parser> parser) {
+std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parsePrimaryType(const std::shared_ptr<::app_src_parser_::Parser>& parser) {
     auto start = parser->location();
     if (parser->check(::app_src_lexer_::TokenType::LeftParen)) {
         if ((parser->peek(1).kind != ::app_src_lexer_::TokenType::RightParen) && !((parser->peek(1).kind == ::app_src_lexer_::TokenType::Identifier) && (parser->peek(2).kind == ::app_src_lexer_::TokenType::Colon))) {

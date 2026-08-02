@@ -185,7 +185,7 @@ doof::Result<std::shared_ptr<TestDiscovery>, std::string> TestDiscovery::fromJso
     }
     return doof::Success<std::shared_ptr<TestDiscovery>>{std::make_shared<TestDiscovery>(_field_tests.value(), _field_errors.value())};
 }
-std::shared_ptr<TestDiscovery> discoverModuleTests(std::shared_ptr<::app_src_ast_::Program> program, std::string modulePath, std::string rootDirectory) {
+std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& modulePath, const std::string& rootDirectory) {
     const auto result = std::make_shared<TestDiscovery>(std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     auto usesMocks = false;
     const auto& _iterable_1 = program->statements;
@@ -232,7 +232,7 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(std::shared_ptr<::app_src_ast
     }
     return result;
 }
-std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsForCompilation(std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests) {
+std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsForCompilation(const std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>>& tests) {
     const auto shared = std::make_shared<TestCompilationGroup>(std::string("shared"), std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{}));
     std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> mocked = std::make_shared<std::vector<std::shared_ptr<TestCompilationGroup>>>(std::vector<std::shared_ptr<TestCompilationGroup>>{});
     const auto& _iterable_4 = tests;
@@ -265,7 +265,7 @@ std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsFo
     }
     return result;
 }
-std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> filterDiscoveredTests(std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests, std::string filter) {
+std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> filterDiscoveredTests(const std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>>& tests, const std::string& filter) {
     if (filter == std::string("")) {
         return copyTests(tests);
     }
@@ -279,7 +279,7 @@ std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> filterDiscoveredTe
     }
     return selected;
 }
-std::string generateTestHarness(std::string harnessPath, std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests) {
+std::string generateTestHarness(const std::string& harnessPath, const std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>>& tests) {
     auto source = std::string("");
     for (int32_t index = 0; index < static_cast<int32_t>((tests)->size()); ++index) {
         const auto test = (*tests)[index];
@@ -305,10 +305,10 @@ std::string generateTestHarness(std::string harnessPath, std::shared_ptr<std::ve
     (source = (source + std::string("}\n")));
     return source;
 }
-std::string safeGroupName(std::string value) {
+std::string safeGroupName(const std::string& value) {
     return doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(value, std::string("/"), std::string("_")), std::string("\\"), std::string("_")), std::string("."), std::string("_")), std::string("-"), std::string("_"));
 }
-std::string testDisplayPath(std::string rootDirectory, std::string modulePath) {
+std::string testDisplayPath(const std::string& rootDirectory, const std::string& modulePath) {
     const auto root = trimTrailingSlashes(doof::string_replaceAll(rootDirectory, std::string("\\"), std::string("/")));
     const auto module = doof::string_replaceAll(modulePath, std::string("\\"), std::string("/"));
     const auto prefix = (root + std::string("/"));
@@ -317,7 +317,7 @@ std::string testDisplayPath(std::string rootDirectory, std::string modulePath) {
     }
     return module;
 }
-std::string formatParseFailure(std::string modulePath, std::string source, int32_t line, int32_t column, std::string message) {
+std::string formatParseFailure(const std::string& modulePath, const std::string& source, int32_t line, int32_t column, const std::string& message) {
     const auto header = ((((((modulePath + std::string(":")) + doof::to_string(line)) + std::string(":")) + doof::to_string(column)) + std::string(": error: ")) + message);
     const auto lines = doof::string_split(source, std::string("\n"));
     if ((line < 1) || (line > static_cast<int32_t>((lines)->size()))) {
@@ -326,7 +326,7 @@ std::string formatParseFailure(std::string modulePath, std::string source, int32
     const auto caretColumn = ((column < 1) ? 1 : column);
     return (((((header + std::string("\n")) + (*lines)[(line - 1)]) + std::string("\n")) + doof::string_repeat(std::string(" "), (caretColumn - 1))) + std::string("^"));
 }
-void mergeCoverageOutput(std::string output, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>> modules, std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>> hitsByModule) {
+void mergeCoverageOutput(const std::string& output, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>>& modules, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>>& hitsByModule) {
     const auto& _iterable_8 = doof::string_split(output, std::string("\n"));
     for (const auto& line : *_iterable_8) {
         const auto trimmed = doof::string_trim(line);
@@ -352,7 +352,7 @@ void mergeCoverageOutput(std::string output, std::shared_ptr<std::vector<std::sh
         }
     }
 }
-std::string stripCoverageLines(std::string output) {
+std::string stripCoverageLines(const std::string& output) {
     auto result = std::string("");
     const auto& _iterable_9 = doof::string_split(output, std::string("\n"));
     for (const auto& line : *_iterable_9) {
@@ -366,7 +366,7 @@ std::string stripCoverageLines(std::string output) {
     }
     return doof::string_trim(result);
 }
-std::shared_ptr<CoverageReport> buildCoverageReport(std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>> modules, std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>> hitsByModule, std::string rootDirectory) {
+std::shared_ptr<CoverageReport> buildCoverageReport(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>>& modules, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>>& hitsByModule, const std::string& rootDirectory) {
     const auto report = std::make_shared<CoverageReport>(0, 0, 1000, std::make_shared<std::vector<std::shared_ptr<CoverageFileReport>>>(std::vector<std::shared_ptr<CoverageFileReport>>{}));
     for (int32_t index = 0; index < static_cast<int32_t>((modules)->size()); ++index) {
         const auto module = (*modules)[index];
@@ -395,7 +395,7 @@ std::shared_ptr<CoverageReport> buildCoverageReport(std::shared_ptr<std::vector<
     (report->totalPercentTenths = coveragePercentTenths(report->totalCovered, report->totalLines));
     return report;
 }
-std::string renderCoverageJson(std::shared_ptr<CoverageReport> report) {
+std::string renderCoverageJson(const std::shared_ptr<CoverageReport>& report) {
     auto output = (std::string("{\n  \"timestamp\": \"\",\n  \"totals\": { \"covered\": ") + doof::to_string(report->totalCovered));
     (output = (((((output + std::string(", \"total\": ")) + doof::to_string(report->totalLines)) + std::string(", \"percent\": ")) + coveragePercentText(report->totalPercentTenths)) + std::string(" },\n")));
     (output = (output + std::string("  \"files\": [")));
@@ -411,7 +411,7 @@ std::string renderCoverageJson(std::shared_ptr<CoverageReport> report) {
     }
     return (output + ((static_cast<int32_t>((report->files)->size()) == 0) ? std::string("]\n}\n") : std::string("\n  ]\n}\n")));
 }
-std::string renderCoverageHtml(std::shared_ptr<CoverageReport> report, std::string fileDirectoryName) {
+std::string renderCoverageHtml(const std::shared_ptr<CoverageReport>& report, const std::string& fileDirectoryName) {
     auto rows = std::string("");
     const auto& _iterable_11 = report->files;
     for (const auto& file : *_iterable_11) {
@@ -423,7 +423,7 @@ std::string renderCoverageHtml(std::shared_ptr<CoverageReport> report, std::stri
     const auto overall = coveragePercentText(report->totalPercentTenths);
     return (((((((((((((std::string("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\">") + std::string("<title>Doof Coverage Report</title><style>body{font:16px system-ui;max-width:960px;margin:2rem auto;padding:0 1rem;color:#1f2933}")) + std::string("table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:.65rem;border-bottom:1px solid #ddd}")) + std::string("a{color:#9a3412}.summary{font-size:1.3rem}</style></head><body><h1>Doof Coverage</h1>")) + std::string("<p class=\"summary\">Overall: ")) + doof::to_string(report->totalCovered)) + std::string("/")) + doof::to_string(report->totalLines)) + std::string(" lines (")) + overall) + std::string("%)</p>")) + std::string("<table><thead><tr><th>File</th><th>Lines</th><th>Coverage</th></tr></thead><tbody>")) + rows) + std::string("</tbody></table></body></html>\n"));
 }
-std::string renderCoverageFileHtml(std::shared_ptr<CoverageFileReport> file, std::string source, std::string indexHref) {
+std::string renderCoverageFileHtml(const std::shared_ptr<CoverageFileReport>& file, const std::string& source, const std::string& indexHref) {
     auto lines = std::string("");
     const auto sourceLines = doof::string_split(source, std::string("\n"));
     for (int32_t index = 0; index < static_cast<int32_t>((sourceLines)->size()); ++index) {
@@ -433,10 +433,10 @@ std::string renderCoverageFileHtml(std::shared_ptr<CoverageFileReport> file, std
     }
     return ((((((((((((std::string("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\">") + std::string("<title>")) + escapeHtml(file->path)) + std::string(" — Doof Coverage</title><style>body{font:15px system-ui;margin:2rem;color:#1f2933}")) + std::string(".line{display:grid;grid-template-columns:4rem 1fr;font-family:monospace;white-space:pre}.line span{text-align:right;padding-right:1rem;color:#6b7280}")) + std::string(".covered{background:#dcfce7}.missed{background:#fee2e2}.neutral{background:#f8fafc}a{color:#9a3412}</style></head><body>")) + std::string("<a href=\"")) + escapeHtml(indexHref)) + std::string("\">Back to coverage summary</a><h1>")) + escapeHtml(file->path)) + std::string("</h1>")) + lines) + std::string("</body></html>\n"));
 }
-std::string coverageFileRelativePath(std::string path) {
+std::string coverageFileRelativePath(const std::string& path) {
     return (doof::string_replaceAll(doof::string_replaceAll(path, std::string("\\"), std::string("/")), std::string("../"), std::string("_external/")) + std::string(".html"));
 }
-int32_t parseCoverageInteger(std::string value) {
+int32_t parseCoverageInteger(const std::string& value) {
     if (value == std::string("")) {
         return -1;
     }
@@ -472,12 +472,12 @@ int32_t parseCoverageInteger(std::string value) {
     }
     return result;
 }
-void appendUniqueLine(std::shared_ptr<std::vector<int32_t>> lines, int32_t line) {
+void appendUniqueLine(const std::shared_ptr<std::vector<int32_t>>& lines, int32_t line) {
     if (!containsLine(lines, line)) {
         lines->push_back(line);
     }
 }
-bool containsLine(std::shared_ptr<std::vector<int32_t>> lines, int32_t line) {
+bool containsLine(const std::shared_ptr<std::vector<int32_t>>& lines, int32_t line) {
     const auto& _iterable_12 = lines;
     for (const auto& existing : *_iterable_12) {
         if (existing == line) {
@@ -495,7 +495,7 @@ int32_t coveragePercentTenths(int32_t covered, int32_t total) {
 std::string coveragePercentText(int32_t tenths) {
     return ((doof::to_string((tenths / 10)) + std::string(".")) + doof::to_string((tenths % 10)));
 }
-std::string renderLineArray(std::shared_ptr<std::vector<int32_t>> lines) {
+std::string renderLineArray(const std::shared_ptr<std::vector<int32_t>>& lines) {
     auto result = std::string("[");
     for (int32_t index = 0; index < static_cast<int32_t>((lines)->size()); ++index) {
         if (index > 0) {
@@ -505,13 +505,13 @@ std::string renderLineArray(std::shared_ptr<std::vector<int32_t>> lines) {
     }
     return (result + std::string("]"));
 }
-std::string escapeJson(std::string value) {
+std::string escapeJson(const std::string& value) {
     return doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(value, std::string("\\"), std::string("\\\\")), std::string("\""), std::string("\\\"")), std::string("\n"), std::string("\\n"));
 }
-std::string escapeHtml(std::string value) {
+std::string escapeHtml(const std::string& value) {
     return doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(value, std::string("&"), std::string("&amp;")), std::string("<"), std::string("&lt;")), std::string(">"), std::string("&gt;")), std::string("\""), std::string("&quot;")), std::string("'"), std::string("&#39;"));
 }
-void addDiscoveredTest(std::shared_ptr<TestDiscovery> result, std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration, std::string exportedName, std::string modulePath, std::string rootDirectory, bool usesMocks) {
+void addDiscoveredTest(const std::shared_ptr<TestDiscovery>& result, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& declaration, const std::string& exportedName, const std::string& modulePath, const std::string& rootDirectory, bool usesMocks) {
     const auto location = ((((modulePath + std::string(":")) + doof::to_string(declaration->span.start.line)) + std::string(":")) + doof::to_string(declaration->span.start.column));
     if (static_cast<int32_t>((declaration->params)->size()) > 0) {
         result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must not declare parameters")));
@@ -528,7 +528,7 @@ void addDiscoveredTest(std::shared_ptr<TestDiscovery> result, std::shared_ptr<::
     const auto displayPath = testDisplayPath(rootDirectory, modulePath);
     result->tests->push_back(std::make_shared<DiscoveredTest>(((displayPath + std::string("::")) + exportedName), exportedName, modulePath, displayPath, usesMocks));
 }
-bool returnsNone(std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration) {
+bool returnsNone(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& declaration) {
     if (doof::is_null(declaration->returnType)) {
         {
             auto _case_subject = declaration->body;
@@ -553,7 +553,7 @@ bool returnsNone(std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaratio
     }
     doof::unreachable();
 }
-std::shared_ptr<::app_src_ast_::FunctionDeclaration> findFunction(std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>> statements, std::string name) {
+std::shared_ptr<::app_src_ast_::FunctionDeclaration> findFunction(const std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>>& statements, const std::string& name) {
     const auto& _iterable_13 = statements;
     for (const auto& statement : *_iterable_13) {
         {
@@ -570,7 +570,7 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> findFunction(std::shared_pt
     }
     return nullptr;
 }
-std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> copyTests(std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests) {
+std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> copyTests(const std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>>& tests) {
     std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> result = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{});
     const auto& _iterable_14 = tests;
     for (const auto& test : *_iterable_14) {
@@ -578,7 +578,7 @@ std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> copyTests(std::sha
     }
     return result;
 }
-std::string relativeImportSpecifier(std::string harnessPath, std::string modulePath) {
+std::string relativeImportSpecifier(const std::string& harnessPath, const std::string& modulePath) {
     const auto sourceComponents = parentComponents(doof::string_replaceAll(harnessPath, std::string("\\"), std::string("/")));
     const auto to = doof::string_split(withoutExtension(doof::string_replaceAll(modulePath, std::string("\\"), std::string("/"))), std::string("/"));
     auto common = 0;
@@ -600,27 +600,27 @@ std::string relativeImportSpecifier(std::string harnessPath, std::string moduleP
     }
     return result;
 }
-std::shared_ptr<std::vector<std::string>> parentComponents(std::string path) {
+std::shared_ptr<std::vector<std::string>> parentComponents(const std::string& path) {
     const auto components = doof::string_split(path, std::string("/"));
     if (static_cast<int32_t>((components)->size()) > 0) {
         auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/test-runner", 438, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }
     return components;
 }
-std::string withoutExtension(std::string path) {
+std::string withoutExtension(const std::string& path) {
     if (doof::string_endsWith(path, std::string(".do"))) {
         return doof::string_substring(path, 0, (static_cast<int32_t>(path.size()) - 3));
     }
     return path;
 }
-std::string trimTrailingSlashes(std::string path) {
+std::string trimTrailingSlashes(const std::string& path) {
     auto end = static_cast<int32_t>(path.size());
     while ((end > 1) && (path[(end - 1)] == U'\u002F')) {
         (end = (end - 1));
     }
     return doof::string_substring(path, 0, end);
 }
-std::string escapeDoofString(std::string value) {
+std::string escapeDoofString(const std::string& value) {
     return doof::string_replaceAll(doof::string_replaceAll(value, std::string("\\"), std::string("\\\\")), std::string("\""), std::string("\\\""));
 }
 }

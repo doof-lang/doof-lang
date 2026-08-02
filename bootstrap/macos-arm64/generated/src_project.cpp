@@ -18,7 +18,7 @@ using namespace ::std_::path::index;
 using namespace ::app_src_package_manifest_;
 using namespace ::app_src_macos_app_;
 using namespace ::app_src_ios_app_;
-std::string projectManifestPath(std::string path) {
+std::string projectManifestPath(const std::string& path) {
     auto directory = (::doof_fs::isDirectory(path) ? path : ::std_::path::index::dirname(path));
     while (true) {
         const auto candidate = ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{directory, std::string("doof.json")}));
@@ -33,7 +33,7 @@ std::string projectManifestPath(std::string path) {
     }
     return std::string("");
 }
-std::string environmentValue(std::string name) {
+std::string environmentValue(const std::string& name) {
     auto _binding_value_1 = ::std_::os::index::env(name);
     if (doof::is_failure(_binding_value_1)) {
         const auto& value = _binding_value_1;
@@ -42,13 +42,13 @@ std::string environmentValue(std::string name) {
     const auto value = doof::success_value(_binding_value_1);
     return value;
 }
-std::string fileName(std::string path) {
+std::string fileName(const std::string& path) {
     return ::std_::path::index::basename(path);
 }
-std::string parentPath(std::string path) {
+std::string parentPath(const std::string& path) {
     return ::std_::path::index::dirname(path);
 }
-std::string joinPath(std::string directory, std::string name) {
+std::string joinPath(const std::string& directory, const std::string& name) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{directory, name}));
 }
 
@@ -165,13 +165,13 @@ doof::Result<std::shared_ptr<ProjectSpec>, std::string> ProjectSpec::fromJsonVal
     }
     return doof::Success<std::shared_ptr<ProjectSpec>>{std::make_shared<ProjectSpec>(_field_rootDirectory, _field_manifestPath, _field_name, _field_entry, _field_buildDirectory, _field_hasManifest, _field_explicitEntry.value(), _field_manifest, _field_resources.value(), _field_externalDependencies.value(), _field_nativeBuild, _field_target.value(), _field_macosApp.value(), _field_iosApp.value(), _field_packageConfig.value(), _field_iosPackageConfig.value())};
 }
-std::string projectEntryRequestError(std::shared_ptr<ProjectSpec> project, std::string requestedPath) {
+std::string projectEntryRequestError(const std::shared_ptr<ProjectSpec>& project, const std::string& requestedPath) {
     if (!project->hasManifest && (!project->explicitEntry || !doof::string_endsWith(requestedPath, std::string(".do")))) {
         return std::string("no doof.json found; pass an explicit .do entry file");
     }
     return std::string("");
 }
-std::shared_ptr<ProjectSpec> readProjectSpec(std::string requestedPath, std::string platform, std::string targetOverride) {
+std::shared_ptr<ProjectSpec> readProjectSpec(const std::string& requestedPath, const std::string& platform, const std::string& targetOverride) {
     const auto absolutePath = [&]() -> std::string { auto _try_value = ::std_::path::index::absolute(requestedPath); if (doof::is_failure(_try_value)) doof::panic_at("src/project", 63, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     const auto directory = (::doof_fs::isDirectory(absolutePath) ? absolutePath : parentPath(absolutePath));
     const auto manifest = projectManifestPath(absolutePath);

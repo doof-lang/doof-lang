@@ -18,7 +18,7 @@ using namespace ::app_src_emitter_context_;
 using namespace ::app_src_emitter_expr_;
 using namespace ::app_src_emitter_stmt_;
 using namespace ::app_src_emitter_types_;
-std::string emitActorCreation(std::shared_ptr<::app_src_ast_::ActorCreationExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitActorCreation(const std::shared_ptr<::app_src_ast_::ActorCreationExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (doof::is_null(expression->resolvedType)) {
         doof::panic(std::string("Actor creation is missing its resolved type"));
     }
@@ -43,7 +43,7 @@ std::string emitActorCreation(std::shared_ptr<::app_src_ast_::ActorCreationExpre
     doof::unreachable();
     return std::string("");
 }
-std::string emitAsyncExpression(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitAsyncExpression(const std::shared_ptr<::app_src_ast_::AsyncExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     {
         auto _case_subject = expression->expression;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
@@ -87,7 +87,7 @@ std::string emitAsyncExpression(std::shared_ptr<::app_src_ast_::AsyncExpression>
     doof::panic(std::string("Cannot emit async expression without an actor method or isolated function call"));
     return std::string("");
 }
-std::string emitIsolatedFunctionCall(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_ast_::CallExpression> call, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitIsolatedFunctionCall(const std::shared_ptr<::app_src_ast_::AsyncExpression>& expression, const std::shared_ptr<::app_src_ast_::CallExpression>& call, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (doof::is_null(expression->resolvedType)) {
         doof::panic(std::string("Async call is missing its resolved Promise type"));
     }
@@ -112,7 +112,7 @@ std::string emitIsolatedFunctionCall(std::shared_ptr<::app_src_ast_::AsyncExpres
     }
     return ((((((std::string("doof::submit_async<") + cppReturn) + std::string(">([=]() -> ")) + cppReturn) + std::string(" { return ")) + invocation) + std::string("; })"));
 }
-std::string emitAsyncBlock(std::shared_ptr<::app_src_ast_::AsyncExpression> expression, std::shared_ptr<::app_src_ast_::Block> block, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitAsyncBlock(const std::shared_ptr<::app_src_ast_::AsyncExpression>& expression, const std::shared_ptr<::app_src_ast_::Block>& block, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (doof::is_null(expression->resolvedType)) {
         doof::panic(std::string("Async block is missing its resolved Promise type"));
     }
@@ -147,13 +147,13 @@ std::string emitAsyncBlock(std::shared_ptr<::app_src_ast_::AsyncExpression> expr
     (context->valueYieldReturnsVoid = previousVoidState);
     return ((((((((std::string("doof::submit_async<") + cppReturn) + std::string(">([")) + captures) + std::string("]() -> ")) + cppReturn) + std::string(" {\n")) + body) + std::string("})"));
 }
-std::string emitRetireActor(std::shared_ptr<::app_src_ast_::RetireExpression> expression, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitRetireActor(const std::shared_ptr<::app_src_ast_::RetireExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     return (::app_src_emitter_expr_::emitExpression(expression->actor, context, std::monostate{}) + std::string("->retire()"));
 }
-std::string emitSyncActorCall(std::shared_ptr<::app_src_ast_::CallExpression> expression, std::shared_ptr<::app_src_ast_::MemberExpression> member, std::shared_ptr<::app_src_semantic_::ActorType> actor, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitSyncActorCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expression, const std::shared_ptr<::app_src_ast_::MemberExpression>& member, const std::shared_ptr<::app_src_semantic_::ActorType>& actor, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     return emitActorMethodCall(expression, member, actor, false, context);
 }
-std::string emitActorMethodCall(std::shared_ptr<::app_src_ast_::CallExpression> expression, std::shared_ptr<::app_src_ast_::MemberExpression> member, std::shared_ptr<::app_src_semantic_::ActorType> actor, bool async_, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitActorMethodCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expression, const std::shared_ptr<::app_src_ast_::MemberExpression>& member, const std::shared_ptr<::app_src_semantic_::ActorType>& actor, bool async_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     const auto object = ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{});
     const auto className = ::app_src_emitter_types_::emitClassInnerType(actor->innerClass, context->modulePath);
     std::shared_ptr<::app_src_semantic_::FunctionType> methodType = nullptr;

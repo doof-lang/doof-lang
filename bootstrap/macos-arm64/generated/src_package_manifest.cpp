@@ -14,13 +14,13 @@ using namespace ::std_::json::index;
 using namespace ::std_::path::index;
 using namespace ::app_src_macos_app_;
 using namespace ::app_src_ios_app_;
-std::string manifestJoinPath(std::string directory, std::string name) {
+std::string manifestJoinPath(const std::string& directory, const std::string& name) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{directory, name}));
 }
-doof::JsonValue manifestJsonField(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name) {
+doof::JsonValue manifestJsonField(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
     return [&]() -> doof::JsonValue { auto _try_value = doof::map_get(object, name, "", 0); if (doof::is_failure(_try_value)) doof::panic_at("src/package-manifest", 13, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
 }
-bool manifestJsonHas(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name) {
+bool manifestJsonHas(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
     return (object->find(name) != object->end());
 }
 
@@ -585,7 +585,7 @@ doof::Result<std::shared_ptr<PackageManifest>, std::string> PackageManifest::fro
     }
     return doof::Success<std::shared_ptr<PackageManifest>>{std::make_shared<PackageManifest>(_field_name, _field_version.value(), _field_manifestPath, _field_rootDirectory, _field_resources.value(), _field_dependencies.value(), _field_externalDependencies.value(), _field_packageResolutions.value(), _field_externalResolutions.value(), _field_policy.value(), _field_nativeBuild, _field_target.value(), _field_macosApp.value(), _field_iosApp.value(), _field_packageConfig.value(), _field_iosPackageConfig.value())};
 }
-doof::Result<std::shared_ptr<PackageManifest>, std::string> parsePackageManifest(std::string source, std::string manifestPath, std::string rootDirectory, std::string platform, std::string targetOverride) {
+doof::Result<std::shared_ptr<PackageManifest>, std::string> parsePackageManifest(const std::string& source, const std::string& manifestPath, const std::string& rootDirectory, const std::string& platform, const std::string& targetOverride) {
     auto _try_value_1 = ::doof_json::parse(source);
     if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
     const auto parsed = doof::success_value(_try_value_1);
@@ -645,7 +645,7 @@ doof::Result<std::shared_ptr<PackageManifest>, std::string> parsePackageManifest
     const auto iosPackageConfig = doof::success_value(_try_value_16);
     return doof::Success<std::shared_ptr<PackageManifest>>{ std::make_shared<PackageManifest>(name, version, manifestPath, rootDirectory, resources, dependencies, externalDependencies, packageResolutions, externalResolutions, policy, nativeBuild, target, macosApp, iosApp, packageConfig, iosPackageConfig) };
 }
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>>, std::string> parsePackageDependencies(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath, std::string rootDirectory) {
+doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>>, std::string> parsePackageDependencies(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory) {
     if (!manifestJsonHas(root, std::string("dependencies"))) {
         return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>>>{ std::make_shared<std::vector<std::shared_ptr<PackageDependency>>>(std::vector<std::shared_ptr<PackageDependency>>{}) };
     }
@@ -688,7 +688,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>>, s
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>>>{ result };
 }
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>, std::string> parseResolutions(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath, std::string section) {
+doof::Result<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>, std::string> parseResolutions(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& section) {
     if (!manifestJsonHas(root, std::string("resolutions"))) {
         return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>>{ std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{}) };
     }
@@ -749,7 +749,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>>{ result };
 }
-doof::Result<std::shared_ptr<DependencyPolicy>, std::string> parseDependencyPolicy(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath) {
+doof::Result<std::shared_ptr<DependencyPolicy>, std::string> parseDependencyPolicy(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath) {
     const auto result = std::make_shared<DependencyPolicy>(false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     if (!manifestJsonHas(root, std::string("policy"))) {
         return doof::Success<std::shared_ptr<DependencyPolicy>>{ result };
@@ -789,7 +789,7 @@ doof::Result<std::shared_ptr<DependencyPolicy>, std::string> parseDependencyPoli
     }
     return doof::Success<std::shared_ptr<DependencyPolicy>>{ result };
 }
-doof::Result<void, std::string> appendPolicyStrings(std::shared_ptr<std::vector<std::string>> target, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name, std::string manifestPath, std::string fieldPath) {
+doof::Result<void, std::string> appendPolicyStrings(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name, const std::string& manifestPath, const std::string& fieldPath) {
     auto _try_value_40 = manifestArray(manifestJsonField(object, name), manifestPath, ((fieldPath + std::string(".")) + name));
     if (doof::is_failure(_try_value_40)) return doof::Failure<std::string>{doof::failure_error(_try_value_40)};
     const auto values = doof::success_value(_try_value_40);
@@ -804,7 +804,7 @@ doof::Result<void, std::string> appendPolicyStrings(std::shared_ptr<std::vector<
     }
     return doof::Success<void>{};
 }
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>, std::string> parseExternalDependencies(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath, std::string rootDirectory) {
+doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>, std::string> parseExternalDependencies(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory) {
     if (!manifestJsonHas(root, std::string("externalDependencies"))) {
         return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>>{ std::make_shared<std::vector<std::shared_ptr<ExternalDependency>>>(std::vector<std::shared_ptr<ExternalDependency>>{}) };
     }
@@ -893,7 +893,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>, 
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>>{ result };
 }
-doof::Result<std::string, std::string> requiredManifestString(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name, std::string manifestPath, std::string fieldPath) {
+doof::Result<std::string, std::string> requiredManifestString(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name, const std::string& manifestPath, const std::string& fieldPath) {
     if (!manifestJsonHas(object, name)) {
         return doof::Failure<std::string>{ ((((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".")) + name) + std::string(" is required")) };
     }
@@ -905,7 +905,7 @@ doof::Result<std::string, std::string> requiredManifestString(std::shared_ptr<do
     }
     return doof::Success<std::string>{ value };
 }
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>, std::string> parseExternalDependencyCopyFiles(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string manifestPath, std::string fieldPath) {
+doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>, std::string> parseExternalDependencyCopyFiles(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& manifestPath, const std::string& fieldPath) {
     if (!manifestJsonHas(object, std::string("copyFiles"))) {
         return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>>{ std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{}) };
     }
@@ -928,7 +928,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyF
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>>{ result };
 }
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>>, std::string> parseExternalDependencyCommands(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string manifestPath, std::string fieldPath) {
+doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>>, std::string> parseExternalDependencyCommands(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& manifestPath, const std::string& fieldPath) {
     if (!manifestJsonHas(object, std::string("commands"))) {
         return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>>>{ std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{}) };
     }
@@ -986,11 +986,11 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyComma
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>>>{ result };
 }
-bool isSupportedExternalArchiveUrl(std::string url) {
+bool isSupportedExternalArchiveUrl(const std::string& url) {
     const auto lower = doof::string_toLowerCase(url);
     return (((((doof::string_endsWith(lower, std::string(".zip")) || doof::string_endsWith(lower, std::string(".tar.gz"))) || doof::string_endsWith(lower, std::string(".tgz"))) || doof::string_endsWith(lower, std::string(".tar.bz2"))) || doof::string_endsWith(lower, std::string(".tbz2"))) || doof::string_endsWith(lower, std::string(".tar.xz")));
 }
-bool isHexString(std::string value, int32_t length) {
+bool isHexString(const std::string& value, int32_t length) {
     if (static_cast<int32_t>(value.size()) != length) {
         return false;
     }
@@ -1002,7 +1002,7 @@ bool isHexString(std::string value, int32_t length) {
     }
     return true;
 }
-std::shared_ptr<NativeBuildPlan> mergeNativeBuildPlans(std::shared_ptr<std::vector<std::shared_ptr<NativeBuildPlan>>> plans) {
+std::shared_ptr<NativeBuildPlan> mergeNativeBuildPlans(const std::shared_ptr<std::vector<std::shared_ptr<NativeBuildPlan>>>& plans) {
     const auto merged = std::make_shared<NativeBuildPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     const auto& _iterable_67 = plans;
     for (const auto& plan : *_iterable_67) {
@@ -1010,7 +1010,7 @@ std::shared_ptr<NativeBuildPlan> mergeNativeBuildPlans(std::shared_ptr<std::vect
     }
     return merged;
 }
-doof::Result<std::shared_ptr<NativeBuildPlan>, std::string> parseManifestNativeBuild(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath, std::string rootDirectory, std::string platform, std::string target) {
+doof::Result<std::shared_ptr<NativeBuildPlan>, std::string> parseManifestNativeBuild(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory, const std::string& platform, const std::string& target) {
     const auto result = std::make_shared<NativeBuildPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     if (!manifestJsonHas(root, std::string("build"))) {
         return doof::Success<std::shared_ptr<NativeBuildPlan>>{ result };
@@ -1036,7 +1036,7 @@ doof::Result<std::shared_ptr<NativeBuildPlan>, std::string> parseManifestNativeB
     }
     return doof::Success<std::shared_ptr<NativeBuildPlan>>{ result };
 }
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std::string> parseManifestResources(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath, std::string rootDirectory) {
+doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std::string> parseManifestResources(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory) {
     if (manifestJsonHas(root, std::string("resources"))) {
         return parseResourceArray(manifestJsonField(root, std::string("resources")), manifestPath, rootDirectory, std::string("resources"));
     }
@@ -1050,7 +1050,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>>{ std::make_shared<std::vector<std::shared_ptr<PackageResource>>>(std::vector<std::shared_ptr<PackageResource>>{}) };
 }
-doof::Result<std::string, std::string> parseManifestTarget(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath) {
+doof::Result<std::string, std::string> parseManifestTarget(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath) {
     if (manifestJsonHas(root, std::string("target"))) {
         return manifestString(manifestJsonField(root, std::string("target")), manifestPath, std::string("target"));
     }
@@ -1064,7 +1064,7 @@ doof::Result<std::string, std::string> parseManifestTarget(std::shared_ptr<doof:
     }
     return doof::Success<std::string>{ std::string("") };
 }
-doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>, std::string> parseMacOSApp(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath, std::string rootDirectory, std::string packageName, std::string packageVersion, std::string target) {
+doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>, std::string> parseMacOSApp(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory, const std::string& packageName, const std::string& packageVersion, const std::string& target) {
     if (target != std::string("macos-app")) {
         return doof::Success<std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>>{ nullptr };
     }
@@ -1204,7 +1204,7 @@ doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>, std::string>
     }
     return doof::Success<std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>>{ std::make_shared<::app_src_macos_app_::MacOSAppConfig>(executableName, bundleId, displayName, version, iconPath, infoPlist, resources, embeddedLibraries, category, minimumSystemVersion) };
 }
-doof::Result<std::shared_ptr<::app_src_ios_app_::IOSAppConfig>, std::string> parseIOSApp(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath, std::string rootDirectory, std::string packageName, std::string packageVersion, std::string target) {
+doof::Result<std::shared_ptr<::app_src_ios_app_::IOSAppConfig>, std::string> parseIOSApp(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory, const std::string& packageName, const std::string& packageVersion, const std::string& target) {
     if (target != std::string("ios-app")) {
         return doof::Success<std::shared_ptr<::app_src_ios_app_::IOSAppConfig>>{ nullptr };
     }
@@ -1342,7 +1342,7 @@ doof::Result<std::shared_ptr<::app_src_ios_app_::IOSAppConfig>, std::string> par
     }
     return doof::Success<std::shared_ptr<::app_src_ios_app_::IOSAppConfig>>{ std::make_shared<::app_src_ios_app_::IOSAppConfig>(executableName, bundleId, displayName, version, iconPath, infoPlist, resources, embeddedLibraries, minimumDeploymentTarget) };
 }
-doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig>, std::string> parseMacOSPackage(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath, std::string rootDirectory) {
+doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig>, std::string> parseMacOSPackage(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory) {
     auto distDirectory = manifestJoinPath(rootDirectory, std::string("dist"));
     auto signing = std::string("developer-id");
     auto identity = std::string("");
@@ -1412,7 +1412,7 @@ doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig>, std::str
     }
     return doof::Success<std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig>>{ std::make_shared<::app_src_macos_app_::MacOSPackageConfig>(distDirectory, signing, identity, sandbox, entitlementsPath) };
 }
-doof::Result<std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>, std::string> parseIOSPackage(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root, std::string manifestPath, std::string rootDirectory) {
+doof::Result<std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>, std::string> parseIOSPackage(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory) {
     auto identity = std::string("");
     auto provisioningProfilePath = std::string("");
     if (!manifestJsonHas(root, std::string("build"))) {
@@ -1450,13 +1450,13 @@ doof::Result<std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>, std::string>
     }
     return doof::Success<std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>>{ std::make_shared<::app_src_ios_app_::IOSPackageConfig>(identity, provisioningProfilePath) };
 }
-doof::Result<std::string, std::string> optionalManifestString(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string key, std::string fallback, std::string manifestPath, std::string fieldPath) {
+doof::Result<std::string, std::string> optionalManifestString(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& key, const std::string& fallback, const std::string& manifestPath, const std::string& fieldPath) {
     if (!manifestJsonHas(object, key)) {
         return doof::Success<std::string>{ fallback };
     }
     return manifestString(manifestJsonField(object, key), manifestPath, fieldPath);
 }
-doof::Result<std::string, std::string> firstManifestString(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> first, std::string firstKey, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> second, std::string secondKey, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> third, std::string thirdKey, std::string fallback, std::string manifestPath, std::string fieldPath) {
+doof::Result<std::string, std::string> firstManifestString(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& first, const std::string& firstKey, const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& second, const std::string& secondKey, const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& third, const std::string& thirdKey, const std::string& fallback, const std::string& manifestPath, const std::string& fieldPath) {
     if (manifestJsonHas(first, firstKey)) {
         return manifestString(manifestJsonField(first, firstKey), manifestPath, firstKey);
     }
@@ -1468,7 +1468,7 @@ doof::Result<std::string, std::string> firstManifestString(std::shared_ptr<doof:
     }
     return doof::Success<std::string>{ fallback };
 }
-std::string sanitizeBundleName(std::string value) {
+std::string sanitizeBundleName(const std::string& value) {
     const auto allowed = std::string("abcdefghijklmnopqrstuvwxyz0123456789-");
     auto result = std::string("");
     const auto lower = doof::string_toLowerCase(value);
@@ -1484,19 +1484,19 @@ std::string sanitizeBundleName(std::string value) {
     }
     return ((result == std::string("")) ? std::string("app") : result);
 }
-bool manifestPathWithinRoot(std::string path, std::string rootDirectory) {
+bool manifestPathWithinRoot(const std::string& path, const std::string& rootDirectory) {
     const auto boundary = (doof::string_endsWith(rootDirectory, std::string("/")) ? rootDirectory : (rootDirectory + std::string("/")));
     return ((path == rootDirectory) || doof::string_startsWith(path, boundary));
 }
-bool isManagedMacOSPlistKey(std::string key) {
+bool isManagedMacOSPlistKey(const std::string& key) {
     const auto keys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("CFBundleDevelopmentRegion"), std::string("CFBundleDisplayName"), std::string("CFBundleExecutable"), std::string("CFBundleIconFile"), std::string("CFBundleIdentifier"), std::string("CFBundleInfoDictionaryVersion"), std::string("CFBundleName"), std::string("CFBundlePackageType"), std::string("CFBundleShortVersionString"), std::string("CFBundleVersion"), std::string("LSApplicationCategoryType"), std::string("LSMinimumSystemVersion"), std::string("NSHighResolutionCapable"), std::string("NSPrincipalClass")});
     return doof::array_contains(keys, key, "", 0);
 }
-bool isManagedIOSPlistKey(std::string key) {
+bool isManagedIOSPlistKey(const std::string& key) {
     const auto keys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("CFBundleDevelopmentRegion"), std::string("CFBundleDisplayName"), std::string("CFBundleExecutable"), std::string("CFBundleIdentifier"), std::string("CFBundleInfoDictionaryVersion"), std::string("CFBundleName"), std::string("CFBundlePackageType"), std::string("CFBundleShortVersionString"), std::string("CFBundleVersion"), std::string("LSRequiresIPhoneOS"), std::string("MinimumOSVersion"), std::string("UIDeviceFamily"), std::string("UILaunchStoryboardName"), std::string("UIApplicationSceneManifest")});
     return doof::array_contains(keys, key, "", 0);
 }
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std::string> parseResourceArray(doof::JsonValue value, std::string manifestPath, std::string rootDirectory, std::string fieldPath) {
+doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std::string> parseResourceArray(const doof::JsonValue& value, const std::string& manifestPath, const std::string& rootDirectory, const std::string& fieldPath) {
     auto _try_value_124 = manifestArray(value, manifestPath, fieldPath);
     if (doof::is_failure(_try_value_124)) return doof::Failure<std::string>{doof::failure_error(_try_value_124)};
     const auto entries = doof::success_value(_try_value_124);
@@ -1544,7 +1544,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>>{ resources };
 }
-doof::Result<std::string, std::string> normalizeResourceDestination(std::string destination, std::string manifestPath, std::string fieldPath) {
+doof::Result<std::string, std::string> normalizeResourceDestination(const std::string& destination, const std::string& manifestPath, const std::string& fieldPath) {
     const auto portable = doof::string_replaceAll(destination, std::string("\\"), std::string("/"));
     if (doof::string_startsWith(portable, std::string("/")) || (((static_cast<int32_t>(portable.size()) >= 3) && (portable[1] == U'\u003A')) && (portable[2] == U'\u002F'))) {
         return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(" must be relative")) };
@@ -1574,7 +1574,7 @@ doof::Result<std::string, std::string> normalizeResourceDestination(std::string 
     }
     return doof::Success<std::string>{ normalized };
 }
-doof::Result<void, std::string> appendNativeFragment(std::shared_ptr<NativeBuildPlan> target, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> fragment, std::string manifestPath, std::string rootDirectory, std::string fieldPath) {
+doof::Result<void, std::string> appendNativeFragment(const std::shared_ptr<NativeBuildPlan>& target, const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& fragment, const std::string& manifestPath, const std::string& rootDirectory, const std::string& fieldPath) {
     auto _try_value_130 = appendStringArrayField(target->includePaths, fragment, std::string("includePaths"), manifestPath, fieldPath, rootDirectory);
     if (doof::is_failure(_try_value_130)) return doof::Failure<std::string>{doof::failure_error(_try_value_130)};
     auto _try_value_131 = appendStringArrayField(target->sourceFiles, fragment, std::string("sourceFiles"), manifestPath, fieldPath, rootDirectory);
@@ -1597,7 +1597,7 @@ doof::Result<void, std::string> appendNativeFragment(std::shared_ptr<NativeBuild
     if (doof::is_failure(_try_value_139)) return doof::Failure<std::string>{doof::failure_error(_try_value_139)};
     return doof::Success<void>{};
 }
-doof::Result<void, std::string> appendStringArrayField(std::shared_ptr<std::vector<std::string>> target, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name, std::string manifestPath, std::string fieldPath, std::string pathRoot) {
+doof::Result<void, std::string> appendStringArrayField(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name, const std::string& manifestPath, const std::string& fieldPath, const std::string& pathRoot) {
     if (!manifestJsonHas(object, name)) {
         return doof::Success<void>{};
     }
@@ -1613,7 +1613,7 @@ doof::Result<void, std::string> appendStringArrayField(std::shared_ptr<std::vect
     }
     return doof::Success<void>{};
 }
-void appendNativeBuild(std::shared_ptr<NativeBuildPlan> target, std::shared_ptr<NativeBuildPlan> source) {
+void appendNativeBuild(const std::shared_ptr<NativeBuildPlan>& target, const std::shared_ptr<NativeBuildPlan>& source) {
     appendUniqueValues(target->includePaths, source->includePaths);
     appendUniqueValues(target->sourceFiles, source->sourceFiles);
     appendUniqueValues(target->libraryPaths, source->libraryPaths);
@@ -1625,13 +1625,13 @@ void appendNativeBuild(std::shared_ptr<NativeBuildPlan> target, std::shared_ptr<
     appendUniqueValues(target->compilerFlags, source->compilerFlags);
     appendUniqueValues(target->linkerFlags, source->linkerFlags);
 }
-void appendUniqueValues(std::shared_ptr<std::vector<std::string>> target, std::shared_ptr<std::vector<std::string>> values) {
+void appendUniqueValues(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<std::vector<std::string>>& values) {
     const auto& _iterable_142 = values;
     for (const auto& value : *_iterable_142) {
         appendUnique(target, value);
     }
 }
-void appendUnique(std::shared_ptr<std::vector<std::string>> target, std::string value) {
+void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const std::string& value) {
     const auto& _iterable_143 = target;
     for (const auto& existing : *_iterable_143) {
         if (existing == value) {
@@ -1640,7 +1640,7 @@ void appendUnique(std::shared_ptr<std::vector<std::string>> target, std::string 
     }
     target->push_back(value);
 }
-doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> manifestObject(doof::JsonValue value, std::string manifestPath, std::string fieldPath) {
+doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> manifestObject(const doof::JsonValue& value, const std::string& manifestPath, const std::string& fieldPath) {
     {
         auto _case_subject = value;
         if (doof::json_is_object(_case_subject)) {
@@ -1653,7 +1653,7 @@ doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, s
     }
     doof::unreachable();
 }
-doof::Result<std::shared_ptr<std::vector<doof::JsonValue>>, std::string> manifestArray(doof::JsonValue value, std::string manifestPath, std::string fieldPath) {
+doof::Result<std::shared_ptr<std::vector<doof::JsonValue>>, std::string> manifestArray(const doof::JsonValue& value, const std::string& manifestPath, const std::string& fieldPath) {
     {
         auto _case_subject = value;
         if (doof::json_is_array(_case_subject)) {
@@ -1666,7 +1666,7 @@ doof::Result<std::shared_ptr<std::vector<doof::JsonValue>>, std::string> manifes
     }
     doof::unreachable();
 }
-doof::Result<std::string, std::string> manifestString(doof::JsonValue value, std::string manifestPath, std::string fieldPath) {
+doof::Result<std::string, std::string> manifestString(const doof::JsonValue& value, const std::string& manifestPath, const std::string& fieldPath) {
     {
         auto _case_subject = value;
         if (doof::json_is_string(_case_subject)) {

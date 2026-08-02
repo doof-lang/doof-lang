@@ -115,7 +115,7 @@ doof::Result<std::shared_ptr<NativeCompilePlan>, std::string> NativeCompilePlan:
     auto _field_outputPath = (_lenient ? doof::json_as_string_lenient(_iterator_outputPath->second) : doof::json_as_string(_iterator_outputPath->second));
     return doof::Success<std::shared_ptr<NativeCompilePlan>>{std::make_shared<NativeCompilePlan>(_field_compiler, _field_linker, _field_precompiledHeaderTask.value(), _field_compileTasks.value(), _field_linkArguments.value(), _field_outputPath)};
 }
-std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>> tasks, int32_t maximumWorkers) {
+std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(const std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>& tasks, int32_t maximumWorkers) {
     if ((static_cast<int32_t>((tasks)->size()) == 0) || (maximumWorkers <= 0)) {
         return std::make_shared<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>>(std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>{});
     }
@@ -134,7 +134,7 @@ std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCo
     }
     return doof::array_drainToReadonly(readonlyBatches, "", 0);
 }
-std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::string outputDirectory, std::string outputPath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native, bool release, std::string platform, std::shared_ptr<std::vector<std::string>> wasmExportNames, bool wasm) {
+std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, bool release, const std::string& platform, const std::shared_ptr<std::vector<std::string>>& wasmExportNames, bool wasm) {
     const auto swiftLink = hasSwiftSource(native->sourceFiles);
     std::shared_ptr<std::vector<std::string>> compileArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-std=c++17")});
     if (release) {
@@ -278,7 +278,7 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::
     linkArguments->push_back(outputPath);
     return std::make_shared<NativeCompilePlan>(compiler, (swiftLink ? std::string("swiftc") : compiler), precompiledHeaderTask, compileTasks, linkArguments, outputPath);
 }
-void appendReleaseLinkerArguments(std::shared_ptr<std::vector<std::string>> arguments, std::string platform, bool swiftLink) {
+void appendReleaseLinkerArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& platform, bool swiftLink) {
     if ((platform == std::string("macos")) || doof::string_startsWith(platform, std::string("ios-"))) {
         appendLinkerOption(arguments, std::string("-dead_strip"), swiftLink);
         appendLinkerOption(arguments, std::string("-S"), swiftLink);
@@ -288,7 +288,7 @@ void appendReleaseLinkerArguments(std::shared_ptr<std::vector<std::string>> argu
     appendLinkerOption(arguments, std::string("--gc-sections"), swiftLink);
     appendLinkerOption(arguments, std::string("--strip-all"), swiftLink);
 }
-void appendLinkerOption(std::shared_ptr<std::vector<std::string>> arguments, std::string option, bool swiftLink) {
+void appendLinkerOption(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& option, bool swiftLink) {
     if (swiftLink) {
         arguments->push_back(std::string("-Xlinker"));
         arguments->push_back(option);
@@ -296,13 +296,13 @@ void appendLinkerOption(std::shared_ptr<std::vector<std::string>> arguments, std
         arguments->push_back((std::string("-Wl,") + option));
     }
 }
-std::string replaceSourceExtension(std::string path, std::string extension) {
+std::string replaceSourceExtension(const std::string& path, const std::string& extension) {
     if (doof::string_endsWith(path, std::string(".cpp"))) {
         return (doof::string_substring(path, 0, (static_cast<int32_t>(path.size()) - 4)) + extension);
     }
     return (path + extension);
 }
-std::shared_ptr<std::vector<std::string>> copyArguments(std::shared_ptr<std::vector<std::string>> source) {
+std::shared_ptr<std::vector<std::string>> copyArguments(const std::shared_ptr<std::vector<std::string>>& source) {
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_12 = source;
     for (const auto& argument : *_iterable_12) {
@@ -310,7 +310,7 @@ std::shared_ptr<std::vector<std::string>> copyArguments(std::shared_ptr<std::vec
     }
     return result;
 }
-std::shared_ptr<std::vector<std::string>> copyNativeCompileArguments(std::shared_ptr<std::vector<std::string>> source, bool cSource) {
+std::shared_ptr<std::vector<std::string>> copyNativeCompileArguments(const std::shared_ptr<std::vector<std::string>>& source, bool cSource) {
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_13 = source;
     for (const auto& argument : *_iterable_13) {
@@ -320,13 +320,13 @@ std::shared_ptr<std::vector<std::string>> copyNativeCompileArguments(std::shared
     }
     return result;
 }
-bool isCSource(std::string path) {
+bool isCSource(const std::string& path) {
     return doof::string_endsWith(doof::string_toLowerCase(path), std::string(".c"));
 }
-bool isSwiftSource(std::string path) {
+bool isSwiftSource(const std::string& path) {
     return doof::string_endsWith(doof::string_toLowerCase(path), std::string(".swift"));
 }
-bool hasSwiftSource(std::shared_ptr<std::vector<std::string>> paths) {
+bool hasSwiftSource(const std::shared_ptr<std::vector<std::string>>& paths) {
     const auto& _iterable_14 = paths;
     for (const auto& path : *_iterable_14) {
         if (isSwiftSource(path)) {
@@ -335,10 +335,10 @@ bool hasSwiftSource(std::shared_ptr<std::vector<std::string>> paths) {
     }
     return false;
 }
-std::shared_ptr<std::vector<std::string>> swiftObjectArguments(std::string sourcePath, std::string objectPath) {
+std::shared_ptr<std::vector<std::string>> swiftObjectArguments(const std::string& sourcePath, const std::string& objectPath) {
     return std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-parse-as-library"), std::string("-emit-object"), sourcePath, std::string("-o"), objectPath});
 }
-std::string deriveCCompiler(std::string compiler) {
+std::string deriveCCompiler(const std::string& compiler) {
     if ((compiler == std::string("em++")) || doof::string_endsWith(compiler, std::string("/em++"))) {
         return (doof::string_substring(compiler, 0, (static_cast<int32_t>(compiler.size()) - 4)) + std::string("emcc"));
     }
@@ -353,7 +353,7 @@ std::string deriveCCompiler(std::string compiler) {
     }
     return compiler;
 }
-std::string wasmExportList(std::shared_ptr<std::vector<std::string>> names) {
+std::string wasmExportList(const std::shared_ptr<std::vector<std::string>>& names) {
     auto result = std::string("[\"_malloc\",\"_free\",\"_doof_free\"");
     const auto& _iterable_15 = names;
     for (const auto& name : *_iterable_15) {
@@ -361,13 +361,13 @@ std::string wasmExportList(std::shared_ptr<std::vector<std::string>> names) {
     }
     return (result + std::string("]"));
 }
-void appendObjectArguments(std::shared_ptr<std::vector<std::string>> arguments, std::string sourcePath, std::string outputPath) {
+void appendObjectArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& sourcePath, const std::string& outputPath) {
     arguments->push_back(std::string("-c"));
     arguments->push_back(sourcePath);
     arguments->push_back(std::string("-o"));
     arguments->push_back(outputPath);
 }
-bool usesClangPrecompiledHeader(std::string compiler, std::string platform) {
+bool usesClangPrecompiledHeader(const std::string& compiler, const std::string& platform) {
     const auto name = doof::string_toLowerCase(compiler);
     if (doof::string_contains(name, std::string("clang"))) {
         return true;
@@ -377,7 +377,7 @@ bool usesClangPrecompiledHeader(std::string compiler, std::string platform) {
     }
     return (platform == std::string("macos"));
 }
-std::string resolveBuildPath(std::string outputDirectory, std::string path) {
+std::string resolveBuildPath(const std::string& outputDirectory, const std::string& path) {
     if (doof::string_startsWith(path, std::string("/"))) {
         return path;
     }

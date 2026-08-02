@@ -14,14 +14,14 @@ using namespace ::std_::time::index;
 bool Timer::cancel() {
     return this->native->cancel();
 }
-std::shared_ptr<Timer> setTimeout(std::shared_ptr<::std_::time::duration::Duration> delay, doof::callback<void()> handler, bool keepsAlive) {
+std::shared_ptr<Timer> setTimeout(const std::shared_ptr<::std_::time::duration::Duration>& delay, const doof::callback<void()>& handler, bool keepsAlive) {
     if (delay->isNegative()) {
         doof::panic(std::string("setTimeout delay must not be negative"));
     }
     const auto timerHandler = handler;
     return std::make_shared<Timer>(::doof_event::NativeTimer::createTimeout(delay->toNanos(), keepsAlive, doof::callback<void()>([timerHandler]() -> void { return timerHandler.call(); })));
 }
-std::shared_ptr<Timer> setInterval(std::shared_ptr<::std_::time::duration::Duration> interval, doof::callback<void()> handler, bool keepsAlive) {
+std::shared_ptr<Timer> setInterval(const std::shared_ptr<::std_::time::duration::Duration>& interval, const doof::callback<void()>& handler, bool keepsAlive) {
     if (interval->toNanos() <= 0LL) {
         doof::panic(std::string("setInterval interval must be positive"));
     }
@@ -34,7 +34,7 @@ void runMainEventLoop() {
 int32_t drainMainEventLoop() {
     return ::doof_event::drainMainEventLoop();
 }
-void setMainEventWakeHandler(doof::callback<void()> handler) {
+void setMainEventWakeHandler(const doof::callback<void()>& handler) {
     ::doof_event::setMainEventWakeCallback(handler);
 }
 void clearMainEventWakeHandler() {
@@ -76,7 +76,7 @@ void _runMainEventLoop() {
 int32_t _drainMainEventLoop() {
     return ::doof_event::drainMainEventLoop();
 }
-void _setMainEventWakeHandler(doof::callback<void()> handler) {
+void _setMainEventWakeHandler(const doof::callback<void()>& handler) {
     ::doof_event::setMainEventWakeCallback(handler);
 }
 void _clearMainEventWakeHandler() {

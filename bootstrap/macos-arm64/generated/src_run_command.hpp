@@ -32,12 +32,12 @@ namespace app_src_run_command_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<RunInvocation>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::shared_ptr<RunInvocation> planNativeProgramRun(std::string executablePath, std::shared_ptr<std::vector<std::string>> programArguments, std::string packageRoot);
-    std::shared_ptr<RunInvocation> planMacOSAppRun(std::string appPath, std::string packageRoot);
-    std::shared_ptr<RunInvocation> planIOSSimulatorInstall(std::string appPath, std::string packageRoot);
-    std::shared_ptr<RunInvocation> planIOSSimulatorLaunch(std::string bundleId, std::string packageRoot);
-    std::shared_ptr<RunInvocation> planIOSDeviceInstall(std::string appPath, std::string deviceIdentifier, std::string packageRoot);
-    std::shared_ptr<RunInvocation> planIOSDeviceLaunch(std::string bundleId, std::string deviceIdentifier, std::string packageRoot);
+    std::shared_ptr<RunInvocation> planNativeProgramRun(const std::string& executablePath, const std::shared_ptr<std::vector<std::string>>& programArguments, const std::string& packageRoot);
+    std::shared_ptr<RunInvocation> planMacOSAppRun(const std::string& appPath, const std::string& packageRoot);
+    std::shared_ptr<RunInvocation> planIOSSimulatorInstall(const std::string& appPath, const std::string& packageRoot);
+    std::shared_ptr<RunInvocation> planIOSSimulatorLaunch(const std::string& bundleId, const std::string& packageRoot);
+    std::shared_ptr<RunInvocation> planIOSDeviceInstall(const std::string& appPath, const std::string& deviceIdentifier, const std::string& packageRoot);
+    std::shared_ptr<RunInvocation> planIOSDeviceLaunch(const std::string& bundleId, const std::string& deviceIdentifier, const std::string& packageRoot);
 }
 
 namespace app_src_run_command_ {

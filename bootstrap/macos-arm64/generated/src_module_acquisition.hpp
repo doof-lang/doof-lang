@@ -31,12 +31,12 @@ namespace app_src_module_acquisition_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ModuleAcquisition>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(std::string logicalPath, std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>> acquisitions);
-    std::optional<std::string> acquiredModuleDiskPath(std::string logicalPath, std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>> acquisitions);
-    std::string acquiredManifestPath(std::shared_ptr<ModuleAcquisition> acquisition);
-    bool acquisitionMatches(std::string prefix, std::string logicalPath);
-    std::shared_ptr<ModuleAcquisition> selectedAcquisition(std::string logicalPath, std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>> acquisitions);
-    std::string acquisitionJoinPath(std::string directory, std::string suffix);
+    std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions);
+    std::optional<std::string> acquiredModuleDiskPath(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions);
+    std::string acquiredManifestPath(const std::shared_ptr<ModuleAcquisition>& acquisition);
+    bool acquisitionMatches(const std::string& prefix, const std::string& logicalPath);
+    std::shared_ptr<ModuleAcquisition> selectedAcquisition(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions);
+    std::string acquisitionJoinPath(const std::string& directory, const std::string& suffix);
 }
 
 namespace app_src_module_acquisition_ {

@@ -73,7 +73,7 @@ doof::Result<std::shared_ptr<SourceLocationSpanOverride>, std::string> SourceLoc
     return doof::Success<std::shared_ptr<SourceLocationSpanOverride>>{std::make_shared<SourceLocationSpanOverride>(_field_span)};
 }
 
-void recordCoverageLine(std::shared_ptr<EmitContext> context, int32_t line) {
+void recordCoverageLine(const std::shared_ptr<EmitContext>& context, int32_t line) {
     const auto& _iterable_1 = context->coverageInstrumentedLines;
     for (const auto& existing : *_iterable_1) {
         if (existing == line) {
@@ -82,7 +82,7 @@ void recordCoverageLine(std::shared_ptr<EmitContext> context, int32_t line) {
     }
     context->coverageInstrumentedLines->push_back(line);
 }
-bool isCapturedMutable(std::shared_ptr<EmitContext> context, std::string name) {
+bool isCapturedMutable(const std::shared_ptr<EmitContext>& context, const std::string& name) {
     const auto& _iterable_2 = context->capturedMutables;
     for (const auto& captured : *_iterable_2) {
         if (captured == name) {
@@ -91,13 +91,13 @@ bool isCapturedMutable(std::shared_ptr<EmitContext> context, std::string name) {
     }
     return false;
 }
-std::shared_ptr<EmitContext> createEmitContext(std::shared_ptr<::app_src_ast_::Program> program) {
+std::shared_ptr<EmitContext> createEmitContext(const std::shared_ptr<::app_src_ast_::Program>& program) {
     return createEmitContextForPrograms(std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{program}));
 }
-std::shared_ptr<EmitContext> createEmitContextForPrograms(std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs) {
+std::shared_ptr<EmitContext> createEmitContextForPrograms(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs) {
     return std::make_shared<EmitContext>(std::string(""), programs, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{}), std::make_shared<std::vector<std::shared_ptr<EmitModuleSurface>>>(std::vector<std::shared_ptr<EmitModuleSurface>>{}), std::string(""), false, false, std::string(""), std::string(""), false, false, std::string(""), std::monostate{}, nullptr, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), nullptr, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), 0, false, false, false, -1, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
 }
-std::shared_ptr<EmitContext> createEmitContextForModule(std::shared_ptr<::app_src_ast_::Program> program, std::string modulePath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms) {
+std::shared_ptr<EmitContext> createEmitContextForModule(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& modulePath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& allPrograms) {
     auto programs = allPrograms;
     if (static_cast<int32_t>((programs)->size()) == 0) {
         (programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{program}));

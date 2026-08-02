@@ -62,15 +62,15 @@ namespace app_src_dependency_policy_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ResolvedExternalInput>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    bool hasMutableStdPackageInputs(std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>> packages);
-    std::shared_ptr<::app_src_package_manifest_::DependencyResolution> resolutionForUrl(std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::DependencyResolution>>> resolutions, std::string url);
-    std::shared_ptr<::app_src_package_manifest_::PackageDependency> selectedPackageSource(std::shared_ptr<::app_src_package_manifest_::PackageDependency> dependency, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::DependencyResolution>>> resolutions);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>, std::string> resolveExternalInputs(std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>> packages, std::shared_ptr<::app_src_package_manifest_::PackageManifest> rootManifest);
-    doof::Result<void, std::string> validateDependencyPolicy(std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>> packages, std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>> externals, std::shared_ptr<::app_src_package_manifest_::PackageManifest> rootManifest);
-    std::shared_ptr<ResolvedExternalInput> resolvedExternalInput(std::shared_ptr<ReachedPackageInput> owner, std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::shared_ptr<::app_src_package_manifest_::DependencyResolution> resolution);
-    bool sameSelectedExternal(std::shared_ptr<ResolvedExternalInput> left, std::shared_ptr<ResolvedExternalInput> right);
-    bool containsCanonicalUrl(std::shared_ptr<std::vector<std::string>> values, std::string value);
-    doof::Result<void, std::string> validateTransitiveNativePolicy(std::shared_ptr<ReachedPackageInput> package, std::shared_ptr<::app_src_package_manifest_::DependencyPolicy> policy);
+    bool hasMutableStdPackageInputs(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages);
+    std::shared_ptr<::app_src_package_manifest_::DependencyResolution> resolutionForUrl(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::DependencyResolution>>>& resolutions, const std::string& url);
+    std::shared_ptr<::app_src_package_manifest_::PackageDependency> selectedPackageSource(const std::shared_ptr<::app_src_package_manifest_::PackageDependency>& dependency, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::DependencyResolution>>>& resolutions);
+    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>, std::string> resolveExternalInputs(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest);
+    doof::Result<void, std::string> validateDependencyPolicy(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages, const std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>& externals, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest);
+    std::shared_ptr<ResolvedExternalInput> resolvedExternalInput(const std::shared_ptr<ReachedPackageInput>& owner, const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency, const std::shared_ptr<::app_src_package_manifest_::DependencyResolution>& resolution);
+    bool sameSelectedExternal(const std::shared_ptr<ResolvedExternalInput>& left, const std::shared_ptr<ResolvedExternalInput>& right);
+    bool containsCanonicalUrl(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
+    doof::Result<void, std::string> validateTransitiveNativePolicy(const std::shared_ptr<ReachedPackageInput>& package, const std::shared_ptr<::app_src_package_manifest_::DependencyPolicy>& policy);
 }
 
 namespace app_src_dependency_policy_ {

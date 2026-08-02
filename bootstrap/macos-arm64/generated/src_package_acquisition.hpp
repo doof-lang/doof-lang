@@ -52,20 +52,20 @@ namespace app_src_package_acquisition_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<AcquiredPackage>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::string workspacePackageAcquisitionRoot(std::string workspaceRoot);
-    std::string packageAcquisitionPath(std::string packagesRoot, std::string packageName);
-    std::string packageAcquisitionReceiptPath(std::string packageRoot);
-    doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPackage(std::shared_ptr<ExactPackageSource> source, std::string packagesRoot);
-    bool validPackageAcquisitionName(std::string name);
-    bool reusableAcquiredPackage(std::string root, std::shared_ptr<ExactPackageSource> source);
-    bool acquisitionReceiptMatches(std::string path, std::shared_ptr<ExactPackageSource> source);
-    std::optional<std::string> acquisitionReceiptString(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name);
-    std::optional<int32_t> acquisitionReceiptInt(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name);
-    std::string renderAcquisitionReceipt(std::shared_ptr<ExactPackageSource> source);
-    doof::Result<void, std::string> validateAcquiredPackage(std::string root, std::shared_ptr<ExactPackageSource> source);
-    doof::Result<std::string, std::string> packageCommand(std::string command, std::shared_ptr<std::vector<std::string>> arguments);
-    doof::Result<void, std::string> ensurePackageDirectory(std::string path);
-    doof::Result<void, std::string> removePackageTree(std::string path);
+    std::string workspacePackageAcquisitionRoot(const std::string& workspaceRoot);
+    std::string packageAcquisitionPath(const std::string& packagesRoot, const std::string& packageName);
+    std::string packageAcquisitionReceiptPath(const std::string& packageRoot);
+    doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPackage(const std::shared_ptr<ExactPackageSource>& source, const std::string& packagesRoot);
+    bool validPackageAcquisitionName(const std::string& name);
+    bool reusableAcquiredPackage(const std::string& root, const std::shared_ptr<ExactPackageSource>& source);
+    bool acquisitionReceiptMatches(const std::string& path, const std::shared_ptr<ExactPackageSource>& source);
+    std::optional<std::string> acquisitionReceiptString(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name);
+    std::optional<int32_t> acquisitionReceiptInt(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name);
+    std::string renderAcquisitionReceipt(const std::shared_ptr<ExactPackageSource>& source);
+    doof::Result<void, std::string> validateAcquiredPackage(const std::string& root, const std::shared_ptr<ExactPackageSource>& source);
+    doof::Result<std::string, std::string> packageCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments);
+    doof::Result<void, std::string> ensurePackageDirectory(const std::string& path);
+    doof::Result<void, std::string> removePackageTree(const std::string& path);
 }
 
 namespace app_src_package_acquisition_ {

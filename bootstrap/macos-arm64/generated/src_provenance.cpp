@@ -14,7 +14,7 @@ using namespace ::app_src_dependency_policy_;
 using namespace ::app_src_package_manifest_;
 using namespace ::app_src_std_catalog_;
 using namespace ::std_::json::index;
-std::string renderBuildProvenance(std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>> packages, std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>> externals, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::shared_ptr<::app_src_std_catalog_::StdCatalog> catalog) {
+std::string renderBuildProvenance(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>>& packages, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>>& externals, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& nativeBuild, const std::shared_ptr<::app_src_std_catalog_::StdCatalog>& catalog) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> root = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     provenanceSet(root, std::string("schemaVersion"), doof::json_value(2));
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> compiler = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
@@ -37,7 +37,7 @@ std::string renderBuildProvenance(std::shared_ptr<std::vector<std::shared_ptr<::
     provenanceSet(root, std::string("native"), doof::json_value(provenanceNative(nativeBuild)));
     return (::doof_json::format(doof::json_value(root)) + std::string("\n"));
 }
-std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenancePackage(std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput> package) {
+std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenancePackage(const std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>& package) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> value = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     provenanceSet(value, std::string("name"), doof::json_value(package->manifest->name));
     provenanceSet(value, std::string("logicalPrefix"), doof::json_value(package->logicalPrefix));
@@ -65,7 +65,7 @@ std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenancePacka
     }
     return value;
 }
-std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenanceExternal(std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput> input) {
+std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenanceExternal(const std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>& input) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> value = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     provenanceSet(value, std::string("name"), doof::json_value(input->dependency->name));
     provenanceSet(value, std::string("introducedBy"), doof::json_value(input->owner->logicalPrefix));
@@ -92,7 +92,7 @@ std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenanceExter
     }
     return value;
 }
-std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenanceNative(std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild) {
+std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenanceNative(const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& nativeBuild) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> value = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     provenanceSet(value, std::string("linkLibraries"), doof::json_value(provenanceStrings(nativeBuild->linkLibraries)));
     provenanceSet(value, std::string("frameworks"), doof::json_value(provenanceStrings(nativeBuild->frameworks)));
@@ -100,7 +100,7 @@ std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenanceNativ
     provenanceSet(value, std::string("sourceFiles"), doof::json_value(provenanceStrings(nativeBuild->sourceFiles)));
     return value;
 }
-std::shared_ptr<std::vector<doof::JsonValue>> provenanceStrings(std::shared_ptr<std::vector<std::string>> values) {
+std::shared_ptr<std::vector<doof::JsonValue>> provenanceStrings(const std::shared_ptr<std::vector<std::string>>& values) {
     std::shared_ptr<std::vector<doof::JsonValue>> result = std::make_shared<std::vector<doof::JsonValue>>(std::vector<doof::JsonValue>{});
     const auto& _iterable_3 = values;
     for (const auto& value : *_iterable_3) {
@@ -108,7 +108,7 @@ std::shared_ptr<std::vector<doof::JsonValue>> provenanceStrings(std::shared_ptr<
     }
     return result;
 }
-std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>> sortedProvenancePackages(std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>> values) {
+std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>> sortedProvenancePackages(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>>& values) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>> result = std::make_shared<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>>(std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>{});
     const auto& _iterable_4 = values;
     for (const auto& value : *_iterable_4) {
@@ -123,7 +123,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::Reache
     }
     return result;
 }
-std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>> sortedProvenanceExternals(std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>> values) {
+std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>> sortedProvenanceExternals(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>>& values) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>> result = std::make_shared<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>>(std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>{});
     const auto& _iterable_5 = values;
     for (const auto& value : *_iterable_5) {
@@ -143,7 +143,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::Resolv
     }
     return result;
 }
-void provenanceSet(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string name, doof::JsonValue value) {
+void provenanceSet(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name, const doof::JsonValue& value) {
     doof::map_set(object, name, value, "", 0);
 }
 }

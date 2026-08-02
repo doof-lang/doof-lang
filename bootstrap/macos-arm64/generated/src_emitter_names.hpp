@@ -32,16 +32,16 @@ namespace app_src_emitter_names_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ModuleNamespaceMapping>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    void configureModuleNamespaces(std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>> mappings);
-    std::string moduleStem(std::string path);
-    std::string moduleNamespace(std::string path);
-    std::string moduleDiagnosticPath(std::string path, bool stripExtension);
-    std::string moduleNativeHeaderPath(std::string modulePath, std::string headerPath);
-    std::shared_ptr<ModuleNamespaceMapping> namespaceMappingForPath(std::string path);
-    std::string namespacePath(std::string path);
-    std::string namespaceComponent(std::string value);
-    std::string moduleHeaderName(std::string path);
-    std::string moduleSourceName(std::string path);
+    void configureModuleNamespaces(const std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>>& mappings);
+    std::string moduleStem(const std::string& path);
+    std::string moduleNamespace(const std::string& path);
+    std::string moduleDiagnosticPath(const std::string& path, bool stripExtension);
+    std::string moduleNativeHeaderPath(const std::string& modulePath, const std::string& headerPath);
+    std::shared_ptr<ModuleNamespaceMapping> namespaceMappingForPath(const std::string& path);
+    std::string namespacePath(const std::string& path);
+    std::string namespaceComponent(const std::string& value);
+    std::string moduleHeaderName(const std::string& path);
+    std::string moduleSourceName(const std::string& path);
 }
 
 namespace app_src_emitter_names_ {

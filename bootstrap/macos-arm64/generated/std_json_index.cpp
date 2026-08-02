@@ -6,7 +6,7 @@
 #include "std_stream_index.hpp"
 
 namespace std_::json::index {
-doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> parseJsonObject(std::string text) {
+doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> parseJsonObject(const std::string& text) {
     auto _try_value_1 = ::doof_json::parse(text);
     if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
     const auto result = doof::success_value(_try_value_1);
@@ -22,10 +22,10 @@ doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, s
     }
     doof::unreachable();
 }
-doof::Result<doof::JsonValue, std::string> parseJsonValue(std::string text) {
+doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text) {
     return ::doof_json::parse(text);
 }
-std::string formatJsonValue(doof::JsonValue value) {
+std::string formatJsonValue(const doof::JsonValue& value) {
     return ::doof_json::format(value);
 }
 }

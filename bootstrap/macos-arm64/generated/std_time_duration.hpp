@@ -40,7 +40,7 @@ struct Duration : public std::enable_shared_from_this<Duration> {
     static std::shared_ptr<Duration> ofMinutes(int64_t m);
     static std::shared_ptr<Duration> ofHours(int64_t h);
     static std::shared_ptr<Duration> ofDays(int64_t d);
-    static doof::Result<std::shared_ptr<Duration>, std::string> parse(std::string s);
+    static doof::Result<std::shared_ptr<Duration>, std::string> parse(const std::string& s);
     int64_t toNanos();
     int64_t toMicros();
     int64_t toMillis();
@@ -52,14 +52,14 @@ struct Duration : public std::enable_shared_from_this<Duration> {
     bool isZero();
     std::shared_ptr<Duration> abs();
     std::shared_ptr<Duration> negated();
-    std::shared_ptr<Duration> plus(std::shared_ptr<Duration> other);
-    std::shared_ptr<Duration> minus(std::shared_ptr<Duration> other);
+    std::shared_ptr<Duration> plus(const std::shared_ptr<Duration>& other);
+    std::shared_ptr<Duration> minus(const std::shared_ptr<Duration>& other);
     std::shared_ptr<Duration> multipliedBy(int64_t factor);
     std::shared_ptr<Duration> dividedBy(int64_t divisor);
-    int32_t compareTo(std::shared_ptr<Duration> other);
-    bool isLessThan(std::shared_ptr<Duration> other);
-    bool isGreaterThan(std::shared_ptr<Duration> other);
-    bool equals(std::shared_ptr<Duration> other);
+    int32_t compareTo(const std::shared_ptr<Duration>& other);
+    bool isLessThan(const std::shared_ptr<Duration>& other);
+    bool isGreaterThan(const std::shared_ptr<Duration>& other);
+    bool equals(const std::shared_ptr<Duration>& other);
     std::string toISOString();
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<Duration>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
@@ -67,11 +67,11 @@ struct Duration : public std::enable_shared_from_this<Duration> {
     // Utilities for the current operating-system thread.
 struct Thread : public std::enable_shared_from_this<Thread> {
     Thread() {}
-    static void sleep(std::shared_ptr<Duration> duration);
+    static void sleep(const std::shared_ptr<Duration>& duration);
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<Thread>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    doof::Result<std::shared_ptr<Duration>, std::string> parseDuration(std::string s);
+    doof::Result<std::shared_ptr<Duration>, std::string> parseDuration(const std::string& s);
     bool isDigit(char32_t c);
     int32_t digitValue(char32_t c);
 }

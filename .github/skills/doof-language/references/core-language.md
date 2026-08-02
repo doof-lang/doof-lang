@@ -190,7 +190,9 @@ type Callback = (value: int, label: string): none
 type Predicate<T> = (item: T): bool
 ```
 
-Parameter names are part of the function type.
+Function types retain parameter names for named calls, diagnostics, and
+reflection. Names do not affect compatibility: parameters are compared by
+position and type, along with the return type.
 
 Common modifiers:
 

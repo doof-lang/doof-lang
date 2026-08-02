@@ -66,18 +66,18 @@ namespace app_src_emitter_project_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ProjectEmission>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::shared_ptr<ProjectEmission> planProjectEmission(std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission> graph, std::shared_ptr<std::vector<std::shared_ptr<NativePackageInput>>> packages);
-    void planPackageSupportFiles(std::shared_ptr<ProjectEmission> project, std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission> graph, std::shared_ptr<NativePackageInput> package_);
-    void planPackageNativeBuild(std::shared_ptr<ProjectEmission> project, std::shared_ptr<NativePackageInput> package_);
-    std::string addNativeCopy(std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>> copies, std::shared_ptr<NativePackageInput> package_, std::string sourcePath);
-    std::optional<std::string> logicalSuffix(std::string path, std::string prefix);
-    std::string diskSuffix(std::string path, std::string root);
-    std::string replaceDoExtension(std::string path);
-    std::string projectJoinPath(std::string directory, std::string suffix);
-    std::string projectParentPath(std::string path);
-    void addSupportFile(std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>> files, std::shared_ptr<ProjectSupportFile> file);
-    void appendUniqueValues(std::shared_ptr<std::vector<std::string>> target, std::shared_ptr<std::vector<std::string>> values);
-    void appendUnique(std::shared_ptr<std::vector<std::string>> target, std::string value);
+    std::shared_ptr<ProjectEmission> planProjectEmission(const std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission>& graph, const std::shared_ptr<std::vector<std::shared_ptr<NativePackageInput>>>& packages);
+    void planPackageSupportFiles(const std::shared_ptr<ProjectEmission>& project, const std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission>& graph, const std::shared_ptr<NativePackageInput>& package_);
+    void planPackageNativeBuild(const std::shared_ptr<ProjectEmission>& project, const std::shared_ptr<NativePackageInput>& package_);
+    std::string addNativeCopy(const std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>>& copies, const std::shared_ptr<NativePackageInput>& package_, const std::string& sourcePath);
+    std::optional<std::string> logicalSuffix(const std::string& path, const std::string& prefix);
+    std::string diskSuffix(const std::string& path, const std::string& root);
+    std::string replaceDoExtension(const std::string& path);
+    std::string projectJoinPath(const std::string& directory, const std::string& suffix);
+    std::string projectParentPath(const std::string& path);
+    void addSupportFile(const std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>>& files, const std::shared_ptr<ProjectSupportFile>& file);
+    void appendUniqueValues(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<std::vector<std::string>>& values);
+    void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const std::string& value);
 }
 
 namespace app_src_emitter_project_ {

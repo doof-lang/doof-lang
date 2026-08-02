@@ -7,7 +7,7 @@
 #include "std_stream_index.hpp"
 
 namespace std_::parse::index {
-doof::Result<int32_t, ::std_::parse::types::ParsingError> parseInt(std::string value) {
+doof::Result<int32_t, ::std_::parse::types::ParsingError> parseInt(const std::string& value) {
     return ::doof_parse::parseInt(value);
 }
 }

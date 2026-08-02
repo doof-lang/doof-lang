@@ -170,6 +170,72 @@ export function emitType(resolvedType: ResolvedType, currentModulePath: string =
   return "void"
 }
 
+/** Borrows immutable parameters whose C++ carriers do not require Doof value-copy semantics. */
+export function emitParameterType(resolvedType: ResolvedType, currentModulePath: string = ""): string {
+  emitted := emitType(resolvedType, currentModulePath)
+  return if canBorrowParameter(resolvedType) then "const " + emitted + "&" else emitted
+}
+
+/** Applies parameter borrowing after contextual generic specialization selected the emitted carrier. */
+export function borrowParameterType(resolvedType: ResolvedType, emittedType: string): string {
+  return if canBorrowParameter(resolvedType) then "const " + emittedType + "&" else emittedType
+}
+
+function canBorrowParameter(resolvedType: ResolvedType): bool {
+  case resolvedType {
+    primitive: PrimitiveType -> { return primitive.name == "string" }
+    class_: ClassType -> { return class_.symbol.kind != "struct" }
+    _: InterfaceType -> { return true }
+    _: FunctionType -> { return true }
+    _: ActorType -> { return true }
+    _: PromiseType -> { return true }
+    _: ArrayResolvedType -> { return true }
+    _: MapResolvedType -> { return true }
+    _: SetResolvedType -> { return true }
+    _: StreamResolvedType -> { return true }
+    _: JsonValueResolvedType -> { return true }
+    result: ResultResolvedType -> {
+      return !requiresParameterValueSemantics(result.valueType) && !requiresParameterValueSemantics(result.errorType)
+    }
+    tuple: TupleResolvedType -> {
+      for element of tuple.elements { if requiresParameterValueSemantics(element) { return false } }
+      return true
+    }
+    union_: UnionResolvedType -> {
+      for member of union_.types { if requiresParameterValueSemantics(member) { return false } }
+      return true
+    }
+    _: WeakResolvedType -> { return true }
+    _: ClassMetadataResolvedType -> { return true }
+    _: MethodReflectionResolvedType -> { return true }
+    _ -> { return false }
+  }
+  return false
+}
+
+// Structs are direct C++ values whose mutable fields belong to the parameter's
+// local copy. Generic parameters may specialize to structs, so retain their
+// existing by-value ABI as well.
+function requiresParameterValueSemantics(resolvedType: ResolvedType): bool {
+  case resolvedType {
+    class_: ClassType -> { return class_.symbol.kind == "struct" }
+    _: TypeParameterType -> { return true }
+    result: ResultResolvedType -> {
+      return requiresParameterValueSemantics(result.valueType) || requiresParameterValueSemantics(result.errorType)
+    }
+    tuple: TupleResolvedType -> {
+      for element of tuple.elements { if requiresParameterValueSemantics(element) { return true } }
+      return false
+    }
+    union_: UnionResolvedType -> {
+      for member of union_.types { if requiresParameterValueSemantics(member) { return true } }
+      return false
+    }
+    _ -> { return false }
+  }
+  return false
+}
+
 function emitMetadataInnerType(owner: ResolvedType, currentModulePath: string): string {
   case owner {
     class_: ClassType -> { return emitClassInnerType(class_, currentModulePath) }

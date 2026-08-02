@@ -18,13 +18,13 @@ using namespace ::app_src_emitter_context_;
 using namespace ::app_src_emitter_expr_;
 using namespace ::app_src_emitter_types_;
 using namespace ::app_src_json_semantics_;
-std::string emitInterfaceJsonDeclaration(std::shared_ptr<::app_src_ast_::InterfaceDeclaration> owner) {
+std::string emitInterfaceJsonDeclaration(const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& owner) {
     if (!owner->needsJson) {
         return std::string("");
     }
     return ((((std::string("doof::Result<") + owner->name) + std::string(", std::string> ")) + owner->name) + std::string("_fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);\n"));
 }
-std::string emitInterfaceJsonDefinition(std::shared_ptr<::app_src_ast_::InterfaceDeclaration> owner, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitInterfaceJsonDefinition(const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (!owner->needsJson) {
         return std::string("");
     }
@@ -52,7 +52,7 @@ std::string emitInterfaceJsonDefinition(std::shared_ptr<::app_src_ast_::Interfac
     }
     return (((((result + std::string("    return ")) + failureType) + std::string("{\"Unknown ")) + discriminator->fieldName) + std::string(": \\\"\" + _discriminator + \"\\\"\"};\n}\n"));
 }
-std::string emitGeneratedJsonDeclarations(std::shared_ptr<::app_src_ast_::ClassDeclaration> owner, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitGeneratedJsonDeclarations(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (!::app_src_json_semantics_::canGenerateJsonSerialization(owner, context->allPrograms)) {
         return std::string("");
     }
@@ -63,7 +63,7 @@ std::string emitGeneratedJsonDeclarations(std::shared_ptr<::app_src_ast_::ClassD
     }
     return result;
 }
-std::string emitGeneratedJsonMethods(std::shared_ptr<::app_src_ast_::ClassDeclaration> owner, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitGeneratedJsonMethods(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (!::app_src_json_semantics_::canGenerateJsonSerialization(owner, context->allPrograms)) {
         return std::string("");
     }
@@ -73,7 +73,7 @@ std::string emitGeneratedJsonMethods(std::shared_ptr<::app_src_ast_::ClassDeclar
     }
     return result;
 }
-std::string emitToJsonObject(std::shared_ptr<::app_src_ast_::ClassDeclaration> owner, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitToJsonObject(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     auto result = ((std::string("doof::JsonObject ") + owner->name) + std::string("::toJsonObject() const {\n"));
     (result = (result + std::string("    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();\n")));
     const auto& _iterable_1 = owner->fields;
@@ -88,7 +88,7 @@ std::string emitToJsonObject(std::shared_ptr<::app_src_ast_::ClassDeclaration> o
     }
     return (result + std::string("    return _json;\n}\n"));
 }
-std::string emitFromJsonValue(std::shared_ptr<::app_src_ast_::ClassDeclaration> owner, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitFromJsonValue(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     const auto valueType = jsonResultValueType(owner);
     const auto failureType = std::string("doof::Failure<std::string>");
     auto result = ((((std::string("doof::Result<") + valueType) + std::string(", std::string> ")) + owner->name) + std::string("::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {\n"));
@@ -131,7 +131,7 @@ std::string emitFromJsonValue(std::shared_ptr<::app_src_ast_::ClassDeclaration> 
     }
     return (((((result + std::string("    return doof::Success<")) + valueType) + std::string(">{")) + constructed) + std::string("};\n}\n"));
 }
-std::string emitJsonConstFieldValidation(std::shared_ptr<::app_src_ast_::ClassField> field, std::string name, std::string failureType) {
+std::string emitJsonConstFieldValidation(const std::shared_ptr<::app_src_ast_::ClassField>& field, const std::string& name, const std::string& failureType) {
     if (doof::is_null(field->defaultValue)) {
         return std::string("");
     }
@@ -157,7 +157,7 @@ std::string emitJsonConstFieldValidation(std::shared_ptr<::app_src_ast_::ClassFi
     doof::unreachable();
     return std::string("");
 }
-std::string emitJsonFieldRead(std::shared_ptr<::app_src_ast_::ClassField> field, std::string name, std::shared_ptr<::app_src_emitter_context_::EmitContext> context, std::string failureType) {
+std::string emitJsonFieldRead(const std::shared_ptr<::app_src_ast_::ClassField>& field, const std::string& name, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& failureType) {
     const auto type_ = doof::unwrap_optional(field->resolvedType);
     const auto safeName = ::app_src_emitter_expr_::cppIdentifier(name);
     const auto iterator = (std::string("_iterator_") + safeName);
@@ -187,13 +187,13 @@ std::string emitJsonFieldRead(std::shared_ptr<::app_src_ast_::ClassField> field,
     (result = (result + emitJsonValidation((iterator + std::string("->second")), type_, name, failureType, 1)));
     return (((((result + std::string("    auto ")) + value) + std::string(" = ")) + emitJsonRead((iterator + std::string("->second")), type_, context)) + std::string(";\n"));
 }
-std::string emitJsonValidation(std::string json, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_, std::string name, std::string failureType, int32_t indent) {
+std::string emitJsonValidation(const std::string& json, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::string& name, const std::string& failureType, int32_t indent) {
     const auto prefix = ((indent == 2) ? std::string("        ") : std::string("    "));
     const auto check = emitJsonTypeCheck(json, type_);
     const auto expected = jsonTypeName(type_);
     return (((((((((((prefix + std::string("if (!(")) + check) + std::string(")) { return ")) + failureType) + std::string("{\"Field \\\"")) + name) + std::string("\\\" expected ")) + expected) + std::string(" but got \" + std::string(doof::json_type_name(")) + json) + std::string("))}; }\n"));
 }
-std::string emitJsonTypeCheck(std::string json, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_) {
+std::string emitJsonTypeCheck(const std::string& json, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
     {
         auto _case_subject = type_;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
@@ -237,7 +237,7 @@ std::string emitJsonTypeCheck(std::string json, std::variant<std::shared_ptr<::a
     doof::unreachable();
     return std::string("false");
 }
-std::string emitJsonRead(std::string json, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitJsonRead(const std::string& json, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     {
         auto _case_subject = type_;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
@@ -312,7 +312,7 @@ std::string emitJsonRead(std::string json, std::variant<std::shared_ptr<::app_sr
     doof::unreachable();
     return std::string("{}");
 }
-std::string emitPrimitiveJsonRead(std::string json, std::string name) {
+std::string emitPrimitiveJsonRead(const std::string& json, const std::string& name) {
     if (name == std::string("bool")) {
         return ((((std::string("(_lenient ? doof::json_as_bool_lenient(") + json) + std::string(") : doof::json_as_bool(")) + json) + std::string("))"));
     }
@@ -336,7 +336,7 @@ std::string emitPrimitiveJsonRead(std::string json, std::string name) {
     }
     return ((((std::string("(_lenient ? doof::json_as_string_lenient(") + json) + std::string(") : doof::json_as_string(")) + json) + std::string("))"));
 }
-std::string jsonTypeName(std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_) {
+std::string jsonTypeName(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
     {
         auto _case_subject = type_;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
@@ -378,7 +378,7 @@ std::string jsonTypeName(std::variant<std::shared_ptr<::app_src_semantic_::Primi
     doof::unreachable();
     return std::string("value");
 }
-std::string emitJsonField(std::string value, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> resolvedType, std::shared_ptr<::app_src_emitter_context_::EmitContext> context) {
+std::string emitJsonField(const std::string& value, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& resolvedType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     {
         auto _case_subject = resolvedType;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>>(_case_subject)) {
@@ -470,7 +470,7 @@ std::string emitJsonField(std::string value, std::variant<std::shared_ptr<::app_
     doof::unreachable();
     return std::string("doof::json_value(nullptr)");
 }
-std::string jsonResultValueType(std::shared_ptr<::app_src_ast_::ClassDeclaration> owner) {
+std::string jsonResultValueType(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner) {
     if (owner->struct_) {
         return owner->name;
     }

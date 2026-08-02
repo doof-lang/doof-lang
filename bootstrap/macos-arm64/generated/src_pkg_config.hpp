@@ -35,10 +35,10 @@ namespace app_src_pkg_config_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<PkgConfigCommandResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    doof::Result<void, std::string> applyPkgConfigResult(std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native, std::string packageName, std::string mode, std::shared_ptr<PkgConfigCommandResult> result);
-    std::shared_ptr<std::vector<std::string>> pkgConfigTokens(std::string output);
-    void applyPkgConfigTokens(std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native, std::shared_ptr<std::vector<std::string>> tokens, std::string mode);
-    void appendUnique(std::shared_ptr<std::vector<std::string>> target, std::string value);
+    doof::Result<void, std::string> applyPkgConfigResult(const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, const std::string& packageName, const std::string& mode, const std::shared_ptr<PkgConfigCommandResult>& result);
+    std::shared_ptr<std::vector<std::string>> pkgConfigTokens(const std::string& output);
+    void applyPkgConfigTokens(const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, const std::shared_ptr<std::vector<std::string>>& tokens, const std::string& mode);
+    void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const std::string& value);
 }
 
 namespace app_src_pkg_config_ {

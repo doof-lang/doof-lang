@@ -158,7 +158,7 @@ doof::Result<std::shared_ptr<ResolvedExternalInput>, std::string> ResolvedExtern
     }
     return doof::Success<std::shared_ptr<ResolvedExternalInput>>{std::make_shared<ResolvedExternalInput>(_field_owner, _field_dependency, _field_selectedKind, _field_selectedUrl, _field_selectedRef.value(), _field_selectedCommit.value(), _field_selectedSha256.value(), _field_overridden.value())};
 }
-bool hasMutableStdPackageInputs(std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>> packages) {
+bool hasMutableStdPackageInputs(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages) {
     const auto& _iterable_1 = packages;
     for (const auto& package : *_iterable_1) {
         if (package->mutable_ && doof::string_startsWith(package->logicalPrefix, std::string("/std/"))) {
@@ -167,7 +167,7 @@ bool hasMutableStdPackageInputs(std::shared_ptr<std::vector<std::shared_ptr<Reac
     }
     return false;
 }
-std::shared_ptr<::app_src_package_manifest_::DependencyResolution> resolutionForUrl(std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::DependencyResolution>>> resolutions, std::string url) {
+std::shared_ptr<::app_src_package_manifest_::DependencyResolution> resolutionForUrl(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::DependencyResolution>>>& resolutions, const std::string& url) {
     const auto canonical = ::app_src_std_catalog_::canonicalDependencyUrl(url);
     const auto& _iterable_2 = resolutions;
     for (const auto& resolution : *_iterable_2) {
@@ -177,7 +177,7 @@ std::shared_ptr<::app_src_package_manifest_::DependencyResolution> resolutionFor
     }
     return nullptr;
 }
-std::shared_ptr<::app_src_package_manifest_::PackageDependency> selectedPackageSource(std::shared_ptr<::app_src_package_manifest_::PackageDependency> dependency, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::DependencyResolution>>> resolutions) {
+std::shared_ptr<::app_src_package_manifest_::PackageDependency> selectedPackageSource(const std::shared_ptr<::app_src_package_manifest_::PackageDependency>& dependency, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::DependencyResolution>>>& resolutions) {
     if (dependency->url == std::string("")) {
         return dependency;
     }
@@ -187,7 +187,7 @@ std::shared_ptr<::app_src_package_manifest_::PackageDependency> selectedPackageS
     }
     return std::make_shared<::app_src_package_manifest_::PackageDependency>(dependency->name, std::string(""), ::app_src_std_catalog_::canonicalDependencyUrl(resolution->url), resolution->ref, resolution->commit);
 }
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>, std::string> resolveExternalInputs(std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>> packages, std::shared_ptr<::app_src_package_manifest_::PackageManifest> rootManifest) {
+doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>, std::string> resolveExternalInputs(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest) {
     std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>> result = std::make_shared<std::vector<std::shared_ptr<ResolvedExternalInput>>>(std::vector<std::shared_ptr<ResolvedExternalInput>>{});
     const auto& _iterable_3 = packages;
     for (const auto& owner : *_iterable_3) {
@@ -212,7 +212,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>>{ result };
 }
-doof::Result<void, std::string> validateDependencyPolicy(std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>> packages, std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>> externals, std::shared_ptr<::app_src_package_manifest_::PackageManifest> rootManifest) {
+doof::Result<void, std::string> validateDependencyPolicy(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages, const std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>& externals, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest) {
     const auto policy = rootManifest->policy;
     const auto& _iterable_6 = packages;
     for (const auto& package : *_iterable_6) {
@@ -238,13 +238,13 @@ doof::Result<void, std::string> validateDependencyPolicy(std::shared_ptr<std::ve
     }
     return doof::Success<void>{};
 }
-std::shared_ptr<ResolvedExternalInput> resolvedExternalInput(std::shared_ptr<ReachedPackageInput> owner, std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::shared_ptr<::app_src_package_manifest_::DependencyResolution> resolution) {
+std::shared_ptr<ResolvedExternalInput> resolvedExternalInput(const std::shared_ptr<ReachedPackageInput>& owner, const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency, const std::shared_ptr<::app_src_package_manifest_::DependencyResolution>& resolution) {
     if (doof::is_null(resolution)) {
         return std::make_shared<ResolvedExternalInput>(owner, dependency, dependency->kind, ::app_src_std_catalog_::canonicalDependencyUrl(dependency->url), dependency->ref, dependency->commit, dependency->sha256, false);
     }
     return std::make_shared<ResolvedExternalInput>(owner, dependency, resolution->kind, ::app_src_std_catalog_::canonicalDependencyUrl(resolution->url), resolution->ref, resolution->commit, resolution->sha256, ((((resolution->kind != dependency->kind) || (resolution->ref != dependency->ref)) || (resolution->commit != dependency->commit)) || (resolution->sha256 != dependency->sha256)));
 }
-bool sameSelectedExternal(std::shared_ptr<ResolvedExternalInput> left, std::shared_ptr<ResolvedExternalInput> right) {
+bool sameSelectedExternal(const std::shared_ptr<ResolvedExternalInput>& left, const std::shared_ptr<ResolvedExternalInput>& right) {
     if (left->selectedKind != right->selectedKind) {
         return false;
     }
@@ -253,7 +253,7 @@ bool sameSelectedExternal(std::shared_ptr<ResolvedExternalInput> left, std::shar
     }
     return (left->selectedSha256 == right->selectedSha256);
 }
-bool containsCanonicalUrl(std::shared_ptr<std::vector<std::string>> values, std::string value) {
+bool containsCanonicalUrl(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
     const auto canonical = ::app_src_std_catalog_::canonicalDependencyUrl(value);
     const auto& _iterable_9 = values;
     for (const auto& existing : *_iterable_9) {
@@ -263,7 +263,7 @@ bool containsCanonicalUrl(std::shared_ptr<std::vector<std::string>> values, std:
     }
     return false;
 }
-doof::Result<void, std::string> validateTransitiveNativePolicy(std::shared_ptr<ReachedPackageInput> package, std::shared_ptr<::app_src_package_manifest_::DependencyPolicy> policy) {
+doof::Result<void, std::string> validateTransitiveNativePolicy(const std::shared_ptr<ReachedPackageInput>& package, const std::shared_ptr<::app_src_package_manifest_::DependencyPolicy>& policy) {
     if (policy->hasLinkLibraryAllowlist) {
         const auto& _iterable_10 = package->manifest->nativeBuild->linkLibraries;
         for (const auto& value : *_iterable_10) {

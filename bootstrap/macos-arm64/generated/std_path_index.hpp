@@ -27,29 +27,29 @@ namespace std_::path::index {
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     doof::Result<std::string, std::string> _homeDirectory();
     std::string _tempDirectory();
-    doof::Result<std::string, std::string> _dataDirectory(std::optional<std::string> appId = std::nullopt);
-    doof::Result<std::string, std::string> _cacheDirectory(std::optional<std::string> appId = std::nullopt);
+    doof::Result<std::string, std::string> _dataDirectory(const std::optional<std::string>& appId = std::nullopt);
+    doof::Result<std::string, std::string> _cacheDirectory(const std::optional<std::string>& appId = std::nullopt);
     doof::Result<std::string, std::string> _currentWorkingDirectory();
-    doof::Result<std::string, std::string> _absolute(std::string path);
+    doof::Result<std::string, std::string> _absolute(const std::string& path);
     doof::Result<std::string, std::string> _resourcesDirectory();
-    doof::Result<std::string, std::string> normalizePathResult(doof::Result<std::string, std::string> result);
+    doof::Result<std::string, std::string> normalizePathResult(const doof::Result<std::string, std::string>& result);
     doof::Result<std::string, std::string> homeDirectory();
     std::string tempDirectory();
-    doof::Result<std::string, std::string> dataDirectory(std::optional<std::string> appId = std::nullopt);
-    doof::Result<std::string, std::string> cacheDirectory(std::optional<std::string> appId = std::nullopt);
+    doof::Result<std::string, std::string> dataDirectory(const std::optional<std::string>& appId = std::nullopt);
+    doof::Result<std::string, std::string> cacheDirectory(const std::optional<std::string>& appId = std::nullopt);
     doof::Result<std::string, std::string> currentWorkingDirectory();
-    doof::Result<std::string, std::string> absolute(std::string path);
+    doof::Result<std::string, std::string> absolute(const std::string& path);
     doof::Result<std::string, std::string> resourcesDirectory();
-    doof::Result<std::string, std::string> resourcePath(std::string path);
-    std::string join(std::shared_ptr<std::vector<std::string>> parts);
-    std::string dirname(std::string path);
-    std::string basename(std::string path);
-    std::string stem(std::string path);
-    std::string extension(std::string path);
-    bool isAbsolute(std::string path);
-    std::string renderPath(std::shared_ptr<std::vector<std::string>> segments, bool absolute);
-    int32_t lastSeparatorIndex(std::string path);
-    int32_t lastDotIndex(std::string path);
+    doof::Result<std::string, std::string> resourcePath(const std::string& path);
+    std::string join(const std::shared_ptr<std::vector<std::string>>& parts);
+    std::string dirname(const std::string& path);
+    std::string basename(const std::string& path);
+    std::string stem(const std::string& path);
+    std::string extension(const std::string& path);
+    bool isAbsolute(const std::string& path);
+    std::string renderPath(const std::shared_ptr<std::vector<std::string>>& segments, bool absolute);
+    int32_t lastSeparatorIndex(const std::string& path);
+    int32_t lastDotIndex(const std::string& path);
 }
 
 namespace std_::path::index {

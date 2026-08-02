@@ -96,7 +96,7 @@ doof::Result<std::shared_ptr<TimerSummary>, std::string> TimerSummary::fromJsonV
     return doof::Success<std::shared_ptr<TimerSummary>>{std::make_shared<TimerSummary>(_field_entries)};
 }
 
-void TimerBucket::record(std::shared_ptr<::std_::time::duration::Duration> duration) {
+void TimerBucket::record(const std::shared_ptr<::std_::time::duration::Duration>& duration) {
     auto nanos = duration->toNanos();
     if (this->count == 0) {
         (this->minNanos = nanos);
@@ -188,10 +188,10 @@ doof::Result<std::shared_ptr<TimerBucket>, std::string> TimerBucket::fromJsonVal
     return doof::Success<std::shared_ptr<TimerBucket>>{std::make_shared<TimerBucket>(_field_count.value(), _field_totalNanos.value(), _field_minNanos.value(), _field_maxNanos.value(), _field_durations.value())};
 }
 
-std::shared_ptr<StopwatchSpan> Stopwatch::measure(std::string name) {
+std::shared_ptr<StopwatchSpan> Stopwatch::measure(const std::string& name) {
     return std::make_shared<StopwatchSpan>(std::shared_ptr<Stopwatch>(this, [](Stopwatch*) {}), name, ::std_::time::temporal::Instant::now(), false, nullptr);
 }
-int32_t Stopwatch::count(std::string name) {
+int32_t Stopwatch::count(const std::string& name) {
     auto _binding_value_1 = bucketFor(name);
     if (doof::is_null(_binding_value_1)) {
         const auto& bucket = _binding_value_1;
@@ -200,31 +200,31 @@ int32_t Stopwatch::count(std::string name) {
     const auto bucket = doof::unwrap_optional(_binding_value_1);
     return bucket->count;
 }
-doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> Stopwatch::total(std::string name) {
+doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> Stopwatch::total(const std::string& name) {
     auto _try_value_2 = requireBucket(name);
     if (doof::is_failure(_try_value_2)) return doof::Failure<std::shared_ptr<TimerError>>{doof::failure_error(_try_value_2)};
     const auto bucket = doof::success_value(_try_value_2);
     return doof::Success<std::shared_ptr<::std_::time::duration::Duration>>{ bucket->total() };
 }
-doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> Stopwatch::mean(std::string name) {
+doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> Stopwatch::mean(const std::string& name) {
     auto _try_value_3 = requireBucket(name);
     if (doof::is_failure(_try_value_3)) return doof::Failure<std::shared_ptr<TimerError>>{doof::failure_error(_try_value_3)};
     const auto bucket = doof::success_value(_try_value_3);
     return doof::Success<std::shared_ptr<::std_::time::duration::Duration>>{ bucket->mean() };
 }
-doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> Stopwatch::min(std::string name) {
+doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> Stopwatch::min(const std::string& name) {
     auto _try_value_4 = requireBucket(name);
     if (doof::is_failure(_try_value_4)) return doof::Failure<std::shared_ptr<TimerError>>{doof::failure_error(_try_value_4)};
     const auto bucket = doof::success_value(_try_value_4);
     return doof::Success<std::shared_ptr<::std_::time::duration::Duration>>{ bucket->min() };
 }
-doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> Stopwatch::max(std::string name) {
+doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> Stopwatch::max(const std::string& name) {
     auto _try_value_5 = requireBucket(name);
     if (doof::is_failure(_try_value_5)) return doof::Failure<std::shared_ptr<TimerError>>{doof::failure_error(_try_value_5)};
     const auto bucket = doof::success_value(_try_value_5);
     return doof::Success<std::shared_ptr<::std_::time::duration::Duration>>{ bucket->max() };
 }
-doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> Stopwatch::p95(std::string name) {
+doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> Stopwatch::p95(const std::string& name) {
     auto _try_value_6 = requireBucket(name);
     if (doof::is_failure(_try_value_6)) return doof::Failure<std::shared_ptr<TimerError>>{doof::failure_error(_try_value_6)};
     const auto bucket = doof::success_value(_try_value_6);
@@ -238,14 +238,14 @@ std::shared_ptr<TimerSummary> Stopwatch::summary() {
     }
     return std::make_shared<TimerSummary>(doof::array_drainToReadonly(entries, "", 0));
 }
-void Stopwatch::record(std::string name, std::shared_ptr<::std_::time::duration::Duration> duration) {
+void Stopwatch::record(const std::string& name, const std::shared_ptr<::std_::time::duration::Duration>& duration) {
     auto bucket = (doof::is_null(bucketFor(name)) ? std::make_shared<TimerBucket>(0, 0LL, 0LL, 0LL, std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{})) : doof::unwrap_optional(bucketFor(name)));
     if (!(this->timers->find(name) != this->timers->end())) {
         doof::map_set(this->timers, name, bucket, "", 0);
     }
     bucket->record(duration);
 }
-std::shared_ptr<TimerBucket> Stopwatch::bucketFor(std::string name) {
+std::shared_ptr<TimerBucket> Stopwatch::bucketFor(const std::string& name) {
     return [&]() -> std::shared_ptr<TimerBucket> {
     auto _case_subject = doof::map_get(this->timers, name, "", 0);
     if (std::holds_alternative<doof::Success<std::shared_ptr<TimerBucket>>>(_case_subject)) {
@@ -258,7 +258,7 @@ std::shared_ptr<TimerBucket> Stopwatch::bucketFor(std::string name) {
     throw std::runtime_error("non-exhaustive case expression");
 }();
 }
-doof::Result<std::shared_ptr<TimerBucket>, std::shared_ptr<TimerError>> Stopwatch::requireBucket(std::string name) {
+doof::Result<std::shared_ptr<TimerBucket>, std::shared_ptr<TimerError>> Stopwatch::requireBucket(const std::string& name) {
     auto _binding_value_8 = bucketFor(name);
     if (doof::is_null(_binding_value_8)) {
         const auto& bucket = _binding_value_8;
@@ -335,7 +335,7 @@ doof::Result<std::shared_ptr<StopwatchSpan>, std::string> StopwatchSpan::fromJso
     }
     return doof::Success<std::shared_ptr<StopwatchSpan>>{std::make_shared<StopwatchSpan>(_field_stopwatch, _field_name, _field_startedAt, _field_finished.value(), _field_finishedDuration.value())};
 }
-std::shared_ptr<TimerError> missingTimer(std::string name) {
+std::shared_ptr<TimerError> missingTimer(const std::string& name) {
     return std::make_shared<TimerError>(std::string("MissingTimer"), name, std::string("No timings recorded for '") + doof::to_string(name) + std::string("'"));
 }
 }

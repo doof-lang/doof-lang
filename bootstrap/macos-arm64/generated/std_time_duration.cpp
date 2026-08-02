@@ -29,7 +29,7 @@ std::shared_ptr<Duration> Duration::ofHours(int64_t h) {
 std::shared_ptr<Duration> Duration::ofDays(int64_t d) {
     return std::make_shared<Duration>(((d * 86400LL) * 1000000000LL));
 }
-doof::Result<std::shared_ptr<Duration>, std::string> Duration::parse(std::string s) {
+doof::Result<std::shared_ptr<Duration>, std::string> Duration::parse(const std::string& s) {
     return parseDuration(s);
 }
 int64_t Duration::toNanos() {
@@ -65,10 +65,10 @@ std::shared_ptr<Duration> Duration::abs() {
 std::shared_ptr<Duration> Duration::negated() {
     return std::make_shared<Duration>(-this->nanos);
 }
-std::shared_ptr<Duration> Duration::plus(std::shared_ptr<Duration> other) {
+std::shared_ptr<Duration> Duration::plus(const std::shared_ptr<Duration>& other) {
     return std::make_shared<Duration>((this->nanos + other->nanos));
 }
-std::shared_ptr<Duration> Duration::minus(std::shared_ptr<Duration> other) {
+std::shared_ptr<Duration> Duration::minus(const std::shared_ptr<Duration>& other) {
     return std::make_shared<Duration>((this->nanos - other->nanos));
 }
 std::shared_ptr<Duration> Duration::multipliedBy(int64_t factor) {
@@ -77,7 +77,7 @@ std::shared_ptr<Duration> Duration::multipliedBy(int64_t factor) {
 std::shared_ptr<Duration> Duration::dividedBy(int64_t divisor) {
     return std::make_shared<Duration>((this->nanos / divisor));
 }
-int32_t Duration::compareTo(std::shared_ptr<Duration> other) {
+int32_t Duration::compareTo(const std::shared_ptr<Duration>& other) {
     if (this->nanos < other->nanos) {
         return -1;
     }
@@ -86,13 +86,13 @@ int32_t Duration::compareTo(std::shared_ptr<Duration> other) {
     }
     return 0;
 }
-bool Duration::isLessThan(std::shared_ptr<Duration> other) {
+bool Duration::isLessThan(const std::shared_ptr<Duration>& other) {
     return (this->nanos < other->nanos);
 }
-bool Duration::isGreaterThan(std::shared_ptr<Duration> other) {
+bool Duration::isGreaterThan(const std::shared_ptr<Duration>& other) {
     return (this->nanos > other->nanos);
 }
-bool Duration::equals(std::shared_ptr<Duration> other) {
+bool Duration::equals(const std::shared_ptr<Duration>& other) {
     return (this->nanos == other->nanos);
 }
 std::string Duration::toISOString() {
@@ -141,7 +141,7 @@ doof::Result<std::shared_ptr<Duration>, std::string> Duration::fromJsonValue(con
     auto _field_nanos = (_lenient ? doof::json_as_long_lenient(_iterator_nanos->second) : doof::json_as_long(_iterator_nanos->second));
     return doof::Success<std::shared_ptr<Duration>>{std::make_shared<Duration>(_field_nanos)};
 }
-doof::Result<std::shared_ptr<Duration>, std::string> parseDuration(std::string s) {
+doof::Result<std::shared_ptr<Duration>, std::string> parseDuration(const std::string& s) {
     if (static_cast<int32_t>(s.size()) < 2) {
         return doof::Failure<std::string>{ std::string("Invalid duration format") };
     }
@@ -286,7 +286,7 @@ int32_t digitValue(char32_t c) {
     return 9;
 }
 
-void Thread::sleep(std::shared_ptr<Duration> duration) {
+void Thread::sleep(const std::shared_ptr<Duration>& duration) {
     ::doof_time::thread_sleep_nanos(duration->toNanos());
 }
 doof::JsonObject Thread::toJsonObject() const {

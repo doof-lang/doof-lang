@@ -116,7 +116,7 @@ std::string decodeEscapeCharacter(char32_t escaped) {
     }
     return doof::to_string(escaped);
 }
-std::string tokenValue(Token token, std::string source) {
+std::string tokenValue(Token token, const std::string& source) {
     const auto raw = doof::string_substring(source, token.valueOffset, (token.valueOffset + token.valueLength));
     if ((((token.kind == TokenType::IntLiteral) || (token.kind == TokenType::LongLiteral)) || (token.kind == TokenType::FloatLiteral)) || (token.kind == TokenType::DoubleLiteral)) {
         if (doof::string_contains(raw, std::string("_"))) {
@@ -140,7 +140,7 @@ std::string tokenValue(Token token, std::string source) {
     }
     return value;
 }
-TokenType keywordType(std::string word) {
+TokenType keywordType(const std::string& word) {
     if (static_cast<int32_t>(word.size()) == 2) {
         if (word == std::string("if")) {
             return TokenType::If;
@@ -329,7 +329,7 @@ char32_t Lexer::advance() {
 void Lexer::addToken(TokenType kind, int32_t tokenOffset, int32_t tokenLength, int32_t valueOffset, int32_t valueLength, bool needsDecode, int32_t tokenLine, int32_t tokenColumn) {
     this->tokens->push_back(Token{kind, tokenLength, valueOffset, valueLength, needsDecode, tokenLine, tokenColumn, tokenOffset});
 }
-void Lexer::diagnostic(std::string message, int32_t diagnosticLine, int32_t diagnosticColumn) {
+void Lexer::diagnostic(const std::string& message, int32_t diagnosticLine, int32_t diagnosticColumn) {
     this->diagnostics->push_back(LexerDiagnostic{std::string("error"), message, diagnosticLine, diagnosticColumn});
 }
 void Lexer::skipWhitespaceAndComments() {

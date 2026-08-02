@@ -7,7 +7,7 @@
 
 namespace std_::os::index {
 using namespace ::std_::time::index;
-doof::Result<std::string, std::string> env(std::string name) {
+doof::Result<std::string, std::string> env(const std::string& name) {
     return ::doof_os::env(name);
 }
 int32_t pid() {
@@ -93,7 +93,7 @@ doof::Result<std::shared_ptr<ExecOptions>, std::string> ExecOptions::fromJsonVal
     }
     return doof::Success<std::shared_ptr<ExecOptions>>{std::make_shared<ExecOptions>(_field_cwd.value(), _field_env.value(), _field_inheritEnv.value(), _field_withStdin.value(), _field_mergeStderrIntoStdout.value(), _field_inheritOutput.value(), _field_maxOutputBytes.value(), _field_timeout.value())};
 }
-doof::Result<std::shared_ptr<::NativeExecProcess>, std::string> spawnNative(std::string command, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<ExecOptions> options) {
+doof::Result<std::shared_ptr<::NativeExecProcess>, std::string> spawnNative(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options) {
     const std::shared_ptr<std::vector<std::string>> envKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const std::shared_ptr<std::vector<std::string>> envValues = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_1 = options->env;
@@ -132,7 +132,7 @@ std::shared_ptr<std::vector<uint8_t>> ExecStderrStream::value() {
     return this->currentValue;
 }
 
-doof::Result<std::shared_ptr<Exec>, std::string> Exec::spawn(std::string command, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<ExecOptions> options) {
+doof::Result<std::shared_ptr<Exec>, std::string> Exec::spawn(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options) {
     return [&]() -> doof::Result<std::shared_ptr<Exec>, std::string> {
     auto _case_subject = spawnNative(command, args, options);
     if (std::holds_alternative<doof::Success<std::shared_ptr<::NativeExecProcess>>>(_case_subject)) {
@@ -158,7 +158,7 @@ std::shared_ptr<std::vector<uint8_t>> Exec::nextStdoutChunk() {
 std::shared_ptr<std::vector<uint8_t>> Exec::nextStderrChunk() {
     return this->native->nextStderrChunk();
 }
-doof::Result<void, std::string> Exec::writeStdinText(std::string value) {
+doof::Result<void, std::string> Exec::writeStdinText(const std::string& value) {
     return this->native->writeStdinText(value);
 }
 doof::Result<void, std::string> Exec::closeStdin() {
@@ -220,7 +220,7 @@ doof::Result<std::shared_ptr<ExecResult>, std::string> ExecResult::fromJsonValue
     }
     return doof::Success<std::shared_ptr<ExecResult>>{std::make_shared<ExecResult>(_field_exitCode, _field_stdout, _field_stderr, _field_stdoutTruncated.value(), _field_stderrTruncated.value())};
 }
-doof::Result<std::shared_ptr<ExecResult>, std::string> run(std::string command, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<ExecOptions> options) {
+doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options) {
     std::shared_ptr<::NativeExecProcess> proc = nullptr;
     {
         auto _case_subject = spawnNative(command, args, options);
@@ -247,7 +247,7 @@ doof::Result<std::shared_ptr<ExecResult>, std::string> run(std::string command, 
     throw std::runtime_error("non-exhaustive case expression");
 }();
 }
-doof::Result<std::string, std::string> _env(std::string name) {
+doof::Result<std::string, std::string> _env(const std::string& name) {
     return ::doof_os::env(name);
 }
 int32_t _pid() {

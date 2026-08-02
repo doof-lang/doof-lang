@@ -74,16 +74,16 @@ inline std::optional<JwtError> JwtError_fromValue(int32_t value) {
   }
 }
 inline std::ostream& operator<<(std::ostream& output, JwtError value) { return output << JwtError_name(value); }
-    std::shared_ptr<std::vector<uint8_t>> sha1(std::shared_ptr<std::vector<uint8_t>> data);
-    std::string encodeHex(std::shared_ptr<std::vector<uint8_t>> data);
-    std::shared_ptr<std::vector<uint8_t>> sha1String(std::string text);
-    std::shared_ptr<std::vector<uint8_t>> sha256(std::shared_ptr<std::vector<uint8_t>> data);
-    std::shared_ptr<std::vector<uint8_t>> sha256String(std::string text);
-    std::shared_ptr<std::vector<uint8_t>> hmacSha256(std::shared_ptr<::doof_crypto::SecretBytes> key, std::shared_ptr<std::vector<uint8_t>> data);
-    std::string encodeBase64Url(std::shared_ptr<std::vector<uint8_t>> data);
-    doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64Url(std::string text);
-    bool timingSafeEqual(std::shared_ptr<std::vector<uint8_t>> a, std::shared_ptr<std::vector<uint8_t>> b);
-    doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64(std::string text);
+    std::shared_ptr<std::vector<uint8_t>> sha1(const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::string encodeHex(const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::shared_ptr<std::vector<uint8_t>> sha1String(const std::string& text);
+    std::shared_ptr<std::vector<uint8_t>> sha256(const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::shared_ptr<std::vector<uint8_t>> sha256String(const std::string& text);
+    std::shared_ptr<std::vector<uint8_t>> hmacSha256(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::string encodeBase64Url(const std::shared_ptr<std::vector<uint8_t>>& data);
+    doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64Url(const std::string& text);
+    bool timingSafeEqual(const std::shared_ptr<std::vector<uint8_t>>& a, const std::shared_ptr<std::vector<uint8_t>>& b);
+    doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64(const std::string& text);
     struct Jwt : public std::enable_shared_from_this<Jwt> {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> header;
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> claims;
@@ -93,17 +93,17 @@ inline std::ostream& operator<<(std::ostream& output, JwtError value) { return o
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<Jwt>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::string sha1Hex(std::shared_ptr<std::vector<uint8_t>> data);
-    std::string sha1HexString(std::string text);
-    std::string sha256Hex(std::shared_ptr<std::vector<uint8_t>> data);
-    std::string sha256HexString(std::string text);
-    std::string hmacSha256Hex(std::shared_ptr<::doof_crypto::SecretBytes> key, std::shared_ptr<std::vector<uint8_t>> data);
-    std::string hmacSha256Base64Url(std::shared_ptr<::doof_crypto::SecretBytes> key, std::shared_ptr<std::vector<uint8_t>> data);
+    std::string sha1Hex(const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::string sha1HexString(const std::string& text);
+    std::string sha256Hex(const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::string sha256HexString(const std::string& text);
+    std::string hmacSha256Hex(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::string hmacSha256Base64Url(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data);
     std::shared_ptr<::doof_crypto::SecretBytes> randomBytes(int32_t length);
-    doof::Result<std::string, std::string> decodeBase64UrlToString(std::string text);
-    std::shared_ptr<std::vector<uint8_t>> stringToBytes(std::string text);
-    doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(std::string token);
-    doof::Result<std::shared_ptr<Jwt>, JwtError> verifyJwtHs256(std::string token, std::shared_ptr<::doof_crypto::SecretBytes> key);
+    doof::Result<std::string, std::string> decodeBase64UrlToString(const std::string& text);
+    std::shared_ptr<std::vector<uint8_t>> stringToBytes(const std::string& text);
+    doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(const std::string& token);
+    doof::Result<std::shared_ptr<Jwt>, JwtError> verifyJwtHs256(const std::string& token, const std::shared_ptr<::doof_crypto::SecretBytes>& key);
 }
 
 namespace std_::crypto::index {

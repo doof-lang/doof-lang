@@ -14,7 +14,7 @@ import {
 import { EmitContext, recordCoverageLine } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
-import { emitClassInnerType, emitContextReturnType, emitContextType, emitReturnType, emitType, specializeEmitType } from "./emitter-types"
+import { borrowParameterType, emitClassInnerType, emitContextReturnType, emitContextType, emitParameterType, emitReturnType, emitType, specializeEmitType } from "./emitter-types"
 import { scanCapturedMutablesInBlock, scanCapturedMutablesInExpression } from "./emitter-expr-lambda"
 import { moduleNamespace } from "./emitter-names"
 import { MethodInstantiation } from "./emitter-monomorphize"
@@ -39,7 +39,9 @@ export function emitFunctionSignature(fn: FunctionDeclaration, name: string = ""
   for i of 0..<fn.params.length {
     if i > 0 { result = result + ", " }
     parameterType := fn.params[i].resolvedType ?? functionType.params[i].type_
-    parameterText := if defaultContext == none then emitType(parameterType, modulePath) else emitContextType(parameterType, defaultContext!)
+    parameterText := if defaultContext == none
+      then emitParameterType(parameterType, modulePath)
+      else borrowParameterType(parameterType, emitContextType(parameterType, defaultContext!))
     ensureKnown(parameterType, fn.name + " parameter " + fn.params[i].name)
     result = result + parameterText + " " + cppIdentifier(fn.params[i].name)
     if includeDefaults && canEmitDefault(fn, i) {

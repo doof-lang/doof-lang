@@ -10,7 +10,7 @@ namespace std_::fs::index {
 using namespace ::std_::path::index;
 using namespace ::std_::stream::index;
 using namespace ::std_::fs::types;
-doof::Result<std::string, ::std_::fs::types::IoError> resolveResourcePath(std::string path) {
+doof::Result<std::string, ::std_::fs::types::IoError> resolveResourcePath(const std::string& path) {
     auto _binding_value_1 = ::std_::path::index::resourcePath(path);
     if (doof::is_failure(_binding_value_1)) {
         const auto& resolvedPath = _binding_value_1;
@@ -19,13 +19,13 @@ doof::Result<std::string, ::std_::fs::types::IoError> resolveResourcePath(std::s
     const auto resolvedPath = doof::success_value(_binding_value_1);
     return doof::Success<std::string>{ resolvedPath };
 }
-doof::Result<std::string, ::std_::fs::types::IoError> readTextResource(std::string path) {
+doof::Result<std::string, ::std_::fs::types::IoError> readTextResource(const std::string& path) {
     auto _try_value_2 = resolveResourcePath(path);
     if (doof::is_failure(_try_value_2)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_2)};
     const auto resolved = doof::success_value(_try_value_2);
     return ::doof_fs::readText(resolved);
 }
-doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlobResource(std::string path) {
+doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlobResource(const std::string& path) {
     auto _try_value_3 = resolveResourcePath(path);
     if (doof::is_failure(_try_value_3)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_3)};
     const auto resolved = doof::success_value(_try_value_3);
@@ -49,37 +49,37 @@ bool BlockReadStream::next() {
 std::shared_ptr<std::vector<uint8_t>> BlockReadStream::value() {
     return this->currentValue;
 }
-doof::Result<Stream__readonly_array_byte, ::std_::fs::types::IoError> readBlockStream(std::string path, int32_t blockSize) {
+doof::Result<Stream__readonly_array_byte, ::std_::fs::types::IoError> readBlockStream(const std::string& path, int32_t blockSize) {
     auto _try_value_4 = ::NativeBlobReadStream::open(path, normalizeStreamBlockSize(blockSize));
     if (doof::is_failure(_try_value_4)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_4)};
     const auto native = doof::success_value(_try_value_4);
     return doof::Success<Stream__readonly_array_byte>{ std::make_shared<BlockReadStream>(native, std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{})) };
 }
-doof::Result<Stream__readonly_array_byte, ::std_::fs::types::IoError> readBlobStream(std::string path, int32_t blockSize) {
+doof::Result<Stream__readonly_array_byte, ::std_::fs::types::IoError> readBlobStream(const std::string& path, int32_t blockSize) {
     return readBlockStream(path, blockSize);
 }
-doof::Result<Stream__string, ::std_::fs::types::IoError> readLineStream(std::string path, int32_t blockSize) {
+doof::Result<Stream__string, ::std_::fs::types::IoError> readLineStream(const std::string& path, int32_t blockSize) {
     auto _try_value_5 = readBlockStream(path, blockSize);
     if (doof::is_failure(_try_value_5)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_5)};
     const auto blocks = doof::success_value(_try_value_5);
     return doof::Success<Stream__string>{ ::std_::stream::index::blobStreamToLineStream(blocks) };
 }
-doof::Result<Stream__readonly_array_byte, ::std_::fs::types::IoError> readResourceBlockStream(std::string path, int32_t blockSize) {
+doof::Result<Stream__readonly_array_byte, ::std_::fs::types::IoError> readResourceBlockStream(const std::string& path, int32_t blockSize) {
     auto _try_value_6 = resolveResourcePath(path);
     if (doof::is_failure(_try_value_6)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_6)};
     const auto resolved = doof::success_value(_try_value_6);
     return readBlockStream(resolved, blockSize);
 }
-doof::Result<Stream__readonly_array_byte, ::std_::fs::types::IoError> readResourceBlobStream(std::string path, int32_t blockSize) {
+doof::Result<Stream__readonly_array_byte, ::std_::fs::types::IoError> readResourceBlobStream(const std::string& path, int32_t blockSize) {
     return readResourceBlockStream(path, blockSize);
 }
-doof::Result<Stream__string, ::std_::fs::types::IoError> readResourceLineStream(std::string path, int32_t blockSize) {
+doof::Result<Stream__string, ::std_::fs::types::IoError> readResourceLineStream(const std::string& path, int32_t blockSize) {
     auto _try_value_7 = resolveResourcePath(path);
     if (doof::is_failure(_try_value_7)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_7)};
     const auto resolved = doof::success_value(_try_value_7);
     return readLineStream(resolved, blockSize);
 }
-doof::Result<void, ::std_::fs::types::IoError> writeBlobStream(std::string path, Stream__readonly_array_byte chunks) {
+doof::Result<void, ::std_::fs::types::IoError> writeBlobStream(const std::string& path, const Stream__readonly_array_byte& chunks) {
     auto _try_value_8 = ::NativeFileWriteStream::open(path);
     if (doof::is_failure(_try_value_8)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_8)};
     const auto writer = doof::success_value(_try_value_8);
@@ -93,7 +93,7 @@ doof::Result<void, ::std_::fs::types::IoError> writeBlobStream(std::string path,
     if (doof::is_failure(_try_value_11)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_11)};
     return doof::Success<void>{};
 }
-doof::Result<void, ::std_::fs::types::IoError> writeLineStream(std::string path, Stream__string lines) {
+doof::Result<void, ::std_::fs::types::IoError> writeLineStream(const std::string& path, const Stream__string& lines) {
     auto _try_value_12 = ::NativeFileWriteStream::open(path);
     if (doof::is_failure(_try_value_12)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_12)};
     const auto writer = doof::success_value(_try_value_12);
@@ -107,46 +107,46 @@ doof::Result<void, ::std_::fs::types::IoError> writeLineStream(std::string path,
     if (doof::is_failure(_try_value_15)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_15)};
     return doof::Success<void>{};
 }
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readResourceDir(std::string path) {
+doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readResourceDir(const std::string& path) {
     auto _try_value_16 = resolveResourcePath(path);
     if (doof::is_failure(_try_value_16)) return doof::Failure<::std_::fs::types::IoError>{doof::failure_error(_try_value_16)};
     const auto resolved = doof::success_value(_try_value_16);
     return ::doof_fs::readDir(resolved);
 }
-bool exists(std::string path) {
+bool exists(const std::string& path) {
     return ::doof_fs::exists(path);
 }
-doof::Result<std::string, ::std_::fs::types::IoError> readText(std::string path) {
+doof::Result<std::string, ::std_::fs::types::IoError> readText(const std::string& path) {
     return ::doof_fs::readText(path);
 }
-doof::Result<void, ::std_::fs::types::IoError> mkdir(std::string path) {
+doof::Result<void, ::std_::fs::types::IoError> mkdir(const std::string& path) {
     return ::doof_fs::mkdir(path);
 }
-bool isDirectory(std::string path) {
+bool isDirectory(const std::string& path) {
     return ::doof_fs::isDirectory(path);
 }
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readDir(std::string path) {
+doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readDir(const std::string& path) {
     return ::doof_fs::readDir(path);
 }
-doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlob(std::string path) {
+doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlob(const std::string& path) {
     return ::doof_fs::readBlob(path);
 }
-doof::Result<void, ::std_::fs::types::IoError> writeText(std::string path, std::string content) {
+doof::Result<void, ::std_::fs::types::IoError> writeText(const std::string& path, const std::string& content) {
     return ::doof_fs::writeText(path, content);
 }
-doof::Result<void, ::std_::fs::types::IoError> writeBlob(std::string path, std::shared_ptr<std::vector<uint8_t>> data) {
+doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& data) {
     return ::doof_fs::writeBlob(path, data);
 }
-doof::Result<void, ::std_::fs::types::IoError> remove(std::string path) {
+doof::Result<void, ::std_::fs::types::IoError> remove(const std::string& path) {
     return ::doof_fs::remove(path);
 }
-doof::Result<void, ::std_::fs::types::IoError> rename(std::string sourcePath, std::string destPath) {
+doof::Result<void, ::std_::fs::types::IoError> rename(const std::string& sourcePath, const std::string& destPath) {
     return ::doof_fs::rename(sourcePath, destPath);
 }
-doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(std::string path) {
+doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(const std::string& path) {
     return ::doof_fs::metadata(path);
 }
-bool isFile(std::string path) {
+bool isFile(const std::string& path) {
     return ::doof_fs::isFile(path);
 }
 }

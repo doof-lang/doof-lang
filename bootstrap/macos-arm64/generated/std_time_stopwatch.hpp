@@ -67,7 +67,7 @@ namespace std_::time::stopwatch {
     int64_t maxNanos = 0LL;
     std::shared_ptr<std::vector<int64_t>> durations = std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{});
     TimerBucket(int32_t count = 0, int64_t totalNanos = 0LL, int64_t minNanos = 0LL, int64_t maxNanos = 0LL, std::shared_ptr<std::vector<int64_t>> durations = std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{})) : count(count), totalNanos(totalNanos), minNanos(minNanos), maxNanos(maxNanos), durations(durations) {}
-    void record(std::shared_ptr<::std_::time::duration::Duration> duration);
+    void record(const std::shared_ptr<::std_::time::duration::Duration>& duration);
     std::shared_ptr<::std_::time::duration::Duration> total();
     std::shared_ptr<::std_::time::duration::Duration> mean();
     std::shared_ptr<::std_::time::duration::Duration> min();
@@ -80,17 +80,17 @@ namespace std_::time::stopwatch {
     struct Stopwatch : public std::enable_shared_from_this<Stopwatch> {
     std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>> timers = std::make_shared<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<TimerBucket>>>{});
     Stopwatch(std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>> timers = std::make_shared<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<TimerBucket>>>{})) : timers(timers) {}
-    std::shared_ptr<StopwatchSpan> measure(std::string name);
-    int32_t count(std::string name);
-    doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> total(std::string name);
-    doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> mean(std::string name);
-    doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> min(std::string name);
-    doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> max(std::string name);
-    doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> p95(std::string name);
+    std::shared_ptr<StopwatchSpan> measure(const std::string& name);
+    int32_t count(const std::string& name);
+    doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> total(const std::string& name);
+    doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> mean(const std::string& name);
+    doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> min(const std::string& name);
+    doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> max(const std::string& name);
+    doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> p95(const std::string& name);
     std::shared_ptr<TimerSummary> summary();
-    void record(std::string name, std::shared_ptr<::std_::time::duration::Duration> duration);
-    std::shared_ptr<TimerBucket> bucketFor(std::string name);
-    doof::Result<std::shared_ptr<TimerBucket>, std::shared_ptr<TimerError>> requireBucket(std::string name);
+    void record(const std::string& name, const std::shared_ptr<::std_::time::duration::Duration>& duration);
+    std::shared_ptr<TimerBucket> bucketFor(const std::string& name);
+    doof::Result<std::shared_ptr<TimerBucket>, std::shared_ptr<TimerError>> requireBucket(const std::string& name);
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<Stopwatch>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
@@ -108,7 +108,7 @@ namespace std_::time::stopwatch {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<StopwatchSpan>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::shared_ptr<TimerError> missingTimer(std::string name);
+    std::shared_ptr<TimerError> missingTimer(const std::string& name);
 }
 
 namespace std_::time::stopwatch {

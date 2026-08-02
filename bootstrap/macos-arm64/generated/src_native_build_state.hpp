@@ -55,11 +55,11 @@ namespace app_src_native_build_state_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<NativeBuildState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::shared_ptr<NativeBuildState> parseNativeBuildState(std::string source);
-    std::string renderNativeBuildState(std::shared_ptr<NativeBuildState> state);
-    std::shared_ptr<NativeTaskState> findNativeTaskState(std::shared_ptr<NativeBuildState> state, std::string id);
-    std::shared_ptr<std::vector<std::string>> parseMakeDependencies(std::string source);
-    void appendUnique(std::shared_ptr<std::vector<std::string>> values, std::string value);
+    std::shared_ptr<NativeBuildState> parseNativeBuildState(const std::string& source);
+    std::string renderNativeBuildState(const std::shared_ptr<NativeBuildState>& state);
+    std::shared_ptr<NativeTaskState> findNativeTaskState(const std::shared_ptr<NativeBuildState>& state, const std::string& id);
+    std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::string& source);
+    void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
 }
 
 namespace app_src_native_build_state_ {

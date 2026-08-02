@@ -1258,7 +1258,8 @@ type Pair<A, B> = Tuple<A, B>         // Alias for common tuple arities
 
 ## Function Types
 
-Functions are first-class values with explicit type signatures **including parameter names**:
+Functions are first-class values with explicit type signatures that record
+parameter names:
 
 ```javascript
 type Callback = (value: int, description: string): none
@@ -1267,7 +1268,11 @@ type Transform = (input: int): int
 type BinaryOp = (left: int, right: int): int
 ```
 
-Parameter names are part of the function type — they define the contract for how the function should be called.
+Parameter names define the named-call surface and are preserved for diagnostics
+and reflection. They are not considered when checking function-type
+compatibility: parameters are matched by position and type. Thus
+`(value: int): none` is compatible with `(item: int): none`, while
+`(value: string): none` is not compatible with either.
 
 ---
 

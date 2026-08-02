@@ -48,26 +48,26 @@ namespace app_src_ios_app_driver_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<IOSCommandResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::string outputPath(std::string directory, std::string name);
-    std::string parentPath(std::string path);
-    std::string fileName(std::string path);
+    std::string outputPath(const std::string& directory, const std::string& name);
+    std::string parentPath(const std::string& path);
+    std::string fileName(const std::string& path);
     std::string hostPlatform();
-    std::shared_ptr<IOSCommandResult> runIOSCommand(std::string command, std::shared_ptr<std::vector<std::string>> arguments);
-    doof::Result<std::string, std::string> commandText(std::string command, std::shared_ptr<std::vector<std::string>> arguments, std::string description);
-    doof::Result<void, std::string> runRequiredCommand(std::string command, std::shared_ptr<std::vector<std::string>> arguments, std::string description);
-    void ensureDirectory(std::string path);
-    void copyPath(std::string sourcePath, std::string destinationPath);
-    void removeTree(std::string path);
-    void appendUnique(std::shared_ptr<std::vector<std::string>> values, std::string value);
-    doof::Result<void, std::string> configureIOSNativeBuild(std::string outputDirectory, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> config, std::string destination, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native);
-    std::string globBaseDirectory(std::string pattern);
-    bool globMatches(std::string pattern, std::string value, int32_t patternIndex = 0, int32_t valueIndex = 0);
-    void collectResourceFiles(std::string path, std::string baseDirectory, std::string pattern, std::shared_ptr<std::vector<std::string>> results);
-    doof::Result<void, std::string> copyIOSResources(std::shared_ptr<::app_src_ios_app_::IOSAppConfig> config, std::string appPath);
-    doof::Result<void, std::string> compileIOSIcon(std::shared_ptr<::app_src_ios_app_::IOSAppConfig> config, std::string appPath, std::string destination, std::string buildDirectory);
-    doof::Result<std::string, std::string> assembleIOSApp(std::string buildDirectory, std::string executablePath, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> config, std::string destination = std::string("simulator"));
-    void collectNestedCode(std::string path, std::shared_ptr<std::vector<std::string>> results);
-    doof::Result<void, std::string> signAndArchiveIOSApp(std::string appPath, std::string archivePath, std::string bundleId, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> config, std::string buildDirectory);
+    std::shared_ptr<IOSCommandResult> runIOSCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments);
+    doof::Result<std::string, std::string> commandText(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& description);
+    doof::Result<void, std::string> runRequiredCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& description);
+    void ensureDirectory(const std::string& path);
+    void copyPath(const std::string& sourcePath, const std::string& destinationPath);
+    void removeTree(const std::string& path);
+    void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
+    doof::Result<void, std::string> configureIOSNativeBuild(const std::string& outputDirectory, const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& destination, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native);
+    std::string globBaseDirectory(const std::string& pattern);
+    bool globMatches(const std::string& pattern, const std::string& value, int32_t patternIndex = 0, int32_t valueIndex = 0);
+    void collectResourceFiles(const std::string& path, const std::string& baseDirectory, const std::string& pattern, const std::shared_ptr<std::vector<std::string>>& results);
+    doof::Result<void, std::string> copyIOSResources(const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& appPath);
+    doof::Result<void, std::string> compileIOSIcon(const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& appPath, const std::string& destination, const std::string& buildDirectory);
+    doof::Result<std::string, std::string> assembleIOSApp(const std::string& buildDirectory, const std::string& executablePath, const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& destination = std::string("simulator"));
+    void collectNestedCode(const std::string& path, const std::shared_ptr<std::vector<std::string>>& results);
+    doof::Result<void, std::string> signAndArchiveIOSApp(const std::string& appPath, const std::string& archivePath, const std::string& bundleId, const std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>& config, const std::string& buildDirectory);
 }
 
 namespace app_src_ios_app_driver_ {

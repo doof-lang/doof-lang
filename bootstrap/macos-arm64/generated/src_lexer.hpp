@@ -543,7 +543,7 @@ inline std::ostream& operator<<(std::ostream& output, TokenType value) { return 
     char32_t peek(int32_t offset = 0);
     char32_t advance();
     void addToken(TokenType kind, int32_t tokenOffset, int32_t tokenLength, int32_t valueOffset, int32_t valueLength, bool needsDecode, int32_t tokenLine, int32_t tokenColumn);
-    void diagnostic(std::string message, int32_t diagnosticLine, int32_t diagnosticColumn);
+    void diagnostic(const std::string& message, int32_t diagnosticLine, int32_t diagnosticColumn);
     void skipWhitespaceAndComments();
     bool isDigit(char32_t ch);
     bool isHexDigit(char32_t ch);
@@ -563,8 +563,8 @@ inline std::ostream& operator<<(std::ostream& output, TokenType value) { return 
     static doof::Result<std::shared_ptr<Lexer>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     std::string decodeEscapeCharacter(char32_t escaped);
-    std::string tokenValue(Token token, std::string source);
-    TokenType keywordType(std::string word);
+    std::string tokenValue(Token token, const std::string& source);
+    TokenType keywordType(const std::string& word);
 }
 
 namespace app_src_lexer_ {

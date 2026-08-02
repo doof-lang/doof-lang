@@ -146,7 +146,7 @@ doof::Result<std::shared_ptr<SetCookie>, std::string> SetCookie::fromJsonValue(c
     return doof::Success<std::shared_ptr<SetCookie>>{std::make_shared<SetCookie>(_field_name, _field_value, _field_domain.value(), _field_path.value(), _field_expires.value(), _field_maxAge.value(), _field_secure.value(), _field_httpOnly.value(), _field_sameSite.value())};
 }
 
-std::optional<std::string> HttpRequest::header(std::string name) {
+std::optional<std::string> HttpRequest::header(const std::string& name) {
     const auto lowerName = doof::string_toLowerCase(name);
     const auto& _iterable_1 = this->headers;
     for (const auto& entry : *_iterable_1) {
@@ -211,7 +211,7 @@ doof::Result<std::shared_ptr<HttpRequest>, std::string> HttpRequest::fromJsonVal
 bool HttpResponse::ok() {
     return ((this->status >= 200) && (this->status < 300));
 }
-std::optional<std::string> HttpResponse::header(std::string name) {
+std::optional<std::string> HttpResponse::header(const std::string& name) {
     const auto lowerName = doof::string_toLowerCase(name);
     const auto& _iterable_2 = this->headers;
     for (const auto& entry : *_iterable_2) {
@@ -267,19 +267,19 @@ doof::Result<std::shared_ptr<HttpResponse>, std::string> HttpResponse::fromJsonV
 std::shared_ptr<HttpClient> createClient() {
     return std::make_shared<HttpClient>(std::make_shared<::NativeHttpClient>());
 }
-std::shared_ptr<HttpRequest> newRequest(std::string method, std::string url) {
+std::shared_ptr<HttpRequest> newRequest(const std::string& method, const std::string& url) {
     return std::make_shared<HttpRequest>(method, url, std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{}), nullptr, 30000, true);
 }
-doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> get(std::shared_ptr<HttpClient> client, std::string url) {
+doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> get(const std::shared_ptr<HttpClient>& client, const std::string& url) {
     return send(client, newRequest(std::string("GET"), url));
 }
-doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> postJsonValue(std::shared_ptr<HttpClient> client, std::string url, doof::JsonValue body) {
+doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> postJsonValue(const std::shared_ptr<HttpClient>& client, const std::string& url, const doof::JsonValue& body) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
     builder->writeString(::doof_json::format(body));
     const auto headers = std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{std::make_shared<::std_::http::types::HttpHeader>(std::string("Content-Type"), std::string("application/json"))});
     return send(client, std::make_shared<HttpRequest>(std::string("POST"), url, headers, builder->build(), 30000, true));
 }
-std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> parseCookieHeader(std::string header) {
+std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> parseCookieHeader(const std::string& header) {
     const std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> cookies = std::make_shared<std::vector<std::shared_ptr<Cookie>>>(std::vector<std::shared_ptr<Cookie>>{});
     const auto parts = doof::string_split(header, std::string(";"));
     const auto& _iterable_3 = parts;
@@ -296,7 +296,7 @@ std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> parseCookieHeader(std::str
     }
     return doof::array_drainToReadonly(cookies, "", 0);
 }
-std::string renderCookieHeader(std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> cookies) {
+std::string renderCookieHeader(const std::shared_ptr<std::vector<std::shared_ptr<Cookie>>>& cookies) {
     auto text = std::string("");
     auto first = true;
     const auto& _iterable_4 = cookies;
@@ -313,7 +313,7 @@ std::string renderCookieHeader(std::shared_ptr<std::vector<std::shared_ptr<Cooki
     }
     return text;
 }
-std::shared_ptr<SetCookie> parseSetCookieHeader(std::string header) {
+std::shared_ptr<SetCookie> parseSetCookieHeader(const std::string& header) {
     const auto parts = doof::string_split(header, std::string(";"));
     if (static_cast<int32_t>((parts)->size()) == 0) {
         return nullptr;
@@ -367,7 +367,7 @@ std::shared_ptr<SetCookie> parseSetCookieHeader(std::string header) {
     }
     return std::make_shared<SetCookie>(name, doof::string_trim(doof::string_slice(firstPart, (firstSeparator + 1))), domain, path, expires, maxAge, secure, httpOnly, sameSite);
 }
-std::string renderSetCookieHeader(std::shared_ptr<SetCookie> cookie) {
+std::string renderSetCookieHeader(const std::shared_ptr<SetCookie>& cookie) {
     auto text = std::string("") + doof::to_string(cookie->name) + std::string("=") + doof::to_string(cookie->value) + std::string("");
     const auto expires = cookie->expires;
     if (!doof::is_null(expires)) {
@@ -397,7 +397,7 @@ std::string renderSetCookieHeader(std::shared_ptr<SetCookie> cookie) {
     }
     return text;
 }
-std::optional<std::string> cookieValue(std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> cookies, std::string name) {
+std::optional<std::string> cookieValue(const std::shared_ptr<std::vector<std::shared_ptr<Cookie>>>& cookies, const std::string& name) {
     const auto& _iterable_5 = cookies;
     for (const auto& cookie : *_iterable_5) {
         if (cookie->name == name) {
@@ -406,7 +406,7 @@ std::optional<std::string> cookieValue(std::shared_ptr<std::vector<std::shared_p
     }
     return std::nullopt;
 }
-doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> send(std::shared_ptr<HttpClient> client, std::shared_ptr<HttpRequest> request) {
+doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> send(const std::shared_ptr<HttpClient>& client, const std::shared_ptr<HttpRequest>& request) {
     const auto nativeResult = client->native->perform(request->method, request->url, renderHeaders(request->headers), request->body, request->timeoutMs, request->followRedirects);
     return [&]() -> doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> {
     auto _case_subject = nativeResult;
@@ -421,7 +421,7 @@ doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types:
     throw std::runtime_error("non-exhaustive case expression");
 }();
 }
-std::string renderHeaders(std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers) {
+std::string renderHeaders(const std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>& headers) {
     auto text = std::string("");
     const auto& _iterable_6 = headers;
     for (const auto& header : *_iterable_6) {
@@ -429,7 +429,7 @@ std::string renderHeaders(std::shared_ptr<std::vector<std::shared_ptr<::std_::ht
     }
     return text;
 }
-std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> parseHeaders(std::string headerText) {
+std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> parseHeaders(const std::string& headerText) {
     const std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers = std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{});
     const auto lines = doof::string_split(headerText, std::string("\r\n"));
     const auto& _iterable_7 = lines;
@@ -445,7 +445,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> p
     }
     return doof::array_drainToReadonly(headers, "", 0);
 }
-std::shared_ptr<::std_::http::types::HttpError> parseError(std::string raw) {
+std::shared_ptr<::std_::http::types::HttpError> parseError(const std::string& raw) {
     const auto firstSeparator = doof::string_indexOf(raw, std::string("|"));
     if (firstSeparator < 0) {
         return std::make_shared<::std_::http::types::HttpError>(std::string("transport"), std::string("0"), raw);

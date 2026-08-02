@@ -55,22 +55,22 @@ namespace app_src_native_build_ {
     static doof::Result<std::shared_ptr<NativeCompilePlan>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     using NativeCompileTaskBatch = std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>;
-    std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>> tasks, int32_t maximumWorkers = 8);
-    std::shared_ptr<NativeCompilePlan> planNativeCompile(std::string compiler, std::string outputDirectory, std::string outputPath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> native, bool release = false, std::string platform = std::string(""), std::shared_ptr<std::vector<std::string>> wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool wasm = false);
-    void appendReleaseLinkerArguments(std::shared_ptr<std::vector<std::string>> arguments, std::string platform, bool swiftLink);
-    void appendLinkerOption(std::shared_ptr<std::vector<std::string>> arguments, std::string option, bool swiftLink);
-    std::string replaceSourceExtension(std::string path, std::string extension);
-    std::shared_ptr<std::vector<std::string>> copyArguments(std::shared_ptr<std::vector<std::string>> source);
-    std::shared_ptr<std::vector<std::string>> copyNativeCompileArguments(std::shared_ptr<std::vector<std::string>> source, bool cSource);
-    bool isCSource(std::string path);
-    bool isSwiftSource(std::string path);
-    bool hasSwiftSource(std::shared_ptr<std::vector<std::string>> paths);
-    std::shared_ptr<std::vector<std::string>> swiftObjectArguments(std::string sourcePath, std::string objectPath);
-    std::string deriveCCompiler(std::string compiler);
-    std::string wasmExportList(std::shared_ptr<std::vector<std::string>> names);
-    void appendObjectArguments(std::shared_ptr<std::vector<std::string>> arguments, std::string sourcePath, std::string outputPath);
-    bool usesClangPrecompiledHeader(std::string compiler, std::string platform);
-    std::string resolveBuildPath(std::string outputDirectory, std::string path);
+    std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(const std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>& tasks, int32_t maximumWorkers = 8);
+    std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, bool release = false, const std::string& platform = std::string(""), const std::shared_ptr<std::vector<std::string>>& wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool wasm = false);
+    void appendReleaseLinkerArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& platform, bool swiftLink);
+    void appendLinkerOption(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& option, bool swiftLink);
+    std::string replaceSourceExtension(const std::string& path, const std::string& extension);
+    std::shared_ptr<std::vector<std::string>> copyArguments(const std::shared_ptr<std::vector<std::string>>& source);
+    std::shared_ptr<std::vector<std::string>> copyNativeCompileArguments(const std::shared_ptr<std::vector<std::string>>& source, bool cSource);
+    bool isCSource(const std::string& path);
+    bool isSwiftSource(const std::string& path);
+    bool hasSwiftSource(const std::shared_ptr<std::vector<std::string>>& paths);
+    std::shared_ptr<std::vector<std::string>> swiftObjectArguments(const std::string& sourcePath, const std::string& objectPath);
+    std::string deriveCCompiler(const std::string& compiler);
+    std::string wasmExportList(const std::shared_ptr<std::vector<std::string>>& names);
+    void appendObjectArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& sourcePath, const std::string& outputPath);
+    bool usesClangPrecompiledHeader(const std::string& compiler, const std::string& platform);
+    std::string resolveBuildPath(const std::string& outputDirectory, const std::string& path);
 }
 
 namespace app_src_native_build_ {

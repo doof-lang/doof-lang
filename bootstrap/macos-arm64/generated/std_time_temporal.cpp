@@ -24,7 +24,7 @@ std::shared_ptr<Instant> Instant::ofEpochMillis(int64_t ms) {
 std::shared_ptr<Instant> Instant::ofEpochSeconds(int64_t s) {
     return std::make_shared<Instant>((s * 1000000000LL));
 }
-doof::Result<std::shared_ptr<Instant>, std::string> Instant::parse(std::string s) {
+doof::Result<std::shared_ptr<Instant>, std::string> Instant::parse(const std::string& s) {
     return ::doof_time::parse_instant(s);
 }
 int64_t Instant::toEpochNanos() {
@@ -36,19 +36,19 @@ int64_t Instant::toEpochMillis() {
 int64_t Instant::toEpochSeconds() {
     return (this->epochNanos / 1000000000LL);
 }
-std::shared_ptr<Instant> Instant::plus(std::shared_ptr<::std_::time::duration::Duration> d) {
+std::shared_ptr<Instant> Instant::plus(const std::shared_ptr<::std_::time::duration::Duration>& d) {
     return std::make_shared<Instant>((this->epochNanos + d->toNanos()));
 }
-std::shared_ptr<Instant> Instant::minus(std::shared_ptr<::std_::time::duration::Duration> d) {
+std::shared_ptr<Instant> Instant::minus(const std::shared_ptr<::std_::time::duration::Duration>& d) {
     return std::make_shared<Instant>((this->epochNanos - d->toNanos()));
 }
-std::shared_ptr<::std_::time::duration::Duration> Instant::durationUntil(std::shared_ptr<Instant> other) {
+std::shared_ptr<::std_::time::duration::Duration> Instant::durationUntil(const std::shared_ptr<Instant>& other) {
     return ::std_::time::duration::Duration::ofNanos((other->epochNanos - this->epochNanos));
 }
-std::shared_ptr<::std_::time::duration::Duration> Instant::durationSince(std::shared_ptr<Instant> other) {
+std::shared_ptr<::std_::time::duration::Duration> Instant::durationSince(const std::shared_ptr<Instant>& other) {
     return ::std_::time::duration::Duration::ofNanos((this->epochNanos - other->epochNanos));
 }
-int32_t Instant::compareTo(std::shared_ptr<Instant> other) {
+int32_t Instant::compareTo(const std::shared_ptr<Instant>& other) {
     if (this->epochNanos < other->epochNanos) {
         return -1;
     }
@@ -57,25 +57,25 @@ int32_t Instant::compareTo(std::shared_ptr<Instant> other) {
     }
     return 0;
 }
-bool Instant::isBefore(std::shared_ptr<Instant> other) {
+bool Instant::isBefore(const std::shared_ptr<Instant>& other) {
     return (this->epochNanos < other->epochNanos);
 }
-bool Instant::isAfter(std::shared_ptr<Instant> other) {
+bool Instant::isAfter(const std::shared_ptr<Instant>& other) {
     return (this->epochNanos > other->epochNanos);
 }
-bool Instant::equals(std::shared_ptr<Instant> other) {
+bool Instant::equals(const std::shared_ptr<Instant>& other) {
     return (this->epochNanos == other->epochNanos);
 }
 std::shared_ptr<DateTime> Instant::toDateTime() {
     return ::doof_time::instant_to_datetime(this->epochNanos);
 }
-std::shared_ptr<ZonedDateTime> Instant::toZonedDateTime(std::shared_ptr<TimeZone> zone) {
+std::shared_ptr<ZonedDateTime> Instant::toZonedDateTime(const std::shared_ptr<TimeZone>& zone) {
     return ::doof_time::instant_to_zoned_datetime(this->epochNanos, zone);
 }
 std::string Instant::toISOString() {
     return ::doof_time::format_instant(this->epochNanos);
 }
-doof::Result<std::shared_ptr<Instant>, std::string> Instant::parseHttpDate(std::string s) {
+doof::Result<std::shared_ptr<Instant>, std::string> Instant::parseHttpDate(const std::string& s) {
     if (static_cast<int32_t>(s.size()) != 29) {
         return doof::Failure<std::string>{ std::string("HTTP date must use IMF-fixdate format") };
     }
@@ -153,10 +153,10 @@ doof::Result<std::shared_ptr<Date>, std::string> Date::create(int32_t year, int3
 std::shared_ptr<Date> Date::todayUTC() {
     return ::doof_time::system_date_utc();
 }
-std::shared_ptr<Date> Date::today(std::shared_ptr<TimeZone> zone) {
+std::shared_ptr<Date> Date::today(const std::shared_ptr<TimeZone>& zone) {
     return ::doof_time::system_date_in_zone(zone);
 }
-doof::Result<std::shared_ptr<Date>, std::string> Date::parse(std::string s) {
+doof::Result<std::shared_ptr<Date>, std::string> Date::parse(const std::string& s) {
     return ::doof_time::parse_date(s);
 }
 DayOfWeek Date::dayOfWeek() {
@@ -189,10 +189,10 @@ std::shared_ptr<Date> Date::plusYears(int32_t n) {
 std::shared_ptr<Date> Date::minusYears(int32_t n) {
     return ::doof_time::date_add_years(this->year, this->month, this->day, -n);
 }
-int32_t Date::daysUntil(std::shared_ptr<Date> other) {
+int32_t Date::daysUntil(const std::shared_ptr<Date>& other) {
     return ::doof_time::date_diff(this->year, this->month, this->day, other->year, other->month, other->day);
 }
-int32_t Date::compareTo(std::shared_ptr<Date> other) {
+int32_t Date::compareTo(const std::shared_ptr<Date>& other) {
     if (this->year != other->year) {
         return ((this->year < other->year) ? -1 : 1);
     }
@@ -204,13 +204,13 @@ int32_t Date::compareTo(std::shared_ptr<Date> other) {
     }
     return 0;
 }
-bool Date::isBefore(std::shared_ptr<Date> other) {
+bool Date::isBefore(const std::shared_ptr<Date>& other) {
     return (this->compareTo(other) < 0);
 }
-bool Date::isAfter(std::shared_ptr<Date> other) {
+bool Date::isAfter(const std::shared_ptr<Date>& other) {
     return (this->compareTo(other) > 0);
 }
-bool Date::equals(std::shared_ptr<Date> other) {
+bool Date::equals(const std::shared_ptr<Date>& other) {
     return (((this->year == other->year) && (this->month == other->month)) && (this->day == other->day));
 }
 std::string Date::toISOString() {
@@ -246,7 +246,7 @@ std::shared_ptr<Time> Time::NOON;
 doof::Result<std::shared_ptr<Time>, std::string> Time::create(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond) {
     return ::doof_time::validate_time(hour, minute, second, nanosecond);
 }
-doof::Result<std::shared_ptr<Time>, std::string> Time::parse(std::string s) {
+doof::Result<std::shared_ptr<Time>, std::string> Time::parse(const std::string& s) {
     return ::doof_time::parse_time(s);
 }
 std::shared_ptr<Time> Time::plusHours(int32_t n) {
@@ -261,7 +261,7 @@ std::shared_ptr<Time> Time::plusSeconds(int32_t n) {
 std::shared_ptr<Time> Time::plusNanos(int64_t n) {
     return ::doof_time::time_add_nanos(this->hour, this->minute, this->second, this->nanosecond, n);
 }
-int32_t Time::compareTo(std::shared_ptr<Time> other) {
+int32_t Time::compareTo(const std::shared_ptr<Time>& other) {
     if (this->hour != other->hour) {
         return ((this->hour < other->hour) ? -1 : 1);
     }
@@ -276,13 +276,13 @@ int32_t Time::compareTo(std::shared_ptr<Time> other) {
     }
     return 0;
 }
-bool Time::isBefore(std::shared_ptr<Time> other) {
+bool Time::isBefore(const std::shared_ptr<Time>& other) {
     return (this->compareTo(other) < 0);
 }
-bool Time::isAfter(std::shared_ptr<Time> other) {
+bool Time::isAfter(const std::shared_ptr<Time>& other) {
     return (this->compareTo(other) > 0);
 }
-bool Time::equals(std::shared_ptr<Time> other) {
+bool Time::equals(const std::shared_ptr<Time>& other) {
     return ((((this->hour == other->hour) && (this->minute == other->minute)) && (this->second == other->second)) && (this->nanosecond == other->nanosecond));
 }
 std::string Time::toISOString() {
@@ -322,7 +322,7 @@ doof::Result<std::shared_ptr<Time>, std::string> Time::fromJsonValue(const doof:
     return doof::Success<std::shared_ptr<Time>>{std::make_shared<Time>(_field_hour, _field_minute, _field_second, _field_nanosecond)};
 }
 
-std::shared_ptr<DateTime> DateTime::create(std::shared_ptr<Date> date, std::shared_ptr<Time> time) {
+std::shared_ptr<DateTime> DateTime::create(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time) {
     return std::make_shared<DateTime>(date, time);
 }
 doof::Result<std::shared_ptr<DateTime>, std::string> DateTime::fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second, int32_t nanosecond) {
@@ -337,7 +337,7 @@ doof::Result<std::shared_ptr<DateTime>, std::string> DateTime::fromParts(int32_t
 std::shared_ptr<DateTime> DateTime::nowUTC() {
     return Instant::now()->toDateTime();
 }
-doof::Result<std::shared_ptr<DateTime>, std::string> DateTime::parse(std::string s) {
+doof::Result<std::shared_ptr<DateTime>, std::string> DateTime::parse(const std::string& s) {
     return ::doof_time::parse_datetime(s);
 }
 std::shared_ptr<DateTime> DateTime::plusDays(int32_t n) {
@@ -355,35 +355,35 @@ std::shared_ptr<DateTime> DateTime::plusMinutes(int32_t n) {
 std::shared_ptr<DateTime> DateTime::plusSeconds(int32_t n) {
     return ::doof_time::datetime_plus_nanos(this->date, this->time, (static_cast<int64_t>(n) * 1000000000LL));
 }
-std::shared_ptr<DateTime> DateTime::plus(std::shared_ptr<::std_::time::duration::Duration> d) {
+std::shared_ptr<DateTime> DateTime::plus(const std::shared_ptr<::std_::time::duration::Duration>& d) {
     return ::doof_time::datetime_plus_nanos(this->date, this->time, d->toNanos());
 }
-std::shared_ptr<DateTime> DateTime::minus(std::shared_ptr<::std_::time::duration::Duration> d) {
+std::shared_ptr<DateTime> DateTime::minus(const std::shared_ptr<::std_::time::duration::Duration>& d) {
     return ::doof_time::datetime_plus_nanos(this->date, this->time, -d->toNanos());
 }
 std::shared_ptr<Instant> DateTime::toInstantUTC() {
     return ::doof_time::datetime_to_instant(this->date, this->time);
 }
-std::shared_ptr<Instant> DateTime::toInstant(std::shared_ptr<TimeZone> zone) {
+std::shared_ptr<Instant> DateTime::toInstant(const std::shared_ptr<TimeZone>& zone) {
     return ::doof_time::datetime_to_instant_in_zone(this->date, this->time, zone);
 }
-std::shared_ptr<ZonedDateTime> DateTime::atZone(std::shared_ptr<TimeZone> zone) {
+std::shared_ptr<ZonedDateTime> DateTime::atZone(const std::shared_ptr<TimeZone>& zone) {
     return ::doof_time::datetime_at_zone(this->shared_from_this(), zone);
 }
-int32_t DateTime::compareTo(std::shared_ptr<DateTime> other) {
+int32_t DateTime::compareTo(const std::shared_ptr<DateTime>& other) {
     auto dc = this->date->compareTo(other->date);
     if (dc != 0) {
         return dc;
     }
     return this->time->compareTo(other->time);
 }
-bool DateTime::isBefore(std::shared_ptr<DateTime> other) {
+bool DateTime::isBefore(const std::shared_ptr<DateTime>& other) {
     return (this->compareTo(other) < 0);
 }
-bool DateTime::isAfter(std::shared_ptr<DateTime> other) {
+bool DateTime::isAfter(const std::shared_ptr<DateTime>& other) {
     return (this->compareTo(other) > 0);
 }
-bool DateTime::equals(std::shared_ptr<DateTime> other) {
+bool DateTime::equals(const std::shared_ptr<DateTime>& other) {
     return (this->date->equals(other->date) && this->time->equals(other->time));
 }
 std::string DateTime::toISOString() {
@@ -410,16 +410,16 @@ doof::Result<std::shared_ptr<DateTime>, std::string> DateTime::fromJsonValue(con
 }
 
 std::shared_ptr<TimeZone> TimeZone::UTC;
-doof::Result<std::shared_ptr<TimeZone>, std::string> TimeZone::lookup(std::string id) {
+doof::Result<std::shared_ptr<TimeZone>, std::string> TimeZone::lookup(const std::string& id) {
     return ::doof_time::lookup_timezone(id);
 }
 std::shared_ptr<TimeZone> TimeZone::local() {
     return ::doof_time::system_timezone();
 }
-int32_t TimeZone::offsetSecondsAt(std::shared_ptr<Instant> instant) {
+int32_t TimeZone::offsetSecondsAt(const std::shared_ptr<Instant>& instant) {
     return ::doof_time::zone_offset_at(this->id, instant->toEpochSeconds());
 }
-bool TimeZone::isDSTAt(std::shared_ptr<Instant> instant) {
+bool TimeZone::isDSTAt(const std::shared_ptr<Instant>& instant) {
     return ::doof_time::zone_dst_at(this->id, instant->toEpochSeconds());
 }
 doof::JsonObject TimeZone::toJsonObject() const {
@@ -437,7 +437,7 @@ doof::Result<std::shared_ptr<TimeZone>, std::string> TimeZone::fromJsonValue(con
     return doof::Success<std::shared_ptr<TimeZone>>{std::make_shared<TimeZone>(_field_id)};
 }
 
-std::shared_ptr<ZonedDateTime> ZonedDateTime::now(std::shared_ptr<TimeZone> zone) {
+std::shared_ptr<ZonedDateTime> ZonedDateTime::now(const std::shared_ptr<TimeZone>& zone) {
     return Instant::now()->toZonedDateTime(zone);
 }
 std::shared_ptr<ZonedDateTime> ZonedDateTime::nowUTC() {
@@ -455,10 +455,10 @@ int32_t ZonedDateTime::offsetSeconds() {
 std::shared_ptr<Instant> ZonedDateTime::toInstant() {
     return this->dateTime->toInstant(this->zone);
 }
-std::shared_ptr<ZonedDateTime> ZonedDateTime::withZoneSameInstant(std::shared_ptr<TimeZone> newZone) {
+std::shared_ptr<ZonedDateTime> ZonedDateTime::withZoneSameInstant(const std::shared_ptr<TimeZone>& newZone) {
     return this->toInstant()->toZonedDateTime(newZone);
 }
-std::shared_ptr<ZonedDateTime> ZonedDateTime::withZoneSameLocal(std::shared_ptr<TimeZone> newZone) {
+std::shared_ptr<ZonedDateTime> ZonedDateTime::withZoneSameLocal(const std::shared_ptr<TimeZone>& newZone) {
     return std::make_shared<ZonedDateTime>(dateTime, newZone);
 }
 std::shared_ptr<DateTime> ZonedDateTime::toDateTime() {
@@ -467,13 +467,13 @@ std::shared_ptr<DateTime> ZonedDateTime::toDateTime() {
 std::shared_ptr<ZonedDateTime> ZonedDateTime::toUTC() {
     return this->withZoneSameInstant(TimeZone::UTC);
 }
-int32_t ZonedDateTime::compareTo(std::shared_ptr<ZonedDateTime> other) {
+int32_t ZonedDateTime::compareTo(const std::shared_ptr<ZonedDateTime>& other) {
     return this->toInstant()->compareTo(other->toInstant());
 }
-bool ZonedDateTime::isBefore(std::shared_ptr<ZonedDateTime> other) {
+bool ZonedDateTime::isBefore(const std::shared_ptr<ZonedDateTime>& other) {
     return this->toInstant()->isBefore(other->toInstant());
 }
-bool ZonedDateTime::isAfter(std::shared_ptr<ZonedDateTime> other) {
+bool ZonedDateTime::isAfter(const std::shared_ptr<ZonedDateTime>& other) {
     return this->toInstant()->isAfter(other->toInstant());
 }
 std::string ZonedDateTime::toISOString() {
@@ -579,7 +579,7 @@ std::string httpMonthName(int32_t month) {
     throw std::runtime_error("non-exhaustive case expression");
 }();
 }
-std::optional<int32_t> httpMonthNumber(std::string text) {
+std::optional<int32_t> httpMonthNumber(const std::string& text) {
     return [&]() -> std::optional<int32_t> {
     auto _case_subject = text;
     if (_case_subject == std::string("Jan")) {
@@ -636,13 +636,13 @@ void __doof_initialize_module() {
 int64_t _systemNanosEpoch() {
     return ::doof_time::system_nanos_epoch();
 }
-doof::Result<std::shared_ptr<Instant>, std::string> _parseInstant(std::string s) {
+doof::Result<std::shared_ptr<Instant>, std::string> _parseInstant(const std::string& s) {
     return ::doof_time::parse_instant(s);
 }
 std::shared_ptr<DateTime> _instantToDateTime(int64_t nanos) {
     return ::doof_time::instant_to_datetime(nanos);
 }
-std::shared_ptr<ZonedDateTime> _instantToZonedDateTime(int64_t nanos, std::shared_ptr<TimeZone> zone) {
+std::shared_ptr<ZonedDateTime> _instantToZonedDateTime(int64_t nanos, const std::shared_ptr<TimeZone>& zone) {
     return ::doof_time::instant_to_zoned_datetime(nanos, zone);
 }
 std::string _formatInstant(int64_t nanos) {
@@ -654,10 +654,10 @@ doof::Result<std::shared_ptr<Date>, std::string> _validateDate(int32_t year, int
 std::shared_ptr<Date> _systemDateUTC() {
     return ::doof_time::system_date_utc();
 }
-std::shared_ptr<Date> _systemDateInZone(std::shared_ptr<TimeZone> zone) {
+std::shared_ptr<Date> _systemDateInZone(const std::shared_ptr<TimeZone>& zone) {
     return ::doof_time::system_date_in_zone(zone);
 }
-doof::Result<std::shared_ptr<Date>, std::string> _parseDate(std::string s) {
+doof::Result<std::shared_ptr<Date>, std::string> _parseDate(const std::string& s) {
     return ::doof_time::parse_date(s);
 }
 DayOfWeek _dateToDayOfWeek(int32_t year, int32_t month, int32_t day) {
@@ -687,37 +687,37 @@ int32_t _dateDiff(int32_t y1, int32_t m1, int32_t d1, int32_t y2, int32_t m2, in
 doof::Result<std::shared_ptr<Time>, std::string> _validateTime(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond) {
     return ::doof_time::validate_time(hour, minute, second, nanosecond);
 }
-doof::Result<std::shared_ptr<Time>, std::string> _parseTime(std::string s) {
+doof::Result<std::shared_ptr<Time>, std::string> _parseTime(const std::string& s) {
     return ::doof_time::parse_time(s);
 }
 std::shared_ptr<Time> _timeAddNanos(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond, int64_t nanos) {
     return ::doof_time::time_add_nanos(hour, minute, second, nanosecond, nanos);
 }
-doof::Result<std::shared_ptr<DateTime>, std::string> _parseDateTime(std::string s) {
+doof::Result<std::shared_ptr<DateTime>, std::string> _parseDateTime(const std::string& s) {
     return ::doof_time::parse_datetime(s);
 }
-std::shared_ptr<DateTime> _dateTimePlusNanos(std::shared_ptr<Date> date, std::shared_ptr<Time> time, int64_t nanos) {
+std::shared_ptr<DateTime> _dateTimePlusNanos(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time, int64_t nanos) {
     return ::doof_time::datetime_plus_nanos(date, time, nanos);
 }
-std::shared_ptr<Instant> _dateTimeToInstant(std::shared_ptr<Date> date, std::shared_ptr<Time> time) {
+std::shared_ptr<Instant> _dateTimeToInstant(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time) {
     return ::doof_time::datetime_to_instant(date, time);
 }
-std::shared_ptr<Instant> _dateTimeToInstantInZone(std::shared_ptr<Date> date, std::shared_ptr<Time> time, std::shared_ptr<TimeZone> zone) {
+std::shared_ptr<Instant> _dateTimeToInstantInZone(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time, const std::shared_ptr<TimeZone>& zone) {
     return ::doof_time::datetime_to_instant_in_zone(date, time, zone);
 }
-std::shared_ptr<ZonedDateTime> _dateTimeAtZone(std::shared_ptr<DateTime> dateTime, std::shared_ptr<TimeZone> zone) {
+std::shared_ptr<ZonedDateTime> _dateTimeAtZone(const std::shared_ptr<DateTime>& dateTime, const std::shared_ptr<TimeZone>& zone) {
     return ::doof_time::datetime_at_zone(dateTime, zone);
 }
-doof::Result<std::shared_ptr<TimeZone>, std::string> _lookupTimeZone(std::string id) {
+doof::Result<std::shared_ptr<TimeZone>, std::string> _lookupTimeZone(const std::string& id) {
     return ::doof_time::lookup_timezone(id);
 }
 std::shared_ptr<TimeZone> _systemTimeZone() {
     return ::doof_time::system_timezone();
 }
-int32_t _zoneOffsetAt(std::string id, int64_t epochSeconds) {
+int32_t _zoneOffsetAt(const std::string& id, int64_t epochSeconds) {
     return ::doof_time::zone_offset_at(id, epochSeconds);
 }
-bool _zoneDSTAt(std::string id, int64_t epochSeconds) {
+bool _zoneDSTAt(const std::string& id, int64_t epochSeconds) {
     return ::doof_time::zone_dst_at(id, epochSeconds);
 }
 }

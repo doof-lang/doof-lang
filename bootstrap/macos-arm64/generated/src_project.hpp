@@ -61,13 +61,13 @@ namespace app_src_project_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ProjectSpec>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    std::string projectManifestPath(std::string path);
-    std::string environmentValue(std::string name);
-    std::string fileName(std::string path);
-    std::string parentPath(std::string path);
-    std::string joinPath(std::string directory, std::string name);
-    std::string projectEntryRequestError(std::shared_ptr<ProjectSpec> project, std::string requestedPath);
-    std::shared_ptr<ProjectSpec> readProjectSpec(std::string requestedPath, std::string platform = std::string(""), std::string targetOverride = std::string(""));
+    std::string projectManifestPath(const std::string& path);
+    std::string environmentValue(const std::string& name);
+    std::string fileName(const std::string& path);
+    std::string parentPath(const std::string& path);
+    std::string joinPath(const std::string& directory, const std::string& name);
+    std::string projectEntryRequestError(const std::shared_ptr<ProjectSpec>& project, const std::string& requestedPath);
+    std::shared_ptr<ProjectSpec> readProjectSpec(const std::string& requestedPath, const std::string& platform = std::string(""), const std::string& targetOverride = std::string(""));
 }
 
 namespace app_src_project_ {

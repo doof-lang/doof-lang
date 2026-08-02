@@ -283,7 +283,7 @@ export function testEmitsLenientGeneratedJsonDecode(): none {
 export function testEscapesShortCppKeywordEverywhere(): none {
   result := emit("class Option { short: string | null }\nfunction read(short: string): string => Option { short }.short!")
   Assert.equal(result.header.contains(" short_;"), true)
-  Assert.equal(result.header.contains("std::string short_"), true)
+  Assert.equal(result.header.contains("const std::string& short_"), true)
   Assert.equal(result.source.contains("->short_"), true)
 }
 
@@ -296,8 +296,8 @@ export function testEscapesCharCppKeywordEverywhere(): none {
 
 export function testEscapesDeleteCppKeywordForMethods(): none {
   result := emit("class Router { delete(pattern: string): Router => this }\nfunction remove(router: Router): Router => router.delete(\"/old\")")
-  Assert.equal(result.header.contains(" delete_(std::string pattern)"), true)
-  Assert.equal(result.source.contains("Router::delete_(std::string pattern)"), true)
+  Assert.equal(result.header.contains(" delete_(const std::string& pattern)"), true)
+  Assert.equal(result.source.contains("Router::delete_(const std::string& pattern)"), true)
   Assert.equal(result.source.contains("router->delete_(std::string(\"/old\"))"), true)
 }
 
@@ -1001,17 +1001,17 @@ export function testEmitsPositionAwareNoneRepresentations(): none {
   result := emit("function fallthrough(): none { }\nfunction explicit(): none { return none }\nfunction invoke(callback: (): none): none { callback() }\nfunction save(): Result<none, string> => Success()\nfunction fail(): Result<int, none> => Failure()\nfunction settle(value: Promise<none>): Promise<none> => value")
   Assert.stringContains(result.header, "void fallthrough()")
   Assert.stringContains(result.header, "void explicit()")
-  Assert.stringContains(result.header, "doof::callback<void()> callback")
+  Assert.stringContains(result.header, "const doof::callback<void()>& callback")
   Assert.stringContains(result.header, "doof::Result<void, std::string> save()")
   Assert.stringContains(result.header, "doof::Result<int32_t, void> fail()")
-  Assert.stringContains(result.header, "doof::Promise<void> settle(doof::Promise<void> value)")
+  Assert.stringContains(result.header, "doof::Promise<void> settle(const doof::Promise<void>& value)")
   Assert.stringContains(result.source, "void explicit() {\n    return;")
 }
 
 export function testEmitsNullableMapsWithTheirPointerCarrier(): none {
   result := emit("function read(value: Map<string, int> | null): int => value!.size")
   Assert.equal(result.header.contains("std::variant<std::monostate"), false)
-  Assert.equal(result.header.contains("std::shared_ptr<doof::ordered_map<std::string, int32_t>> value"), true)
+  Assert.equal(result.header.contains("const std::shared_ptr<doof::ordered_map<std::string, int32_t>>& value"), true)
 }
 
 export function testKeepsImmutableStructBindingInteriorMutable(): none {

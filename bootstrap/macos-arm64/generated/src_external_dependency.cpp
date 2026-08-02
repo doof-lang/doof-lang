@@ -68,10 +68,10 @@ doof::Result<std::shared_ptr<ExternalDependencyTarget>, std::string> ExternalDep
     }
     return doof::Success<std::shared_ptr<ExternalDependencyTarget>>{std::make_shared<ExternalDependencyTarget>(_field_nativeTarget, _field_sdkPath.value(), _field_targetTriple.value(), _field_configureHost.value(), _field_jobs.value())};
 }
-std::string externalPath(std::string directory, std::string name) {
+std::string externalPath(const std::string& directory, const std::string& name) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{directory, name}));
 }
-doof::Result<void, std::string> ensureExternalDirectory(std::string path) {
+doof::Result<void, std::string> ensureExternalDirectory(const std::string& path) {
     if ((path == std::string("")) || ::doof_fs::exists(path)) {
         return doof::Success<void>{};
     }
@@ -87,7 +87,7 @@ doof::Result<void, std::string> ensureExternalDirectory(std::string path) {
     }
     return doof::Success<void>{};
 }
-doof::Result<void, std::string> removeExternalTree(std::string path) {
+doof::Result<void, std::string> removeExternalTree(const std::string& path) {
     if (!::doof_fs::exists(path)) {
         return doof::Success<void>{};
     }
@@ -111,7 +111,7 @@ doof::Result<void, std::string> removeExternalTree(std::string path) {
     }
     return doof::Success<void>{};
 }
-doof::Result<void, std::string> copyExternalPath(std::string sourcePath, std::string destinationPath) {
+doof::Result<void, std::string> copyExternalPath(const std::string& sourcePath, const std::string& destinationPath) {
     if (::doof_fs::isDirectory(sourcePath)) {
         auto _try_value_7 = ensureExternalDirectory(destinationPath);
         if (doof::is_failure(_try_value_7)) return doof::Failure<std::string>{doof::failure_error(_try_value_7)};
@@ -143,11 +143,11 @@ doof::Result<void, std::string> copyExternalPath(std::string sourcePath, std::st
     }
     return doof::Success<void>{};
 }
-bool externalPathWithinRoot(std::string path, std::string root) {
+bool externalPathWithinRoot(const std::string& path, const std::string& root) {
     const auto boundary = (doof::string_endsWith(root, std::string("/")) ? root : (root + std::string("/")));
     return ((path == root) || doof::string_startsWith(path, boundary));
 }
-doof::Result<std::string, std::string> commandOutput(std::string command, std::shared_ptr<std::vector<std::string>> arguments, std::shared_ptr<::std_::os::index::ExecOptions> options) {
+doof::Result<std::string, std::string> commandOutput(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::shared_ptr<::std_::os::index::ExecOptions>& options) {
     auto _binding_value_14 = ::std_::os::index::run(command, arguments, options);
     if (doof::is_failure(_binding_value_14)) {
         const auto error = doof::failure_error(_binding_value_14);
@@ -160,7 +160,7 @@ doof::Result<std::string, std::string> commandOutput(std::string command, std::s
     }
     return doof::Success<std::string>{ output };
 }
-std::string externalCommandFingerprint(std::shared_ptr<::app_src_package_manifest_::ExternalDependencyCommand> command) {
+std::string externalCommandFingerprint(const std::shared_ptr<::app_src_package_manifest_::ExternalDependencyCommand>& command) {
     auto result = (((command->program + std::string("\n")) + command->workingDirectory) + std::string("\n"));
     const auto& _iterable_15 = command->args;
     for (const auto& argument : *_iterable_15) {
@@ -172,7 +172,7 @@ std::string externalCommandFingerprint(std::shared_ptr<::app_src_package_manifes
     }
     return result;
 }
-std::string externalSourceFingerprint(std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency) {
+std::string externalSourceFingerprint(const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency) {
     auto value = ((((((((((((((((std::string("schema=1\nname=") + dependency->name) + std::string("\nkind=")) + dependency->kind) + std::string("\nurl=")) + dependency->url) + std::string("\ndestination=")) + dependency->destination) + std::string("\nsha256=")) + dependency->sha256) + std::string("\nstrip=")) + doof::to_string(dependency->stripComponents)) + std::string("\nref=")) + dependency->ref) + std::string("\ncommit=")) + dependency->commit) + std::string("\n"));
     const auto& _iterable_17 = dependency->copyFiles;
     for (const auto& copyFile : *_iterable_17) {
@@ -180,7 +180,7 @@ std::string externalSourceFingerprint(std::shared_ptr<::app_src_package_manifest
     }
     return ::std_::crypto::index::sha256HexString(value);
 }
-std::string externalNativeFingerprint(std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::shared_ptr<ExternalDependencyTarget> target) {
+std::string externalNativeFingerprint(const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency, const std::shared_ptr<ExternalDependencyTarget>& target) {
     auto value = ((((((((std::string("schema=1\ntarget=") + target->nativeTarget) + std::string("\nsdk=")) + target->sdkPath) + std::string("\ntriple=")) + target->targetTriple) + std::string("\nhost=")) + target->configureHost) + std::string("\n"));
     const auto& _iterable_18 = dependency->commands;
     for (const auto& command : *_iterable_18) {
@@ -188,7 +188,7 @@ std::string externalNativeFingerprint(std::shared_ptr<::app_src_package_manifest
     }
     return ::std_::crypto::index::sha256HexString(value);
 }
-bool markerMatches(std::string path, std::string fingerprint) {
+bool markerMatches(const std::string& path, const std::string& fingerprint) {
     if (!::doof_fs::exists(path)) {
         return false;
     }
@@ -235,7 +235,7 @@ bool markerMatches(std::string path, std::string fingerprint) {
     }
     doof::unreachable();
 }
-bool markerContentMatches(std::string path, std::string expected) {
+bool markerContentMatches(const std::string& path, const std::string& expected) {
     if (!::doof_fs::exists(path)) {
         return false;
     }
@@ -247,10 +247,10 @@ bool markerContentMatches(std::string path, std::string expected) {
     const auto source = doof::success_value(_binding_value_22);
     return (source == expected);
 }
-void externalJsonSet(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> object, std::string key, doof::JsonValue value) {
+void externalJsonSet(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& key, const doof::JsonValue& value) {
     doof::map_set(object, key, value, "", 0);
 }
-std::shared_ptr<std::vector<doof::JsonValue>> externalCommandsJson(std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependencyCommand>>> commands) {
+std::shared_ptr<std::vector<doof::JsonValue>> externalCommandsJson(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependencyCommand>>>& commands) {
     std::shared_ptr<std::vector<doof::JsonValue>> values = std::make_shared<std::vector<doof::JsonValue>>(std::vector<doof::JsonValue>{});
     const auto& _iterable_23 = commands;
     for (const auto& command : *_iterable_23) {
@@ -275,7 +275,7 @@ std::shared_ptr<std::vector<doof::JsonValue>> externalCommandsJson(std::shared_p
     }
     return values;
 }
-std::string externalSourceMarkerContent(std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::string fingerprint) {
+std::string externalSourceMarkerContent(const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency, const std::string& fingerprint) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> marker = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     externalJsonSet(marker, std::string("schemaVersion"), doof::json_value(1));
     externalJsonSet(marker, std::string("name"), doof::json_value(dependency->name));
@@ -303,7 +303,7 @@ std::string externalSourceMarkerContent(std::shared_ptr<::app_src_package_manife
     }
     return (::doof_json::format(doof::json_value(marker)) + std::string("\n"));
 }
-std::string externalNativeMarkerContent(std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::shared_ptr<ExternalDependencyTarget> target, std::string fingerprint) {
+std::string externalNativeMarkerContent(const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency, const std::shared_ptr<ExternalDependencyTarget>& target, const std::string& fingerprint) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> marker = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     externalJsonSet(marker, std::string("schemaVersion"), doof::json_value(1));
     externalJsonSet(marker, std::string("nativeTarget"), doof::json_value(target->nativeTarget));
@@ -315,7 +315,7 @@ std::string externalNativeMarkerContent(std::shared_ptr<::app_src_package_manife
     externalJsonSet(marker, std::string("fingerprint"), doof::json_value(fingerprint));
     return (::doof_json::format(doof::json_value(marker)) + std::string("\n"));
 }
-bool isEmptyExternalDirectory(std::string path) {
+bool isEmptyExternalDirectory(const std::string& path) {
     if (!::doof_fs::isDirectory(path)) {
         return false;
     }
@@ -327,7 +327,7 @@ bool isEmptyExternalDirectory(std::string path) {
     const auto entries = doof::success_value(_binding_value_27);
     return (static_cast<int32_t>((entries)->size()) == 0);
 }
-doof::Result<void, std::string> copyArchiveContents(std::string sourceRoot, std::string destination) {
+doof::Result<void, std::string> copyArchiveContents(const std::string& sourceRoot, const std::string& destination) {
     if (!::doof_fs::isDirectory(sourceRoot)) {
         return doof::Failure<std::string>{ (std::string("stripped archive root is not a directory: ") + sourceRoot) };
     }
@@ -346,7 +346,7 @@ doof::Result<void, std::string> copyArchiveContents(std::string sourceRoot, std:
     }
     return doof::Success<void>{};
 }
-doof::Result<std::string, std::string> strippedArchiveRoot(std::string extractRoot, int32_t count, std::string dependencyName) {
+doof::Result<std::string, std::string> strippedArchiveRoot(const std::string& extractRoot, int32_t count, const std::string& dependencyName) {
     auto current = extractRoot;
     for (int32_t ignored = 0; ignored < count; ++ignored) {
         auto _binding_value_32 = ::doof_fs::readDir(current);
@@ -372,7 +372,7 @@ doof::Result<std::string, std::string> strippedArchiveRoot(std::string extractRo
     }
     return doof::Success<std::string>{ current };
 }
-doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> downloadExternalArchive(std::string url) {
+doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> downloadExternalArchive(const std::string& url) {
     if (doof::string_startsWith(url, std::string("file://"))) {
         const auto path = doof::string_substring(url, 7, static_cast<int32_t>(url.size()));
         auto _binding_value_34 = ::doof_fs::readBlob(path);
@@ -395,7 +395,7 @@ doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> downloadExterna
     }
     return doof::Success<std::shared_ptr<std::vector<uint8_t>>>{ response->getBlob() };
 }
-doof::Result<void, std::string> acquireArchive(std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::string destination, std::string stagingRoot) {
+doof::Result<void, std::string> acquireArchive(const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency, const std::string& destination, const std::string& stagingRoot) {
     const auto archivePath = externalPath(stagingRoot, std::string("source"));
     const auto extractRoot = externalPath(stagingRoot, std::string("extract"));
     const auto payloadRoot = externalPath(stagingRoot, std::string("payload"));
@@ -444,7 +444,7 @@ doof::Result<void, std::string> acquireArchive(std::shared_ptr<::app_src_package
     }
     return doof::Success<void>{};
 }
-doof::Result<void, std::string> acquireGit(std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::string destination, std::string stagingRoot) {
+doof::Result<void, std::string> acquireGit(const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency, const std::string& destination, const std::string& stagingRoot) {
     const auto repositoryRoot = externalPath(stagingRoot, std::string("repository"));
     auto _try_value_46 = commandOutput(std::string("git"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("clone"), std::string("--depth"), std::string("1"), std::string("--branch"), dependency->ref, dependency->url, repositoryRoot}), std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, MAX_EXTERNAL_COMMAND_OUTPUT_BYTES, nullptr));
     if (doof::is_failure(_try_value_46)) return doof::Failure<std::string>{doof::failure_error(_try_value_46)};
@@ -464,10 +464,10 @@ doof::Result<void, std::string> acquireGit(std::shared_ptr<::app_src_package_man
     }
     return doof::Success<void>{};
 }
-std::string applyExternalDependencySubstitutions(std::string value, std::string packageRoot, std::string destination, std::shared_ptr<ExternalDependencyTarget> target) {
+std::string applyExternalDependencySubstitutions(const std::string& value, const std::string& packageRoot, const std::string& destination, const std::shared_ptr<ExternalDependencyTarget>& target) {
     return doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(value, std::string("${packageRoot}"), packageRoot), std::string("${destination}"), destination), std::string("${jobs}"), doof::to_string(((target->jobs < 1) ? 1 : target->jobs))), std::string("${nativeTarget}"), target->nativeTarget), std::string("${sdkPath}"), target->sdkPath), std::string("${targetTriple}"), target->targetTriple), std::string("${configureHost}"), target->configureHost);
 }
-doof::Result<void, std::string> runExternalCommands(std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::string packageRoot, std::string destination, std::shared_ptr<ExternalDependencyTarget> target) {
+doof::Result<void, std::string> runExternalCommands(const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency, const std::string& packageRoot, const std::string& destination, const std::shared_ptr<ExternalDependencyTarget>& target) {
     const auto nativeMarker = externalPath(destination, ((std::string(".doof-external-native-") + target->nativeTarget) + std::string(".json")));
     const auto fingerprint = externalNativeFingerprint(dependency, target);
     if (markerMatches(nativeMarker, fingerprint)) {
@@ -511,7 +511,7 @@ doof::Result<void, std::string> runExternalCommands(std::shared_ptr<::app_src_pa
     }
     return doof::Success<void>{};
 }
-doof::Result<void, std::string> acquirePackageExternalDependencies(std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::shared_ptr<ExternalDependencyTarget> target) {
+doof::Result<void, std::string> acquirePackageExternalDependencies(const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& manifest, const std::shared_ptr<ExternalDependencyTarget>& target) {
     if (manifest->manifestPath == std::string("")) {
         return doof::Success<void>{};
     }
