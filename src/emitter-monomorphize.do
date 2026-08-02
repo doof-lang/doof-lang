@@ -68,9 +68,9 @@ export class InstantiationPlan {
   classes: ClassInstantiation[] = []
   interfaces: InterfaceInstantiation[] = []
   methods: MethodInstantiation[] = []
-  overflow: bool = false
+  let overflow: bool = false
   overflowTrace: string[] = []
-  currentTrace: string[] = []
+  let currentTrace: string[] = []
   nativeTemplateClassKeys: string[] = []
 }
 

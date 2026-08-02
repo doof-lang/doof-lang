@@ -33,10 +33,10 @@ export class MacOSAppConfig {
 /** Resolved build.package.macos release settings. */
 export class MacOSPackageConfig {
   distDirectory: string = ""
-  signing: string = "developer-id"
-  identity: string = ""
-  sandbox: bool = false
-  entitlementsPath: string = ""
+  let signing: string = "developer-id"
+  let identity: string = ""
+  let sandbox: bool = false
+  let entitlementsPath: string = ""
 }
 
 export function macOSPackageArchiveName(executableName: string, version: string): string {

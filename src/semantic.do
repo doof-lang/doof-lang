@@ -206,7 +206,7 @@ export class TypeSubstitution {
 
 export class Binding {
   name: string
-  kind: string
+  let kind: string
   type_: ResolvedType
   mutable: bool
   span: SemanticSpan
@@ -224,18 +224,18 @@ export class Scope {
   typeParams: string[] = []
   typeParamConstraintNames: string[] = []
   typeParamConstraints: ResolvedTypeConstraint[] = []
-  returnType: ResolvedType | none = none
+  let returnType: ResolvedType | none = none
   thisType: ResolvedType | none = none
   functionName: string = ""
-  inValueYieldBlock: bool = false
-  yieldType: ResolvedType | none = none
+  let inValueYieldBlock: bool = false
+  let yieldType: ResolvedType | none = none
   capturesTryErrors: bool = false
   catchErrorTypes: ResolvedType[] = []
   tryPanics: bool = false
 }
 
 export class ResolvedTypeConstraint {
-  type_: ResolvedType | none = none
+  let type_: ResolvedType | none = none
 }
 
 export class CheckResult {

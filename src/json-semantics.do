@@ -16,7 +16,7 @@ export class JsonDiscriminatorEntry {
 
 export class JsonDiscriminator {
   fieldName: string
-  entries: JsonDiscriminatorEntry[] = []
+  let entries: JsonDiscriminatorEntry[] = []
 }
 
 // Automatic dispatch deliberately uses only fixed string fields. Shape-based

@@ -30,13 +30,13 @@ import {
 
 export class Parser {
   readonly source: string
-  tokens: Token[] = []
-  pos: int = 0
-  inForIterable: bool = false
-  errorMessage: string = ""
-  errorLine: int = 0
-  errorColumn: int = 0
-  errorOffset: int = 0
+  let tokens: Token[] = []
+  let pos: int = 0
+  let inForIterable: bool = false
+  let errorMessage: string = ""
+  let errorLine: int = 0
+  let errorColumn: int = 0
+  let errorOffset: int = 0
 
   function parse(): Program {
     errorMessage = ""

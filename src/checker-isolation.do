@@ -32,8 +32,8 @@ class IsolationNode {
   module: string
   owner: string = ""
   calls: IsolationCall[] = []
-  directReason: IsolationReason | none = none
-  reason: IsolationReason | none = none
+  let directReason: IsolationReason | none = none
+  let reason: IsolationReason | none = none
 }
 
 class IsolationGraph {

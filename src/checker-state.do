@@ -7,8 +7,8 @@ export class CheckerState {
   result: AnalysisResult
   entry: string = ""
   entryMode: string = "executable"
-  diagnostics: Diagnostic[] = []
-  info: ModuleInfo | none = none
-  moduleScope: Scope | none = none
+  let diagnostics: Diagnostic[] = []
+  let info: ModuleInfo | none = none
+  let moduleScope: Scope | none = none
   warnedImplicitFieldDeclarations: string[] = []
 }

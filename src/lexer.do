@@ -239,9 +239,9 @@ function keywordType(word: string): TokenType {
 
 export class Lexer {
   readonly source: string
-  pos: int = 0
-  line: int = 1
-  column: int = 1
+  let pos: int = 0
+  let line: int = 1
+  let column: int = 1
   tokens: Token[] = []
   diagnostics: LexerDiagnostic[] = []
   templateDelimiters: char[] = []

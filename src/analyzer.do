@@ -43,9 +43,9 @@ readonly BUILTIN_TYPES = ["byte", "int", "long", "float", "double", "string", "c
 
 export class ModuleAnalyzer {
   resolver: ModuleResolver
-  modules: ModuleInfo[] = []
-  diagnostics: Diagnostic[] = []
-  inProgress: string[] = []
+  let modules: ModuleInfo[] = []
+  let diagnostics: Diagnostic[] = []
+  let inProgress: string[] = []
 
   function analyze(entry: string): AnalysisResult {
     modules = []

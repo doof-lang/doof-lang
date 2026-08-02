@@ -33,13 +33,13 @@ export class HeaderPlan {
   classForwardDeclarations: string[] = []
   typeOnlyForwardDeclarations: string[] = []
   typeOnlyModuleIncludes: string[] = []
-  moduleIncludes: string[] = []
+  let moduleIncludes: string[] = []
   nativeIncludes: string[] = []
   nativeAliases: string[] = []
   nativeNamespaces: string[] = []
-  hasMain: bool = false
-  mainReturnsInt: bool = false
-  mainAcceptsArgs: bool = false
+  let hasMain: bool = false
+  let mainReturnsInt: bool = false
+  let mainAcceptsArgs: bool = false
 }
 
 export function planHeader(program: Program, context: EmitContext): HeaderPlan {

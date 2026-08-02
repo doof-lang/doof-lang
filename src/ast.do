@@ -23,10 +23,10 @@ export struct SourceSpan {
 
 export class NamedType {
   kind: string
-  name: string
+  let name: string
   typeArgs: TypeAnnotation[]
-  resolvedSymbol: Symbol | none = none
-  resolvedType: ResolvedType | none = none
+  let resolvedSymbol: Symbol | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -34,14 +34,14 @@ export class ArrayType {
   kind: string
   elementType: TypeAnnotation
   readonly_: bool
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class UnionType {
   kind: string
   types: TypeAnnotation[]
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -49,14 +49,14 @@ export class AstFunctionType {
   kind: string
   params: FunctionTypeParam[]
   returnType: TypeAnnotation
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class WeakType {
   kind: string = "weak-type"
   type_: TypeAnnotation
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -131,8 +131,8 @@ export class NoneLiteral {
 export class Identifier {
   kind: string
   name: string
-  resolvedType: ResolvedType | none = none
-  resolvedBinding: Binding | none = none
+  let resolvedType: ResolvedType | none = none
+  let resolvedBinding: Binding | none = none
   span: SourceSpan
 }
 
@@ -169,8 +169,8 @@ export class MemberExpression {
   property: string
   optional: bool
   force: bool
-  resolvedStaticOwner: ClassDeclaration | none = none
-  resolvedCallableField: bool = false
+  let resolvedStaticOwner: ClassDeclaration | none = none
+  let resolvedCallableField: bool = false
   resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
@@ -195,18 +195,18 @@ export class CallExpression {
   callee: Expression
   args: CallArgument[]
   typeArgs: TypeAnnotation[] = []
-  resolvedGenericTypeArgs: ResolvedType[] = []
-  resolvedFunction: FunctionDeclaration | none = none
-  resolvedConstructor: FunctionDeclaration | none = none
-  resolvedClass: ClassDeclaration | none = none
+  let resolvedGenericTypeArgs: ResolvedType[] = []
+  let resolvedFunction: FunctionDeclaration | none = none
+  let resolvedConstructor: FunctionDeclaration | none = none
+  let resolvedClass: ClassDeclaration | none = none
   resolvedType: ResolvedType | none = none
-  span: SourceSpan
+  let span: SourceSpan
 }
 
 export class ArrayLiteral {
   kind: string
   elements: Expression[]
-  readonly_: bool
+  let readonly_: bool
   resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
@@ -217,7 +217,7 @@ export class ObjectProperty {
   // resolve enum shorthand such as `.Spades` against Map<Suit, V>.
   key: Expression | none = none
   value: Expression | none
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -225,7 +225,7 @@ export class ObjectLiteral {
   kind: string
   properties: ObjectProperty[]
   spread: Expression | none
-  resolvedClass: ClassDeclaration | none = none
+  let resolvedClass: ClassDeclaration | none = none
   resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
@@ -263,9 +263,9 @@ export class ConstructExpression {
   typeArgs: TypeAnnotation[]
   args: ObjectProperty[]
   named: bool
-  resolvedClass: ClassDeclaration | none = none
-  resolvedConstructor: FunctionDeclaration | none = none
-  resolvedConstructedType: ResolvedType | none = none
+  let resolvedClass: ClassDeclaration | none = none
+  let resolvedConstructor: FunctionDeclaration | none = none
+  let resolvedConstructedType: ResolvedType | none = none
   resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
@@ -273,11 +273,11 @@ export class ConstructExpression {
 export class DotShorthand {
   kind: string
   name: string
-  resolvedShorthandOwnerName: string = ""
-  resolvedShorthandOwnerKind: string = ""
-  resolvedShorthandOwnerModule: string = ""
-  resolvedShorthandOwnerNative: bool = false
-  resolvedShorthandOwnerCppName: string = ""
+  let resolvedShorthandOwnerName: string = ""
+  let resolvedShorthandOwnerKind: string = ""
+  let resolvedShorthandOwnerModule: string = ""
+  let resolvedShorthandOwnerNative: bool = false
+  let resolvedShorthandOwnerCppName: string = ""
   resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
@@ -297,7 +297,7 @@ export class CallerExpression {
 export class AsyncExpression {
   kind: string
   expression: Expression | Block
-  resolvedCaptureNames: string[] = []
+  let resolvedCaptureNames: string[] = []
   resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
@@ -353,7 +353,7 @@ export class Parameter {
   description: string = ""
   type_: TypeAnnotation | none
   defaultValue: Expression | none
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -370,8 +370,8 @@ export class ConstDeclaration {
   type_: TypeAnnotation | none
   value: Expression
   exported: bool
-  resolvedType: ResolvedType | none = none
-  moduleInitializerChecked: bool = false
+  let resolvedType: ResolvedType | none = none
+  let moduleInitializerChecked: bool = false
   span: SourceSpan
 }
 
@@ -382,8 +382,8 @@ export class ReadonlyDeclaration {
   type_: TypeAnnotation | none
   value: Expression
   exported: bool
-  resolvedType: ResolvedType | none = none
-  moduleInitializerChecked: bool = false
+  let resolvedType: ResolvedType | none = none
+  let moduleInitializerChecked: bool = false
   span: SourceSpan
 }
 
@@ -395,8 +395,8 @@ export class ImmutableBinding {
   exported: bool
   else_: Block | none = none
   failureName: string | none = none
-  resolvedType: ResolvedType | none = none
-  moduleInitializerChecked: bool = false
+  let resolvedType: ResolvedType | none = none
+  let moduleInitializerChecked: bool = false
   span: SourceSpan
 }
 
@@ -405,8 +405,8 @@ export class LetDeclaration {
   name: string
   type_: TypeAnnotation | none
   value: Expression
-  resolvedType: ResolvedType | none = none
-  moduleInitializerChecked: bool = false
+  let resolvedType: ResolvedType | none = none
+  let moduleInitializerChecked: bool = false
   span: SourceSpan
 }
 
@@ -422,13 +422,13 @@ export class FunctionDeclaration {
   exported: bool
   static_: bool
   isolated_: bool
-  resolvedIsolated: bool = false
+  let resolvedIsolated: bool = false
   private_: bool
   bodyless: bool = false
   native_: bool = false
   nativeHeader: string = ""
   nativeCppName: string = ""
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -439,7 +439,7 @@ export class TypeParameterConstraint {
 export class ReturnStatement {
   kind: string
   value: Expression | none = none
-  resolvedExpectedType: ResolvedType | none = none
+  let resolvedExpectedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -453,7 +453,7 @@ export class YieldBlockAssignmentStatement {
   kind: string = "yield-block-assignment-statement"
   name: string
   value: YieldBlockExpression
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -470,7 +470,7 @@ export class CaseExpression {
   kind: string
   subject: Expression
   arms: CaseExpressionArm[]
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -480,7 +480,7 @@ export class CaseStatement {
   arms: CaseArm[]
   // Checker-owned control-flow fact consumed by statement lowering. `false`
   // means evaluation cannot continue after this case statement.
-  resolvedCompletes: bool | none = none
+  let resolvedCompletes: bool | none = none
   span: SourceSpan
 }
 
@@ -502,7 +502,7 @@ export class TypePattern {
   kind: string
   name: string
   type_: TypeAnnotation
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -567,7 +567,7 @@ export class WithBinding {
   name: string
   type_: TypeAnnotation | none
   value: Expression
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -634,8 +634,8 @@ export class ClassDeclaration {
   native_: bool = false
   nativeHeader: string = ""
   nativeCppName: string = ""
-  resolvedSymbol: Symbol | none = none
-  needsMetadata: bool = false
+  let resolvedSymbol: Symbol | none = none
+  let needsMetadata: bool = false
   span: SourceSpan
 }
 
@@ -651,8 +651,8 @@ export class ClassField {
   readonly_: bool
   weak_: bool = false
   private_: bool
-  resolvedType: ResolvedType | none = none
-  moduleInitializerChecked: bool = false
+  let resolvedType: ResolvedType | none = none
+  let moduleInitializerChecked: bool = false
   span: SourceSpan
 }
 
@@ -665,8 +665,8 @@ export class InterfaceDeclaration {
   fields: InterfaceField[]
   methods: FunctionDeclaration[]
   exported: bool
-  resolvedSymbol: Symbol | none = none
-  needsJson: bool = false
+  let resolvedSymbol: Symbol | none = none
+  let needsJson: bool = false
   span: SourceSpan
 }
 
@@ -677,7 +677,7 @@ export class InterfaceField {
   type_: TypeAnnotation
   let_: bool = false
   readonly_: bool = false
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -706,7 +706,7 @@ export class TypeAliasDeclaration {
   typeParamConstraints: TypeParameterConstraint[] = []
   type_: TypeAnnotation
   exported: bool
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 

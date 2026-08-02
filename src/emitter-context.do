@@ -26,26 +26,26 @@ export class SourceLocationSpanOverride {
 }
 
 export class EmitContext {
-  modulePath: string = ""
+  let modulePath: string = ""
   allPrograms: Program[] = []
-  namespaceImports: NamespaceBinding[] = []
-  imports: ImportBinding[] = []
-  moduleSurfaces: EmitModuleSurface[] = []
-  currentClass: string = ""
-  currentClassNative: bool = false
-  currentFunctionStatic: bool = false
-  currentReturnErrorType: string = ""
-  currentFunctionName: string = ""
-  inValueYieldBlock: bool = false
-  valueYieldReturnsVoid: bool = false
-  catchVarName: string = ""
-  catchResultType: ResolvedType | none = none
+  let namespaceImports: NamespaceBinding[] = []
+  let imports: ImportBinding[] = []
+  let moduleSurfaces: EmitModuleSurface[] = []
+  let currentClass: string = ""
+  let currentClassNative: bool = false
+  let currentFunctionStatic: bool = false
+  let currentReturnErrorType: string = ""
+  let currentFunctionName: string = ""
+  let inValueYieldBlock: bool = false
+  let valueYieldReturnsVoid: bool = false
+  let catchVarName: string = ""
+  let catchResultType: ResolvedType | none = none
   // Call-site override used while materializing defaults such as @caller.
-  sourceLocationSpanOverride: SourceLocationSpanOverride | none = none
-  genericTypeParams: string[] = []
+  let sourceLocationSpanOverride: SourceLocationSpanOverride | none = none
+  let genericTypeParams: string[] = []
   // Concrete Doof monomorphization substitution active while emitting a
   // specialized function, class, or method body.
-  substitution: TypeSubstitution | none = none
+  let substitution: TypeSubstitution | none = none
   concreteFunctionNames: string[] = []
   concreteFunctionKeys: string[] = []
   concreteClassNames: string[] = []
@@ -57,14 +57,14 @@ export class EmitContext {
   concreteInterfaceKeys: string[] = []
   // Mutable locals captured by any lambda in the current callable. Their
   // declarations are heap-boxed and every identifier use dereferences the box.
-  capturedMutables: string[] = []
-  tryCounter: int = 0
+  let capturedMutables: string[] = []
+  let tryCounter: int = 0
   // Native entry scripts lower direct bindings into private deferred storage.
-  scriptEntry: bool = false
-  tryPanics: bool = false
+  let scriptEntry: bool = false
+  let tryPanics: bool = false
   // Coverage is configured per source module by the graph emitter.
-  coverageEnabled: bool = false
-  coverageModuleId: int = -1
+  let coverageEnabled: bool = false
+  let coverageModuleId: int = -1
   coverageInstrumentedLines: int[] = []
 }
 

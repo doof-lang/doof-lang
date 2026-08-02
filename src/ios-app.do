@@ -29,8 +29,8 @@ export class IOSAppConfig {
 
 /** Resolved build.package.ios release settings. */
 export class IOSPackageConfig {
-  identity: string = ""
-  provisioningProfilePath: string = ""
+  let identity: string = ""
+  let provisioningProfilePath: string = ""
 }
 
 export function iosPackageArchiveName(executableName: string, version: string): string {

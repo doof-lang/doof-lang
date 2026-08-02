@@ -82,15 +82,15 @@ export class DependencyResolution {
 
 /** Optional root-owned allowlists for transitive source and native inputs. */
 export class DependencyPolicy {
-  hasPackageSourceAllowlist: bool = false
+  let hasPackageSourceAllowlist: bool = false
   allowedPackageSources: string[] = []
-  hasExternalSourceAllowlist: bool = false
+  let hasExternalSourceAllowlist: bool = false
   allowedExternalSources: string[] = []
-  hasLinkLibraryAllowlist: bool = false
+  let hasLinkLibraryAllowlist: bool = false
   allowedLinkLibraries: string[] = []
-  hasFrameworkAllowlist: bool = false
+  let hasFrameworkAllowlist: bool = false
   allowedFrameworks: string[] = []
-  hasPkgConfigAllowlist: bool = false
+  let hasPkgConfigAllowlist: bool = false
   allowedPkgConfigPackages: string[] = []
 }
 

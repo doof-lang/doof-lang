@@ -7,22 +7,22 @@
 export class CliRequest {
   command: string
   entry: string
-  outputDirectory: string = ""
-  compiler: string = ""
-  filter: string = ""
-  listOnly: bool = false
-  coverage: bool = false
-  coverageOutput: string = ""
-  distDirectory: string = ""
-  macosSigning: string = ""
-  macosSignIdentity: string = ""
-  macosSandbox: bool = false
-  macosEntitlements: string = ""
-  iosDestination: string = "simulator"
-  iosDevice: string = ""
-  iosSignIdentity: string = ""
-  iosProvisioningProfile: string = ""
-  targetOverride: string = ""
+  let outputDirectory: string = ""
+  let compiler: string = ""
+  let filter: string = ""
+  let listOnly: bool = false
+  let coverage: bool = false
+  let coverageOutput: string = ""
+  let distDirectory: string = ""
+  let macosSigning: string = ""
+  let macosSignIdentity: string = ""
+  let macosSandbox: bool = false
+  let macosEntitlements: string = ""
+  let iosDestination: string = "simulator"
+  let iosDevice: string = ""
+  let iosSignIdentity: string = ""
+  let iosProvisioningProfile: string = ""
+  let targetOverride: string = ""
   programArguments: string[] = []
 }
 

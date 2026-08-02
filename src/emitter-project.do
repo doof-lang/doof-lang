@@ -32,7 +32,7 @@ export class ProjectEmission {
   supportFiles: ProjectSupportFile[] = []
   nativeCopies: ProjectNativeCopy[] = []
   nativeBuild: NativeBuildPlan = NativeBuildPlan {}
-  wasmExportNames: string[] = []
+  let wasmExportNames: string[] = []
 }
 
 /** Plans generated support files and native package inputs for one project. */

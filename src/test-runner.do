@@ -13,17 +13,17 @@ import { CoverageModuleMetadata } from "./emitter-module"
 
 export class CoverageFileReport {
   path: string
-  covered: int
+  let covered: int
   total: int
-  percentTenths: int
+  let percentTenths: int
   hitLines: int[] = []
   missedLines: int[] = []
 }
 
 export class CoverageReport {
-  totalCovered: int = 0
-  totalLines: int = 0
-  totalPercentTenths: int = 1000
+  let totalCovered: int = 0
+  let totalLines: int = 0
+  let totalPercentTenths: int = 1000
   files: CoverageFileReport[] = []
 }
 

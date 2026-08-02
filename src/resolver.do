@@ -15,9 +15,9 @@ export function noSourceLoader(path: string): Result<SourceFile | none, Diagnost
 export class ModuleResolver {
   sources: SourceFile[]
   loader: SourceLoader
-  loadedPaths: string[] = []
-  failedPaths: string[] = []
-  diagnostics: Diagnostic[] = []
+  let loadedPaths: string[] = []
+  let failedPaths: string[] = []
+  let diagnostics: Diagnostic[] = []
 
   function find(path: string): SourceFile | none {
     for source of sources { if source.path == path { return source } }
