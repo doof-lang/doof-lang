@@ -133,9 +133,10 @@ let i: int = b       // ✅ Implicit widening byte → int
 
 let i: int = 42
 let l: long = i      // ✅ Implicit widening int → long
+let d: double = i    // ✅ Implicit widening int → double
 
 let f: float = 3.14f
-let d: double = f    // ✅ Implicit widening float → double
+let fd: double = f   // ✅ Implicit widening float → double
 
 let l: long = 1000L
 let i: int = l       // ❌ Error: potential data loss
@@ -145,6 +146,8 @@ let b: byte = i      // ❌ Error: potential data loss
 ```
 
 **Rationale:** Widening is always safe (no precision/range loss), while narrowing can lose data and should be explicit.
+Every 32-bit `int` value is exactly representable by `double`; `long` to `double`
+remains explicit because 64-bit integers can lose precision.
 
 ### Explicit Numeric Casts
 

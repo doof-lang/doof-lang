@@ -554,6 +554,7 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
       case target {
         primitiveTarget: PrimitiveType -> {
           if primitiveValue.name == "int" && primitiveTarget.name == "long" { return true }
+          if primitiveValue.name == "int" && primitiveTarget.name == "double" { return true }
           if primitiveValue.name == "int" && primitiveTarget.name == "byte" { return true }
           if primitiveValue.name == "float" && primitiveTarget.name == "double" { return true }
         }

@@ -568,6 +568,15 @@ export function testInfersWiderCompatibleGenericArgument(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testWidensIntValuesToDoubleAtTypedBoundaries(): none {
+  accepted := checked("function scale(value: double): double => value\nfunction apply(value: double): double => value\nfunction main(): double { count: int := 42\nscaled: double := count\nreturn apply(scale(count)) + scaled }")
+  Assert.equal(accepted.diagnostics.length, 0)
+
+  rejected := checked("function apply(value: double): double => value\nfunction main(): double { count: long := 9007199254740993L\nreturn apply(count) }")
+  Assert.equal(rejected.diagnostics.length, 1)
+  Assert.equal(rejected.diagnostics[0].message, "Argument 1 has type long; expected double")
+}
+
 export function testChecksBuiltinSourceLocationAndCallerDefaults(): none {
   result := checked("function debug(source: SourceLocation = @caller): string => source.fileName + string(source.line) + source.functionName")
   Assert.equal(result.diagnostics.length, 0)

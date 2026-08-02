@@ -52,8 +52,9 @@ count := 30_000
 
 Rules:
 
-- `int` widens to `long`.
+- `int` widens to `long` or `double`.
 - `float` widens to `double`.
+- `long` does not implicitly widen to `double`, because that conversion can lose precision.
 - Contextual literal narrowing applies when the target type is known.
 - Numeric separators may appear between digits only.
 

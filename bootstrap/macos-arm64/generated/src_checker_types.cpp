@@ -614,6 +614,9 @@ bool sameType(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveT
                         return false;
                     }
                     for (int32_t i = 0; i < static_cast<int32_t>((leftFunction->params)->size()); ++i) {
+                        if ((*leftFunction->params)[i]->name != (*rightFunction->params)[i]->name) {
+                            return false;
+                        }
                         if (!sameType((*leftFunction->params)[i]->type_, (*rightFunction->params)[i]->type_)) {
                             return false;
                         }
@@ -889,6 +892,26 @@ bool isAssignable(const std::variant<std::shared_ptr<::app_src_semantic_::Primit
             }
             }
     }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
+            const auto& valueFunction = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
+            {
+                auto _case_subject = target;
+                if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
+                    const auto& targetFunction = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
+                    if (static_cast<int32_t>((valueFunction->params)->size()) != static_cast<int32_t>((targetFunction->params)->size())) {
+                        return false;
+                    }
+                    for (int32_t i = 0; i < static_cast<int32_t>((valueFunction->params)->size()); ++i) {
+                        if (!sameType((*valueFunction->params)[i]->type_, (*targetFunction->params)[i]->type_)) {
+                            return false;
+                        }
+                    }
+                    return isAssignable(valueFunction->returnType, targetFunction->returnType);
+            }
+            else {
+            }
+            }
+    }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>>(_case_subject)) {
             if (sameType(value, target)) {
                 return true;
@@ -970,6 +993,9 @@ bool isAssignable(const std::variant<std::shared_ptr<::app_src_semantic_::Primit
                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
                     const auto& primitiveTarget = std::get<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject);
                     if ((primitiveValue->name == std::string("int")) && (primitiveTarget->name == std::string("long"))) {
+                        return true;
+                    }
+                    if ((primitiveValue->name == std::string("int")) && (primitiveTarget->name == std::string("double"))) {
                         return true;
                     }
                     if ((primitiveValue->name == std::string("int")) && (primitiveTarget->name == std::string("byte"))) {

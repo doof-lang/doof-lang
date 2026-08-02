@@ -11,6 +11,12 @@ export function testComparesResolvedTypesStructurally(): none {
   Assert.isFalse(sameType(arrayType(primitive("int")), arrayType(primitive("string"))))
 }
 
+export function testAllowsLosslessIntToDoubleWidening(): none {
+  Assert.isTrue(isAssignable(primitive("int"), primitive("double")))
+  Assert.isFalse(isAssignable(primitive("long"), primitive("double")))
+  Assert.isFalse(isAssignable(primitive("double"), primitive("int")))
+}
+
 export function testDistinguishesFunctionSignatures(): none {
   intToString := functionType(
     [FunctionParamType { name: "value", type_: primitive("int"), hasDefault: false }],
