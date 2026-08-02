@@ -6,12 +6,12 @@
 
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
-  ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType,
+  ActorType, ArrayResolvedType, ClassType, Diagnostic, EnumType, FunctionType, InterfaceType,
   JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType,
-  ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType,
+  ResolvedType, ResultResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType,
   TypeParameterType, UnionResolvedType, UnknownType, WeakResolvedType,
 } from "./semantic"
-import { ClassDeclaration, ExportDeclaration, InterfaceDeclaration, Statement } from "./ast"
+import { ClassDeclaration, ExportDeclaration, InterfaceDeclaration, SourceSpan, Statement } from "./ast"
 import { classType, substituteTypeParams, typeName } from "./checker-types"
 
 export class ActorBoundaryViolation {
@@ -20,6 +20,45 @@ export class ActorBoundaryViolation {
 
 export function findActorBoundaryViolation(result: AnalysisResult, type_: ResolvedType): ActorBoundaryViolation | none {
   return findViolation(result, type_, [])
+}
+
+export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[] {
+  let diagnostics: Diagnostic[] = []
+  for module of result.modules {
+    for raw of module.program.statements {
+      case unwrapExport(raw) {
+        class_: ClassDeclaration -> {
+          for field of class_.fields {
+            if !field.readonly_ || field.resolvedType == none { continue }
+            violation := findViolation(result, field.resolvedType!, [])
+            if violation == none { continue }
+            name := if field.names.length == 0 then "<field>" else field.names[0]
+            diagnostics.push(Diagnostic {
+              severity: "error",
+              message: "Readonly field \"" + class_.name + "." + name + "\" must be deeply immutable: " + violation!.reason,
+              span: semanticSpan(field.span),
+              module: module.path,
+            })
+          }
+        }
+        interface_: InterfaceDeclaration -> {
+          for field of interface_.fields {
+            if !field.readonly_ || field.resolvedType == none { continue }
+            violation := findViolation(result, field.resolvedType!, [])
+            if violation == none { continue }
+            diagnostics.push(Diagnostic {
+              severity: "error",
+              message: "Readonly field \"" + interface_.name + "." + field.name + "\" must be deeply immutable: " + violation!.reason,
+              span: semanticSpan(field.span),
+              module: module.path,
+            })
+          }
+        }
+        _ -> { }
+      }
+    }
+  }
+  return diagnostics
 }
 
 function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string[]): ActorBoundaryViolation | none {
@@ -91,7 +130,8 @@ function findClassViolation(result: AnalysisResult, type_: ClassType, seen: stri
   declaration := classDeclaration(result, type_.symbol.module, type_.symbol.name)
   if declaration == none { return none }
   for field of declaration!.fields {
-    if !field.readonly_ {
+    if field.static_ { continue }
+    if field.let_ {
       name := if field.names.length == 0 then "<field>" else field.names[0]
       return ActorBoundaryViolation { reason: "field \"" + name + "\" is mutable" }
     }
@@ -116,7 +156,7 @@ function findInterfaceViolation(result: AnalysisResult, type_: InterfaceType, se
   declaration := interfaceDeclaration(result, type_.symbol.module, type_.symbol.name)
   if declaration == none { return none }
   for field of declaration!.fields {
-    if !field.readonly_ { return ActorBoundaryViolation { reason: "field \"" + field.name + "\" is mutable" } }
+    if field.let_ { return ActorBoundaryViolation { reason: "field \"" + field.name + "\" is mutable" } }
     if field.resolvedType == none { continue }
     effective := substituteTypeParams(field.resolvedType!, declaration!.typeParams, type_.typeArgs)
     violation := findViolation(result, effective, nextSeen)
@@ -177,4 +217,11 @@ function findModule(result: AnalysisResult, path: string): ModuleInfo | none {
 function containsString(values: string[], value: string): bool {
   for item of values { if item == value { return true } }
   return false
+}
+
+function semanticSpan(span: SourceSpan): SemanticSpan {
+  return SemanticSpan {
+    start: SemanticLocation { line: span.start.line, column: span.start.column, offset: span.start.offset },
+    end: SemanticLocation { line: span.end.line, column: span.end.column, offset: span.end.offset },
+  }
 }

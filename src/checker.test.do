@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
-import { createChecker, validateCheckedTypes, validateIsolationEffects } from "./checker"
+import { createChecker, validateCheckedTypes, validateDeepReadonlyFields, validateIsolationEffects } from "./checker"
 import { CheckResult, Diagnostic, FunctionType, SourceFile } from "./semantic"
 import { AsExpression, AssignmentExpression, Block, CaseStatement, ClassDeclaration, ConstructExpression, Expression, ExpressionStatement, Identifier, IfStatement, FunctionDeclaration, ImmutableBinding, LetDeclaration, ObjectLiteral, ReadonlyDeclaration, WithStatement } from "./ast"
 import { typeName, unknownType } from "./checker-types"
@@ -11,6 +11,7 @@ function checkedIncludingDeprecations(source: string): CheckResult {
   checker := createChecker(analysis, "/main.do")
   semantic := checker.check("/main.do")
   diagnostics := semantic.diagnostics
+  for diagnostic of validateDeepReadonlyFields(analysis) { diagnostics.push(diagnostic) }
   for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
   return CheckResult { diagnostics }
 }
@@ -160,6 +161,7 @@ function checkedSources(sources: SourceFile[], entry: string): CheckResult {
     checkedModule := checker.check(module.path)
     for diagnostic of checkedModule.diagnostics { diagnostics.push(diagnostic) }
   }
+  for diagnostic of validateDeepReadonlyFields(analysis) { diagnostics.push(diagnostic) }
   for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
   return CheckResult { diagnostics }
 }
@@ -883,12 +885,22 @@ export function testRejectsSameBindingUseAfterRetireButAllowsShadowing(): none {
 }
 
 export function testValidatesActorBoundaryPayloads(): none {
-  mutableResult := checked("class Payload { value: int }\nclass Worker { function accept(payload: Payload): void {} }\nfunction main(): none { worker := Actor<Worker>()\npayload := Payload { value: 1 }\nworker.accept(payload) }")
+  immutableResult := checked("class Payload { value: int }\nclass Worker { function accept(payload: Payload): void {} }\nfunction main(): none { worker := Actor<Worker>()\npayload := Payload { value: 1 }\nworker.accept(payload) }")
+  Assert.equal(immutableResult.diagnostics.length, 0)
+
+  mutableResult := checked("class Payload { let value: int }\nclass Worker { function accept(payload: Payload): void {} }\nfunction main(): none { worker := Actor<Worker>()\npayload := Payload { value: 1 }\nworker.accept(payload) }")
   Assert.equal(mutableResult.diagnostics.length > 0, true)
   Assert.equal(mutableResult.diagnostics[0].message.contains("field \"value\" is mutable"), true)
 
   readonlyResult := checked("class Payload { readonly value: int }\nclass Worker { function accept(payload: Payload): int => payload.value }\nfunction main(): none { worker := Actor<Worker>()\npayload := Payload { value: 1 }\nvalue := worker.accept(payload) }")
   Assert.equal(readonlyResult.diagnostics.length, 0)
+
+  nestedImmutable := checked("class Payload { value: int }\nclass Envelope { payload: Payload }\nclass Worker { function accept(envelope: Envelope): int => envelope.payload.value }\nfunction main(): none { worker := Actor<Worker>()\nworker.accept(Envelope { payload: Payload { value: 1 } }) }")
+  Assert.equal(nestedImmutable.diagnostics.length, 0)
+
+  mutableInterior := checked("class Payload { values: int[] }\nclass Worker { function accept(payload: Payload): void {} }\nfunction main(): none { worker := Actor<Worker>()\nworker.accept(Payload { values: [1] }) }")
+  Assert.equal(mutableInterior.diagnostics.length > 0, true)
+  Assert.stringContains(mutableInterior.diagnostics[0].message, "array type \"int[]\" is mutable")
 
   mutableSet := checked("class Worker { function accept(values: Set<int>): void {} }\nfunction main(): none { worker := Actor<Worker>()\nvalues: Set<int> := [1]\nworker.accept(values) }")
   Assert.equal(mutableSet.diagnostics.length > 0, true)
@@ -896,6 +908,20 @@ export function testValidatesActorBoundaryPayloads(): none {
 
   readonlySet := checked("class Worker { function accept(values: ReadonlySet<int>): int => values.size }\nfunction main(): none { worker := Actor<Worker>()\nvalues: Set<int> := [1]\nfrozen := values.drainToReadonly()\nvalue := worker.accept(frozen) }")
   Assert.equal(readonlySet.diagnostics.length, 0)
+}
+
+export function testValidatesDeepReadonlyFieldGraphs(): none {
+  immutable := checked("class Point { x: int }\nclass Container { readonly point: Point\nreadonly values: int[] }")
+  Assert.equal(immutable.diagnostics.length, 0)
+
+  mutableClass := checked("class MutablePoint { let x: int }\nclass Container { readonly point: MutablePoint }")
+  Assert.equal(mutableClass.diagnostics.length, 1)
+  Assert.stringContains(mutableClass.diagnostics[0].message, "Readonly field \"Container.point\" must be deeply immutable")
+  Assert.stringContains(mutableClass.diagnostics[0].message, "field \"x\" is mutable")
+
+  actor := checked("class Worker {}\nclass Container { readonly worker: Actor<Worker> }")
+  Assert.equal(actor.diagnostics.length, 1)
+  Assert.stringContains(actor.diagnostics[0].message, "Actor<T> references cannot cross actor boundaries")
 }
 
 export function testValidatesNestedAndGenericActorBoundaryPayloads(): none {
@@ -957,7 +983,7 @@ export function testAllowsActorLocalMutationAndRecursiveIsolatedCalls(): none {
 }
 
 export function testRejectsMutableActorConstructionArguments(): none {
-  result := checked("class Payload { value: int }\nclass Worker { payload: Payload }\nfunction main(): void { payload := Payload { value: 1 }\nworker := Actor<Worker>(payload) }")
+  result := checked("class Payload { let value: int }\nclass Worker { payload: Payload }\nfunction main(): void { payload := Payload { value: 1 }\nworker := Actor<Worker>(payload) }")
   Assert.equal(result.diagnostics.length > 0, true)
   Assert.equal(result.diagnostics[0].message.contains("Actor constructor argument 1"), true)
   Assert.equal(result.diagnostics[0].message.contains("field \"value\" is mutable"), true)
@@ -977,10 +1003,27 @@ export function testReadonlyInterfaceFieldsRequireReadonlyImplementations(): non
 }
 
 export function testRejectsMutableStaticStateReachedFromActorMethods(): none {
-  result := checked("class Globals { static count: int = 0 }\nclass Worker { function run(): void { Globals.count = Globals.count + 1 } }\nfunction main(): void { worker := Actor<Worker>()\nworker.run() }")
+  result := checked("class Globals { static let count: int = 0 }\nclass Worker { function run(): void { Globals.count = Globals.count + 1 } }\nfunction main(): void { worker := Actor<Worker>()\nworker.run() }")
   Assert.equal(result.diagnostics.length > 0, true)
   let found = false
   for diagnostic of result.diagnostics { if diagnostic.message.contains("mutable static field \"Globals.count\"") { found = true } }
+  Assert.equal(found, true)
+}
+
+export function testAllowsStableStaticValuesButRejectsMutableStaticInteriorsInActorMethods(): none {
+  stable := checked("class Globals { static count: int = 1 }\nclass Worker { function read(): int => Globals.count }\nfunction main(): none { worker := Actor<Worker>()\nworker.read() }")
+  Assert.equal(stable.diagnostics.length, 0)
+
+  mutableInterior := checked("class Globals { static values: int[] = [] }\nclass Worker { function read(): int => Globals.values.length }\nfunction main(): none { worker := Actor<Worker>()\nworker.read() }")
+  Assert.equal(mutableInterior.diagnostics.length > 0, true)
+  let found = false
+  for diagnostic of mutableInterior.diagnostics { if diagnostic.message.contains("mutable static field \"Globals.values\"") { found = true } }
+  Assert.equal(found, true)
+
+  implicitMutableInterior := checked("class Worker { static values: int[] = []\nfunction read(): int => values.length }\nfunction main(): none { worker := Actor<Worker>()\nworker.read() }")
+  Assert.equal(implicitMutableInterior.diagnostics.length > 0, true)
+  found = false
+  for diagnostic of implicitMutableInterior.diagnostics { if diagnostic.message.contains("mutable static field \"Worker.values\"") { found = true } }
   Assert.equal(found, true)
 }
 
@@ -1013,7 +1056,7 @@ export function testPropagatesIsolationThroughInterfaceDispatch(): none {
 }
 
 export function testRejectsMutableImplementationsWidenedToBoundaryInterfaces(): none {
-  result := checked("interface Payload { readonly id: int }\nclass MutablePayload implements Payload { readonly id: int\nvalue: int }\nclass Worker { function accept(payload: Payload): void {} }\nfunction main(): void { worker := Actor<Worker>()\npayload: Payload := MutablePayload { id: 1, value: 2 }\nworker.accept(payload) }")
+  result := checked("interface Payload { readonly id: int }\nclass MutablePayload implements Payload { readonly id: int\nlet value: int }\nclass Worker { function accept(payload: Payload): void {} }\nfunction main(): void { worker := Actor<Worker>()\npayload: Payload := MutablePayload { id: 1, value: 2 }\nworker.accept(payload) }")
   Assert.equal(result.diagnostics.length > 0, true)
   let found = false
   for diagnostic of result.diagnostics {
@@ -1289,12 +1332,14 @@ export function testChecksExplicitAndStructuralInterfaceImplementations(): none 
   Assert.equal(result.diagnostics.length, 0)
 }
 
-export function testWarnsOncePerImplicitlyImmutableFieldDeclaration(): none {
+export function testRejectsAssignmentToImplicitlyImmutableFields(): none {
   result := checked("class Counter { value: int\nfunction update(): none { value += 1\nthis.value = value + 1 } }\nfunction updateOutside(counter: Counter): none { counter.value = 3 }")
-  Assert.equal(result.diagnostics.length, 1)
-  Assert.equal(result.diagnostics[0].severity, "warning")
-  Assert.equal(result.diagnostics[0].message, "Field 'Counter.value' is implicitly immutable; add 'let' because it is assigned after construction")
-  Assert.equal(result.diagnostics[0].span.start.line, 1)
+  Assert.equal(result.diagnostics.length, 3)
+  for diagnostic of result.diagnostics {
+    Assert.equal(diagnostic.severity, "error")
+    Assert.stringContains(diagnostic.message, "Cannot assign to immutable field 'Counter.value'")
+    Assert.stringContains(diagnostic.message, "declare it with 'let'")
+  }
 }
 
 export function testChecksExplicitFieldMutabilityModes(): none {
@@ -1310,11 +1355,13 @@ export function testChecksExplicitFieldMutabilityModes(): none {
   Assert.equal(interior.diagnostics.length, 0)
 }
 
-export function testWarnsForGroupedStaticStructAndNativeFieldWrites(): none {
+export function testRejectsGroupedStaticStructAndNativeBareFieldWrites(): none {
   grouped := checked("class Point { x, y: int\nfunction move(): none { x += 1\ny += 1 } }\nstruct State { value: int }\nclass Globals { static count: int = 0 }\nimport class Native from \"native.hpp\" { value: int }\nfunction update(state: State, native: Native): none { state.value = 1\nGlobals.count += 1\nnative.value = 2 }")
-  Assert.equal(grouped.diagnostics.length, 4)
-  Assert.stringContains(grouped.diagnostics[0].message, "add 'let' to the group or split the declaration")
-  for diagnostic of grouped.diagnostics { Assert.equal(diagnostic.severity, "warning") }
+  Assert.equal(grouped.diagnostics.length, 5)
+  for diagnostic of grouped.diagnostics {
+    Assert.equal(diagnostic.severity, "error")
+    Assert.stringContains(diagnostic.message, "declare it with 'let'")
+  }
 }
 
 export function testChecksInterfaceFieldMutabilityContracts(): none {
@@ -1325,10 +1372,10 @@ export function testChecksInterfaceFieldMutabilityContracts(): none {
   Assert.equal(missingLet.diagnostics.length > 0, true)
   Assert.stringContains(missingLet.diagnostics[0].message, "does not satisfy interface")
 
-  legacy := checked("interface View { value: int }\nclass Counter implements View { let value: int }\nfunction update(view: View): none { view.value = 1 }")
-  Assert.equal(legacy.diagnostics.length, 1)
-  Assert.equal(legacy.diagnostics[0].severity, "warning")
-  Assert.stringContains(legacy.diagnostics[0].message, "Field 'View.value' is implicitly immutable")
+  immutableView := checked("interface View { value: int }\nclass Counter implements View { let value: int }\nfunction update(view: View): none { view.value = 1 }")
+  Assert.equal(immutableView.diagnostics.length, 1)
+  Assert.equal(immutableView.diagnostics[0].severity, "error")
+  Assert.stringContains(immutableView.diagnostics[0].message, "immutable field 'View.value'")
 }
 
 export function testRejectsClassesThatDoNotSatisfyInterfaces(): none {

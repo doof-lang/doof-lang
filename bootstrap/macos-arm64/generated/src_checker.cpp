@@ -9,6 +9,7 @@
 #include "src_checker_symbols.hpp"
 #include "src_checker_validation.hpp"
 #include "src_checker_isolation.hpp"
+#include "src_checker_actor_boundary.hpp"
 #include "src_ast.hpp"
 #include "src_checker_types.hpp"
 #include "src_checker_common.hpp"
@@ -28,6 +29,7 @@ using namespace ::app_src_checker_interfaces_;
 using namespace ::app_src_checker_symbols_;
 using namespace ::app_src_checker_validation_;
 using namespace ::app_src_checker_isolation_;
+using namespace ::app_src_checker_actor_boundary_;
 using namespace ::app_src_ast_;
 using namespace ::app_src_checker_types_;
 using namespace ::app_src_checker_common_;
@@ -78,7 +80,7 @@ std::shared_ptr<::app_src_semantic_::CheckResult> checkModule(std::shared_ptr<::
     }
     const auto scriptScope = std::make_shared<::app_src_semantic_::Scope>(state->moduleScope, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>{}), std::monostate{}, std::monostate{}, std::string(""), false, std::monostate{}, false, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}), scriptEntry);
     if (scriptEntry) {
-        ::app_src_checker_symbols_::declare(scriptScope, std::make_shared<::app_src_semantic_::Binding>(std::string("arguments"), std::string("script-arguments"), ::app_src_checker_types_::arrayType(::app_src_checker_types_::primitive(std::string("string")), false), false, ::app_src_checker_validation_::checkerSemanticSpan(state->info->program->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+        ::app_src_checker_symbols_::declare(scriptScope, std::make_shared<::app_src_semantic_::Binding>(std::string("arguments"), std::string("script-arguments"), ::app_src_checker_types_::arrayType(::app_src_checker_types_::primitive(std::string("string")), false), false, ::app_src_checker_validation_::checkerSemanticSpan(state->info->program->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
     }
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>> retiredActors = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{});
     const auto& _iterable_4 = state->info->program->statements;
@@ -309,7 +311,7 @@ void promoteScriptBinding(std::variant<std::shared_ptr<::app_src_ast_::ConstDecl
     }
 }
 std::shared_ptr<ModuleChecker> createChecker(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string entry, std::string entryMode) {
-    return std::make_shared<ModuleChecker>(std::make_shared<::app_src_checker_state_::CheckerState>(result, (doof::string_endsWith(entry, std::string(".do")) ? entry : (entry + std::string(".do"))), entryMode, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}), nullptr, nullptr, std::make_shared<std::vector<std::string>>(std::vector<std::string>{})));
+    return std::make_shared<ModuleChecker>(std::make_shared<::app_src_checker_state_::CheckerState>(result, (doof::string_endsWith(entry, std::string(".do")) ? entry : (entry + std::string(".do"))), entryMode, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}), nullptr, nullptr));
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateCheckedTypes(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result) {
     return ::app_src_checker_validation_::validateCheckedTypes(result);
@@ -318,5 +320,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> v
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{});
     ::app_src_checker_isolation_::validateIsolationEffects(result, diagnostics);
     return diagnostics;
+}
+std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateDeepReadonlyFields(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result) {
+    return ::app_src_checker_actor_boundary_::validateDeepReadonlyFields(result);
 }
 }

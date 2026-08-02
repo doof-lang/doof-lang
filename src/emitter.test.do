@@ -426,7 +426,7 @@ export function testSpecializesGenericResultCasePatterns(): none {
 }
 
 export function testEmitsActorCreationCallsPromiseAndRetirement(): none {
-  result := emit("class Worker { value: int\nfunction add(amount: int): int { this.value = this.value + amount\nreturn this.value } }\nfunction main(): int { worker := Actor<Worker>(1)\nfirst := worker.add(2)\npromise := async worker.add(3)\nsecond := try! promise.get()\nstate := retire worker\nreturn first + second + state.value }")
+  result := emit("class Worker { let value: int\nfunction add(amount: int): int { this.value = this.value + amount\nreturn this.value } }\nfunction main(): int { worker := Actor<Worker>(1)\nfirst := worker.add(2)\npromise := async worker.add(3)\nsecond := try! promise.get()\nstate := retire worker\nreturn first + second + state.value }")
   Assert.equal(result.source.contains("std::make_shared<doof::Actor<Worker>>(Worker{1})"), true)
   Assert.equal(result.source.contains("->template call_sync<int32_t>"), true)
   Assert.equal(result.source.contains("->template call_async<int32_t>"), true)
@@ -489,7 +489,7 @@ export function testActorCallsUseConcreteGenericReturnTypes(): none {
 }
 
 export function testEmitsVoidActorCallsAndPromiseAnnotation(): none {
-  result := emit("class Worker { value: int\nfunction set(value: int): void { this.value = value } }\nfunction create(): Actor<Worker> => Actor<Worker>(0)\nfunction run(worker: Actor<Worker>): Promise<void> => async worker.set(2)")
+  result := emit("class Worker { let value: int\nfunction set(value: int): void { this.value = value } }\nfunction create(): Actor<Worker> => Actor<Worker>(0)\nfunction run(worker: Actor<Worker>): Promise<void> => async worker.set(2)")
   Assert.equal(result.header.contains("std::shared_ptr<doof::Actor<Worker>> create()"), true)
   Assert.equal(result.header.contains("doof::Promise<void> run"), true)
   Assert.equal(result.source.contains("call_async<void>"), true)

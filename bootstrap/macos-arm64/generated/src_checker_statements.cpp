@@ -171,14 +171,14 @@ bool checkStatement(std::shared_ptr<::app_src_checker_state_::CheckerState> stat
                         for (int32_t i = 0; i < static_cast<int32_t>((forOf->bindings)->size()); ++i) {
                             const auto name = (*forOf->bindings)[i];
                             if (name != std::string("_")) {
-                                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), (*tuple->elements)[i], false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+                                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), (*tuple->elements)[i], false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
                             }
                         }
                     } else {
                         const auto& _iterable_3 = forOf->bindings;
                         for (const auto& name : *_iterable_3) {
                             if (name != std::string("_")) {
-                                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), element, false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+                                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), element, false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
                             }
                         }
                     }
@@ -187,7 +187,7 @@ bool checkStatement(std::shared_ptr<::app_src_checker_state_::CheckerState> stat
                     const auto& _iterable_4 = forOf->bindings;
                     for (const auto& name : *_iterable_4) {
                         if (name != std::string("_")) {
-                            ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), element, false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+                            ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), element, false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
                         }
                     }
             }
@@ -213,7 +213,7 @@ bool checkStatement(std::shared_ptr<::app_src_checker_state_::CheckerState> stat
                 if (!::app_src_checker_types_::isAssignable(valueType, declaredType)) {
                     ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(valueType)) + std::string(" to ")) + ::app_src_checker_types_::typeName(declaredType)), binding->span);
                 }
-                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(binding->name, std::string("with"), declaredType, false, ::app_src_checker_validation_::checkerSemanticSpan(binding->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(binding->name, std::string("with"), declaredType, false, ::app_src_checker_validation_::checkerSemanticSpan(binding->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
             }
             checkBlock(state, with_->body, bodyScope);
             return bindingsComplete;
@@ -419,10 +419,10 @@ bool checkValueDeclaration(std::shared_ptr<::app_src_checker_state_::CheckerStat
             if (doof::is_null(failureType)) {
                 ::app_src_checker_common_::typeError(state, std::string("declaration-else failure capture requires a Result expression"), span);
             } else if (failureName.value() != std::string("_")) {
-                ::app_src_checker_symbols_::declare(elseScope, std::make_shared<::app_src_semantic_::Binding>(failureName.value(), std::string("else-failure"), doof::unwrap_optional(failureType), false, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+                ::app_src_checker_symbols_::declare(elseScope, std::make_shared<::app_src_semantic_::Binding>(failureName.value(), std::string("else-failure"), doof::unwrap_optional(failureType), false, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
             }
         } else if (name != std::string("_")) {
-            ::app_src_checker_symbols_::declare(elseScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("else-subject"), valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+            ::app_src_checker_symbols_::declare(elseScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("else-subject"), valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
         }
         const auto handlerCompletes = checkBlock(state, doof::unwrap_optional(elseBlock), elseScope);
         if ((name != std::string("_")) && handlerCompletes) {
@@ -457,7 +457,7 @@ bool checkValueDeclaration(std::shared_ptr<::app_src_checker_state_::CheckerStat
         if (doof::is_null(scope->parent)) {
             (declarationSymbol = ::app_src_checker_symbols_::symbolFor(doof::unwrap_optional(state->info), name));
         }
-        ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(name, kind, declaredType, mutable_, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, declarationSymbol, std::string(""), std::string(""), std::string(""), 1));
+        ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(name, kind, declaredType, mutable_, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, declarationSymbol, std::string(""), std::string(""), std::string("")));
     }
     return (std::visit([](auto&& _obj) { return _obj->kind; }, valueType) != std::string("never"));
 }
@@ -493,7 +493,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
         if (!doof::is_null(parameter->defaultValue)) {
             ::app_src_checker_expressions_::checkExpression(state, doof::unwrap_optional(parameter->defaultValue), scope, ::app_src_checker_symbols_::optionalResolvedType(parameterType));
         }
-        ::app_src_checker_symbols_::declareShadowing(scope, std::make_shared<::app_src_semantic_::Binding>(parameter->name, std::string("parameter"), parameterType, false, ::app_src_checker_validation_::checkerSemanticSpan(parameter->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+        ::app_src_checker_symbols_::declareShadowing(scope, std::make_shared<::app_src_semantic_::Binding>(parameter->name, std::string("parameter"), parameterType, false, ::app_src_checker_validation_::checkerSemanticSpan(parameter->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
     }
     if (fn->bodyless) {
         return functionValue;
@@ -845,25 +845,25 @@ bool checkTry(std::shared_ptr<::app_src_checker_state_::CheckerState> state, std
                     const auto& declaration = std::get<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject);
                     (std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->resolvedType); }, declaration->value) = ::app_src_checker_symbols_::optionalResolvedType(resultValue));
                     (declaration->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(result->valueType));
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("const"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("const"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject)) {
                     const auto& declaration = std::get<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject);
                     (std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->resolvedType); }, declaration->value) = ::app_src_checker_symbols_::optionalResolvedType(resultValue));
                     (declaration->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(result->valueType));
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("readonly"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("readonly"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject)) {
                     const auto& binding = std::get<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject);
                     (std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->resolvedType); }, binding->value) = ::app_src_checker_symbols_::optionalResolvedType(resultValue));
                     (binding->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(result->valueType));
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(binding->name, std::string("immutable-binding"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(binding->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(binding->name, std::string("immutable-binding"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(binding->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject)) {
                     const auto& declaration = std::get<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject);
                     (std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->resolvedType); }, declaration->value) = ::app_src_checker_symbols_::optionalResolvedType(resultValue));
                     (declaration->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(result->valueType));
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("let"), result->valueType, true, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("let"), result->valueType, true, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExpressionStatement>>(_case_subject)) {
                     const auto& expression = std::get<std::shared_ptr<::app_src_ast_::ExpressionStatement>>(_case_subject);
@@ -976,7 +976,7 @@ std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::Pr
     return result;
 }
 void declareDestructuredBinding(std::shared_ptr<::app_src_checker_state_::CheckerState> state, std::shared_ptr<::app_src_semantic_::Scope> scope, std::string name, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_, std::string bindingKind, ::app_src_ast_::SourceSpan span) {
-    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(name, ((bindingKind == std::string("let")) ? std::string("let") : std::string("immutable-binding")), type_, (bindingKind == std::string("let")), ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, nullptr, std::string(""), std::string(""), std::string(""), 1));
+    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(name, ((bindingKind == std::string("let")) ? std::string("let") : std::string("immutable-binding")), type_, (bindingKind == std::string("let")), ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
 }
 void validateDestructuringTarget(std::shared_ptr<::app_src_checker_state_::CheckerState> state, std::shared_ptr<::app_src_semantic_::Scope> scope, std::string name, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> valueType, ::app_src_ast_::SourceSpan span) {
     const auto target = ::app_src_checker_symbols_::lookup(scope, name);
@@ -1211,7 +1211,7 @@ void addClassFields(std::shared_ptr<::app_src_checker_state_::CheckerState> stat
             for (const auto& field : *_iterable_37) {
                 const auto& _iterable_38 = field->names;
                 for (const auto& name : *_iterable_38) {
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("field"), (doof::is_null(field->resolvedType) ? ::app_src_checker_types_::unknownType() : doof::unwrap_optional(field->resolvedType)), (!field->readonly_ && !field->const_), ::app_src_checker_validation_::checkerSemanticSpan(field->span), state->info->path, nullptr, std::string(""), (field->readonly_ ? std::string("readonly") : (field->const_ ? std::string("const") : (field->let_ ? std::string("let") : std::string("implicit")))), class_->name, static_cast<int32_t>((field->names)->size())));
+                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("field"), (doof::is_null(field->resolvedType) ? ::app_src_checker_types_::unknownType() : doof::unwrap_optional(field->resolvedType)), field->let_, ::app_src_checker_validation_::checkerSemanticSpan(field->span), state->info->path, nullptr, std::string(""), (field->readonly_ ? std::string("readonly") : (field->const_ ? std::string("const") : (field->let_ ? std::string("let") : std::string("implicit")))), class_->name));
                 }
             }
     }

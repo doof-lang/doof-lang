@@ -55,7 +55,7 @@ modules own the following decisions:
 | `checker-literals.do` | Contextual array and object literal inference |
 | `checker-generics.do` | Generic inference and decorated call-target resolution |
 | `checker-interfaces.do` | Structural conformance and closed-world implementation discovery |
-| `checker-actor-boundary.do` | Deep payload validation at actor call sites |
+| `checker-actor-boundary.do` | Deep immutability graph analysis for actor payloads and `readonly` fields |
 | `checker-actor-lifecycle.do` | Conservative straight-line use-after-retire diagnostics and AST traversal helpers |
 | `checker-module-initialization.do` | Construction-only declarative initializer validation and direct-storage eligibility |
 | `checker-isolation.do` | Graph-wide transitive mutable-global effect validation |

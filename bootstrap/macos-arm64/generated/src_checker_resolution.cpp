@@ -860,7 +860,7 @@ std::shared_ptr<::app_src_semantic_::Binding> fieldAssignmentBinding(std::shared
                         const auto& _iterable_21 = field->names;
                         for (const auto& name : *_iterable_21) {
                             if (name == property) {
-                                return std::make_shared<::app_src_semantic_::Binding>(name, std::string("field"), fieldType, (!field->readonly_ && !field->const_), ::app_src_checker_validation_::checkerSemanticSpan(field->span), class_->symbol->module, class_->symbol, std::string(""), (field->readonly_ ? std::string("readonly") : (field->const_ ? std::string("const") : (field->let_ ? std::string("let") : std::string("implicit")))), classDeclaration->name, static_cast<int32_t>((field->names)->size()));
+                                return std::make_shared<::app_src_semantic_::Binding>(name, std::string("field"), fieldType, field->let_, ::app_src_checker_validation_::checkerSemanticSpan(field->span), class_->symbol->module, class_->symbol, std::string(""), (field->readonly_ ? std::string("readonly") : (field->const_ ? std::string("const") : (field->let_ ? std::string("let") : std::string("implicit")))), classDeclaration->name);
                             }
                         }
                     }
@@ -882,7 +882,7 @@ std::shared_ptr<::app_src_semantic_::Binding> fieldAssignmentBinding(std::shared
                     const auto& _iterable_22 = interface_->fields;
                     for (const auto& field : *_iterable_22) {
                         if (field->name == property) {
-                            return std::make_shared<::app_src_semantic_::Binding>(property, std::string("field"), fieldType, !field->readonly_, ::app_src_checker_validation_::checkerSemanticSpan(field->span), interfaceType_->symbol->module, interfaceType_->symbol, std::string(""), (field->readonly_ ? std::string("readonly") : (field->let_ ? std::string("let") : std::string("implicit"))), interface_->name, 1);
+                            return std::make_shared<::app_src_semantic_::Binding>(property, std::string("field"), fieldType, field->let_, ::app_src_checker_validation_::checkerSemanticSpan(field->span), interfaceType_->symbol->module, interfaceType_->symbol, std::string(""), (field->readonly_ ? std::string("readonly") : (field->let_ ? std::string("let") : std::string("implicit"))), interface_->name);
                         }
                     }
             }

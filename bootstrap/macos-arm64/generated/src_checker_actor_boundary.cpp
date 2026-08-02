@@ -32,6 +32,50 @@ doof::Result<std::shared_ptr<ActorBoundaryViolation>, std::string> ActorBoundary
 std::shared_ptr<ActorBoundaryViolation> findActorBoundaryViolation(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_) {
     return findViolation(result, type_, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
 }
+std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateDeepReadonlyFields(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result) {
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{});
+    const auto& _iterable_1 = result->modules;
+    for (const auto& module : *_iterable_1) {
+        const auto& _iterable_2 = module->program->statements;
+        for (const auto& raw : *_iterable_2) {
+            {
+                auto _case_subject = unwrapExport(raw);
+                if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
+                    const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
+                    const auto& _iterable_3 = class_->fields;
+                    for (const auto& field : *_iterable_3) {
+                        if (!field->readonly_ || doof::is_null(field->resolvedType)) {
+                            continue;
+                        }
+                        const auto violation = findViolation(result, doof::unwrap_optional(field->resolvedType), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+                        if (doof::is_null(violation)) {
+                            continue;
+                        }
+                        const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : (*field->names)[0]);
+                        diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (((((std::string("Readonly field \"") + class_->name) + std::string(".")) + name) + std::string("\" must be deeply immutable: ")) + violation->reason), semanticSpan(field->span), module->path, std::string("")));
+                    }
+            }
+            else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
+                    const auto& interface_ = std::get<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject);
+                    const auto& _iterable_4 = interface_->fields;
+                    for (const auto& field : *_iterable_4) {
+                        if (!field->readonly_ || doof::is_null(field->resolvedType)) {
+                            continue;
+                        }
+                        const auto violation = findViolation(result, doof::unwrap_optional(field->resolvedType), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+                        if (doof::is_null(violation)) {
+                            continue;
+                        }
+                        diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (((((std::string("Readonly field \"") + interface_->name) + std::string(".")) + field->name) + std::string("\" must be deeply immutable: ")) + violation->reason), semanticSpan(field->span), module->path, std::string("")));
+                    }
+            }
+            else {
+            }
+            }
+        }
+    }
+    return diagnostics;
+}
 std::shared_ptr<ActorBoundaryViolation> findViolation(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> type_, std::shared_ptr<std::vector<std::string>> seen) {
     {
         auto _case_subject = type_;
@@ -102,8 +146,8 @@ std::shared_ptr<ActorBoundaryViolation> findViolation(std::shared_ptr<::app_src_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_1 = tuple->elements;
-            for (const auto& element : *_iterable_1) {
+            const auto& _iterable_5 = tuple->elements;
+            for (const auto& element : *_iterable_5) {
                 const auto violation = findViolation(result, element, seen);
                 if (!doof::is_null(violation)) {
                     return violation;
@@ -113,8 +157,8 @@ std::shared_ptr<ActorBoundaryViolation> findViolation(std::shared_ptr<::app_src_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_2 = union_->types;
-            for (const auto& member : *_iterable_2) {
+            const auto& _iterable_6 = union_->types;
+            for (const auto& member : *_iterable_6) {
                 const auto violation = findViolation(result, member, seen);
                 if (!doof::is_null(violation)) {
                     return violation;
@@ -124,8 +168,8 @@ std::shared_ptr<ActorBoundaryViolation> findViolation(std::shared_ptr<::app_src_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_3 = function_->params;
-            for (const auto& parameter : *_iterable_3) {
+            const auto& _iterable_7 = function_->params;
+            for (const auto& parameter : *_iterable_7) {
                 const auto violation = findViolation(result, parameter->type_, seen);
                 if (!doof::is_null(violation)) {
                     return std::make_shared<ActorBoundaryViolation>((((std::string("callback parameter \"") + parameter->name) + std::string("\" cannot cross actor boundaries: ")) + violation->reason));
@@ -150,8 +194,8 @@ std::shared_ptr<ActorBoundaryViolation> findClassViolation(std::shared_ptr<::app
         return nullptr;
     }
     std::shared_ptr<std::vector<std::string>> nextSeen = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_4 = seen;
-    for (const auto& item : *_iterable_4) {
+    const auto& _iterable_8 = seen;
+    for (const auto& item : *_iterable_8) {
         nextSeen->push_back(item);
     }
     nextSeen->push_back(key);
@@ -159,9 +203,12 @@ std::shared_ptr<ActorBoundaryViolation> findClassViolation(std::shared_ptr<::app
     if (doof::is_null(declaration)) {
         return nullptr;
     }
-    const auto& _iterable_5 = declaration->fields;
-    for (const auto& field : *_iterable_5) {
-        if (!field->readonly_) {
+    const auto& _iterable_9 = declaration->fields;
+    for (const auto& field : *_iterable_9) {
+        if (field->static_) {
+            continue;
+        }
+        if (field->let_) {
             const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : (*field->names)[0]);
             return std::make_shared<ActorBoundaryViolation>(((std::string("field \"") + name) + std::string("\" is mutable")));
         }
@@ -184,8 +231,8 @@ std::shared_ptr<ActorBoundaryViolation> findInterfaceViolation(std::shared_ptr<:
         return nullptr;
     }
     std::shared_ptr<std::vector<std::string>> nextSeen = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_6 = seen;
-    for (const auto& item : *_iterable_6) {
+    const auto& _iterable_10 = seen;
+    for (const auto& item : *_iterable_10) {
         nextSeen->push_back(item);
     }
     nextSeen->push_back(key);
@@ -193,9 +240,9 @@ std::shared_ptr<ActorBoundaryViolation> findInterfaceViolation(std::shared_ptr<:
     if (doof::is_null(declaration)) {
         return nullptr;
     }
-    const auto& _iterable_7 = declaration->fields;
-    for (const auto& field : *_iterable_7) {
-        if (!field->readonly_) {
+    const auto& _iterable_11 = declaration->fields;
+    for (const auto& field : *_iterable_11) {
+        if (field->let_) {
             return std::make_shared<ActorBoundaryViolation>(((std::string("field \"") + field->name) + std::string("\" is mutable")));
         }
         if (doof::is_null(field->resolvedType)) {
@@ -208,8 +255,8 @@ std::shared_ptr<ActorBoundaryViolation> findInterfaceViolation(std::shared_ptr<:
         }
     }
     if (!doof::is_null(declaration->resolvedSymbol)) {
-        const auto& _iterable_8 = declaration->resolvedSymbol->implementations;
-        for (const auto& implementation : *_iterable_8) {
+        const auto& _iterable_12 = declaration->resolvedSymbol->implementations;
+        for (const auto& implementation : *_iterable_12) {
             const auto implementationType = ::app_src_checker_types_::classType(implementation->name, implementation, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}));
             const auto violation = findClassViolation(result, implementationType, nextSeen);
             if (!doof::is_null(violation)) {
@@ -224,8 +271,8 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> classDeclaration(std::shared_p
     if (doof::is_null(module)) {
         return nullptr;
     }
-    const auto& _iterable_9 = module->program->statements;
-    for (const auto& statement : *_iterable_9) {
+    const auto& _iterable_13 = module->program->statements;
+    for (const auto& statement : *_iterable_13) {
         {
             auto _case_subject = unwrapExport(statement);
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
@@ -245,8 +292,8 @@ std::shared_ptr<::app_src_ast_::InterfaceDeclaration> interfaceDeclaration(std::
     if (doof::is_null(module)) {
         return nullptr;
     }
-    const auto& _iterable_10 = module->program->statements;
-    for (const auto& statement : *_iterable_10) {
+    const auto& _iterable_14 = module->program->statements;
+    for (const auto& statement : *_iterable_14) {
         {
             auto _case_subject = unwrapExport(statement);
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
@@ -275,8 +322,8 @@ std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<
     doof::unreachable();
 }
 std::shared_ptr<::app_src_analyzer_::ModuleInfo> findModule(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string path) {
-    const auto& _iterable_11 = result->modules;
-    for (const auto& module : *_iterable_11) {
+    const auto& _iterable_15 = result->modules;
+    for (const auto& module : *_iterable_15) {
         if (module->path == path) {
             return module;
         }
@@ -284,12 +331,15 @@ std::shared_ptr<::app_src_analyzer_::ModuleInfo> findModule(std::shared_ptr<::ap
     return nullptr;
 }
 bool containsString(std::shared_ptr<std::vector<std::string>> values, std::string value) {
-    const auto& _iterable_12 = values;
-    for (const auto& item : *_iterable_12) {
+    const auto& _iterable_16 = values;
+    for (const auto& item : *_iterable_16) {
         if (item == value) {
             return true;
         }
     }
     return false;
+}
+::app_src_semantic_::SemanticSpan semanticSpan(::app_src_ast_::SourceSpan span) {
+    return ::app_src_semantic_::SemanticSpan{::app_src_semantic_::SemanticLocation{span.start.line, span.start.column, span.start.offset}, ::app_src_semantic_::SemanticLocation{span.end.line, span.end.column, span.end.offset}};
 }
 }

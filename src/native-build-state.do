@@ -8,7 +8,7 @@ export readonly NATIVE_BUILD_STATE_VERSION = 1
 
 export class NativeInputSignature {
   path: string
-  signature: string
+  let signature: string
   contentHash: bool = true
 }
 

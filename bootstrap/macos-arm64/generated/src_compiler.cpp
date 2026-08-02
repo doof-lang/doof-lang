@@ -66,16 +66,20 @@ std::shared_ptr<Compilation> compileInternal(std::shared_ptr<std::vector<std::sh
         for (const auto& module : *_iterable_2) {
             checkModuleDependencies(module->path, analysis, checker, checkedPaths, visitingPaths, diagnostics);
         }
-        const auto& _iterable_3 = ::app_src_checker_::validateIsolationEffects(analysis);
+        const auto& _iterable_3 = ::app_src_checker_::validateDeepReadonlyFields(analysis);
         for (const auto& diagnostic : *_iterable_3) {
+            diagnostics->push_back(diagnostic);
+        }
+        const auto& _iterable_4 = ::app_src_checker_::validateIsolationEffects(analysis);
+        for (const auto& diagnostic : *_iterable_4) {
             diagnostics->push_back(diagnostic);
         }
     }
     if (::app_src_diagnostics_::hasErrorDiagnostics(diagnostics)) {
         return std::make_shared<Compilation>(nullptr, diagnostics);
     }
-    const auto& _iterable_4 = ::app_src_checker_::validateCheckedTypes(analysis);
-    for (const auto& diagnostic : *_iterable_4) {
+    const auto& _iterable_5 = ::app_src_checker_::validateCheckedTypes(analysis);
+    for (const auto& diagnostic : *_iterable_5) {
         diagnostics->push_back(diagnostic);
     }
     if (::app_src_diagnostics_::hasErrorDiagnostics(diagnostics)) {
@@ -84,8 +88,8 @@ std::shared_ptr<Compilation> compileInternal(std::shared_ptr<std::vector<std::sh
     const auto instantiations = ::app_src_emitter_monomorphize_::buildInstantiationPlan(analysis);
     if (instantiations->overflow) {
         auto trace = std::string("");
-        const auto& _iterable_5 = instantiations->overflowTrace;
-        for (const auto& item : *_iterable_5) {
+        const auto& _iterable_6 = instantiations->overflowTrace;
+        for (const auto& item : *_iterable_6) {
             (trace = ((trace + ((trace == std::string("")) ? std::string("") : std::string(" -> "))) + item));
         }
         auto zero = ::app_src_semantic_::SemanticLocation{0, 0, 0};
@@ -94,14 +98,14 @@ std::shared_ptr<Compilation> compileInternal(std::shared_ptr<std::vector<std::sh
     }
     const auto emission = ::app_src_emitter_module_::emitModuleGraph(analysis, entry, instantiations, entryMode, coverage);
     if (entryMode == std::string("wasm")) {
-        auto _binding_value_6 = ::app_src_emitter_wasm_::emitWasmSupport(analysis, entry);
-        if (doof::is_failure(_binding_value_6)) {
-            const auto message = doof::failure_error(_binding_value_6);
+        auto _binding_value_7 = ::app_src_emitter_wasm_::emitWasmSupport(analysis, entry);
+        if (doof::is_failure(_binding_value_7)) {
+            const auto message = doof::failure_error(_binding_value_7);
             auto zero = ::app_src_semantic_::SemanticLocation{0, 0, 0};
             diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, ::app_src_semantic_::SemanticSpan{zero, zero}, entry, std::string("")));
             return std::make_shared<Compilation>(nullptr, diagnostics);
         }
-        const auto wasm = doof::success_value(_binding_value_6);
+        const auto wasm = doof::success_value(_binding_value_7);
         (emission->wasmSupportSource = wasm->source);
         (emission->wasmExportNames = wasm->exportNames);
     }
@@ -116,25 +120,25 @@ void checkModuleDependencies(std::string path, std::shared_ptr<::app_src_analyze
         return;
     }
     visitingPaths->push_back(path);
-    const auto& _iterable_7 = module->imports;
-    for (const auto& imported : *_iterable_7) {
+    const auto& _iterable_8 = module->imports;
+    for (const auto& imported : *_iterable_8) {
         checkModuleDependencies(imported->sourceModule, analysis, checker, checkedPaths, visitingPaths, diagnostics);
     }
-    const auto& _iterable_8 = module->reExports;
-    for (const auto& reExport : *_iterable_8) {
+    const auto& _iterable_9 = module->reExports;
+    for (const auto& reExport : *_iterable_9) {
         checkModuleDependencies(reExport, analysis, checker, checkedPaths, visitingPaths, diagnostics);
     }
-    auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(visitingPaths); if (doof::is_failure(_try_value)) doof::panic_at("src/compiler", 114, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(visitingPaths); if (doof::is_failure(_try_value)) doof::panic_at("src/compiler", 115, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     const auto checked = checker->check(path);
-    const auto& _iterable_9 = checked->diagnostics;
-    for (const auto& diagnostic : *_iterable_9) {
+    const auto& _iterable_10 = checked->diagnostics;
+    for (const auto& diagnostic : *_iterable_10) {
         diagnostics->push_back(diagnostic);
     }
     checkedPaths->push_back(path);
 }
 bool containsPath(std::shared_ptr<std::vector<std::string>> paths, std::string path) {
-    const auto& _iterable_10 = paths;
-    for (const auto& existing : *_iterable_10) {
+    const auto& _iterable_11 = paths;
+    for (const auto& existing : *_iterable_11) {
         if (existing == path) {
             return true;
         }
@@ -142,8 +146,8 @@ bool containsPath(std::shared_ptr<std::vector<std::string>> paths, std::string p
     return false;
 }
 std::shared_ptr<::app_src_analyzer_::ModuleInfo> findAnalysisModule(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string path) {
-    const auto& _iterable_11 = result->modules;
-    for (const auto& module : *_iterable_11) {
+    const auto& _iterable_12 = result->modules;
+    for (const auto& module : *_iterable_12) {
         if (module->path == path) {
             return module;
         }

@@ -9,7 +9,7 @@ import { emitModuleGraph, ModuleGraphEmission } from "./emitter-module"
 import { buildInstantiationPlan } from "./emitter-monomorphize"
 import { emitWasmSupport } from "./emitter-wasm"
 import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
-import { createChecker, ModuleChecker, validateCheckedTypes, validateIsolationEffects } from "./checker"
+import { createChecker, ModuleChecker, validateCheckedTypes, validateDeepReadonlyFields, validateIsolationEffects } from "./checker"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { SourceLoader, noSourceLoader } from "./resolver"
 import { CheckResult, Diagnostic, SemanticLocation, SemanticSpan, SourceFile } from "./semantic"
@@ -54,6 +54,7 @@ function compileInternal(
     for module of analysis.modules {
       checkModuleDependencies(module.path, analysis, checker, checkedPaths, visitingPaths, diagnostics)
     }
+    for diagnostic of validateDeepReadonlyFields(analysis) { diagnostics.push(diagnostic) }
     for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
   }
 

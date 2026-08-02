@@ -12,6 +12,7 @@ import { discoverInterfaceImplementations, findModule } from "./checker-interfac
 import { declare, predeclareModuleBindings } from "./checker-symbols"
 import { checkerSemanticSpan, validateCheckedTypes as validateCheckedTypesImpl } from "./checker-validation"
 import { validateIsolationEffects as validateIsolationEffectsImpl } from "./checker-isolation"
+import { validateDeepReadonlyFields as validateDeepReadonlyFieldsImpl } from "./checker-actor-boundary"
 import {
   ConstDeclaration, ExportDeclaration, ExportList, FunctionDeclaration, ImportDeclaration,
   ImmutableBinding, InterfaceDeclaration, ClassDeclaration, EnumDeclaration, LetDeclaration,
@@ -199,4 +200,8 @@ export function validateIsolationEffects(result: AnalysisResult): Diagnostic[] {
   let diagnostics: Diagnostic[] = []
   validateIsolationEffectsImpl(result, diagnostics)
   return diagnostics
+}
+
+export function validateDeepReadonlyFields(result: AnalysisResult): Diagnostic[] {
+  return validateDeepReadonlyFieldsImpl(result)
 }

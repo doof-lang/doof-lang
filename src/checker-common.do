@@ -65,22 +65,10 @@ export function validateAssignmentBinding(state: CheckerState, binding: Binding,
     if !binding.mutable { typeError(state, "Cannot assign to immutable binding '" + binding.name + "'", span) }
     return
   }
-  if binding.fieldMode == "readonly" || binding.fieldMode == "const" {
-    typeError(state, "Cannot assign to immutable field '" + binding.fieldOwner + "." + binding.name + "'", span)
-    return
-  }
-  if binding.fieldMode != "implicit" { return }
-  key := binding.module + ":" + string(binding.span.start.offset) + ":" + string(binding.span.end.offset)
-  for warned of state.warnedImplicitFieldDeclarations { if warned == key { return } }
-  state.warnedImplicitFieldDeclarations.push(key)
+  if binding.mutable { return }
   let suffix = ""
-  if binding.fieldGroupSize > 1 { suffix = "; add 'let' to the group or split the declaration if only some fields are mutable" }
-  state.diagnostics.push(Diagnostic {
-    severity: "warning",
-    message: "Field '" + binding.fieldOwner + "." + binding.name + "' is implicitly immutable; add 'let' because it is assigned after construction" + suffix,
-    span: binding.span,
-    module: binding.module,
-  })
+  if binding.fieldMode == "implicit" { suffix = "; declare it with 'let' to allow reassignment" }
+  typeError(state, "Cannot assign to immutable field '" + binding.fieldOwner + "." + binding.name + "'" + suffix, span)
 }
 export function requireBool(state: CheckerState, resolvedType: ResolvedType, span: SourceSpan): none {
   case resolvedType {

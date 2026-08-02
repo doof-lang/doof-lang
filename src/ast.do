@@ -261,7 +261,7 @@ export class ConstructExpression {
   kind: string
   type_: string
   typeArgs: TypeAnnotation[]
-  args: ObjectProperty[]
+  let args: ObjectProperty[]
   named: bool
   let resolvedClass: ClassDeclaration | none = none
   let resolvedConstructor: FunctionDeclaration | none = none

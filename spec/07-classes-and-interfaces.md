@@ -59,11 +59,9 @@ class Model {
 | `readonly` | Deeply immutable field |
 | literal value after `:` | Compile-time constant, must match on initialisation |
 
-The compatibility release still permits assignment to a bare field, but emits
-one warning at that declaration asking for `let`. This temporary exception is
-conservative for actor and isolation analysis. Construction, defaults, JSON
-decoding, and raw construction inside a dedicated static constructor continue
-to initialize bare fields without warnings.
+Construction, defaults, JSON decoding, and raw construction inside a dedicated
+static constructor initialize bare fields. Ordinary method and external
+assignment require the field to be declared with `let`.
 
 Canonical modifier order is `[private] [static] let [weak] name` or
 `[private] [static] readonly [weak] name`. `let`, `readonly`, and deprecated

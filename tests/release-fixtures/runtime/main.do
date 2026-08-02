@@ -1,7 +1,7 @@
 import { producePromise } from "./promise-producer"
 
 class Accumulator {
-  value: int
+  let value: int
 
   function add(amount: int): int {
     this.value = this.value + amount

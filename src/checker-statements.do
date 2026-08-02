@@ -806,12 +806,11 @@ export function addClassFields(state: CheckerState, scope: Scope, owner: ClassTy
             name,
             kind: "field",
             type_: field.resolvedType ?? unknownType(),
-            mutable: !field.readonly_ && !field.const_,
+            mutable: field.let_,
             span: checkerSemanticSpan(field.span),
             module: state.info!.path,
             fieldMode: if field.readonly_ then "readonly" else if field.const_ then "const" else if field.let_ then "let" else "implicit",
             fieldOwner: class_.name,
-            fieldGroupSize: field.names.length,
           })
         }
       }

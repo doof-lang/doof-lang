@@ -54,11 +54,9 @@ Current v1 restrictions:
 | literal value after `:` | compile-time constant, for example `kind: "circle"` or `version: 1` |
 | `private` | file-scoped visibility |
 
-During the compatibility release, assigning a legacy bare field still works
-but warns once at its declaration. Add `let` to fields that are reassigned;
-leave other bare fields unchanged so they become shallow immutable at the
-enforcement cutover. Bare collection fields still allow interior operations
-such as `.push(...)`.
+Assigning a bare field after construction is an error. Bare collection fields
+still allow interior operations such as `.push(...)`; use `let` only when the
+field slot itself must be reassigned.
 
 ## Construction
 

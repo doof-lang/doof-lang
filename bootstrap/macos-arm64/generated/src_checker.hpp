@@ -50,6 +50,7 @@ namespace app_src_checker_ {
 #include "src_checker_symbols.hpp"
 #include "src_checker_validation.hpp"
 #include "src_checker_isolation.hpp"
+#include "src_checker_actor_boundary.hpp"
 #include "src_ast.hpp"
 #include "src_checker_types.hpp"
 #include "src_checker_common.hpp"
@@ -73,6 +74,7 @@ namespace app_src_checker_ {
     std::shared_ptr<ModuleChecker> createChecker(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string entry = std::string(""), std::string entryMode = std::string("executable"));
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateCheckedTypes(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result);
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateIsolationEffects(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result);
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateDeepReadonlyFields(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result);
 }
 
 namespace app_src_checker_ {

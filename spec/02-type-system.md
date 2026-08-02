@@ -862,8 +862,9 @@ implemented by bare, `let`, or `readonly` storage when the types are
 compatible. A `readonly` interface field still requires a `readonly`
 implementation so widening cannot conceal mutable storage as deeply immutable.
 
-During the compatibility release, writes through a bare interface field are
-accepted with the same declaration warning as writes to bare nominal fields.
+Writes through a bare interface field are rejected even when a concrete
+implementation uses mutable storage. Only a `let` interface field exposes
+field-slot assignment.
 
 ### Type Construction with Interfaces
 
@@ -1293,8 +1294,8 @@ frozen = [5, 6]                // ❌ Error - binding is immutable
 data := readonly [1, 2, 3]     // readonly int[] - readonly collection surface
 
 class MutablePoint {
-    x: float
-    y: float
+    let x: float
+    let y: float
 }
 
 let points: readonly MutablePoint[] = readonly [MutablePoint { x: 1.0, y: 2.0 }]  // ✅ OK
@@ -1307,7 +1308,7 @@ points.push(MutablePoint { x: 3.0, y: 4.0 })  // ❌ Error - readonly array
 When `readonly` appears on a binding or class field, the referenced value must be deeply immutable. A type is deeply readonly-compatible if:
 
 1. **Primitives** — `int`, `long`, `float`, `double`, `string`, `bool` — always readonly-compatible
-2. **Classes** — all fields must be `readonly`
+2. **Classes and structs** — no instance field may use `let`, and every field type must itself be deeply readonly-compatible; static fields are not part of the instance graph
 3. **Arrays** — are treated as `readonly T[]`, and `T` must itself be deeply readonly-compatible
 4. **Collections** — are treated as `ReadonlyMap<K, V>` / `ReadonlySet<T>`, and nested types must be deeply readonly-compatible
 5. **Unions** — all variants must be readonly-compatible
@@ -1322,14 +1323,14 @@ The parser also accepts `readonly Array<T>`, `readonly Map<K, V>`, and `readonly
 ```javascript
 // Readonly-compatible class
 class ImmutablePoint {
-    readonly x: float
-    readonly y: float
+    x: float
+    y: float
 }
 
 // Not readonly-compatible
 class MutablePoint {
-    x: float
-    y: float
+    let x: float
+    let y: float
 }
 
 readonly p1 = ImmutablePoint { x: 1.0, y: 2.0 }  // ✅ OK
@@ -1360,7 +1361,7 @@ class BadPoints {
 ```javascript
 class Container {
     readonly items: int[]           // field surface is treated as readonly int[]
-    count: int                      // mutable field
+    let count: int                  // mutable field
 }
 
 // Immutable binding (shallow) to object with mixed mutability

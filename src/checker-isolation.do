@@ -116,24 +116,42 @@ function mutableModuleReason(result: AnalysisResult, expression: Expression): Is
   return none
 }
 
-function mutableStaticReason(expression: Expression): IsolationReason | none {
+function mutableStaticReason(result: AnalysisResult, expression: Expression): IsolationReason | none {
   case expression {
-    member: MemberExpression -> {
-      if member.resolvedStaticOwner == none { return none }
-      for field of member.resolvedStaticOwner!.fields {
-        if !field.static_ || field.readonly_ { continue }
-        for name of field.names {
-          if name == member.property {
-            return IsolationReason {
-              kind: "static",
-              name: member.resolvedStaticOwner!.name + "." + member.property,
-              span: member.span,
-            }
+    identifier: Identifier -> {
+      if identifier.resolvedBinding == none || identifier.resolvedBinding!.kind != "field" { return none }
+      binding := identifier.resolvedBinding!
+      module := findModule(result, binding.module)
+      if module == none { return none }
+      for raw of module!.program.statements {
+        case unwrapExport(raw) {
+          class_: ClassDeclaration -> {
+            if class_.name != binding.fieldOwner { continue }
+            return staticFieldReason(result, class_, identifier.name, identifier.span)
           }
+          _ -> { }
         }
       }
     }
+    member: MemberExpression -> {
+      if member.resolvedStaticOwner == none { return none }
+      return staticFieldReason(result, member.resolvedStaticOwner!, member.property, member.span)
+    }
     _ -> { }
+  }
+  return none
+}
+
+function staticFieldReason(result: AnalysisResult, owner: ClassDeclaration, property: string, span: SourceSpan): IsolationReason | none {
+  for field of owner.fields {
+    if !field.static_ || field.const_ { continue }
+    for name of field.names {
+      if name != property { continue }
+      let mutable = field.let_ || field.resolvedType == none
+      if !mutable { mutable = findActorBoundaryViolation(result, field.resolvedType!) != none }
+      if !mutable { return none }
+      return IsolationReason { kind: "static", name: owner.name + "." + property, span }
+    }
   }
   return none
 }
@@ -236,7 +254,7 @@ function analyzeNode(result: AnalysisResult, graph: IsolationGraph, node: Isolat
   for expression of functionExpressions(node.declaration) {
     if node.directReason == none {
       node.directReason = mutableModuleReason(result, expression)
-      if node.directReason == none { node.directReason = mutableStaticReason(expression) }
+      if node.directReason == none { node.directReason = mutableStaticReason(result, expression) }
     }
     case expression {
       call: CallExpression -> {
@@ -296,7 +314,7 @@ function pushDiagnostic(diagnostics: Diagnostic[], module: string, span: SourceS
 function probeReason(result: AnalysisResult, graph: IsolationGraph, expression: Expression): IsolationReason | none {
   for nested of allExpressions([expression]) {
     let reason = mutableModuleReason(result, nested)
-    if reason == none { reason = mutableStaticReason(nested) }
+    if reason == none { reason = mutableStaticReason(result, nested) }
     if reason != none { return reason }
     case nested {
       call: CallExpression -> {

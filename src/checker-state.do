@@ -10,5 +10,4 @@ export class CheckerState {
   let diagnostics: Diagnostic[] = []
   let info: ModuleInfo | none = none
   let moduleScope: Scope | none = none
-  warnedImplicitFieldDeclarations: string[] = []
 }

@@ -214,16 +214,14 @@ class Entity {
 }
 
 let e = Entity { id: 123, tags: ["new"], name: "Widget" }
-e.id = 456              // ⚠️ Compatibility warning; becomes an error after migration
+e.id = 456              // ❌ Error: shallow immutable field
 e.tags.push("old")      // ❌ Error: readonly array
 e.name = "Gadget"       // ✅ OK
 ```
 
-During the compatibility release, assignment to a legacy bare field remains
-accepted with one warning per declaration. Add `let` only to declarations
-that are actually assigned after construction. Mutation through the interior
-of a bare field remains valid; for example, `items: int[]` prevents replacing
-`items` but does not prevent `items.push(value)`.
+Mutation through the interior of a bare field remains valid; for example,
+`items: int[]` prevents replacing `items` but does not prevent
+`items.push(value)`.
 
 ### Collection Initializer Modifier
 

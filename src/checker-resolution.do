@@ -568,13 +568,12 @@ export function fieldAssignmentBinding(state: CheckerState, object: ResolvedType
                   name,
                   kind: "field",
                   type_: fieldType,
-                  mutable: !field.readonly_ && !field.const_,
+                  mutable: field.let_,
                   span: checkerSemanticSpan(field.span),
                   module: class_.symbol.module,
                   symbol: class_.symbol,
                   fieldMode: if field.readonly_ then "readonly" else if field.const_ then "const" else if field.let_ then "let" else "implicit",
                   fieldOwner: classDeclaration.name,
-                  fieldGroupSize: field.names.length,
                 }
               }
             }
@@ -594,7 +593,7 @@ export function fieldAssignmentBinding(state: CheckerState, object: ResolvedType
                 name: property,
                 kind: "field",
                 type_: fieldType,
-                mutable: !field.readonly_,
+                mutable: field.let_,
                 span: checkerSemanticSpan(field.span),
                 module: interfaceType_.symbol.module,
                 symbol: interfaceType_.symbol,

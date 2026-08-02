@@ -215,7 +215,6 @@ export class Binding {
   casePattern: string = ""
   fieldMode: string = ""
   fieldOwner: string = ""
-  fieldGroupSize: int = 1
 }
 
 export class Scope {

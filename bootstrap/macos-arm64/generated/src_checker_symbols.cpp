@@ -215,13 +215,13 @@ void predeclareModuleBindings(std::shared_ptr<::app_src_analyzer_::ModuleInfo> i
     const auto& _iterable_6 = info->symbols;
     for (const auto& symbol : *_iterable_6) {
         if (((((symbol->kind == std::string("function")) || (symbol->kind == std::string("class"))) || (symbol->kind == std::string("struct"))) || (symbol->kind == std::string("interface"))) || (symbol->kind == std::string("enum"))) {
-            declare(scope, std::make_shared<::app_src_semantic_::Binding>(symbol->name, symbol->kind, symbolType(symbol, info, result), false, ::app_src_checker_validation_::checkerSemanticSpan(::app_src_checker_interfaces_::symbolSpan(info, symbol->name)), info->path, symbol, std::string(""), std::string(""), std::string(""), 1));
+            declare(scope, std::make_shared<::app_src_semantic_::Binding>(symbol->name, symbol->kind, symbolType(symbol, info, result), false, ::app_src_checker_validation_::checkerSemanticSpan(::app_src_checker_interfaces_::symbolSpan(info, symbol->name)), info->path, symbol, std::string(""), std::string(""), std::string("")));
         }
     }
     const auto& _iterable_7 = info->imports;
     for (const auto& imported : *_iterable_7) {
         if (!doof::is_null(imported->symbol)) {
-            declare(scope, std::make_shared<::app_src_semantic_::Binding>(imported->localName, std::string("import"), symbolType(doof::unwrap_optional(imported->symbol), info, result), false, ::app_src_checker_validation_::checkerSemanticSpan(::app_src_checker_interfaces_::symbolSpan(info, imported->localName)), info->path, imported->symbol, std::string(""), std::string(""), std::string(""), 1));
+            declare(scope, std::make_shared<::app_src_semantic_::Binding>(imported->localName, std::string("import"), symbolType(doof::unwrap_optional(imported->symbol), info, result), false, ::app_src_checker_validation_::checkerSemanticSpan(::app_src_checker_interfaces_::symbolSpan(info, imported->localName)), info->path, imported->symbol, std::string(""), std::string(""), std::string("")));
         }
     }
 }
