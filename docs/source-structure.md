@@ -36,6 +36,7 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
 | `semantic.do` | Diagnostics, symbols, bindings, scopes, resolved-type records | Pass orchestration |
 | `diagnostics.do` | Shared diagnostic severity queries | Creation of feature-specific diagnostics |
 | `compiler.do` | Analyze → check all modules → graph validations → specialize → emit orchestration | Filesystem, package, or native compiler operations |
+| `frontend-cache.do` | Versioned pointer-free frontend fingerprints, resolution probes, and module-output records | AST/checker serialization or filesystem access |
 
 ## Checker
 
@@ -78,7 +79,7 @@ emitter or individual expression branch.
 | `emitter-context.do` | Graph-wide nominal/method context and per-module emission state |
 | `emitter-names.do` | Stable C++ namespaces, filenames, and diagnostic paths from logical module identity |
 | `emitter-monomorphize.do` | Fixed-point discovery of concrete generic instantiations |
-| `emitter-module.do` | Module graph orchestration, include planning, and header/source pairing |
+| `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, include planning, and header/source pairing |
 | `emitter-header.do` | Header declaration ordering and rendering |
 | `emitter-decl.do` | Functions, classes, top-level declarations, signatures, and definitions |
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering |

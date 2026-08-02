@@ -5,7 +5,7 @@
 // the project emitter would turn a front-end omission into a C++ failure.
 
 import { AnalysisResult, ModuleInfo, createAnalyzerWithLoader } from "./analyzer"
-import { emitModuleGraph, ModuleGraphEmission } from "./emitter-module"
+import { emitModuleGraph, ModuleEmissionCacheKey, ModuleGraphEmission } from "./emitter-module"
 import { buildInstantiationPlan } from "./emitter-monomorphize"
 import { emitWasmSupport } from "./emitter-wasm"
 import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
@@ -17,6 +17,8 @@ import { CheckResult, Diagnostic, SemanticLocation, SemanticSpan, SourceFile } f
 export class Compilation {
   emission: ModuleGraphEmission | none
   diagnostics: Diagnostic[]
+  sourceFiles: SourceFile[] = []
+  resolutionProbes: string[] = []
 }
 
 export function compile(sources: SourceFile[], entry: string, coverage: bool = false): Compilation {
@@ -30,8 +32,23 @@ export function compileWithLoader(
   namespaceMappings: ModuleNamespaceMapping[] = [],
   entryMode: string = "executable",
   coverage: bool = false,
+  reusableModules: ModuleEmissionCacheKey[] = [],
+  emissionConfigurationFingerprint: string = "",
 ): Compilation {
-  return compileInternal(sources, entry, loader, namespaceMappings, entryMode, coverage)
+  return compileInternal(
+    sources, entry, loader, namespaceMappings, entryMode, coverage, true,
+    reusableModules, emissionConfigurationFingerprint,
+  )
+}
+
+/** Checks a source graph without running lowering or C++ emission. */
+export function checkWithLoader(
+  sources: SourceFile[],
+  entry: string,
+  loader: SourceLoader,
+  entryMode: string = "executable",
+): Compilation {
+  return compileInternal(sources, entry, loader, [], entryMode, false, false)
 }
 
 function compileInternal(
@@ -41,9 +58,13 @@ function compileInternal(
   namespaceMappings: ModuleNamespaceMapping[],
   entryMode: string = "executable",
   coverage: bool = false,
+  emit: bool = true,
+  reusableModules: ModuleEmissionCacheKey[] = [],
+  emissionConfigurationFingerprint: string = "",
 ): Compilation {
   configureModuleNamespaces(namespaceMappings)
-  analysis := createAnalyzerWithLoader(sources, loader).analyze(entry)
+  analyzer := createAnalyzerWithLoader(sources, loader)
+  analysis := analyzer.analyze(entry)
   let diagnostics: Diagnostic[] = []
   for diagnostic of analysis.diagnostics { diagnostics.push(diagnostic) }
 
@@ -59,12 +80,13 @@ function compileInternal(
   }
 
   if hasErrorDiagnostics(diagnostics) {
-    return Compilation { emission: none, diagnostics }
+    return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
   }
   for diagnostic of validateCheckedTypes(analysis) { diagnostics.push(diagnostic) }
   if hasErrorDiagnostics(diagnostics) {
-    return Compilation { emission: none, diagnostics }
+    return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
   }
+  if !emit { return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths } }
   instantiations := buildInstantiationPlan(analysis)
   if instantiations.overflow {
     let trace = ""
@@ -76,19 +98,22 @@ function compileInternal(
       span: SemanticSpan { start: zero, end: zero },
       module: entry,
     })
-    return Compilation { emission: none, diagnostics }
+    return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
   }
-  emission := emitModuleGraph(analysis, entry, instantiations, entryMode, coverage)
+  emission := emitModuleGraph(
+    analysis, entry, instantiations, entryMode, coverage,
+    reusableModules, emissionConfigurationFingerprint,
+  )
   if entryMode == "wasm" {
     wasm := emitWasmSupport(analysis, entry) else message {
       zero := SemanticLocation { line: 0, column: 0, offset: 0 }
       diagnostics.push(Diagnostic { severity: "error", message, span: SemanticSpan { start: zero, end: zero }, module: entry })
-      return Compilation { emission: none, diagnostics }
+      return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
     }
     emission.wasmSupportSource = wasm.source
     emission.wasmExportNames = wasm.exportNames
   }
-  return Compilation { emission, diagnostics }
+  return Compilation { emission, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
 }
 
 // Analyzer discovery order is driven by import syntax, not by a fixed source

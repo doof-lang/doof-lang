@@ -66,6 +66,7 @@ namespace app_src_emitter_module_ {
     struct ModulePlan;
     struct ModuleGraphPlan;
     struct ModuleEmission;
+    struct ModuleEmissionCacheKey;
     struct CoverageModuleMetadata;
     struct ModuleGraphEmission;
     struct CxxModuleEmitter;
@@ -83,6 +84,7 @@ namespace app_src_emitter_module_ {
 #include "src_emitter_header.hpp"
 #include "src_emitter_monomorphize.hpp"
 #include "src_emitter_names.hpp"
+#include "std_crypto_index.hpp"
 #include "src_semantic.hpp"
 
 namespace app_src_emitter_module_ {
@@ -112,9 +114,18 @@ namespace app_src_emitter_module_ {
     std::string sourceName;
     int32_t coverageModuleId = -1;
     std::shared_ptr<std::vector<int32_t>> instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    ModuleEmission(std::string modulePath, std::string header, std::string source, std::string headerName, std::string sourceName, int32_t coverageModuleId = -1, std::shared_ptr<std::vector<int32_t>> instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})) : modulePath(modulePath), header(header), source(source), headerName(headerName), sourceName(sourceName), coverageModuleId(coverageModuleId), instrumentedLines(instrumentedLines) {}
+    bool reused = false;
+    std::string fingerprint = std::string("");
+    ModuleEmission(std::string modulePath, std::string header, std::string source, std::string headerName, std::string sourceName, int32_t coverageModuleId = -1, std::shared_ptr<std::vector<int32_t>> instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), bool reused = false, std::string fingerprint = std::string("")) : modulePath(modulePath), header(header), source(source), headerName(headerName), sourceName(sourceName), coverageModuleId(coverageModuleId), instrumentedLines(instrumentedLines), reused(reused), fingerprint(fingerprint) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ModuleEmission>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+    struct ModuleEmissionCacheKey : public std::enable_shared_from_this<ModuleEmissionCacheKey> {
+    std::string modulePath;
+    std::string fingerprint;
+    ModuleEmissionCacheKey(std::string modulePath, std::string fingerprint) : modulePath(modulePath), fingerprint(fingerprint) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<ModuleEmissionCacheKey>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct CoverageModuleMetadata : public std::enable_shared_from_this<CoverageModuleMetadata> {
     int32_t moduleId;
@@ -165,7 +176,10 @@ namespace app_src_emitter_module_ {
     bool containsString(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
     std::string emitImportedNamespaces(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     void addNamespace(const std::shared_ptr<std::vector<std::string>>& namespaces, const std::string& namespace_);
-    std::shared_ptr<ModuleGraphEmission> emitModuleGraph(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& entry = std::string(""), const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations = nullptr, const std::string& entryMode = std::string("executable"), bool coverage = false);
+    std::shared_ptr<ModuleGraphEmission> emitModuleGraph(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& entry = std::string(""), const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations = nullptr, const std::string& entryMode = std::string("executable"), bool coverage = false, const std::shared_ptr<std::vector<std::shared_ptr<ModuleEmissionCacheKey>>>& reusableModules = std::make_shared<std::vector<std::shared_ptr<ModuleEmissionCacheKey>>>(std::vector<std::shared_ptr<ModuleEmissionCacheKey>>{}), const std::string& configurationFingerprint = std::string(""));
+    bool reusableModuleMatches(const std::shared_ptr<std::vector<std::shared_ptr<ModuleEmissionCacheKey>>>& keys, const std::string& path, const std::string& fingerprint);
+    std::string moduleEmissionFingerprint(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& module, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations, const std::string& path, const std::string& entry, const std::string& entryMode, bool coverage, const std::shared_ptr<std::vector<std::string>>& initializationOrder, const std::string& configurationFingerprint);
+    void collectModuleDependencyClosure(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path, const std::shared_ptr<std::vector<std::string>>& reachable);
     bool isCoverageEligible(const std::string& modulePath);
     std::shared_ptr<std::vector<int32_t>> sortedCoverageLines(const std::shared_ptr<std::vector<int32_t>>& lines);
     void configureInstantiationRegistry(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& plan);

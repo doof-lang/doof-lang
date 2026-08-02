@@ -75,12 +75,14 @@ namespace app_src_analyzer_ {
 #include "src_resolver.hpp"
 #include "src_semantic.hpp"
 #include "src_ast.hpp"
+#include "std_crypto_index.hpp"
 
 namespace app_src_analyzer_ {
     using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     struct ModuleInfo : public std::enable_shared_from_this<ModuleInfo> {
     std::string path;
+    std::string sourceHash = std::string("");
     std::shared_ptr<::app_src_ast_::Program> program;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>> symbols;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>> exports;
@@ -90,7 +92,7 @@ namespace app_src_analyzer_ {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> mockImportDirectives;
     std::optional<std::string> mockRootPath = std::nullopt;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics;
-    ModuleInfo(std::string path, std::shared_ptr<::app_src_ast_::Program> program, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>> symbols, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>> exports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> imports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> namespaceImports, std::shared_ptr<std::vector<std::string>> reExports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> mockImportDirectives, std::optional<std::string> mockRootPath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics) : path(path), program(program), symbols(symbols), exports(exports), imports(imports), namespaceImports(namespaceImports), reExports(reExports), mockImportDirectives(mockImportDirectives), mockRootPath(mockRootPath), diagnostics(diagnostics) {}
+    ModuleInfo(std::string path, std::string sourceHash, std::shared_ptr<::app_src_ast_::Program> program, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>> symbols, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>> exports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> imports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> namespaceImports, std::shared_ptr<std::vector<std::string>> reExports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> mockImportDirectives, std::optional<std::string> mockRootPath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics) : path(path), sourceHash(sourceHash), program(program), symbols(symbols), exports(exports), imports(imports), namespaceImports(namespaceImports), reExports(reExports), mockImportDirectives(mockImportDirectives), mockRootPath(mockRootPath), diagnostics(diagnostics) {}
 };
     struct AnalysisResult : public std::enable_shared_from_this<AnalysisResult> {
     std::shared_ptr<std::vector<std::shared_ptr<ModuleInfo>>> modules = std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{});

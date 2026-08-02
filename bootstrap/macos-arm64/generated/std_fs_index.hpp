@@ -47,9 +47,9 @@ namespace std_::fs::index {
     doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readDir(const std::string& path);
     doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlob(const std::string& path);
     doof::Result<void, ::std_::fs::types::IoError> writeText(const std::string& path, const std::string& content);
-    doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& data);
-    doof::Result<void, ::std_::fs::types::IoError> remove(const std::string& path);
     doof::Result<void, ::std_::fs::types::IoError> rename(const std::string& sourcePath, const std::string& destPath);
+    doof::Result<void, ::std_::fs::types::IoError> remove(const std::string& path);
+    doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& data);
     doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(const std::string& path);
     bool isFile(const std::string& path);
     struct BlockReadStream : public std::enable_shared_from_this<BlockReadStream> {

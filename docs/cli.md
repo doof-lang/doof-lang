@@ -21,6 +21,14 @@ doof test <path> [filter] [--list] [--coverage]
 from its package root. `package` creates an optimized release artifact and
 records provenance. `test` discovers and runs exported test functions.
 
+For `check`, `emit`, `build`, and `run`, successful exact source/configuration
+fingerprints are cached below `<build-directory>/.doof-cache/v1/`. Exact hits
+skip the frontend. After an edit, Doof performs a normal semantic compilation
+and retains any generated module whose transitive inputs and lowering plan are
+unchanged. Retained generated files keep their timestamps so the native object
+and dependency cache can reuse them. Removing the build directory clears both
+caches. Cache corruption or incompatibility is treated as a miss.
+
 Manifestless WebAssembly libraries use an explicit source and target:
 
 ```text

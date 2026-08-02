@@ -20,9 +20,11 @@ import {
   CaseStatement, MockImportDirective, WeakType, YieldBlockAssignmentStatement, TypeParameterConstraint,
 } from "./ast"
 import type { ImportDeclaration, Program, SourceSpan, Statement, TryStatement, TypeAnnotation } from "./ast"
+import { sha256HexString } from "std/crypto"
 
 export class ModuleInfo {
   path: string
+  sourceHash: string = ""
   program: Program
   symbols: Symbol[] = []
   exports: Symbol[] = []
@@ -97,7 +99,7 @@ export class ModuleAnalyzer {
     if mockRootPath == none && mockImportDirectives.length > 0 && path.endsWith(".test.do") {
       mockRootPath = path
     }
-    info := ModuleInfo { path, program, mockImportDirectives, mockRootPath }
+    info := ModuleInfo { path, sourceHash: sha256HexString(source.source), program, mockImportDirectives, mockRootPath }
     modules.push(info)
     validateMockImportDirectives(info, inheritedMockRootPath)
     collectSymbols(info)

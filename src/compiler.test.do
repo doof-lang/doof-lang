@@ -2,14 +2,42 @@ import { Assert } from "std/assert"
 import { readText } from "std/fs"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
-import { Compilation, compile, compileWithLoader } from "./compiler"
-import { emitModuleGraph } from "./emitter-module"
+import { checkWithLoader, Compilation, compile, compileWithLoader } from "./compiler"
+import { noSourceLoader } from "./resolver"
+import { emitModuleGraph, ModuleEmissionCacheKey } from "./emitter-module"
 import { Diagnostic, SourceFile } from "./semantic"
 
 function compileSample(path: string): Compilation {
   return compile([
     SourceFile { path: "/sample.do", source: try! readText(path) },
   ], "/sample.do")
+}
+
+export function testCheckOnlyDoesNotProduceEmission(): none {
+  result := checkWithLoader([
+    SourceFile { path: "/main.do", source: "function main(): int => 1" },
+  ], "/main.do", noSourceLoader)
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.emission, none)
+}
+
+export function testReusesOnlyModulesWhoseDependencyFingerprintIsUnchanged(): none {
+  firstSources := [
+    SourceFile { path: "/main.do", source: "import { left } from \"./left\"\nimport { right } from \"./right\"\nfunction main(): int => left() + right()" },
+    SourceFile { path: "/left.do", source: "export function left(): int => 1" },
+    SourceFile { path: "/right.do", source: "export function right(): int => 2" },
+  ]
+  first := compileWithLoader(firstSources, "/main.do", noSourceLoader, [], "executable", false, [], "test")
+  let keys: ModuleEmissionCacheKey[] = []
+  for module of first.emission!.modules {
+    keys.push(ModuleEmissionCacheKey { modulePath: module.modulePath, fingerprint: module.fingerprint })
+  }
+  firstSources[1] = SourceFile { path: "/left.do", source: "export function left(): int => 3" }
+  second := compileWithLoader(firstSources, "/main.do", noSourceLoader, [], "executable", false, keys, "test")
+  for module of second.emission!.modules {
+    if module.modulePath == "/right.do" { Assert.equal(module.reused, true) }
+    else { Assert.equal(module.reused, false) }
+  }
 }
 
 export function testCompilesAnImportedProject(): none {

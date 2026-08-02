@@ -28,6 +28,7 @@ The important hand-offs are:
 | `emitter-module.do` | generated header/source pairs and graph support | `emitter-project.do` |
 | `emitter-project.do` | generated project plus normalized native inputs | native build planner and driver |
 | `native-build.do` | deterministic PCH/compile/link tasks | `native-build-driver.do` |
+| `frontend-cache.do` | exact source/configuration fingerprints and emitted-module names | `driver.do` cache validation and materialization |
 
 `compiler.do` coordinates the pure graph pipeline. `driver.do` adapts CLI,
 filesystem, acquired-package, test, app, and process boundaries to it. Source
@@ -54,6 +55,7 @@ the row from left to right.
 | Module initialization | top-level checked declarations/statements and compiler entry mode | `checker-module-initialization.do` validates construction-only expressions and direct storage | `emitter-module.do`, `emitter-header.do`, and `emitter-decl.do` emit direct storage and graph-ordered execution |
 | Packages and reproducible inputs | manifests/catalog in `package-manifest.do` and `std-catalog.do` | `dependency-policy.do` selects exact reached inputs | acquisition modules materialize; `provenance.do` records; `emitter-project.do` collates |
 | Incremental native builds | normalized native plan and emitted modules | `native-build.do` creates stable tasks; `pkg-config.do` normalizes flags | `native-build-driver.do` fingerprints arguments/dependencies, persists state, and runs dirty work |
+| Incremental frontend/emission | resolver probes, source hashes, configuration, and transitive module dependencies | `frontend-cache.do` persists pointer-free exact state; `emitter-module.do` fingerprints module inputs plus the global lowering plan | `driver.do` skips exact graph hits and retains matching generated files without changing timestamps |
 | Tests, mocks, and coverage | `test-runner.do` discovers tests and generates harnesses | analyzer rewrites mock imports; emitter inserts stable coverage markers | driver groups, builds, isolates, runs, merges, and renders reports |
 
 ## The decorated-AST boundary
@@ -106,6 +108,25 @@ tasks, app bundles, and run invocations. Environment-facing modules are:
 
 This separation keeps semantic tests in memory and planning tests
 deterministic.
+
+## Incremental cache boundary
+
+Incrementality deliberately stops at generated artifacts. The persistent
+frontend cache contains source-resolution probes (including missing exact-path
+probes), content hashes, relevant manifests/configuration, module output names,
+and emission fingerprints. It never serializes AST, symbol, binding, or checker
+objects.
+
+An exact graph/configuration hit skips checking and emission. After any input
+change, the ordinary clean semantic pipeline runs. Each module is then emitted
+only when its own/transitive source fingerprint or the conservative global
+lowering-plan fingerprint changed. Retained `.cpp`/`.hpp` files keep their
+timestamps, allowing the native dependency cache to reuse objects safely.
+
+Missing, corrupt, or version-mismatched cache files are ordinary cache misses.
+Clean compilation semantics remain authoritative.
+Changes to checking or lowering semantics must bump `FRONTEND_SEMANTIC_ABI`
+even when the serialized JSON shape is unchanged.
 
 ## Adding or changing a language concept
 

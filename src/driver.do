@@ -7,7 +7,7 @@
 // import is encountered. Bare modules come from doof.json dependencies, while
 // local and std/* paths are resolved from their acquired roots.
 
-import { compileWithLoader } from "./compiler"
+import { checkWithLoader, Compilation, compileWithLoader } from "./compiler"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { CliRequest, cliUsage, parseCli } from "./cli"
 import { ExternalDependencyTarget, acquirePackageExternalDependencies } from "./external-dependency"
@@ -17,6 +17,11 @@ import {
 } from "./dependency-policy"
 import { NativePackageInput, ProjectEmission, planProjectEmission } from "./emitter-project"
 import { ModuleNamespaceMapping } from "./emitter-names"
+import { ModuleEmission, ModuleEmissionCacheKey, ModuleGraphEmission } from "./emitter-module"
+import {
+  FRONTEND_SEMANTIC_ABI, FrontendCacheState, FrontendFileInput, FrontendModuleOutput, FrontendSourceProbe,
+  parseFrontendCacheState, renderFrontendCacheState,
+} from "./frontend-cache"
 import { ModuleAcquisition, acquiredManifestPath, acquiredModuleDiskPath, acquiredPackageForModule } from "./module-acquisition"
 import { buildNativeProject } from "./native-build-driver"
 import {
@@ -45,7 +50,8 @@ import {
   stripCoverageLines, testDisplayPath,
 } from "./test-runner"
 import { BlobReader } from "std/blob"
-import { EntryKind, exists, isDirectory, mkdir, readBlob, readDir, readText, readTextResource, writeBlob, writeText } from "std/fs"
+import { sha256HexString } from "std/crypto"
+import { EntryKind, exists, isDirectory, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
 import { ExecOptions, architecture, run, platform } from "std/os"
 import { absolute } from "std/path"
 
@@ -651,6 +657,153 @@ function writeTextIfChanged(path: string, content: string): none {
   try! writeText(path, content)
 }
 
+function frontendCachePath(buildDirectory: string, kind: string): string {
+  return driverOutputPath(driverOutputPath(buildDirectory, ".doof-cache/v1"), kind + ".json")
+}
+
+function frontendConfigurationFingerprint(
+  entry: string,
+  entryMode: string,
+  target: string,
+  manifest: PackageManifest,
+  stdlibRoot: string,
+  nativePlatform: string,
+  externalTarget: ExternalDependencyTarget,
+): string {
+  manifestSource := readTextOrEmpty(manifest.manifestPath)
+  return sha256HexString(
+    "doof-frontend-cache-2:" + string(FRONTEND_SEMANTIC_ABI) + "\n" + entry + "\n" + entryMode + "\n" + target + "\n" +
+      stdlibRoot + "\n" + nativePlatform + "\n" + externalTarget.nativeTarget + "\n" +
+      externalTarget.sdkPath + "\n" + externalTarget.targetTriple + "\n" +
+      configuredDriverSourceState.stdCatalog.digest + "\n" + manifestSource,
+  )
+}
+
+function readTextOrEmpty(path: string): string {
+  source := readText(path) else { return "" }
+  return source
+}
+
+function readFrontendState(path: string): FrontendCacheState | none {
+  if !exists(path) { return none }
+  source := readText(path) else { return none }
+  return parseFrontendCacheState(source)
+}
+
+function frontendStateMatches(
+  state: FrontendCacheState | none,
+  configurationFingerprint: string,
+  loader: SourceLoader,
+): bool {
+  if state == none || state!.configurationFingerprint != configurationFingerprint { return false }
+  for input of state!.fileInputs {
+    source := readText(input.path) else { return false }
+    if sha256HexString(source) != input.sourceHash { return false }
+  }
+  for probe of state!.probes {
+    source := loader(probe.logicalPath) else { return false }
+    if probe.missing {
+      if source != none { return false }
+    } else {
+      if source == none || sha256HexString(source!.source) != probe.sourceHash { return false }
+    }
+  }
+  return true
+}
+
+function frontendStateForCompilation(
+  result: Compilation,
+  configurationFingerprint: string,
+  rootManifest: PackageManifest,
+): FrontendCacheState {
+  state := FrontendCacheState { configurationFingerprint }
+  for path of result.resolutionProbes {
+    let matched: SourceFile | none = none
+    for source of result.sourceFiles { if source.path == path { matched = source } }
+    state.probes.push(FrontendSourceProbe {
+      logicalPath: path,
+      sourceHash: if matched == none then "" else sha256HexString(matched!.source),
+      missing: matched == none,
+    })
+  }
+  addFrontendFileInput(state.fileInputs, rootManifest.manifestPath)
+  for reached of configuredDriverSourceState.reachedPackages {
+    addFrontendFileInput(state.fileInputs, reached.manifest.manifestPath)
+  }
+  if result.emission != none {
+    for module of result.emission!.modules {
+      state.modules.push(FrontendModuleOutput {
+        modulePath: module.modulePath, headerName: module.headerName, sourceName: module.sourceName,
+        fingerprint: module.fingerprint,
+      })
+    }
+  }
+  return state
+}
+
+function cachedModuleGraph(state: FrontendCacheState, outputDirectory: string): ModuleGraphEmission | none {
+  if state.modules.length == 0 { return none }
+  graph := ModuleGraphEmission {}
+  for module of state.modules {
+    if !exists(driverOutputPath(outputDirectory, module.headerName)) ||
+      !exists(driverOutputPath(outputDirectory, module.sourceName)) { return none }
+    graph.modules.push(ModuleEmission {
+      modulePath: module.modulePath, headerName: module.headerName, sourceName: module.sourceName,
+      header: "", source: "", reused: true, fingerprint: module.fingerprint,
+    })
+  }
+  return graph
+}
+
+function reusableEmissionKeys(
+  state: FrontendCacheState | none,
+  outputDirectory: string,
+): ModuleEmissionCacheKey[] {
+  let keys: ModuleEmissionCacheKey[] = []
+  if state == none { return keys }
+  for module of state!.modules {
+    if module.fingerprint == "" || !exists(driverOutputPath(outputDirectory, module.headerName)) ||
+      !exists(driverOutputPath(outputDirectory, module.sourceName)) { continue }
+    keys.push(ModuleEmissionCacheKey { modulePath: module.modulePath, fingerprint: module.fingerprint })
+  }
+  return keys
+}
+
+function addFrontendFileInput(inputs: FrontendFileInput[], path: string): none {
+  for input of inputs { if input.path == path { return } }
+  source := readText(path) else { return }
+  inputs.push(FrontendFileInput { path, sourceHash: sha256HexString(source) })
+}
+
+function writeFrontendState(path: string, state: FrontendCacheState): none {
+  ensureOutputDirectory(parentPath(path))
+  temporaryPath := path + ".tmp"
+  try! writeText(temporaryPath, renderFrontendCacheState(state))
+  try! rename(temporaryPath, path)
+}
+
+function removeStaleFrontendOutputs(
+  previous: FrontendCacheState | none,
+  current: FrontendCacheState,
+  outputDirectory: string,
+): none {
+  if previous == none { return }
+  prefix := if outputDirectory.endsWith("/") then outputDirectory else outputDirectory + "/"
+  for old of previous!.modules {
+    let retained = false
+    for module of current.modules {
+      if module.modulePath == old.modulePath && module.headerName == old.headerName && module.sourceName == old.sourceName {
+        retained = true
+      }
+    }
+    if retained { continue }
+    for name of [old.headerName, old.sourceName] {
+      path := driverOutputPath(outputDirectory, name)
+      if path.startsWith(prefix) && exists(path) && !isDirectory(path) { try! remove(path) }
+    }
+  }
+}
+
 function writeBlobIfChanged(path: string, content: readonly byte[]): none {
   if exists(path) {
     existing := try! readBlob(path)
@@ -668,6 +821,7 @@ function blobsEqual(left: readonly byte[], right: readonly byte[]): bool {
 function materializeProject(outputDirectory: string, project: ProjectEmission): none {
   ensureOutputDirectory(outputDirectory)
   for module of project.modules {
+    if module.reused { continue }
     writeTextIfChanged(driverOutputPath(outputDirectory, module.headerName), module.header)
     writeTextIfChanged(driverOutputPath(outputDirectory, module.sourceName), module.source)
   }
@@ -1019,9 +1173,47 @@ function emitRequest(request: CliRequest): int {
     }
   }
   entryMode := if project.target == "wasm" then "wasm" else if project.iosApp == none then "executable" else "ios-app"
-  result := compileWithLoader([], entry, loader, namespaceMappings, entryMode)
+  buildDirectory := if request.outputDirectory == ""
+    then joinPath(project.rootDirectory, project.buildDirectory)
+    else try! absolute(request.outputDirectory)
+  outputDirectory := if request.command == "package"
+    then joinPath(buildDirectory, "release")
+    else buildDirectory
+  frontendConfiguration := frontendConfigurationFingerprint(
+    entry, entryMode, project.target, rootManifest, stdlibRoot, nativePlatform, externalTarget,
+  )
+  checkCachePath := frontendCachePath(buildDirectory, "check")
+  if request.command == "check" && frontendStateMatches(readFrontendState(checkCachePath), frontendConfiguration, loader) {
+    return 0
+  }
+  emissionCachePath := frontendCachePath(buildDirectory, "emission")
+  previousEmissionState := readFrontendState(emissionCachePath)
+  let reusedFrontend = false
+  let result = Compilation { emission: none, diagnostics: [] }
+  cachedGraph := if request.command == "emit" || request.command == "build" || request.command == "run"
+    then if project.target == "wasm" || project.macosApp != none || project.iosApp != none
+      then none
+      else if frontendStateMatches(previousEmissionState, frontendConfiguration, loader) && previousEmissionState != none
+        then cachedModuleGraph(previousEmissionState!, outputDirectory)
+        else none
+    else none
+  if cachedGraph != none {
+    result = Compilation { emission: cachedGraph!, diagnostics: [] }
+    reusedFrontend = true
+  } else {
+    result = if request.command == "check"
+      then checkWithLoader([], entry, loader, entryMode)
+      else compileWithLoader(
+        [], entry, loader, namespaceMappings, entryMode, false,
+        if request.command == "package" then [] else reusableEmissionKeys(previousEmissionState, outputDirectory),
+        frontendConfiguration,
+      )
+  }
   if result.diagnostics.length > 0 { printDiagnostics(result.diagnostics) }
   if hasErrorDiagnostics(result.diagnostics) { return 1 }
+  if request.command != "check" && request.command != "package" && !reusedFrontend && result.diagnostics.length == 0 {
+    writeFrontendState(checkCachePath, frontendStateForCompilation(result, frontendConfiguration, rootManifest))
+  }
   if request.command == "package" && hasMutableStdPackageInputs(reachedPackageInputs(rootManifest)) {
     println("warning: packaging with standard packages overridden by DOOF_STDLIB_ROOT; provenance.json will record them as mutable inputs")
   }
@@ -1029,19 +1221,18 @@ function emitRequest(request: CliRequest): int {
     println("error: " + error)
     return 1
   }
-  if request.command == "check" { return 0 }
+  if request.command == "check" {
+    if result.diagnostics.length == 0 {
+      writeFrontendState(checkCachePath, frontendStateForCompilation(result, frontendConfiguration, rootManifest))
+    }
+    return 0
+  }
   if result.emission == none { panic("compiler produced no emission") }
   _ := acquireResolvedExternalInputs(externalInputs, externalTarget) else error {
     println("error: " + error)
     return 1
   }
 
-  buildDirectory := if request.outputDirectory == ""
-    then joinPath(project.rootDirectory, project.buildDirectory)
-    else try! absolute(request.outputDirectory)
-  outputDirectory := if request.command == "package"
-    then joinPath(buildDirectory, "release")
-    else buildDirectory
   emission := planProjectEmission(
     result.emission!,
     projectNativePackages(project.rootDirectory, rootManifest, stdlibRoot),
@@ -1054,6 +1245,11 @@ function emitRequest(request: CliRequest): int {
       reachedPackageInputs(rootManifest), externalInputs, emission.nativeBuild, configuredDriverSourceState.stdCatalog,
     ),
   )
+  if !reusedFrontend && request.command != "package" && project.target != "wasm" && project.macosApp == none && project.iosApp == none {
+    nextEmissionState := frontendStateForCompilation(result, frontendConfiguration, rootManifest)
+    removeStaleFrontendOutputs(previousEmissionState, nextEmissionState, outputDirectory)
+    writeFrontendState(emissionCachePath, nextEmissionState)
+  }
   if project.iosApp != none {
     _ := configureIOSNativeBuild(outputDirectory, project.iosApp!, iosDestination, emission.nativeBuild) else error {
       println("error: " + error)

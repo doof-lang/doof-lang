@@ -20,6 +20,7 @@ import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { HeaderPlan, planHeader, renderHeader } from "./emitter-header"
 import { buildInstantiationPlan, ClassInstantiation, FunctionInstantiation, InstantiationPlan, MethodInstantiation, nativeTemplateClassKey } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
+import { sha256HexString } from "std/crypto"
 import {
   ArrayResolvedType, ClassType, FunctionType, ImportBinding, InterfaceType, MapResolvedType, NamespaceBinding,
   ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeSubstitution, UnionResolvedType, WeakResolvedType,
@@ -69,6 +70,15 @@ export class ModuleEmission {
   sourceName: string
   coverageModuleId: int = -1
   instrumentedLines: int[] = []
+  // Exact frontend-cache hits retain the already materialized files. The
+  // native planner still consumes their stable names.
+  reused: bool = false
+  let fingerprint: string = ""
+}
+
+export class ModuleEmissionCacheKey {
+  modulePath: string
+  fingerprint: string
 }
 
 export class CoverageModuleMetadata {
@@ -323,11 +333,15 @@ export function emitModuleGraph(
   instantiations: InstantiationPlan | none = none,
   entryMode: string = "executable",
   coverage: bool = false,
+  reusableModules: ModuleEmissionCacheKey[] = [],
+  configurationFingerprint: string = "",
 ): ModuleGraphEmission {
   graph := ModuleGraphEmission {}
   concretePlan := instantiations ?? buildInstantiationPlan(result)
   plan := planModuleGraph(result)
   initializationOrder := planModuleInitializationOrder(result, entry, entryMode)
+  graphPrograms := allPrograms(result)
+  graphSurfaces := emitModuleSurfaces(result)
   let nextCoverageModuleId = 0
   for module of plan.modules {
     info := findGraphModule(result, module.path)
@@ -337,16 +351,27 @@ export function emitModuleGraph(
       coverageModuleId = nextCoverageModuleId
       nextCoverageModuleId += 1
     }
+    fingerprint := moduleEmissionFingerprint(
+      result, info!, concretePlan, module.path, entry, entryMode, coverage,
+      initializationOrder, configurationFingerprint,
+    )
+    if !coverage && reusableModuleMatches(reusableModules, module.path, fingerprint) {
+      graph.modules.push(ModuleEmission {
+        modulePath: module.path, headerName: module.headerName, sourceName: module.sourceName,
+        header: "", source: "", reused: true, fingerprint,
+      })
+      continue
+    }
     emitter := CxxModuleEmitter {
       moduleName: module.namespaceName,
       headerNameOverride: module.headerName,
       sourceNameOverride: module.sourceName,
       namespaceNameOverride: module.namespaceName,
       modulePath: module.path,
-      allPrograms: allPrograms(result),
+      allPrograms: graphPrograms,
       namespaceImports: infoNamespaceImports(result, module.path),
       imports: infoImports(result, module.path),
-      moduleSurfaces: emitModuleSurfaces(result),
+      moduleSurfaces: graphSurfaces,
       instantiations: concretePlan,
       coverageModuleId,
       initializationModuleNamespaces: if module.path == entry then moduleInitializationNamespaces(initializationOrder) else [],
@@ -356,6 +381,7 @@ export function emitModuleGraph(
       module.includes,
       if module.path == entry then entryMode else "none",
     )
+    emitted.fingerprint = fingerprint
     graph.modules.push(emitted)
     if coverageModuleId >= 0 {
       graph.coverageModules.push(CoverageModuleMetadata {
@@ -366,6 +392,60 @@ export function emitModuleGraph(
     }
   }
   return graph
+}
+
+function reusableModuleMatches(keys: ModuleEmissionCacheKey[], path: string, fingerprint: string): bool {
+  for key of keys { if key.modulePath == path && key.fingerprint == fingerprint { return true } }
+  return false
+}
+
+function moduleEmissionFingerprint(
+  result: AnalysisResult,
+  module: ModuleInfo,
+  instantiations: InstantiationPlan,
+  path: string,
+  entry: string,
+  entryMode: string,
+  coverage: bool,
+  initializationOrder: string[],
+  configurationFingerprint: string,
+): string {
+  let value = "doof-module-emission-1\n" + configurationFingerprint + "\n" + path + "\n" +
+    entryMode + "\n" + string(coverage)
+  let reachable: string[] = []
+  collectModuleDependencyClosure(result, path, reachable)
+  for candidate of result.modules {
+    if containsString(reachable, candidate.path) {
+      value = value + "\nsource:" + candidate.path + ":" + candidate.sourceHash
+    }
+  }
+  // Concrete specialization ownership can flow opposite to import edges: a
+  // caller may add code to a generic declaration's module. Include the global
+  // plan conservatively so such changes can never retain stale C++.
+  for item of instantiations.functions { value = value + "\nfunction:" + item.key }
+  for item of instantiations.classes { value = value + "\nclass:" + item.key }
+  for item of instantiations.methods { value = value + "\nmethod:" + item.key }
+  for item of instantiations.interfaces {
+    value = value + "\ninterface:" + item.key
+    for implementation of item.implementations {
+      value = value + ":" + implementation.modulePath + ":" + implementation.typeName
+    }
+  }
+  for key of instantiations.nativeTemplateClassKeys { value = value + "\nnative:" + key }
+  if path == entry {
+    for initialized of initializationOrder { value = value + "\ninitialize:" + initialized }
+  }
+  return sha256HexString(value)
+}
+
+function collectModuleDependencyClosure(result: AnalysisResult, path: string, reachable: string[]): none {
+  if containsString(reachable, path) { return }
+  reachable.push(path)
+  module := findGraphModule(result, path)
+  if module == none { return }
+  for imported of module!.imports { collectModuleDependencyClosure(result, imported.sourceModule, reachable) }
+  for imported of module!.namespaceImports { collectModuleDependencyClosure(result, imported.sourceModule, reachable) }
+  for reExport of module!.reExports { collectModuleDependencyClosure(result, reExport, reachable) }
 }
 
 function isCoverageEligible(modulePath: string): bool {

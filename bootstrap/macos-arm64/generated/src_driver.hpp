@@ -11,6 +11,7 @@
 #include <type_traits>
 #include <variant>
 #include <vector>
+namespace app_src_compiler_ { struct Compilation; }
 namespace app_src_cli_ { struct CliRequest; }
 namespace app_src_external_dependency_ { struct ExternalDependencyTarget; }
 namespace app_src_dependency_policy_ { struct ReachedPackageInput; }
@@ -18,6 +19,13 @@ namespace app_src_dependency_policy_ { struct ResolvedExternalInput; }
 namespace app_src_emitter_project_ { struct NativePackageInput; }
 namespace app_src_emitter_project_ { struct ProjectEmission; }
 namespace app_src_emitter_names_ { struct ModuleNamespaceMapping; }
+namespace app_src_emitter_module_ { struct ModuleEmission; }
+namespace app_src_emitter_module_ { struct ModuleEmissionCacheKey; }
+namespace app_src_emitter_module_ { struct ModuleGraphEmission; }
+namespace app_src_frontend_cache_ { struct FrontendCacheState; }
+namespace app_src_frontend_cache_ { struct FrontendFileInput; }
+namespace app_src_frontend_cache_ { struct FrontendModuleOutput; }
+namespace app_src_frontend_cache_ { struct FrontendSourceProbe; }
 namespace app_src_module_acquisition_ { struct ModuleAcquisition; }
 namespace app_src_package_manifest_ { struct ExternalDependency; }
 namespace app_src_package_manifest_ { struct NativeBuildPlan; }
@@ -58,6 +66,8 @@ namespace app_src_driver_ {
 #include "src_dependency_policy.hpp"
 #include "src_emitter_project.hpp"
 #include "src_emitter_names.hpp"
+#include "src_emitter_module.hpp"
+#include "src_frontend_cache.hpp"
 #include "src_module_acquisition.hpp"
 #include "src_native_build_driver.hpp"
 #include "src_package_manifest.hpp"
@@ -76,6 +86,7 @@ namespace app_src_driver_ {
 #include "src_std_catalog.hpp"
 #include "src_test_runner.hpp"
 #include "std_blob_index.hpp"
+#include "std_crypto_index.hpp"
 #include "std_fs_index.hpp"
 #include "std_os_index.hpp"
 #include "std_path_index.hpp"
@@ -177,6 +188,17 @@ namespace app_src_driver_ {
     void ensureOutputDirectory(const std::string& path);
     void materializeNativeCopy(const std::string& sourcePath, const std::string& outputPath);
     void writeTextIfChanged(const std::string& path, const std::string& content);
+    std::string frontendCachePath(const std::string& buildDirectory, const std::string& kind);
+    std::string frontendConfigurationFingerprint(const std::string& entry, const std::string& entryMode, const std::string& target, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& manifest, const std::string& stdlibRoot, const std::string& nativePlatform, const std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget>& externalTarget);
+    std::string readTextOrEmpty(const std::string& path);
+    std::shared_ptr<::app_src_frontend_cache_::FrontendCacheState> readFrontendState(const std::string& path);
+    bool frontendStateMatches(const std::shared_ptr<::app_src_frontend_cache_::FrontendCacheState>& state, const std::string& configurationFingerprint, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader);
+    std::shared_ptr<::app_src_frontend_cache_::FrontendCacheState> frontendStateForCompilation(const std::shared_ptr<::app_src_compiler_::Compilation>& result, const std::string& configurationFingerprint, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest);
+    std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission> cachedModuleGraph(const std::shared_ptr<::app_src_frontend_cache_::FrontendCacheState>& state, const std::string& outputDirectory);
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>> reusableEmissionKeys(const std::shared_ptr<::app_src_frontend_cache_::FrontendCacheState>& state, const std::string& outputDirectory);
+    void addFrontendFileInput(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_frontend_cache_::FrontendFileInput>>>& inputs, const std::string& path);
+    void writeFrontendState(const std::string& path, const std::shared_ptr<::app_src_frontend_cache_::FrontendCacheState>& state);
+    void removeStaleFrontendOutputs(const std::shared_ptr<::app_src_frontend_cache_::FrontendCacheState>& previous, const std::shared_ptr<::app_src_frontend_cache_::FrontendCacheState>& current, const std::string& outputDirectory);
     void writeBlobIfChanged(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& content);
     bool blobsEqual(const std::shared_ptr<std::vector<uint8_t>>& left, const std::shared_ptr<std::vector<uint8_t>>& right);
     void materializeProject(const std::string& outputDirectory, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project);
