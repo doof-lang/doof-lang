@@ -32,7 +32,7 @@ export function testRoundTripsVersionedNativeBuildState(): none {
       outputPath: "/build/main.o",
       outputSize: 42L,
       outputModifiedNanos: 99L,
-      inputs: [NativeInputSignature { path: "/src/main.cpp", signature: "def" }],
+      inputs: [NativeInputSignature { path: "/src/main.cpp", signature: "def", size: 12L, modifiedNanos: 13L }],
     }],
     managedOutputs: ["/build/main.o"],
   }
@@ -41,6 +41,7 @@ export function testRoundTripsVersionedNativeBuildState(): none {
   task := findNativeTaskState(parsed!, "object:main")
   Assert.equal(task != none, true)
   Assert.equal(task!.inputs[0].signature, "def")
+  Assert.equal(task!.inputs[0].size, 12L)
   Assert.equal(parsed!.version, NATIVE_BUILD_STATE_VERSION)
   Assert.equal(parseNativeBuildState("{\"version\":999}"), none)
   Assert.equal(parseNativeBuildState("not json"), none)

@@ -8,13 +8,15 @@
 
 namespace app_src_native_build_state_ {
 using namespace ::std_::json::index;
-int32_t NATIVE_BUILD_STATE_VERSION = 1;
+int32_t NATIVE_BUILD_STATE_VERSION = 2;
 
 doof::JsonObject NativeInputSignature::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
     (*_json)["path"] = doof::json_value(this->path);
     (*_json)["signature"] = doof::json_value(this->signature);
     (*_json)["contentHash"] = doof::json_value(this->contentHash);
+    (*_json)["size"] = doof::json_value(this->size);
+    (*_json)["modifiedNanos"] = doof::json_value(this->modifiedNanos);
     return _json;
 }
 doof::Result<std::shared_ptr<NativeInputSignature>, std::string> NativeInputSignature::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
@@ -35,7 +37,21 @@ doof::Result<std::shared_ptr<NativeInputSignature>, std::string> NativeInputSign
     } else {
         _field_contentHash = true;
     }
-    return doof::Success<std::shared_ptr<NativeInputSignature>>{std::make_shared<NativeInputSignature>(_field_path, _field_signature, _field_contentHash.value())};
+    std::optional<int64_t> _field_size;
+    if (auto _iterator_size = _object->find("size"); _iterator_size != _object->end()) {
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_size->second) : doof::json_is_number(_iterator_size->second)))) { return doof::Failure<std::string>{"Field \"size\" expected number but got " + std::string(doof::json_type_name(_iterator_size->second))}; }
+        _field_size = (_lenient ? doof::json_as_long_lenient(_iterator_size->second) : doof::json_as_long(_iterator_size->second));
+    } else {
+        _field_size = -1LL;
+    }
+    std::optional<int64_t> _field_modifiedNanos;
+    if (auto _iterator_modifiedNanos = _object->find("modifiedNanos"); _iterator_modifiedNanos != _object->end()) {
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_modifiedNanos->second) : doof::json_is_number(_iterator_modifiedNanos->second)))) { return doof::Failure<std::string>{"Field \"modifiedNanos\" expected number but got " + std::string(doof::json_type_name(_iterator_modifiedNanos->second))}; }
+        _field_modifiedNanos = (_lenient ? doof::json_as_long_lenient(_iterator_modifiedNanos->second) : doof::json_as_long(_iterator_modifiedNanos->second));
+    } else {
+        _field_modifiedNanos = -1LL;
+    }
+    return doof::Success<std::shared_ptr<NativeInputSignature>>{std::make_shared<NativeInputSignature>(_field_path, _field_signature, _field_contentHash.value(), _field_size.value(), _field_modifiedNanos.value())};
 }
 
 doof::JsonObject NativeTaskState::toJsonObject() const {
@@ -96,7 +112,7 @@ doof::Result<std::shared_ptr<NativeBuildState>, std::string> NativeBuildState::f
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_version->second) : doof::json_is_number(_iterator_version->second)))) { return doof::Failure<std::string>{"Field \"version\" expected number but got " + std::string(doof::json_type_name(_iterator_version->second))}; }
         _field_version = (_lenient ? doof::json_as_int_lenient(_iterator_version->second) : doof::json_as_int(_iterator_version->second));
     } else {
-        _field_version = 1;
+        _field_version = 2;
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<NativeTaskState>>>> _field_tasks;
     if (auto _iterator_tasks = _object->find("tasks"); _iterator_tasks != _object->end()) {

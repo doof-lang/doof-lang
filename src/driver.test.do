@@ -1,5 +1,16 @@
 import { Assert } from "std/assert"
-import { driverRootLogicalPath, driverRootLogicalPrefix, nativeBuildOutputName } from "./driver"
+import { driverRootLogicalPath, driverRootLogicalPrefix, nativeBuildOutputName, synchronizeExecutableResources } from "./driver"
+import { PackageResource } from "./package-manifest"
+import { exists, isDirectory, metadata, mkdir, readDir, readText, remove, writeText } from "std/fs"
+import { join, tempDirectory } from "std/path"
+
+function removeDriverTestTree(path: string): none {
+  if !exists(path) { return }
+  if isDirectory(path) {
+    for entry of try! readDir(path) { removeDriverTestTree(join([path, entry.name])) }
+  }
+  try! remove(path)
+}
 
 export function testCanonicalizesStandardPackageRoots(): none {
   Assert.equal(driverRootLogicalPrefix("std/path", "/workspace/doof-stdlib/path"), "/std/path")
@@ -47,4 +58,37 @@ export function testPlansMsvcNativeExecutableSuffixOnWindows(): none {
   Assert.equal(nativeBuildOutputName("tools/doof", "windows"), "tools-doof.exe")
   Assert.equal(nativeBuildOutputName("doof.exe", "windows"), "doof.exe")
   Assert.equal(nativeBuildOutputName("doof", "macos"), "doof")
+}
+
+export function testSynchronizesExecutableResourceEditsAdditionsAndRemovals(): none {
+  root := join([tempDirectory(), "doof-driver-resource-sync"])
+  removeDriverTestTree(root)
+  try! mkdir(root)
+  source := join([root, "source"])
+  output := join([root, "output"])
+  try! mkdir(source)
+  try! mkdir(output)
+  keepSource := join([source, "keep.txt"])
+  removedSource := join([source, "removed.txt"])
+  try! writeText(keepSource, "first")
+  try! writeText(removedSource, "remove")
+  resources := [PackageResource { sourcePath: source, destination: "assets" }]
+  statePath := join([output, ".doof-cache/v1/resources.json"])
+
+  synchronizeExecutableResources(resources, output, statePath)
+  keepOutput := join([output, "assets/keep.txt"])
+  removedOutput := join([output, "assets/removed.txt"])
+  before := try! metadata(keepOutput)
+  synchronizeExecutableResources(resources, output, statePath)
+  after := try! metadata(keepOutput)
+  Assert.equal(after.modifiedAt.toEpochNanos(), before.modifiedAt.toEpochNanos())
+
+  try! writeText(keepSource, "second value")
+  try! remove(removedSource)
+  try! writeText(join([source, "added.txt"]), "added")
+  synchronizeExecutableResources(resources, output, statePath)
+  Assert.equal(try! readText(keepOutput), "second value")
+  Assert.equal(try! readText(join([output, "assets/added.txt"])), "added")
+  Assert.equal(exists(removedOutput), false)
+  removeDriverTestTree(root)
 }

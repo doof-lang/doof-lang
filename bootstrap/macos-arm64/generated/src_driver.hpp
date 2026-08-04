@@ -34,6 +34,8 @@ namespace app_src_package_manifest_ { struct PackageManifest; }
 namespace app_src_package_manifest_ { struct PackageResource; }
 namespace app_src_package_acquisition_ { struct ExactPackageSource; }
 namespace app_src_parser_ { struct Parser; }
+namespace app_src_resource_state_ { struct MaterializedResource; }
+namespace app_src_resource_state_ { struct ResourceState; }
 namespace app_src_semantic_ { struct Diagnostic; }
 namespace app_src_semantic_ { struct SemanticLocation; }
 namespace app_src_semantic_ { struct SemanticSpan; }
@@ -80,6 +82,7 @@ namespace app_src_driver_ {
 #include "src_parser.hpp"
 #include "src_project.hpp"
 #include "src_provenance.hpp"
+#include "src_resource_state.hpp"
 #include "src_resolver.hpp"
 #include "src_run_command.hpp"
 #include "src_semantic.hpp"
@@ -203,6 +206,10 @@ namespace app_src_driver_ {
     bool blobsEqual(const std::shared_ptr<std::vector<uint8_t>>& left, const std::shared_ptr<std::vector<uint8_t>>& right);
     void materializeProject(const std::string& outputDirectory, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project);
     void materializeExecutableResources(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>>& resources, const std::string& outputDirectory);
+    std::shared_ptr<::app_src_resource_state_::ResourceState> readResourceState(const std::string& path);
+    void materializeTrackedResource(const std::string& sourcePath, const std::string& outputPath, const std::shared_ptr<::app_src_resource_state_::ResourceState>& previous, const std::shared_ptr<::app_src_resource_state_::ResourceState>& next);
+    bool resourceOutputIsCurrent(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_resource_state_::MaterializedResource>>>& files, const std::string& outputPath);
+    void synchronizeExecutableResources(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>>& resources, const std::string& outputDirectory, const std::string& statePath);
     void materializeRuntimeHeader(const std::string& outputDirectory);
     std::string nativeBuildOutputName(const std::string& projectName, const std::string& nativePlatform);
     void printDiagnostics(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);

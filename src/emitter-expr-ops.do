@@ -256,11 +256,23 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
         _ -> { }
       }
     }
-    case expression.operand {
-      member: MemberExpression -> { return "doof::unwrap_optional(" + operand + ")" }
-      _ -> { }
-    }
     if operandType != none {
+      case expression.operand {
+        _: MemberExpression -> {
+          case operandType! {
+            union_: UnionResolvedType -> {
+              if usesVariantRepresentation(union_) {
+                let nonNullMembers: ResolvedType[] = []
+                for member of union_.types { if member.kind != "none" { nonNullMembers.push(member) } }
+                if nonNullMembers.length == 1 { return "std::get<" + emitType(nonNullMembers[0], context.modulePath) + ">(" + operand + ")" }
+              }
+            }
+            _ -> { }
+          }
+          return "doof::unwrap_optional(" + operand + ")"
+        }
+        _ -> { }
+      }
       case operandType! {
         union_: UnionResolvedType -> {
           if hasSinglePrimitiveMember(union_) { return operand + ".value()" }

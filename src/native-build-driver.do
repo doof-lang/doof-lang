@@ -227,11 +227,25 @@ function linkFingerprint(linker: string, arguments: string[], outputPath: string
   return sha256HexString(value)
 }
 
-function pathSignature(path: string, contentHash: bool): string | none {
+function pathSignature(path: string, contentHash: bool): NativeInputSignature | none {
   if !exists(path) || isDirectory(path) { return none }
-  if contentHash { return sha256Hex(try! readBlob(path)) }
   info := metadata(path) else { return none }
-  return string(info.size) + ":" + string(info.modifiedAt.toEpochNanos())
+  modifiedNanos := info.modifiedAt.toEpochNanos()
+  signature := if contentHash then sha256Hex(try! readBlob(path)) else string(info.size) + ":" + string(modifiedNanos)
+  return NativeInputSignature { path, signature, contentHash, size: info.size, modifiedNanos }
+}
+
+function currentInputSignature(previous: NativeInputSignature): NativeInputSignature | none {
+  if !exists(previous.path) || isDirectory(previous.path) { return none }
+  info := metadata(previous.path) else { return none }
+  modifiedNanos := info.modifiedAt.toEpochNanos()
+  if previous.size == info.size && previous.modifiedNanos == modifiedNanos {
+    return NativeInputSignature {
+      path: previous.path, signature: previous.signature, contentHash: previous.contentHash,
+      size: info.size, modifiedNanos,
+    }
+  }
+  return pathSignature(previous.path, previous.contentHash)
 }
 
 function taskIsCurrent(previous: NativeTaskState | none, fingerprint: string): bool {
@@ -239,9 +253,9 @@ function taskIsCurrent(previous: NativeTaskState | none, fingerprint: string): b
   info := metadata(previous!.outputPath) else { return false }
   let currentInputs: NativeInputSignature[] = []
   for input of previous!.inputs {
-    signature := pathSignature(input.path, input.contentHash)
+    signature := currentInputSignature(input)
     if signature == none { return false }
-    currentInputs.push(NativeInputSignature { path: input.path, signature: signature!, contentHash: input.contentHash })
+    currentInputs.push(signature!)
   }
   return nativeTaskStateIsCurrent(previous, fingerprint, info.size, info.modifiedAt.toEpochNanos(), currentInputs)
 }
@@ -260,7 +274,8 @@ export function nativeTaskStateIsCurrent(
   for index of 0..<previous!.inputs.length {
     expected := previous!.inputs[index]
     current := currentInputs[index]
-    if expected.path != current.path || expected.signature != current.signature || expected.contentHash != current.contentHash { return false }
+    if expected.path != current.path || expected.signature != current.signature || expected.contentHash != current.contentHash ||
+      expected.size != current.size || expected.modifiedNanos != current.modifiedNanos { return false }
   }
   return true
 }
@@ -278,7 +293,7 @@ function captureTaskState(task: NativeCompileTask, fingerprint: string): NativeT
   }
   for path of paths {
     signature := pathSignature(path, true)
-    if signature != none { state.inputs.push(NativeInputSignature { path, signature: signature!, contentHash: true }) }
+    if signature != none { state.inputs.push(signature!) }
   }
   return state
 }
@@ -288,7 +303,7 @@ function captureLinkState(outputPath: string, fingerprint: string, objectPaths: 
   state := NativeTaskState { id: "link:" + outputPath, fingerprint, outputPath, outputSize: info.size, outputModifiedNanos: info.modifiedAt.toEpochNanos() }
   for path of objectPaths {
     signature := pathSignature(path, false)
-    if signature != none { state.inputs.push(NativeInputSignature { path, signature: signature!, contentHash: false }) }
+    if signature != none { state.inputs.push(signature!) }
   }
   return state
 }

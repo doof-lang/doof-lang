@@ -36,6 +36,10 @@ import { resolveIOSDeviceIdentifier, resolveIOSDeviceSigningOptions, signIOSDevi
 import { Parser } from "./parser"
 import { environmentValue, fileName, joinPath, parentPath, projectEntryRequestError, readProjectSpec } from "./project"
 import { renderBuildProvenance } from "./provenance"
+import {
+  MaterializedResource, ResourceState, findMaterializedResource, materializedResourceIsCurrent,
+  parseResourceState, renderResourceState,
+} from "./resource-state"
 import { SourceLoader } from "./resolver"
 import {
   planIOSDeviceInstall, planIOSDeviceLaunch, planIOSSimulatorInstall, planIOSSimulatorLaunch,
@@ -51,7 +55,7 @@ import {
 } from "./test-runner"
 import { BlobReader } from "std/blob"
 import { sha256HexString } from "std/crypto"
-import { EntryKind, exists, isDirectory, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
+import { EntryKind, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
 import { ExecOptions, architecture, run, platform } from "std/os"
 import { absolute } from "std/path"
 
@@ -853,6 +857,84 @@ function materializeExecutableResources(resources: PackageResource[], outputDire
   }
 }
 
+function readResourceState(path: string): ResourceState {
+  if !exists(path) { return ResourceState {} }
+  source := readText(path) else { return ResourceState {} }
+  parsed := parseResourceState(source)
+  return if parsed == none then ResourceState {} else parsed!
+}
+
+function materializeTrackedResource(
+  sourcePath: string,
+  outputPath: string,
+  previous: ResourceState,
+  next: ResourceState,
+): none {
+  if isDirectory(sourcePath) {
+    ensureOutputDirectory(outputPath)
+    for entry of try! readDir(sourcePath) {
+      materializeTrackedResource(joinPath(sourcePath, entry.name), joinPath(outputPath, entry.name), previous, next)
+    }
+    return
+  }
+  sourceInfo := try! metadata(sourcePath)
+  prior := findMaterializedResource(previous, sourcePath, outputPath)
+  if exists(outputPath) && !isDirectory(outputPath) {
+    outputInfo := try! metadata(outputPath)
+    if materializedResourceIsCurrent(
+      prior,
+      sourceInfo.size,
+      sourceInfo.modifiedAt.toEpochNanos(),
+      outputInfo.size,
+      outputInfo.modifiedAt.toEpochNanos(),
+    ) {
+      next.files.push(prior!)
+      return
+    }
+  }
+  materializeNativeCopy(sourcePath, outputPath)
+  outputInfo := try! metadata(outputPath)
+  next.files.push(MaterializedResource {
+    sourcePath,
+    outputPath,
+    sourceSize: sourceInfo.size,
+    sourceModifiedNanos: sourceInfo.modifiedAt.toEpochNanos(),
+    outputSize: outputInfo.size,
+    outputModifiedNanos: outputInfo.modifiedAt.toEpochNanos(),
+  })
+}
+
+function resourceOutputIsCurrent(files: MaterializedResource[], outputPath: string): bool {
+  for file of files { if file.outputPath == outputPath { return true } }
+  return false
+}
+
+export function synchronizeExecutableResources(
+  resources: PackageResource[],
+  outputDirectory: string,
+  statePath: string,
+): none {
+  previous := readResourceState(statePath)
+  next := ResourceState {}
+  for resource of resources {
+    destinationRoot := driverOutputPath(outputDirectory, resource.destination)
+    outputPath := if isDirectory(resource.sourcePath)
+      then destinationRoot
+      else driverOutputPath(destinationRoot, fileName(resource.sourcePath))
+    materializeTrackedResource(resource.sourcePath, outputPath, previous, next)
+  }
+  prefix := if outputDirectory.endsWith("/") then outputDirectory else outputDirectory + "/"
+  for old of previous.files {
+    if resourceOutputIsCurrent(next.files, old.outputPath) || !old.outputPath.startsWith(prefix) ||
+      !exists(old.outputPath) || isDirectory(old.outputPath) { continue }
+    try! remove(old.outputPath)
+  }
+  ensureOutputDirectory(parentPath(statePath))
+  temporaryPath := statePath + ".tmp"
+  try! writeText(temporaryPath, renderResourceState(next))
+  try! rename(temporaryPath, statePath)
+}
+
 function materializeRuntimeHeader(outputDirectory: string): none {
   // Packaged compilers carry the canonical header as an executable resource.
   // The override remains useful when developing against an alternate runtime.
@@ -1270,7 +1352,9 @@ function emitRequest(request: CliRequest): int {
     }
     executableName := if project.target == "wasm" then nativeBuildOutputName(project.name, "") + ".wasm" else if project.macosApp != none then project.macosApp!.executableName else if project.iosApp != none then project.iosApp!.executableName else nativeBuildOutputName(project.name, nativePlatform)
     outputPath := driverOutputPath(outputDirectory, executableName)
-    if project.macosApp == none && project.iosApp == none { materializeExecutableResources(project.resources, outputDirectory) }
+    if project.macosApp == none && project.iosApp == none {
+      synchronizeExecutableResources(project.resources, outputDirectory, frontendCachePath(buildDirectory, "resources"))
+    }
     exitCode := buildNativeProject(request.compiler, outputDirectory, outputPath, emission, false, hostPlatform())
     if exitCode != 0 { return exitCode }
     if project.iosApp != none {

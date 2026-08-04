@@ -559,6 +559,19 @@ export function testKeepsNullableNativePseudoFieldNamesAsMethodCalls(): none {
   Assert.equal(result.source.contains("doof::span(node)"), false)
 }
 
+export function testUnwrapsNullableEnumFieldsToTheirEnumValue(): none {
+  result := emit(
+    "enum Outcome { Victory, Defeat }\n" +
+    "class State { let pending: Outcome | none = none }\n" +
+    "function isVictory(outcome: Outcome): bool => outcome == Outcome.Victory\n" +
+    "function checkField(state: State): bool => isVictory(state.pending!)\n" +
+    "function checkLocal(pending: Outcome | none): bool => isVictory(pending!)",
+  )
+  Assert.stringContains(result.source, "isVictory(std::get<Outcome>(state->pending))")
+  Assert.stringContains(result.source, "isVictory(std::get<Outcome>(pending))")
+  Assert.equal(result.source.contains("isVictory(doof::unwrap_optional(state->pending))"), false)
+}
+
 export function testTreatsCompilerAstSpellingsAsOrdinaryNominalTypes(): none {
   result := emit("class Expression { kind: string\nresolvedType: string\nspan: int }\nfunction describe(value: Expression): string => value.kind + value.resolvedType + string(value.span)\nfunction missing(): Expression | none => none")
   Assert.stringContains(result.header, "std::shared_ptr<Expression>")

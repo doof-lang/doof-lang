@@ -4,12 +4,14 @@
 
 import { formatJsonValue, parseJsonValue } from "std/json"
 
-export readonly NATIVE_BUILD_STATE_VERSION = 1
+export readonly NATIVE_BUILD_STATE_VERSION = 2
 
 export class NativeInputSignature {
   path: string
   let signature: string
   contentHash: bool = true
+  size: long = -1L
+  modifiedNanos: long = -1L
 }
 
 export class NativeTaskState {
@@ -22,7 +24,7 @@ export class NativeTaskState {
 }
 
 export class NativeBuildState {
-  version: int = 1
+  version: int = 2
   tasks: NativeTaskState[] = []
   managedOutputs: string[] = []
 }

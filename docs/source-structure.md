@@ -37,6 +37,7 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
 | `diagnostics.do` | Shared diagnostic severity queries | Creation of feature-specific diagnostics |
 | `compiler.do` | Analyze → check all modules → graph validations → specialize → emit orchestration | Filesystem, package, or native compiler operations |
 | `frontend-cache.do` | Versioned pointer-free frontend fingerprints, resolution probes, and module-output records | AST/checker serialization or filesystem access |
+| `resource-state.do` | Versioned executable-resource source/output metadata and pure currentness checks | Filesystem traversal or copying |
 
 ## Checker
 
