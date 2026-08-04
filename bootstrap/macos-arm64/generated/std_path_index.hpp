@@ -47,7 +47,9 @@ namespace std_::path::index {
     std::string stem(const std::string& path);
     std::string extension(const std::string& path);
     bool isAbsolute(const std::string& path);
-    std::string renderPath(const std::shared_ptr<std::vector<std::string>>& segments, bool absolute);
+    std::string rootPrefix(const std::string& path);
+    bool isAsciiLetter(char32_t character);
+    std::string renderPath(const std::shared_ptr<std::vector<std::string>>& segments, const std::string& prefix);
     int32_t lastSeparatorIndex(const std::string& path);
     int32_t lastDotIndex(const std::string& path);
 }

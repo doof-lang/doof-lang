@@ -124,8 +124,8 @@ threads or reconstruct scheduling policy.
 | `external-dependency.do` | External archive/Git acquisition, sentinels, and build commands |
 | `provenance.do` | Deterministic reached-input and native-build provenance |
 | `pkg-config.do` | Pure interpretation of bounded `pkg-config` results |
-| `native-build.do` | Pure native compile/link task and argument planning |
-| `native-build-state.do` | Versioned incremental state and dependency-file parsing |
+| `native-build.do` | Pure GCC-compatible/MSVC compile and link task planning |
+| `native-build-state.do` | Versioned incremental state plus Make/MSVC dependency parsing |
 | `native-build-driver.do` | Native compiler processes, fingerprints, dependency signatures, PCH/object/link execution |
 | `test-runner.do` | Pure test discovery, grouping, harness generation, and coverage reports |
 | `run-command.do` | Pure invocation plans for built artifacts |
@@ -144,7 +144,7 @@ Other maintained inputs:
 - `resources/std-catalog.json` — embedded exact standard-package catalog
 - `tools/update-std-catalog.do` — catalog maintenance tool
 - `tests/release-fixtures/` — native and platform acceptance packages
-- `bootstrap/macos-arm64/generated/` — generated stage-0 trust root
+- `bootstrap/macos-arm64/generated/` — shared generated stage-0 trust root in its legacy location; host build scripts own target-native source selection
 
 Primitive string parsing is a standard-library concern owned by `std/parse`.
 The checker provides only an actionable migration diagnostic for removed

@@ -79,6 +79,22 @@ export function parseMakeDependencies(source: string): string[] {
   return result
 }
 
+/** Parses the dependency JSON emitted by MSVC's /sourceDependencies option. */
+export function parseMsvcDependencies(source: string): string[] {
+  parsed := parseJsonValue(source) else { return [] }
+  root := parsed as JsonObject else { return [] }
+  dataValue := root.get("Data") else { return [] }
+  data := dataValue as JsonObject else { return [] }
+  includesValue := data.get("Includes") else { return [] }
+  includes := includesValue as JsonValue[] else { return [] }
+  let result: string[] = []
+  for value of includes {
+    path := value as string else { continue }
+    appendUnique(result, path)
+  }
+  return result
+}
+
 function appendUnique(values: string[], value: string): none {
   for existing of values { if existing == value { return } }
   values.push(value)

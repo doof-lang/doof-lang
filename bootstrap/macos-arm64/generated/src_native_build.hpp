@@ -55,8 +55,11 @@ namespace app_src_native_build_ {
     static doof::Result<std::shared_ptr<NativeCompilePlan>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     using NativeCompileTaskBatch = std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>;
+    bool isMsvcCompiler(const std::string& compiler);
     std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(const std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>& tasks, int32_t maximumWorkers = 8);
     std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, bool release = false, const std::string& platform = std::string(""), const std::shared_ptr<std::vector<std::string>>& wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool wasm = false);
+    std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, bool release);
+    void appendMsvcObjectArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& sourcePath, const std::string& outputPath, const std::string& dependencyFilePath, bool cSource);
     void appendReleaseLinkerArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& platform, bool swiftLink);
     void appendLinkerOption(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& option, bool swiftLink);
     std::string replaceSourceExtension(const std::string& path, const std::string& extension);

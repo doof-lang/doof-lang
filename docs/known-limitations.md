@@ -3,7 +3,8 @@
 The official compiler is intentionally shipping before every former parity
 goal is complete.
 
-- Clean bootstrap is currently supported only on macOS arm64.
+- Clean bootstrap is supported on macOS arm64 and Windows x64; Windows still
+  uses separate PowerShell bootstrap and developer-environment commands.
 - Compiler development requires a mutable stdlib checkout through
   `DOOF_STDLIB_ROOT` or `../doof-stdlib`.
 - External build handoff/provenance contracts are not yet complete for every
@@ -11,7 +12,7 @@ goal is complete.
 - Diagnostic behavior has focused tests but no exhaustive invalid-program
   compatibility corpus.
 - Some JSON union/interface cases, interface reflection, recorded mocks,
-  timeouts, Windows/MSVC support, and iOS embedded-library
+  timeouts, MSVC precompiled-header optimization, and iOS embedded-library
   packaging remain incomplete.
 
 See [ROADMAP.md](../ROADMAP.md) for acceptance-oriented follow-up work.

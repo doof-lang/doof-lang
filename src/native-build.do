@@ -32,6 +32,15 @@ export class NativeCompilePlan {
   outputPath: string
 }
 
+/** Returns whether a compiler command selects the Microsoft C/C++ driver. */
+export function isMsvcCompiler(compiler: string): bool {
+  normalized := compiler.replaceAll("\\", "/").toLowerCase()
+  let slash = -1
+  for index of 0..<normalized.length { if normalized[index] == '/' { slash = index } }
+  name := if slash < 0 then normalized else normalized.substring(slash + 1, normalized.length)
+  return name == "cl" || name == "cl.exe"
+}
+
 /** Distributes object tasks across a bounded set of serial worker batches. */
 export function batchNativeCompileTasks(
   tasks: NativeCompileTask[],
@@ -64,6 +73,9 @@ export function planNativeCompile(
   wasmExportNames: string[] = [],
   wasm: bool = false,
 ): NativeCompilePlan {
+  if isMsvcCompiler(compiler) && !wasm {
+    return planMsvcNativeCompile(compiler, outputDirectory, outputPath, modules, native, release)
+  }
   swiftLink := hasSwiftSource(native.sourceFiles)
   let compileArguments: string[] = ["-std=c++17"]
   // Release defaults precede manifest flags so packages can intentionally
@@ -217,6 +229,108 @@ export function planNativeCompile(
     linkArguments,
     outputPath,
   }
+}
+
+/** Plans native Windows compilation using cl.exe and link.exe. */
+function planMsvcNativeCompile(
+  compiler: string,
+  outputDirectory: string,
+  outputPath: string,
+  modules: ModuleEmission[],
+  native: NativeBuildPlan,
+  release: bool,
+): NativeCompilePlan {
+  let compileArguments: string[] = [
+    "/nologo", "/std:c++17", "/EHsc", "/utf-8", "/Zc:__cplusplus", "/permissive-",
+  ]
+  if release {
+    compileArguments.push("/O2")
+    compileArguments.push("/DNDEBUG")
+    compileArguments.push("/Gy")
+    compileArguments.push("/Gw")
+    compileArguments.push("/GL")
+  }
+  for define of native.defines { compileArguments.push("/D" + define) }
+  compileArguments.push("/I")
+  compileArguments.push(outputDirectory)
+  for includePath of native.includePaths {
+    compileArguments.push("/I")
+    compileArguments.push(resolveBuildPath(outputDirectory, includePath))
+  }
+  for flag of native.compilerFlags { compileArguments.push(flag) }
+
+  let compileTasks: NativeCompileTask[] = []
+  let objectPaths: string[] = []
+  for module of modules {
+    sourcePath := resolveBuildPath(outputDirectory, module.sourceName)
+    objectPath := resolveBuildPath(outputDirectory, ".doof-objects/generated/" + replaceSourceExtension(module.sourceName, ".obj"))
+    dependencyFile := objectPath + ".json"
+    arguments := copyArguments(compileArguments)
+    appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, false)
+    compileTasks.push(NativeCompileTask {
+      id: "object:" + objectPath,
+      compiler,
+      sourcePath,
+      outputPath: objectPath,
+      dependencyFilePath: dependencyFile,
+      arguments: arguments.drainToReadonly(),
+    })
+    objectPaths.push(objectPath)
+  }
+  for sourceFile of native.sourceFiles {
+    sourcePath := resolveBuildPath(outputDirectory, sourceFile)
+    objectPath := resolveBuildPath(outputDirectory, ".doof-objects/native/" + sha1HexString(sourceFile) + ".obj")
+    dependencyFile := objectPath + ".json"
+    arguments := copyArguments(compileArguments)
+    appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, isCSource(sourcePath))
+    compileTasks.push(NativeCompileTask {
+      id: "object:" + objectPath,
+      compiler,
+      sourcePath,
+      outputPath: objectPath,
+      dependencyFilePath: dependencyFile,
+      arguments: arguments.drainToReadonly(),
+    })
+    objectPaths.push(objectPath)
+  }
+
+  let linkArguments: string[] = ["/nologo"]
+  for objectPath of objectPaths { linkArguments.push(objectPath) }
+  for libraryPath of native.libraryPaths {
+    linkArguments.push("/LIBPATH:" + resolveBuildPath(outputDirectory, libraryPath))
+  }
+  for library of native.linkLibraries {
+    linkArguments.push(if library.toLowerCase().endsWith(".lib") then library else library + ".lib")
+  }
+  if release {
+    linkArguments.push("/LTCG")
+    linkArguments.push("/OPT:REF")
+    linkArguments.push("/OPT:ICF")
+  }
+  for flag of native.linkerFlags { linkArguments.push(flag) }
+  linkArguments.push("/OUT:" + outputPath)
+  return NativeCompilePlan {
+    compiler,
+    linker: "link.exe",
+    compileTasks,
+    linkArguments,
+    outputPath,
+  }
+}
+
+function appendMsvcObjectArguments(
+  arguments: string[],
+  sourcePath: string,
+  outputPath: string,
+  dependencyFilePath: string,
+  cSource: bool,
+): none {
+  arguments.push(if cSource then "/TC" else "/TP")
+  arguments.push("/sourceDependencies")
+  arguments.push(dependencyFilePath)
+  arguments.push("/c")
+  arguments.push(sourcePath)
+  arguments.push("/Fo" + outputPath)
 }
 
 /** Adds release-only dead-code elimination and symbol stripping. */

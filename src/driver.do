@@ -118,8 +118,10 @@ function driverWithExtension(path: string): string {
 
 function driverLogicalPath(path: string): string {
   withExtension := driverWithExtension(path)
+  sourceSuffix := driverSourceSuffix(withExtension)
+  if sourceSuffix != withExtension { return sourceSuffix }
   if withExtension.startsWith("/") {
-    return driverSourceSuffix(withExtension)
+    return withExtension
   }
   return "/" + withExtension
 }
@@ -367,9 +369,10 @@ function sourceLoaderForRequest(
 ): Result<SourceLoader, string> {
   let localRoots: DriverSourceRoot[] = []
   rootLogicalPrefix := driverRootLogicalPrefix(rootManifest.name, rootManifest.rootDirectory)
-  if rootLogicalPrefix != driverLogicalPrefix(rootManifest.rootDirectory) {
-    localRoots.push(DriverSourceRoot { logicalPrefix: rootLogicalPrefix, diskRoot: rootManifest.rootDirectory })
-  }
+  // Keep an explicit root mapping even when POSIX logical paths happen to be
+  // directly readable disk paths. Windows drive paths are represented with a
+  // leading slash in the logical graph and must map back through this root.
+  localRoots.push(DriverSourceRoot { logicalPrefix: rootLogicalPrefix, diskRoot: rootManifest.rootDirectory })
   sourceRoot := driverSourceDiskRoot(entryPath)
   if sourceRoot != "" {
     localRoots.push(DriverSourceRoot { logicalPrefix: "/src", diskRoot: sourceRoot })
@@ -576,7 +579,9 @@ function externalTargetForRequest(
 
 function driverLogicalPrefix(path: string): string {
   absolutePath := try! absolute(path)
-  if absolutePath.startsWith("/") { return driverSourceSuffix(absolutePath) }
+  sourceSuffix := driverSourceSuffix(absolutePath)
+  if sourceSuffix != absolutePath { return sourceSuffix }
+  if absolutePath.startsWith("/") { return absolutePath }
   return "/" + absolutePath
 }
 
@@ -858,8 +863,10 @@ function materializeRuntimeHeader(outputDirectory: string): none {
   writeTextIfChanged(driverOutputPath(outputDirectory, "doof_runtime.hpp"), try! runtimeSource)
 }
 
-function buildOutputName(projectName: string): string {
-  return projectName.replaceAll("/", "-").replaceAll("\\", "-")
+export function nativeBuildOutputName(projectName: string, nativePlatform: string): string {
+  name := projectName.replaceAll("/", "-").replaceAll("\\", "-")
+  if nativePlatform == "windows" && !name.toLowerCase().endsWith(".exe") { return name + ".exe" }
+  return name
 }
 
 function printDiagnostics(diagnostics: Diagnostic[]): none {
@@ -1261,7 +1268,7 @@ function emitRequest(request: CliRequest): int {
       println("error: doof run is not supported for --target wasm; instantiate the generated .wasm from your host runtime")
       return 1
     }
-    executableName := if project.target == "wasm" then buildOutputName(project.name) + ".wasm" else if project.macosApp != none then project.macosApp!.executableName else if project.iosApp != none then project.iosApp!.executableName else buildOutputName(project.name)
+    executableName := if project.target == "wasm" then nativeBuildOutputName(project.name, "") + ".wasm" else if project.macosApp != none then project.macosApp!.executableName else if project.iosApp != none then project.iosApp!.executableName else nativeBuildOutputName(project.name, nativePlatform)
     outputPath := driverOutputPath(outputDirectory, executableName)
     if project.macosApp == none && project.iosApp == none { materializeExecutableResources(project.resources, outputDirectory) }
     exitCode := buildNativeProject(request.compiler, outputDirectory, outputPath, emission, false, hostPlatform())
@@ -1338,7 +1345,7 @@ function emitRequest(request: CliRequest): int {
     if project.packageConfig == none { panic("project package settings were not resolved") }
     distDirectory := if request.distDirectory != "" then try! absolute(request.distDirectory) else project.packageConfig!.distDirectory
     ensureOutputDirectory(distDirectory)
-    executableName := if project.target == "wasm" then buildOutputName(project.name) + ".wasm" else if project.macosApp != none then project.macosApp!.executableName else if project.iosApp != none then project.iosApp!.executableName else buildOutputName(project.name)
+    executableName := if project.target == "wasm" then nativeBuildOutputName(project.name, "") + ".wasm" else if project.macosApp != none then project.macosApp!.executableName else if project.iosApp != none then project.iosApp!.executableName else nativeBuildOutputName(project.name, nativePlatform)
     outputPath := if project.macosApp == none && project.iosApp == none
       then driverOutputPath(distDirectory, executableName)
       else driverOutputPath(outputDirectory, executableName)

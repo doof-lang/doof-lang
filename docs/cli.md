@@ -21,6 +21,13 @@ doof test <path> [filter] [--list] [--coverage]
 from its package root. `package` creates an optimized release artifact and
 records provenance. `test` discovers and runs exported test functions.
 
+Native Windows builds use MSVC by default. Run the compiler from an MSVC x64
+developer environment, or pass an explicit compiler with `--compiler`/`CXX`.
+The MSVC plan uses `cl.exe`, `.obj` files, `/sourceDependencies` JSON for
+incremental invalidation, and `link.exe`; Windows executable outputs receive
+the `.exe` suffix. GCC-compatible compiler planning remains available when an
+explicit non-MSVC compiler is selected.
+
 For `check`, `emit`, `build`, and `run`, successful exact source/configuration
 fingerprints are cached below `<build-directory>/.doof-cache/v1/`. Exact hits
 skip the frontend. After an edit, Doof performs a normal semantic compilation

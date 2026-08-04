@@ -10,14 +10,19 @@ written in Doof itself.
 
 ## Requirements
 
-The initial bootstrap target is Apple Silicon macOS. Install Xcode Command
-Line Tools and provide the Doof standard-library package checkouts through
-either `DOOF_STDLIB_ROOT` or an adjacent `../doof-stdlib` directory.
+The bootstrap supports Apple Silicon macOS with Xcode Command Line Tools and
+Windows x64 with the MSVC C++ workload. Provide the Doof standard-library
+package checkouts through either `DOOF_STDLIB_ROOT` or an adjacent
+`../doof-stdlib` directory.
 
 ```sh
 export DOOF_STDLIB_ROOT=/path/to/doof-stdlib
 ./build.sh
 ```
+
+On Windows, run `scripts/bootstrap-compiler.ps1` and subsequent `doof build`
+commands from an MSVC x64 developer environment. Native builds default to
+`cl.exe` and `link.exe` and produce `.exe` outputs.
 
 The build compiles the checked-in generated C++ stage 0, rebuilds the compiler
 twice, compares the B5 and B6 generated sources byte-for-byte, and publishes
@@ -72,7 +77,7 @@ limitations are tracked in [ROADMAP.md](ROADMAP.md).
 - `docs/` — contributor maps, operational contracts, and lowering notes
 - `runtime/` — canonical generated-program runtime header
 - `resources/` — immutable resources embedded in compiler releases
-- `bootstrap/macos-arm64/` — trusted generated-C++ stage-0 source snapshot
+- `bootstrap/macos-arm64/` — trusted generated-C++ stage-0 source snapshot (legacy location for the shared cross-platform graph)
 - `tests/release-fixtures/` — native and platform release acceptance packages
 - `.github/skills/doof-language/` — Codex/Copilot language guidance
 

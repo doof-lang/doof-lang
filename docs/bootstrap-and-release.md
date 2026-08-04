@@ -21,9 +21,35 @@ run the complete release gate and review the generated diff.
 fixtures, plus macOS framework and iOS simulator acceptance checks. Release
 artifacts and all mutable state remain below ignored `build/` and `dist/`.
 
-The first supported clean-bootstrap host is macOS arm64 with Xcode Command Line
-Tools. `DOOF_STDLIB_ROOT` or adjacent `../doof-stdlib` package checkouts are
-currently required when rebuilding or testing source.
+Supported clean-bootstrap hosts are macOS arm64 with Xcode Command Line Tools
+and Windows x64 with the MSVC C++ workload. `DOOF_STDLIB_ROOT` or adjacent
+`../doof-stdlib` package checkouts are currently required when rebuilding or
+testing source. Windows stage 0 is compiled with
+`scripts/bootstrap-compiler.ps1`; B5 and B6 then use the compiler's native
+MSVC build plan from an x64 developer environment.
+
+## Cross-platform snapshot
+
+The bootstrap trust root is one target-independent generated source graph. Host
+build scripts select the native source files, system frameworks/libraries, and
+compiler flags for their target; they must not maintain divergent generated
+compiler implementations. Platform-neutral native headers use guarded host
+implementations where practical, while sources that require a platform language
+or SDK (for example Objective-C++ HTTP support) live beside their alternatives
+and are selected by the host build.
+
+The shared snapshot remains at the legacy `bootstrap/macos-arm64/generated/`
+path while Windows bootstrap orchestration is completed. Build scripts should prefer
+`bootstrap/generated/` when that directory exists, so moving the reviewed tree
+does not require another build-policy change. A supported host must compile and
+smoke-test this same snapshot in addition to the B5/B6 source fixed-point gate.
+
+Target-specific native source filenames end in `_windows`, `_apple`, `_macos`,
+`_ios`, or `_linux` before the language extension. Bootstrap drivers compile
+neutral sources plus only the suffixes valid for their host. Their
+`--list-sources`/`-ListSources` modes expose the selected graph without invoking
+the native compiler, so a snapshot refresh can verify that host alternatives do
+not leak into one another.
 
 ## Development self-install
 

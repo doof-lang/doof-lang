@@ -115,6 +115,17 @@ doof::Result<std::shared_ptr<NativeCompilePlan>, std::string> NativeCompilePlan:
     auto _field_outputPath = (_lenient ? doof::json_as_string_lenient(_iterator_outputPath->second) : doof::json_as_string(_iterator_outputPath->second));
     return doof::Success<std::shared_ptr<NativeCompilePlan>>{std::make_shared<NativeCompilePlan>(_field_compiler, _field_linker, _field_precompiledHeaderTask.value(), _field_compileTasks.value(), _field_linkArguments.value(), _field_outputPath)};
 }
+bool isMsvcCompiler(const std::string& compiler) {
+    const auto normalized = doof::string_toLowerCase(doof::string_replaceAll(compiler, std::string("\\"), std::string("/")));
+    auto slash = -1;
+    for (int32_t index = 0; index < static_cast<int32_t>(normalized.size()); ++index) {
+        if (normalized[index] == U'\u002F') {
+            (slash = index);
+        }
+    }
+    const auto name = ((slash < 0) ? normalized : doof::string_substring(normalized, (slash + 1), static_cast<int32_t>(normalized.size())));
+    return ((name == std::string("cl")) || (name == std::string("cl.exe")));
+}
 std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(const std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>& tasks, int32_t maximumWorkers) {
     if ((static_cast<int32_t>((tasks)->size()) == 0) || (maximumWorkers <= 0)) {
         return std::make_shared<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>>(std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>{});
@@ -135,6 +146,9 @@ std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCo
     return doof::array_drainToReadonly(readonlyBatches, "", 0);
 }
 std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, bool release, const std::string& platform, const std::shared_ptr<std::vector<std::string>>& wasmExportNames, bool wasm) {
+    if (isMsvcCompiler(compiler) && !wasm) {
+        return planMsvcNativeCompile(compiler, outputDirectory, outputPath, modules, native, release);
+    }
     const auto swiftLink = hasSwiftSource(native->sourceFiles);
     std::shared_ptr<std::vector<std::string>> compileArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-std=c++17")});
     if (release) {
@@ -278,6 +292,85 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
     linkArguments->push_back(outputPath);
     return std::make_shared<NativeCompilePlan>(compiler, (swiftLink ? std::string("swiftc") : compiler), precompiledHeaderTask, compileTasks, linkArguments, outputPath);
 }
+std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, bool release) {
+    std::shared_ptr<std::vector<std::string>> compileArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("/nologo"), std::string("/std:c++17"), std::string("/EHsc"), std::string("/utf-8"), std::string("/Zc:__cplusplus"), std::string("/permissive-")});
+    if (release) {
+        compileArguments->push_back(std::string("/O2"));
+        compileArguments->push_back(std::string("/DNDEBUG"));
+        compileArguments->push_back(std::string("/Gy"));
+        compileArguments->push_back(std::string("/Gw"));
+        compileArguments->push_back(std::string("/GL"));
+    }
+    const auto& _iterable_12 = native->defines;
+    for (const auto& define : *_iterable_12) {
+        compileArguments->push_back((std::string("/D") + define));
+    }
+    compileArguments->push_back(std::string("/I"));
+    compileArguments->push_back(outputDirectory);
+    const auto& _iterable_13 = native->includePaths;
+    for (const auto& includePath : *_iterable_13) {
+        compileArguments->push_back(std::string("/I"));
+        compileArguments->push_back(resolveBuildPath(outputDirectory, includePath));
+    }
+    const auto& _iterable_14 = native->compilerFlags;
+    for (const auto& flag : *_iterable_14) {
+        compileArguments->push_back(flag);
+    }
+    std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>> compileTasks = std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(std::vector<std::shared_ptr<NativeCompileTask>>{});
+    std::shared_ptr<std::vector<std::string>> objectPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    const auto& _iterable_15 = modules;
+    for (const auto& module : *_iterable_15) {
+        const auto sourcePath = resolveBuildPath(outputDirectory, module->sourceName);
+        const auto objectPath = resolveBuildPath(outputDirectory, (std::string(".doof-objects/generated/") + replaceSourceExtension(module->sourceName, std::string(".obj"))));
+        const auto dependencyFile = (objectPath + std::string(".json"));
+        const auto arguments = copyArguments(compileArguments);
+        appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, false);
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, false, doof::array_drainToReadonly(arguments, "", 0)));
+        objectPaths->push_back(objectPath);
+    }
+    const auto& _iterable_16 = native->sourceFiles;
+    for (const auto& sourceFile : *_iterable_16) {
+        const auto sourcePath = resolveBuildPath(outputDirectory, sourceFile);
+        const auto objectPath = resolveBuildPath(outputDirectory, ((std::string(".doof-objects/native/") + ::std_::crypto::index::sha1HexString(sourceFile)) + std::string(".obj")));
+        const auto dependencyFile = (objectPath + std::string(".json"));
+        const auto arguments = copyArguments(compileArguments);
+        appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, isCSource(sourcePath));
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, false, doof::array_drainToReadonly(arguments, "", 0)));
+        objectPaths->push_back(objectPath);
+    }
+    std::shared_ptr<std::vector<std::string>> linkArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("/nologo")});
+    const auto& _iterable_17 = objectPaths;
+    for (const auto& objectPath : *_iterable_17) {
+        linkArguments->push_back(objectPath);
+    }
+    const auto& _iterable_18 = native->libraryPaths;
+    for (const auto& libraryPath : *_iterable_18) {
+        linkArguments->push_back((std::string("/LIBPATH:") + resolveBuildPath(outputDirectory, libraryPath)));
+    }
+    const auto& _iterable_19 = native->linkLibraries;
+    for (const auto& library : *_iterable_19) {
+        linkArguments->push_back((doof::string_endsWith(doof::string_toLowerCase(library), std::string(".lib")) ? library : (library + std::string(".lib"))));
+    }
+    if (release) {
+        linkArguments->push_back(std::string("/LTCG"));
+        linkArguments->push_back(std::string("/OPT:REF"));
+        linkArguments->push_back(std::string("/OPT:ICF"));
+    }
+    const auto& _iterable_20 = native->linkerFlags;
+    for (const auto& flag : *_iterable_20) {
+        linkArguments->push_back(flag);
+    }
+    linkArguments->push_back((std::string("/OUT:") + outputPath));
+    return std::make_shared<NativeCompilePlan>(compiler, std::string("link.exe"), nullptr, compileTasks, linkArguments, outputPath);
+}
+void appendMsvcObjectArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& sourcePath, const std::string& outputPath, const std::string& dependencyFilePath, bool cSource) {
+    arguments->push_back((cSource ? std::string("/TC") : std::string("/TP")));
+    arguments->push_back(std::string("/sourceDependencies"));
+    arguments->push_back(dependencyFilePath);
+    arguments->push_back(std::string("/c"));
+    arguments->push_back(sourcePath);
+    arguments->push_back((std::string("/Fo") + outputPath));
+}
 void appendReleaseLinkerArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& platform, bool swiftLink) {
     if ((platform == std::string("macos")) || doof::string_startsWith(platform, std::string("ios-"))) {
         appendLinkerOption(arguments, std::string("-dead_strip"), swiftLink);
@@ -304,16 +397,16 @@ std::string replaceSourceExtension(const std::string& path, const std::string& e
 }
 std::shared_ptr<std::vector<std::string>> copyArguments(const std::shared_ptr<std::vector<std::string>>& source) {
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_12 = source;
-    for (const auto& argument : *_iterable_12) {
+    const auto& _iterable_21 = source;
+    for (const auto& argument : *_iterable_21) {
         result->push_back(argument);
     }
     return result;
 }
 std::shared_ptr<std::vector<std::string>> copyNativeCompileArguments(const std::shared_ptr<std::vector<std::string>>& source, bool cSource) {
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_13 = source;
-    for (const auto& argument : *_iterable_13) {
+    const auto& _iterable_22 = source;
+    for (const auto& argument : *_iterable_22) {
         if (!cSource || (argument != std::string("-std=c++17"))) {
             result->push_back(argument);
         }
@@ -327,8 +420,8 @@ bool isSwiftSource(const std::string& path) {
     return doof::string_endsWith(doof::string_toLowerCase(path), std::string(".swift"));
 }
 bool hasSwiftSource(const std::shared_ptr<std::vector<std::string>>& paths) {
-    const auto& _iterable_14 = paths;
-    for (const auto& path : *_iterable_14) {
+    const auto& _iterable_23 = paths;
+    for (const auto& path : *_iterable_23) {
         if (isSwiftSource(path)) {
             return true;
         }
@@ -355,8 +448,8 @@ std::string deriveCCompiler(const std::string& compiler) {
 }
 std::string wasmExportList(const std::shared_ptr<std::vector<std::string>>& names) {
     auto result = std::string("[\"_malloc\",\"_free\",\"_doof_free\"");
-    const auto& _iterable_15 = names;
-    for (const auto& name : *_iterable_15) {
+    const auto& _iterable_24 = names;
+    for (const auto& name : *_iterable_24) {
         (result = (((result + std::string(",\"_")) + name) + std::string("\"")));
     }
     return (result + std::string("]"));

@@ -36,7 +36,7 @@ doof::Result<std::string, std::string> currentWorkingDirectory() {
     return normalizePathResult(::doof_path::currentWorkingDirectory());
 }
 doof::Result<std::string, std::string> absolute(const std::string& path) {
-    return normalizePathResult(::doof_path::absolute(path));
+    return normalizePathResult(::doof_path::absolute(join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{path}))));
 }
 doof::Result<std::string, std::string> resourcesDirectory() {
     return normalizePathResult(::doof_path::resourcesDirectory());
@@ -52,18 +52,27 @@ doof::Result<std::string, std::string> resourcePath(const std::string& path) {
     return doof::Failure<std::string>{ std::string("Resource path cannot escape the resources directory") };
 }
 std::string join(const std::shared_ptr<std::vector<std::string>>& parts) {
-    auto absolute = false;
+    auto prefix = std::string("");
     std::shared_ptr<std::vector<std::string>> segments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_2 = parts;
     for (const auto& part : *_iterable_2) {
         if (static_cast<int32_t>(part.size()) == 0) {
             continue;
         }
-        if (isAbsolute(part)) {
-            (absolute = true);
+        const auto normalizedPart = doof::string_replaceAll(part, std::string("\\"), std::string("/"));
+        const auto partPrefix = rootPrefix(normalizedPart);
+        if (partPrefix != std::string("")) {
+            (prefix = partPrefix);
             (segments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
         }
-        const auto rawSegments = doof::string_split(part, std::string("/"));
+        auto segmentSource = normalizedPart;
+        if (partPrefix != std::string("")) {
+            (segmentSource = doof::string_slice(normalizedPart, static_cast<int32_t>(partPrefix.size())));
+            if (doof::string_startsWith(segmentSource, std::string("/"))) {
+                (segmentSource = doof::string_slice(segmentSource, 1));
+            }
+        }
+        const auto rawSegments = doof::string_split(segmentSource, std::string("/"));
         const auto& _iterable_3 = rawSegments;
         for (const auto& rawSegment : *_iterable_3) {
             if ((static_cast<int32_t>(rawSegment.size()) == 0) || (rawSegment == std::string("."))) {
@@ -72,7 +81,7 @@ std::string join(const std::shared_ptr<std::vector<std::string>>& parts) {
             if (rawSegment == std::string("..")) {
                 if ((static_cast<int32_t>((segments)->size()) > 0) && ((*segments)[(static_cast<int32_t>((segments)->size()) - 1)] != std::string(".."))) {
                     (segments = doof::array_slice(segments, 0, (static_cast<int32_t>((segments)->size()) - 1), "", 0));
-                } else if (!absolute) {
+                } else if (prefix == std::string("")) {
                     segments->push_back(std::string(".."));
                 }
                 continue;
@@ -80,12 +89,13 @@ std::string join(const std::shared_ptr<std::vector<std::string>>& parts) {
             segments->push_back(rawSegment);
         }
     }
-    return renderPath(segments, absolute);
+    return renderPath(segments, prefix);
 }
 std::string dirname(const std::string& path) {
     const auto normalized = join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{path}));
-    if (normalized == std::string("/")) {
-        return std::string("/");
+    const auto prefix = rootPrefix(normalized);
+    if ((normalized == std::string("/")) || ((prefix != std::string("")) && (normalized == (prefix + std::string("/"))))) {
+        return normalized;
     }
     const auto separator = lastSeparatorIndex(normalized);
     if (separator < 0) {
@@ -94,11 +104,15 @@ std::string dirname(const std::string& path) {
     if (separator == 0) {
         return std::string("/");
     }
+    if ((prefix != std::string("")) && (separator == static_cast<int32_t>(prefix.size()))) {
+        return (prefix + std::string("/"));
+    }
     return doof::string_substring(normalized, 0, separator);
 }
 std::string basename(const std::string& path) {
     const auto normalized = join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{path}));
-    if (normalized == std::string("/")) {
+    const auto prefix = rootPrefix(normalized);
+    if ((normalized == std::string("/")) || ((prefix != std::string("")) && (normalized == (prefix + std::string("/"))))) {
         return std::string("");
     }
     const auto separator = lastSeparatorIndex(normalized);
@@ -130,18 +144,39 @@ std::string extension(const std::string& path) {
     return doof::string_slice(name, dotIndex);
 }
 bool isAbsolute(const std::string& path) {
-    return doof::string_startsWith(path, std::string("/"));
+    return (rootPrefix(doof::string_replaceAll(path, std::string("\\"), std::string("/"))) != std::string(""));
 }
-std::string renderPath(const std::shared_ptr<std::vector<std::string>>& segments, bool absolute) {
+std::string rootPrefix(const std::string& path) {
+    if (doof::string_startsWith(path, std::string("//"))) {
+        const auto components = doof::string_split(path, std::string("/"));
+        if (((static_cast<int32_t>((components)->size()) >= 4) && ((*components)[2] != std::string(""))) && ((*components)[3] != std::string(""))) {
+            return (((std::string("//") + (*components)[2]) + std::string("/")) + (*components)[3]);
+        }
+    }
+    if (doof::string_startsWith(path, std::string("/"))) {
+        return std::string("/");
+    }
+    if ((((static_cast<int32_t>(path.size()) >= 3) && isAsciiLetter(doof::string_at(path, 0, "", 0))) && (doof::string_at(path, 1, "", 0) == U'\u003A')) && (doof::string_at(path, 2, "", 0) == U'\u002F')) {
+        return doof::string_substring(path, 0, 2);
+    }
+    return std::string("");
+}
+bool isAsciiLetter(char32_t character) {
+    return (((character >= U'\u0041') && (character <= U'\u005A')) || ((character >= U'\u0061') && (character <= U'\u007A')));
+}
+std::string renderPath(const std::shared_ptr<std::vector<std::string>>& segments, const std::string& prefix) {
     if (static_cast<int32_t>((segments)->size()) == 0) {
-        return (absolute ? std::string("/") : std::string("."));
+        return ((prefix == std::string("")) ? std::string(".") : ((prefix == std::string("/")) ? std::string("/") : (prefix + std::string("/"))));
     }
     auto output = (*segments)[0];
     for (int32_t index = 1; index < static_cast<int32_t>((segments)->size()); ++index) {
         (output += (std::string("/") + (*segments)[index]));
     }
-    if (absolute) {
+    if (prefix == std::string("/")) {
         return (std::string("/") + output);
+    }
+    if (prefix != std::string("")) {
+        return ((prefix + std::string("/")) + output);
     }
     return output;
 }

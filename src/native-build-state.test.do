@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 import {
   NATIVE_BUILD_STATE_VERSION, NativeBuildState, NativeInputSignature, NativeTaskState,
-  findNativeTaskState, parseMakeDependencies, parseNativeBuildState, renderNativeBuildState,
+  findNativeTaskState, parseMakeDependencies, parseMsvcDependencies, parseNativeBuildState, renderNativeBuildState,
 } from "./native-build-state"
 
 export function testParsesMakeDependenciesWithContinuationsAndEscapedSpaces(): none {
@@ -11,6 +11,17 @@ export function testParsesMakeDependenciesWithContinuationsAndEscapedSpaces(): n
   Assert.equal(dependencies[1], "include/a.hpp")
   Assert.equal(dependencies[2], "include/path with spaces.hpp")
   Assert.equal(parseMakeDependencies("missing target separator").length, 0)
+}
+
+export function testParsesMsvcSourceDependencies(): none {
+  dependencies := parseMsvcDependencies(
+    "{\"Version\":\"1.2\",\"Data\":{\"Source\":\"C:\\\\src\\\\main.cpp\",\"Includes\":[\"C:\\\\src\\\\main.hpp\",\"C:\\\\sdk\\\\vector\",\"C:\\\\src\\\\main.hpp\"]}}",
+  )
+  Assert.equal(dependencies.length, 2)
+  Assert.equal(dependencies[0], "C:\\src\\main.hpp")
+  Assert.equal(dependencies[1], "C:\\sdk\\vector")
+  Assert.equal(parseMsvcDependencies("{}").length, 0)
+  Assert.equal(parseMsvcDependencies("not json").length, 0)
 }
 
 export function testRoundTripsVersionedNativeBuildState(): none {

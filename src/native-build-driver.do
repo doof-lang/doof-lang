@@ -3,10 +3,10 @@
 // incremental state, dependency signatures, compiler workers, and linking.
 
 import { ProjectEmission } from "./emitter-project"
-import { NativeCompilePlan, NativeCompileTask, batchNativeCompileTasks, planNativeCompile } from "./native-build"
+import { NativeCompilePlan, NativeCompileTask, batchNativeCompileTasks, isMsvcCompiler, planNativeCompile } from "./native-build"
 import {
   NativeBuildState, NativeInputSignature, NativeTaskState, findNativeTaskState,
-  parseMakeDependencies, parseNativeBuildState, renderNativeBuildState,
+  parseMakeDependencies, parseMsvcDependencies, parseNativeBuildState, renderNativeBuildState,
 } from "./native-build-state"
 import { PkgConfigCommandResult, applyPkgConfigResult } from "./pkg-config"
 import { BlobReader } from "std/blob"
@@ -105,7 +105,7 @@ export function buildNativeProject(
     configured := envCompiler()
     if configured != "" { compiler = configured }
   }
-  if compiler == "" { compiler = "c++" }
+  if compiler == "" { compiler = if platform == "windows" then "cl.exe" else "c++" }
   plan := planNativeCompile(compiler, outputDirectory, outputPath, project.modules, project.nativeBuild, release, platform, project.wasmExportNames, wasm)
   return executeNativePlan(outputDirectory, plan, project)
 }
@@ -207,7 +207,7 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
 
 function compilerIdentity(command: string, identities: NativeCompilerIdentity[]): string {
   for identity of identities { if identity.command == command { return identity.signature } }
-  result := runBuildCommand(command, ["--version"])
+  result := runBuildCommand(command, if isMsvcCompiler(command) then ["/?"] else ["--version"])
   let description = command
   if result.exitCode == 0 { description = description + "\n" + BlobReader(result.output).readString(long(result.output.length)) }
   signature := sha256HexString(description)
@@ -271,7 +271,10 @@ function captureTaskState(task: NativeCompileTask, fingerprint: string): NativeT
   let paths: string[] = [task.sourcePath]
   if task.dependencyFilePath != "" && exists(task.dependencyFilePath) {
     dependencySource := try! readText(task.dependencyFilePath)
-    for path of parseMakeDependencies(dependencySource) { appendUnique(paths, path) }
+    dependencies := if task.dependencyFilePath.toLowerCase().endsWith(".json")
+      then parseMsvcDependencies(dependencySource)
+      else parseMakeDependencies(dependencySource)
+    for path of dependencies { appendUnique(paths, path) }
   }
   for path of paths {
     signature := pathSignature(path, true)

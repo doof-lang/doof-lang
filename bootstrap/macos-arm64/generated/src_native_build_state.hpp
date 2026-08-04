@@ -59,6 +59,7 @@ namespace app_src_native_build_state_ {
     std::string renderNativeBuildState(const std::shared_ptr<NativeBuildState>& state);
     std::shared_ptr<NativeTaskState> findNativeTaskState(const std::shared_ptr<NativeBuildState>& state, const std::string& id);
     std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::string& source);
+    std::shared_ptr<std::vector<std::string>> parseMsvcDependencies(const std::string& source);
     void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
 }
 

@@ -204,7 +204,7 @@ namespace app_src_driver_ {
     void materializeProject(const std::string& outputDirectory, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project);
     void materializeExecutableResources(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>>& resources, const std::string& outputDirectory);
     void materializeRuntimeHeader(const std::string& outputDirectory);
-    std::string buildOutputName(const std::string& projectName);
+    std::string nativeBuildOutputName(const std::string& projectName, const std::string& nativePlatform);
     void printDiagnostics(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
     void collectTestFiles(const std::string& path, const std::shared_ptr<std::vector<std::string>>& results, bool root = true);
     std::shared_ptr<std::vector<std::string>> sortedTestFiles(const std::shared_ptr<std::vector<std::string>>& values);

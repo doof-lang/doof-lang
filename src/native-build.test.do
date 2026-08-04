@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 
 import { ModuleEmission } from "./emitter-module"
-import { NativeCompileTask, NativeCompileTaskBatch, batchNativeCompileTasks, planNativeCompile } from "./native-build"
+import { NativeCompileTask, NativeCompileTaskBatch, batchNativeCompileTasks, isMsvcCompiler, planNativeCompile } from "./native-build"
 import { NativeBuildPlan } from "./package-manifest"
 
 export function testPlansGeneratedAndManifestNativeSources(): none {
@@ -333,4 +333,58 @@ export function testPlansStandaloneEmscriptenWasmLink(): none {
   Assert.equal(plan.linkArguments.contains("--no-entry"), true)
   Assert.equal(plan.linkArguments.contains("-sEXPORTED_FUNCTIONS=[\"_malloc\",\"_free\",\"_doof_free\",\"_doof_initialize\",\"_doof_export_add\"]"), true)
   Assert.equal(plan.linkArguments.contains("-sINITIAL_MEMORY=33554432"), true)
+}
+
+export function testPlansMsvcCompilationAndLinking(): none {
+  Assert.equal(isMsvcCompiler("cl.exe"), true)
+  Assert.equal(isMsvcCompiler("C:\\VS\\bin\\cl.exe"), true)
+  Assert.equal(isMsvcCompiler("clang++"), false)
+
+  plan := planNativeCompile(
+    "cl.exe",
+    "C:/generated",
+    "C:/generated/demo.exe",
+    [ModuleEmission {
+      modulePath: "/main.do",
+      header: "",
+      source: "",
+      headerName: "main.hpp",
+      sourceName: "main.cpp",
+    }],
+    NativeBuildPlan {
+      sourceFiles: ["native/bridge.c", "native/helper.cpp"],
+      includePaths: ["include"],
+      libraryPaths: ["vendor/lib"],
+      linkLibraries: ["winhttp", "custom.lib"],
+      defines: ["WINDOWS_BUILD=1"],
+      compilerFlags: ["/W4"],
+      linkerFlags: ["/INCREMENTAL:NO"],
+    },
+    true,
+    "windows",
+  )
+
+  Assert.equal(plan.compiler, "cl.exe")
+  Assert.equal(plan.linker, "link.exe")
+  Assert.equal(plan.precompiledHeaderTask, none)
+  Assert.equal(plan.compileTasks.length, 3)
+  generated := plan.compileTasks[0]
+  Assert.equal(generated.outputPath, "C:/generated/.doof-objects/generated/main.obj")
+  Assert.equal(generated.dependencyFilePath, generated.outputPath + ".json")
+  Assert.equal(generated.arguments.contains("/TP"), true)
+  Assert.equal(generated.arguments.contains("/sourceDependencies"), true)
+  Assert.equal(generated.arguments.contains("/Fo" + generated.outputPath), true)
+  Assert.equal(generated.arguments.contains("/GL"), true)
+  Assert.equal(generated.arguments.contains("/DWINDOWS_BUILD=1"), true)
+  Assert.equal(generated.arguments.contains("/W4"), true)
+  Assert.equal(plan.compileTasks[1].arguments.contains("/TC"), true)
+  Assert.equal(plan.compileTasks[2].arguments.contains("/TP"), true)
+  Assert.equal(plan.linkArguments.contains("/LIBPATH:C:/generated/vendor/lib"), true)
+  Assert.equal(plan.linkArguments.contains("winhttp.lib"), true)
+  Assert.equal(plan.linkArguments.contains("custom.lib"), true)
+  Assert.equal(plan.linkArguments.contains("/LTCG"), true)
+  Assert.equal(plan.linkArguments.contains("/OPT:REF"), true)
+  Assert.equal(plan.linkArguments.contains("/OPT:ICF"), true)
+  Assert.equal(plan.linkArguments.contains("/INCREMENTAL:NO"), true)
+  Assert.equal(plan.linkArguments[plan.linkArguments.length - 1], "/OUT:C:/generated/demo.exe")
 }

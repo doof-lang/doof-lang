@@ -45,7 +45,7 @@ export function cliUsage(): string {
     "\n" +
     "options:\n" +
     "  -o, --output-directory <path>  output root (package uses <path>/release)\n" +
-    "  --compiler <path>           C++ compiler command (default: CXX or c++)\n" +
+    "  --compiler <path>           C++ compiler command (default: CXX, cl.exe on Windows, or c++)\n" +
     "  --target <kind>            override build target (macos-app, ios-app, or wasm)\n" +
     "  --distdir <path>            packaged artifact directory\n" +
     "  --macos-signing <kind>      developer-id or ad-hoc\n" +
