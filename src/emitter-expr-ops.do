@@ -22,7 +22,7 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
       success := "doof::Success<" + targetCpp + ">"
       failure := "doof::Failure<" + emitType(result.errorType, context.modulePath) + ">"
       source := emitExpression(expression.expression, context)
-      if sameType(sourceType, target) { return success + "{" + source + "}" }
+      if sameType(sourceType, target) { return resultCpp + "{" + success + "{" + source + "}}" }
       case sourceType {
         sourceResult: ResultResolvedType -> {
           let narrowed = ""
@@ -31,11 +31,12 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
             _ -> { }
           }
           if narrowed != "" {
-            let errorValue = "doof::failure_error(_as_source)"
-            if !sameType(sourceResult.errorType, result.errorType) {
-              errorValue = "doof::variant_promote<" + emitType(result.errorType, context.modulePath) + ">(" + errorValue + ")"
-            }
+            errorValue := emitAsFailureValue(sourceResult, result, context)
             return "[&]() -> " + resultCpp + " { auto _as_source = " + source + "; if (doof::is_failure(_as_source)) return " + failure + "{" + errorValue + "}; return " + narrowed + "; }()"
+          }
+          if isNumeric(sourceResult.valueType) && isNumeric(target) {
+            errorValue := emitAsFailureValue(sourceResult, result, context)
+            return "[&]() -> " + resultCpp + " { auto _as_source = " + source + "; if (doof::is_failure(_as_source)) return " + failure + "{" + errorValue + "}; auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(doof::success_value(_as_source)); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
           }
         }
         _ -> { }
@@ -82,6 +83,9 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
               return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (!_as_value.has_value()) return " + failure + "{\"Nullable narrowing failed\"}; auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(_as_value.value()); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
             }
           }
+          if isNumeric(target) && unionHasNumericMember(union_) {
+            return emitNumericUnionAs(source, union_, targetCpp, resultCpp, success, failure, context)
+          }
           return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (doof::variant_is<" + targetCpp + ">(_as_value)) return " + success + "{doof::variant_narrow<" + targetCpp + ">(_as_value)}; return " + failure + "{\"Union narrowing failed\"}; }()"
         }
         _ -> { }
@@ -91,6 +95,30 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
     _ -> { panic("as expression must resolve to Result") }
   }
   return ""
+}
+
+function emitAsFailureValue(source: ResultResolvedType, target: ResultResolvedType, context: EmitContext): string {
+  errorValue := "doof::failure_error(_as_source)"
+  if !sameType(source.errorType, target.errorType) {
+    return "doof::variant_promote<" + emitType(target.errorType, context.modulePath) + ">(" + errorValue + ")"
+  }
+  return errorValue
+}
+
+function unionHasNumericMember(union_: UnionResolvedType): bool {
+  for member of union_.types { if isNumeric(member) { return true } }
+  return false
+}
+
+function emitNumericUnionAs(source: string, union_: UnionResolvedType, targetCpp: string, resultCpp: string, success: string, failure: string, context: EmitContext): string {
+  let numericItem = ""
+  for member of union_.types {
+    if isNumeric(member) {
+      if numericItem != "" { numericItem = numericItem + " || " }
+      numericItem = numericItem + "std::is_same_v<_AsItem, " + emitType(member, context.modulePath) + ">"
+    }
+  }
+  return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; auto _as_checked = std::visit([](const auto& _as_item) -> std::optional<" + targetCpp + "> { using _AsItem = std::decay_t<decltype(_as_item)>; if constexpr (" + numericItem + ") return doof::checked_numeric_as<" + targetCpp + ">(_as_item); return std::nullopt; }, _as_value); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
 }
 
 function unionContainsJsonValue(union_: UnionResolvedType): bool {

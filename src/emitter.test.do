@@ -273,6 +273,20 @@ export function testRetainsVariantBackedAsNarrowing(): none {
   Assert.equal(result.source.contains("doof::variant_narrow<std::string>(_as_value)"), true)
 }
 
+export function testEmitsNumericAsThroughMixedUnionAndResult(): none {
+  result := emit("function mixed(value: int | string): Result<long, string> => value as long\nfunction fallible(value: Result<int, bool>): Result<long, bool | string> => value as long")
+  Assert.stringContains(result.source, "std::visit([](const auto& _as_item) -> std::optional<int64_t>")
+  Assert.stringContains(result.source, "doof::checked_numeric_as<int64_t>(_as_item)")
+  Assert.stringContains(result.source, "if (doof::is_failure(_as_source))")
+  Assert.stringContains(result.source, "doof::checked_numeric_as<int64_t>(doof::success_value(_as_source))")
+  Assert.stringNotContains(result.source, "Unsupported narrowing")
+}
+
+export function testWrapsIdentityAsInItsDeclaredResultType(): none {
+  result := emit("function same(value: int): Result<int, string> => value as int")
+  Assert.stringContains(result.source, "doof::Result<int32_t, std::string>{doof::Success<int32_t>{value}}")
+}
+
 export function testEmitsLenientGeneratedJsonDecode(): none {
   result := emit("class Options { enabled: bool\nname: string }\nfunction decode(value: JsonValue): Result<Options, string> => Options.fromJsonValue(value, true)")
   Assert.equal(result.header.contains("bool _lenient = false"), true)
