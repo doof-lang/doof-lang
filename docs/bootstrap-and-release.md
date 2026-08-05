@@ -30,6 +30,15 @@ MSVC build plan from an x64 developer environment. Both paths create their
 MSVC runtime/Windows precompiled header below the ignored build directory; the
 reviewed bootstrap snapshot remains source-only.
 
+`./scripts/test-bootstrap-alpine.sh` is an experimental portability gate for
+the checked-in stage-0 source graph. It builds an Alpine image with Apple's
+`container` CLI, mounts the repository read-only, selects neutral and `_linux`
+sources, compiles and links them against musl in temporary container storage,
+and smoke-tests the resulting compiler executable. It does not
+run B5/B6, publish an artifact, or add Linux to the supported clean-bootstrap
+hosts. `DOOF_ALPINE_VERSION` overrides the pinned Alpine base image for matrix
+testing, and `DOOF_ALPINE_MEMORY` overrides the 4 GB container memory limit.
+
 ## Cross-platform snapshot
 
 The bootstrap trust root is one target-independent generated source graph. Host

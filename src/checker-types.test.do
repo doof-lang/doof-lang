@@ -17,6 +17,14 @@ export function testAllowsLosslessIntToDoubleWidening(): none {
   Assert.isFalse(isAssignable(primitive("double"), primitive("int")))
 }
 
+export function testAllowsByteToIntWidening(): none {
+  Assert.isTrue(isAssignable(primitive("byte"), primitive("int")))
+}
+
+export function testRejectsNonLiteralIntToByteNarrowing(): none {
+  Assert.isFalse(isAssignable(primitive("int"), primitive("byte")))
+}
+
 export function testDistinguishesFunctionSignatures(): none {
   intToString := functionType(
     [FunctionParamType { name: "value", type_: primitive("int"), hasDefault: false }],

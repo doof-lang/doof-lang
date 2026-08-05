@@ -50,6 +50,7 @@ contracts.
 ```sh
 ./build.sh                         # bootstrap and fixed-point verification
 ./scripts/test.sh                  # compiler unit/component tests
+./scripts/test-bootstrap-alpine.sh # experimental Alpine stage-0 compile smoke test
 ./scripts/release.sh               # full release acceptance gate
 ./scripts/update-std-catalog.sh    # regenerate the exact std package catalog
 ./install.sh                       # build, test, and sudo-install the compiler
@@ -63,6 +64,15 @@ the macOS console-executable resource lookup while keeping the canonical files
 in the bundle. Use `./install.sh --prefix /absolute/path` to select a different
 prefix. Existing compiler files or symlinks are replaced; an existing
 directory at any managed path is left untouched and reported as an error.
+
+The Alpine smoke test uses Apple's `container` CLI to mount the repository
+read-only, compile and link the checked-in bootstrap snapshot against musl in
+temporary container storage, then run the resulting compiler's help command.
+Start the container service with `container system start` before running it.
+This is an experimental portability test, not a supported
+clean-bootstrap host or part of the release gate. Override its pinned base with
+`DOOF_ALPINE_VERSION` when testing another Alpine release, or its 4 GB
+container memory limit with `DOOF_ALPINE_MEMORY`.
 
 Language behavior is defined by the [language specification](spec/01-overview.md).
 Compiler contributors should start with the [documentation map](docs/README.md),
