@@ -5,6 +5,9 @@ goal is complete.
 
 - Clean bootstrap is supported on macOS arm64 and Windows x64; Windows still
   uses separate PowerShell bootstrap and developer-environment commands.
+- The experimental Alpine bootstrap test compiles the complete 96-file
+  neutral/Linux source graph, but linking is blocked until `std/http` and its
+  WebSocket support provide Linux native implementations.
 - Compiler development requires a mutable stdlib checkout through
   `DOOF_STDLIB_ROOT` or `../doof-stdlib`.
 - External build handoff/provenance contracts are not yet complete for every
