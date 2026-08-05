@@ -3,7 +3,7 @@ import { Parser } from "./parser"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 import {
-  CoverageModuleMetadata, buildCoverageReport, discoverModuleTests, filterDiscoveredTests,
+  CoverageModuleMetadata, DiscoveredTest, buildCoverageReport, discoverModuleTests, filterDiscoveredTests,
   coverageFileRelativePath, formatParseFailure, generateTestHarness, groupTestsForCompilation, mergeCoverageOutput,
   renderCoverageFileHtml, renderCoverageHtml, renderCoverageJson, stripCoverageLines, testDisplayPath,
 } from "./test-runner"
@@ -77,6 +77,23 @@ export function testGeneratesPerIdHarnessWithRelativeImport(): none {
   Assert.equal(harness.contains("if testId == \"src/math.test.do::testAdds\""), true)
   Assert.equal(harness.contains("__doof_test_0()"), true)
   Assert.equal(harness.contains("PASS src/math.test.do::testAdds"), false)
+}
+
+export function testGeneratesFlatHarnessBeyondMsvcNestingLimit(): none {
+  let tests: DiscoveredTest[] = []
+  for index of 0..<140 {
+    tests.push(DiscoveredTest {
+      id: "suite.test.do::test" + string(index),
+      name: "test" + string(index),
+      modulePath: "/work/suite.test.do",
+      moduleDisplayPath: "suite.test.do",
+    })
+  }
+
+  harness := generateTestHarness("/work/build/.doof-tests/shared/__doof_tests__.do", tests)
+  Assert.equal(harness.contains("} else if testId"), false)
+  Assert.equal(harness.split("    if testId == ").length, 141)
+  Assert.stringContains(harness, "if testId == \"suite.test.do::test139\"")
 }
 
 export function testGroupsOrdinaryTestsAndIsolatesMockRoots(): none {

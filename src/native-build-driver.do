@@ -22,6 +22,7 @@ class NativeCommandResult {
   readonly output: readonly byte[] = []
   readonly error: string = ""
   readonly truncated: bool
+  readonly quietSourcePath: string = ""
 }
 
 class NativeCompilerBatchResult {
@@ -34,7 +35,11 @@ class NativeCompilerIdentity {
   signature: string
 }
 
-isolated function runBuildCommand(command: string, arguments: string[]): NativeCommandResult {
+isolated function runBuildCommand(
+  command: string,
+  arguments: string[],
+  quietSourcePath: string = "",
+): NativeCommandResult {
   executed := run(command, arguments, ExecOptions {
     withStdin: false,
     mergeStderrIntoStdout: true,
@@ -46,7 +51,19 @@ isolated function runBuildCommand(command: string, arguments: string[]): NativeC
     exitCode: executed.exitCode,
     output: executed.stdout,
     truncated: executed.stdoutTruncated,
+    quietSourcePath,
   }
+}
+
+/** Identifies the standalone source-name line emitted by cl.exe for every successful compile. */
+export function isMsvcSourceEcho(line: string, sourcePath: string): bool {
+  if sourcePath == "" { return false }
+  normalizedLine := line.trim().replaceAll("\\", "/")
+  normalizedSource := sourcePath.replaceAll("\\", "/")
+  let slash = -1
+  for index of 0..<normalizedSource.length { if normalizedSource[index] == '/' { slash = index } }
+  sourceName := if slash < 0 then normalizedSource else normalizedSource.substring(slash + 1, normalizedSource.length)
+  return normalizedLine == normalizedSource || normalizedLine == sourceName
 }
 
 function printBuildOutput(result: NativeCommandResult, remainingLines: int): int {
@@ -54,6 +71,7 @@ function printBuildOutput(result: NativeCommandResult, remainingLines: int): int
   output := if result.error != "" then result.error else BlobReader(result.output).readString(long(result.output.length))
   for line of output.split("\n") {
     if line == "" { continue }
+    if isMsvcSourceEcho(line, result.quietSourcePath) { continue }
     if remaining <= 0 { return 0 }
     println(line)
     remaining -= 1
@@ -67,7 +85,11 @@ class NativeCompilerWorker {
   compile(): NativeCompilerBatchResult {
     let outputs: NativeCommandResult[] = []
     for task of this.tasks {
-      result := runBuildCommand(task.compiler, mutableArguments(task.arguments))
+      result := runBuildCommand(
+        task.compiler,
+        mutableArguments(task.arguments),
+        if isMsvcCompiler(task.compiler) then task.sourcePath else "",
+      )
       outputs.push(result)
       if result.exitCode != 0 {
         return NativeCompilerBatchResult { exitCode: result.exitCode, outputs: outputs.drainToReadonly() }
@@ -116,6 +138,10 @@ function envCompiler(): string {
 }
 
 function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, project: ProjectEmission): int {
+  for supportFile of plan.supportFiles {
+    ensureDirectory(parentDirectory(supportFile.outputPath))
+    writeTextIfChanged(supportFile.outputPath, supportFile.content)
+  }
   statePath := joinOutput(outputDirectory, ".doof-native-build-state.json")
   previousState := readBuildState(statePath)
   nextState := NativeBuildState {}
@@ -129,7 +155,7 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
     ensureDirectory(parentDirectory(pchTask.outputPath))
     pchFingerprint := taskFingerprint(pchTask, identities)
     pchPrevious := findNativeTaskState(previousState, pchTask.id)
-    if !taskIsCurrent(pchPrevious, pchFingerprint) {
+    if !taskIsCurrent(pchPrevious, pchFingerprint, pchTask.auxiliaryOutputPaths) {
       pchChanged = true
       pchResult := runBuildCommand(pchTask.compiler, mutableArguments(pchTask.arguments))
       remainingOutputLines = printBuildOutput(pchResult, remainingOutputLines)
@@ -181,6 +207,9 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
   if compileExitCode != 0 { println("error: native object compiler exited with code " + string(compileExitCode)); return compileExitCode }
 
   let objectPaths: string[] = []
+  if plan.precompiledHeaderTask != none {
+    for path of plan.precompiledHeaderTask!.auxiliaryOutputPaths { objectPaths.push(path) }
+  }
   for index of 0..<plan.compileTasks.length {
     task := plan.compileTasks[index]
     objectPaths.push(task.outputPath)
@@ -248,8 +277,13 @@ function currentInputSignature(previous: NativeInputSignature): NativeInputSigna
   return pathSignature(previous.path, previous.contentHash)
 }
 
-function taskIsCurrent(previous: NativeTaskState | none, fingerprint: string): bool {
+function taskIsCurrent(
+  previous: NativeTaskState | none,
+  fingerprint: string,
+  auxiliaryOutputPaths: readonly string[] = [],
+): bool {
   if previous == none || !exists(previous!.outputPath) { return false }
+  for path of auxiliaryOutputPaths { if !exists(path) || isDirectory(path) { return false } }
   info := metadata(previous!.outputPath) else { return false }
   let currentInputs: NativeInputSignature[] = []
   for input of previous!.inputs {
@@ -257,7 +291,7 @@ function taskIsCurrent(previous: NativeTaskState | none, fingerprint: string): b
     if signature == none { return false }
     currentInputs.push(signature!)
   }
-  return nativeTaskStateIsCurrent(previous, fingerprint, info.size, info.modifiedAt.toEpochNanos(), currentInputs)
+  return nativeTaskStateIsCurrent(previous, fingerprint, info.size, info.modifiedAt.toEpochNanos(), currentInputs, true)
 }
 
 /** Pure invalidation rule used by the filesystem executor and focused tests. */
@@ -267,7 +301,9 @@ export function nativeTaskStateIsCurrent(
   outputSize: long,
   outputModifiedNanos: long,
   currentInputs: NativeInputSignature[],
+  auxiliaryOutputsCurrent: bool = true,
 ): bool {
+  if !auxiliaryOutputsCurrent { return false }
   if previous == none || previous!.fingerprint != fingerprint { return false }
   if previous!.outputSize != outputSize || previous!.outputModifiedNanos != outputModifiedNanos { return false }
   if previous!.inputs.length == 0 || previous!.inputs.length != currentInputs.length { return false }
@@ -321,8 +357,22 @@ function writeBuildState(path: string, state: NativeBuildState): none {
   try! rename(temporaryPath, path)
 }
 
+function writeTextIfChanged(path: string, content: string): none {
+  if exists(path) {
+    previous := readText(path) else { try! writeText(path, content); return }
+    if !nativeSupportFileNeedsWrite(previous, content) { return }
+  }
+  try! writeText(path, content)
+}
+
+/** Keeps generated build inputs stable so unchanged PCH dependencies remain reusable. */
+export function nativeSupportFileNeedsWrite(previous: string | none, content: string): bool {
+  return previous == none || previous! != content
+}
+
 function collectManagedOutputs(outputs: string[], outputDirectory: string, plan: NativeCompilePlan, project: ProjectEmission): none {
   appendUnique(outputs, joinOutput(outputDirectory, "doof_runtime.hpp"))
+  for supportFile of plan.supportFiles { appendUnique(outputs, supportFile.outputPath) }
   for module of project.modules {
     appendUnique(outputs, joinOutput(outputDirectory, module.headerName))
     appendUnique(outputs, joinOutput(outputDirectory, module.sourceName))
@@ -334,10 +384,12 @@ function collectManagedOutputs(outputs: string[], outputDirectory: string, plan:
   if plan.precompiledHeaderTask != none {
     appendUnique(outputs, plan.precompiledHeaderTask!.outputPath)
     if plan.precompiledHeaderTask!.dependencyFilePath != "" { appendUnique(outputs, plan.precompiledHeaderTask!.dependencyFilePath) }
+    for path of plan.precompiledHeaderTask!.auxiliaryOutputPaths { appendUnique(outputs, path) }
   }
   for task of plan.compileTasks {
     appendUnique(outputs, task.outputPath)
     if task.dependencyFilePath != "" { appendUnique(outputs, task.dependencyFilePath) }
+    for path of task.auxiliaryOutputPaths { appendUnique(outputs, path) }
   }
   appendUnique(outputs, plan.outputPath)
 }

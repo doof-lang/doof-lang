@@ -292,16 +292,15 @@ std::string generateTestHarness(const std::string& harnessPath, const std::share
     (source = (source + std::string("    }\n\n")));
     (source = (source + std::string("    testId := args[0]\n")));
     for (int32_t index = 0; index < static_cast<int32_t>((tests)->size()); ++index) {
-        const auto keyword = ((index == 0) ? std::string("if") : std::string("} else if"));
         const auto id = escapeDoofString((*tests)[index]->id);
-        (source = (((((source + std::string("    ")) + keyword) + std::string(" testId == \"")) + id) + std::string("\" {\n")));
+        (source = (((source + std::string("    if testId == \"")) + id) + std::string("\" {\n")));
         (source = (((source + std::string("        __doof_test_")) + doof::to_string(index)) + std::string("()\n")));
         (source = (source + std::string("        return 0\n")));
+        (source = (source + std::string("    }\n")));
     }
-    (source = (source + std::string("    } else {\n")));
-    (source = ((source + std::string("        println(\"unknown test id: $")) + std::string("{testId}\")\n")));
-    (source = (source + std::string("        return 2\n")));
-    (source = (source + std::string("    }\n")));
+    (source = (source + std::string("\n")));
+    (source = ((source + std::string("    println(\"unknown test id: $")) + std::string("{testId}\")\n")));
+    (source = (source + std::string("    return 2\n")));
     (source = (source + std::string("}\n")));
     return source;
 }
@@ -603,7 +602,7 @@ std::string relativeImportSpecifier(const std::string& harnessPath, const std::s
 std::shared_ptr<std::vector<std::string>> parentComponents(const std::string& path) {
     const auto components = doof::string_split(path, std::string("/"));
     if (static_cast<int32_t>((components)->size()) > 0) {
-        auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/test-runner", 438, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+        auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/test-runner", 437, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }
     return components;
 }

@@ -73,6 +73,10 @@ $outputRoot = Join-Path $repoRoot "build\bootstrap-stage0-windows-$Architecture"
 $objectRoot = Join-Path $outputRoot "objects"
 $sourceResponse = Join-Path $outputRoot "msvc-sources.rsp"
 $objectResponse = Join-Path $outputRoot "msvc-objects.rsp"
+$pchHeader = Join-Path $outputRoot "doof_msvc_pch.hpp"
+$pchSource = Join-Path $outputRoot "doof_msvc_pch.cpp"
+$pchFile = Join-Path $outputRoot "doof_msvc.pch"
+$pchObject = Join-Path $outputRoot "doof_msvc_pch.obj"
 $executable = Join-Path $outputRoot "doof.exe"
 
 if (-not (Test-Path -LiteralPath $snapshotRoot -PathType Container)) {
@@ -108,6 +112,26 @@ if (Test-Path -LiteralPath $outputRoot) {
 }
 New-Item -ItemType Directory -Path $objectRoot -Force | Out-Null
 
+$pchHeaderContent = @'
+#pragma once
+#include "doof_runtime.hpp"
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#ifdef small
+#undef small
+#endif
+#endif
+'@
+$utf8WithoutBom = [System.Text.UTF8Encoding]::new($false)
+[System.IO.File]::WriteAllText($pchHeader, $pchHeaderContent, $utf8WithoutBom)
+[System.IO.File]::WriteAllText($pchSource, "#include `"doof_msvc_pch.hpp`"`n", $utf8WithoutBom)
+
 $duplicateBasenames = @($sources | Group-Object BaseName | Where-Object Count -gt 1)
 if ($duplicateBasenames.Count -ne 0) {
     $names = ($duplicateBasenames | ForEach-Object Name) -join ", "
@@ -120,7 +144,7 @@ if ($objectiveCSources.Count -ne 0) {
 
 Write-ResponseFile -Path $sourceResponse -Values @($sources.FullName)
 
-$compileArguments = @(
+$commonCompileArguments = @(
     "/nologo",
     "/std:c++17",
     "/O2",
@@ -128,11 +152,29 @@ $compileArguments = @(
     "/EHsc",
     "/utf-8",
     "/Zc:__cplusplus",
-    "/permissive-",
-    "/MP",
-    "/FS"
+    "/permissive-"
 )
-foreach ($directory in $includeDirectories) { $compileArguments += "/I$directory" }
+foreach ($directory in @($outputRoot) + $includeDirectories) { $commonCompileArguments += "/I$directory" }
+
+$pchArguments = @($commonCompileArguments)
+$pchArguments += "/Ycdoof_msvc_pch.hpp"
+$pchArguments += "/Fp$pchFile"
+$pchArguments += "/Fo$pchObject"
+$pchArguments += "/c"
+$pchArguments += $pchSource
+
+Write-Host "  Building the MSVC precompiled runtime and Windows headers..."
+& cl.exe @pchArguments
+if ($LASTEXITCODE -ne 0) {
+    throw "MSVC precompiled-header creation failed with exit code $LASTEXITCODE."
+}
+
+$compileArguments = @($commonCompileArguments)
+$compileArguments += "/MP"
+$compileArguments += "/FS"
+$compileArguments += "/FIdoof_msvc_pch.hpp"
+$compileArguments += "/Yudoof_msvc_pch.hpp"
+$compileArguments += "/Fp$pchFile"
 $compileArguments += "/c"
 $compileArguments += "@$sourceResponse"
 $compileArguments += "/Fo$objectRoot\"
@@ -149,8 +191,8 @@ if ($objects.Count -ne $sources.Count) {
 }
 Write-ResponseFile -Path $objectResponse -Values @($objects.FullName)
 
-Write-Host "  Linking $($objects.Count) bootstrap objects..."
-& link.exe /nologo "/OUT:$executable" /SUBSYSTEM:CONSOLE "@$objectResponse"
+Write-Host "  Linking $($objects.Count) bootstrap objects and the PCH creator..."
+& link.exe /nologo "/OUT:$executable" /SUBSYSTEM:CONSOLE $pchObject "@$objectResponse"
 if ($LASTEXITCODE -ne 0) { throw "MSVC bootstrap link failed with exit code $LASTEXITCODE." }
 
 Copy-Item -LiteralPath (Join-Path $repoRoot "runtime\doof_runtime.h") -Destination $outputRoot

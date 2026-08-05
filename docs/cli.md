@@ -25,8 +25,13 @@ Native Windows builds use MSVC by default. Run the compiler from an MSVC x64
 developer environment, or pass an explicit compiler with `--compiler`/`CXX`.
 The MSVC plan uses `cl.exe`, `.obj` files, `/sourceDependencies` JSON for
 incremental invalidation, and `link.exe`; Windows executable outputs receive
-the `.exe` suffix. GCC-compatible compiler planning remains available when an
-explicit non-MSVC compiler is selected.
+the `.exe` suffix. Multi-module builds create a build-local precompiled header
+containing the portable Doof runtime plus lean Windows SDK declarations, then
+reuse it across generated modules. Manifest-native sources retain their own
+language and include environments and do not consume this PCH. GCC-compatible
+compiler planning remains available when an explicit non-MSVC compiler is
+selected. Native object compilation uses at most four compiler workers by
+default to avoid oversubscribing smaller development machines.
 
 For `check`, `emit`, `build`, and `run`, successful exact source/configuration
 fingerprints are cached below `<build-directory>/.doof-cache/v1/`. Exact hits

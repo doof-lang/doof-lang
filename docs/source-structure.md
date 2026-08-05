@@ -125,7 +125,7 @@ threads or reconstruct scheduling policy.
 | `external-dependency.do` | External archive/Git acquisition, sentinels, and build commands |
 | `provenance.do` | Deterministic reached-input and native-build provenance |
 | `pkg-config.do` | Pure interpretation of bounded `pkg-config` results |
-| `native-build.do` | Pure GCC-compatible/MSVC compile and link task planning |
+| `native-build.do` | Pure GCC-compatible/MSVC support-file, PCH, compile, and link task planning |
 | `native-build-state.do` | Versioned incremental state plus Make/MSVC dependency parsing |
 | `native-build-driver.do` | Native compiler processes, fingerprints, dependency signatures, PCH/object/link execution |
 | `test-runner.do` | Pure test discovery, grouping, harness generation, and coverage reports |

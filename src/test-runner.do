@@ -133,16 +133,15 @@ export function generateTestHarness(harnessPath: string, tests: DiscoveredTest[]
   source = source + "    }\n\n"
   source = source + "    testId := args[0]\n"
   for index of 0..<tests.length {
-    keyword := if index == 0 then "if" else "} else if"
     id := escapeDoofString(tests[index].id)
-    source = source + "    " + keyword + " testId == \"" + id + "\" {\n"
+    source = source + "    if testId == \"" + id + "\" {\n"
     source = source + "        __doof_test_" + string(index) + "()\n"
     source = source + "        return 0\n"
+    source = source + "    }\n"
   }
-  source = source + "    } else {\n"
-  source = source + "        println(\"unknown test id: $" + "{testId}\")\n"
-  source = source + "        return 2\n"
-  source = source + "    }\n"
+  source = source + "\n"
+  source = source + "    println(\"unknown test id: $" + "{testId}\")\n"
+  source = source + "    return 2\n"
   source = source + "}\n"
   return source
 }

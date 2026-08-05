@@ -20,6 +20,7 @@ doof::JsonObject NativeCompileTask::toJsonObject() const {
     (*_json)["sourcePath"] = doof::json_value(this->sourcePath);
     (*_json)["outputPath"] = doof::json_value(this->outputPath);
     (*_json)["dependencyFilePath"] = doof::json_value(this->dependencyFilePath);
+    (*_json)["auxiliaryOutputPaths"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->auxiliaryOutputPaths->size()); for (const auto& _element : *this->auxiliaryOutputPaths) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
     (*_json)["usesPrecompiledHeader"] = doof::json_value(this->usesPrecompiledHeader);
     (*_json)["arguments"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->arguments->size()); for (const auto& _element : *this->arguments) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
     return _json;
@@ -50,6 +51,13 @@ doof::Result<std::shared_ptr<NativeCompileTask>, std::string> NativeCompileTask:
     } else {
         _field_dependencyFilePath = std::string("");
     }
+    std::optional<std::shared_ptr<std::vector<std::string>>> _field_auxiliaryOutputPaths;
+    if (auto _iterator_auxiliaryOutputPaths = _object->find("auxiliaryOutputPaths"); _iterator_auxiliaryOutputPaths != _object->end()) {
+        if (!(doof::json_is_array(_iterator_auxiliaryOutputPaths->second))) { return doof::Failure<std::string>{"Field \"auxiliaryOutputPaths\" expected array but got " + std::string(doof::json_type_name(_iterator_auxiliaryOutputPaths->second))}; }
+        _field_auxiliaryOutputPaths = [&]() { const auto* _array = doof::json_as_array(_iterator_auxiliaryOutputPaths->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
+    } else {
+        _field_auxiliaryOutputPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    }
     std::optional<bool> _field_usesPrecompiledHeader;
     if (auto _iterator_usesPrecompiledHeader = _object->find("usesPrecompiledHeader"); _iterator_usesPrecompiledHeader != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_usesPrecompiledHeader->second) : doof::json_is_boolean(_iterator_usesPrecompiledHeader->second)))) { return doof::Failure<std::string>{"Field \"usesPrecompiledHeader\" expected boolean but got " + std::string(doof::json_type_name(_iterator_usesPrecompiledHeader->second))}; }
@@ -64,13 +72,34 @@ doof::Result<std::shared_ptr<NativeCompileTask>, std::string> NativeCompileTask:
     } else {
         _field_arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
-    return doof::Success<std::shared_ptr<NativeCompileTask>>{std::make_shared<NativeCompileTask>(_field_id, _field_compiler, _field_sourcePath, _field_outputPath, _field_dependencyFilePath.value(), _field_usesPrecompiledHeader.value(), _field_arguments.value())};
+    return doof::Success<std::shared_ptr<NativeCompileTask>>{std::make_shared<NativeCompileTask>(_field_id, _field_compiler, _field_sourcePath, _field_outputPath, _field_dependencyFilePath.value(), _field_auxiliaryOutputPaths.value(), _field_usesPrecompiledHeader.value(), _field_arguments.value())};
+}
+
+doof::JsonObject NativeBuildSupportFile::toJsonObject() const {
+    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
+    (*_json)["outputPath"] = doof::json_value(this->outputPath);
+    (*_json)["content"] = doof::json_value(this->content);
+    return _json;
+}
+doof::Result<std::shared_ptr<NativeBuildSupportFile>, std::string> NativeBuildSupportFile::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
+    const auto* _object = doof::json_as_object(_json);
+    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    auto _iterator_outputPath = _object->find("outputPath");
+    if (_iterator_outputPath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"outputPath\""}; }
+    if (!((_lenient ? doof::json_is_lenient_string(_iterator_outputPath->second) : doof::json_is_string(_iterator_outputPath->second)))) { return doof::Failure<std::string>{"Field \"outputPath\" expected string but got " + std::string(doof::json_type_name(_iterator_outputPath->second))}; }
+    auto _field_outputPath = (_lenient ? doof::json_as_string_lenient(_iterator_outputPath->second) : doof::json_as_string(_iterator_outputPath->second));
+    auto _iterator_content = _object->find("content");
+    if (_iterator_content == _object->end()) { return doof::Failure<std::string>{"Missing required field \"content\""}; }
+    if (!((_lenient ? doof::json_is_lenient_string(_iterator_content->second) : doof::json_is_string(_iterator_content->second)))) { return doof::Failure<std::string>{"Field \"content\" expected string but got " + std::string(doof::json_type_name(_iterator_content->second))}; }
+    auto _field_content = (_lenient ? doof::json_as_string_lenient(_iterator_content->second) : doof::json_as_string(_iterator_content->second));
+    return doof::Success<std::shared_ptr<NativeBuildSupportFile>>{std::make_shared<NativeBuildSupportFile>(_field_outputPath, _field_content)};
 }
 
 doof::JsonObject NativeCompilePlan::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
     (*_json)["compiler"] = doof::json_value(this->compiler);
     (*_json)["linker"] = doof::json_value(this->linker);
+    (*_json)["supportFiles"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->supportFiles->size()); for (const auto& _element : *this->supportFiles) { _array->push_back(doof::json_value(_element->toJsonObject())); } return doof::json_value(_array); }();
     (*_json)["precompiledHeaderTask"] = (this->precompiledHeaderTask ? doof::json_value(this->precompiledHeaderTask->toJsonObject()) : doof::json_value(nullptr));
     (*_json)["compileTasks"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->compileTasks->size()); for (const auto& _element : *this->compileTasks) { _array->push_back(doof::json_value(_element->toJsonObject())); } return doof::json_value(_array); }();
     (*_json)["linkArguments"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->linkArguments->size()); for (const auto& _element : *this->linkArguments) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
@@ -88,6 +117,13 @@ doof::Result<std::shared_ptr<NativeCompilePlan>, std::string> NativeCompilePlan:
     if (_iterator_linker == _object->end()) { return doof::Failure<std::string>{"Missing required field \"linker\""}; }
     if (!((_lenient ? doof::json_is_lenient_string(_iterator_linker->second) : doof::json_is_string(_iterator_linker->second)))) { return doof::Failure<std::string>{"Field \"linker\" expected string but got " + std::string(doof::json_type_name(_iterator_linker->second))}; }
     auto _field_linker = (_lenient ? doof::json_as_string_lenient(_iterator_linker->second) : doof::json_as_string(_iterator_linker->second));
+    std::optional<std::shared_ptr<std::vector<std::shared_ptr<NativeBuildSupportFile>>>> _field_supportFiles;
+    if (auto _iterator_supportFiles = _object->find("supportFiles"); _iterator_supportFiles != _object->end()) {
+        if (!(doof::json_is_array(_iterator_supportFiles->second))) { return doof::Failure<std::string>{"Field \"supportFiles\" expected array but got " + std::string(doof::json_type_name(_iterator_supportFiles->second))}; }
+        _field_supportFiles = [&]() { const auto* _array = doof::json_as_array(_iterator_supportFiles->second); auto _values = std::make_shared<std::vector<std::shared_ptr<NativeBuildSupportFile>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(NativeBuildSupportFile::fromJsonValue(_element, _lenient))); } return _values; }();
+    } else {
+        _field_supportFiles = std::make_shared<std::vector<std::shared_ptr<NativeBuildSupportFile>>>(std::vector<std::shared_ptr<NativeBuildSupportFile>>{});
+    }
     std::optional<std::shared_ptr<NativeCompileTask>> _field_precompiledHeaderTask;
     if (auto _iterator_precompiledHeaderTask = _object->find("precompiledHeaderTask"); _iterator_precompiledHeaderTask != _object->end()) {
         if (!(doof::json_is_null(_iterator_precompiledHeaderTask->second) || doof::json_is_object(_iterator_precompiledHeaderTask->second))) { return doof::Failure<std::string>{"Field \"precompiledHeaderTask\" expected object or null but got " + std::string(doof::json_type_name(_iterator_precompiledHeaderTask->second))}; }
@@ -113,7 +149,7 @@ doof::Result<std::shared_ptr<NativeCompilePlan>, std::string> NativeCompilePlan:
     if (_iterator_outputPath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"outputPath\""}; }
     if (!((_lenient ? doof::json_is_lenient_string(_iterator_outputPath->second) : doof::json_is_string(_iterator_outputPath->second)))) { return doof::Failure<std::string>{"Field \"outputPath\" expected string but got " + std::string(doof::json_type_name(_iterator_outputPath->second))}; }
     auto _field_outputPath = (_lenient ? doof::json_as_string_lenient(_iterator_outputPath->second) : doof::json_as_string(_iterator_outputPath->second));
-    return doof::Success<std::shared_ptr<NativeCompilePlan>>{std::make_shared<NativeCompilePlan>(_field_compiler, _field_linker, _field_precompiledHeaderTask.value(), _field_compileTasks.value(), _field_linkArguments.value(), _field_outputPath)};
+    return doof::Success<std::shared_ptr<NativeCompilePlan>>{std::make_shared<NativeCompilePlan>(_field_compiler, _field_linker, _field_supportFiles.value(), _field_precompiledHeaderTask.value(), _field_compileTasks.value(), _field_linkArguments.value(), _field_outputPath)};
 }
 bool isMsvcCompiler(const std::string& compiler) {
     const auto normalized = doof::string_toLowerCase(doof::string_replaceAll(compiler, std::string("\\"), std::string("/")));
@@ -199,7 +235,7 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
         pchArguments->push_back(runtimeHeader);
         pchArguments->push_back(std::string("-o"));
         pchArguments->push_back(pchPath);
-        (precompiledHeaderTask = std::make_shared<NativeCompileTask>((std::string("pch:") + pchPath), compiler, runtimeHeader, pchPath, dependencyFile, false, doof::array_drainToReadonly(pchArguments, "", 0)));
+        (precompiledHeaderTask = std::make_shared<NativeCompileTask>((std::string("pch:") + pchPath), compiler, runtimeHeader, pchPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, doof::array_drainToReadonly(pchArguments, "", 0)));
         if (clangPch) {
             (clangPchPath = pchPath);
         }
@@ -219,7 +255,7 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
         arguments->push_back(std::string("-MF"));
         arguments->push_back(dependencyFile);
         appendObjectArguments(arguments, sourcePath, objectPath);
-        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, (!doof::is_null(precompiledHeaderTask)), doof::array_drainToReadonly(arguments, "", 0)));
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), (!doof::is_null(precompiledHeaderTask)), doof::array_drainToReadonly(arguments, "", 0)));
         objectPaths->push_back(objectPath);
     }
     for (int32_t index = 0; index < static_cast<int32_t>((native->sourceFiles)->size()); ++index) {
@@ -236,7 +272,7 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
             appendObjectArguments(arguments, sourcePath, objectPath);
         }
         const auto taskCompiler = (swiftSource ? std::string("swiftc") : (cSource ? deriveCCompiler(compiler) : compiler));
-        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), taskCompiler, sourcePath, objectPath, dependencyFile, false, doof::array_drainToReadonly(arguments, "", 0)));
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), taskCompiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, doof::array_drainToReadonly(arguments, "", 0)));
         objectPaths->push_back(objectPath);
     }
     std::shared_ptr<std::vector<std::string>> linkArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
@@ -290,7 +326,7 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
     }
     linkArguments->push_back(std::string("-o"));
     linkArguments->push_back(outputPath);
-    return std::make_shared<NativeCompilePlan>(compiler, (swiftLink ? std::string("swiftc") : compiler), precompiledHeaderTask, compileTasks, linkArguments, outputPath);
+    return std::make_shared<NativeCompilePlan>(compiler, (swiftLink ? std::string("swiftc") : compiler), std::make_shared<std::vector<std::shared_ptr<NativeBuildSupportFile>>>(std::vector<std::shared_ptr<NativeBuildSupportFile>>{}), precompiledHeaderTask, compileTasks, linkArguments, outputPath);
 }
 std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, bool release) {
     std::shared_ptr<std::vector<std::string>> compileArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("/nologo"), std::string("/std:c++17"), std::string("/EHsc"), std::string("/utf-8"), std::string("/Zc:__cplusplus"), std::string("/permissive-")});
@@ -316,16 +352,49 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
     for (const auto& flag : *_iterable_14) {
         compileArguments->push_back(flag);
     }
+    std::shared_ptr<std::vector<std::shared_ptr<NativeBuildSupportFile>>> supportFiles = std::make_shared<std::vector<std::shared_ptr<NativeBuildSupportFile>>>(std::vector<std::shared_ptr<NativeBuildSupportFile>>{});
+    std::shared_ptr<NativeCompileTask> precompiledHeaderTask = nullptr;
+    auto pchHeaderName = std::string("");
+    auto pchPath = std::string("");
+    auto pchObjectPath = std::string("");
+    if (static_cast<int32_t>((modules)->size()) > 1) {
+        (pchHeaderName = std::string("doof_msvc_pch.hpp"));
+        const auto pchHeaderPath = resolveBuildPath(outputDirectory, pchHeaderName);
+        const auto pchSourcePath = resolveBuildPath(outputDirectory, std::string("doof_msvc_pch.cpp"));
+        (pchPath = resolveBuildPath(outputDirectory, std::string(".doof-objects/pch/doof_msvc.pch")));
+        (pchObjectPath = resolveBuildPath(outputDirectory, std::string(".doof-objects/pch/doof_msvc_pch.obj")));
+        const auto pchDependencyPath = (pchPath + std::string(".json"));
+        supportFiles->push_back(std::make_shared<NativeBuildSupportFile>(pchHeaderPath, msvcPchHeaderSource()));
+        supportFiles->push_back(std::make_shared<NativeBuildSupportFile>(pchSourcePath, ((std::string("#include \"") + pchHeaderName) + std::string("\"\n"))));
+        const auto pchArguments = copyArguments(compileArguments);
+        pchArguments->push_back(std::string("/TP"));
+        pchArguments->push_back((std::string("/Yc") + pchHeaderName));
+        pchArguments->push_back((std::string("/Fp") + pchPath));
+        pchArguments->push_back(std::string("/sourceDependencies"));
+        pchArguments->push_back(pchDependencyPath);
+        pchArguments->push_back(std::string("/c"));
+        pchArguments->push_back(pchSourcePath);
+        pchArguments->push_back((std::string("/Fo") + pchObjectPath));
+        (precompiledHeaderTask = std::make_shared<NativeCompileTask>((std::string("pch:") + pchPath), compiler, pchSourcePath, pchPath, pchDependencyPath, std::make_shared<std::vector<std::string>>(std::vector<std::string>{pchObjectPath}), false, doof::array_drainToReadonly(pchArguments, "", 0)));
+    }
     std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>> compileTasks = std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(std::vector<std::shared_ptr<NativeCompileTask>>{});
     std::shared_ptr<std::vector<std::string>> objectPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    if (pchObjectPath != std::string("")) {
+        objectPaths->push_back(pchObjectPath);
+    }
     const auto& _iterable_15 = modules;
     for (const auto& module : *_iterable_15) {
         const auto sourcePath = resolveBuildPath(outputDirectory, module->sourceName);
         const auto objectPath = resolveBuildPath(outputDirectory, (std::string(".doof-objects/generated/") + replaceSourceExtension(module->sourceName, std::string(".obj"))));
         const auto dependencyFile = (objectPath + std::string(".json"));
         const auto arguments = copyArguments(compileArguments);
+        if (!doof::is_null(precompiledHeaderTask)) {
+            arguments->push_back((std::string("/FI") + pchHeaderName));
+            arguments->push_back((std::string("/Yu") + pchHeaderName));
+            arguments->push_back((std::string("/Fp") + pchPath));
+        }
         appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, false);
-        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, false, doof::array_drainToReadonly(arguments, "", 0)));
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), (!doof::is_null(precompiledHeaderTask)), doof::array_drainToReadonly(arguments, "", 0)));
         objectPaths->push_back(objectPath);
     }
     const auto& _iterable_16 = native->sourceFiles;
@@ -335,7 +404,7 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
         const auto dependencyFile = (objectPath + std::string(".json"));
         const auto arguments = copyArguments(compileArguments);
         appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, isCSource(sourcePath));
-        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, false, doof::array_drainToReadonly(arguments, "", 0)));
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, doof::array_drainToReadonly(arguments, "", 0)));
         objectPaths->push_back(objectPath);
     }
     std::shared_ptr<std::vector<std::string>> linkArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("/nologo")});
@@ -361,7 +430,10 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
         linkArguments->push_back(flag);
     }
     linkArguments->push_back((std::string("/OUT:") + outputPath));
-    return std::make_shared<NativeCompilePlan>(compiler, std::string("link.exe"), nullptr, compileTasks, linkArguments, outputPath);
+    return std::make_shared<NativeCompilePlan>(compiler, std::string("link.exe"), supportFiles, precompiledHeaderTask, compileTasks, linkArguments, outputPath);
+}
+std::string msvcPchHeaderSource() {
+    return (((((((std::string("#pragma once\n") + std::string("#include \"doof_runtime.hpp\"\n")) + std::string("#if defined(_WIN32)\n")) + std::string("#ifndef WIN32_LEAN_AND_MEAN\n#define WIN32_LEAN_AND_MEAN\n#endif\n")) + std::string("#ifndef NOMINMAX\n#define NOMINMAX\n#endif\n")) + std::string("#include <windows.h>\n")) + std::string("#ifdef small\n#undef small\n#endif\n")) + std::string("#endif\n"));
 }
 void appendMsvcObjectArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& sourcePath, const std::string& outputPath, const std::string& dependencyFilePath, bool cSource) {
     arguments->push_back((cSource ? std::string("/TC") : std::string("/TP")));

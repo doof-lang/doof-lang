@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 
 import { ModuleEmission } from "./emitter-module"
-import { NativeCompileTask, NativeCompileTaskBatch, batchNativeCompileTasks, isMsvcCompiler, planNativeCompile } from "./native-build"
+import { NativeCompileTask, NativeCompileTaskBatch, batchNativeCompileTasks, isMsvcCompiler, msvcPchHeaderSource, planNativeCompile } from "./native-build"
 import { NativeBuildPlan } from "./package-manifest"
 
 export function testPlansGeneratedAndManifestNativeSources(): none {
@@ -254,7 +254,7 @@ export function testDoesNotApplyCxxPrecompiledHeaderToObjectiveCxxSources(): non
   Assert.equal(objectiveCxxTask.arguments.contains("/tmp/generated/doof_runtime.hpp.pch"), false)
 }
 
-export function testBatchesCompileTasksAcrossAtMostEightWorkers(): none {
+export function testBatchesCompileTasksAcrossAtMostFourWorkers(): none {
   let tasks: NativeCompileTask[] = []
   for index of 0..<19 {
     tasks.push(NativeCompileTask {
@@ -267,11 +267,11 @@ export function testBatchesCompileTasksAcrossAtMostEightWorkers(): none {
 
   batches := batchNativeCompileTasks(tasks)
   readonly frozenBatches: readonly NativeCompileTaskBatch[] = batches
-  Assert.equal(batches.length, 8)
-  Assert.equal(batches[0].length, 3)
-  Assert.equal(batches[1].length, 3)
-  Assert.equal(batches[2].length, 3)
-  Assert.equal(batches[3].length, 2)
+  Assert.equal(batches.length, 4)
+  Assert.equal(batches[0].length, 5)
+  Assert.equal(batches[1].length, 5)
+  Assert.equal(batches[2].length, 5)
+  Assert.equal(batches[3].length, 4)
   let assigned = 0
   for batch of batches { assigned = assigned + batch.length }
   Assert.equal(assigned, 19)
@@ -387,4 +387,59 @@ export function testPlansMsvcCompilationAndLinking(): none {
   Assert.equal(plan.linkArguments.contains("/OPT:ICF"), true)
   Assert.equal(plan.linkArguments.contains("/INCREMENTAL:NO"), true)
   Assert.equal(plan.linkArguments[plan.linkArguments.length - 1], "/OUT:C:/generated/demo.exe")
+}
+
+export function testPlansMsvcPrecompiledRuntimeAndWindowsHeadersForGeneratedModules(): none {
+  modules := [
+    ModuleEmission { modulePath: "/one.do", header: "", source: "", headerName: "one.hpp", sourceName: "one.cpp" },
+    ModuleEmission { modulePath: "/two.do", header: "", source: "", headerName: "two.hpp", sourceName: "two.cpp" },
+  ]
+  plan := planNativeCompile(
+    "cl.exe",
+    "C:/generated",
+    "C:/generated/demo.exe",
+    modules,
+    NativeBuildPlan {
+      sourceFiles: ["native/bridge.c", "native/helper.cpp"],
+      defines: ["WINDOWS_BUILD=1"],
+      compilerFlags: ["/W4"],
+    },
+    false,
+    "windows",
+  )
+
+  Assert.equal(plan.supportFiles.length, 2)
+  Assert.equal(plan.supportFiles[0].outputPath, "C:/generated/doof_msvc_pch.hpp")
+  Assert.equal(plan.supportFiles[0].content, msvcPchHeaderSource())
+  Assert.equal(plan.supportFiles[0].content.contains("#include \"doof_runtime.hpp\""), true)
+  Assert.equal(plan.supportFiles[0].content.contains("#define WIN32_LEAN_AND_MEAN"), true)
+  Assert.equal(plan.supportFiles[0].content.contains("#define NOMINMAX"), true)
+  Assert.equal(plan.supportFiles[0].content.contains("#include <windows.h>"), true)
+  Assert.equal(plan.supportFiles[0].content.contains("#undef small"), true)
+  Assert.equal(plan.supportFiles[1].content, "#include \"doof_msvc_pch.hpp\"\n")
+
+  pch := plan.precompiledHeaderTask!
+  Assert.equal(pch.outputPath, "C:/generated/.doof-objects/pch/doof_msvc.pch")
+  Assert.equal(pch.dependencyFilePath, pch.outputPath + ".json")
+  Assert.equal(pch.auxiliaryOutputPaths.length, 1)
+  Assert.equal(pch.auxiliaryOutputPaths[0], "C:/generated/.doof-objects/pch/doof_msvc_pch.obj")
+  Assert.equal(pch.arguments.contains("/Ycdoof_msvc_pch.hpp"), true)
+  Assert.equal(pch.arguments.contains("/Fp" + pch.outputPath), true)
+  Assert.equal(pch.arguments.contains("/DWINDOWS_BUILD=1"), true)
+  Assert.equal(pch.arguments.contains("/W4"), true)
+  Assert.equal(plan.linkArguments.contains(pch.auxiliaryOutputPaths[0]), true)
+
+  for index of 0..<2 {
+    generated := plan.compileTasks[index]
+    Assert.equal(generated.usesPrecompiledHeader, true)
+    Assert.equal(generated.arguments.contains("/FIdoof_msvc_pch.hpp"), true)
+    Assert.equal(generated.arguments.contains("/Yudoof_msvc_pch.hpp"), true)
+    Assert.equal(generated.arguments.contains("/Fp" + pch.outputPath), true)
+  }
+  for index of 2..<plan.compileTasks.length {
+    native := plan.compileTasks[index]
+    Assert.equal(native.usesPrecompiledHeader, false)
+    Assert.equal(native.arguments.contains("/Yudoof_msvc_pch.hpp"), false)
+    Assert.equal(native.arguments.contains("/FIdoof_msvc_pch.hpp"), false)
+  }
 }

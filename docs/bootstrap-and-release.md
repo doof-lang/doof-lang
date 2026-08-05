@@ -26,7 +26,9 @@ and Windows x64 with the MSVC C++ workload. `DOOF_STDLIB_ROOT` or adjacent
 `../doof-stdlib` package checkouts are currently required when rebuilding or
 testing source. Windows stage 0 is compiled with
 `scripts/bootstrap-compiler.ps1`; B5 and B6 then use the compiler's native
-MSVC build plan from an x64 developer environment.
+MSVC build plan from an x64 developer environment. Both paths create their
+MSVC runtime/Windows precompiled header below the ignored build directory; the
+reviewed bootstrap snapshot remains source-only.
 
 ## Cross-platform snapshot
 

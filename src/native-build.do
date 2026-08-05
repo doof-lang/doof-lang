@@ -15,8 +15,15 @@ export class NativeCompileTask {
   readonly sourcePath: string
   readonly outputPath: string
   readonly dependencyFilePath: string = ""
+  readonly auxiliaryOutputPaths: readonly string[] = []
   readonly usesPrecompiledHeader: bool = false
   readonly arguments: string[] = []
+}
+
+/** Build-only generated input consumed by native compiler tasks. */
+export class NativeBuildSupportFile {
+  readonly outputPath: string
+  readonly content: string
 }
 
 /** One immutable serial work queue assigned to a native compiler actor. */
@@ -26,6 +33,7 @@ export type NativeCompileTaskBatch = readonly NativeCompileTask[]
 export class NativeCompilePlan {
   compiler: string
   linker: string
+  supportFiles: NativeBuildSupportFile[] = []
   precompiledHeaderTask: NativeCompileTask | none = none
   compileTasks: NativeCompileTask[] = []
   linkArguments: string[] = []
@@ -44,7 +52,7 @@ export function isMsvcCompiler(compiler: string): bool {
 /** Distributes object tasks across a bounded set of serial worker batches. */
 export function batchNativeCompileTasks(
   tasks: NativeCompileTask[],
-  maximumWorkers: int = 8,
+  maximumWorkers: int = 4,
 ): readonly NativeCompileTaskBatch[] {
   if tasks.length == 0 || maximumWorkers <= 0 { return [] }
   workerCount := if tasks.length < maximumWorkers then tasks.length else maximumWorkers
@@ -259,13 +267,53 @@ function planMsvcNativeCompile(
   }
   for flag of native.compilerFlags { compileArguments.push(flag) }
 
+  let supportFiles: NativeBuildSupportFile[] = []
+  let precompiledHeaderTask: NativeCompileTask | none = none
+  let pchHeaderName = ""
+  let pchPath = ""
+  let pchObjectPath = ""
+  if modules.length > 1 {
+    pchHeaderName = "doof_msvc_pch.hpp"
+    pchHeaderPath := resolveBuildPath(outputDirectory, pchHeaderName)
+    pchSourcePath := resolveBuildPath(outputDirectory, "doof_msvc_pch.cpp")
+    pchPath = resolveBuildPath(outputDirectory, ".doof-objects/pch/doof_msvc.pch")
+    pchObjectPath = resolveBuildPath(outputDirectory, ".doof-objects/pch/doof_msvc_pch.obj")
+    pchDependencyPath := pchPath + ".json"
+    supportFiles.push(NativeBuildSupportFile { outputPath: pchHeaderPath, content: msvcPchHeaderSource() })
+    supportFiles.push(NativeBuildSupportFile { outputPath: pchSourcePath, content: "#include \"" + pchHeaderName + "\"\n" })
+    pchArguments := copyArguments(compileArguments)
+    pchArguments.push("/TP")
+    pchArguments.push("/Yc" + pchHeaderName)
+    pchArguments.push("/Fp" + pchPath)
+    pchArguments.push("/sourceDependencies")
+    pchArguments.push(pchDependencyPath)
+    pchArguments.push("/c")
+    pchArguments.push(pchSourcePath)
+    pchArguments.push("/Fo" + pchObjectPath)
+    precompiledHeaderTask = NativeCompileTask {
+      id: "pch:" + pchPath,
+      compiler,
+      sourcePath: pchSourcePath,
+      outputPath: pchPath,
+      dependencyFilePath: pchDependencyPath,
+      auxiliaryOutputPaths: [pchObjectPath],
+      arguments: pchArguments.drainToReadonly(),
+    }
+  }
+
   let compileTasks: NativeCompileTask[] = []
   let objectPaths: string[] = []
+  if pchObjectPath != "" { objectPaths.push(pchObjectPath) }
   for module of modules {
     sourcePath := resolveBuildPath(outputDirectory, module.sourceName)
     objectPath := resolveBuildPath(outputDirectory, ".doof-objects/generated/" + replaceSourceExtension(module.sourceName, ".obj"))
     dependencyFile := objectPath + ".json"
     arguments := copyArguments(compileArguments)
+    if precompiledHeaderTask != none {
+      arguments.push("/FI" + pchHeaderName)
+      arguments.push("/Yu" + pchHeaderName)
+      arguments.push("/Fp" + pchPath)
+    }
     appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, false)
     compileTasks.push(NativeCompileTask {
       id: "object:" + objectPath,
@@ -273,6 +321,7 @@ function planMsvcNativeCompile(
       sourcePath,
       outputPath: objectPath,
       dependencyFilePath: dependencyFile,
+      usesPrecompiledHeader: precompiledHeaderTask != none,
       arguments: arguments.drainToReadonly(),
     })
     objectPaths.push(objectPath)
@@ -312,10 +361,24 @@ function planMsvcNativeCompile(
   return NativeCompilePlan {
     compiler,
     linker: "link.exe",
+    supportFiles,
+    precompiledHeaderTask,
     compileTasks,
     linkArguments,
     outputPath,
   }
+}
+
+/** Stable MSVC-only umbrella captured before generated module compilation. */
+export function msvcPchHeaderSource(): string {
+  return "#pragma once\n" +
+    "#include \"doof_runtime.hpp\"\n" +
+    "#if defined(_WIN32)\n" +
+    "#ifndef WIN32_LEAN_AND_MEAN\n#define WIN32_LEAN_AND_MEAN\n#endif\n" +
+    "#ifndef NOMINMAX\n#define NOMINMAX\n#endif\n" +
+    "#include <windows.h>\n" +
+    "#ifdef small\n#undef small\n#endif\n" +
+    "#endif\n"
 }
 
 function appendMsvcObjectArguments(
