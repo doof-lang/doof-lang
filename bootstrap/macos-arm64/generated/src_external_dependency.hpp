@@ -24,6 +24,8 @@ namespace std_::stream::index { struct DecodedLineStream; }
 
 namespace app_src_external_dependency_ {
     struct ExternalDependencyTarget;
+    extern std::string EXTERNAL_SOURCE_MARKER;
+    extern int64_t MAX_EXTERNAL_COMMAND_OUTPUT_BYTES;
 }
 
 #include "src_package_manifest.hpp"

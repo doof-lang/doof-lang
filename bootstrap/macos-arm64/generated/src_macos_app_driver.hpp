@@ -24,6 +24,7 @@ namespace std_::stream::index { struct DecodedLineStream; }
 namespace app_src_macos_app_driver_ {
     struct MacOSCommandResult;
     struct EmbeddedCode;
+    extern int64_t MAX_MACOS_COMMAND_OUTPUT_BYTES;
 }
 
 #include "src_macos_app.hpp"

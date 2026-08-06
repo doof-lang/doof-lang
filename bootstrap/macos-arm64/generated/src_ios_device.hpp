@@ -26,6 +26,7 @@ namespace app_src_ios_device_ {
     struct IOSProvisioningProfile;
     struct IOSDeviceSigningOptions;
     struct IOSDeviceCommandResult;
+    extern int64_t MAX_IOS_DEVICE_COMMAND_OUTPUT_BYTES;
 }
 
 #include "std_crypto_index.hpp"

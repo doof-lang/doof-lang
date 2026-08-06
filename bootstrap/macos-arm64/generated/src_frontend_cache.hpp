@@ -22,6 +22,8 @@ namespace app_src_frontend_cache_ {
     struct FrontendFileInput;
     struct FrontendModuleOutput;
     struct FrontendCacheState;
+    extern int32_t FRONTEND_CACHE_VERSION;
+    extern int32_t FRONTEND_SEMANTIC_ABI;
 }
 
 #include "std_json_index.hpp"
@@ -68,6 +70,4 @@ namespace app_src_frontend_cache_ {
 }
 
 namespace app_src_frontend_cache_ {
-    extern int32_t FRONTEND_CACHE_VERSION;
-    extern int32_t FRONTEND_SEMANTIC_ABI;
 }

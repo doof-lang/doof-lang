@@ -38,7 +38,7 @@ std::string emitAs(const std::shared_ptr<::app_src_ast_::AsExpression>& expressi
             const auto failure = ((std::string("doof::Failure<") + ::app_src_emitter_types_::emitType(result->errorType, context->modulePath)) + std::string(">"));
             const auto source = ::app_src_emitter_expr_::emitExpression(expression->expression, context, std::monostate{});
             if (::app_src_checker_types_::sameType(sourceType, target)) {
-                return (((success + std::string("{")) + source) + std::string("}"));
+                return (((((resultCpp + std::string("{")) + success) + std::string("{")) + source) + std::string("}}"));
             }
             {
                 auto _case_subject = sourceType;
@@ -54,11 +54,12 @@ std::string emitAs(const std::shared_ptr<::app_src_ast_::AsExpression>& expressi
                     }
                     }
                     if (narrowed != std::string("")) {
-                        auto errorValue = std::string("doof::failure_error(_as_source)");
-                        if (!::app_src_checker_types_::sameType(sourceResult->errorType, result->errorType)) {
-                            (errorValue = ((((std::string("doof::variant_promote<") + ::app_src_emitter_types_::emitType(result->errorType, context->modulePath)) + std::string(">(")) + errorValue) + std::string(")")));
-                        }
+                        const auto errorValue = emitAsFailureValue(sourceResult, result, context);
                         return ((((((((((std::string("[&]() -> ") + resultCpp) + std::string(" { auto _as_source = ")) + source) + std::string("; if (doof::is_failure(_as_source)) return ")) + failure) + std::string("{")) + errorValue) + std::string("}; return ")) + narrowed) + std::string("; }()"));
+                    }
+                    if (::app_src_checker_types_::isNumeric(sourceResult->valueType) && ::app_src_checker_types_::isNumeric(target)) {
+                        const auto errorValue = emitAsFailureValue(sourceResult, result, context);
+                        return ((((((((((((((std::string("[&]() -> ") + resultCpp) + std::string(" { auto _as_source = ")) + source) + std::string("; if (doof::is_failure(_as_source)) return ")) + failure) + std::string("{")) + errorValue) + std::string("}; auto _as_checked = doof::checked_numeric_as<")) + targetCpp) + std::string(">(doof::success_value(_as_source)); if (_as_checked.has_value()) return ")) + success) + std::string("{_as_checked.value()}; return ")) + failure) + std::string("{\"Numeric narrowing failed\"}; }()"));
                     }
             }
             else {
@@ -116,6 +117,9 @@ std::string emitAs(const std::shared_ptr<::app_src_ast_::AsExpression>& expressi
                             return ((((((((((((std::string("[&]() -> ") + resultCpp) + std::string(" { auto _as_value = ")) + source) + std::string("; if (!_as_value.has_value()) return ")) + failure) + std::string("{\"Nullable narrowing failed\"}; auto _as_checked = doof::checked_numeric_as<")) + targetCpp) + std::string(">(_as_value.value()); if (_as_checked.has_value()) return ")) + success) + std::string("{_as_checked.value()}; return ")) + failure) + std::string("{\"Numeric narrowing failed\"}; }()"));
                         }
                     }
+                    if (::app_src_checker_types_::isNumeric(target) && unionHasNumericMember(union_)) {
+                        return emitNumericUnionAs(source, union_, targetCpp, resultCpp, success, failure, context);
+                    }
                     return ((((((((((((std::string("[&]() -> ") + resultCpp) + std::string(" { auto _as_value = ")) + source) + std::string("; if (doof::variant_is<")) + targetCpp) + std::string(">(_as_value)) return ")) + success) + std::string("{doof::variant_narrow<")) + targetCpp) + std::string(">(_as_value)}; return ")) + failure) + std::string("{\"Union narrowing failed\"}; }()"));
             }
             else {
@@ -130,9 +134,38 @@ std::string emitAs(const std::shared_ptr<::app_src_ast_::AsExpression>& expressi
     doof::unreachable();
     return std::string("");
 }
-bool unionContainsJsonValue(const std::shared_ptr<::app_src_semantic_::UnionResolvedType>& union_) {
+std::string emitAsFailureValue(const std::shared_ptr<::app_src_semantic_::ResultResolvedType>& source, const std::shared_ptr<::app_src_semantic_::ResultResolvedType>& target, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
+    const auto errorValue = std::string("doof::failure_error(_as_source)");
+    if (!::app_src_checker_types_::sameType(source->errorType, target->errorType)) {
+        return ((((std::string("doof::variant_promote<") + ::app_src_emitter_types_::emitType(target->errorType, context->modulePath)) + std::string(">(")) + errorValue) + std::string(")"));
+    }
+    return errorValue;
+}
+bool unionHasNumericMember(const std::shared_ptr<::app_src_semantic_::UnionResolvedType>& union_) {
     const auto& _iterable_1 = union_->types;
     for (const auto& member : *_iterable_1) {
+        if (::app_src_checker_types_::isNumeric(member)) {
+            return true;
+        }
+    }
+    return false;
+}
+std::string emitNumericUnionAs(const std::string& source, const std::shared_ptr<::app_src_semantic_::UnionResolvedType>& union_, const std::string& targetCpp, const std::string& resultCpp, const std::string& success, const std::string& failure, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
+    auto numericItem = std::string("");
+    const auto& _iterable_2 = union_->types;
+    for (const auto& member : *_iterable_2) {
+        if (::app_src_checker_types_::isNumeric(member)) {
+            if (numericItem != std::string("")) {
+                (numericItem = (numericItem + std::string(" || ")));
+            }
+            (numericItem = (((numericItem + std::string("std::is_same_v<_AsItem, ")) + ::app_src_emitter_types_::emitType(member, context->modulePath)) + std::string(">")));
+        }
+    }
+    return ((((((((((((((std::string("[&]() -> ") + resultCpp) + std::string(" { auto _as_value = ")) + source) + std::string("; auto _as_checked = std::visit([](const auto& _as_item) -> std::optional<")) + targetCpp) + std::string("> { using _AsItem = std::decay_t<decltype(_as_item)>; if constexpr (")) + numericItem) + std::string(") return doof::checked_numeric_as<")) + targetCpp) + std::string(">(_as_item); return std::nullopt; }, _as_value); if (_as_checked.has_value()) return ")) + success) + std::string("{_as_checked.value()}; return ")) + failure) + std::string("{\"Numeric narrowing failed\"}; }()"));
+}
+bool unionContainsJsonValue(const std::shared_ptr<::app_src_semantic_::UnionResolvedType>& union_) {
+    const auto& _iterable_3 = union_->types;
+    for (const auto& member : *_iterable_3) {
         {
             auto _case_subject = member;
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>>(_case_subject)) {
@@ -218,8 +251,8 @@ bool isVariantCarrier(const std::variant<std::shared_ptr<::app_src_semantic_::Pr
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
             auto nonNull = 0;
-            const auto& _iterable_2 = union_->types;
-            for (const auto& member : *_iterable_2) {
+            const auto& _iterable_4 = union_->types;
+            for (const auto& member : *_iterable_4) {
                 if (std::visit([](auto&& _obj) { return _obj->kind; }, member) != std::string("none")) {
                     (nonNull = (nonNull + 1));
                 }
@@ -238,8 +271,8 @@ std::string emitIdentifier(const std::shared_ptr<::app_src_ast_::Identifier>& ex
     if (((!doof::is_null(expression->resolvedBinding)) && (expression->resolvedBinding->kind == std::string("field"))) && !context->currentFunctionStatic) {
         return (std::string("this->") + cppIdentifier(expression->name));
     }
-    const auto& _iterable_3 = context->imports;
-    for (const auto& imported : *_iterable_3) {
+    const auto& _iterable_5 = context->imports;
+    for (const auto& imported : *_iterable_5) {
         if ((imported->localName == expression->name) && (!doof::is_null(imported->symbol))) {
             if (imported->symbol->native_) {
                 return (std::string("::") + ((imported->symbol->nativeCppName == std::string("")) ? imported->symbol->name : imported->symbol->nativeCppName));
@@ -257,8 +290,8 @@ std::string emitIdentifier(const std::shared_ptr<::app_src_ast_::Identifier>& ex
         }
     }
     if ((!doof::is_null(expression->resolvedBinding)) && (expression->resolvedBinding->kind == std::string("import"))) {
-        const auto& _iterable_4 = context->imports;
-        for (const auto& imported : *_iterable_4) {
+        const auto& _iterable_6 = context->imports;
+        for (const auto& imported : *_iterable_6) {
             if ((imported->localName == expression->name) && (!doof::is_null(imported->symbol))) {
                 return (((std::string("::") + ::app_src_emitter_expr_utils_::exprModuleNamespaceFor(imported->symbol->module)) + std::string("::")) + cppIdentifier(::app_src_emitter_expr_utils_::emittedSymbolName(doof::unwrap_optional(imported->symbol))));
             }
@@ -381,8 +414,8 @@ std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& ex
                             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
                             if (::app_src_emitter_types_::usesVariantRepresentation(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(union_))) {
                                 std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>> nonNullMembers = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{});
-                                const auto& _iterable_5 = union_->types;
-                                for (const auto& member : *_iterable_5) {
+                                const auto& _iterable_7 = union_->types;
+                                for (const auto& member : *_iterable_7) {
                                     if (std::visit([](auto&& _obj) { return _obj->kind; }, member) != std::string("none")) {
                                         nonNullMembers->push_back(member);
                                     }
@@ -409,8 +442,8 @@ std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& ex
                     }
                     if (::app_src_emitter_types_::usesVariantRepresentation(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(union_))) {
                         std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>> nonNullMembers = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{});
-                        const auto& _iterable_6 = union_->types;
-                        for (const auto& member : *_iterable_6) {
+                        const auto& _iterable_8 = union_->types;
+                        for (const auto& member : *_iterable_8) {
                             if (std::visit([](auto&& _obj) { return _obj->kind; }, member) != std::string("none")) {
                                 nonNullMembers->push_back(member);
                             }
@@ -485,8 +518,8 @@ std::string emitMember(const std::shared_ptr<::app_src_ast_::MemberExpression>& 
         auto _case_subject = expression->object;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
             const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
-            const auto& _iterable_7 = context->namespaceImports;
-            for (const auto& namespace_ : *_iterable_7) {
+            const auto& _iterable_9 = context->namespaceImports;
+            for (const auto& namespace_ : *_iterable_9) {
                 if (namespace_->localName == identifier->name) {
                     return (((std::string("::") + ::app_src_emitter_expr_utils_::exprModuleNamespaceFor(namespace_->sourceModule)) + std::string("::")) + cppIdentifier(expression->property));
                 }

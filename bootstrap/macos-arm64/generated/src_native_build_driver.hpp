@@ -31,6 +31,8 @@ namespace app_src_native_build_driver_ {
     struct NativeCompilerBatchResult;
     struct NativeCompilerIdentity;
     struct NativeCompilerWorker;
+    extern int32_t MAX_NATIVE_OUTPUT_LINES;
+    extern int64_t MAX_NATIVE_OUTPUT_BYTES;
 }
 
 #include "src_emitter_project.hpp"

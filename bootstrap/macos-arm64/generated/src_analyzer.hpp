@@ -69,6 +69,7 @@ namespace app_src_analyzer_ {
     struct ModuleInfo;
     struct AnalysisResult;
     struct ModuleAnalyzer;
+    extern std::shared_ptr<std::vector<std::string>> BUILTIN_TYPES;
 }
 
 #include "src_parser.hpp"

@@ -21,6 +21,7 @@ namespace app_src_native_build_state_ {
     struct NativeInputSignature;
     struct NativeTaskState;
     struct NativeBuildState;
+    extern int32_t NATIVE_BUILD_STATE_VERSION;
 }
 
 #include "std_json_index.hpp"
@@ -66,5 +67,4 @@ namespace app_src_native_build_state_ {
 }
 
 namespace app_src_native_build_state_ {
-    extern int32_t NATIVE_BUILD_STATE_VERSION;
 }

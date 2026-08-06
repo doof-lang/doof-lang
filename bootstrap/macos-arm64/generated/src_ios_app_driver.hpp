@@ -25,6 +25,7 @@ namespace std_::stream::index { struct DecodedLineStream; }
 
 namespace app_src_ios_app_driver_ {
     struct IOSCommandResult;
+    extern int64_t MAX_IOS_COMMAND_OUTPUT_BYTES;
 }
 
 #include "src_ios_app.hpp"

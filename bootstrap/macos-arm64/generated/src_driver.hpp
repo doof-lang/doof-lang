@@ -59,6 +59,9 @@ namespace app_src_driver_ {
     struct DriverReachedPackage;
     struct DriverAcquiredSource;
     struct DriverSourceState;
+    extern int32_t MAX_PRINTED_DIAGNOSTICS;
+    extern int64_t MAX_NATIVE_COMPILER_OUTPUT_BYTES;
+    extern int64_t MAX_COVERAGE_OUTPUT_BYTES;
 }
 
 #include "src_compiler.hpp"

@@ -6,7 +6,7 @@ import { EmitContext } from "./emitter-context"
 import { emitCaseTypePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
-import { exprModuleNamespaceFor } from "./emitter-expr-utils"
+import { exprModuleNamespaceFor, hasNoneMember } from "./emitter-expr-utils"
 import { emitType, specializeEmitType } from "./emitter-types"
 
 export function emitDotShorthand(expression: DotShorthand, context: EmitContext): string {
@@ -24,6 +24,15 @@ export function emitDotShorthand(expression: DotShorthand, context: EmitContext)
 }
 
 export function emitIfExpression(expression: IfExpression, context: EmitContext): string {
+  // C++ determines the common type of `?:` operands before applying the
+  // surrounding expression's conversion. That makes nullable Doof branches
+  // such as `none` and a struct invalid (`nullptr` versus `optional<T>`).
+  // An explicit lambda result type gives each branch the checked contextual
+  // conversion independently.
+  if expression.resolvedType != none && hasNoneMember(expression.resolvedType!) {
+    resultType := expression.resolvedType!
+    return "[&]() -> " + emitType(resultType, context.modulePath) + " { if (" + emitExpression(expression.condition, context) + ") { return " + emitExpression(expression.then_, context, resultType) + "; } return " + emitExpression(expression.else_, context, resultType) + "; }()"
+  }
   return "(" + emitExpression(expression.condition, context) + " ? " + emitExpression(expression.then_, context) + " : " + emitExpression(expression.else_, context) + ")"
 }
 

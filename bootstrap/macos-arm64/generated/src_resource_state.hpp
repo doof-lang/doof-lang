@@ -20,6 +20,7 @@ namespace std_::stream::index { struct DecodedLineStream; }
 namespace app_src_resource_state_ {
     struct MaterializedResource;
     struct ResourceState;
+    extern int32_t RESOURCE_STATE_VERSION;
 }
 
 #include "std_json_index.hpp"
@@ -52,5 +53,4 @@ namespace app_src_resource_state_ {
 }
 
 namespace app_src_resource_state_ {
-    extern int32_t RESOURCE_STATE_VERSION;
 }

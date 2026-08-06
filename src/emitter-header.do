@@ -6,7 +6,7 @@
 
 import {
   ClassDeclaration, ConstDeclaration, EnumDeclaration, ExportDeclaration, Expression, FunctionDeclaration, InterfaceDeclaration,
-  Program, ReadonlyDeclaration, Statement, TypeAliasDeclaration,
+  ImmutableBinding, Program, ReadonlyDeclaration, Statement, TypeAliasDeclaration,
 } from "./ast"
 import { EmitContext, EmitModuleSurface } from "./emitter-context"
 import { emitClassDeclaration, emitDescriptionComment, emitFunctionDeclaration, emitFunctionDefinition, emitInterfaceAlias } from "./emitter-decl"
@@ -24,7 +24,8 @@ export class HeaderPlan {
   functionSignatures: string[] = []
   nativeAdapterSignatures: string[] = []
   genericFunctionDefinitions: string[] = []
-  exportedValueDefinitions: string[] = []
+  earlyModuleValueDeclarations: string[] = []
+  moduleValueDeclarations: string[] = []
   earlyClassDefinitions: string[] = []
   classDefinitions: string[] = []
   interfaceAliases: string[] = []
@@ -140,8 +141,23 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext): 
     // Generic aliases are erased after checker substitution. Concrete uses
     // lower directly to their substituted concrete type.
     alias: TypeAliasDeclaration -> { if alias.typeParams.length == 0 { plan.typeAliases.push(emitTypeAlias(alias, context)) } }
-    const_: ConstDeclaration -> { if const_.exported { plan.exportedValueDefinitions.push(emitDescriptionComment(const_.description, "") + emitExportedValue(const_.name, const_.resolvedType!, context)) } }
-    readonly_: ReadonlyDeclaration -> { if readonly_.exported { plan.exportedValueDefinitions.push(emitDescriptionComment(readonly_.description, "") + emitExportedValue(readonly_.name, readonly_.resolvedType!, context)) } }
+    const_: ConstDeclaration -> {
+      collectModuleValueDeclaration(
+        plan,
+        emitDescriptionComment(const_.description, "") + emitModuleValueDeclaration(const_.name, const_.resolvedType!, context),
+        const_.resolvedType!,
+      )
+    }
+    readonly_: ReadonlyDeclaration -> {
+      collectModuleValueDeclaration(
+        plan,
+        emitDescriptionComment(readonly_.description, "") + emitModuleValueDeclaration(readonly_.name, readonly_.resolvedType!, context),
+        readonly_.resolvedType!,
+      )
+    }
+    binding: ImmutableBinding -> {
+      collectModuleValueDeclaration(plan, emitModuleValueDeclaration(binding.name, binding.resolvedType!, context), binding.resolvedType!)
+    }
     fn: FunctionDeclaration -> {
       if fn.native_ {
         if fn.nativeHeader != "" { addUnique(plan.nativeIncludes, moduleNativeHeaderPath(context.modulePath, fn.nativeHeader)) }
@@ -296,6 +312,9 @@ export function renderHeader(plan: HeaderPlan, guardName: string): string {
   if plan.typeOnlyForwardDeclarations.length > 0 { result = result + "\n" }
   result = result + "namespace " + guardName + " {\n"
   for declaration of plan.classForwardDeclarations { result = result + "    " + declaration }
+  // Module bindings are source-private at the Doof level. They may still be
+  // declared in generated C++ so inline class field defaults can name them.
+  for declaration of plan.earlyModuleValueDeclarations { result = result + "    " + declaration }
   result = result + "}\n\n"
   if plan.earlyClassDefinitions.length > 0 {
     result = result + "namespace " + guardName + " {\n"
@@ -317,17 +336,62 @@ export function renderHeader(plan: HeaderPlan, guardName: string): string {
   for definition of plan.enumDefinitions { result = result + "    " + definition }
   // Concrete class methods may call module-owned native adapters.
   for signature of plan.nativeAdapterSignatures { result = result + "    " + signature }
+  for declaration of plan.moduleValueDeclarations { result = result + "    " + declaration }
   for definition of plan.classDefinitions { result = result + "    " + definition }
   for alias of plan.typeAliases { result = result + "    " + alias }
   for signature of plan.functionSignatures { result = result + "    " + signature }
   result = result + "}\n\n"
   result = result + "namespace " + guardName + " {\n"
-  for definition of plan.exportedValueDefinitions { result = result + "    " + definition }
   for definition of plan.genericFunctionDefinitions { result = result + definition }
   return result + "}\n"
 }
 
-function emitExportedValue(name: string, type_: ResolvedType, context: EmitContext): string {
+function collectModuleValueDeclaration(plan: HeaderPlan, declaration: string, type_: ResolvedType): none {
+  if moduleValueDeclarationNeedsIncludes(type_) { plan.moduleValueDeclarations.push(declaration) }
+  else { plan.earlyModuleValueDeclarations.push(declaration) }
+}
+
+// Values whose C++ spelling requires an enum/interface definition or a
+// complete by-value nominal type wait until generated/native includes and
+// aliases are available. Ordinary Doof classes lower through shared_ptr and
+// can use the existing forward declaration.
+function moduleValueDeclarationNeedsIncludes(type_: ResolvedType): bool {
+  case type_ {
+    class_: ClassType -> {
+      if class_.symbol.kind == "struct" || class_.symbol.native_ { return true }
+      for argument of class_.typeArgs { if moduleValueDeclarationNeedsIncludes(argument) { return true } }
+      return false
+    }
+    _: EnumType -> { return true }
+    _: InterfaceType -> { return true }
+    array: ArrayResolvedType -> { return moduleValueDeclarationNeedsIncludes(array.elementType) }
+    map: MapResolvedType -> {
+      return moduleValueDeclarationNeedsIncludes(map.keyType) || moduleValueDeclarationNeedsIncludes(map.valueType)
+    }
+    set_: SetResolvedType -> { return moduleValueDeclarationNeedsIncludes(set_.elementType) }
+    stream: StreamResolvedType -> { return moduleValueDeclarationNeedsIncludes(stream.elementType) }
+    result: ResultResolvedType -> {
+      return moduleValueDeclarationNeedsIncludes(result.valueType) || moduleValueDeclarationNeedsIncludes(result.errorType)
+    }
+    tuple: TupleResolvedType -> {
+      for element of tuple.elements { if moduleValueDeclarationNeedsIncludes(element) { return true } }
+      return false
+    }
+    union_: UnionResolvedType -> {
+      for member of union_.types { if moduleValueDeclarationNeedsIncludes(member) { return true } }
+      return false
+    }
+    weak_: WeakResolvedType -> { return moduleValueDeclarationNeedsIncludes(weak_.inner) }
+    function_: FunctionType -> {
+      for parameter of function_.params { if moduleValueDeclarationNeedsIncludes(parameter.type_) { return true } }
+      return moduleValueDeclarationNeedsIncludes(function_.returnType)
+    }
+    _ -> { return false }
+  }
+  return false
+}
+
+function emitModuleValueDeclaration(name: string, type_: ResolvedType, context: EmitContext): string {
   return "extern " + emitContextType(type_, context) + " " + name + ";\n"
 }
 

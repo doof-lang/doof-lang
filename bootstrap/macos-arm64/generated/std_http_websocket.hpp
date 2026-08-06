@@ -44,6 +44,14 @@ namespace std_::http::websocket {
     struct WebSocketPing;
     struct WebSocketCloseCommand;
     struct WebSocketConnection;
+    extern int32_t WEBSOCKET_CLOSE_NORMAL;
+    extern int32_t WEBSOCKET_CLOSE_GOING_AWAY;
+    extern int32_t WEBSOCKET_CLOSE_PROTOCOL_ERROR;
+    extern int32_t WEBSOCKET_CLOSE_UNSUPPORTED_DATA;
+    extern int32_t WEBSOCKET_CLOSE_INVALID_PAYLOAD;
+    extern int32_t WEBSOCKET_CLOSE_POLICY_VIOLATION;
+    extern int32_t WEBSOCKET_CLOSE_MESSAGE_TOO_BIG;
+    extern int32_t WEBSOCKET_CLOSE_INTERNAL_ERROR;
 }
 
 #include "std_blob_index.hpp"
@@ -189,12 +197,4 @@ inline std::ostream& operator<<(std::ostream& output, WebSocketState value) { re
 }
 
 namespace std_::http::websocket {
-    extern int32_t WEBSOCKET_CLOSE_NORMAL;
-    extern int32_t WEBSOCKET_CLOSE_GOING_AWAY;
-    extern int32_t WEBSOCKET_CLOSE_PROTOCOL_ERROR;
-    extern int32_t WEBSOCKET_CLOSE_UNSUPPORTED_DATA;
-    extern int32_t WEBSOCKET_CLOSE_INVALID_PAYLOAD;
-    extern int32_t WEBSOCKET_CLOSE_POLICY_VIOLATION;
-    extern int32_t WEBSOCKET_CLOSE_MESSAGE_TOO_BIG;
-    extern int32_t WEBSOCKET_CLOSE_INTERNAL_ERROR;
 }

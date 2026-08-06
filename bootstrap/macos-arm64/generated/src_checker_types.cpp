@@ -992,13 +992,13 @@ bool isAssignable(const std::variant<std::shared_ptr<::app_src_semantic_::Primit
                 auto _case_subject = target;
                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
                     const auto& primitiveTarget = std::get<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject);
+                    if ((primitiveValue->name == std::string("byte")) && (primitiveTarget->name == std::string("int"))) {
+                        return true;
+                    }
                     if ((primitiveValue->name == std::string("int")) && (primitiveTarget->name == std::string("long"))) {
                         return true;
                     }
                     if ((primitiveValue->name == std::string("int")) && (primitiveTarget->name == std::string("double"))) {
-                        return true;
-                    }
-                    if ((primitiveValue->name == std::string("int")) && (primitiveTarget->name == std::string("byte"))) {
                         return true;
                     }
                     if ((primitiveValue->name == std::string("float")) && (primitiveTarget->name == std::string("double"))) {

@@ -19,7 +19,10 @@ the `monostate` absence arm through the standard forced-nullable boundary so the
 generated visitor is valid for every remaining C++ alternative. Runtime-backed
 builtin types use the same native-symbol metadata as declared native types.
 Generated headers own declaration ordering and dependency includes; sources own
-definitions and executable entry wrappers.
+definitions and executable entry wrappers. Module storage declarations needed
+by inline class-field or parameter defaults are emitted before their consumers,
+including for Doof-private bindings. This generated C++ visibility is a lowering
+detail and does not widen the binding's Doof module visibility.
 
 Named functions and methods borrow immutable parameters with `const&` when the
 C++ carrier is reference-like or variant-heavy. Cheap scalar carriers,

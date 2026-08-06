@@ -22,6 +22,8 @@ namespace std_::stream::index { struct DecodedLineStream; }
 namespace app_src_package_acquisition_ {
     struct ExactPackageSource;
     struct AcquiredPackage;
+    extern std::string PACKAGE_ACQUISITION_RECEIPT;
+    extern int32_t PACKAGE_ACQUISITION_SCHEMA_VERSION;
 }
 
 #include "std_blob_index.hpp"

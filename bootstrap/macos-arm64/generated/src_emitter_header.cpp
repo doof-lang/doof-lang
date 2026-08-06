@@ -28,7 +28,8 @@ doof::JsonObject HeaderPlan::toJsonObject() const {
     (*_json)["functionSignatures"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->functionSignatures->size()); for (const auto& _element : *this->functionSignatures) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
     (*_json)["nativeAdapterSignatures"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->nativeAdapterSignatures->size()); for (const auto& _element : *this->nativeAdapterSignatures) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
     (*_json)["genericFunctionDefinitions"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->genericFunctionDefinitions->size()); for (const auto& _element : *this->genericFunctionDefinitions) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
-    (*_json)["exportedValueDefinitions"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->exportedValueDefinitions->size()); for (const auto& _element : *this->exportedValueDefinitions) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
+    (*_json)["earlyModuleValueDeclarations"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->earlyModuleValueDeclarations->size()); for (const auto& _element : *this->earlyModuleValueDeclarations) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
+    (*_json)["moduleValueDeclarations"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->moduleValueDeclarations->size()); for (const auto& _element : *this->moduleValueDeclarations) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
     (*_json)["earlyClassDefinitions"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->earlyClassDefinitions->size()); for (const auto& _element : *this->earlyClassDefinitions) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
     (*_json)["classDefinitions"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->classDefinitions->size()); for (const auto& _element : *this->classDefinitions) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
     (*_json)["interfaceAliases"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->interfaceAliases->size()); for (const auto& _element : *this->interfaceAliases) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
@@ -70,12 +71,19 @@ doof::Result<std::shared_ptr<HeaderPlan>, std::string> HeaderPlan::fromJsonValue
     } else {
         _field_genericFunctionDefinitions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
-    std::optional<std::shared_ptr<std::vector<std::string>>> _field_exportedValueDefinitions;
-    if (auto _iterator_exportedValueDefinitions = _object->find("exportedValueDefinitions"); _iterator_exportedValueDefinitions != _object->end()) {
-        if (!(doof::json_is_array(_iterator_exportedValueDefinitions->second))) { return doof::Failure<std::string>{"Field \"exportedValueDefinitions\" expected array but got " + std::string(doof::json_type_name(_iterator_exportedValueDefinitions->second))}; }
-        _field_exportedValueDefinitions = [&]() { const auto* _array = doof::json_as_array(_iterator_exportedValueDefinitions->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
+    std::optional<std::shared_ptr<std::vector<std::string>>> _field_earlyModuleValueDeclarations;
+    if (auto _iterator_earlyModuleValueDeclarations = _object->find("earlyModuleValueDeclarations"); _iterator_earlyModuleValueDeclarations != _object->end()) {
+        if (!(doof::json_is_array(_iterator_earlyModuleValueDeclarations->second))) { return doof::Failure<std::string>{"Field \"earlyModuleValueDeclarations\" expected array but got " + std::string(doof::json_type_name(_iterator_earlyModuleValueDeclarations->second))}; }
+        _field_earlyModuleValueDeclarations = [&]() { const auto* _array = doof::json_as_array(_iterator_earlyModuleValueDeclarations->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
-        _field_exportedValueDefinitions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+        _field_earlyModuleValueDeclarations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    }
+    std::optional<std::shared_ptr<std::vector<std::string>>> _field_moduleValueDeclarations;
+    if (auto _iterator_moduleValueDeclarations = _object->find("moduleValueDeclarations"); _iterator_moduleValueDeclarations != _object->end()) {
+        if (!(doof::json_is_array(_iterator_moduleValueDeclarations->second))) { return doof::Failure<std::string>{"Field \"moduleValueDeclarations\" expected array but got " + std::string(doof::json_type_name(_iterator_moduleValueDeclarations->second))}; }
+        _field_moduleValueDeclarations = [&]() { const auto* _array = doof::json_as_array(_iterator_moduleValueDeclarations->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
+    } else {
+        _field_moduleValueDeclarations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_earlyClassDefinitions;
     if (auto _iterator_earlyClassDefinitions = _object->find("earlyClassDefinitions"); _iterator_earlyClassDefinitions != _object->end()) {
@@ -182,13 +190,13 @@ doof::Result<std::shared_ptr<HeaderPlan>, std::string> HeaderPlan::fromJsonValue
     } else {
         _field_mainAcceptsArgs = false;
     }
-    return doof::Success<std::shared_ptr<HeaderPlan>>{std::make_shared<HeaderPlan>(_field_functionSignatures.value(), _field_nativeAdapterSignatures.value(), _field_genericFunctionDefinitions.value(), _field_exportedValueDefinitions.value(), _field_earlyClassDefinitions.value(), _field_classDefinitions.value(), _field_interfaceAliases.value(), _field_enumDefinitions.value(), _field_typeAliases.value(), _field_classForwardDeclarations.value(), _field_typeOnlyForwardDeclarations.value(), _field_typeOnlyModuleIncludes.value(), _field_moduleIncludes.value(), _field_nativeIncludes.value(), _field_nativeAliases.value(), _field_nativeNamespaces.value(), _field_hasMain.value(), _field_mainReturnsInt.value(), _field_mainAcceptsArgs.value())};
+    return doof::Success<std::shared_ptr<HeaderPlan>>{std::make_shared<HeaderPlan>(_field_functionSignatures.value(), _field_nativeAdapterSignatures.value(), _field_genericFunctionDefinitions.value(), _field_earlyModuleValueDeclarations.value(), _field_moduleValueDeclarations.value(), _field_earlyClassDefinitions.value(), _field_classDefinitions.value(), _field_interfaceAliases.value(), _field_enumDefinitions.value(), _field_typeAliases.value(), _field_classForwardDeclarations.value(), _field_typeOnlyForwardDeclarations.value(), _field_typeOnlyModuleIncludes.value(), _field_moduleIncludes.value(), _field_nativeIncludes.value(), _field_nativeAliases.value(), _field_nativeNamespaces.value(), _field_hasMain.value(), _field_mainReturnsInt.value(), _field_mainAcceptsArgs.value())};
 }
 std::shared_ptr<HeaderPlan> planHeader(const std::shared_ptr<::app_src_ast_::Program>& program, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     return planHeaders(std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{program}), context);
 }
 std::shared_ptr<HeaderPlan> planHeaders(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    const auto plan = std::make_shared<HeaderPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, false, false);
+    const auto plan = std::make_shared<HeaderPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, false, false);
     const auto& _iterable_1 = programs;
     for (const auto& program : *_iterable_1) {
         const auto& _iterable_2 = program->statements;
@@ -310,15 +318,15 @@ void collect(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
             const auto& const_ = std::get<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject);
-            if (const_->exported) {
-                plan->exportedValueDefinitions->push_back((::app_src_emitter_decl_::emitDescriptionComment(const_->description, std::string("")) + emitExportedValue(const_->name, doof::unwrap_optional(const_->resolvedType), context)));
-            }
+            collectModuleValueDeclaration(plan, (::app_src_emitter_decl_::emitDescriptionComment(const_->description, std::string("")) + emitModuleValueDeclaration(const_->name, doof::unwrap_optional(const_->resolvedType), context)), doof::unwrap_optional(const_->resolvedType));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject)) {
             const auto& readonly_ = std::get<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject);
-            if (readonly_->exported) {
-                plan->exportedValueDefinitions->push_back((::app_src_emitter_decl_::emitDescriptionComment(readonly_->description, std::string("")) + emitExportedValue(readonly_->name, doof::unwrap_optional(readonly_->resolvedType), context)));
-            }
+            collectModuleValueDeclaration(plan, (::app_src_emitter_decl_::emitDescriptionComment(readonly_->description, std::string("")) + emitModuleValueDeclaration(readonly_->name, doof::unwrap_optional(readonly_->resolvedType), context)), doof::unwrap_optional(readonly_->resolvedType));
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject)) {
+            const auto& binding = std::get<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject);
+            collectModuleValueDeclaration(plan, emitModuleValueDeclaration(binding->name, doof::unwrap_optional(binding->resolvedType), context), doof::unwrap_optional(binding->resolvedType));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
             const auto& fn = std::get<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject);
@@ -606,17 +614,21 @@ std::string renderHeader(const std::shared_ptr<HeaderPlan>& plan, const std::str
     for (const auto& declaration : *_iterable_27) {
         (result = ((result + std::string("    ")) + declaration));
     }
+    const auto& _iterable_28 = plan->earlyModuleValueDeclarations;
+    for (const auto& declaration : *_iterable_28) {
+        (result = ((result + std::string("    ")) + declaration));
+    }
     (result = (result + std::string("}\n\n")));
     if (static_cast<int32_t>((plan->earlyClassDefinitions)->size()) > 0) {
         (result = (((result + std::string("namespace ")) + guardName) + std::string(" {\n")));
-        const auto& _iterable_28 = plan->earlyClassDefinitions;
-        for (const auto& definition : *_iterable_28) {
+        const auto& _iterable_29 = plan->earlyClassDefinitions;
+        for (const auto& definition : *_iterable_29) {
             (result = ((result + std::string("    ")) + definition));
         }
         (result = (result + std::string("}\n\n")));
     }
-    const auto& _iterable_29 = plan->moduleIncludes;
-    for (const auto& include : *_iterable_29) {
+    const auto& _iterable_30 = plan->moduleIncludes;
+    for (const auto& include : *_iterable_30) {
         if (!containsValue(plan->typeOnlyModuleIncludes, include)) {
             (result = (((result + std::string("#include \"")) + include) + std::string("\"\n")));
         }
@@ -624,12 +636,12 @@ std::string renderHeader(const std::shared_ptr<HeaderPlan>& plan, const std::str
     if (static_cast<int32_t>((plan->moduleIncludes)->size()) > 0) {
         (result = (result + std::string("\n")));
     }
-    const auto& _iterable_30 = plan->nativeAliases;
-    for (const auto& alias : *_iterable_30) {
+    const auto& _iterable_31 = plan->nativeAliases;
+    for (const auto& alias : *_iterable_31) {
         (result = (result + alias));
     }
-    const auto& _iterable_31 = plan->nativeIncludes;
-    for (const auto& include : *_iterable_31) {
+    const auto& _iterable_32 = plan->nativeIncludes;
+    for (const auto& include : *_iterable_32) {
         if (doof::string_startsWith(include, std::string("<"))) {
             (result = (((result + std::string("#include ")) + include) + std::string("\n")));
         } else {
@@ -640,48 +652,138 @@ std::string renderHeader(const std::shared_ptr<HeaderPlan>& plan, const std::str
         (result = (result + std::string("\n")));
     }
     (result = (((result + std::string("namespace ")) + guardName) + std::string(" {\n")));
-    const auto& _iterable_32 = plan->interfaceAliases;
-    for (const auto& alias : *_iterable_32) {
+    const auto& _iterable_33 = plan->interfaceAliases;
+    for (const auto& alias : *_iterable_33) {
         (result = ((result + std::string("    ")) + alias));
     }
-    const auto& _iterable_33 = plan->enumDefinitions;
-    for (const auto& definition : *_iterable_33) {
+    const auto& _iterable_34 = plan->enumDefinitions;
+    for (const auto& definition : *_iterable_34) {
         (result = ((result + std::string("    ")) + definition));
     }
-    const auto& _iterable_34 = plan->nativeAdapterSignatures;
-    for (const auto& signature : *_iterable_34) {
+    const auto& _iterable_35 = plan->nativeAdapterSignatures;
+    for (const auto& signature : *_iterable_35) {
         (result = ((result + std::string("    ")) + signature));
     }
-    const auto& _iterable_35 = plan->classDefinitions;
-    for (const auto& definition : *_iterable_35) {
+    const auto& _iterable_36 = plan->moduleValueDeclarations;
+    for (const auto& declaration : *_iterable_36) {
+        (result = ((result + std::string("    ")) + declaration));
+    }
+    const auto& _iterable_37 = plan->classDefinitions;
+    for (const auto& definition : *_iterable_37) {
         (result = ((result + std::string("    ")) + definition));
     }
-    const auto& _iterable_36 = plan->typeAliases;
-    for (const auto& alias : *_iterable_36) {
+    const auto& _iterable_38 = plan->typeAliases;
+    for (const auto& alias : *_iterable_38) {
         (result = ((result + std::string("    ")) + alias));
     }
-    const auto& _iterable_37 = plan->functionSignatures;
-    for (const auto& signature : *_iterable_37) {
+    const auto& _iterable_39 = plan->functionSignatures;
+    for (const auto& signature : *_iterable_39) {
         (result = ((result + std::string("    ")) + signature));
     }
     (result = (result + std::string("}\n\n")));
     (result = (((result + std::string("namespace ")) + guardName) + std::string(" {\n")));
-    const auto& _iterable_38 = plan->exportedValueDefinitions;
-    for (const auto& definition : *_iterable_38) {
-        (result = ((result + std::string("    ")) + definition));
-    }
-    const auto& _iterable_39 = plan->genericFunctionDefinitions;
-    for (const auto& definition : *_iterable_39) {
+    const auto& _iterable_40 = plan->genericFunctionDefinitions;
+    for (const auto& definition : *_iterable_40) {
         (result = (result + definition));
     }
     return (result + std::string("}\n"));
 }
-std::string emitExportedValue(const std::string& name, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
+void collectModuleValueDeclaration(const std::shared_ptr<HeaderPlan>& plan, const std::string& declaration, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
+    if (moduleValueDeclarationNeedsIncludes(type_)) {
+        plan->moduleValueDeclarations->push_back(declaration);
+    } else {
+        plan->earlyModuleValueDeclarations->push_back(declaration);
+    }
+}
+bool moduleValueDeclarationNeedsIncludes(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
+    {
+        auto _case_subject = type_;
+        if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
+            const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
+            if ((class_->symbol->kind == std::string("struct")) || class_->symbol->native_) {
+                return true;
+            }
+            const auto& _iterable_41 = class_->typeArgs;
+            for (const auto& argument : *_iterable_41) {
+                if (moduleValueDeclarationNeedsIncludes(argument)) {
+                    return true;
+                }
+            }
+            return false;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject)) {
+            return true;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
+            const auto& array = std::get<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject);
+            return moduleValueDeclarationNeedsIncludes(array->elementType);
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
+            const auto& map = std::get<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject);
+            return (moduleValueDeclarationNeedsIncludes(map->keyType) || moduleValueDeclarationNeedsIncludes(map->valueType));
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::SetResolvedType>>(_case_subject)) {
+            const auto& set_ = std::get<std::shared_ptr<::app_src_semantic_::SetResolvedType>>(_case_subject);
+            return moduleValueDeclarationNeedsIncludes(set_->elementType);
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::StreamResolvedType>>(_case_subject)) {
+            const auto& stream = std::get<std::shared_ptr<::app_src_semantic_::StreamResolvedType>>(_case_subject);
+            return moduleValueDeclarationNeedsIncludes(stream->elementType);
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject)) {
+            const auto& result = std::get<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject);
+            return (moduleValueDeclarationNeedsIncludes(result->valueType) || moduleValueDeclarationNeedsIncludes(result->errorType));
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
+            const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
+            const auto& _iterable_42 = tuple->elements;
+            for (const auto& element : *_iterable_42) {
+                if (moduleValueDeclarationNeedsIncludes(element)) {
+                    return true;
+                }
+            }
+            return false;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
+            const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
+            const auto& _iterable_43 = union_->types;
+            for (const auto& member : *_iterable_43) {
+                if (moduleValueDeclarationNeedsIncludes(member)) {
+                    return true;
+                }
+            }
+            return false;
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::WeakResolvedType>>(_case_subject)) {
+            const auto& weak_ = std::get<std::shared_ptr<::app_src_semantic_::WeakResolvedType>>(_case_subject);
+            return moduleValueDeclarationNeedsIncludes(weak_->inner);
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
+            const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
+            const auto& _iterable_44 = function_->params;
+            for (const auto& parameter : *_iterable_44) {
+                if (moduleValueDeclarationNeedsIncludes(parameter->type_)) {
+                    return true;
+                }
+            }
+            return moduleValueDeclarationNeedsIncludes(function_->returnType);
+    }
+    else {
+            return false;
+    }
+    }
+    doof::unreachable();
+    return false;
+}
+std::string emitModuleValueDeclaration(const std::string& name, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     return ((((std::string("extern ") + ::app_src_emitter_types_::emitContextType(type_, context)) + std::string(" ")) + name) + std::string(";\n"));
 }
 void addUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
-    const auto& _iterable_40 = values;
-    for (const auto& existing : *_iterable_40) {
+    const auto& _iterable_45 = values;
+    for (const auto& existing : *_iterable_45) {
         if (existing == value) {
             return;
         }
@@ -689,8 +791,8 @@ void addUnique(const std::shared_ptr<std::vector<std::string>>& values, const st
     values->push_back(value);
 }
 bool hasNonTypeOnlyImport(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>& imports, const std::string& sourceModule) {
-    const auto& _iterable_41 = imports;
-    for (const auto& imported : *_iterable_41) {
+    const auto& _iterable_46 = imports;
+    for (const auto& imported : *_iterable_46) {
         if ((imported->sourceModule == sourceModule) && !imported->typeOnly) {
             return true;
         }
@@ -698,8 +800,8 @@ bool hasNonTypeOnlyImport(const std::shared_ptr<std::vector<std::shared_ptr<::ap
     return false;
 }
 bool containsValue(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
-    const auto& _iterable_42 = values;
-    for (const auto& existing : *_iterable_42) {
+    const auto& _iterable_47 = values;
+    for (const auto& existing : *_iterable_47) {
         if (existing == value) {
             return true;
         }
@@ -734,21 +836,21 @@ std::string emitEnumDeclaration(const std::shared_ptr<::app_src_ast_::EnumDeclar
     (result = (result + std::string("};\n")));
     (result = (((((result + std::string("inline const char* ")) + declaration->name) + std::string("_name(")) + declaration->name) + std::string(" value) {\n")));
     (result = (result + std::string("  switch (value) {\n")));
-    const auto& _iterable_43 = declaration->variants;
-    for (const auto& variant : *_iterable_43) {
+    const auto& _iterable_48 = declaration->variants;
+    for (const auto& variant : *_iterable_48) {
         (result = (((((((result + std::string("    case ")) + declaration->name) + std::string("::")) + variant->name) + std::string(": return \"")) + variant->name) + std::string("\";\n")));
     }
     (result = (result + std::string("  }\n  return \"\";\n}\n")));
     (result = (((((result + std::string("inline std::optional<")) + declaration->name) + std::string("> ")) + declaration->name) + std::string("_fromName(std::string_view value) {\n")));
-    const auto& _iterable_44 = declaration->variants;
-    for (const auto& variant : *_iterable_44) {
+    const auto& _iterable_49 = declaration->variants;
+    for (const auto& variant : *_iterable_49) {
         (result = (((((((result + std::string("  if (value == \"")) + variant->name) + std::string("\") return ")) + declaration->name) + std::string("::")) + variant->name) + std::string(";\n")));
     }
     (result = (result + std::string("  return std::nullopt;\n}\n")));
     (result = (((((result + std::string("inline std::optional<")) + declaration->name) + std::string("> ")) + declaration->name) + std::string("_fromValue(int32_t value) {\n")));
     (result = (((result + std::string("  switch (static_cast<")) + declaration->name) + std::string(">(value)) {\n")));
-    const auto& _iterable_45 = declaration->variants;
-    for (const auto& variant : *_iterable_45) {
+    const auto& _iterable_50 = declaration->variants;
+    for (const auto& variant : *_iterable_50) {
         (result = (((((((((result + std::string("    case ")) + declaration->name) + std::string("::")) + variant->name) + std::string(": return ")) + declaration->name) + std::string("::")) + variant->name) + std::string(";\n")));
     }
     (result = (result + std::string("    default: return std::nullopt;\n  }\n}\n")));

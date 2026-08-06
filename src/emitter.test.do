@@ -68,6 +68,25 @@ export function testEmitsDirectModuleStorageAndExplicitAssignments(): none {
   Assert.equal(result.source.contains("std::optional<"), false)
 }
 
+export function testDeclaresPublicAndPrivateModuleConstantsBeforeClassFieldDefaults(): none {
+  result := emit(
+    "export readonly PUBLIC_DURATION = 0.25\n" +
+    "readonly PRIVATE_DURATION = 0.5\n" +
+    "class Movement { publicDuration: double = PUBLIC_DURATION\nprivateDuration: double = PRIVATE_DURATION }\n" +
+    "function make(): Movement => Movement {}",
+  )
+  publicDeclaration := result.header.indexOf("extern double PUBLIC_DURATION;")
+  privateDeclaration := result.header.indexOf("extern double PRIVATE_DURATION;")
+  classDefinition := result.header.indexOf("struct Movement : public")
+  Assert.isTrue(publicDeclaration >= 0)
+  Assert.isTrue(privateDeclaration >= 0)
+  Assert.isTrue(publicDeclaration < classDefinition)
+  Assert.isTrue(privateDeclaration < classDefinition)
+  Assert.stringContains(result.header, "double publicDuration = PUBLIC_DURATION;")
+  Assert.stringContains(result.header, "double privateDuration = PRIVATE_DURATION;")
+  Assert.stringContains(result.header, "Movement(double publicDuration = PUBLIC_DURATION, double privateDuration = PRIVATE_DURATION)")
+}
+
 export function testEmitsAssignableDefaultConstructedStructStaticStorage(): none {
   result := emit(
     "struct Vec3 { const kind = \"vec3\"\nx: double\ny: double\nz: double\n" +
@@ -561,6 +580,17 @@ export function testDoesNotHardwireAliasFieldInIfExpressions(): none {
   result := emit("class Label { alias: string }\nfunction choose(label: Label, first: bool): string => if first then \"first\" else label.alias")
   Assert.stringContains(result.source, "label->alias)")
   Assert.equal(result.source.contains("label->alias.value()"), false)
+}
+
+export function testEmitsNullableIfExpressionBranchesThroughCheckedResultType(): none {
+  result := emit(
+    "struct MovementRoute { distance: int }\n" +
+    "function route(airborne: bool): MovementRoute | none => if airborne then none else MovementRoute { distance: 6 }\n" +
+    "function count(missing: bool): int | none => if missing then none else 6",
+  )
+  Assert.stringContains(result.source, "[&]() -> std::optional<MovementRoute> { if (airborne) { return std::nullopt; } return MovementRoute{6}; }()")
+  Assert.stringContains(result.source, "[&]() -> std::optional<int32_t> { if (missing) { return std::nullopt; } return 6; }()")
+  Assert.equal(result.source.contains("airborne ? nullptr"), false)
 }
 
 export function testKeepsNullableNativePseudoFieldNamesAsMethodCalls(): none {
