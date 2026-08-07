@@ -49,6 +49,7 @@ contracts.
 
 ```sh
 ./build.sh                         # bootstrap and fixed-point verification
+./scripts/refresh-bootstrap.sh     # regenerate and verify the bootstrap snapshot
 ./scripts/test.sh                  # compiler unit/component tests
 ./scripts/test-bootstrap-alpine.sh # experimental Alpine stage-0 compile smoke test
 ./scripts/release.sh               # full release acceptance gate

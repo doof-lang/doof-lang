@@ -877,10 +877,10 @@ namespace std_::os::index {
     struct ExecResult : public std::enable_shared_from_this<ExecResult> {
     int32_t exitCode;
     std::shared_ptr<std::vector<uint8_t>> stdout_;
-    std::shared_ptr<std::vector<uint8_t>> stderr;
+    std::shared_ptr<std::vector<uint8_t>> stderr_;
     bool stdoutTruncated = false;
     bool stderrTruncated = false;
-    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr(stderr), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
+    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ExecResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };

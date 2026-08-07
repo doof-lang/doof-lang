@@ -17,6 +17,15 @@ PCH files, build databases, or absolute developer paths. Refresh them only
 from a verified Doof compiler using the final repository layout, then
 run the complete release gate and review the generated diff.
 
+Run `./scripts/refresh-bootstrap.sh` to perform that workflow. It advances
+compiler generations until two adjacent generated source graphs match, runs
+release verification before changing the trust root, preserves reviewed
+Windows and Linux native alternatives that are not emitted by a macOS build,
+updates the source-only snapshot, and reruns the complete release gate from the
+refreshed stage 0. If the final gate fails, it restores the original snapshot.
+Set `DOOF_REFRESH_MAX_GENERATIONS` to change the default six-generation
+convergence limit.
+
 `./scripts/release.sh` adds compiler coverage and CLI/native/resource/package
 fixtures, plus macOS framework and iOS simulator acceptance checks. Release
 artifacts and all mutable state remain below ignored `build/` and `dist/`.

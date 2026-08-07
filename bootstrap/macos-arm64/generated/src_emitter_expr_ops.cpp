@@ -328,6 +328,9 @@ std::string cppIdentifier(const std::string& name) {
     if (name == std::string("stdout")) {
         return std::string("stdout_");
     }
+    if (name == std::string("stderr")) {
+        return std::string("stderr_");
+    }
     return name;
 }
 std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {

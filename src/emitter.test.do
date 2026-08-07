@@ -347,20 +347,25 @@ export function testEscapesDeleteCppKeywordForMethods(): none {
 }
 
 export function testEscapesPlatformStdioIdentifiersEverywhere(): none {
-  result := emit("class Streams { stdin: string\nstdout: string }\nfunction combine(stdin: string, stdout: string): string => Streams { stdin, stdout }.stdin + stdout")
+  result := emit("class Streams { stdin: string\nstdout: string\nstderr: string }\nfunction combine(stdin: string, stdout: string, stderr: string): string => Streams { stdin, stdout, stderr }.stdin + stdout + stderr")
   Assert.stringContains(result.header, "std::string stdin_;")
   Assert.stringContains(result.header, "std::string stdout_;")
+  Assert.stringContains(result.header, "std::string stderr_;")
   Assert.stringContains(result.header, "const std::string& stdin_")
   Assert.stringContains(result.header, "const std::string& stdout_")
+  Assert.stringContains(result.header, "const std::string& stderr_")
   Assert.stringContains(result.source, "->stdin_")
   Assert.stringContains(result.source, "+ stdout_")
+  Assert.stringContains(result.source, "+ stderr_")
 }
 
 export function testPreservesPlatformStdioNamesAtNativeInteropBoundary(): none {
-  result := emit("import class NativeStreams from \"native.hpp\" as native::Streams { stdout(): string static stdin(): string }\nfunction combine(streams: NativeStreams): string => streams.stdout() + NativeStreams.stdin()")
+  result := emit("import class NativeStreams from \"native.hpp\" as native::Streams { stdout(): string\nstderr(): string\nstatic stdin(): string }\nfunction combine(streams: NativeStreams): string => streams.stdout() + streams.stderr() + NativeStreams.stdin()")
   Assert.stringContains(result.source, "streams->stdout()")
+  Assert.stringContains(result.source, "streams->stderr()")
   Assert.stringContains(result.source, "::native::Streams::stdin()")
   Assert.stringNotContains(result.source, "streams->stdout_()")
+  Assert.stringNotContains(result.source, "streams->stderr_()")
   Assert.stringNotContains(result.source, "::native::Streams::stdin_()")
 }
 

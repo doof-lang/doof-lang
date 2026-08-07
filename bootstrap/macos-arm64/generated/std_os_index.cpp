@@ -186,7 +186,7 @@ doof::JsonObject ExecResult::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
     (*_json)["exitCode"] = doof::json_value(this->exitCode);
     (*_json)["stdout"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->stdout_->size()); for (const auto& _element : *this->stdout_) { _array->push_back(doof::json_value(static_cast<int32_t>(_element))); } return doof::json_value(_array); }();
-    (*_json)["stderr"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->stderr->size()); for (const auto& _element : *this->stderr) { _array->push_back(doof::json_value(static_cast<int32_t>(_element))); } return doof::json_value(_array); }();
+    (*_json)["stderr"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->stderr_->size()); for (const auto& _element : *this->stderr_) { _array->push_back(doof::json_value(static_cast<int32_t>(_element))); } return doof::json_value(_array); }();
     (*_json)["stdoutTruncated"] = doof::json_value(this->stdoutTruncated);
     (*_json)["stderrTruncated"] = doof::json_value(this->stderrTruncated);
     return _json;
@@ -202,10 +202,10 @@ doof::Result<std::shared_ptr<ExecResult>, std::string> ExecResult::fromJsonValue
     if (_iterator_stdout_ == _object->end()) { return doof::Failure<std::string>{"Missing required field \"stdout\""}; }
     if (!(doof::json_is_array(_iterator_stdout_->second))) { return doof::Failure<std::string>{"Field \"stdout\" expected array but got " + std::string(doof::json_type_name(_iterator_stdout_->second))}; }
     auto _field_stdout_ = [&]() { const auto* _array = doof::json_as_array(_iterator_stdout_->second); auto _values = std::make_shared<std::vector<uint8_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(static_cast<uint8_t>(_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
-    auto _iterator_stderr = _object->find("stderr");
-    if (_iterator_stderr == _object->end()) { return doof::Failure<std::string>{"Missing required field \"stderr\""}; }
-    if (!(doof::json_is_array(_iterator_stderr->second))) { return doof::Failure<std::string>{"Field \"stderr\" expected array but got " + std::string(doof::json_type_name(_iterator_stderr->second))}; }
-    auto _field_stderr = [&]() { const auto* _array = doof::json_as_array(_iterator_stderr->second); auto _values = std::make_shared<std::vector<uint8_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(static_cast<uint8_t>(_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
+    auto _iterator_stderr_ = _object->find("stderr");
+    if (_iterator_stderr_ == _object->end()) { return doof::Failure<std::string>{"Missing required field \"stderr\""}; }
+    if (!(doof::json_is_array(_iterator_stderr_->second))) { return doof::Failure<std::string>{"Field \"stderr\" expected array but got " + std::string(doof::json_type_name(_iterator_stderr_->second))}; }
+    auto _field_stderr_ = [&]() { const auto* _array = doof::json_as_array(_iterator_stderr_->second); auto _values = std::make_shared<std::vector<uint8_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(static_cast<uint8_t>(_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     std::optional<bool> _field_stdoutTruncated;
     if (auto _iterator_stdoutTruncated = _object->find("stdoutTruncated"); _iterator_stdoutTruncated != _object->end()) {
         if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_stdoutTruncated->second) : doof::json_is_boolean(_iterator_stdoutTruncated->second)))) { return doof::Failure<std::string>{"Field \"stdoutTruncated\" expected boolean but got " + std::string(doof::json_type_name(_iterator_stdoutTruncated->second))}; }
@@ -220,7 +220,7 @@ doof::Result<std::shared_ptr<ExecResult>, std::string> ExecResult::fromJsonValue
     } else {
         _field_stderrTruncated = false;
     }
-    return doof::Success<std::shared_ptr<ExecResult>>{std::make_shared<ExecResult>(_field_exitCode, _field_stdout_, _field_stderr, _field_stdoutTruncated.value(), _field_stderrTruncated.value())};
+    return doof::Success<std::shared_ptr<ExecResult>>{std::make_shared<ExecResult>(_field_exitCode, _field_stdout_, _field_stderr_, _field_stdoutTruncated.value(), _field_stderrTruncated.value())};
 }
 doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options) {
     std::shared_ptr<::NativeExecProcess> proc = nullptr;

@@ -236,6 +236,7 @@ export function cppIdentifier(name: string): string {
   if name == "delete" { return "delete_" }
   if name == "stdin" { return "stdin_" }
   if name == "stdout" { return "stdout_" }
+  if name == "stderr" { return "stderr_" }
   return name
 }
 
