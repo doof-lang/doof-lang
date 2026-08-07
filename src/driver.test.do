@@ -1,5 +1,5 @@
 import { Assert } from "std/assert"
-import { driverRootLogicalPath, driverRootLogicalPrefix, materializeGeneratedText, nativeBuildOutputName, synchronizeExecutableResources } from "./driver"
+import { driverRootLogicalPath, driverRootLogicalPrefix, frontendEmissionCacheSupported, materializeGeneratedText, nativeBuildOutputName, synchronizeExecutableResources } from "./driver"
 import { PackageResource } from "./package-manifest"
 import { exists, isDirectory, metadata, mkdir, readDir, readText, remove, writeText } from "std/fs"
 import { join, tempDirectory } from "std/path"
@@ -58,6 +58,13 @@ export function testPlansMsvcNativeExecutableSuffixOnWindows(): none {
   Assert.equal(nativeBuildOutputName("tools/doof", "windows"), "tools-doof.exe")
   Assert.equal(nativeBuildOutputName("doof.exe", "windows"), "doof.exe")
   Assert.equal(nativeBuildOutputName("doof", "macos"), "doof")
+}
+
+export function testFrontendEmissionCacheSupportsMacOSApps(): none {
+  Assert.equal(frontendEmissionCacheSupported("macos-app"), true)
+  Assert.equal(frontendEmissionCacheSupported(""), true)
+  Assert.equal(frontendEmissionCacheSupported("wasm"), false)
+  Assert.equal(frontendEmissionCacheSupported("ios-app"), false)
 }
 
 export function testPreservesGeneratedHeaderTimestampWhenProjectedContentIsUnchanged(): none {

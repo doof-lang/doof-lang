@@ -772,6 +772,11 @@ function cachedModuleGraph(state: FrontendCacheState, outputDirectory: string): 
   return graph
 }
 
+/** App bundles reuse ordinary generated modules; iOS keeps its distinct entry wrapper out of the cache for now. */
+export function frontendEmissionCacheSupported(target: string): bool {
+  return target != "wasm" && target != "ios-app"
+}
+
 function reusableEmissionKeys(
   state: FrontendCacheState | none,
   outputDirectory: string,
@@ -1288,7 +1293,7 @@ function emitRequest(request: CliRequest): int {
   let reusedFrontend = false
   let result = Compilation { emission: none, diagnostics: [] }
   cachedGraph := if request.command == "emit" || request.command == "build" || request.command == "run"
-    then if project.target == "wasm" || project.macosApp != none || project.iosApp != none
+    then if !frontendEmissionCacheSupported(project.target)
       then none
       else if frontendStateMatches(previousEmissionState, frontendConfiguration, loader) && previousEmissionState != none
         then cachedModuleGraph(previousEmissionState!, outputDirectory)
@@ -1342,7 +1347,7 @@ function emitRequest(request: CliRequest): int {
       reachedPackageInputs(rootManifest), externalInputs, emission.nativeBuild, configuredDriverSourceState.stdCatalog,
     ),
   )
-  if !reusedFrontend && request.command != "package" && project.target != "wasm" && project.macosApp == none && project.iosApp == none {
+  if !reusedFrontend && request.command != "package" && frontendEmissionCacheSupported(project.target) {
     nextEmissionState := frontendStateForCompilation(result, frontendConfiguration, rootManifest)
     removeStaleFrontendOutputs(previousEmissionState, nextEmissionState, outputDirectory)
     writeFrontendState(emissionCachePath, nextEmissionState)

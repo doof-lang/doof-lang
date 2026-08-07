@@ -5,7 +5,7 @@
 import { ProjectEmission } from "./emitter-project"
 import { NativeCompilePlan, NativeCompileTask, batchNativeCompileTasks, isMsvcCompiler, planNativeCompile } from "./native-build"
 import {
-  NativeBuildState, NativeInputSignature, NativeTaskState, findNativeTaskState,
+  NativeBuildState, NativeInputSignature, NativeTaskState,
   parseMakeDependencies, parseMsvcDependencies, parseNativeBuildState, renderNativeBuildState,
 } from "./native-build-state"
 import { PkgConfigCommandResult, applyPkgConfigResult } from "./pkg-config"
@@ -144,6 +144,7 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
   }
   statePath := joinOutput(outputDirectory, ".doof-native-build-state.json")
   previousState := readBuildState(statePath)
+  previousTasks := indexNativeTaskStates(previousState)
   nextState := NativeBuildState {}
   let identities: NativeCompilerIdentity[] = []
   let remainingOutputLines = MAX_NATIVE_OUTPUT_LINES
@@ -154,7 +155,7 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
     pchTask := plan.precompiledHeaderTask!
     ensureDirectory(parentDirectory(pchTask.outputPath))
     pchFingerprint := taskFingerprint(pchTask, identities)
-    pchPrevious := findNativeTaskState(previousState, pchTask.id)
+    pchPrevious := indexedNativeTaskState(previousTasks, pchTask.id)
     if !taskIsCurrent(pchPrevious, pchFingerprint, pchTask.auxiliaryOutputPaths) {
       pchChanged = true
       pchResult := runBuildCommand(pchTask.compiler, mutableArguments(pchTask.arguments))
@@ -174,7 +175,7 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
   for task of plan.compileTasks {
     fingerprint := taskFingerprint(task, identities)
     taskFingerprints.push(fingerprint)
-    previous := findNativeTaskState(previousState, task.id)
+    previous := indexedNativeTaskState(previousTasks, task.id)
     if (task.usesPrecompiledHeader && pchChanged) || !taskIsCurrent(previous, fingerprint) {
       dirtyTasks.push(task)
       dirtyTaskIds.push(task.id)
@@ -214,13 +215,15 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
     task := plan.compileTasks[index]
     objectPaths.push(task.outputPath)
     if contains(dirtyTaskIds, task.id) { nextState.tasks.push(captureTaskState(task, taskFingerprints[index])) }
-    else { nextState.tasks.push(findNativeTaskState(previousState, task.id)!) }
+    else { nextState.tasks.push(indexedNativeTaskState(previousTasks, task.id)!) }
   }
 
   linkId := "link:" + plan.outputPath
   computedLinkFingerprint := linkFingerprint(plan.linker, plan.linkArguments, plan.outputPath, identities)
-  linkPrevious := findNativeTaskState(previousState, linkId)
+  linkPrevious := indexedNativeTaskState(previousTasks, linkId)
+  let linkChanged = false
   if dirtyTasks.length > 0 || !taskIsCurrent(linkPrevious, computedLinkFingerprint) {
+    linkChanged = true
     linkResult := runBuildCommand(plan.linker, plan.linkArguments)
     ignored := printBuildOutput(linkResult, remainingOutputLines)
     if linkResult.truncated && !truncationReported { println("... native linker output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes") }
@@ -230,8 +233,24 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
 
   collectManagedOutputs(nextState.managedOutputs, outputDirectory, plan, project)
   removeStaleOutputs(previousState.managedOutputs, nextState.managedOutputs, outputDirectory)
-  writeBuildState(statePath, nextState)
+  if pchChanged || dirtyTasks.length > 0 || linkChanged || nativeManagedOutputsChanged(previousState.managedOutputs, nextState.managedOutputs) {
+    writeBuildState(statePath, nextState)
+  }
   return 0
+}
+
+function indexNativeTaskStates(state: NativeBuildState): Map<string, NativeTaskState> {
+  let indexed: Map<string, NativeTaskState> = {}
+  for task of state.tasks { indexed.set(task.id, task) }
+  return indexed
+}
+
+function indexedNativeTaskState(
+  indexed: Map<string, NativeTaskState>,
+  id: string,
+): NativeTaskState | none {
+  task := indexed.get(id) else { return none }
+  return task
 }
 
 function compilerIdentity(command: string, identities: NativeCompilerIdentity[]): string {
@@ -371,45 +390,77 @@ export function nativeSupportFileNeedsWrite(previous: string | none, content: st
 }
 
 function collectManagedOutputs(outputs: string[], outputDirectory: string, plan: NativeCompilePlan, project: ProjectEmission): none {
-  appendUnique(outputs, joinOutput(outputDirectory, "doof_runtime.hpp"))
-  for supportFile of plan.supportFiles { appendUnique(outputs, supportFile.outputPath) }
-  for module of project.modules {
-    appendUnique(outputs, joinOutput(outputDirectory, module.headerName))
-    appendUnique(outputs, joinOutput(outputDirectory, module.sourceName))
-  }
-  for supportFile of project.supportFiles { appendUnique(outputs, joinOutput(outputDirectory, supportFile.relativePath)) }
-  for nativeCopy of project.nativeCopies {
-    collectManagedNativeCopyOutputs(outputs, nativeCopy.sourcePath, joinOutput(outputDirectory, nativeCopy.relativePath))
-  }
-  if plan.precompiledHeaderTask != none {
-    appendUnique(outputs, plan.precompiledHeaderTask!.outputPath)
-    if plan.precompiledHeaderTask!.dependencyFilePath != "" { appendUnique(outputs, plan.precompiledHeaderTask!.dependencyFilePath) }
-    for path of plan.precompiledHeaderTask!.auxiliaryOutputPaths { appendUnique(outputs, path) }
-  }
-  for task of plan.compileTasks {
-    appendUnique(outputs, task.outputPath)
-    if task.dependencyFilePath != "" { appendUnique(outputs, task.dependencyFilePath) }
-    for path of task.auxiliaryOutputPaths { appendUnique(outputs, path) }
-  }
-  appendUnique(outputs, plan.outputPath)
+  let indexed: Set<string> = []
+  for output of outputs { indexed.add(output) }
+  collectManagedOutputsIndexed(outputs, indexed, outputDirectory, plan, project)
 }
 
-function collectManagedNativeCopyOutputs(outputs: string[], sourcePath: string, outputPath: string): none {
+function collectManagedOutputsIndexed(
+  outputs: string[],
+  indexed: Set<string>,
+  outputDirectory: string,
+  plan: NativeCompilePlan,
+  project: ProjectEmission,
+): none {
+  appendManagedOutput(outputs, indexed, joinOutput(outputDirectory, "doof_runtime.hpp"))
+  for supportFile of plan.supportFiles { appendManagedOutput(outputs, indexed, supportFile.outputPath) }
+  for module of project.modules {
+    appendManagedOutput(outputs, indexed, joinOutput(outputDirectory, module.headerName))
+    appendManagedOutput(outputs, indexed, joinOutput(outputDirectory, module.sourceName))
+  }
+  for supportFile of project.supportFiles { appendManagedOutput(outputs, indexed, joinOutput(outputDirectory, supportFile.relativePath)) }
+  for nativeCopy of project.nativeCopies {
+    collectManagedNativeCopyOutputs(outputs, indexed, nativeCopy.sourcePath, joinOutput(outputDirectory, nativeCopy.relativePath))
+  }
+  if plan.precompiledHeaderTask != none {
+    appendManagedOutput(outputs, indexed, plan.precompiledHeaderTask!.outputPath)
+    if plan.precompiledHeaderTask!.dependencyFilePath != "" { appendManagedOutput(outputs, indexed, plan.precompiledHeaderTask!.dependencyFilePath) }
+    for path of plan.precompiledHeaderTask!.auxiliaryOutputPaths { appendManagedOutput(outputs, indexed, path) }
+  }
+  for task of plan.compileTasks {
+    appendManagedOutput(outputs, indexed, task.outputPath)
+    if task.dependencyFilePath != "" { appendManagedOutput(outputs, indexed, task.dependencyFilePath) }
+    for path of task.auxiliaryOutputPaths { appendManagedOutput(outputs, indexed, path) }
+  }
+  appendManagedOutput(outputs, indexed, plan.outputPath)
+}
+
+function collectManagedNativeCopyOutputs(outputs: string[], indexed: Set<string>, sourcePath: string, outputPath: string): none {
   if !isDirectory(sourcePath) {
-    appendUnique(outputs, outputPath)
+    appendManagedOutput(outputs, indexed, outputPath)
     return
   }
   for entry of try! readDir(sourcePath) {
-    collectManagedNativeCopyOutputs(outputs, joinOutput(sourcePath, entry.name), joinOutput(outputPath, entry.name))
+    collectManagedNativeCopyOutputs(outputs, indexed, joinOutput(sourcePath, entry.name), joinOutput(outputPath, entry.name))
   }
 }
 
 function removeStaleOutputs(previous: string[], current: string[], outputDirectory: string): none {
-  prefix := if outputDirectory.endsWith("/") then outputDirectory else outputDirectory + "/"
-  for path of previous {
-    if contains(current, path) || !path.startsWith(prefix) || !exists(path) || isDirectory(path) { continue }
-    try! remove(path)
+  for path of staleManagedOutputCandidates(previous, current, outputDirectory) {
+    if exists(path) && !isDirectory(path) { try! remove(path) }
   }
+}
+
+/** Selects only obsolete outputs owned by this build directory without quadratic membership scans. */
+export function staleManagedOutputCandidates(previous: string[], current: string[], outputDirectory: string): string[] {
+  prefix := if outputDirectory.endsWith("/") then outputDirectory else outputDirectory + "/"
+  let retained: Set<string> = []
+  for path of current { retained.add(path) }
+  let stale: string[] = []
+  for path of previous {
+    if retained.has(path) || !path.startsWith(prefix) { continue }
+    stale.push(path)
+  }
+  return stale
+}
+
+/** Avoids serializing and replacing the native snapshot when its deterministic output inventory is unchanged. */
+export function nativeManagedOutputsChanged(previous: string[], current: string[]): bool {
+  if previous.length != current.length { return true }
+  for index of 0..<previous.length {
+    if previous[index] != current[index] { return true }
+  }
+  return false
 }
 
 function mutableArguments(arguments: readonly string[]): string[] {
@@ -425,6 +476,12 @@ function contains(values: string[], value: string): bool {
 
 function appendUnique(values: string[], value: string): none {
   if !contains(values, value) { values.push(value) }
+}
+
+function appendManagedOutput(outputs: string[], indexed: Set<string>, value: string): none {
+  if indexed.has(value) { return }
+  indexed.add(value)
+  outputs.push(value)
 }
 
 function joinOutput(directory: string, name: string): string { return if directory.endsWith("/") then directory + name else directory + "/" + name }
