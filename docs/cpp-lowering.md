@@ -18,11 +18,20 @@ lowering behavior. Before visiting a nullable multi-arm union, lowering removes
 the `monostate` absence arm through the standard forced-nullable boundary so the
 generated visitor is valid for every remaining C++ alternative. Runtime-backed
 builtin types use the same native-symbol metadata as declared native types.
-Generated headers own declaration ordering and dependency includes; sources own
-definitions and executable entry wrappers. Module storage declarations needed
+Each generated header is a consumer-projected, self-contained C++ worldview:
+it renders the canonical declarations required by its matching source directly
+in their defining namespaces and never includes another generated Doof header.
+Sources include only their matching header and own definitions and executable
+entry wrappers. Module storage declarations needed
 by inline class-field or parameter defaults are emitted before their consumers,
 including for Doof-private bindings. This generated C++ visibility is a lowering
 detail and does not widen the binding's Doof module visibility.
+
+`doof_runtime.hpp` is the first include in every generated header and owns the
+standard-library baseline used by generated declarations. Native builds
+precompile that runtime header, so generated headers do not repeat baseline
+standard-library includes; feature-specific native headers remain responsible
+for their own dependencies.
 
 Named functions and methods borrow immutable parameters with `const&` when the
 C++ carrier is reference-like or variant-heavy. Cheap scalar carriers,
@@ -30,6 +39,14 @@ direct-value structs, and unresolved generic parameters stay by value so Doof
 value semantics are preserved. Function-valued callback signatures stay by
 value because callbacks may queue or actor-dispatch arguments beyond the
 caller's stack frame.
+
+Consumer-projected headers preserve referenced, non-generic Doof type aliases
+when their identity is present on checked annotations. Repeated anonymous
+unions whose C++ alternatives are only `std::monostate` and `std::shared_ptr`
+receive generated aliases such as `__type1`. Anonymous alias indices are unique
+across the complete projected header, including across namespace sections. This keeps large
+reference-only `std::variant` carriers single-spelled without hoisting variants
+that require complete by-value nominal definitions.
 
 Actors, promises, escaping mutable captures, `Result`, checked narrowing,
 destructuring, JSON serialization, metadata/invoke, and WebAssembly wrappers

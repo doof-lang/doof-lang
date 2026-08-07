@@ -1,13 +1,4 @@
 #include "src_checker_actor_boundary.hpp"
-#include <cmath>
-#include "src_analyzer.hpp"
-#include "src_semantic.hpp"
-#include "src_ast.hpp"
-#include "src_checker_types.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_checker_actor_boundary_ {
 using namespace ::app_src_analyzer_;

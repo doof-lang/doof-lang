@@ -1,27 +1,10 @@
 #include "src_checker_symbols.hpp"
-#include <cmath>
-#include "src_semantic.hpp"
-#include "src_analyzer.hpp"
-#include "src_ast.hpp"
-#include "src_checker_types.hpp"
-#include "src_json_semantics.hpp"
-#include "src_checker_actor_boundary.hpp"
-#include "src_checker_actor_lifecycle.hpp"
-#include "src_checker_interfaces.hpp"
-#include "src_checker_validation.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_checker_symbols_ {
 using namespace ::app_src_semantic_;
 using namespace ::app_src_analyzer_;
 using namespace ::app_src_ast_;
 using namespace ::app_src_checker_types_;
-using namespace ::app_src_json_semantics_;
-using namespace ::app_src_checker_actor_boundary_;
-using namespace ::app_src_checker_actor_lifecycle_;
 using namespace ::app_src_checker_interfaces_;
 using namespace ::app_src_checker_validation_;
 std::shared_ptr<::app_src_semantic_::ClassType> builtinSourceLocationType() {
@@ -235,6 +218,17 @@ bool isNamespaceImport(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& i
     return false;
 }
 std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> namespaceMemberType(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& namespaceName, const std::string& memberName, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
+    const auto symbol = namespaceMemberSymbol(info, namespaceName, memberName, result);
+    if (doof::is_null(symbol)) {
+        return ::app_src_checker_types_::unknownType();
+    }
+    const auto source = ::app_src_checker_interfaces_::findModule(result, symbol->module);
+    if (doof::is_null(source)) {
+        return ::app_src_checker_types_::unknownType();
+    }
+    return symbolType(doof::unwrap_optional(symbol), doof::unwrap_optional(source), result);
+}
+std::shared_ptr<::app_src_semantic_::Symbol> namespaceMemberSymbol(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& namespaceName, const std::string& memberName, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     const auto& _iterable_9 = info->namespaceImports;
     for (const auto& imported : *_iterable_9) {
         if (imported->localName != namespaceName) {
@@ -242,16 +236,16 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
         }
         const auto source = ::app_src_checker_interfaces_::findModule(result, imported->sourceModule);
         if (doof::is_null(source)) {
-            return ::app_src_checker_types_::unknownType();
+            return nullptr;
         }
         const auto& _iterable_10 = source->exports;
         for (const auto& symbol : *_iterable_10) {
             if (symbol->name == memberName) {
-                return symbolType(symbol, doof::unwrap_optional(source), result);
+                return symbol;
             }
         }
     }
-    return ::app_src_checker_types_::unknownType();
+    return nullptr;
 }
 std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> symbolType(const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     if ((symbol->kind == std::string("class")) || (symbol->kind == std::string("struct"))) {

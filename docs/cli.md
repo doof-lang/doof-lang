@@ -39,7 +39,10 @@ skip the frontend. After an edit, Doof performs a normal semantic compilation
 and retains any generated module whose transitive inputs and lowering plan are
 unchanged. Retained generated files keep their timestamps so the native object
 and dependency cache can reuse them. Removing the build directory clears both
-caches. Native dependency validation uses persisted size and nanosecond
+caches. Generated module sources include only their matching consumer-projected
+header; that header directly contains the checked foreign declaration closure
+rather than including other generated module headers. Native dependency
+validation uses persisted size and nanosecond
 modification metadata on the unchanged hot path and falls back to content
 fingerprints after metadata changes. Executable resources have a separate
 materialization record: unchanged files are not reread, while edits, additions,

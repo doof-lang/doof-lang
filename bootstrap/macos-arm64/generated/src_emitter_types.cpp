@@ -1,14 +1,4 @@
 #include "src_emitter_types.hpp"
-#include <cmath>
-#include "src_semantic.hpp"
-#include "src_emitter_names.hpp"
-#include "src_checker_types.hpp"
-#include "src_emitter_context.hpp"
-#include "src_emitter_monomorphize.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_emitter_types_ {
 using namespace ::app_src_semantic_;

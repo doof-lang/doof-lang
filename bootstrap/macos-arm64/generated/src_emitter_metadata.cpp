@@ -1,15 +1,4 @@
 #include "src_emitter_metadata.hpp"
-#include <cmath>
-#include "src_ast.hpp"
-#include "src_semantic.hpp"
-#include "src_emitter_context.hpp"
-#include "src_emitter_expr.hpp"
-#include "src_emitter_types.hpp"
-#include "src_emitter_json.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_emitter_metadata_ {
 using namespace ::app_src_ast_;

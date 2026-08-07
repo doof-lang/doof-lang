@@ -1,16 +1,4 @@
 #include "src_ios_app_driver.hpp"
-#include <cmath>
-#include "src_ios_app.hpp"
-#include "src_ios_device.hpp"
-#include "src_package_manifest.hpp"
-#include "std_blob_index.hpp"
-#include "std_fs_index.hpp"
-#include "std_os_index.hpp"
-#include "std_parse_index.hpp"
-#include "std_path_index.hpp"
-#include "std_time_index.hpp"
-#include "std_http_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_ios_app_driver_ {
 using namespace ::app_src_ios_app_;
@@ -21,7 +9,6 @@ using namespace ::std_::fs::index;
 using namespace ::std_::os::index;
 using namespace ::std_::parse::index;
 using namespace ::std_::path::index;
-using namespace ::std_::time::index;
 int64_t MAX_IOS_COMMAND_OUTPUT_BYTES = 262144LL;
 
 doof::JsonObject IOSCommandResult::toJsonObject() const {

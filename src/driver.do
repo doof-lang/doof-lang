@@ -666,6 +666,14 @@ function writeTextIfChanged(path: string, content: string): none {
   try! writeText(path, content)
 }
 
+// Generated C++ materialization is content preserving so native dependency
+// timestamps remain stable when conservative frontend invalidation reproduces
+// the same projected worldview.
+export function materializeGeneratedText(path: string, content: string): none {
+  ensureOutputDirectory(parentPath(path))
+  writeTextIfChanged(path, content)
+}
+
 function frontendCachePath(buildDirectory: string, kind: string): string {
   return driverOutputPath(driverOutputPath(buildDirectory, ".doof-cache/v1"), kind + ".json")
 }
@@ -831,8 +839,8 @@ function materializeProject(outputDirectory: string, project: ProjectEmission): 
   ensureOutputDirectory(outputDirectory)
   for module of project.modules {
     if module.reused { continue }
-    writeTextIfChanged(driverOutputPath(outputDirectory, module.headerName), module.header)
-    writeTextIfChanged(driverOutputPath(outputDirectory, module.sourceName), module.source)
+    materializeGeneratedText(driverOutputPath(outputDirectory, module.headerName), module.header)
+    materializeGeneratedText(driverOutputPath(outputDirectory, module.sourceName), module.source)
   }
   for supportFile of project.supportFiles {
     outputPath := driverOutputPath(outputDirectory, supportFile.relativePath)

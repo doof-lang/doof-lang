@@ -170,6 +170,10 @@ export class MemberExpression {
   optional: bool
   force: bool
   let resolvedStaticOwner: ClassDeclaration | none = none
+  // Namespace imports have no runtime value. Retain the checker-selected
+  // exported symbol so lowering can project its exact declaration.
+  let resolvedNamespaceAccess: bool = false
+  let resolvedNamespaceSymbol: Symbol | none = none
   let resolvedCallableField: bool = false
   resolvedType: ResolvedType | none = none
   span: SourceSpan

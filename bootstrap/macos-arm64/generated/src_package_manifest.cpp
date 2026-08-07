@@ -1,13 +1,4 @@
 #include "src_package_manifest.hpp"
-#include <cmath>
-#include "std_json_index.hpp"
-#include "std_path_index.hpp"
-#include "src_macos_app.hpp"
-#include "src_ios_app.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_package_manifest_ {
 using namespace ::std_::json::index;

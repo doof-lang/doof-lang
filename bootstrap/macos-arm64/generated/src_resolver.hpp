@@ -1,33 +1,40 @@
 #pragma once
 #include "doof_runtime.hpp"
-#include <cstdint>
-#include <cmath>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <ostream>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <variant>
-#include <vector>
-namespace app_src_semantic_ { struct Diagnostic; }
-namespace app_src_semantic_ { struct SourceFile; }
-namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
-namespace std_::os::index { struct ExecStdoutStream; }
-namespace std_::os::index { struct ExecStderrStream; }
-namespace std_::stream::index { struct DecodedLineStream; }
+namespace app_src_semantic_ {
+    struct SemanticLocation;
+    struct SemanticSpan;
+    struct Diagnostic;
+    struct SourceFile;
+}
 
 namespace app_src_resolver_ {
     struct ModuleResolver;
 }
 
-#include "src_semantic.hpp"
+namespace app_src_resolver_ {
+    using SourceLoader = doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>;
+}
+
+namespace app_src_semantic_ {
+    struct SemanticLocation {
+    int32_t line;
+    int32_t column;
+    int32_t offset;
+    SemanticLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
+    SemanticLocation() {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<SemanticLocation, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+    struct SourceFile : public std::enable_shared_from_this<SourceFile> {
+    std::string path;
+    std::string source;
+    SourceFile(std::string path, std::string source) : path(path), source(source) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<SourceFile>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+}
 
 namespace app_src_resolver_ {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
-    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     struct ModuleResolver : public std::enable_shared_from_this<ModuleResolver> {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sources;
     doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)> loader;
@@ -39,12 +46,32 @@ namespace app_src_resolver_ {
     bool failed(const std::string& path);
     std::string resolve(const std::string& importer, const std::string& specifier);
 };
-    using SourceLoader = doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>;
+}
+
+namespace app_src_semantic_ {
+    struct SemanticSpan {
+    SemanticLocation start;
+    SemanticLocation end;
+    SemanticSpan(SemanticLocation start, SemanticLocation end) : start(start), end(end) {}
+    SemanticSpan() {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<SemanticSpan, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+    struct Diagnostic : public std::enable_shared_from_this<Diagnostic> {
+    std::string severity;
+    std::string message;
+    SemanticSpan span;
+    std::string module;
+    std::string replacement = std::string("");
+    Diagnostic(std::string severity, std::string message, SemanticSpan span, std::string module, std::string replacement = std::string("")) : severity(severity), message(message), span(span), module(module), replacement(replacement) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<Diagnostic>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+}
+
+namespace app_src_resolver_ {
     doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>> noSourceLoader(const std::string& path);
     std::string withExtension(const std::string& path);
     std::string relativeBase(const std::string& importer, const std::string& specifier);
     std::string parentDirectory(const std::string& path);
-}
-
-namespace app_src_resolver_ {
 }

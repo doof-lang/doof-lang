@@ -1,11 +1,4 @@
 #include "src_emitter_project.hpp"
-#include <cmath>
-#include "src_emitter_module.hpp"
-#include "src_package_manifest.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_emitter_project_ {
 using namespace ::app_src_emitter_module_;

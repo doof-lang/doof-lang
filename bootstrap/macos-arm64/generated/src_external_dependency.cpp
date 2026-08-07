@@ -1,14 +1,4 @@
 #include "src_external_dependency.hpp"
-#include <cmath>
-#include "src_package_manifest.hpp"
-#include "std_blob_index.hpp"
-#include "std_crypto_index.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_json_index.hpp"
-#include "std_os_index.hpp"
-#include "std_path_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_external_dependency_ {
 using namespace ::app_src_package_manifest_;

@@ -1,12 +1,4 @@
 #include "src_native_build.hpp"
-#include <cmath>
-#include "src_emitter_module.hpp"
-#include "src_package_manifest.hpp"
-#include "std_crypto_index.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_native_build_ {
 using namespace ::app_src_emitter_module_;

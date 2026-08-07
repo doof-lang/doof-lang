@@ -191,7 +191,13 @@ export function validateExpression(expression: Expression, module: string, diagn
     binary: BinaryExpression -> { validateExpression(binary.left, module, diagnostics); validateExpression(binary.right, module, diagnostics) }
     unary: UnaryExpression -> { validateExpression(unary.operand, module, diagnostics) }
     assignment: AssignmentExpression -> { validateExpression(assignment.target, module, diagnostics); validateExpression(assignment.value, module, diagnostics) }
-    member: MemberExpression -> { validateExpression(member.object, module, diagnostics) }
+    member: MemberExpression -> {
+      if member.resolvedNamespaceAccess {
+        if member.resolvedNamespaceSymbol == none {
+          addValidationError(module, member.span, "Namespace member '" + member.property + "' has no resolved symbol", diagnostics)
+        }
+      } else { validateExpression(member.object, module, diagnostics) }
+    }
     index: IndexExpression -> { validateExpression(index.object, module, diagnostics); validateExpression(index.index, module, diagnostics) }
     call: CallExpression -> {
       validateExpression(call.callee, module, diagnostics)

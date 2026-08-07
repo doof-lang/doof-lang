@@ -1,12 +1,4 @@
 #include "src_macos_app_driver.hpp"
-#include <cmath>
-#include "src_macos_app.hpp"
-#include "std_blob_index.hpp"
-#include "std_fs_index.hpp"
-#include "std_os_index.hpp"
-#include "std_path_index.hpp"
-#include "std_http_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_macos_app_driver_ {
 using namespace ::app_src_macos_app_;

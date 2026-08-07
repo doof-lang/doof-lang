@@ -49,7 +49,107 @@ export function testCompilesAnImportedProject(): none {
   Assert.equal(result.emission != none, true)
   Assert.equal(result.emission!.modules.length, 2)
   Assert.equal(result.emission!.modules[0].header.contains("int32_t main_"), false)
-  Assert.equal(result.emission!.modules[0].header.contains("#include \"math.hpp\""), true)
+  Assert.equal(result.emission!.modules[0].header.contains("#include \"math.hpp\""), false)
+  Assert.stringContains(result.emission!.modules[0].header, "namespace app_math_")
+  Assert.stringContains(result.emission!.modules[0].header, "int32_t add(int32_t a, int32_t b);")
+  Assert.equal(result.emission!.modules[0].source.contains("#include \"math.hpp\""), false)
+}
+
+export function testProjectsOnlyUsedForeignDeclarations(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "import { used, unused } from \"./lib\"\nfunction main(): int => used()" },
+    SourceFile { path: "/lib.do", source: "export function used(): int => 1\nexport function unused(): int => 2" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  header := result.emission!.modules[0].header
+  Assert.stringContains(header, "int32_t used();")
+  Assert.equal(header.contains("int32_t unused();"), false)
+}
+
+export function testProjectsOnlyUsedNamespaceMembers(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "import * as lib from \"./lib\"\nfunction main(): int => lib.used()" },
+    SourceFile { path: "/lib.do", source: "export function used(): int => 1\nexport function unused(): int => 2" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  header := result.emission!.modules[0].header
+  Assert.stringContains(header, "int32_t used();")
+  Assert.equal(header.contains("int32_t unused();"), false)
+}
+
+export function testUnrelatedDependencyExportLeavesConsumerViewUnchanged(): none {
+  first := compile([
+    SourceFile { path: "/main.do", source: "import { used } from \"./lib\"\nfunction main(): int => used()" },
+    SourceFile { path: "/lib.do", source: "export function used(): int => 1" },
+  ], "/main.do")
+  second := compile([
+    SourceFile { path: "/main.do", source: "import { used } from \"./lib\"\nfunction main(): int => used()" },
+    SourceFile { path: "/lib.do", source: "export function used(): int => 1\nexport function unrelated(): string => \"new\"" },
+  ], "/main.do")
+  Assert.equal(first.diagnostics.length, 0)
+  Assert.equal(second.diagnostics.length, 0)
+  Assert.equal(first.emission!.modules[0].header, second.emission!.modules[0].header)
+}
+
+export function testProjectsCompleteForeignClassAndSignatureTypeClosure(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "import { makeWidget } from \"./widget\"\nfunction main(): int => makeWidget().value" },
+    SourceFile { path: "/widget.do", source: "export class Widget { value: int }\nexport function makeWidget(): Widget => Widget { value: 7 }" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  header := result.emission!.modules[0].header
+  Assert.stringContains(header, "namespace app_widget_")
+  Assert.stringContains(header, "struct Widget : public std::enable_shared_from_this<Widget>")
+  Assert.stringContains(header, "std::shared_ptr<Widget> makeWidget();")
+}
+
+export function testRendersCanonicalForeignClassIdenticallyAcrossWorldviews(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "import { left } from \"./left\"\nimport { right } from \"./right\"\nfunction main(): int => left() + right()" },
+    SourceFile { path: "/left.do", source: "import { Widget } from \"./widget\"\nexport function left(): int => Widget { value: 1 }.value" },
+    SourceFile { path: "/right.do", source: "import { Widget } from \"./widget\"\nexport function right(): int => Widget { value: 2 }.value" },
+    SourceFile { path: "/widget.do", source: "export class Widget { value: int }" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  let leftHeader = ""
+  let rightHeader = ""
+  for module of result.emission!.modules {
+    if module.modulePath == "/left.do" { leftHeader = module.header }
+    if module.modulePath == "/right.do" { rightHeader = module.header }
+  }
+  canonical := "struct Widget : public std::enable_shared_from_this<Widget> {\n    int32_t value;"
+  Assert.stringContains(leftHeader, canonical)
+  Assert.stringContains(rightHeader, canonical)
+}
+
+export function testProjectsNativeTypeRequiredByForeignFunctionSignature(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "import { inspect } from \"./bridge\"\nfunction main(): int => 0" },
+    SourceFile { path: "/bridge.do", source: "export import class Secret from \"native.hpp\" as native::Secret {}\nexport function inspect(secret: Secret): int => 1" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  // The unused named import does not select either declaration.
+  Assert.equal(result.emission!.modules[0].header.contains("native.hpp"), false)
+
+  used := compile([
+    SourceFile { path: "/main.do", source: "import { inspect, makeSecret } from \"./bridge\"\nfunction main(): int => inspect(makeSecret())" },
+    SourceFile { path: "/bridge.do", source: "export import class Secret from \"native.hpp\" as native::Secret {}\nexport function makeSecret(): Secret => Secret {}\nexport function inspect(secret: Secret): int => 1" },
+  ], "/main.do")
+  Assert.equal(used.diagnostics.length, 0)
+  Assert.stringContains(used.emission!.modules[0].header, "#include \"native.hpp\"")
+  Assert.stringContains(used.emission!.modules[0].header, "std::shared_ptr<::native::Secret>")
+}
+
+export function testDoesNotProjectNativeAdaptersUsedOnlyInsideForeignBodies(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "import { wrapped } from \"./bridge\"\nfunction main(): int => wrapped()" },
+    SourceFile { path: "/bridge.do", source: "import function nativeValue(): int from \"native.hpp\" as native::value\nexport function wrapped(): int => nativeValue()" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  header := result.emission!.modules[0].header
+  Assert.stringContains(header, "int32_t wrapped();")
+  Assert.equal(header.contains("native.hpp"), false)
+  Assert.equal(header.contains("nativeValue"), false)
 }
 
 export function testLowersNativeEntryScriptBeforeOptionalMain(): none {
@@ -356,9 +456,11 @@ export function testEmitsSplitImportedProject(): none {
   Assert.equal(graph.modules.length, 3)
   Assert.equal(graph.modules[0].headerName, "main.hpp")
   Assert.equal(graph.modules[0].sourceName, "main.cpp")
-  Assert.equal(graph.modules[0].header.contains("#include \"index.hpp\""), true)
+  Assert.equal(graph.modules[0].header.contains("#include \"index.hpp\""), false)
+  Assert.equal(graph.modules[0].header.contains("namespace app_lib_math_"), true)
   Assert.equal(graph.modules[0].header.contains("namespace app_main_"), true)
-  Assert.equal(graph.modules[1].header.contains("#include \"lib_math.hpp\""), true)
+  Assert.equal(graph.modules[1].header.contains("#include \"lib_math.hpp\""), false)
+  Assert.equal(graph.modules[1].header.contains("namespace app_lib_math_"), true)
   Assert.equal(graph.modules[2].header.contains("namespace app_lib_math_"), true)
   Assert.equal(graph.modules[0].source.contains("::app_lib_math_::add(2, 3)"), true)
 }

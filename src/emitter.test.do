@@ -37,6 +37,18 @@ export function testKeepsLetFieldLoweringRepresentationNeutral(): none {
   Assert.equal(mutable.source, bare.source)
 }
 
+export function testOmitsEmptyNamespaceBlocksFromHeaders(): none {
+  functionOnly := emit("function main(): int => 0")
+  Assert.stringNotContains(functionOnly.header, "namespace main_ {\n}\n")
+  Assert.stringContains(functionOnly.header, "namespace main_ {\n    int32_t doof_main()")
+  Assert.isFalse(functionOnly.header.endsWith("\n\n"))
+
+  enumOnly := emit("enum Color { Red }")
+  Assert.stringNotContains(enumOnly.header, "namespace main_ {\n}\n")
+  Assert.stringContains(enumOnly.header, "namespace main_ {\n    enum class Color")
+  Assert.isFalse(enumOnly.header.endsWith("\n\n"))
+}
+
 export function testEmitsIOSAppEntryWithoutNativeMain(): none {
   analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function main(): void {}" }]).analyze("/main.do")
   Assert.equal(analysis.diagnostics.length, 0)
@@ -630,6 +642,81 @@ export function testPromotesShorthandConstructionFieldsByResolvedTypes(): none {
   Assert.stringContains(result.source, "doof::variant_promote<std::variant<std::shared_ptr<Leaf>, std::shared_ptr<Branch>>>(body)")
 }
 
+export function testReusesNamedAliasesForRepeatedHeaderVariants(): none {
+  result := emit(
+    "class Leaf {}\nclass Branch {}\n" +
+    "type Node = Leaf | Branch\n" +
+    "class Pair { left: Node\nright: Node }\n" +
+    "function choose(value: Node): Node => value",
+  )
+  spelling := "std::variant<std::shared_ptr<Leaf>, std::shared_ptr<Branch>>"
+  Assert.stringContains(result.header, "using Node = " + spelling + ";")
+  Assert.stringContains(result.header, "Node left;")
+  Assert.stringContains(result.header, "Node choose(const Node& value);")
+  Assert.equal(result.header.split(spelling).length, 2)
+  // Source definitions remain free to use the canonical structural spelling;
+  // a C++ alias denotes exactly the same declaration type.
+  Assert.stringContains(result.source, spelling)
+}
+
+export function testSynthesizesNamesForRepeatedAnonymousHeaderVariants(): none {
+  result := emit("class Left {}\nclass Right {}\nclass Pair { left: Left | Right\nright: Left | Right }")
+  spelling := "std::variant<std::shared_ptr<Left>, std::shared_ptr<Right>>"
+  Assert.stringContains(result.header, "using __type1 = " + spelling + ";")
+  Assert.stringContains(result.header, "__type1 left;")
+  Assert.stringContains(result.header, "__type1 right;")
+}
+
+export function testProjectsNamedAliasesIntoConsumerHeaders(): none {
+  sources := [
+    SourceFile {
+      path: "/tree.do",
+      source: "export class Leaf {}\nexport class Branch {}\nexport type Node = Leaf | Branch\nexport class Pair { left: Node\nright: Node }",
+    },
+    SourceFile { path: "/main.do", source: "import { Pair } from \"./tree\"\nfunction pass(value: Pair): Pair => value" },
+  ]
+  analysis := createAnalyzer(sources).analyze("/main.do")
+  Assert.equal(analysis.diagnostics.length, 0)
+  checker := createChecker(analysis)
+  Assert.equal(hasErrorDiagnostics(checker.check("/tree.do").diagnostics), false)
+  Assert.equal(hasErrorDiagnostics(checker.check("/main.do").diagnostics), false)
+  graph := emitModuleGraph(analysis, "/main.do")
+  let header = ""
+  for module of graph.modules { if module.modulePath == "/main.do" { header = module.header } }
+  Assert.stringContains(header, "using Node = std::variant<std::shared_ptr<Leaf>, std::shared_ptr<Branch>>;")
+  Assert.stringContains(header, "Node left;")
+  Assert.stringContains(header, "Node right;")
+  Assert.equal(header.contains("using __type"), false)
+}
+
+export function testIndexesAnonymousHeaderTypesAcrossProjectedNamespaces(): none {
+  sources := [
+    SourceFile { path: "/a.do", source: "export class ALeft {}\nexport class ARight {}\nexport class APair { left: ALeft | ARight\nright: ALeft | ARight }" },
+    SourceFile { path: "/b.do", source: "export class BLeft {}\nexport class BRight {}\nexport class BPair { left: BLeft | BRight\nright: BLeft | BRight }" },
+    SourceFile { path: "/main.do", source: "import { APair } from \"./a\"\nimport { BPair } from \"./b\"\nfunction first(a: APair, b: BPair): APair => a" },
+  ]
+  analysis := createAnalyzer(sources).analyze("/main.do")
+  Assert.equal(analysis.diagnostics.length, 0)
+  checker := createChecker(analysis)
+  Assert.equal(hasErrorDiagnostics(checker.check("/a.do").diagnostics), false)
+  Assert.equal(hasErrorDiagnostics(checker.check("/b.do").diagnostics), false)
+  Assert.equal(hasErrorDiagnostics(checker.check("/main.do").diagnostics), false)
+  graph := emitModuleGraph(analysis, "/main.do")
+  let header = ""
+  for module of graph.modules { if module.modulePath == "/main.do" { header = module.header } }
+  Assert.equal(header.split("using __type1 =").length, 2)
+  Assert.equal(header.split("using __type2 =").length, 2)
+  Assert.stringContains(header, "namespace app_a_ {\n    using __type1 =")
+  Assert.stringContains(header, "namespace app_b_ {\n    using __type2 =")
+}
+
+export function testDoesNotHoistSingleOrValueBearingHeaderVariants(): none {
+  single := emit("class Left {}\nclass Right {}\nfunction choose(value: Left | Right): none {}")
+  Assert.equal(single.header.contains("using __type"), false)
+  valueBearing := emit("struct Left { value: int }\nstruct Right { value: int }\nclass Pair { left: Left | Right\nright: Left | Right }")
+  Assert.equal(valueBearing.header.contains("using __type"), false)
+}
+
 export function testEmitsArbitrarySharedUnionMembersFromResolvedTypes(): none {
   result := emit("class Left { value: int\nread(): int => value }\nclass Right { value: int\nread(): int => value }\ntype Either = Left | Right\ntype MaybeEither = Left | Right | none\nfunction total(item: Either): int => item.value + item.read()\nfunction maybeTotal(item: MaybeEither): int => item.value + item.read()")
   Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, item)")
@@ -975,12 +1062,23 @@ export function testEmitsJsonValueCaseTypeGuardsAndNarrowing(): none {
   Assert.equal(result.source.contains("const auto object = doof::json_object(_case_subject);"), true)
 }
 
-export function testHeaderPlannerIncludesRequiredStandardLibrary(): none {
+export function testGeneratedModulesUseRuntimeStandardLibraryBaseline(): none {
   result := emit("function square(value: double): double => value ** value")
   Assert.equal(result.header.startsWith("#pragma once\n#include \"doof_runtime.hpp\"\n"), true)
   Assert.equal(result.header.contains("DOOF_SELFHOST_COMMON_HELPERS"), false)
   Assert.equal(result.header.contains("inline bool starts_with"), false)
-  Assert.equal(result.header.contains("#include <cmath>"), true)
+  Assert.equal(result.header.contains("#include <cstdint>"), false)
+  Assert.equal(result.header.contains("#include <cmath>"), false)
+  Assert.equal(result.header.contains("#include <functional>"), false)
+  Assert.equal(result.header.contains("#include <memory>"), false)
+  Assert.equal(result.header.contains("#include <optional>"), false)
+  Assert.equal(result.header.contains("#include <ostream>"), false)
+  Assert.equal(result.header.contains("#include <string>"), false)
+  Assert.equal(result.header.contains("#include <tuple>"), false)
+  Assert.equal(result.header.contains("#include <type_traits>"), false)
+  Assert.equal(result.header.contains("#include <variant>"), false)
+  Assert.equal(result.header.contains("#include <vector>"), false)
+  Assert.equal(result.source.contains("#include <cmath>"), false)
   Assert.equal(result.source.contains("std::pow(value, value)"), true)
 }
 
@@ -1010,19 +1108,21 @@ export function testBreaksCircularStructHeaderDependencies(): none {
     if module.modulePath == "/transform.do" { transformHeader = module.header }
   }
 
-  renderTransformForward := renderHeader.indexOf("namespace app_transform_ { struct Transform; }")
+  renderTransformForward := renderHeader.indexOf("namespace app_transform_ {\n    struct Transform;")
   renderPointDefinition := renderHeader.indexOf("struct Point3 {")
-  renderTransformInclude := renderHeader.indexOf("#include \"transform.hpp\"")
+  renderTransformDefinition := renderHeader.indexOf("struct Transform {")
   Assert.isTrue(renderTransformForward >= 0)
-  Assert.isTrue(renderTransformForward < renderTransformInclude)
-  Assert.isTrue(renderPointDefinition < renderTransformInclude)
+  Assert.equal(renderHeader.contains("#include \"transform.hpp\""), false)
+  Assert.isTrue(renderTransformForward < renderTransformDefinition)
+  Assert.isTrue(renderPointDefinition < renderTransformDefinition)
 
-  transformPointForward := transformHeader.indexOf("namespace app_render_ { struct Point3; }")
-  transformRenderInclude := transformHeader.indexOf("#include \"render.hpp\"")
+  transformPointForward := transformHeader.indexOf("namespace app_render_ {\n    struct Point3;")
+  transformPointDefinition := transformHeader.indexOf("struct Point3 {")
   transformDefinition := transformHeader.indexOf("struct Transform {")
   Assert.isTrue(transformPointForward >= 0)
-  Assert.isTrue(transformPointForward < transformRenderInclude)
-  Assert.isTrue(transformDefinition > transformRenderInclude)
+  Assert.equal(transformHeader.contains("#include \"render.hpp\""), false)
+  Assert.isTrue(transformPointForward < transformPointDefinition)
+  Assert.isTrue(transformDefinition > transformPointDefinition)
 }
 
 export function testKeepsImportedStaticDefaultsOutOfHeaders(): none {
@@ -1129,7 +1229,7 @@ export function testEmitsUnreachableAfterDivergentExhaustiveCaseStatements(): no
   Assert.equal(completing.source.contains("doof::unreachable();"), false)
 }
 
-export function testPlansStableModuleNamesAndImportHeaders(): none {
+export function testPlansStableModuleNamesWithoutImportHeaders(): none {
   analysis := createAnalyzer([
     SourceFile { path: "/main.do", source: "import { add } from \"./lib/math\"\nfunction main(): int => add(2, 3)" },
     SourceFile { path: "/lib/math.do", source: "export function add(a: int, b: int): int => a + b" },
@@ -1141,7 +1241,6 @@ export function testPlansStableModuleNamesAndImportHeaders(): none {
   Assert.equal(plan.modules[0].namespaceName, "app_main_")
   Assert.equal(plan.modules[0].headerName, "main.hpp")
   Assert.equal(plan.modules[0].sourceName, "main.cpp")
-  Assert.equal(plan.modules[0].includes[0], "lib_math.hpp")
   Assert.equal(plan.modules[1].namespaceName, "app_lib_math_")
   Assert.equal(plan.modules[1].headerName, "lib_math.hpp")
 }
@@ -1222,7 +1321,7 @@ export function testEmitsImportedTypeAliasesForNativeNamespaces(): none {
   Assert.equal(header.contains("namespace doof_blob { using EncodingError = ::app_types_::EncodingError; }"), true)
 }
 
-export function testEmitsNativeAliasesForImportedModuleTypeSurface(): none {
+export function testEmitsVisibleNativeAliasesAndCompleteRecursiveTypes(): none {
   sources := [
     SourceFile { path: "/main.do", source: "import { FileInfo, IoError } from \"./types\"\nexport { EntryKind } from \"./types\"\nimport class NativeReader from \"native.hpp\" as NativeReader { error(): IoError }\nexport import function metadata(path: string): Result<FileInfo, IoError> from \"native.hpp\" as doof_fs::metadata" },
     SourceFile { path: "/types.do", source: "import { Instant } from \"./time\"\nexport enum EntryKind { File }\nexport enum IoError { Other }\nexport class FileInfo { kind: EntryKind\nmodifiedAt: Instant }" },
@@ -1236,9 +1335,14 @@ export function testEmitsNativeAliasesForImportedModuleTypeSurface(): none {
   graph := emitModuleGraph(analysis, "/main.do")
   let header = ""
   for module of graph.modules { if module.modulePath == "/main.do" { header = module.header } }
-  Assert.isTrue(header.indexOf("#include \"types.hpp\"") < header.indexOf("namespace doof_fs"))
+  Assert.equal(header.contains("#include \"types.hpp\""), false)
+  Assert.equal(header.contains("namespace doof_fs { using FileInfo = ::app_types_::FileInfo; }"), true)
+  Assert.equal(header.contains("namespace doof_fs { using IoError = ::app_types_::IoError; }"), true)
   Assert.equal(header.contains("namespace doof_fs { using EntryKind = ::app_types_::EntryKind; }"), true)
-  Assert.equal(header.contains("namespace doof_fs { using Instant = ::app_time_::Instant; }"), true)
+  Assert.equal(header.contains("namespace doof_fs { using Instant = ::app_time_::Instant; }"), false)
+  instantDefinition := header.indexOf("namespace app_time_ {\n    struct Instant : public")
+  nativeInclude := header.indexOf("#include \"native.hpp\"")
+  Assert.equal(instantDefinition >= 0 && instantDefinition < nativeInclude, true)
   Assert.equal(header.contains("using IoError = ::app_types_::IoError;"), true)
   Assert.equal(header.contains("using Duration = ::app_time_::Duration;"), false)
 }

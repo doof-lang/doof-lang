@@ -1,29 +1,18 @@
 #pragma once
 #include "doof_runtime.hpp"
-#include <cstdint>
-#include <cmath>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <ostream>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <variant>
-#include <vector>
-namespace app_src_macos_app_ { struct MacOSAppConfig; }
-namespace app_src_macos_app_ { struct MacOSAppResource; }
-namespace app_src_macos_app_ { struct MacOSEmbeddedLibrary; }
-namespace app_src_macos_app_ { struct MacOSPackageConfig; }
-namespace app_src_ios_app_ { struct IOSAppConfig; }
-namespace app_src_ios_app_ { struct IOSAppResource; }
-namespace app_src_ios_app_ { struct IOSEmbeddedLibrary; }
-namespace app_src_ios_app_ { struct IOSPackageConfig; }
-namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
-namespace std_::os::index { struct ExecStdoutStream; }
-namespace std_::os::index { struct ExecStderrStream; }
-namespace std_::stream::index { struct DecodedLineStream; }
+namespace app_src_macos_app_ {
+    struct MacOSAppResource;
+    struct MacOSEmbeddedLibrary;
+    struct MacOSAppConfig;
+    struct MacOSPackageConfig;
+}
+
+namespace app_src_ios_app_ {
+    struct IOSAppResource;
+    struct IOSEmbeddedLibrary;
+    struct IOSAppConfig;
+    struct IOSPackageConfig;
+}
 
 namespace app_src_package_manifest_ {
     struct NativeBuildPlan;
@@ -37,14 +26,87 @@ namespace app_src_package_manifest_ {
     struct PackageManifest;
 }
 
-#include "std_json_index.hpp"
-#include "std_path_index.hpp"
-#include "src_macos_app.hpp"
-#include "src_ios_app.hpp"
+namespace app_src_macos_app_ {
+    struct MacOSAppResource : public std::enable_shared_from_this<MacOSAppResource> {
+    std::string sourcePath;
+    std::string destination;
+    MacOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<MacOSAppResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+    struct MacOSEmbeddedLibrary : public std::enable_shared_from_this<MacOSEmbeddedLibrary> {
+    std::string library = std::string("");
+    std::string path = std::string("");
+    MacOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<MacOSEmbeddedLibrary>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+    struct MacOSAppConfig : public std::enable_shared_from_this<MacOSAppConfig> {
+    std::string executableName;
+    std::string bundleId;
+    std::string displayName;
+    std::string version;
+    std::string iconPath = std::string("");
+    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr;
+    std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{});
+    std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{});
+    std::string category = std::string("public.app-category.developer-tools");
+    std::string minimumSystemVersion = std::string("11.0");
+    MacOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{}), std::string category = std::string("public.app-category.developer-tools"), std::string minimumSystemVersion = std::string("11.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), category(category), minimumSystemVersion(minimumSystemVersion) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<MacOSAppConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+    struct MacOSPackageConfig : public std::enable_shared_from_this<MacOSPackageConfig> {
+    std::string distDirectory = std::string("");
+    std::string signing = std::string("developer-id");
+    std::string identity = std::string("");
+    bool sandbox = false;
+    std::string entitlementsPath = std::string("");
+    MacOSPackageConfig(std::string distDirectory = std::string(""), std::string signing = std::string("developer-id"), std::string identity = std::string(""), bool sandbox = false, std::string entitlementsPath = std::string("")) : distDirectory(distDirectory), signing(signing), identity(identity), sandbox(sandbox), entitlementsPath(entitlementsPath) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<MacOSPackageConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+}
+
+namespace app_src_ios_app_ {
+    struct IOSAppResource : public std::enable_shared_from_this<IOSAppResource> {
+    std::string sourcePath;
+    std::string destination;
+    IOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<IOSAppResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+    struct IOSEmbeddedLibrary : public std::enable_shared_from_this<IOSEmbeddedLibrary> {
+    std::string library = std::string("");
+    std::string path = std::string("");
+    IOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<IOSEmbeddedLibrary>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+    struct IOSAppConfig : public std::enable_shared_from_this<IOSAppConfig> {
+    std::string executableName;
+    std::string bundleId;
+    std::string displayName;
+    std::string version;
+    std::string iconPath = std::string("");
+    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr;
+    std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(std::vector<std::shared_ptr<IOSAppResource>>{});
+    std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{});
+    std::string minimumDeploymentTarget = std::string("16.0");
+    IOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(std::vector<std::shared_ptr<IOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{}), std::string minimumDeploymentTarget = std::string("16.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), minimumDeploymentTarget(minimumDeploymentTarget) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<IOSAppConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+    struct IOSPackageConfig : public std::enable_shared_from_this<IOSPackageConfig> {
+    std::string identity = std::string("");
+    std::string provisioningProfilePath = std::string("");
+    IOSPackageConfig(std::string identity = std::string(""), std::string provisioningProfilePath = std::string("")) : identity(identity), provisioningProfilePath(provisioningProfilePath) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<IOSPackageConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+}
 
 namespace app_src_package_manifest_ {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
-    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     struct NativeBuildPlan : public std::enable_shared_from_this<NativeBuildPlan> {
     std::shared_ptr<std::vector<std::string>> includePaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> sourceFiles = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
@@ -155,6 +217,20 @@ namespace app_src_package_manifest_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<PackageManifest>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
+}
+
+#include "std/json/native_json.hpp"
+
+namespace std_::json::index {
+    doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text);
+    std::string formatJsonValue(const doof::JsonValue& value);
+}
+
+namespace std_::path::index {
+    std::string join(const std::shared_ptr<std::vector<std::string>>& parts);
+}
+
+namespace app_src_package_manifest_ {
     std::string manifestJoinPath(const std::string& directory, const std::string& name);
     doof::JsonValue manifestJsonField(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name);
     bool manifestJsonHas(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name);
@@ -193,7 +269,4 @@ namespace app_src_package_manifest_ {
     doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> manifestObject(const doof::JsonValue& value, const std::string& manifestPath, const std::string& fieldPath);
     doof::Result<std::shared_ptr<std::vector<doof::JsonValue>>, std::string> manifestArray(const doof::JsonValue& value, const std::string& manifestPath, const std::string& fieldPath);
     doof::Result<std::string, std::string> manifestString(const doof::JsonValue& value, const std::string& manifestPath, const std::string& fieldPath);
-}
-
-namespace app_src_package_manifest_ {
 }

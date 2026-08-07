@@ -1,8 +1,8 @@
 // Module-level orchestration for the Doof C++ emitter.
 //
-// Include planning stays at this boundary so expression and statement emitters
-// remain independent of module layout. Every analyzed module becomes its own
-// header/source pair; there is no project-wide emission mode.
+// Worldview planning stays at this boundary so expression and statement
+// emitters remain independent of module layout. Every analyzed module becomes
+// its own self-contained header/source pair.
 
 import {
   BoolLiteral, CharLiteral, ClassDeclaration, ConstDeclaration, DotShorthand, DoubleLiteral, EnumDeclaration, ExportDeclaration, ExportList, Expression, FloatLiteral, FunctionDeclaration,
@@ -17,7 +17,8 @@ import { emitMetadataDefinition } from "./emitter-metadata"
 import { emitStatement } from "./emitter-stmt"
 import { emitContextType } from "./emitter-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { HeaderPlan, planHeader, renderHeader } from "./emitter-header"
+import { HeaderPlan, HeaderSection, planHeader, renderProjectedHeader } from "./emitter-header"
+import { planWorldview, WorldviewModule } from "./emitter-worldview"
 import { buildInstantiationPlan, ClassInstantiation, FunctionInstantiation, InstantiationPlan, MethodInstantiation, nativeTemplateClassKey } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
 import { sha256HexString } from "std/crypto"
@@ -31,14 +32,13 @@ export class ModulePlan {
   namespaceName: string
   headerName: string
   sourceName: string
-  includes: string[] = []
 }
 
 export class ModuleGraphPlan {
   modules: ModulePlan[] = []
 }
 
-// Plan the names and direct header dependencies before split-module emission.
+// Plan stable output names before split-module emission.
 export function planModuleGraph(result: AnalysisResult): ModuleGraphPlan {
   plan := ModuleGraphPlan {}
   for info of result.modules {
@@ -48,18 +48,9 @@ export function planModuleGraph(result: AnalysisResult): ModuleGraphPlan {
       headerName: moduleHeaderName(info.path),
       sourceName: moduleSourceName(info.path),
     }
-    for imported of info.imports { addInclude(module, imported.sourceModule) }
-    for imported of info.namespaceImports { addInclude(module, imported.sourceModule) }
-    for reExport of info.reExports { addInclude(module, reExport) }
     plan.modules.push(module)
   }
   return plan
-}
-
-function addInclude(module: ModulePlan, sourceModule: string): none {
-  includeName := moduleHeaderName(sourceModule)
-  for existing of module.includes { if existing == includeName { return } }
-  module.includes.push(includeName)
 }
 
 export class ModuleEmission {
@@ -104,11 +95,13 @@ export class CxxModuleEmitter {
   namespaceImports: NamespaceBinding[] = []
   imports: ImportBinding[] = []
   moduleSurfaces: EmitModuleSurface[] = []
+  let worldviewModules: WorldviewModule[] = []
+  let worldviewInterfaceKeys: string[] = []
   instantiations: InstantiationPlan | none = none
   coverageModuleId: int = -1
   initializationModuleNamespaces: string[] = []
 
-  function emit(program: Program, moduleIncludes: string[] = [], entryMode: string = "executable"): ModuleEmission {
+  function emit(program: Program, entryMode: string = "executable"): ModuleEmission {
     context := if modulePath == "" then createEmitContext(program) else createEmitContextForModule(program, modulePath, allPrograms)
     context.namespaceImports = namespaceImports
     context.imports = imports
@@ -118,28 +111,43 @@ export class CxxModuleEmitter {
       context.coverageModuleId = coverageModuleId
     }
     if instantiations != none { configureInstantiationRegistry(context, instantiations!) }
-    plan := planHeader(program, context)
+    let sections: HeaderSection[] = []
+    let plan: HeaderPlan | none = none
+    let views = worldviewModules
+    if views.length == 0 { views = [WorldviewModule { path: modulePath, program }] }
+    for view of views {
+      sectionContext := createEmitContextForModule(view.program, view.path, allPrograms)
+      sectionContext.imports = surfaceImports(moduleSurfaces, view.path)
+      sectionContext.moduleSurfaces = moduleSurfaces
+      if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
+      sectionPlan := planHeader(view.program, sectionContext)
+      if instantiations != none {
+        addConcreteHeaderDeclarations(sectionPlan, sectionContext, instantiations!, view.program, worldviewInterfaceKeys)
+      }
+      sectionNamespace := if view.path == modulePath
+        then if namespaceNameOverride != "" then namespaceNameOverride else if modulePath == "" then moduleName + "_" else moduleNamespace(view.path)
+        else moduleNamespace(view.path)
+      sections.push(HeaderSection { namespaceName: sectionNamespace, plan: sectionPlan })
+      if view.path == modulePath { plan = sectionPlan }
+    }
+    if plan == none { panic("worldview omitted root module " + modulePath) }
     context.scriptEntry = (entryMode == "executable" || entryMode == "ios-app") && hasScriptStatements([program])
-    if instantiations != none { addConcreteHeaderDeclarations(plan, context, instantiations!) }
-    return emitPlanned([program], context, plan, entryMode, moduleIncludes)
+    return emitPlanned([program], context, plan!, sections, entryMode)
   }
 
-  private function emitPlanned(programs: Program[], context: EmitContext, plan: HeaderPlan, entryMode: string, moduleIncludes: string[] = []): ModuleEmission {
+  private function emitPlanned(programs: Program[], context: EmitContext, plan: HeaderPlan, sections: HeaderSection[], entryMode: string): ModuleEmission {
     headerName := if headerNameOverride == "" then moduleName + ".hpp" else headerNameOverride
     sourceName := if sourceNameOverride == "" then moduleName + ".cpp" else sourceNameOverride
     namespaceName := if namespaceNameOverride == "" then moduleName + "_" else namespaceNameOverride
-    plan.moduleIncludes = moduleIncludes
-    header := renderHeader(plan, namespaceName)
-    let source = "#include \"" + headerName + "\"\n#include <cmath>\n"
-    for include of moduleIncludes { source = source + "#include \"" + include + "\"\n" }
-    if instantiations != none { source = source + concreteImplementationIncludes(context, instantiations!, moduleIncludes) }
+    header := renderProjectedHeader(sections)
+    let source = "#include \"" + headerName + "\"\n"
     source = source + "\n"
     for namespace of initializationModuleNamespaces {
       source = source + "namespace " + namespace + " { void __doof_initialize_module(); }\n"
     }
     if initializationModuleNamespaces.length > 0 { source = source + "\n" }
     source = source + "namespace " + namespaceName + " {\n"
-    source = source + emitImportedNamespaces(context)
+    source = source + emitImportedNamespaces(context, worldviewModules)
     if context.scriptEntry { source = source + emitScriptStorage(programs, context) }
     for program of programs {
       for statement of program.statements {
@@ -282,43 +290,31 @@ function emitScriptRunner(programs: Program[], context: EmitContext): string {
   return source + "}\n"
 }
 
-// Interface variants only require forward declarations in headers, which
-// keeps cyclic module graphs legal. Translation units that dispatch through a
-// variant need each alternative complete for std::visit, so include those
-// implementation headers privately in the owning source file.
-function concreteImplementationIncludes(context: EmitContext, plan: InstantiationPlan, existingIncludes: string[]): string {
-  let includes: string[] = []
-  for interface_ of plan.interfaces {
-    if interface_.name != "Stream" && interface_.modulePath != context.modulePath { continue }
-    for implementation of interface_.implementations {
-      if implementation.modulePath == context.modulePath { continue }
-      include := moduleHeaderName(implementation.modulePath)
-      if !containsString(existingIncludes, include) { addNamespace(includes, include) }
-    }
-  }
-  let result = ""
-  for include of includes { result = result + "#include \"" + include + "\"\n" }
-  return result
-}
-
 function containsString(values: string[], value: string): bool {
   for existing of values { if existing == value { return true } }
   return false
 }
 
-function emitImportedNamespaces(context: EmitContext): string {
+function emitImportedNamespaces(context: EmitContext, worldviewModules: WorldviewModule[]): string {
   let namespaces: string[] = []
   for imported of context.imports {
+    if !worldviewContainsModule(worldviewModules, imported.sourceModule) { continue }
     namespace := moduleNamespace(imported.sourceModule)
     addNamespace(namespaces, namespace)
   }
   for imported of context.namespaceImports {
+    if !worldviewContainsModule(worldviewModules, imported.sourceModule) { continue }
     namespace := moduleNamespace(imported.sourceModule)
     addNamespace(namespaces, namespace)
   }
   let result = ""
   for namespace of namespaces { result = result + "using namespace ::" + namespace + ";\n" }
   return result
+}
+
+function worldviewContainsModule(modules: WorldviewModule[], path: string): bool {
+  for module of modules { if module.path == path { return true } }
+  return false
 }
 
 function addNamespace(namespaces: string[], namespace: string): none {
@@ -376,11 +372,10 @@ export function emitModuleGraph(
       coverageModuleId,
       initializationModuleNamespaces: if module.path == entry then moduleInitializationNamespaces(initializationOrder) else [],
     }
-    emitted := emitter.emit(
-      info!.program,
-      module.includes,
-      if module.path == entry then entryMode else "none",
-    )
+    worldview := planWorldview(result, module.path, concretePlan)
+    emitter.worldviewModules = worldview.modules
+    emitter.worldviewInterfaceKeys = worldview.interfaceKeys
+    emitted := emitter.emit(info!.program, if module.path == entry then entryMode else "none")
     emitted.fingerprint = fingerprint
     graph.modules.push(emitted)
     if coverageModuleId >= 0 {
@@ -410,7 +405,7 @@ function moduleEmissionFingerprint(
   initializationOrder: string[],
   configurationFingerprint: string,
 ): string {
-  let value = "doof-module-emission-1\n" + configurationFingerprint + "\n" + path + "\n" +
+  let value = "doof-module-emission-2\n" + configurationFingerprint + "\n" + path + "\n" +
     entryMode + "\n" + string(coverage)
   let reachable: string[] = []
   collectModuleDependencyClosure(result, path, reachable)
@@ -487,9 +482,17 @@ function configureInstantiationRegistry(context: EmitContext, plan: Instantiatio
   }
 }
 
-function addConcreteHeaderDeclarations(plan: HeaderPlan, context: EmitContext, instantiations: InstantiationPlan): none {
+function addConcreteHeaderDeclarations(
+  plan: HeaderPlan,
+  context: EmitContext,
+  instantiations: InstantiationPlan,
+  program: Program,
+  interfaceKeys: string[] = [],
+): none {
   for interface_ of instantiations.interfaces {
+    if !containsString(interfaceKeys, interface_.key) { continue }
     if interface_.name != "Stream" && interface_.modulePath != context.modulePath { continue }
+    if interface_.name != "Stream" && !programDeclares(program, interface_.name) { continue }
     let alternatives = ""
     for implementation of interface_.implementations {
       if alternatives != "" { alternatives = alternatives + ", " }
@@ -506,6 +509,7 @@ function addConcreteHeaderDeclarations(plan: HeaderPlan, context: EmitContext, i
   }
   for instantiation of instantiations.classes {
     if instantiation.modulePath != context.modulePath { continue }
+    if !programDeclares(program, instantiation.declaration.name) { continue }
     for argument of instantiation.substitution.arguments { addConcreteTypeForwardDeclarations(plan, context, argument) }
     plan.classForwardDeclarations.push("struct " + instantiation.emittedName + ";\n")
     context.substitution = instantiation.substitution
@@ -516,6 +520,7 @@ function addConcreteHeaderDeclarations(plan: HeaderPlan, context: EmitContext, i
   }
   for instantiation of instantiations.functions {
     if instantiation.modulePath != context.modulePath { continue }
+    if !programDeclares(program, instantiation.declaration.name) { continue }
     for argument of instantiation.substitution.arguments { addConcreteTypeForwardDeclarations(plan, context, argument) }
     context.substitution = instantiation.substitution
     signature := emitFunctionDeclaration(instantiation.declaration, instantiation.emittedName, context.modulePath, context)
@@ -523,6 +528,22 @@ function addConcreteHeaderDeclarations(plan: HeaderPlan, context: EmitContext, i
     else { plan.functionSignatures.push(signature) }
     clearInstantiation(context)
   }
+}
+
+function programDeclares(program: Program, name: string): bool {
+  for statement of program.statements { if headerDeclarationName(statement) == name { return true } }
+  return false
+}
+
+function headerDeclarationName(statement: Statement): string {
+  case statement {
+    export_: ExportDeclaration -> { return headerDeclarationName(export_.declaration) }
+    class_: ClassDeclaration -> { return class_.name }
+    interface_: InterfaceDeclaration -> { return interface_.name }
+    fn: FunctionDeclaration -> { return fn.name }
+    _ -> { return "" }
+  }
+  return ""
 }
 
 function addConcreteTypeForwardDeclarations(plan: HeaderPlan, context: EmitContext, type_: ResolvedType): none {
@@ -599,6 +620,11 @@ function allPrograms(result: AnalysisResult): Program[] {
   return programs
 }
 
+function surfaceImports(surfaces: EmitModuleSurface[], path: string): ImportBinding[] {
+  for surface of surfaces { if surface.path == path { return surface.imports } }
+  return []
+}
+
 function infoNamespaceImports(result: AnalysisResult, path: string): NamespaceBinding[] {
   for module of result.modules { if module.path == path { return module.namespaceImports } }
   return []
@@ -660,8 +686,7 @@ function moduleInitializationNamespaces(paths: string[]): string[] {
 }
 
 export function emitModule(program: Program, moduleName: string = "main"): ModuleEmission {
-  let emptyIncludes: string[] = []
-  return CxxModuleEmitter { moduleName }.emit(program, emptyIncludes, "executable")
+  return CxxModuleEmitter { moduleName }.emit(program, "executable")
 }
 
 function emitSourceStatement(statement: Statement, context: EmitContext): string {

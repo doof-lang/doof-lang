@@ -1,16 +1,4 @@
 #include "src_ios_device.hpp"
-#include <cmath>
-#include "std_crypto_index.hpp"
-#include "std_fs_index.hpp"
-#include "std_json_index.hpp"
-#include "std_os_index.hpp"
-#include "std_parse_index.hpp"
-#include "std_path_index.hpp"
-#include "std_time_index.hpp"
-#include "src_ios_app.hpp"
-#include "std_blob_index.hpp"
-#include "std_http_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_ios_device_ {
 using namespace ::std_::crypto::index;
@@ -19,7 +7,6 @@ using namespace ::std_::json::index;
 using namespace ::std_::os::index;
 using namespace ::std_::parse::index;
 using namespace ::std_::path::index;
-using namespace ::std_::time::index;
 using namespace ::app_src_ios_app_;
 using namespace ::std_::blob::index;
 int64_t MAX_IOS_DEVICE_COMMAND_OUTPUT_BYTES = 262144LL;

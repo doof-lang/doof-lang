@@ -176,7 +176,9 @@ import class NativeEvent from "./native_event.hpp" as native::Event {
 ### Recommended Interop Conventions
 
 - Put shared enums, type aliases, and other small boundary types in a dedicated Doof module such as `types.do`
-- Include the generated header from native C++ so both sides use the same definitions
+- Select exactly one generated Doof module header in each native C++ translation unit so both sides use the same definitions
+- Native headers do not include generated Doof headers; native implementations include their selected generated worldview
+- If native code needs several Doof module surfaces, create one Doof bridge module and include that generated worldview
 - Prefer enum-typed extern methods like `kind(): EventKind` over raw `int` codes and follow-up mapping helpers
 - Use `Native...` names for low-level bridge types and reserve unprefixed names for Doof-first wrappers or domain models
 - Export raw extern declarations only from focused interop modules; prefer re-exporting them from a barrel rather than repeating declarations
@@ -203,11 +205,13 @@ export import class NativeBoardgameEvent from "./native_boardgame_host.hpp" {
 ```
 
 ```cpp
-#include "types.hpp"
-
+// native_boardgame_host.hpp -- included by the generated host-runtime view
 struct NativeBoardgameEvent {
     NativeBoardgameEventKind kind() const;
 };
+
+// native_boardgame_host.cpp
+#include "host-runtime.hpp"
 ```
 
 This keeps the boundary declarative and removes duplicate integer-to-enum conversion logic.

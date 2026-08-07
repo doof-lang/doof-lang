@@ -25,7 +25,7 @@ The important hand-offs are:
 | Analyzer | `AnalysisResult`, module symbols, resolved named annotations | checker modules |
 | Checker | bindings, resolved expression types, targets, and control-flow decorations on the AST | `checker-validation.do`, then emitter |
 | `emitter-monomorphize.do` | concrete whole-program instantiation plan | module/header/type emitters |
-| `emitter-module.do` | generated header/source pairs and graph support | `emitter-project.do` |
+| `emitter-worldview.do` / `emitter-module.do` | checked declaration closures and generated header/source pairs | `emitter-project.do` |
 | `emitter-project.do` | generated project plus normalized native inputs | native build planner and driver |
 | `native-build.do` | deterministic PCH/compile/link tasks | `native-build-driver.do` |
 | `frontend-cache.do` | exact source/configuration fingerprints and emitted-module names | `driver.do` cache validation and materialization |
@@ -43,7 +43,7 @@ the row from left to right.
 | Concept | Established or modeled | Checked or decorated | Consumed or executed |
 | --- | --- | --- | --- |
 | Source identity and diagnostics | token/AST spans in `lexer.do` and `ast.do`; diagnostic records in `semantic.do` | analyzer and focused checker module attach semantic spans | `driver.do` formats bounded diagnostic output |
-| Modules and names | `resolver.do` resolves logical paths; `analyzer.do` owns imports, exports, symbols, and defining-module identity | `checker-symbols.do` resolves lexical and module bindings | `emitter-names.do` derives stable C++ identity; module/header emitters use it |
+| Modules and names | `resolver.do` resolves logical paths; `analyzer.do` owns imports, exports, symbols, and defining-module identity | `checker-symbols.do` resolves lexical, named-import, and namespace-member bindings | `emitter-names.do` derives stable C++ identity; the worldview planner projects referenced declarations into each module header |
 | Types and assignability | resolved type records in `semantic.do`; shared operations in `checker-types.do` | focused checker modules decorate annotations and expressions | `emitter-types.do` chooses representation; expression/declaration emitters require decorations |
 | Calls and dispatch | declarations and symbols from analysis | `checker-calls.do`, `checker-generics.do`, and `checker-interfaces.do` choose targets and substitutions | `emitter-expr-calls.do` lowers the recorded target |
 | Control flow and narrowing | statement/expression/pattern AST in parser modules | `checker-statements.do` and `checker-expressions.do` determine continuation, exhaustiveness, and narrowed bindings | `emitter-stmt.do`, `emitter-expr-control.do`, and `emitter-case-pattern.do` lower those decisions |

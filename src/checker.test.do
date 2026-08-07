@@ -2,7 +2,7 @@ import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker, validateCheckedTypes, validateDeepReadonlyFields, validateIsolationEffects } from "./checker"
 import { CheckResult, Diagnostic, FunctionType, SourceFile } from "./semantic"
-import { AsExpression, AssignmentExpression, Block, CaseStatement, ClassDeclaration, ConstructExpression, Expression, ExpressionStatement, Identifier, IfStatement, FunctionDeclaration, ImmutableBinding, LetDeclaration, ObjectLiteral, ReadonlyDeclaration, WithStatement } from "./ast"
+import { AsExpression, AssignmentExpression, Block, CallExpression, CaseStatement, ClassDeclaration, ConstructExpression, Expression, ExpressionStatement, Identifier, IfStatement, FunctionDeclaration, ImmutableBinding, LetDeclaration, MemberExpression, ObjectLiteral, ReadonlyDeclaration, WithStatement } from "./ast"
 import { typeName, unknownType } from "./checker-types"
 
 function checkedIncludingDeprecations(source: string): CheckResult {
@@ -271,6 +271,34 @@ export function testReportsUnknownImportedNamespaceMember(): none {
   ], "/main.do")
   Assert.equal(result.diagnostics.length, 1)
   Assert.equal(result.diagnostics[0].message, "Namespace \"tools\" has no member \"missing\"")
+}
+
+export function testDecoratesImportedNamespaceMemberWithResolvedSymbol(): none {
+  analysis := createAnalyzer([
+    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction value(): int => tools.present()" },
+    SourceFile { path: "/tools.do", source: "export function present(): int => 1" },
+  ]).analyze("/main.do")
+  checker := createChecker(analysis)
+  Assert.equal(checker.check("/tools.do").diagnostics.length, 0)
+  Assert.equal(checker.check("/main.do").diagnostics.length, 0)
+  case analysis.modules[0].program.statements[1] {
+    fn: FunctionDeclaration -> { case fn.body {
+      call: CallExpression -> { case call.callee {
+        member: MemberExpression -> {
+          Assert.equal(member.resolvedNamespaceAccess, true)
+          Assert.equal(member.resolvedNamespaceSymbol!.name, "present")
+          Assert.equal(member.resolvedNamespaceSymbol!.module, "/tools.do")
+          member.resolvedNamespaceSymbol = none
+        }
+        _ -> { panic("expected namespace member") }
+      } }
+      _ -> { panic("expected call") }
+    } }
+    _ -> { panic("expected function") }
+  }
+  diagnostics := validateCheckedTypes(analysis)
+  Assert.equal(diagnostics.length, 1)
+  Assert.stringContains(diagnostics[0].message, "has no resolved symbol")
 }
 
 export function testValueBindingsShadowBuiltinConversionNames(): none {

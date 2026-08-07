@@ -1,36 +1,12 @@
 #include "src_checker_expressions.hpp"
-#include <cmath>
-#include "src_semantic.hpp"
-#include "src_analyzer.hpp"
-#include "src_ast.hpp"
-#include "src_checker_types.hpp"
-#include "src_json_semantics.hpp"
-#include "src_checker_actor_boundary.hpp"
-#include "src_checker_async.hpp"
-#include "src_checker_actor_lifecycle.hpp"
-#include "src_checker_state.hpp"
-#include "src_checker_statements.hpp"
-#include "src_checker_calls.hpp"
-#include "src_checker_literals.hpp"
-#include "src_checker_resolution.hpp"
-#include "src_checker_common.hpp"
-#include "src_checker_symbols.hpp"
-#include "src_checker_generics.hpp"
-#include "src_checker_validation.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_checker_expressions_ {
 using namespace ::app_src_semantic_;
 using namespace ::app_src_analyzer_;
 using namespace ::app_src_ast_;
 using namespace ::app_src_checker_types_;
-using namespace ::app_src_json_semantics_;
 using namespace ::app_src_checker_actor_boundary_;
 using namespace ::app_src_checker_async_;
-using namespace ::app_src_checker_actor_lifecycle_;
 using namespace ::app_src_checker_state_;
 using namespace ::app_src_checker_statements_;
 using namespace ::app_src_checker_calls_;
@@ -318,6 +294,8 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     const auto localBinding = ::app_src_checker_symbols_::lookup(scope, identifier->name);
                     if (doof::is_null(localBinding) && ::app_src_checker_symbols_::isNamespaceImport(doof::unwrap_optional(state->info), identifier->name)) {
                         (namespaceName = identifier->name);
+                        (member->resolvedNamespaceAccess = true);
+                        (member->resolvedNamespaceSymbol = ::app_src_checker_symbols_::namespaceMemberSymbol(doof::unwrap_optional(state->info), identifier->name, member->property, state->result));
                         (namespaceMember = doof::optional_value(::app_src_checker_symbols_::namespaceMemberType(doof::unwrap_optional(state->info), identifier->name, member->property, state->result)));
                     } else {
                         (objectType = checkExpression(state, member->object, scope, std::monostate{}));

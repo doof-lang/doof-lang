@@ -1,13 +1,4 @@
 #include "src_provenance.hpp"
-#include <cmath>
-#include "src_dependency_policy.hpp"
-#include "src_package_manifest.hpp"
-#include "src_std_catalog.hpp"
-#include "std_json_index.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_provenance_ {
 using namespace ::app_src_dependency_policy_;

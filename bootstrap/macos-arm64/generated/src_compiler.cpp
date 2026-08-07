@@ -1,18 +1,4 @@
 #include "src_compiler.hpp"
-#include <cmath>
-#include "src_analyzer.hpp"
-#include "src_emitter_module.hpp"
-#include "src_emitter_monomorphize.hpp"
-#include "src_emitter_wasm.hpp"
-#include "src_emitter_names.hpp"
-#include "src_checker.hpp"
-#include "src_diagnostics.hpp"
-#include "src_resolver.hpp"
-#include "src_semantic.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_compiler_ {
 using namespace ::app_src_analyzer_;

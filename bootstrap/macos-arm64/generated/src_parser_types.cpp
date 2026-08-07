@@ -1,12 +1,4 @@
 #include "src_parser_types.hpp"
-#include <cmath>
-#include "src_parser.hpp"
-#include "src_lexer.hpp"
-#include "src_ast.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_parser_types_ {
 using namespace ::app_src_parser_;

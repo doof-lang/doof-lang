@@ -1,12 +1,6 @@
 #include "std_os_index.hpp"
-#include <cmath>
-#include "std_time_index.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace std_::os::index {
-using namespace ::std_::time::index;
 doof::Result<std::string, std::string> env(const std::string& name) {
     return ::doof_os::env(name);
 }

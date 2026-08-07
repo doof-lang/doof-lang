@@ -1,12 +1,4 @@
 #include "std_http_index.hpp"
-#include <cmath>
-#include "std_blob_index.hpp"
-#include "std_stream_index.hpp"
-#include "std_json_index.hpp"
-#include "std_http_types.hpp"
-#include "std_http_websocket.hpp"
-#include "std_fs_index.hpp"
-#include "std_os_index.hpp"
 
 namespace std_::http::index {
 using namespace ::std_::blob::index;

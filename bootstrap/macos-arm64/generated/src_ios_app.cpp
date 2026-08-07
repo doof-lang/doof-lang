@@ -1,9 +1,4 @@
 #include "src_ios_app.hpp"
-#include <cmath>
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_ios_app_ {
 

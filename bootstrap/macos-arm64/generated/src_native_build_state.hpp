@@ -1,22 +1,5 @@
 #pragma once
 #include "doof_runtime.hpp"
-#include <cstdint>
-#include <cmath>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <ostream>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <variant>
-#include <vector>
-namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
-namespace std_::os::index { struct ExecStdoutStream; }
-namespace std_::os::index { struct ExecStderrStream; }
-namespace std_::stream::index { struct DecodedLineStream; }
-
 namespace app_src_native_build_state_ {
     struct NativeInputSignature;
     struct NativeTaskState;
@@ -24,11 +7,7 @@ namespace app_src_native_build_state_ {
     extern int32_t NATIVE_BUILD_STATE_VERSION;
 }
 
-#include "std_json_index.hpp"
-
 namespace app_src_native_build_state_ {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
-    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     struct NativeInputSignature : public std::enable_shared_from_this<NativeInputSignature> {
     std::string path;
     std::string signature;
@@ -58,13 +37,20 @@ namespace app_src_native_build_state_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<NativeBuildState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
+}
+
+#include "std/json/native_json.hpp"
+
+namespace std_::json::index {
+    doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text);
+    std::string formatJsonValue(const doof::JsonValue& value);
+}
+
+namespace app_src_native_build_state_ {
     std::shared_ptr<NativeBuildState> parseNativeBuildState(const std::string& source);
     std::string renderNativeBuildState(const std::shared_ptr<NativeBuildState>& state);
     std::shared_ptr<NativeTaskState> findNativeTaskState(const std::shared_ptr<NativeBuildState>& state, const std::string& id);
     std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::string& source);
     std::shared_ptr<std::vector<std::string>> parseMsvcDependencies(const std::string& source);
     void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
-}
-
-namespace app_src_native_build_state_ {
 }

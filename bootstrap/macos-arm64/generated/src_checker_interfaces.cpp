@@ -1,26 +1,10 @@
 #include "src_checker_interfaces.hpp"
-#include <cmath>
-#include "src_semantic.hpp"
-#include "src_analyzer.hpp"
-#include "src_ast.hpp"
-#include "src_checker_types.hpp"
-#include "src_json_semantics.hpp"
-#include "src_checker_actor_boundary.hpp"
-#include "src_checker_actor_lifecycle.hpp"
-#include "src_checker_symbols.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_checker_interfaces_ {
 using namespace ::app_src_semantic_;
 using namespace ::app_src_analyzer_;
 using namespace ::app_src_ast_;
 using namespace ::app_src_checker_types_;
-using namespace ::app_src_json_semantics_;
-using namespace ::app_src_checker_actor_boundary_;
-using namespace ::app_src_checker_actor_lifecycle_;
 using namespace ::app_src_checker_symbols_;
 ::app_src_ast_::SourceSpan symbolSpan(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& name) {
     const auto& _iterable_1 = info->program->statements;

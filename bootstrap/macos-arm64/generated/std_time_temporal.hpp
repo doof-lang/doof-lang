@@ -1,16 +1,6 @@
 #pragma once
 #include "doof_runtime.hpp"
-#include <cstdint>
-#include <cmath>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <ostream>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <variant>
-#include <vector>
+namespace std_::parse::types { enum class ParsingError; }
 namespace std_::time::temporal { struct Instant; }
 namespace std_::time::temporal { struct DateTime; }
 namespace std_::time::temporal { struct TimeZone; }
@@ -18,14 +8,12 @@ namespace std_::time::temporal { struct ZonedDateTime; }
 namespace std_::time::temporal { struct Date; }
 namespace std_::time::temporal { struct Time; }
 namespace std_::time::temporal { enum class DayOfWeek; }
+namespace std_::time::temporal { enum class Month; }
 namespace std_::time::duration { struct Duration; }
-namespace std_::parse::types { enum class ParsingError; }
-namespace std_::time::duration { struct Thread; }
-namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
-namespace std_::os::index { struct ExecStdoutStream; }
-namespace std_::os::index { struct ExecStderrStream; }
-namespace std_::stream::index { struct DecodedLineStream; }
+
+namespace std_::time::duration {
+    struct Duration;
+}
 
 namespace std_::time::temporal {
     struct Instant;
@@ -36,25 +24,42 @@ namespace std_::time::temporal {
     struct ZonedDateTime;
 }
 
-#include "std_parse_index.hpp"
-#include "std_time_duration.hpp"
-
-namespace doof_time { using Instant = ::std_::time::temporal::Instant; }
-namespace doof_time { using DateTime = ::std_::time::temporal::DateTime; }
-namespace doof_time { using TimeZone = ::std_::time::temporal::TimeZone; }
-namespace doof_time { using ZonedDateTime = ::std_::time::temporal::ZonedDateTime; }
-namespace doof_time { using Date = ::std_::time::temporal::Date; }
-namespace doof_time { using Time = ::std_::time::temporal::Time; }
-namespace doof_time { using DayOfWeek = ::std_::time::temporal::DayOfWeek; }
-namespace doof_time { using ::doof_parse::parseInt; }
-namespace doof_time { using ParsingError = ::std_::parse::types::ParsingError; }
-namespace doof_time { using Duration = ::std_::time::duration::Duration; }
-namespace doof_time { using Thread = ::std_::time::duration::Thread; }
-#include "doof_time.hpp"
+namespace std_::parse::types {
+    enum class ParsingError {
+    InvalidFormat = 0,
+    Overflow = 1,
+    Underflow = 2,
+    EmptyInput = 3
+};
+inline const char* ParsingError_name(ParsingError value) {
+  switch (value) {
+    case ParsingError::InvalidFormat: return "InvalidFormat";
+    case ParsingError::Overflow: return "Overflow";
+    case ParsingError::Underflow: return "Underflow";
+    case ParsingError::EmptyInput: return "EmptyInput";
+  }
+  return "";
+}
+inline std::optional<ParsingError> ParsingError_fromName(std::string_view value) {
+  if (value == "InvalidFormat") return ParsingError::InvalidFormat;
+  if (value == "Overflow") return ParsingError::Overflow;
+  if (value == "Underflow") return ParsingError::Underflow;
+  if (value == "EmptyInput") return ParsingError::EmptyInput;
+  return std::nullopt;
+}
+inline std::optional<ParsingError> ParsingError_fromValue(int32_t value) {
+  switch (static_cast<ParsingError>(value)) {
+    case ParsingError::InvalidFormat: return ParsingError::InvalidFormat;
+    case ParsingError::Overflow: return ParsingError::Overflow;
+    case ParsingError::Underflow: return ParsingError::Underflow;
+    case ParsingError::EmptyInput: return ParsingError::EmptyInput;
+    default: return std::nullopt;
+  }
+}
+inline std::ostream& operator<<(std::ostream& output, ParsingError value) { return output << ParsingError_name(value); }
+}
 
 namespace std_::time::temporal {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
-    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     enum class DayOfWeek {
     Monday = 1,
     Tuesday = 2,
@@ -163,35 +168,48 @@ inline std::optional<Month> Month_fromValue(int32_t value) {
   }
 }
 inline std::ostream& operator<<(std::ostream& output, Month value) { return output << Month_name(value); }
-    int64_t _systemNanosEpoch();
-    doof::Result<std::shared_ptr<Instant>, std::string> _parseInstant(const std::string& s);
-    std::shared_ptr<DateTime> _instantToDateTime(int64_t nanos);
-    std::shared_ptr<ZonedDateTime> _instantToZonedDateTime(int64_t nanos, const std::shared_ptr<TimeZone>& zone);
-    std::string _formatInstant(int64_t nanos);
-    doof::Result<std::shared_ptr<Date>, std::string> _validateDate(int32_t year, int32_t month, int32_t day);
-    std::shared_ptr<Date> _systemDateUTC();
-    std::shared_ptr<Date> _systemDateInZone(const std::shared_ptr<TimeZone>& zone);
-    doof::Result<std::shared_ptr<Date>, std::string> _parseDate(const std::string& s);
-    DayOfWeek _dateToDayOfWeek(int32_t year, int32_t month, int32_t day);
-    int32_t _dateToDayOfYear(int32_t year, int32_t month, int32_t day);
-    bool _isLeapYear(int32_t year);
-    int32_t _daysInMonth(int32_t year, int32_t month);
-    std::shared_ptr<Date> _dateAddDays(int32_t year, int32_t month, int32_t day, int32_t n);
-    std::shared_ptr<Date> _dateAddMonths(int32_t year, int32_t month, int32_t day, int32_t n);
-    std::shared_ptr<Date> _dateAddYears(int32_t year, int32_t month, int32_t day, int32_t n);
-    int32_t _dateDiff(int32_t y1, int32_t m1, int32_t d1, int32_t y2, int32_t m2, int32_t d2);
-    doof::Result<std::shared_ptr<Time>, std::string> _validateTime(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
-    doof::Result<std::shared_ptr<Time>, std::string> _parseTime(const std::string& s);
-    std::shared_ptr<Time> _timeAddNanos(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond, int64_t nanos);
-    doof::Result<std::shared_ptr<DateTime>, std::string> _parseDateTime(const std::string& s);
-    std::shared_ptr<DateTime> _dateTimePlusNanos(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time, int64_t nanos);
-    std::shared_ptr<Instant> _dateTimeToInstant(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time);
-    std::shared_ptr<Instant> _dateTimeToInstantInZone(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time, const std::shared_ptr<TimeZone>& zone);
-    std::shared_ptr<ZonedDateTime> _dateTimeAtZone(const std::shared_ptr<DateTime>& dateTime, const std::shared_ptr<TimeZone>& zone);
-    doof::Result<std::shared_ptr<TimeZone>, std::string> _lookupTimeZone(const std::string& id);
-    std::shared_ptr<TimeZone> _systemTimeZone();
-    int32_t _zoneOffsetAt(const std::string& id, int64_t epochSeconds);
-    bool _zoneDSTAt(const std::string& id, int64_t epochSeconds);
+}
+
+namespace std_::time::duration {
+    // A signed elapsed duration with nanosecond precision.
+struct Duration : public std::enable_shared_from_this<Duration> {
+    int64_t nanos;
+    static std::shared_ptr<Duration> ZERO;
+    Duration(int64_t nanos) : nanos(nanos) {}
+    static std::shared_ptr<Duration> ofNanos(int64_t n);
+    static std::shared_ptr<Duration> ofMicros(int64_t us);
+    static std::shared_ptr<Duration> ofMillis(int64_t ms);
+    static std::shared_ptr<Duration> ofSeconds(int64_t s);
+    static std::shared_ptr<Duration> ofMinutes(int64_t m);
+    static std::shared_ptr<Duration> ofHours(int64_t h);
+    static std::shared_ptr<Duration> ofDays(int64_t d);
+    static doof::Result<std::shared_ptr<Duration>, std::string> parse(const std::string& s);
+    int64_t toNanos();
+    int64_t toMicros();
+    int64_t toMillis();
+    double toSeconds();
+    double toMinutes();
+    double toHours();
+    double toDays();
+    bool isNegative();
+    bool isZero();
+    std::shared_ptr<Duration> abs();
+    std::shared_ptr<Duration> negated();
+    std::shared_ptr<Duration> plus(const std::shared_ptr<Duration>& other);
+    std::shared_ptr<Duration> minus(const std::shared_ptr<Duration>& other);
+    std::shared_ptr<Duration> multipliedBy(int64_t factor);
+    std::shared_ptr<Duration> dividedBy(int64_t divisor);
+    int32_t compareTo(const std::shared_ptr<Duration>& other);
+    bool isLessThan(const std::shared_ptr<Duration>& other);
+    bool isGreaterThan(const std::shared_ptr<Duration>& other);
+    bool equals(const std::shared_ptr<Duration>& other);
+    std::string toISOString();
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<Duration>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+}
+
+namespace std_::time::temporal {
     // A point in UTC time with nanosecond precision.
 struct Instant : public std::enable_shared_from_this<Instant> {
     int64_t epochNanos;
@@ -336,10 +354,57 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ZonedDateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
+}
+
+namespace doof_parse { using ParsingError = ::std_::parse::types::ParsingError; }
+#include "native_parse.hpp"
+
+namespace std_::parse::index {
+    doof::Result<int32_t, ::std_::parse::types::ParsingError> parseInt(const std::string& value);
+}
+
+namespace doof_time { using Instant = ::std_::time::temporal::Instant; }
+namespace doof_time { using DateTime = ::std_::time::temporal::DateTime; }
+namespace doof_time { using TimeZone = ::std_::time::temporal::TimeZone; }
+namespace doof_time { using ZonedDateTime = ::std_::time::temporal::ZonedDateTime; }
+namespace doof_time { using Date = ::std_::time::temporal::Date; }
+namespace doof_time { using Time = ::std_::time::temporal::Time; }
+namespace doof_time { using DayOfWeek = ::std_::time::temporal::DayOfWeek; }
+namespace doof_time { using Month = ::std_::time::temporal::Month; }
+namespace doof_time { using Duration = ::std_::time::duration::Duration; }
+#include "doof_time.hpp"
+
+namespace std_::time::temporal {
+    int64_t _systemNanosEpoch();
+    doof::Result<std::shared_ptr<Instant>, std::string> _parseInstant(const std::string& s);
+    std::shared_ptr<DateTime> _instantToDateTime(int64_t nanos);
+    std::shared_ptr<ZonedDateTime> _instantToZonedDateTime(int64_t nanos, const std::shared_ptr<TimeZone>& zone);
+    std::string _formatInstant(int64_t nanos);
+    doof::Result<std::shared_ptr<Date>, std::string> _validateDate(int32_t year, int32_t month, int32_t day);
+    std::shared_ptr<Date> _systemDateUTC();
+    std::shared_ptr<Date> _systemDateInZone(const std::shared_ptr<TimeZone>& zone);
+    doof::Result<std::shared_ptr<Date>, std::string> _parseDate(const std::string& s);
+    DayOfWeek _dateToDayOfWeek(int32_t year, int32_t month, int32_t day);
+    int32_t _dateToDayOfYear(int32_t year, int32_t month, int32_t day);
+    bool _isLeapYear(int32_t year);
+    int32_t _daysInMonth(int32_t year, int32_t month);
+    std::shared_ptr<Date> _dateAddDays(int32_t year, int32_t month, int32_t day, int32_t n);
+    std::shared_ptr<Date> _dateAddMonths(int32_t year, int32_t month, int32_t day, int32_t n);
+    std::shared_ptr<Date> _dateAddYears(int32_t year, int32_t month, int32_t day, int32_t n);
+    int32_t _dateDiff(int32_t y1, int32_t m1, int32_t d1, int32_t y2, int32_t m2, int32_t d2);
+    doof::Result<std::shared_ptr<Time>, std::string> _validateTime(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
+    doof::Result<std::shared_ptr<Time>, std::string> _parseTime(const std::string& s);
+    std::shared_ptr<Time> _timeAddNanos(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond, int64_t nanos);
+    doof::Result<std::shared_ptr<DateTime>, std::string> _parseDateTime(const std::string& s);
+    std::shared_ptr<DateTime> _dateTimePlusNanos(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time, int64_t nanos);
+    std::shared_ptr<Instant> _dateTimeToInstant(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time);
+    std::shared_ptr<Instant> _dateTimeToInstantInZone(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time, const std::shared_ptr<TimeZone>& zone);
+    std::shared_ptr<ZonedDateTime> _dateTimeAtZone(const std::shared_ptr<DateTime>& dateTime, const std::shared_ptr<TimeZone>& zone);
+    doof::Result<std::shared_ptr<TimeZone>, std::string> _lookupTimeZone(const std::string& id);
+    std::shared_ptr<TimeZone> _systemTimeZone();
+    int32_t _zoneOffsetAt(const std::string& id, int64_t epochSeconds);
+    bool _zoneDSTAt(const std::string& id, int64_t epochSeconds);
     std::string httpWeekdayName(DayOfWeek day);
     std::string httpMonthName(int32_t month);
     std::optional<int32_t> httpMonthNumber(const std::string& text);
-}
-
-namespace std_::time::temporal {
 }

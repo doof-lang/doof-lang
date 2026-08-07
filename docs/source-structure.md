@@ -80,8 +80,9 @@ emitter or individual expression branch.
 | `emitter-context.do` | Graph-wide nominal/method context and per-module emission state |
 | `emitter-names.do` | Stable C++ namespaces, filenames, and diagnostic paths from logical module identity |
 | `emitter-monomorphize.do` | Fixed-point discovery of concrete generic instantiations |
-| `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, include planning, and header/source pairing |
-| `emitter-header.do` | Header declaration ordering and rendering |
+| `emitter-worldview.do` | Consumer-projected declaration closure from checked symbol/type uses |
+| `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, and header/source pairing |
+| `emitter-header.do` | Multi-namespace worldview declaration ordering and rendering |
 | `emitter-decl.do` | Functions, classes, top-level declarations, signatures, and definitions |
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering |
 | `emitter-expr.do` | Single expression dispatch façade |

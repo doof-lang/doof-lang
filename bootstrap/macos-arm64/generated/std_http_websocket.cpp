@@ -1,12 +1,4 @@
 #include "std_http_websocket.hpp"
-#include <cmath>
-#include "std_blob_index.hpp"
-#include "std_event_index.hpp"
-#include "std_http_types.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace std_::http::websocket {
 using namespace ::std_::blob::index;

@@ -176,15 +176,23 @@ export function isNamespaceImport(info: ModuleInfo, name: string): bool {
 }
 
 export function namespaceMemberType(info: ModuleInfo, namespaceName: string, memberName: string, result: AnalysisResult): ResolvedType {
+  symbol := namespaceMemberSymbol(info, namespaceName, memberName, result)
+  if symbol == none { return unknownType() }
+  source := findModule(result, symbol!.module)
+  if source == none { return unknownType() }
+  return symbolType(symbol!, source!, result)
+}
+
+export function namespaceMemberSymbol(info: ModuleInfo, namespaceName: string, memberName: string, result: AnalysisResult): Symbol | none {
   for imported of info.namespaceImports {
     if imported.localName != namespaceName { continue }
     source := findModule(result, imported.sourceModule)
-    if source == none { return unknownType() }
+    if source == none { return none }
     for symbol of source!.exports {
-      if symbol.name == memberName { return symbolType(symbol, source!, result) }
+      if symbol.name == memberName { return symbol }
     }
   }
-  return unknownType()
+  return none
 }
 
 export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisResult): ResolvedType {

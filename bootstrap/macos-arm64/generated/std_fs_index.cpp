@@ -1,10 +1,4 @@
 #include "std_fs_index.hpp"
-#include <cmath>
-#include "std_path_index.hpp"
-#include "std_stream_index.hpp"
-#include "std_fs_types.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
 
 namespace std_::fs::index {
 using namespace ::std_::path::index;

@@ -42,7 +42,7 @@ import { checkCall, checkLambda, checkConstruct, callableField } from "./checker
 import { checkArray, checkObject } from "./checker-literals"
 import { fieldAssignmentBinding, resolveType, memberType, indexType } from "./checker-resolution"
 import { deprecatedNoneAlias, finish, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
-import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
+import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, namespaceMemberSymbol, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
 import { constructorForClass, staticMemberOwner } from "./checker-generics"
 import { checkerSemanticSpan } from "./checker-validation"
 
@@ -225,6 +225,8 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
           localBinding := lookup(scope, identifier.name)
           if localBinding == none && isNamespaceImport(state.info!, identifier.name) {
             namespaceName = identifier.name
+            member.resolvedNamespaceAccess = true
+            member.resolvedNamespaceSymbol = namespaceMemberSymbol(state.info!, identifier.name, member.property, state.result)
             namespaceMember = namespaceMemberType(state.info!, identifier.name, member.property, state.result)
           } else {
             objectType = checkExpression(state, member.object, scope, none)

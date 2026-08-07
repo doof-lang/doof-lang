@@ -1,5 +1,5 @@
 import { Assert } from "std/assert"
-import { driverRootLogicalPath, driverRootLogicalPrefix, nativeBuildOutputName, synchronizeExecutableResources } from "./driver"
+import { driverRootLogicalPath, driverRootLogicalPrefix, materializeGeneratedText, nativeBuildOutputName, synchronizeExecutableResources } from "./driver"
 import { PackageResource } from "./package-manifest"
 import { exists, isDirectory, metadata, mkdir, readDir, readText, remove, writeText } from "std/fs"
 import { join, tempDirectory } from "std/path"
@@ -58,6 +58,19 @@ export function testPlansMsvcNativeExecutableSuffixOnWindows(): none {
   Assert.equal(nativeBuildOutputName("tools/doof", "windows"), "tools-doof.exe")
   Assert.equal(nativeBuildOutputName("doof.exe", "windows"), "doof.exe")
   Assert.equal(nativeBuildOutputName("doof", "macos"), "doof")
+}
+
+export function testPreservesGeneratedHeaderTimestampWhenProjectedContentIsUnchanged(): none {
+  root := join([tempDirectory(), "doof-driver-generated-header"])
+  removeDriverTestTree(root)
+  try! mkdir(root)
+  header := join([root, "consumer.hpp"])
+  materializeGeneratedText(header, "projected worldview\n")
+  before := try! metadata(header)
+  materializeGeneratedText(header, "projected worldview\n")
+  after := try! metadata(header)
+  Assert.equal(after.modifiedAt.toEpochNanos(), before.modifiedAt.toEpochNanos())
+  removeDriverTestTree(root)
 }
 
 export function testSynchronizesExecutableResourceEditsAdditionsAndRemovals(): none {

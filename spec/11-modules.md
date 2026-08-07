@@ -754,7 +754,9 @@ Prefer a Doof-first boundary when designing interop modules:
 
 - Put enums, type aliases, and other small shared boundary types in a focused module such as `types.do`
 - Import those Doof types into your interop module instead of re-declaring raw integer or string codes there
-- Include the generated header from native C++ so both sides share the same enum/type definitions
+- Select exactly one generated Doof module header in each native C++ translation unit so both sides share the same enum/type definitions
+- Do not include generated Doof headers from native headers; native implementation files include their selected generated worldview
+- When native code needs declarations from several Doof modules, expose them through one focused Doof bridge module and include that generated header
 - Prefer typed extern signatures such as `kind(): EventKind` over `kindCode(): int` plus manual mapping helpers in Doof
 - Keep low-level bindings in `Native...` declarations and reserve wrapper classes/functions for cases where the native API cannot expose the desired Doof shape directly
 - Prefer `import function` for stateless free functions rather than creating artificial bridge classes
@@ -778,13 +780,14 @@ export import class NativeBoardgameEvent from "./native_boardgame_host.hpp" {
 ```
 
 ```cpp
-// native_boardgame_host.hpp
-#include "lib/cardgame/types.hpp"
-
+// native_boardgame_host.hpp -- included by the generated host-runtime view
 class NativeBoardgameEvent {
 public:
     NativeBoardgameEventKind kind() const;
 };
+
+// native_boardgame_host.cpp
+#include "lib/cardgame/host-runtime.hpp"
 ```
 
 This avoids duplicate conversion tables and keeps the Doof and C++ views of the boundary in sync.

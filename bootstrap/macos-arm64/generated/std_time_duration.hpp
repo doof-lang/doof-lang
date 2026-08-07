@@ -1,33 +1,14 @@
 #pragma once
 #include "doof_runtime.hpp"
-#include <cstdint>
-#include <cmath>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <ostream>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <variant>
-#include <vector>
-namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
-namespace std_::os::index { struct ExecStdoutStream; }
-namespace std_::os::index { struct ExecStderrStream; }
-namespace std_::stream::index { struct DecodedLineStream; }
+namespace std_::time::duration { struct Duration; }
+namespace std_::time::duration { struct Thread; }
 
 namespace std_::time::duration {
     struct Duration;
     struct Thread;
 }
 
-#include "doof_time.hpp"
-
 namespace std_::time::duration {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
-    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
-    void _threadSleepNanos(int64_t nanos);
     // A signed elapsed duration with nanosecond precision.
 struct Duration : public std::enable_shared_from_this<Duration> {
     int64_t nanos;
@@ -71,10 +52,15 @@ struct Thread : public std::enable_shared_from_this<Thread> {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<Thread>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
+}
+
+namespace doof_time { using Duration = ::std_::time::duration::Duration; }
+namespace doof_time { using Thread = ::std_::time::duration::Thread; }
+#include "doof_time.hpp"
+
+namespace std_::time::duration {
+    void _threadSleepNanos(int64_t nanos);
     doof::Result<std::shared_ptr<Duration>, std::string> parseDuration(const std::string& s);
     bool isDigit(char32_t c);
     int32_t digitValue(char32_t c);
-}
-
-namespace std_::time::duration {
 }

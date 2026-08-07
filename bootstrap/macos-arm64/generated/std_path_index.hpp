@@ -1,30 +1,8 @@
 #pragma once
 #include "doof_runtime.hpp"
-#include <cstdint>
-#include <cmath>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <ostream>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <variant>
-#include <vector>
-namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
-namespace std_::os::index { struct ExecStdoutStream; }
-namespace std_::os::index { struct ExecStderrStream; }
-namespace std_::stream::index { struct DecodedLineStream; }
-
-namespace std_::path::index {
-}
-
 #include "native_path.hpp"
 
 namespace std_::path::index {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
-    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     doof::Result<std::string, std::string> _homeDirectory();
     std::string _tempDirectory();
     doof::Result<std::string, std::string> _dataDirectory(const std::optional<std::string>& appId = std::nullopt);
@@ -52,7 +30,4 @@ namespace std_::path::index {
     std::string renderPath(const std::shared_ptr<std::vector<std::string>>& segments, const std::string& prefix);
     int32_t lastSeparatorIndex(const std::string& path);
     int32_t lastDotIndex(const std::string& path);
-}
-
-namespace std_::path::index {
 }

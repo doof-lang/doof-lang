@@ -1,15 +1,4 @@
 #include "src_checker_module_initialization.hpp"
-#include <cmath>
-#include "src_ast.hpp"
-#include "src_checker_state.hpp"
-#include "src_semantic.hpp"
-#include "src_checker_common.hpp"
-#include "src_checker_symbols.hpp"
-#include "src_checker_types.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_checker_module_initialization_ {
 using namespace ::app_src_ast_;

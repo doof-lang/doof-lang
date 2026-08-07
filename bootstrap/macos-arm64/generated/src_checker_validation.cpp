@@ -1,26 +1,9 @@
 #include "src_checker_validation.hpp"
-#include <cmath>
-#include "src_semantic.hpp"
-#include "src_analyzer.hpp"
-#include "src_ast.hpp"
-#include "src_checker_types.hpp"
-#include "src_json_semantics.hpp"
-#include "src_checker_actor_boundary.hpp"
-#include "src_checker_actor_lifecycle.hpp"
-#include "src_checker_symbols.hpp"
-#include "std_fs_index.hpp"
-#include "std_http_index.hpp"
-#include "std_os_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_checker_validation_ {
 using namespace ::app_src_semantic_;
 using namespace ::app_src_analyzer_;
 using namespace ::app_src_ast_;
-using namespace ::app_src_checker_types_;
-using namespace ::app_src_json_semantics_;
-using namespace ::app_src_checker_actor_boundary_;
-using namespace ::app_src_checker_actor_lifecycle_;
 using namespace ::app_src_checker_symbols_;
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateCheckedTypes(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{});
@@ -379,7 +362,13 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
             const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
-            validateExpression(member->object, module, diagnostics);
+            if (member->resolvedNamespaceAccess) {
+                if (doof::is_null(member->resolvedNamespaceSymbol)) {
+                    addValidationError(module, member->span, ((std::string("Namespace member '") + member->property) + std::string("' has no resolved symbol")), diagnostics);
+                }
+            } else {
+                validateExpression(member->object, module, diagnostics);
+            }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::IndexExpression>>(_case_subject)) {
             const auto& index = std::get<std::shared_ptr<::app_src_ast_::IndexExpression>>(_case_subject);

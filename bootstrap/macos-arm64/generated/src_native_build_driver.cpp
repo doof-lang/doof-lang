@@ -1,15 +1,4 @@
 #include "src_native_build_driver.hpp"
-#include <cmath>
-#include "src_emitter_project.hpp"
-#include "src_native_build.hpp"
-#include "src_native_build_state.hpp"
-#include "src_pkg_config.hpp"
-#include "std_blob_index.hpp"
-#include "std_crypto_index.hpp"
-#include "std_fs_index.hpp"
-#include "std_os_index.hpp"
-#include "std_http_index.hpp"
-#include "std_stream_index.hpp"
 
 namespace app_src_native_build_driver_ {
 using namespace ::app_src_emitter_project_;

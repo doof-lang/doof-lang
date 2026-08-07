@@ -1,22 +1,5 @@
 #pragma once
 #include "doof_runtime.hpp"
-#include <cstdint>
-#include <cmath>
-#include <functional>
-#include <memory>
-#include <optional>
-#include <ostream>
-#include <string>
-#include <tuple>
-#include <type_traits>
-#include <variant>
-#include <vector>
-namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
-namespace std_::os::index { struct ExecStdoutStream; }
-namespace std_::os::index { struct ExecStderrStream; }
-namespace std_::stream::index { struct DecodedLineStream; }
-
 namespace app_src_lexer_ {
     struct Token;
     struct LexerDiagnostic;
@@ -24,21 +7,6 @@ namespace app_src_lexer_ {
 }
 
 namespace app_src_lexer_ {
-    struct LexerDiagnostic {
-    std::string severity;
-    std::string message;
-    int32_t line;
-    int32_t column;
-    LexerDiagnostic(std::string severity, std::string message, int32_t line, int32_t column) : severity(severity), message(message), line(line), column(column) {}
-    LexerDiagnostic() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<LexerDiagnostic, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
-};
-}
-
-namespace app_src_lexer_ {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
-    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
     enum class TokenType {
     IntLiteral,
     LongLiteral,
@@ -515,6 +483,22 @@ inline std::optional<TokenType> TokenType_fromValue(int32_t value) {
   }
 }
 inline std::ostream& operator<<(std::ostream& output, TokenType value) { return output << TokenType_name(value); }
+}
+
+namespace app_src_lexer_ {
+    struct LexerDiagnostic {
+    std::string severity;
+    std::string message;
+    int32_t line;
+    int32_t column;
+    LexerDiagnostic(std::string severity, std::string message, int32_t line, int32_t column) : severity(severity), message(message), line(line), column(column) {}
+    LexerDiagnostic() {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<LexerDiagnostic, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
+}
+
+namespace app_src_lexer_ {
     struct Token {
     TokenType kind;
     int32_t length;
@@ -565,7 +549,4 @@ inline std::ostream& operator<<(std::ostream& output, TokenType value) { return 
     std::string decodeEscapeCharacter(char32_t escaped);
     std::string tokenValue(Token token, const std::string& source);
     TokenType keywordType(const std::string& word);
-}
-
-namespace app_src_lexer_ {
 }
