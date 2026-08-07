@@ -469,13 +469,13 @@ void removeTree(const std::string& path) {
     [&]() -> void { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 316, std::string("try! failed"));  }();
 }
 std::shared_ptr<IOSDeviceCommandResult> runDeviceCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments) {
-    auto _binding_value_11 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, MAX_IOS_DEVICE_COMMAND_OUTPUT_BYTES, nullptr));
+    auto _binding_value_11 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_IOS_DEVICE_COMMAND_OUTPUT_BYTES, nullptr));
     if (doof::is_failure(_binding_value_11)) {
         const auto error = doof::failure_error(_binding_value_11);
         return std::make_shared<IOSDeviceCommandResult>(-1, std::string(""), error);
     }
     const auto executed = doof::success_value(_binding_value_11);
-    const auto output = doof::string_trim(::doof_blob::NativeBlobReader::constructor(executed->stdout, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((executed->stdout)->size()))));
+    const auto output = doof::string_trim(::doof_blob::NativeBlobReader::constructor(executed->stdout_, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((executed->stdout_)->size()))));
     return std::make_shared<IOSDeviceCommandResult>(executed->exitCode, output, std::string(""));
 }
 doof::Result<std::string, std::string> deviceCommandText(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& description) {

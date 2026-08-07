@@ -96,13 +96,13 @@ doof::Result<std::shared_ptr<NativeCompilerIdentity>, std::string> NativeCompile
     return doof::Success<std::shared_ptr<NativeCompilerIdentity>>{std::make_shared<NativeCompilerIdentity>(_field_command, _field_signature)};
 }
 std::shared_ptr<NativeCommandResult> runBuildCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& quietSourcePath) {
-    auto _binding_value_1 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, MAX_NATIVE_OUTPUT_BYTES, nullptr));
+    auto _binding_value_1 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_NATIVE_OUTPUT_BYTES, nullptr));
     if (doof::is_failure(_binding_value_1)) {
         const auto error = doof::failure_error(_binding_value_1);
         return std::make_shared<NativeCommandResult>(-1, std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), error, false, std::string(""));
     }
     const auto executed = doof::success_value(_binding_value_1);
-    return std::make_shared<NativeCommandResult>(executed->exitCode, executed->stdout, std::string(""), executed->stdoutTruncated, quietSourcePath);
+    return std::make_shared<NativeCommandResult>(executed->exitCode, executed->stdout_, std::string(""), executed->stdoutTruncated, quietSourcePath);
 }
 bool isMsvcSourceEcho(const std::string& line, const std::string& sourcePath) {
     if (sourcePath == std::string("")) {

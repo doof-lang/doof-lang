@@ -56,7 +56,7 @@ import {
 import { BlobReader } from "std/blob"
 import { sha256HexString } from "std/crypto"
 import { EntryKind, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
-import { ExecOptions, architecture, run, platform } from "std/os"
+import { ExecOptions, ProcessGroupMode, architecture, run, platform } from "std/os"
 import { absolute } from "std/path"
 
 readonly MAX_PRINTED_DIAGNOSTICS = 8
@@ -80,6 +80,7 @@ isolated function runNativeCommand(
   arguments: string[],
   directory: string | none = none,
   inheritOutput: bool = false,
+  processGroupMode: ProcessGroupMode = .Isolated,
   // Defaults are emitted in the generated prototype before module values.
   maxOutputBytes: long = 262144L,
 ): NativeCommandResult {
@@ -88,6 +89,7 @@ isolated function runNativeCommand(
     withStdin: false,
     mergeStderrIntoStdout: true,
     inheritOutput,
+    processGroupMode,
     maxOutputBytes,
   }) else error {
     return NativeCommandResult { exitCode: -1, error, truncated: false }
@@ -1195,6 +1197,7 @@ function testRequest(request: CliRequest): int {
         [test.id],
         project.rootDirectory,
         !request.coverage,
+        .Isolated,
         if request.coverage then MAX_COVERAGE_OUTPUT_BYTES else MAX_NATIVE_COMPILER_OUTPUT_BYTES,
       )
       if request.coverage {
@@ -1434,7 +1437,7 @@ function emitRequest(request: CliRequest): int {
     }
     if request.command == "build" { return 0 }
     runPlan := planNativeProgramRun(outputPath, request.programArguments, project.rootDirectory)
-    runResult := runNativeCommand(runPlan.command, runPlan.arguments, runPlan.directory, true)
+    runResult := runNativeCommand(runPlan.command, runPlan.arguments, runPlan.directory, true, .Inherited)
     if runResult.error != "" { println("error: " + runResult.error) }
     return runResult.exitCode
   }

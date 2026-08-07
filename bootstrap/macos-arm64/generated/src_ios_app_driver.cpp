@@ -55,13 +55,13 @@ std::string hostPlatform() {
     return ((value == std::string("darwin")) ? std::string("macos") : value);
 }
 std::shared_ptr<IOSCommandResult> runIOSCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments) {
-    auto _binding_value_1 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, MAX_IOS_COMMAND_OUTPUT_BYTES, nullptr));
+    auto _binding_value_1 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_IOS_COMMAND_OUTPUT_BYTES, nullptr));
     if (doof::is_failure(_binding_value_1)) {
         const auto error = doof::failure_error(_binding_value_1);
         return std::make_shared<IOSCommandResult>(-1, std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), error);
     }
     const auto executed = doof::success_value(_binding_value_1);
-    return std::make_shared<IOSCommandResult>(executed->exitCode, executed->stdout, std::string(""));
+    return std::make_shared<IOSCommandResult>(executed->exitCode, executed->stdout_, std::string(""));
 }
 doof::Result<std::string, std::string> commandText(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& description) {
     const auto result = runIOSCommand(command, arguments);

@@ -234,6 +234,8 @@ export function cppIdentifier(name: string): string {
   if name == "char" { return "char_" }
   if name == "short" { return "short_" }
   if name == "delete" { return "delete_" }
+  if name == "stdin" { return "stdin_" }
+  if name == "stdout" { return "stdout_" }
   return name
 }
 
@@ -353,7 +355,16 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
 export function emitMember(expression: MemberExpression, context: EmitContext): string {
   object := emitExpression(expression.object, context)
   case expression.object {
-    _: ThisExpression -> { return "this->" + cppIdentifier(expression.property) }
+    this_: ThisExpression -> {
+      let nativeOwner = false
+      if this_.resolvedType != none {
+        case this_.resolvedType! {
+          class_: ClassType -> { nativeOwner = class_.symbol.native_ }
+          _ -> { }
+        }
+      }
+      return "this->" + (if nativeOwner then expression.property else cppIdentifier(expression.property))
+    }
     _ -> { }
   }
   case expression.object {
@@ -397,7 +408,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
           } else if owner.resolvedSymbol != none && owner.resolvedSymbol!.module != context.modulePath && context.modulePath != "" {
             ownerName = "::" + exprModuleNamespaceFor(owner.resolvedSymbol!.module) + "::" + owner.name
           }
-          return ownerName + "::" + (if expression.property == "metadata" then "_metadata" else cppIdentifier(expression.property))
+          return ownerName + "::" + (if expression.property == "metadata" then "_metadata" else if owner.native_ then expression.property else cppIdentifier(expression.property))
         }
       }
       _ -> { }
@@ -409,7 +420,8 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   if staticObjectType != none {
     case staticObjectType! {
       class_: ClassType -> {
-        return object + (if class_.symbol.kind == "struct" then "." else "->") + cppIdentifier(expression.property)
+        memberName := if class_.symbol.native_ then expression.property else cppIdentifier(expression.property)
+        return object + (if class_.symbol.kind == "struct" then "." else "->") + memberName
       }
       _ -> { }
     }

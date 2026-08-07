@@ -283,13 +283,13 @@ doof::Result<void, std::string> validateAcquiredPackage(const std::string& root,
     return doof::Success<void>{};
 }
 doof::Result<std::string, std::string> packageCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments) {
-    auto _binding_value_31 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, std::nullopt, nullptr));
+    auto _binding_value_31 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, std::nullopt, nullptr));
     if (doof::is_failure(_binding_value_31)) {
         const auto error = doof::failure_error(_binding_value_31);
         return doof::Failure<std::string>{ ((command + std::string(": ")) + error) };
     }
     const auto result = doof::success_value(_binding_value_31);
-    const auto output = doof::string_trim(::doof_blob::NativeBlobReader::constructor(result->stdout, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((result->stdout)->size()))));
+    const auto output = doof::string_trim(::doof_blob::NativeBlobReader::constructor(result->stdout_, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((result->stdout_)->size()))));
     if (result->exitCode != 0) {
         return doof::Failure<std::string>{ (((command + std::string(" exited with code ")) + doof::to_string(result->exitCode)) + ((output == std::string("")) ? std::string("") : (std::string(":\n") + output))) };
     }

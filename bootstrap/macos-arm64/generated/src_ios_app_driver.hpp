@@ -318,6 +318,33 @@ inline std::optional<DayOfWeek> DayOfWeek_fromValue(int32_t value) {
 inline std::ostream& operator<<(std::ostream& output, DayOfWeek value) { return output << DayOfWeek_name(value); }
 }
 
+namespace std_::os::index {
+    enum class ProcessGroupMode {
+    Isolated,
+    Inherited
+};
+inline const char* ProcessGroupMode_name(ProcessGroupMode value) {
+  switch (value) {
+    case ProcessGroupMode::Isolated: return "Isolated";
+    case ProcessGroupMode::Inherited: return "Inherited";
+  }
+  return "";
+}
+inline std::optional<ProcessGroupMode> ProcessGroupMode_fromName(std::string_view value) {
+  if (value == "Isolated") return ProcessGroupMode::Isolated;
+  if (value == "Inherited") return ProcessGroupMode::Inherited;
+  return std::nullopt;
+}
+inline std::optional<ProcessGroupMode> ProcessGroupMode_fromValue(int32_t value) {
+  switch (static_cast<ProcessGroupMode>(value)) {
+    case ProcessGroupMode::Isolated: return ProcessGroupMode::Isolated;
+    case ProcessGroupMode::Inherited: return ProcessGroupMode::Inherited;
+    default: return std::nullopt;
+  }
+}
+inline std::ostream& operator<<(std::ostream& output, ProcessGroupMode value) { return output << ProcessGroupMode_name(value); }
+}
+
 namespace app_src_ios_app_ {
     struct IOSAppResource : public std::enable_shared_from_this<IOSAppResource> {
     std::string sourcePath;
@@ -561,26 +588,13 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
 }
 
 namespace std_::os::index {
-    struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
-    std::optional<std::string> cwd = std::nullopt;
-    std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
-    bool inheritEnv = true;
-    bool withStdin = true;
-    bool mergeStderrIntoStdout = false;
-    bool inheritOutput = false;
-    std::optional<int64_t> maxOutputBytes = std::nullopt;
-    std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
-    ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExecOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
-};
     struct ExecResult : public std::enable_shared_from_this<ExecResult> {
     int32_t exitCode;
-    std::shared_ptr<std::vector<uint8_t>> stdout;
+    std::shared_ptr<std::vector<uint8_t>> stdout_;
     std::shared_ptr<std::vector<uint8_t>> stderr;
     bool stdoutTruncated = false;
     bool stderrTruncated = false;
-    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout, std::shared_ptr<std::vector<uint8_t>> stderr, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout(stdout), stderr(stderr), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
+    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr(stderr), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ExecResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
@@ -682,8 +696,22 @@ namespace std_::parse::index {
 }
 
 namespace std_::os::index {
+    struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
+    std::optional<std::string> cwd = std::nullopt;
+    std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
+    bool inheritEnv = true;
+    bool withStdin = true;
+    bool mergeStderrIntoStdout = false;
+    bool inheritOutput = false;
+    ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated;
+    std::optional<int64_t> maxOutputBytes = std::nullopt;
+    std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
+    ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<ExecOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
     std::string platform();
-    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, std::nullopt, nullptr));
+    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ProcessGroupMode::Isolated, std::nullopt, nullptr));
 }
 
 namespace app_src_ios_device_ {

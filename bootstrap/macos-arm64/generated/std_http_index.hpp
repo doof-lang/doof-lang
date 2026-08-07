@@ -78,6 +78,7 @@ namespace std_::http::index { struct BodyChunkStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
+namespace std_::os::index { enum class ProcessGroupMode; }
 namespace std_::os::index { struct ExecOptions; }
 namespace std_::os::index { struct Exec; }
 namespace std_::os::index { struct ExecResult; }
@@ -503,6 +504,33 @@ inline std::optional<WebSocketState> WebSocketState_fromValue(int32_t value) {
 inline std::ostream& operator<<(std::ostream& output, WebSocketState value) { return output << WebSocketState_name(value); }
 }
 
+namespace std_::os::index {
+    enum class ProcessGroupMode {
+    Isolated,
+    Inherited
+};
+inline const char* ProcessGroupMode_name(ProcessGroupMode value) {
+  switch (value) {
+    case ProcessGroupMode::Isolated: return "Isolated";
+    case ProcessGroupMode::Inherited: return "Inherited";
+  }
+  return "";
+}
+inline std::optional<ProcessGroupMode> ProcessGroupMode_fromName(std::string_view value) {
+  if (value == "Isolated") return ProcessGroupMode::Isolated;
+  if (value == "Inherited") return ProcessGroupMode::Inherited;
+  return std::nullopt;
+}
+inline std::optional<ProcessGroupMode> ProcessGroupMode_fromValue(int32_t value) {
+  switch (static_cast<ProcessGroupMode>(value)) {
+    case ProcessGroupMode::Isolated: return ProcessGroupMode::Isolated;
+    case ProcessGroupMode::Inherited: return ProcessGroupMode::Inherited;
+    default: return std::nullopt;
+  }
+}
+inline std::ostream& operator<<(std::ostream& output, ProcessGroupMode value) { return output << ProcessGroupMode_name(value); }
+}
+
 namespace std_::json::index {
     using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
@@ -846,26 +874,13 @@ namespace std_::http::websocket {
 }
 
 namespace std_::os::index {
-    struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
-    std::optional<std::string> cwd = std::nullopt;
-    std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
-    bool inheritEnv = true;
-    bool withStdin = true;
-    bool mergeStderrIntoStdout = false;
-    bool inheritOutput = false;
-    std::optional<int64_t> maxOutputBytes = std::nullopt;
-    std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
-    ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExecOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
-};
     struct ExecResult : public std::enable_shared_from_this<ExecResult> {
     int32_t exitCode;
-    std::shared_ptr<std::vector<uint8_t>> stdout;
+    std::shared_ptr<std::vector<uint8_t>> stdout_;
     std::shared_ptr<std::vector<uint8_t>> stderr;
     bool stdoutTruncated = false;
     bool stderrTruncated = false;
-    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout, std::shared_ptr<std::vector<uint8_t>> stderr, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout(stdout), stderr(stderr), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
+    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr(stderr), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ExecResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
@@ -1107,10 +1122,12 @@ namespace std_::http::websocket {
     doof::Result<std::shared_ptr<WebSocketConnection>, std::shared_ptr<::std_::http::types::HttpError>> connectWebSocket(const std::string& url, const std::shared_ptr<WebSocketOptions>& options = std::make_shared<WebSocketOptions>(1024, 1024, std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{}), 30000));
 }
 
+namespace doof_os { using ProcessGroupMode = ::std_::os::index::ProcessGroupMode; }
 namespace doof_os { using ExecOptions = ::std_::os::index::ExecOptions; }
 namespace doof_os { using Exec = ::std_::os::index::Exec; }
 namespace doof_os { using ExecResult = ::std_::os::index::ExecResult; }
 namespace doof_os { using Duration = ::std_::time::duration::Duration; }
+using ProcessGroupMode = ::std_::os::index::ProcessGroupMode;
 using ExecOptions = ::std_::os::index::ExecOptions;
 using Exec = ::std_::os::index::Exec;
 using ExecResult = ::std_::os::index::ExecResult;
@@ -1122,6 +1139,20 @@ namespace std_::os::index {
     int32_t _pid();
     std::string _platform();
     std::string _architecture();
+    struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
+    std::optional<std::string> cwd = std::nullopt;
+    std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
+    bool inheritEnv = true;
+    bool withStdin = true;
+    bool mergeStderrIntoStdout = false;
+    bool inheritOutput = false;
+    ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated;
+    std::optional<int64_t> maxOutputBytes = std::nullopt;
+    std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
+    ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<ExecOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
     struct ExecStdoutStream : public std::enable_shared_from_this<ExecStdoutStream> {
     std::shared_ptr<::NativeExecProcess> process;
     std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
@@ -1139,7 +1170,7 @@ namespace std_::os::index {
     struct Exec : public std::enable_shared_from_this<Exec> {
     std::shared_ptr<::NativeExecProcess> native;
     Exec(std::shared_ptr<::NativeExecProcess> native) : native(native) {}
-    static doof::Result<std::shared_ptr<Exec>, std::string> spawn(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, std::nullopt, nullptr));
+    static doof::Result<std::shared_ptr<Exec>, std::string> spawn(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ProcessGroupMode::Isolated, std::nullopt, nullptr));
     Stream__readonly_array_byte stdoutStream();
     Stream__readonly_array_byte stderrStream();
     std::shared_ptr<std::vector<uint8_t>> nextStdoutChunk();

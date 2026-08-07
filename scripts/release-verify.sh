@@ -29,6 +29,7 @@ pkg_fixture="$fixtures_root/pkg-config"
 test_fixture="$fixtures_root/test-runner"
 local_fixture="$fixtures_root/local-dependency"
 module_initialization_fixture="$fixtures_root/module-initialization"
+interactive_run_fixture="$fixtures_root/interactive-run"
 script_fixture="$fixtures_root/manifestless-script/script.do"
 wasm_fixture="$fixtures_root/manifestless-wasm/library.do"
 
@@ -58,6 +59,8 @@ run_binary "$release_root" "$local_fixture/dist/doof-release-local-dependency"
 
 DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" build "$module_initialization_fixture" -o "$verify_root/module-initialization"
 run_binary "$release_root" "$verify_root/module-initialization/doof-release-module-initialization"
+
+python3 "$repo_root/scripts/interactive-run.test.py" "$compiler" "$interactive_run_fixture" "$stdlib_root"
 
 DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" build "$script_fixture" -o "$verify_root/manifestless-script"
 run_binary "$release_root" "$verify_root/manifestless-script/doof"

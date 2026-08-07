@@ -52,13 +52,13 @@ std::string fileName(const std::string& path) {
     return ::std_::path::index::basename(path);
 }
 std::shared_ptr<MacOSCommandResult> runMacOSCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments) {
-    auto _binding_value_1 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, MAX_MACOS_COMMAND_OUTPUT_BYTES, nullptr));
+    auto _binding_value_1 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_MACOS_COMMAND_OUTPUT_BYTES, nullptr));
     if (doof::is_failure(_binding_value_1)) {
         const auto error = doof::failure_error(_binding_value_1);
         return std::make_shared<MacOSCommandResult>(-1, std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), error);
     }
     const auto executed = doof::success_value(_binding_value_1);
-    return std::make_shared<MacOSCommandResult>(executed->exitCode, executed->stdout, std::string(""));
+    return std::make_shared<MacOSCommandResult>(executed->exitCode, executed->stdout_, std::string(""));
 }
 void ensureDirectory(const std::string& path) {
     if ((path == std::string("")) || ::doof_fs::exists(path)) {

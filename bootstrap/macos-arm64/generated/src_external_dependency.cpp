@@ -144,7 +144,7 @@ doof::Result<std::string, std::string> commandOutput(const std::string& command,
         return doof::Failure<std::string>{ ((command + std::string(": ")) + error) };
     }
     const auto result = doof::success_value(_binding_value_14);
-    const auto output = doof::string_trim(::doof_blob::NativeBlobReader::constructor(result->stdout, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((result->stdout)->size()))));
+    const auto output = doof::string_trim(::doof_blob::NativeBlobReader::constructor(result->stdout_, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((result->stdout_)->size()))));
     if (result->exitCode != 0) {
         return doof::Failure<std::string>{ (((command + std::string(" exited with code ")) + doof::to_string(result->exitCode)) + ((output == std::string("")) ? std::string("") : (std::string(":\n") + output))) };
     }
@@ -404,11 +404,11 @@ doof::Result<void, std::string> acquireArchive(const std::shared_ptr<::app_src_p
         return doof::Failure<std::string>{ (((((std::string("External dependency ") + dependency->name) + std::string(" checksum mismatch: expected ")) + dependency->sha256) + std::string(", got ")) + actualSha256) };
     }
     if (doof::string_endsWith(doof::string_toLowerCase(dependency->url), std::string(".zip"))) {
-        auto _try_value_39 = commandOutput(std::string("unzip"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-q"), archivePath, std::string("-d"), extractRoot}), std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, std::nullopt, nullptr));
+        auto _try_value_39 = commandOutput(std::string("unzip"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-q"), archivePath, std::string("-d"), extractRoot}), std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ::std_::os::index::ProcessGroupMode::Isolated, std::nullopt, nullptr));
         if (doof::is_failure(_try_value_39)) return doof::Failure<std::string>{doof::failure_error(_try_value_39)};
         const auto ignoredUnzip = doof::success_value(_try_value_39);
     } else {
-        auto _try_value_40 = commandOutput(std::string("tar"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-xf"), archivePath, std::string("-C"), extractRoot}), std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, std::nullopt, nullptr));
+        auto _try_value_40 = commandOutput(std::string("tar"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-xf"), archivePath, std::string("-C"), extractRoot}), std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ::std_::os::index::ProcessGroupMode::Isolated, std::nullopt, nullptr));
         if (doof::is_failure(_try_value_40)) return doof::Failure<std::string>{doof::failure_error(_try_value_40)};
         const auto ignoredTar = doof::success_value(_try_value_40);
     }
@@ -436,10 +436,10 @@ doof::Result<void, std::string> acquireArchive(const std::shared_ptr<::app_src_p
 }
 doof::Result<void, std::string> acquireGit(const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency, const std::string& destination, const std::string& stagingRoot) {
     const auto repositoryRoot = externalPath(stagingRoot, std::string("repository"));
-    auto _try_value_46 = commandOutput(std::string("git"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("clone"), std::string("--depth"), std::string("1"), std::string("--branch"), dependency->ref, dependency->url, repositoryRoot}), std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, MAX_EXTERNAL_COMMAND_OUTPUT_BYTES, nullptr));
+    auto _try_value_46 = commandOutput(std::string("git"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("clone"), std::string("--depth"), std::string("1"), std::string("--branch"), dependency->ref, dependency->url, repositoryRoot}), std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_EXTERNAL_COMMAND_OUTPUT_BYTES, nullptr));
     if (doof::is_failure(_try_value_46)) return doof::Failure<std::string>{doof::failure_error(_try_value_46)};
     const auto ignoredClone = doof::success_value(_try_value_46);
-    auto _try_value_47 = commandOutput(std::string("git"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-C"), repositoryRoot, std::string("rev-parse"), std::string("HEAD")}), std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, std::nullopt, nullptr));
+    auto _try_value_47 = commandOutput(std::string("git"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-C"), repositoryRoot, std::string("rev-parse"), std::string("HEAD")}), std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ::std_::os::index::ProcessGroupMode::Isolated, std::nullopt, nullptr));
     if (doof::is_failure(_try_value_47)) return doof::Failure<std::string>{doof::failure_error(_try_value_47)};
     const auto actualCommit = doof::success_value(_try_value_47);
     if (doof::string_toLowerCase(actualCommit) != dependency->commit) {
@@ -488,7 +488,7 @@ doof::Result<void, std::string> runExternalCommands(const std::shared_ptr<::app_
         for (const auto& argument : *_iterable_52) {
             arguments->push_back(applyExternalDependencySubstitutions(argument, packageRoot, destination, target));
         }
-        auto _binding_value_53 = commandOutput(program, arguments, std::make_shared<::std_::os::index::ExecOptions>(workingDirectory, doof::map_drainToReadonly(environment, "", 0), true, false, true, false, MAX_EXTERNAL_COMMAND_OUTPUT_BYTES, nullptr));
+        auto _binding_value_53 = commandOutput(program, arguments, std::make_shared<::std_::os::index::ExecOptions>(workingDirectory, doof::map_drainToReadonly(environment, "", 0), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_EXTERNAL_COMMAND_OUTPUT_BYTES, nullptr));
         if (doof::is_failure(_binding_value_53)) {
             const auto error = doof::failure_error(_binding_value_53);
             return doof::Failure<std::string>{ (((((std::string("External dependency ") + dependency->name) + std::string(" command ")) + doof::to_string((index + 1))) + std::string(" failed: ")) + error) };

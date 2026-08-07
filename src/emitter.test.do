@@ -346,6 +346,24 @@ export function testEscapesDeleteCppKeywordForMethods(): none {
   Assert.equal(result.source.contains("router->delete_(std::string(\"/old\"))"), true)
 }
 
+export function testEscapesPlatformStdioIdentifiersEverywhere(): none {
+  result := emit("class Streams { stdin: string\nstdout: string }\nfunction combine(stdin: string, stdout: string): string => Streams { stdin, stdout }.stdin + stdout")
+  Assert.stringContains(result.header, "std::string stdin_;")
+  Assert.stringContains(result.header, "std::string stdout_;")
+  Assert.stringContains(result.header, "const std::string& stdin_")
+  Assert.stringContains(result.header, "const std::string& stdout_")
+  Assert.stringContains(result.source, "->stdin_")
+  Assert.stringContains(result.source, "+ stdout_")
+}
+
+export function testPreservesPlatformStdioNamesAtNativeInteropBoundary(): none {
+  result := emit("import class NativeStreams from \"native.hpp\" as native::Streams { stdout(): string static stdin(): string }\nfunction combine(streams: NativeStreams): string => streams.stdout() + NativeStreams.stdin()")
+  Assert.stringContains(result.source, "streams->stdout()")
+  Assert.stringContains(result.source, "::native::Streams::stdin()")
+  Assert.stringNotContains(result.source, "streams->stdout_()")
+  Assert.stringNotContains(result.source, "::native::Streams::stdin_()")
+}
+
 export function testReturningThisRetainsOwningSharedPointer(): none {
   result := emit("class Builder { chain(): Builder => this }")
   Assert.equal(result.header.contains("public std::enable_shared_from_this<Builder>"), true)

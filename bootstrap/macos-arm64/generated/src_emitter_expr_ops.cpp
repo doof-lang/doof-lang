@@ -322,6 +322,12 @@ std::string cppIdentifier(const std::string& name) {
     if (name == std::string("delete")) {
         return std::string("delete_");
     }
+    if (name == std::string("stdin")) {
+        return std::string("stdin_");
+    }
+    if (name == std::string("stdout")) {
+        return std::string("stdout_");
+    }
     return name;
 }
 std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
@@ -484,7 +490,20 @@ std::string emitMember(const std::shared_ptr<::app_src_ast_::MemberExpression>& 
     {
         auto _case_subject = expression->object;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ThisExpression>>(_case_subject)) {
-            return (std::string("this->") + cppIdentifier(expression->property));
+            const auto& this_ = std::get<std::shared_ptr<::app_src_ast_::ThisExpression>>(_case_subject);
+            auto nativeOwner = false;
+            if (!doof::is_null(this_->resolvedType)) {
+                {
+                    auto _case_subject = doof::unwrap_optional(this_->resolvedType);
+                    if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
+                        const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
+                        (nativeOwner = class_->symbol->native_);
+                }
+                else {
+                }
+                }
+            }
+            return (std::string("this->") + (nativeOwner ? expression->property : cppIdentifier(expression->property)));
     }
     else {
     }
@@ -550,7 +569,7 @@ std::string emitMember(const std::shared_ptr<::app_src_ast_::MemberExpression>& 
                     } else if (((!doof::is_null(owner->resolvedSymbol)) && (owner->resolvedSymbol->module != context->modulePath)) && (context->modulePath != std::string(""))) {
                         (ownerName = (((std::string("::") + ::app_src_emitter_expr_utils_::exprModuleNamespaceFor(owner->resolvedSymbol->module)) + std::string("::")) + owner->name));
                     }
-                    return ((ownerName + std::string("::")) + ((expression->property == std::string("metadata")) ? std::string("_metadata") : cppIdentifier(expression->property)));
+                    return ((ownerName + std::string("::")) + ((expression->property == std::string("metadata")) ? std::string("_metadata") : (owner->native_ ? expression->property : cppIdentifier(expression->property))));
                 }
         }
         else {
@@ -562,7 +581,8 @@ std::string emitMember(const std::shared_ptr<::app_src_ast_::MemberExpression>& 
             auto _case_subject = doof::unwrap_optional(staticObjectType);
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                 const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-                return ((object + ((class_->symbol->kind == std::string("struct")) ? std::string(".") : std::string("->"))) + cppIdentifier(expression->property));
+                const auto memberName = (class_->symbol->native_ ? expression->property : cppIdentifier(expression->property));
+                return ((object + ((class_->symbol->kind == std::string("struct")) ? std::string(".") : std::string("->"))) + memberName);
         }
         else {
         }
