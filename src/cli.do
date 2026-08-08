@@ -34,6 +34,7 @@ export class CliParseResult {
 
 export function cliUsage(): string {
   return "usage: doof <build|run|package|emit|check|test> [entry.do|package-dir] [options] [-- program-args...]\n" +
+    "       doof <script.do> [program-args...]\n" +
     "\n" +
     "commands:\n" +
     "  build   emit generated C++ and build the executable\n" +
@@ -68,6 +69,12 @@ export function parseCli(args: string[]): CliParseResult {
   if args.length == 0 { return CliParseResult { request: none, error: "missing command" } }
   if args[0] == "help" || args[0] == "-h" || args[0] == "--help" {
     return CliParseResult { request: none, help: true }
+  }
+
+  if args[0].endsWith(".do") {
+    request := CliRequest { command: "run", entry: args[0] }
+    for index of 1..<args.length { request.programArguments.push(args[index]) }
+    return CliParseResult { request }
   }
 
   command := args[0]

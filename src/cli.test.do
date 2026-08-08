@@ -44,6 +44,27 @@ export function testParsesRunProgramArgumentsAfterSeparator(): none {
   Assert.equal(result.request!.programArguments[3], "program-output")
 }
 
+export function testParsesDirectScriptInvocation(): none {
+  result := parseCli(["tools/report.do", "one", "two"])
+  Assert.equal(result.error, "")
+  Assert.equal(result.request!.command, "run")
+  Assert.equal(result.request!.entry, "tools/report.do")
+  Assert.equal(result.request!.programArguments.length, 2)
+  Assert.equal(result.request!.programArguments[0], "one")
+  Assert.equal(result.request!.programArguments[1], "two")
+}
+
+export function testDirectScriptArgumentsAreForwardedVerbatim(): none {
+  result := parseCli(["script.do", "--target", "wasm", "--help"])
+  Assert.equal(result.error, "")
+  Assert.equal(result.help, false)
+  Assert.equal(result.request!.targetOverride, "")
+  Assert.equal(result.request!.programArguments.length, 3)
+  Assert.equal(result.request!.programArguments[0], "--target")
+  Assert.equal(result.request!.programArguments[1], "wasm")
+  Assert.equal(result.request!.programArguments[2], "--help")
+}
+
 export function testRejectsProgramArgumentSeparatorForNonRunCommands(): none {
   result := parseCli(["build", "demo", "--", "--verbose"])
   Assert.equal(result.error, "-- is only supported with the run command")

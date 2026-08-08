@@ -210,36 +210,12 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
         return finish(state, expression, result)
       }
       class_: ClassType -> {
-        declaration := declarationFor(state.result, class_.symbol)
-        if declaration != none {
-          case declaration! {
-            classDeclaration: ClassDeclaration -> {
-              expression.resolvedClass = classDeclaration
-              for property of expression.properties {
-                field := findClassField(classDeclaration.fields, property.name)
-                if field == none || field!.static_ || field!.const_ {
-                  typeError(state, "Unknown field '" + property.name + "' for " + class_.name, property.span)
-                  continue
-                }
-                fieldType := memberType(state, class_, property.name, property.span)
-                if property.value != none { property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, optionalResolvedType(fieldType))) }
-                else {
-                  binding := lookup(scope, property.name)
-                  if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
-                  else { property.resolvedType = optionalResolvedType(binding!.type_) }
-                }
-                if !isAssignable(property.resolvedType!, fieldType) { typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(fieldType), property.span) }
-              }
-              for field of classDeclaration.fields {
-                if field.static_ || field.const_ { continue }
-                for name of field.names {
-                  if field.defaultValue == none && !hasObjectProperty(expression.properties, name) { typeError(state, "Missing required field '" + name + "'", expression.span) }
-                }
-              }
-              return finish(state, expression, class_)
-            }
-            _ -> { }
-          }
+        checkedClass := checkClassObject(state, expression, scope, class_, false)
+        if checkedClass != none { return checkedClass! }
+      }
+      union_: UnionResolvedType -> {
+        if supportsUnionObjectInference(union_) {
+          return checkUnionObject(state, expression, scope, union_)
         }
       }
       _ -> { }
@@ -283,6 +259,185 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
     }
   }
   return finish(state, expression, mapType(primitive("string"), jsonValueType()))
+}
+
+function checkClassObject(state: CheckerState, expression: ObjectLiteral, scope: Scope, class_: ClassType, structural: bool): ResolvedType | none {
+  declaration := declarationFor(state.result, class_.symbol)
+  if declaration == none { return none }
+  case declaration! {
+    classDeclaration: ClassDeclaration -> {
+      expression.resolvedClass = classDeclaration
+      for property of expression.properties {
+        field := findClassField(classDeclaration.fields, property.name)
+        if field == none || field!.static_ || (!structural && field!.const_) {
+          typeError(state, "Unknown field '" + property.name + "' for " + class_.name, property.span)
+          decorateObjectProperty(state, property, scope, none)
+          continue
+        }
+        fieldType := memberType(state, class_, property.name, property.span)
+        decorateObjectProperty(state, property, scope, optionalResolvedType(fieldType))
+        if !isAssignable(property.resolvedType!, fieldType) { typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(fieldType), property.span) }
+        if structural && field!.const_ {
+          if property.value == none || field!.defaultValue == none || !sameFixedFieldValue(property.value!, field!.defaultValue!) {
+            typeError(state, "Field '" + property.name + "' must match its literal-valued declaration", property.span)
+          }
+        }
+      }
+      for field of classDeclaration.fields {
+        if field.static_ || (!structural && field.const_) { continue }
+        for name of field.names {
+          required := field.const_ || field.defaultValue == none
+          if required && !hasObjectProperty(expression.properties, name) { typeError(state, "Missing required field '" + name + "'", expression.span) }
+        }
+      }
+      return finish(state, expression, class_)
+    }
+    _ -> { }
+  }
+  return none
+}
+
+function supportsUnionObjectInference(union_: UnionResolvedType): bool {
+  let hasNominal = false
+  for member of union_.types {
+    case member {
+      _: JsonValueResolvedType -> { return false }
+      _: MapResolvedType -> { return false }
+      _: ClassType -> { hasNominal = true }
+      _ -> { }
+    }
+  }
+  return hasNominal
+}
+
+function checkUnionObject(state: CheckerState, expression: ObjectLiteral, scope: Scope, union_: UnionResolvedType): ResolvedType {
+  if expression.spread != none {
+    decorateUnresolvedObject(state, expression, scope)
+    typeError(state, "Cannot infer a sum type member from an object literal with spread fields; use explicit Type { ... } construction", expression.span)
+    return finish(state, expression, union_)
+  }
+  let matches: ClassType[] = []
+  let nominalNames: string[] = []
+  for member of union_.types {
+    case member {
+      class_: ClassType -> {
+        nominalNames.push(class_.name)
+        if objectShapeMatchesClass(state, expression, class_) { matches.push(class_) }
+      }
+      _ -> { }
+    }
+  }
+  if matches.length == 1 {
+    checked := checkClassObject(state, expression, scope, matches[0], true)
+    if checked != none { return checked! }
+  }
+  decorateUnresolvedObject(state, expression, scope)
+  if matches.length == 0 {
+    typeError(state, "Object literal does not match any constructible member of " + typeName(union_) + "; candidates: " + joinNames(nominalNames) + ". Use explicit Type { ... } construction", expression.span)
+  } else {
+    let matchingNames: string[] = []
+    for match of matches { matchingNames.push(match.name) }
+    typeError(state, "Ambiguous object literal for " + typeName(union_) + "; matching members: " + joinNames(matchingNames) + ". Use explicit Type { ... } construction", expression.span)
+  }
+  return finish(state, expression, union_)
+}
+
+function objectShapeMatchesClass(state: CheckerState, expression: ObjectLiteral, class_: ClassType): bool {
+  declaration := declarationFor(state.result, class_.symbol)
+  if declaration == none { return false }
+  case declaration! {
+    classDeclaration: ClassDeclaration -> {
+      for property of expression.properties {
+        if property.key != none { return false }
+        field := findClassField(classDeclaration.fields, property.name)
+        if field == none || field!.static_ { return false }
+      }
+      for field of classDeclaration.fields {
+        if field.static_ { continue }
+        for name of field.names {
+          if (field.const_ || field.defaultValue == none) && !hasObjectProperty(expression.properties, name) { return false }
+        }
+      }
+      return true
+    }
+    _ -> { }
+  }
+  return false
+}
+
+function decorateObjectProperty(state: CheckerState, property: ObjectProperty, scope: Scope, expected: ResolvedType | none): none {
+  if property.key != none { checkExpression(state, property.key!, scope, none) }
+  if property.value != none { property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, expected)) }
+  else {
+    binding := lookup(scope, property.name)
+    if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
+    else { property.resolvedType = optionalResolvedType(binding!.type_) }
+  }
+}
+
+function decorateUnresolvedObject(state: CheckerState, expression: ObjectLiteral, scope: Scope): none {
+  if expression.spread != none { checkExpression(state, expression.spread!, scope, none) }
+  for property of expression.properties { decorateObjectProperty(state, property, scope, none) }
+}
+
+function sameFixedFieldValue(actual: Expression, expected: Expression): bool {
+  case expected {
+    expectedString: StringLiteral -> {
+      case actual { actualString: StringLiteral -> { return actualString.value == expectedString.value } _ -> { return false } }
+    }
+    expectedInt: IntLiteral -> {
+      case actual { actualInt: IntLiteral -> { return actualInt.value == expectedInt.value } _ -> { return false } }
+    }
+    expectedLong: LongLiteral -> {
+      case actual { actualLong: LongLiteral -> { return actualLong.value == expectedLong.value } _ -> { return false } }
+    }
+    expectedFloat: FloatLiteral -> {
+      case actual { actualFloat: FloatLiteral -> { return actualFloat.value == expectedFloat.value } _ -> { return false } }
+    }
+    expectedDouble: DoubleLiteral -> {
+      case actual { actualDouble: DoubleLiteral -> { return actualDouble.value == expectedDouble.value } _ -> { return false } }
+    }
+    expectedChar: CharLiteral -> {
+      case actual { actualChar: CharLiteral -> { return actualChar.value == expectedChar.value } _ -> { return false } }
+    }
+    expectedBool: BoolLiteral -> {
+      case actual { actualBool: BoolLiteral -> { return actualBool.value == expectedBool.value } _ -> { return false } }
+    }
+    _: NoneLiteral -> {
+      case actual { _: NoneLiteral -> { return true } _ -> { return false } }
+    }
+    expectedMember: MemberExpression -> {
+      case actual {
+        actualMember: MemberExpression -> { return actualMember.property == expectedMember.property }
+        actualDot: DotShorthand -> { return actualDot.name == expectedMember.property }
+        _ -> { return false }
+      }
+    }
+    expectedDot: DotShorthand -> {
+      case actual {
+        actualMember: MemberExpression -> { return actualMember.property == expectedDot.name }
+        actualDot: DotShorthand -> { return actualDot.name == expectedDot.name }
+        _ -> { return false }
+      }
+    }
+    expectedUnary: UnaryExpression -> {
+      case actual {
+        actualUnary: UnaryExpression -> { return actualUnary.operator == expectedUnary.operator && sameFixedFieldValue(actualUnary.operand, expectedUnary.operand) }
+        _ -> { return false }
+      }
+    }
+    _ -> { return false }
+  }
+  return false
+}
+
+function joinNames(names: string[]): string {
+  let result = ""
+  for i of 0..<names.length {
+    if i > 0 { result = result + ", " }
+    result = result + names[i]
+  }
+  return result
 }
 
 export function containsJsonValue(state: CheckerState, union_: UnionResolvedType): bool {

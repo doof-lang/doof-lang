@@ -28,6 +28,12 @@ function main(args: string[]): int
 statements before optional `main`; that execution scope receives implicit
 `arguments: string[]`.
 
+On POSIX systems, an executable `.do` script may start at byte offset zero with
+`#!/usr/bin/env doof`. The compiler ignores that first line while preserving
+source positions. After `chmod +x script.do`, arguments passed to
+`./script.do ...` are available through `main(arguments: string[])` or the
+implicit top-level `arguments` binding.
+
 ## Variables and Bindings
 
 | Form | Reassignable | Notes |

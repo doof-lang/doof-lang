@@ -41,6 +41,11 @@ dist/doof package path/to/package
 dist/doof test path/to/package
 ```
 
+POSIX scripts can place `#!/usr/bin/env doof` at the start of an executable
+`.do` file. Invoking `./script.do arg` is equivalent to direct script mode,
+`doof script.do arg`, and forwards trailing arguments to the program. See
+[CLI](docs/cli.md) for details.
+
 Each package is described by a `doof.json`. See [CLI](docs/cli.md),
 [packages](docs/packages.md), and [testing](docs/testing.md) for the supported
 contracts.

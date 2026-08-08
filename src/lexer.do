@@ -252,6 +252,9 @@ export class Lexer {
     // to shared vector storage, so this avoids repeated vector growth/moves on
     // large source files while preserving the normal dynamic semantics.
     tokens.reserve(source.length \ 2 + 16)
+    if source.length >= 2 && source[0] == '#' && source[1] == '!' {
+      while pos < source.length && peek() != '\n' { advance() }
+    }
     while pos < source.length {
       skipWhitespaceAndComments()
       if pos >= source.length { break }

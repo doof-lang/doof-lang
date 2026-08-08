@@ -372,6 +372,32 @@ let q = { x: 1.0, y: 2.0 }         // ❌ Error: object literal needs contextual
 
 Object literals do not infer an anonymous structural type on their own. They must be checked against a contextual target such as a variable annotation, parameter type, return type, array element type, or constructor field type.
 
+When that target is a union containing classes or structs, an object literal
+constructs the single nominal member whose field shape matches. Matching is
+based only on field names: every supplied property must be an instance field,
+all required fields must be present, ordinary defaulted fields may be omitted,
+and literal-valued fields must be supplied for structural construction. The
+selected member then provides contextual types for property values, including
+nested object literals:
+
+```javascript
+class Animal { name: string }
+class Question { text: string; yes: Knowledge; no: Knowledge }
+type Knowledge = Animal | Question
+
+let knowledge: Knowledge = {
+    text: "Does it swim",
+    yes: { name: "fish" },
+    no: { name: "bird" }
+}
+```
+
+Value types do not break shape ties. If no nominal member matches, or more
+than one member matches, the literal is rejected and must use explicit
+`Type { ... }` construction. Spread fields also require explicit nominal
+construction. Contextual Result, Map, and `JsonValue` object behavior retains
+precedence over nominal union inference.
+
 ### Contextual Numeric Narrowing
 
 When an expected type is known from context, numeric literals are interpreted as that type even when the default would differ:

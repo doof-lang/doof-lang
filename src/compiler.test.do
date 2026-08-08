@@ -538,6 +538,13 @@ export function testEmitsFocusedRecursiveAstUnionSample(): none {
   Assert.equal(result.emission != none, true)
 }
 
+export function testEmitsFocusedContextualSumObjectSample(): none {
+  result := compileSample("tests/compiler-samples/contextual-sum-object.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.emission != none, true)
+}
+
 export function testEmitsActorAffineLambdaCaptures(): none {
   result := compile([SourceFile {
     path: "/lambda-captures.do",

@@ -68,6 +68,23 @@ Semicolons may be used to place multiple statements on a single line, though thi
 let x = 1; let y = 2; let z = 3    // legal but discouraged
 ```
 
+## Shebang Lines
+
+A source file may begin with a POSIX shebang line. The line must start with
+`#!` at byte offset zero and is ignored through the next line feed or the end
+of the file. It does not produce tokens, but it remains part of source offsets
+and line numbering. A shebang marker anywhere else is invalid.
+
+The canonical executable-script form is:
+
+```doof
+#!/usr/bin/env doof
+
+function main(arguments: string[]): none {
+    println(arguments.join(", "))
+}
+```
+
 ## Hello World
 
 ```javascript

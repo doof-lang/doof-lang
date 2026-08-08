@@ -7,6 +7,7 @@ commands require an explicit `.do` file; directory/default discovery is not
 available.
 
 ```text
+doof <script.do> [program arguments]
 doof check <path>
 doof emit <path> [-o <directory>]
 doof build <path> [-o <directory>]
@@ -14,6 +15,30 @@ doof run <path> [build options] [-- program arguments]
 doof package <path> [-o <build-directory>] [--distdir <directory>]
 doof test <path> [filter] [--list] [--coverage]
 ```
+
+## Executable scripts
+
+On POSIX systems, a `.do` source file can be invoked directly with a shebang:
+
+```doof
+#!/usr/bin/env doof
+
+function main(arguments: string[]): none {
+    println(arguments.join(", "))
+}
+```
+
+Make the file executable once with `chmod +x script.do`, then run it normally:
+
+```text
+./script.do one two
+```
+
+The direct `doof script.do ...` form runs the source and forwards every value
+after the path verbatim to the program, including option-like values. Use the
+explicit `doof run script.do [build options] -- [program arguments]` form when
+compiler or build options are required. Windows accepts the same source file,
+but does not natively launch files through POSIX shebangs.
 
 `check` parses, resolves, analyzes, and type-checks the reached source graph.
 `emit` also writes split C++ headers/sources and required runtime/native inputs.

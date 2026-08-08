@@ -75,6 +75,44 @@ export function testPositionsAndValues(): none {
   Assert.equal(tokens[3].offset, 10)
 }
 
+export function testShebangIsIgnoredAtSourceStart(): none {
+  source := "#!/usr/bin/env doof\nfunction main(): none {}"
+  lexer := Lexer { source }
+  tokens := lexer.tokenize()
+  Assert.equal(lexer.diagnostics.length, 0)
+  Assert.equal(tokens[0].kind, TokenType.Function)
+  Assert.equal(tokens[0].line, 2)
+  Assert.equal(tokens[0].column, 1)
+  Assert.equal(tokens[0].offset, 20)
+}
+
+export function testShebangSupportsCRLF(): none {
+  source := "#!/usr/bin/env doof\r\nfunction main(): none {}"
+  tokens := Lexer { source }.tokenize()
+  Assert.equal(tokens[0].kind, TokenType.Function)
+  Assert.equal(tokens[0].line, 2)
+  Assert.equal(tokens[0].column, 1)
+  Assert.equal(tokens[0].offset, 21)
+}
+
+export function testShebangMayEndAtEndOfFile(): none {
+  lexer := Lexer { source: "#!/usr/bin/env doof" }
+  tokens := lexer.tokenize()
+  Assert.equal(lexer.diagnostics.length, 0)
+  Assert.equal(tokens.length, 1)
+  Assert.equal(tokens[0].kind, TokenType.EndOfFile)
+  Assert.equal(tokens[0].offset, 19)
+}
+
+export function testShebangIsRejectedAwayFromSourceStart(): none {
+  lexer := Lexer { source: "\n#!/usr/bin/env doof" }
+  lexer.tokenize()
+  Assert.equal(lexer.diagnostics.length, 1)
+  Assert.equal(lexer.diagnostics[0].message, "Unexpected character: '#'")
+  Assert.equal(lexer.diagnostics[0].line, 2)
+  Assert.equal(lexer.diagnostics[0].column, 1)
+}
+
 export function testLexesCallerIntrinsicAsOneToken(): none {
   source := "source: SourceLocation = @caller,"
   tokens := Lexer { source }.tokenize()

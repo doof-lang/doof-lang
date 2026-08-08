@@ -146,6 +146,17 @@ std::string emitArray(const std::shared_ptr<::app_src_ast_::ArrayLiteral>& expre
     return std::string("nullptr");
 }
 std::string emitObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& expected) {
+    if (!doof::is_null(expression->resolvedType)) {
+        {
+            auto _case_subject = doof::unwrap_optional(expression->resolvedType);
+            if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
+                const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
+                return emitClassObject(expression, context, class_);
+        }
+        else {
+        }
+        }
+    }
     if (!doof::is_null(expected)) {
         {
             auto _case_subject = doof::unwrap_optional(expected);
@@ -251,7 +262,7 @@ std::string emitMapObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>& 
         if (i > 0) {
             (values = (values + std::string(", ")));
         }
-        const auto property = doof::array_at(expression->properties, i, "src/emitter-expr-literals", 173);
+        const auto property = doof::array_at(expression->properties, i, "src/emitter-expr-literals", 179);
         const auto value = (doof::is_null(property->value) ? std::string("{}") : ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(property->value), context, doof::optional_value(map->valueType)));
         const auto key = (doof::is_null(property->key) ? quote(property->name) : ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(property->key), context, doof::optional_value(map->keyType)));
         (values = (((((values + std::string("{")) + key) + std::string(", ")) + value) + std::string("}")));
@@ -266,20 +277,20 @@ std::string emitTuple(const std::shared_ptr<::app_src_ast_::TupleLiteral>& expre
         if (i > 0) {
             (values = (values + std::string(", ")));
         }
-        (values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 187), context, std::monostate{})));
+        (values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 193), context, std::monostate{})));
     }
     return ((std::string("std::make_tuple(") + values) + std::string(")"));
 }
 std::string emitString(const std::shared_ptr<::app_src_ast_::StringLiteral>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (static_cast<int32_t>((expression->interpolations)->size()) == 0) {
-        return ((std::string("std::string(") + quote(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 193))) + std::string(")"));
+        return ((std::string("std::string(") + quote(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 199))) + std::string(")"));
     }
-    auto result = ((std::string("std::string(") + quote(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 194))) + std::string(")"));
+    auto result = ((std::string("std::string(") + quote(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 200))) + std::string(")"));
     for (int32_t i = 0; i < static_cast<int32_t>((expression->interpolations)->size()); ++i) {
-        (result = (((result + std::string(" + doof::to_string(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->interpolations, i, "src/emitter-expr-literals", 196), context, std::monostate{})) + std::string(")")));
+        (result = (((result + std::string(" + doof::to_string(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->interpolations, i, "src/emitter-expr-literals", 202), context, std::monostate{})) + std::string(")")));
         const auto partIndex = ((i * 2) + 2);
         if (partIndex < static_cast<int32_t>((expression->parts)->size())) {
-            (result = (((result + std::string(" + std::string(")) + quote(doof::array_at(expression->parts, partIndex, "src/emitter-expr-literals", 198))) + std::string(")")));
+            (result = (((result + std::string(" + std::string(")) + quote(doof::array_at(expression->parts, partIndex, "src/emitter-expr-literals", 204))) + std::string(")")));
         }
     }
     return result;

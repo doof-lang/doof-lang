@@ -97,6 +97,12 @@ export function emitArray(expression: ArrayLiteral, context: EmitContext, expect
 }
 
 export function emitObject(expression: ObjectLiteral, context: EmitContext, expected: ResolvedType | none): string {
+  if expression.resolvedType != none {
+    case expression.resolvedType! {
+      class_: ClassType -> { return emitClassObject(expression, context, class_) }
+      _ -> { }
+    }
+  }
   if expected != none {
     case expected! {
       result: ResultResolvedType -> {

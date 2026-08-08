@@ -664,6 +664,29 @@ let line = Line { start: { x: 0.0, y: 0.0 }, end: { x: 1.0, y: 1.0 } }
 let line = Line ((0.0, 0.0), (1.0, 1.0))
 ```
 
+### Contextual Sum-Type Initialisation
+
+An object literal expected to produce a union of classes or structs may omit
+its nominal type when exactly one member accepts its field shape:
+
+```javascript
+class Leaf { value: int }
+class Branch { left: Node; right: Node }
+type Node = Leaf | Branch
+
+let tree: Node = {
+    left: { value: 1 },
+    right: { value: 2 }
+}
+```
+
+Candidate selection uses field names only. Required fields, including
+literal-valued fields, must be present; non-literal fields with defaults may
+be omitted. Property value types are checked only after selection and never
+break a tie between same-shaped members. Zero matches, multiple matches, and
+spread-based literals require explicit `Leaf { ... }` or `Branch { ... }`
+construction.
+
 ### Name-Value Shorthand
 
 ```javascript

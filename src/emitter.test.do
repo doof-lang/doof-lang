@@ -1460,6 +1460,18 @@ export function testEmitsContextualResultAndClassObjectLiterals(): none {
   Assert.equal(result.source.contains("std::make_shared<Payload>"), true)
 }
 
+export function testEmitsContextualSumObjectLiteralsAndPromotions(): none {
+  result := emit(
+    "class Animal { name: string }\n" +
+    "class Question { text: string\nlet yes: Knowledge\nlet no: Knowledge }\n" +
+    "type Knowledge = Animal | Question\n" +
+    "function initial(): Knowledge => { text: \"Does it swim\", yes: { name: \"fish\" }, no: { name: \"bird\" } }",
+  )
+  Assert.stringContains(result.source, "std::make_shared<::app_main_::Question>")
+  Assert.stringContains(result.source, "std::make_shared<::app_main_::Animal>")
+  Assert.stringContains(result.source, "doof::variant_promote<")
+}
+
 export function testEmitsResultPayloadAccessThroughRuntimeHelpers(): none {
   result := emit("function load(): Result<int, string> => Failure { error: \"bad\" }\nfunction read(): Result<int, string> { value := load() else { return { error: value.error } }\nreturn { value } }")
   Assert.equal(result.source.contains("doof::failure_error(value)"), true)

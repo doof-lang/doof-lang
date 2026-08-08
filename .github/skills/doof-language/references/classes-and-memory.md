@@ -84,6 +84,10 @@ Rules:
   JSON serialization/deserialization.
 - Name-value shorthand such as `{ name }` expands to `{ name: name }`.
 - Spread fields work in named construction.
+- A bare object literal expected as a class/struct union constructs the unique
+  member matching its field shape. Value types do not resolve shape ties;
+  ambiguous, unmatched, and spread-based literals require explicit nominal
+  construction.
 
 ### Literal-Valued Fields in Construction
 

@@ -161,6 +161,15 @@ type ParseResult = Success | Failure
 Direct member access on a multi-member union is allowed only when every present
 member has that field or method.
 
+An object literal contextually expected as a union of classes or structs
+constructs the unique member matching its field names. Required and
+literal-valued fields must be present; ordinary defaulted fields may be
+omitted. Value types do not break shape ties, so zero or multiple matches
+require explicit `Type { ... }` construction. The selected member's field
+types flow recursively into nested object literals. Spread literals and
+unions with Map or `JsonValue` object carriers require their existing explicit
+or carrier-specific forms.
+
 Error results are also ordinary unions: `Result<T, E>` is the canonical spelling
 of `Success<T> | Failure<E>`. The intrinsic arms are valid standalone types, but
 their payload members are intentionally not shared across the union.

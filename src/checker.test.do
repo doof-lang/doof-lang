@@ -1443,6 +1443,67 @@ export function testChecksContextualResultAndClassObjectLiterals(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testInfersContextualSumObjectLiteralsByShape(): none {
+  result := checked(
+    "class Animal { name: string }\n" +
+    "class Question { text: string\nlet yes: Knowledge\nlet no: Knowledge }\n" +
+    "type Knowledge = Animal | Question\n" +
+    "function keep(value: Knowledge): Knowledge => value\n" +
+    "function initial(): Knowledge => { text: \"Does it swim\", yes: { name: \"fish\" }, no: { name: \"bird\" } }\n" +
+    "function main(): Knowledge { let knowledge: Knowledge = { name: \"cat\" }\nknowledge = keep({ text: \"Does it fly\", yes: { name: \"eagle\" }, no: { name: \"fish\" } })\nreturn knowledge }",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testInfersStructNullableDefaultShorthandAndLiteralSumObjects(): none {
+  result := checked(
+    "struct Leaf { value: int\nlabel: string = \"leaf\" }\n" +
+    "struct Pair { left: int\nright: int }\n" +
+    "type Node = Leaf | Pair | none\n" +
+    "function leaf(value: int): Node => { value }\n" +
+    "class TaggedSuccess { const kind = \"Success\"\nvalue: int }\n" +
+    "class TaggedFailure { const kind = \"Failure\"\nerror: string }\n" +
+    "type Outcome = TaggedSuccess | TaggedFailure\n" +
+    "function outcome(): Outcome => { kind: \"Success\", value: 1 }",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testRejectsAmbiguousContextualSumObjectsWithoutValueTypeTieBreaking(): none {
+  result := checked("class Count { value: int }\nclass Label { value: string }\ntype Item = Count | Label\nfunction make(): Item => { value: 1 }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Ambiguous object literal")
+  Assert.stringContains(result.diagnostics[0].message, "Count, Label")
+  Assert.stringContains(result.diagnostics[0].message, "explicit Type { ... } construction")
+}
+
+export function testRejectsUnmatchedAndSpreadContextualSumObjects(): none {
+  unmatched := checked("class Left { left: int }\nclass Right { right: int }\ntype Side = Left | Right\nfunction make(): Side => { missing: 1 }")
+  Assert.equal(unmatched.diagnostics.length, 1)
+  Assert.stringContains(unmatched.diagnostics[0].message, "does not match any constructible member")
+  Assert.stringContains(unmatched.diagnostics[0].message, "Left, Right")
+
+  missingLiteral := checked("class TaggedSuccess { const kind = \"Success\"\nvalue: int }\nclass TaggedFailure { const kind = \"Failure\"\nerror: string }\ntype Outcome = TaggedSuccess | TaggedFailure\nfunction make(): Outcome => { value: 1 }")
+  Assert.equal(missingLiteral.diagnostics.length, 1)
+  Assert.stringContains(missingLiteral.diagnostics[0].message, "does not match any constructible member")
+
+  wrongLiteral := checked("class TaggedSuccess { const kind = \"Success\"\nvalue: int }\nclass TaggedFailure { const kind = \"Failure\"\nerror: string }\ntype Outcome = TaggedSuccess | TaggedFailure\nfunction make(): Outcome => { kind: \"Failure\", value: 1 }")
+  Assert.equal(wrongLiteral.diagnostics.length, 1)
+  Assert.stringContains(wrongLiteral.diagnostics[0].message, "must match its literal-valued declaration")
+
+  spread := checked("class Left { left: int }\nclass Right { right: int }\ntype Side = Left | Right\nfunction make(): Side { base := Left { left: 1 }\nreturn { ...base } }")
+  Assert.equal(spread.diagnostics.length, 1)
+  Assert.stringContains(spread.diagnostics[0].message, "spread fields")
+}
+
+export function testPreservesJsonObjectTypingWhenUnionHasNominalMember(): none {
+  result := checked("class Payload { name: string }\ntype Value = Payload | JsonValue\nfunction make(): Value => { name: \"Ada\" }")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testCollapsesDuplicateUnionMembers(): none {
   result := checked("function choose(value: string | string): string => value")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
