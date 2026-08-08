@@ -593,6 +593,13 @@ export function testEmitsCheckedCollectionIndexReads(): none {
   Assert.stringNotContains(result.source, "(*values)[key]")
 }
 
+export function testEmitsCheckedBooleanArrayIndexReadsAndWrites(): none {
+  result := emit("function settle(settled: bool[], index: int): bool { if settled[index] { return false }\nsettled[index] = true\nreturn settled[index] }")
+  Assert.stringContains(result.source, "if (doof::array_at(settled, index, \"<module>\", 1))")
+  Assert.stringContains(result.source, "doof::array_at(settled, index, \"<module>\", 2) = true")
+  Assert.stringContains(result.source, "return doof::array_at(settled, index, \"<module>\", 3)")
+}
+
 export function testEmitsSafeCollectionIndexWrites(): none {
   result := emit("function writeArray(values: int[], index: int): none { values[index] = 7 }\nfunction writeMap(values: Map<string, int>, key: string): none { values[key] = 7 }")
   Assert.stringContains(result.source, "doof::array_at(values, index, \"<module>\", 1) = 7")

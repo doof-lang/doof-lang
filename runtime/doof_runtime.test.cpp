@@ -298,6 +298,18 @@ void test_configuration() {
     } catch (const doof::Panic&) {}
 }
 
+void test_collection_indexing() {
+    auto settled = std::make_shared<std::vector<bool>>(std::vector<bool>{false, true});
+    require(!doof::array_at(settled, 0, "runtime-test", 1), "boolean array read changed");
+    require(doof::array_at(settled, 1, "runtime-test", 1), "true boolean array read changed");
+    doof::array_at(settled, 0, "runtime-test", 1) = true;
+    require(doof::array_at(settled, 0, "runtime-test", 1), "boolean array write changed");
+
+    auto values = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{1});
+    doof::array_at(values, 0, "runtime-test", 1) = 2;
+    require(doof::array_at(values, 0, "runtime-test", 1) == 2, "ordinary array indexing changed");
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -314,6 +326,7 @@ int main(int argc, char** argv) {
     else if (mode == "release") test_token_release_and_retirement();
     else if (mode == "priority") test_reacquire_priority();
     else if (mode == "configuration") test_configuration();
+    else if (mode == "collections") test_collection_indexing();
     else fail("unknown test mode: " + mode);
     return 0;
 }

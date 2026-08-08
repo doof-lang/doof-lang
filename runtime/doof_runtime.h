@@ -1676,7 +1676,7 @@ std::shared_ptr<std::decay_t<T>> share(T&& val) {
 }
 
 template <typename T>
-T& array_at(const std::shared_ptr<std::vector<T>>& arr, int32_t index, const char* file, int32_t line) {
+typename std::vector<T>::reference array_at(const std::shared_ptr<std::vector<T>>& arr, int32_t index, const char* file, int32_t line) {
     if (!arr) {
         panic_at(file, line, "Attempted to index null array");
     }
