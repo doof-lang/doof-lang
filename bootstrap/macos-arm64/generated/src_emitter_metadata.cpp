@@ -29,7 +29,7 @@ std::string emitMetadataDefinition(const std::shared_ptr<::app_src_ast_::ClassDe
     (result = (((result + std::string("    \"")) + escapeCpp(owner->description)) + std::string("\",\n")));
     (result = (((((result + std::string("    std::make_shared<std::vector<doof::MethodReflection<")) + owner->name) + std::string(">>>(std::vector<doof::MethodReflection<")) + owner->name) + std::string(">>{\n")));
     for (int32_t index = 0; index < static_cast<int32_t>((methods)->size()); ++index) {
-        const auto method = (*methods)[index];
+        const auto method = doof::array_at(methods, index, "src/emitter-metadata", 30);
         (result = (result + emitMethodReflection(owner, method, context)));
         if ((index + 1) < static_cast<int32_t>((methods)->size())) {
             (result = (result + std::string(",")));
@@ -316,10 +316,10 @@ std::string emitClassSchema(const std::shared_ptr<::app_src_ast_::ClassDeclarati
             continue;
         }
         for (int32_t index = 0; index < static_cast<int32_t>((field->names)->size()); ++index) {
-            const auto description = ((index < static_cast<int32_t>((field->descriptions)->size())) ? (*field->descriptions)[index] : std::string(""));
-            properties->push_back(jsonEntry((*field->names)[index], emitTypeSchemaWithDescription(doof::unwrap_optional(field->resolvedType), description, context)));
+            const auto description = ((index < static_cast<int32_t>((field->descriptions)->size())) ? doof::array_at(field->descriptions, index, "src/emitter-metadata", 223) : std::string(""));
+            properties->push_back(jsonEntry(doof::array_at(field->names, index, "src/emitter-metadata", 224), emitTypeSchemaWithDescription(doof::unwrap_optional(field->resolvedType), description, context)));
             if (doof::is_null(field->defaultValue)) {
-                required->push_back(jsonString((*field->names)[index]));
+                required->push_back(jsonString(doof::array_at(field->names, index, "src/emitter-metadata", 225)));
             }
         }
     }

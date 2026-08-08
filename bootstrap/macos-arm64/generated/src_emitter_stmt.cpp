@@ -190,7 +190,7 @@ std::string emitDestructuringValue(const std::shared_ptr<::app_src_ast_::Destruc
         }
     }
     for (int32_t i = 0; i < static_cast<int32_t>((statement->bindings)->size()); ++i) {
-        const auto name = (*statement->bindings)[i];
+        const auto name = doof::array_at(statement->bindings, i, "src/emitter-stmt", 135);
         if (name != std::string("_")) {
             const auto qualifier = ((statement->bindingKind == std::string("let")) ? std::string("auto") : std::string("const auto"));
             auto value = ((((std::string("std::get<") + doof::to_string(i)) + std::string(">(")) + temporaryName) + std::string(")"));
@@ -205,7 +205,7 @@ std::string emitDestructuringValue(const std::shared_ptr<::app_src_ast_::Destruc
                 else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                         const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
                         if (i < static_cast<int32_t>((positionalFields)->size())) {
-                            (value = emitDestructuredField(temporaryName, (*positionalFields)[i], doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(class_), context));
+                            (value = emitDestructuredField(temporaryName, doof::array_at(positionalFields, i, "src/emitter-stmt", 144), doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(class_), context));
                         }
                 }
                 else {
@@ -692,7 +692,7 @@ std::string emitWhile(const std::shared_ptr<::app_src_ast_::WhileStatement>& sta
 }
 std::string emitForOf(const std::shared_ptr<::app_src_ast_::ForOfStatement>& statement, int32_t level, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     const auto ind = indent(level);
-    const auto name = ((static_cast<int32_t>((statement->bindings)->size()) == 0) ? std::string("_item") : ::app_src_emitter_expr_::cppIdentifier((*statement->bindings)[0]));
+    const auto name = ((static_cast<int32_t>((statement->bindings)->size()) == 0) ? std::string("_item") : ::app_src_emitter_expr_::cppIdentifier(doof::array_at(statement->bindings, 0, "src/emitter-stmt", 474)));
     {
         auto _case_subject = statement->iterable;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::BinaryExpression>>(_case_subject)) {
@@ -728,7 +728,7 @@ std::string emitForOf(const std::shared_ptr<::app_src_ast_::ForOfStatement>& sta
             if (i > 0) {
                 (names = (names + std::string(", ")));
             }
-            (names = (names + ::app_src_emitter_expr_::cppIdentifier((*statement->bindings)[i])));
+            (names = (names + ::app_src_emitter_expr_::cppIdentifier(doof::array_at(statement->bindings, i, "src/emitter-stmt", 507))));
         }
         return (((((((((iterableBinding + ind) + std::string("for (const auto& [")) + names) + std::string("] : *")) + iterableName) + std::string(") {\n")) + emitBlock(statement->body, (level + 1), context)) + ind) + std::string("}\n"));
     }
@@ -752,7 +752,7 @@ std::string emitFor(const std::shared_ptr<::app_src_ast_::ForStatement>& stateme
         if (i > 0) {
             (update = (update + std::string(", ")));
         }
-        (update = (update + ::app_src_emitter_expr_::emitExpression((*statement->update)[i], context, std::monostate{})));
+        (update = (update + ::app_src_emitter_expr_::emitExpression(doof::array_at(statement->update, i, "src/emitter-stmt", 528), context, std::monostate{})));
     }
     return ((((((((((ind + std::string("for (")) + init) + std::string("; ")) + condition) + std::string("; ")) + update) + std::string(") {\n")) + emitBlock(statement->body, (level + 1), context)) + ind) + std::string("}\n"));
 }

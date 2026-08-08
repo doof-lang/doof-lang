@@ -105,10 +105,10 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::Reache
     for (const auto& value : *_iterable_4) {
         result->push_back(value);
         auto index = (static_cast<int32_t>((result)->size()) - 1);
-        while ((index > 0) && ((*result)[index]->logicalPrefix < (*result)[(index - 1)]->logicalPrefix)) {
-            const auto previous = (*result)[(index - 1)];
-            ((*result)[(index - 1)] = (*result)[index]);
-            ((*result)[index] = previous);
+        while ((index > 0) && (doof::array_at(result, index, "src/provenance", 105)->logicalPrefix < doof::array_at(result, (index - 1), "src/provenance", 105)->logicalPrefix)) {
+            const auto previous = doof::array_at(result, (index - 1), "src/provenance", 106);
+            (doof::array_at(result, (index - 1), "src/provenance", 107) = doof::array_at(result, index, "src/provenance", 107));
+            (doof::array_at(result, index, "src/provenance", 108) = previous);
             (index -= 1);
         }
     }
@@ -121,14 +121,14 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::Resolv
         result->push_back(value);
         auto index = (static_cast<int32_t>((result)->size()) - 1);
         while (index > 0) {
-            const auto key = ((((::app_src_std_catalog_::canonicalDependencyUrl((*result)[index]->selectedUrl) + std::string("u0000")) + (*result)[index]->owner->logicalPrefix) + std::string("u0000")) + (*result)[index]->dependency->name);
-            const auto previousKey = ((((::app_src_std_catalog_::canonicalDependencyUrl((*result)[(index - 1)]->selectedUrl) + std::string("u0000")) + (*result)[(index - 1)]->owner->logicalPrefix) + std::string("u0000")) + (*result)[(index - 1)]->dependency->name);
+            const auto key = ((((::app_src_std_catalog_::canonicalDependencyUrl(doof::array_at(result, index, "src/provenance", 121)->selectedUrl) + std::string("u0000")) + doof::array_at(result, index, "src/provenance", 121)->owner->logicalPrefix) + std::string("u0000")) + doof::array_at(result, index, "src/provenance", 121)->dependency->name);
+            const auto previousKey = ((((::app_src_std_catalog_::canonicalDependencyUrl(doof::array_at(result, (index - 1), "src/provenance", 122)->selectedUrl) + std::string("u0000")) + doof::array_at(result, (index - 1), "src/provenance", 122)->owner->logicalPrefix) + std::string("u0000")) + doof::array_at(result, (index - 1), "src/provenance", 122)->dependency->name);
             if (key >= previousKey) {
                 break;
             }
-            const auto previous = (*result)[(index - 1)];
-            ((*result)[(index - 1)] = (*result)[index]);
-            ((*result)[index] = previous);
+            const auto previous = doof::array_at(result, (index - 1), "src/provenance", 124);
+            (doof::array_at(result, (index - 1), "src/provenance", 125) = doof::array_at(result, index, "src/provenance", 125));
+            (doof::array_at(result, index, "src/provenance", 126) = previous);
             (index -= 1);
         }
     }

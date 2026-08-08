@@ -70,7 +70,7 @@ doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const s
         if (fn->name == std::string("main")) {
             continue;
         }
-        (source = (source + emitWasmWrapper(fn, (*functionNames)[exportIndex], context)));
+        (source = (source + emitWasmWrapper(fn, doof::array_at(functionNames, exportIndex, "src/emitter-wasm", 53), context)));
         (exportIndex += 1);
     }
     const auto& _iterable_5 = functionNames;

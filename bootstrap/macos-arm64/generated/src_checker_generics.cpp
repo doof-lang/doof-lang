@@ -79,7 +79,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                     }
                     for (int32_t i = 0; i < static_cast<int32_t>((class_->typeArgs)->size()); ++i) {
                         if (i < static_cast<int32_t>((concrete->typeArgs)->size())) {
-                            const auto candidate = inferTypeArgument((*class_->typeArgs)[i], (*concrete->typeArgs)[i], name);
+                            const auto candidate = inferTypeArgument(doof::array_at(class_->typeArgs, i, "src/checker-generics", 78), doof::array_at(concrete->typeArgs, i, "src/checker-generics", 78), name);
                             if (!doof::is_null(candidate)) {
                                 return candidate;
                             }
@@ -98,7 +98,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                     const auto& concrete = std::get<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject);
                     for (int32_t i = 0; i < static_cast<int32_t>((interface_->typeArgs)->size()); ++i) {
                         if (i < static_cast<int32_t>((concrete->typeArgs)->size())) {
-                            const auto candidate = inferTypeArgument((*interface_->typeArgs)[i], (*concrete->typeArgs)[i], name);
+                            const auto candidate = inferTypeArgument(doof::array_at(interface_->typeArgs, i, "src/checker-generics", 91), doof::array_at(concrete->typeArgs, i, "src/checker-generics", 91), name);
                             if (!doof::is_null(candidate)) {
                                 return candidate;
                             }
@@ -117,7 +117,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                     const auto& concrete = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
                     for (int32_t i = 0; i < static_cast<int32_t>((function_->params)->size()); ++i) {
                         if (i < static_cast<int32_t>((concrete->params)->size())) {
-                            const auto candidate = inferTypeArgument((*function_->params)[i]->type_, (*concrete->params)[i]->type_, name);
+                            const auto candidate = inferTypeArgument(doof::array_at(function_->params, i, "src/checker-generics", 104)->type_, doof::array_at(concrete->params, i, "src/checker-generics", 104)->type_, name);
                             if (!doof::is_null(candidate)) {
                                 return candidate;
                             }
@@ -153,7 +153,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                     const auto& concrete = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
                     for (int32_t i = 0; i < static_cast<int32_t>((tuple->elements)->size()); ++i) {
                         if (i < static_cast<int32_t>((concrete->elements)->size())) {
-                            const auto candidate = inferTypeArgument((*tuple->elements)[i], (*concrete->elements)[i], name);
+                            const auto candidate = inferTypeArgument(doof::array_at(tuple->elements, i, "src/checker-generics", 128), doof::array_at(concrete->elements, i, "src/checker-generics", 128), name);
                             if (!doof::is_null(candidate)) {
                                 return candidate;
                             }

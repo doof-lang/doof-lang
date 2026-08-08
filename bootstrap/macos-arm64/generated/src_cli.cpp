@@ -195,24 +195,24 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
     if (static_cast<int32_t>((args)->size()) == 0) {
         return std::make_shared<CliParseResult>(nullptr, std::string("missing command"), false);
     }
-    if ((((*args)[0] == std::string("help")) || ((*args)[0] == std::string("-h"))) || ((*args)[0] == std::string("--help"))) {
+    if (((doof::array_at(args, 0, "src/cli", 69) == std::string("help")) || (doof::array_at(args, 0, "src/cli", 69) == std::string("-h"))) || (doof::array_at(args, 0, "src/cli", 69) == std::string("--help"))) {
         return std::make_shared<CliParseResult>(nullptr, std::string(""), true);
     }
-    const auto command = (*args)[0];
+    const auto command = doof::array_at(args, 0, "src/cli", 73);
     if ((((((command != std::string("build")) && (command != std::string("run"))) && (command != std::string("package"))) && (command != std::string("emit"))) && (command != std::string("check"))) && (command != std::string("test"))) {
         return std::make_shared<CliParseResult>(nullptr, ((std::string("unknown command '") + command) + std::string("'")), false);
     }
-    const auto request = std::make_shared<CliRequest>(command, ((static_cast<int32_t>((args)->size()) < 2) ? std::string(".") : (*args)[1]), std::string(""), std::string(""), std::string(""), false, false, std::string(""), std::string(""), std::string(""), std::string(""), false, std::string(""), std::string("simulator"), std::string(""), std::string(""), std::string(""), std::string(""), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+    const auto request = std::make_shared<CliRequest>(command, ((static_cast<int32_t>((args)->size()) < 2) ? std::string(".") : doof::array_at(args, 1, "src/cli", 77)), std::string(""), std::string(""), std::string(""), false, false, std::string(""), std::string(""), std::string(""), std::string(""), false, std::string(""), std::string("simulator"), std::string(""), std::string(""), std::string(""), std::string(""), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     auto index = ((static_cast<int32_t>((args)->size()) < 2) ? 1 : 2);
     while (index < static_cast<int32_t>((args)->size())) {
-        const auto argument = (*args)[index];
+        const auto argument = doof::array_at(args, index, "src/cli", 80);
         if (argument == std::string("--")) {
             if (command != std::string("run")) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("-- is only supported with the run command"), false);
             }
             (index += 1);
             while (index < static_cast<int32_t>((args)->size())) {
-                request->programArguments->push_back((*args)[index]);
+                request->programArguments->push_back(doof::array_at(args, index, "src/cli", 87));
                 (index += 1);
             }
             continue;
@@ -224,7 +224,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, (std::string("missing value for ") + argument), false);
             }
-            (request->outputDirectory = (*args)[(index + 1)]);
+            (request->outputDirectory = doof::array_at(args, (index + 1), "src/cli", 97));
             (index = (index + 2));
             continue;
         }
@@ -232,7 +232,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --compiler"), false);
             }
-            (request->compiler = (*args)[(index + 1)]);
+            (request->compiler = doof::array_at(args, (index + 1), "src/cli", 103));
             (index = (index + 2));
             continue;
         }
@@ -240,7 +240,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --target"), false);
             }
-            const auto value = (*args)[(index + 1)];
+            const auto value = doof::array_at(args, (index + 1), "src/cli", 109);
             if (((value != std::string("macos-app")) && (value != std::string("ios-app"))) && (value != std::string("wasm"))) {
                 return std::make_shared<CliParseResult>(nullptr, (std::string("invalid value for --target: ") + value), false);
             }
@@ -252,7 +252,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --distdir"), false);
             }
-            (request->distDirectory = (*args)[(index + 1)]);
+            (request->distDirectory = doof::array_at(args, (index + 1), "src/cli", 119));
             (index = (index + 2));
             continue;
         }
@@ -260,7 +260,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --macos-signing"), false);
             }
-            const auto value = (*args)[(index + 1)];
+            const auto value = doof::array_at(args, (index + 1), "src/cli", 125);
             if ((value != std::string("developer-id")) && (value != std::string("ad-hoc"))) {
                 return std::make_shared<CliParseResult>(nullptr, (std::string("invalid value for --macos-signing: ") + value), false);
             }
@@ -272,7 +272,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --macos-sign-identity"), false);
             }
-            (request->macosSignIdentity = (*args)[(index + 1)]);
+            (request->macosSignIdentity = doof::array_at(args, (index + 1), "src/cli", 135));
             (index = (index + 2));
             continue;
         }
@@ -285,7 +285,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --macos-entitlements"), false);
             }
-            (request->macosEntitlements = (*args)[(index + 1)]);
+            (request->macosEntitlements = doof::array_at(args, (index + 1), "src/cli", 146));
             (index = (index + 2));
             continue;
         }
@@ -293,7 +293,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --ios-destination"), false);
             }
-            const auto value = (*args)[(index + 1)];
+            const auto value = doof::array_at(args, (index + 1), "src/cli", 152);
             if ((value != std::string("simulator")) && (value != std::string("device"))) {
                 return std::make_shared<CliParseResult>(nullptr, (std::string("invalid value for --ios-destination: ") + value), false);
             }
@@ -305,7 +305,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --ios-sign-identity"), false);
             }
-            (request->iosSignIdentity = (*args)[(index + 1)]);
+            (request->iosSignIdentity = doof::array_at(args, (index + 1), "src/cli", 162));
             (index += 2);
             continue;
         }
@@ -313,7 +313,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --ios-device"), false);
             }
-            (request->iosDevice = (*args)[(index + 1)]);
+            (request->iosDevice = doof::array_at(args, (index + 1), "src/cli", 168));
             (index += 2);
             continue;
         }
@@ -321,7 +321,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --ios-provisioning-profile"), false);
             }
-            (request->iosProvisioningProfile = (*args)[(index + 1)]);
+            (request->iosProvisioningProfile = doof::array_at(args, (index + 1), "src/cli", 174));
             (index += 2);
             continue;
         }
@@ -329,7 +329,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --filter"), false);
             }
-            (request->filter = (*args)[(index + 1)]);
+            (request->filter = doof::array_at(args, (index + 1), "src/cli", 180));
             (index = (index + 2));
             continue;
         }
@@ -347,7 +347,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --coverage-output"), false);
             }
-            (request->coverageOutput = (*args)[(index + 1)]);
+            (request->coverageOutput = doof::array_at(args, (index + 1), "src/cli", 196));
             (index = (index + 2));
             continue;
         }

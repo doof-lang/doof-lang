@@ -297,6 +297,9 @@ copy := frozen.cloneMutable() // int[]
 copy.push(4)                      // ✅ OK
 ```
 
+Array bracket reads and writes panic at the access site when the index is
+negative or greater than or equal to `.length`.
+
 ### Presence Assertion
 
 The postfix `!` operator asserts that a nullable expression is present or
@@ -1163,6 +1166,10 @@ let m: Map<string, int> = { "a": 1 }
 x := m["a"]   // returns 1
 m["b"] = 2    // inserts new entry
 ```
+
+Reading a missing key with bracket access panics at the access site. Use
+`.get(key)` when absence is expected. Bracket assignment remains an
+insert-or-update operation.
 
 ### Tuple Type
 

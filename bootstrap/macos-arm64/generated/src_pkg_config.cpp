@@ -60,10 +60,10 @@ std::shared_ptr<std::vector<std::string>> pkgConfigTokens(const std::string& out
 void applyPkgConfigTokens(const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, const std::shared_ptr<std::vector<std::string>>& tokens, const std::string& mode) {
     auto index = 0;
     while (index < static_cast<int32_t>((tokens)->size())) {
-        const auto token = (*tokens)[index];
+        const auto token = doof::array_at(tokens, index, "src/pkg-config", 62);
         if (token == std::string("-framework")) {
             if ((index + 1) < static_cast<int32_t>((tokens)->size())) {
-                appendUnique(native->frameworks, (*tokens)[(index + 1)]);
+                appendUnique(native->frameworks, doof::array_at(tokens, (index + 1), "src/pkg-config", 65));
                 (index += 2);
             } else {
                 (index += 1);
@@ -72,7 +72,7 @@ void applyPkgConfigTokens(const std::shared_ptr<::app_src_package_manifest_::Nat
         }
         if (((token == std::string("-I")) || (token == std::string("-L"))) || (token == std::string("-D"))) {
             if ((index + 1) < static_cast<int32_t>((tokens)->size())) {
-                const auto value = (*tokens)[(index + 1)];
+                const auto value = doof::array_at(tokens, (index + 1), "src/pkg-config", 75);
                 if (token == std::string("-I")) {
                     appendUnique(native->includePaths, value);
                 }

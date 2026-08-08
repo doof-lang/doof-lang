@@ -74,13 +74,13 @@ doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(const std::string& token) 
     if (static_cast<int32_t>((parts)->size()) != 3) {
         return doof::Failure<JwtError>{ JwtError::MalformedToken };
     }
-    auto _binding_value_2 = decodeBase64UrlToString((*parts)[0]);
+    auto _binding_value_2 = decodeBase64UrlToString(doof::array_at(parts, 0, "index", 73));
     if (doof::is_failure(_binding_value_2)) {
         const auto& headerJson = _binding_value_2;
         return doof::Failure<JwtError>{ JwtError::InvalidHeader };
     }
     const auto headerJson = doof::success_value(_binding_value_2);
-    auto _binding_value_3 = decodeBase64UrlToString((*parts)[1]);
+    auto _binding_value_3 = decodeBase64UrlToString(doof::array_at(parts, 1, "index", 77));
     if (doof::is_failure(_binding_value_3)) {
         const auto& claimsJson = _binding_value_3;
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
@@ -98,7 +98,7 @@ doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(const std::string& token) 
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
     }
     const auto claimsJsonValue = doof::success_value(_binding_value_5);
-    auto _binding_value_6 = ::doof_crypto::decode_base64_url((*parts)[2]);
+    auto _binding_value_6 = ::doof_crypto::decode_base64_url(doof::array_at(parts, 2, "index", 88));
     if (doof::is_failure(_binding_value_6)) {
         const auto& signature = _binding_value_6;
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
@@ -116,7 +116,7 @@ doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(const std::string& token) 
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
     }
     const auto claims = doof::success_value(_binding_value_8);
-    return doof::Success<std::shared_ptr<Jwt>>{ std::make_shared<Jwt>(header, claims, (((*parts)[0] + std::string(".")) + (*parts)[1]), signature) };
+    return doof::Success<std::shared_ptr<Jwt>>{ std::make_shared<Jwt>(header, claims, ((doof::array_at(parts, 0, "index", 104) + std::string(".")) + doof::array_at(parts, 1, "index", 104)), signature) };
 }
 doof::Result<std::shared_ptr<Jwt>, JwtError> verifyJwtHs256(const std::string& token, const std::shared_ptr<::doof_crypto::SecretBytes>& key) {
     auto _binding_value_9 = parseJwt(token);

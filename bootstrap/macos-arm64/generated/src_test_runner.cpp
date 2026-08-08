@@ -237,7 +237,7 @@ std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsFo
         std::shared_ptr<TestCompilationGroup> group = nullptr;
         const auto& _iterable_5 = mocked;
         for (const auto& existing : *_iterable_5) {
-            if ((static_cast<int32_t>((existing->tests)->size()) > 0) && ((*existing->tests)[0]->modulePath == test->modulePath)) {
+            if ((static_cast<int32_t>((existing->tests)->size()) > 0) && (doof::array_at(existing->tests, 0, "src/test-runner", 97)->modulePath == test->modulePath)) {
                 (group = existing);
                 break;
             }
@@ -275,7 +275,7 @@ std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> filterDiscoveredTe
 std::string generateTestHarness(const std::string& harnessPath, const std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>>& tests) {
     auto source = std::string("");
     for (int32_t index = 0; index < static_cast<int32_t>((tests)->size()); ++index) {
-        const auto test = (*tests)[index];
+        const auto test = doof::array_at(tests, index, "src/test-runner", 126);
         (source = (((((((source + std::string("import { ")) + test->name) + std::string(" as __doof_test_")) + doof::to_string(index)) + std::string(" } from \"")) + relativeImportSpecifier(harnessPath, test->modulePath)) + std::string("\"\n")));
     }
     (source = (source + std::string("\nfunction main(args: string[]): int {\n")));
@@ -285,7 +285,7 @@ std::string generateTestHarness(const std::string& harnessPath, const std::share
     (source = (source + std::string("    }\n\n")));
     (source = (source + std::string("    testId := args[0]\n")));
     for (int32_t index = 0; index < static_cast<int32_t>((tests)->size()); ++index) {
-        const auto id = escapeDoofString((*tests)[index]->id);
+        const auto id = escapeDoofString(doof::array_at(tests, index, "src/test-runner", 136)->id);
         (source = (((source + std::string("    if testId == \"")) + id) + std::string("\" {\n")));
         (source = (((source + std::string("        __doof_test_")) + doof::to_string(index)) + std::string("()\n")));
         (source = (source + std::string("        return 0\n")));
@@ -316,7 +316,7 @@ std::string formatParseFailure(const std::string& modulePath, const std::string&
         return header;
     }
     const auto caretColumn = ((column < 1) ? 1 : column);
-    return (((((header + std::string("\n")) + (*lines)[(line - 1)]) + std::string("\n")) + doof::string_repeat(std::string(" "), (caretColumn - 1))) + std::string("^"));
+    return (((((header + std::string("\n")) + doof::array_at(lines, (line - 1), "src/test-runner", 174)) + std::string("\n")) + doof::string_repeat(std::string(" "), (caretColumn - 1))) + std::string("^"));
 }
 void mergeCoverageOutput(const std::string& output, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>>& modules, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>>& hitsByModule) {
     const auto& _iterable_8 = doof::string_split(output, std::string("\n"));
@@ -329,17 +329,17 @@ void mergeCoverageOutput(const std::string& output, const std::shared_ptr<std::v
         if (static_cast<int32_t>((parts)->size()) != 3) {
             continue;
         }
-        const auto moduleId = parseCoverageInteger((*parts)[1]);
-        const auto sourceLine = parseCoverageInteger((*parts)[2]);
+        const auto moduleId = parseCoverageInteger(doof::array_at(parts, 1, "src/test-runner", 188));
+        const auto sourceLine = parseCoverageInteger(doof::array_at(parts, 2, "src/test-runner", 189));
         if ((moduleId < 0) || (sourceLine < 1)) {
             continue;
         }
         for (int32_t index = 0; index < static_cast<int32_t>((modules)->size()); ++index) {
-            if ((*modules)[index]->moduleId == moduleId) {
+            if (doof::array_at(modules, index, "src/test-runner", 192)->moduleId == moduleId) {
                 while (static_cast<int32_t>((hitsByModule)->size()) <= index) {
                     hitsByModule->push_back(std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
                 }
-                appendUniqueLine((*hitsByModule)[index], sourceLine);
+                appendUniqueLine(doof::array_at(hitsByModule, index, "src/test-runner", 194), sourceLine);
             }
         }
     }
@@ -361,13 +361,13 @@ std::string stripCoverageLines(const std::string& output) {
 std::shared_ptr<CoverageReport> buildCoverageReport(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>>& modules, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>>& hitsByModule, const std::string& rootDirectory) {
     const auto report = std::make_shared<CoverageReport>(0, 0, 1000, std::make_shared<std::vector<std::shared_ptr<CoverageFileReport>>>(std::vector<std::shared_ptr<CoverageFileReport>>{}));
     for (int32_t index = 0; index < static_cast<int32_t>((modules)->size()); ++index) {
-        const auto module = (*modules)[index];
+        const auto module = doof::array_at(modules, index, "src/test-runner", 219);
         if (static_cast<int32_t>((module->instrumentedLines)->size()) == 0) {
             continue;
         }
         std::shared_ptr<std::vector<int32_t>> hits = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
         if (index < static_cast<int32_t>((hitsByModule)->size())) {
-            (hits = (*hitsByModule)[index]);
+            (hits = doof::array_at(hitsByModule, index, "src/test-runner", 222));
         }
         const auto file = std::make_shared<CoverageFileReport>(testDisplayPath(rootDirectory, module->modulePath), 0, static_cast<int32_t>((module->instrumentedLines)->size()), 0, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
         const auto& _iterable_10 = module->instrumentedLines;
@@ -392,7 +392,7 @@ std::string renderCoverageJson(const std::shared_ptr<CoverageReport>& report) {
     (output = (((((output + std::string(", \"total\": ")) + doof::to_string(report->totalLines)) + std::string(", \"percent\": ")) + coveragePercentText(report->totalPercentTenths)) + std::string(" },\n")));
     (output = (output + std::string("  \"files\": [")));
     for (int32_t index = 0; index < static_cast<int32_t>((report->files)->size()); ++index) {
-        const auto file = (*report->files)[index];
+        const auto file = doof::array_at(report->files, index, "src/test-runner", 248);
         (output = (output + ((index == 0) ? std::string("\n") : std::string(",\n"))));
         (output = (((output + std::string("    {\n      \"path\": \"")) + escapeJson(file->path)) + std::string("\",\n")));
         (output = (((output + std::string("      \"covered\": ")) + doof::to_string(file->covered)) + std::string(",\n")));
@@ -421,7 +421,7 @@ std::string renderCoverageFileHtml(const std::shared_ptr<CoverageFileReport>& fi
     for (int32_t index = 0; index < static_cast<int32_t>((sourceLines)->size()); ++index) {
         const auto line = (index + 1);
         const auto className = (containsLine(file->hitLines, line) ? std::string("covered") : (containsLine(file->missedLines, line) ? std::string("missed") : std::string("neutral")));
-        (lines = (((((((lines + std::string("<div class=\"line ")) + className) + std::string("\"><span>")) + doof::to_string(line)) + std::string("</span><code>")) + escapeHtml((*sourceLines)[index])) + std::string("</code></div>\n")));
+        (lines = (((((((lines + std::string("<div class=\"line ")) + className) + std::string("\"><span>")) + doof::to_string(line)) + std::string("</span><code>")) + escapeHtml(doof::array_at(sourceLines, index, "src/test-runner", 286))) + std::string("</code></div>\n")));
     }
     return ((((((((((((std::string("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\">") + std::string("<title>")) + escapeHtml(file->path)) + std::string(" — Doof Coverage</title><style>body{font:15px system-ui;margin:2rem;color:#1f2933}")) + std::string(".line{display:grid;grid-template-columns:4rem 1fr;font-family:monospace;white-space:pre}.line span{text-align:right;padding-right:1rem;color:#6b7280}")) + std::string(".covered{background:#dcfce7}.missed{background:#fee2e2}.neutral{background:#f8fafc}a{color:#9a3412}</style></head><body>")) + std::string("<a href=\"")) + escapeHtml(indexHref)) + std::string("\">Back to coverage summary</a><h1>")) + escapeHtml(file->path)) + std::string("</h1>")) + lines) + std::string("</body></html>\n"));
 }
@@ -434,7 +434,7 @@ int32_t parseCoverageInteger(const std::string& value) {
     }
     auto result = 0;
     for (int32_t index = 0; index < static_cast<int32_t>(value.size()); ++index) {
-        const auto char_ = value[index];
+        const auto char_ = doof::string_at(value, index, "src/test-runner", 305);
         auto digit = -1;
         if (char_ == U'\u0030') {
             (digit = 0);
@@ -493,7 +493,7 @@ std::string renderLineArray(const std::shared_ptr<std::vector<int32_t>>& lines) 
         if (index > 0) {
             (result = (result + std::string(", ")));
         }
-        (result = (result + doof::to_string((*lines)[index])));
+        (result = (result + doof::to_string(doof::array_at(lines, index, "src/test-runner", 345))));
     }
     return (result + std::string("]"));
 }
@@ -574,7 +574,7 @@ std::string relativeImportSpecifier(const std::string& harnessPath, const std::s
     const auto sourceComponents = parentComponents(doof::string_replaceAll(harnessPath, std::string("\\"), std::string("/")));
     const auto to = doof::string_split(withoutExtension(doof::string_replaceAll(modulePath, std::string("\\"), std::string("/"))), std::string("/"));
     auto common = 0;
-    while (((common < static_cast<int32_t>((sourceComponents)->size())) && (common < static_cast<int32_t>((to)->size()))) && ((*sourceComponents)[common] == (*to)[common])) {
+    while (((common < static_cast<int32_t>((sourceComponents)->size())) && (common < static_cast<int32_t>((to)->size()))) && (doof::array_at(sourceComponents, common, "src/test-runner", 422) == doof::array_at(to, common, "src/test-runner", 422))) {
         (common = (common + 1));
     }
     auto result = std::string("");
@@ -585,7 +585,7 @@ std::string relativeImportSpecifier(const std::string& harnessPath, const std::s
         if ((result != std::string("")) && !doof::string_endsWith(result, std::string("/"))) {
             (result = (result + std::string("/")));
         }
-        (result = (result + (*to)[index]));
+        (result = (result + doof::array_at(to, index, "src/test-runner", 429)));
     }
     if (!doof::string_startsWith(result, std::string("."))) {
         return (std::string("./") + result);
@@ -607,7 +607,7 @@ std::string withoutExtension(const std::string& path) {
 }
 std::string trimTrailingSlashes(const std::string& path) {
     auto end = static_cast<int32_t>(path.size());
-    while ((end > 1) && (path[(end - 1)] == U'\u002F')) {
+    while ((end > 1) && (doof::string_at(path, (end - 1), "src/test-runner", 448) == U'\u002F')) {
         (end = (end - 1));
     }
     return doof::string_substring(path, 0, end);

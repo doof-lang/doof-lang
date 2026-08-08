@@ -112,7 +112,7 @@ std::string emitArray(const std::shared_ptr<::app_src_ast_::ArrayLiteral>& expre
                     if (i > 0) {
                         (values = (values + std::string(", ")));
                     }
-                    (values = (values + ::app_src_emitter_expr_::emitExpression((*expression->elements)[i], context, std::monostate{})));
+                    (values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 71), context, std::monostate{})));
                 }
                 return ((((((std::string("std::make_shared<std::vector<") + elementType) + std::string(">>(std::vector<")) + elementType) + std::string(">{")) + values) + std::string("})"));
         }
@@ -124,7 +124,7 @@ std::string emitArray(const std::shared_ptr<::app_src_ast_::ArrayLiteral>& expre
                     if (i > 0) {
                         (values = (values + std::string(", ")));
                     }
-                    (values = (values + ::app_src_emitter_expr_::emitExpression((*expression->elements)[i], context, std::monostate{})));
+                    (values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 80), context, std::monostate{})));
                 }
                 return ((((((std::string("std::make_shared<doof::ordered_set<") + elementType) + std::string(">>(doof::ordered_set<")) + elementType) + std::string(">{")) + values) + std::string("})"));
         }
@@ -134,7 +134,7 @@ std::string emitArray(const std::shared_ptr<::app_src_ast_::ArrayLiteral>& expre
                     if (i > 0) {
                         (values = (values + std::string(", ")));
                     }
-                    (values = (((values + std::string("doof::json_value(")) + ::app_src_emitter_expr_::emitExpression((*expression->elements)[i], context, std::monostate{})) + std::string(")")));
+                    (values = (((values + std::string("doof::json_value(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 88), context, std::monostate{})) + std::string(")")));
                 }
                 return ((std::string("doof::json_value(std::make_shared<std::vector<doof::JsonValue>>(std::initializer_list<doof::JsonValue>{") + values) + std::string("}))"));
         }
@@ -251,7 +251,7 @@ std::string emitMapObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>& 
         if (i > 0) {
             (values = (values + std::string(", ")));
         }
-        const auto property = (*expression->properties)[i];
+        const auto property = doof::array_at(expression->properties, i, "src/emitter-expr-literals", 173);
         const auto value = (doof::is_null(property->value) ? std::string("{}") : ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(property->value), context, doof::optional_value(map->valueType)));
         const auto key = (doof::is_null(property->key) ? quote(property->name) : ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(property->key), context, doof::optional_value(map->keyType)));
         (values = (((((values + std::string("{")) + key) + std::string(", ")) + value) + std::string("}")));
@@ -266,20 +266,20 @@ std::string emitTuple(const std::shared_ptr<::app_src_ast_::TupleLiteral>& expre
         if (i > 0) {
             (values = (values + std::string(", ")));
         }
-        (values = (values + ::app_src_emitter_expr_::emitExpression((*expression->elements)[i], context, std::monostate{})));
+        (values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 187), context, std::monostate{})));
     }
     return ((std::string("std::make_tuple(") + values) + std::string(")"));
 }
 std::string emitString(const std::shared_ptr<::app_src_ast_::StringLiteral>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (static_cast<int32_t>((expression->interpolations)->size()) == 0) {
-        return ((std::string("std::string(") + quote((*expression->parts)[0])) + std::string(")"));
+        return ((std::string("std::string(") + quote(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 193))) + std::string(")"));
     }
-    auto result = ((std::string("std::string(") + quote((*expression->parts)[0])) + std::string(")"));
+    auto result = ((std::string("std::string(") + quote(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 194))) + std::string(")"));
     for (int32_t i = 0; i < static_cast<int32_t>((expression->interpolations)->size()); ++i) {
-        (result = (((result + std::string(" + doof::to_string(")) + ::app_src_emitter_expr_::emitExpression((*expression->interpolations)[i], context, std::monostate{})) + std::string(")")));
+        (result = (((result + std::string(" + doof::to_string(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->interpolations, i, "src/emitter-expr-literals", 196), context, std::monostate{})) + std::string(")")));
         const auto partIndex = ((i * 2) + 2);
         if (partIndex < static_cast<int32_t>((expression->parts)->size())) {
-            (result = (((result + std::string(" + std::string(")) + quote((*expression->parts)[partIndex])) + std::string(")")));
+            (result = (((result + std::string(" + std::string(")) + quote(doof::array_at(expression->parts, partIndex, "src/emitter-expr-literals", 198))) + std::string(")")));
         }
     }
     return result;

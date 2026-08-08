@@ -301,7 +301,7 @@ bool sameConcreteMethodType(const std::variant<std::shared_ptr<::app_src_semanti
                         return false;
                     }
                     for (int32_t index = 0; index < static_cast<int32_t>((actualFunction->params)->size()); ++index) {
-                        if (!::app_src_checker_types_::sameType((*actualFunction->params)[index]->type_, (*expectedFunction->params)[index]->type_)) {
+                        if (!::app_src_checker_types_::sameType(doof::array_at(actualFunction->params, index, "src/checker-interfaces", 200)->type_, doof::array_at(expectedFunction->params, index, "src/checker-interfaces", 200)->type_)) {
                             return false;
                         }
                     }
@@ -345,8 +345,8 @@ bool sameFunctionSignature(const std::shared_ptr<::app_src_ast_::FunctionDeclara
     const auto classModule = classModuleFor(result, classSymbol);
     const auto interfaceModule = classModuleFor(result, interfaceSymbol);
     for (int32_t i = 0; i < static_cast<int32_t>((classMethod->params)->size()); ++i) {
-        const auto actualParameterType = (doof::is_null((*classMethod->params)[i]->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional((*classMethod->params)[i]->type_), classModule, result, std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : doof::unwrap_optional((*classMethod->params)[i]->resolvedType));
-        const auto interfaceType_ = (doof::is_null((*interfaceMethod->params)[i]->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional((*interfaceMethod->params)[i]->type_), interfaceModule, result, std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : doof::unwrap_optional((*interfaceMethod->params)[i]->resolvedType));
+        const auto actualParameterType = (doof::is_null(doof::array_at(classMethod->params, i, "src/checker-interfaces", 226)->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional(doof::array_at(classMethod->params, i, "src/checker-interfaces", 226)->type_), classModule, result, std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : doof::unwrap_optional(doof::array_at(classMethod->params, i, "src/checker-interfaces", 226)->resolvedType));
+        const auto interfaceType_ = (doof::is_null(doof::array_at(interfaceMethod->params, i, "src/checker-interfaces", 227)->resolvedType) ? ::app_src_checker_symbols_::resolveAnnotation(doof::unwrap_optional(doof::array_at(interfaceMethod->params, i, "src/checker-interfaces", 227)->type_), interfaceModule, result, std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : doof::unwrap_optional(doof::array_at(interfaceMethod->params, i, "src/checker-interfaces", 227)->resolvedType));
         if (!::app_src_checker_types_::sameType(actualParameterType, interfaceType_)) {
             return false;
         }

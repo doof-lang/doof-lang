@@ -36,7 +36,7 @@ std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(const std::string& l
     auto separator = -1;
     auto index = 0;
     while (index < static_cast<int32_t>(suffix.size())) {
-        if (suffix[index] == U'\u002F') {
+        if (doof::string_at(suffix, index, "src/module-acquisition", 26) == U'\u002F') {
             (separator = index);
             break;
         }

@@ -81,10 +81,10 @@ std::string relativeBase(const std::string& importer, const std::string& specifi
 }
 std::string parentDirectory(const std::string& path) {
     auto end = (static_cast<int32_t>(path.size()) - 1);
-    while ((end >= 0) && (path[end] == U'\u002F')) {
+    while ((end >= 0) && (doof::string_at(path, end, "src/resolver", 77) == U'\u002F')) {
         (end = (end - 1));
     }
-    while ((end >= 0) && (path[end] != U'\u002F')) {
+    while ((end >= 0) && (doof::string_at(path, end, "src/resolver", 78) != U'\u002F')) {
         (end = (end - 1));
     }
     if (end <= 0) {

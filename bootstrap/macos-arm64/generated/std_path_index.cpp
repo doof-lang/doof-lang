@@ -74,7 +74,7 @@ std::string join(const std::shared_ptr<std::vector<std::string>>& parts) {
                 continue;
             }
             if (rawSegment == std::string("..")) {
-                if ((static_cast<int32_t>((segments)->size()) > 0) && ((*segments)[(static_cast<int32_t>((segments)->size()) - 1)] != std::string(".."))) {
+                if ((static_cast<int32_t>((segments)->size()) > 0) && (doof::array_at(segments, (static_cast<int32_t>((segments)->size()) - 1), "index", 86) != std::string(".."))) {
                     (segments = doof::array_slice(segments, 0, (static_cast<int32_t>((segments)->size()) - 1), "", 0));
                 } else if (prefix == std::string("")) {
                     segments->push_back(std::string(".."));
@@ -144,8 +144,8 @@ bool isAbsolute(const std::string& path) {
 std::string rootPrefix(const std::string& path) {
     if (doof::string_startsWith(path, std::string("//"))) {
         const auto components = doof::string_split(path, std::string("/"));
-        if (((static_cast<int32_t>((components)->size()) >= 4) && ((*components)[2] != std::string(""))) && ((*components)[3] != std::string(""))) {
-            return (((std::string("//") + (*components)[2]) + std::string("/")) + (*components)[3]);
+        if (((static_cast<int32_t>((components)->size()) >= 4) && (doof::array_at(components, 2, "index", 168) != std::string(""))) && (doof::array_at(components, 3, "index", 168) != std::string(""))) {
+            return (((std::string("//") + doof::array_at(components, 2, "index", 169)) + std::string("/")) + doof::array_at(components, 3, "index", 169));
         }
     }
     if (doof::string_startsWith(path, std::string("/"))) {
@@ -163,9 +163,9 @@ std::string renderPath(const std::shared_ptr<std::vector<std::string>>& segments
     if (static_cast<int32_t>((segments)->size()) == 0) {
         return ((prefix == std::string("")) ? std::string(".") : ((prefix == std::string("/")) ? std::string("/") : (prefix + std::string("/"))));
     }
-    auto output = (*segments)[0];
+    auto output = doof::array_at(segments, 0, "index", 190);
     for (int32_t index = 1; index < static_cast<int32_t>((segments)->size()); ++index) {
-        (output += (std::string("/") + (*segments)[index]));
+        (output += (std::string("/") + doof::array_at(segments, index, "index", 192)));
     }
     if (prefix == std::string("/")) {
         return (std::string("/") + output);

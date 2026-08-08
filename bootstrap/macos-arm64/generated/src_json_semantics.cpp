@@ -21,7 +21,7 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
     if (static_cast<int32_t>((implementations)->size()) == 0) {
         return nullptr;
     }
-    const auto& _iterable_2 = (*implementations)[0]->fields;
+    const auto& _iterable_2 = doof::array_at(implementations, 0, "src/json-semantics", 34)->fields;
     for (const auto& candidate : *_iterable_2) {
         if (((candidate->static_ || !candidate->const_) || (static_cast<int32_t>((candidate->names)->size()) != 1)) || doof::is_null(candidate->defaultValue)) {
             continue;
@@ -30,7 +30,7 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
             auto _case_subject = doof::unwrap_optional(candidate->defaultValue);
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject)) {
                 const auto& firstValue = std::get<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject);
-                const auto discriminator = std::make_shared<JsonDiscriminator>((*candidate->names)[0], std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{}));
+                const auto discriminator = std::make_shared<JsonDiscriminator>(doof::array_at(candidate->names, 0, "src/json-semantics", 38), std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{}));
                 const auto& _iterable_3 = implementations;
                 for (const auto& implementation : *_iterable_3) {
                     const auto matching = fixedStringField(implementation, discriminator->fieldName);
@@ -419,10 +419,10 @@ bool isGeneratedJsonDeserializationAnnotation(const std::variant<std::shared_ptr
                     return false;
                 }
                 {
-                    auto _case_subject = (*named->typeArgs)[0];
+                    auto _case_subject = doof::array_at(named->typeArgs, 0, "src/json-semantics", 253);
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                         const auto& key = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
-                        return ((key->name == std::string("string")) && isGeneratedJsonDeserializationAnnotation((*named->typeArgs)[1], programs, visited));
+                        return ((key->name == std::string("string")) && isGeneratedJsonDeserializationAnnotation(doof::array_at(named->typeArgs, 1, "src/json-semantics", 254), programs, visited));
                 }
                 else {
                         return false;
@@ -509,10 +509,10 @@ bool isGeneratedJsonSerializationAnnotation(const std::variant<std::shared_ptr<:
                     return false;
                 }
                 {
-                    auto _case_subject = (*named->typeArgs)[0];
+                    auto _case_subject = doof::array_at(named->typeArgs, 0, "src/json-semantics", 302);
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                         const auto& key = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
-                        return ((key->name == std::string("string")) && isGeneratedJsonSerializationAnnotation((*named->typeArgs)[1], programs, visited));
+                        return ((key->name == std::string("string")) && isGeneratedJsonSerializationAnnotation(doof::array_at(named->typeArgs, 1, "src/json-semantics", 303), programs, visited));
                 }
                 else {
                         return false;
@@ -547,11 +547,11 @@ bool isGeneratedJsonSerializationAnnotation(const std::variant<std::shared_ptr<:
             }
             if (((named->name == std::string("Map")) || (named->name == std::string("ReadonlyMap"))) && (static_cast<int32_t>((named->typeArgs)->size()) == 2)) {
                 {
-                    auto _case_subject = (*named->typeArgs)[0];
+                    auto _case_subject = doof::array_at(named->typeArgs, 0, "src/json-semantics", 323);
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                         const auto& key = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
                         {
-                            auto _case_subject = (*named->typeArgs)[1];
+                            auto _case_subject = doof::array_at(named->typeArgs, 1, "src/json-semantics", 325);
                             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                                 const auto& value = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
                                 return ((key->name == std::string("string")) && (value->name == std::string("JsonValue")));

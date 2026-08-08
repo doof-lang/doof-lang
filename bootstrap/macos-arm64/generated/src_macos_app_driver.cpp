@@ -196,7 +196,7 @@ doof::Result<void, std::string> generateMacOSIcon(const std::string& iconPath, c
     const auto sizes = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{16, 32, 32, 64, 128, 256, 256, 512, 512, 1024});
     const auto names = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("icon_16x16.png"), std::string("icon_16x16@2x.png"), std::string("icon_32x32.png"), std::string("icon_32x32@2x.png"), std::string("icon_128x128.png"), std::string("icon_128x128@2x.png"), std::string("icon_256x256.png"), std::string("icon_256x256@2x.png"), std::string("icon_512x512.png"), std::string("icon_512x512@2x.png")});
     for (int32_t index = 0; index < static_cast<int32_t>((sizes)->size()); ++index) {
-        auto _try_value_7 = runRequiredCommand(std::string("sips"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-z"), doof::to_string((*sizes)[index]), doof::to_string((*sizes)[index]), iconPath, std::string("--out"), outputPath(iconset, (*names)[index])}), std::string("macOS icon resize"));
+        auto _try_value_7 = runRequiredCommand(std::string("sips"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-z"), doof::to_string(doof::array_at(sizes, index, "src/macos-app-driver", 152)), doof::to_string(doof::array_at(sizes, index, "src/macos-app-driver", 152)), iconPath, std::string("--out"), outputPath(iconset, doof::array_at(names, index, "src/macos-app-driver", 152))}), std::string("macOS icon resize"));
         if (doof::is_failure(_try_value_7)) return doof::Failure<std::string>{doof::failure_error(_try_value_7)};
     }
     const auto result = runRequiredCommand(std::string("iconutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-c"), std::string("icns"), iconset, std::string("-o"), destinationPath}), std::string("macOS icon generation"));
@@ -554,7 +554,7 @@ doof::Result<std::string, std::string> developerIdIdentity(const std::string& co
     if (static_cast<int32_t>((identities)->size()) > 1) {
         return doof::Failure<std::string>{ std::string("Multiple Developer ID Application identities found; pass --macos-sign-identity") };
     }
-    return doof::Success<std::string>{ (*identities)[0] };
+    return doof::Success<std::string>{ doof::array_at(identities, 0, "src/macos-app-driver", 409) };
 }
 doof::Result<std::string, std::string> effectiveEntitlements(const std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig>& config, const std::string& buildDirectory) {
     if (!config->sandbox) {

@@ -301,7 +301,7 @@ std::shared_ptr<AsyncBoundaryViolation> findClassAsyncViolation(const std::share
                     }
                 }
                 if (!doof::is_null(reason)) {
-                    const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : (*field->names)[0]);
+                    const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : doof::array_at(field->names, 0, "src/checker-async", 197));
                     return std::make_shared<AsyncBoundaryViolation>((((std::string("field \"") + name) + std::string("\" cannot cross the async boundary: ")) + reason.value()));
                 }
             }

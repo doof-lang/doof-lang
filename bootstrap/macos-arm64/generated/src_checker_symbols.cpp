@@ -36,7 +36,7 @@ void decorateAnnotationWithResolved(const std::variant<std::shared_ptr<::app_src
                     const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
                     for (int32_t i = 0; i < static_cast<int32_t>((named->typeArgs)->size()); ++i) {
                         if (i < static_cast<int32_t>((class_->typeArgs)->size())) {
-                            decorateAnnotationWithResolved((*named->typeArgs)[i], (*class_->typeArgs)[i]);
+                            decorateAnnotationWithResolved(doof::array_at(named->typeArgs, i, "src/checker-symbols", 71), doof::array_at(class_->typeArgs, i, "src/checker-symbols", 71));
                         }
                     }
             }
@@ -66,7 +66,7 @@ void decorateAnnotationWithResolved(const std::variant<std::shared_ptr<::app_src
                     const auto& unionResolved = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
                     for (int32_t i = 0; i < static_cast<int32_t>((union_->types)->size()); ++i) {
                         if (i < static_cast<int32_t>((unionResolved->types)->size())) {
-                            decorateAnnotationWithResolved((*union_->types)[i], (*unionResolved->types)[i]);
+                            decorateAnnotationWithResolved(doof::array_at(union_->types, i, "src/checker-symbols", 89), doof::array_at(unionResolved->types, i, "src/checker-symbols", 89));
                         }
                     }
             }
@@ -83,7 +83,7 @@ void decorateAnnotationWithResolved(const std::variant<std::shared_ptr<::app_src
                     const auto& functionResolved = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
                     for (int32_t i = 0; i < static_cast<int32_t>((function_->params)->size()); ++i) {
                         if (i < static_cast<int32_t>((functionResolved->params)->size())) {
-                            decorateAnnotationWithResolved((*function_->params)[i]->type_, (*functionResolved->params)[i]->type_);
+                            decorateAnnotationWithResolved(doof::array_at(function_->params, i, "src/checker-symbols", 100)->type_, doof::array_at(functionResolved->params, i, "src/checker-symbols", 100)->type_);
                         }
                     }
                     decorateAnnotationWithResolved(function_->returnType, functionResolved->returnType);
@@ -170,7 +170,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
 }
 int32_t functionParameterIndex(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>& parameters, const std::string& name) {
     for (int32_t i = 0; i < static_cast<int32_t>((parameters)->size()); ++i) {
-        if ((*parameters)[i]->name == name) {
+        if (doof::array_at(parameters, i, "src/checker-symbols", 148)->name == name) {
             return i;
         }
     }
@@ -365,20 +365,20 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                 std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> key = ::app_src_checker_types_::unknownType();
                 std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> value = ::app_src_checker_types_::unknownType();
                 if (static_cast<int32_t>((named->typeArgs)->size()) >= 2) {
-                    (key = resolveAnnotation((*named->typeArgs)[0], info, result, typeParams));
-                    (value = resolveAnnotation((*named->typeArgs)[1], info, result, typeParams));
+                    (key = resolveAnnotation(doof::array_at(named->typeArgs, 0, "src/checker-symbols", 265), info, result, typeParams));
+                    (value = resolveAnnotation(doof::array_at(named->typeArgs, 1, "src/checker-symbols", 266), info, result, typeParams));
                 }
                 return ::app_src_checker_types_::mapType(key, value, (named->name == std::string("ReadonlyMap")));
             }
             if ((named->name == std::string("Set")) || (named->name == std::string("ReadonlySet"))) {
-                const auto element = ((static_cast<int32_t>((named->typeArgs)->size()) >= 1) ? resolveAnnotation((*named->typeArgs)[0], info, result, typeParams) : ::app_src_checker_types_::unknownType());
+                const auto element = ((static_cast<int32_t>((named->typeArgs)->size()) >= 1) ? resolveAnnotation(doof::array_at(named->typeArgs, 0, "src/checker-symbols", 271), info, result, typeParams) : ::app_src_checker_types_::unknownType());
                 return ::app_src_checker_types_::setType(element, (named->name == std::string("ReadonlySet")));
             }
             if ((named->name == std::string("Stream")) && (static_cast<int32_t>((named->typeArgs)->size()) >= 1)) {
-                return ::app_src_checker_types_::streamType(resolveAnnotation((*named->typeArgs)[0], info, result, typeParams));
+                return ::app_src_checker_types_::streamType(resolveAnnotation(doof::array_at(named->typeArgs, 0, "src/checker-symbols", 274), info, result, typeParams));
             }
             if ((named->name == std::string("Actor")) && (static_cast<int32_t>((named->typeArgs)->size()) == 1)) {
-                const auto inner = resolveAnnotation((*named->typeArgs)[0], info, result, typeParams);
+                const auto inner = resolveAnnotation(doof::array_at(named->typeArgs, 0, "src/checker-symbols", 276), info, result, typeParams);
                 {
                     auto _case_subject = inner;
                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
@@ -392,7 +392,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                 doof::unreachable();
             }
             if ((named->name == std::string("Promise")) && (static_cast<int32_t>((named->typeArgs)->size()) == 1)) {
-                return ::app_src_checker_types_::promiseType(resolveAnnotation((*named->typeArgs)[0], info, result, typeParams));
+                return ::app_src_checker_types_::promiseType(resolveAnnotation(doof::array_at(named->typeArgs, 0, "src/checker-symbols", 282), info, result, typeParams));
             }
             if ((named->name == std::string("Result")) && (static_cast<int32_t>((named->typeArgs)->size()) >= 2)) {
                 std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> value = std::monostate{};
@@ -411,7 +411,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                 return ::app_src_checker_types_::resultType(doof::unwrap_optional(value), doof::unwrap_optional(error));
             }
             if (((named->name == std::string("Success")) || (named->name == std::string("Failure"))) && (static_cast<int32_t>((named->typeArgs)->size()) == 1)) {
-                const auto payload = resolveAnnotation((*named->typeArgs)[0], info, result, typeParams);
+                const auto payload = resolveAnnotation(doof::array_at(named->typeArgs, 0, "src/checker-symbols", 295), info, result, typeParams);
                 if (named->name == std::string("Success")) {
                     return ::app_src_checker_types_::resultType(payload, ::app_src_checker_types_::unknownType());
                 }
@@ -515,8 +515,8 @@ void declare(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std
 }
 void declareShadowing(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::shared_ptr<::app_src_semantic_::Binding>& binding) {
     for (int32_t index = 0; index < static_cast<int32_t>((scope->bindings)->size()); ++index) {
-        if ((*scope->bindings)[index]->name == binding->name) {
-            ((*scope->bindings)[index] = binding);
+        if (doof::array_at(scope->bindings, index, "src/checker-symbols", 354)->name == binding->name) {
+            (doof::array_at(scope->bindings, index, "src/checker-symbols", 355) = binding);
             return;
         }
     }
@@ -539,8 +539,8 @@ std::string typeParamConstraintName(const std::shared_ptr<::app_src_semantic_::S
     std::shared_ptr<::app_src_semantic_::Scope> current = scope;
     while (!doof::is_null(current)) {
         for (int32_t index = 0; index < static_cast<int32_t>((current->typeParams)->size()); ++index) {
-            if (((*current->typeParams)[index] == name) && (index < static_cast<int32_t>((current->typeParamConstraintNames)->size()))) {
-                return (*current->typeParamConstraintNames)[index];
+            if ((doof::array_at(current->typeParams, index, "src/checker-symbols", 375) == name) && (index < static_cast<int32_t>((current->typeParamConstraintNames)->size()))) {
+                return doof::array_at(current->typeParamConstraintNames, index, "src/checker-symbols", 376);
             }
         }
         (current = current->parent);
@@ -551,8 +551,8 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
     std::shared_ptr<::app_src_semantic_::Scope> current = scope;
     while (!doof::is_null(current)) {
         for (int32_t index = 0; index < static_cast<int32_t>((current->typeParams)->size()); ++index) {
-            if (((*current->typeParams)[index] == name) && (index < static_cast<int32_t>((current->typeParamConstraints)->size()))) {
-                return (*current->typeParamConstraints)[index]->type_;
+            if ((doof::array_at(current->typeParams, index, "src/checker-symbols", 388) == name) && (index < static_cast<int32_t>((current->typeParamConstraints)->size()))) {
+                return doof::array_at(current->typeParamConstraints, index, "src/checker-symbols", 389)->type_;
             }
         }
         (current = current->parent);

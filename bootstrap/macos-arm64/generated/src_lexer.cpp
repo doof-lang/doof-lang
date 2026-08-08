@@ -125,11 +125,11 @@ std::string tokenValue(Token token, const std::string& source) {
     auto value = std::string("");
     auto index = 0;
     while (index < static_cast<int32_t>(raw.size())) {
-        if ((raw[index] == U'\\') && ((index + 1) < static_cast<int32_t>(raw.size()))) {
+        if ((doof::string_at(raw, index, "src/lexer", 171) == U'\\') && ((index + 1) < static_cast<int32_t>(raw.size()))) {
             (index = (index + 1));
-            (value = (value + decodeEscapeCharacter(raw[index])));
+            (value = (value + decodeEscapeCharacter(doof::string_at(raw, index, "src/lexer", 173))));
         } else {
-            (value = (value + doof::to_string(raw[index])));
+            (value = (value + doof::to_string(doof::string_at(raw, index, "src/lexer", 175))));
         }
         (index = (index + 1));
     }
@@ -282,7 +282,7 @@ std::shared_ptr<std::vector<Token>> Lexer::tokenize() {
         if (this->pos >= static_cast<int32_t>(this->source.size())) {
             break;
         }
-        if (((static_cast<int32_t>((this->templateDelimiters)->size()) > 0) && (peek(0) == U'\u007D')) && ((*this->braceDepth)[(static_cast<int32_t>((this->braceDepth)->size()) - 1)] == 0)) {
+        if (((static_cast<int32_t>((this->templateDelimiters)->size()) > 0) && (peek(0) == U'\u007D')) && (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 259) == 0)) {
             advance();
             const auto ignoredBrace = [&]() -> int32_t { auto _try_value = doof::array_pop(this->braceDepth); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 261, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
             readTemplateContinuation();
@@ -308,10 +308,10 @@ char32_t Lexer::peek(int32_t offset) {
     if ((this->pos + offset) >= static_cast<int32_t>(this->source.size())) {
         return U'\0';
     }
-    return this->source[(this->pos + offset)];
+    return doof::string_at(this->source, (this->pos + offset), "src/lexer", 286);
 }
 char32_t Lexer::advance() {
-    const auto ch = this->source[this->pos];
+    const auto ch = doof::string_at(this->source, this->pos, "src/lexer", 290);
     (this->pos = (this->pos + 1));
     if (ch == U'\n') {
         (this->line = (this->line + 1));
@@ -507,7 +507,7 @@ void Lexer::readTemplateContinuation() {
     const auto start = this->pos;
     const auto tokenLine = this->line;
     const auto tokenColumn = this->column;
-    const auto delimiter = (*this->templateDelimiters)[(static_cast<int32_t>((this->templateDelimiters)->size()) - 1)];
+    const auto delimiter = doof::array_at(this->templateDelimiters, (static_cast<int32_t>((this->templateDelimiters)->size()) - 1), "src/lexer", 499);
     const auto contentStart = this->pos;
     auto needsDecode = false;
     auto closed = false;
@@ -600,7 +600,7 @@ void Lexer::readOperatorOrPunctuation() {
     if (ch == U'\u007B') {
         advance();
         if (static_cast<int32_t>((this->braceDepth)->size()) > 0) {
-            ((*this->braceDepth)[(static_cast<int32_t>((this->braceDepth)->size()) - 1)] = ((*this->braceDepth)[(static_cast<int32_t>((this->braceDepth)->size()) - 1)] + 1));
+            (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 574) = (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 574) + 1));
         }
         addToken(TokenType::LeftBrace, start, 1, start, 1, false, tokenLine, tokenColumn);
         return;
@@ -608,7 +608,7 @@ void Lexer::readOperatorOrPunctuation() {
     if (ch == U'\u007D') {
         advance();
         if (static_cast<int32_t>((this->braceDepth)->size()) > 0) {
-            ((*this->braceDepth)[(static_cast<int32_t>((this->braceDepth)->size()) - 1)] = ((*this->braceDepth)[(static_cast<int32_t>((this->braceDepth)->size()) - 1)] - 1));
+            (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 580) = (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 580) - 1));
         }
         addToken(TokenType::RightBrace, start, 1, start, 1, false, tokenLine, tokenColumn);
         return;

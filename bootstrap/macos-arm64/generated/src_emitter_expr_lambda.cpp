@@ -25,7 +25,7 @@ std::string emitLambdaExpression(const std::shared_ptr<::app_src_ast_::LambdaExp
         if (i > 0) {
             (params = (params + std::string(", ")));
         }
-        const auto parameter = (*expression->params)[i];
+        const auto parameter = doof::array_at(expression->params, i, "src/emitter-expr-lambda", 34);
         if (doof::is_null(parameter->resolvedType)) {
             doof::panic(std::string("Lambda parameter was not resolved before emission"));
         }
@@ -39,7 +39,7 @@ std::string emitLambdaExpression(const std::shared_ptr<::app_src_ast_::LambdaExp
             if (i > 0) {
                 (captures = (captures + std::string(", ")));
             }
-            (captures = (captures + (*captureNames)[i]));
+            (captures = (captures + doof::array_at(captureNames, i, "src/emitter-expr-lambda", 45)));
         }
     }
     const auto previousReturnErrorType = context->currentReturnErrorType;

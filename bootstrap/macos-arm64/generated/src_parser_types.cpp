@@ -18,7 +18,7 @@ std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_s
     }
     std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> result = first;
     if (static_cast<int32_t>((types)->size()) > 1) {
-        (result = doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(std::make_shared<::app_src_ast_::UnionType>(std::string("union-type"), types, std::monostate{}, ::app_src_ast_::SourceSpan{std::visit([](auto&& _obj) { return _obj->span; }, first).start, std::visit([](auto&& _obj) { return _obj->span; }, (*types)[(static_cast<int32_t>((types)->size()) - 1)]).end})));
+        (result = doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(std::make_shared<::app_src_ast_::UnionType>(std::string("union-type"), types, std::monostate{}, ::app_src_ast_::SourceSpan{std::visit([](auto&& _obj) { return _obj->span; }, first).start, std::visit([](auto&& _obj) { return _obj->span; }, doof::array_at(types, (static_cast<int32_t>((types)->size()) - 1), "src/parser-types", 18)).end})));
     }
     return result;
 }

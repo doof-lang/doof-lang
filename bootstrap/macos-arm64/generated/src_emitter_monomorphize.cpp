@@ -54,19 +54,19 @@ std::shared_ptr<InstantiationPlan> buildInstantiationPlan(const std::shared_ptr<
             return plan;
         }
         if (functionIndex < static_cast<int32_t>((plan->functions)->size())) {
-            const auto instantiation = (*plan->functions)[functionIndex];
+            const auto instantiation = doof::array_at(plan->functions, functionIndex, "src/emitter-monomorphize", 94);
             (functionIndex = (functionIndex + 1));
             (plan->currentTrace = instantiation->trace);
             collectFunctionBody(instantiation->declaration, instantiation->modulePath, result, plan, instantiation->substitution->names, instantiation->substitution->arguments);
         }
         if (classIndex < static_cast<int32_t>((plan->classes)->size())) {
-            const auto instantiation = (*plan->classes)[classIndex];
+            const auto instantiation = doof::array_at(plan->classes, classIndex, "src/emitter-monomorphize", 101);
             (classIndex = (classIndex + 1));
             (plan->currentTrace = instantiation->trace);
             collectClassBody(instantiation->declaration, instantiation->modulePath, result, plan, instantiation->substitution->names, instantiation->substitution->arguments);
         }
         if (methodIndex < static_cast<int32_t>((plan->methods)->size())) {
-            const auto instantiation = (*plan->methods)[methodIndex];
+            const auto instantiation = doof::array_at(plan->methods, methodIndex, "src/emitter-monomorphize", 108);
             (methodIndex = (methodIndex + 1));
             (plan->currentTrace = instantiation->trace);
             collectFunctionBody(instantiation->declaration, instantiation->modulePath, result, plan, instantiation->substitution->names, instantiation->substitution->arguments);
@@ -848,7 +848,7 @@ std::shared_ptr<std::vector<std::string>> extendedTrace(const std::shared_ptr<st
     std::shared_ptr<std::vector<std::string>> trace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     auto start = ((static_cast<int32_t>((parent)->size()) > 11) ? (static_cast<int32_t>((parent)->size()) - 11) : 0);
     for (int32_t index = start; index < static_cast<int32_t>((parent)->size()); ++index) {
-        trace->push_back((*parent)[index]);
+        trace->push_back(doof::array_at(parent, index, "src/emitter-monomorphize", 458));
     }
     trace->push_back(item);
     return trace;
@@ -918,7 +918,7 @@ bool classImplementsConcreteInterface(const std::shared_ptr<::app_src_ast_::Clas
                 auto _case_subject = specialize(doof::unwrap_optional(implementation->resolvedType), class_->typeParams, classArgs);
                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::StreamResolvedType>>(_case_subject)) {
                     const auto& stream = std::get<std::shared_ptr<::app_src_semantic_::StreamResolvedType>>(_case_subject);
-                    if (::app_src_checker_types_::sameType(stream->elementType, (*interface_->substitution->arguments)[0])) {
+                    if (::app_src_checker_types_::sameType(stream->elementType, doof::array_at(interface_->substitution->arguments, 0, "src/emitter-monomorphize", 502))) {
                         return true;
                     }
             }
@@ -949,7 +949,7 @@ bool classImplementsConcreteInterface(const std::shared_ptr<::app_src_ast_::Clas
             auto _case_subject = valueType;
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
                 const auto& fn = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-                return ((static_cast<int32_t>((fn->params)->size()) == 0) && ::app_src_checker_types_::sameType(fn->returnType, (*interface_->substitution->arguments)[0]));
+                return ((static_cast<int32_t>((fn->params)->size()) == 0) && ::app_src_checker_types_::sameType(fn->returnType, doof::array_at(interface_->substitution->arguments, 0, "src/emitter-monomorphize", 516)));
         }
         else {
                 return false;
@@ -1012,7 +1012,7 @@ bool sameConcreteMethodType(const std::variant<std::shared_ptr<::app_src_semanti
                         return false;
                     }
                     for (int32_t index = 0; index < static_cast<int32_t>((actualFunction->params)->size()); ++index) {
-                        if (!::app_src_checker_types_::sameType((*actualFunction->params)[index]->type_, (*expectedFunction->params)[index]->type_)) {
+                        if (!::app_src_checker_types_::sameType(doof::array_at(actualFunction->params, index, "src/emitter-monomorphize", 551)->type_, doof::array_at(expectedFunction->params, index, "src/emitter-monomorphize", 551)->type_)) {
                             return false;
                         }
                     }

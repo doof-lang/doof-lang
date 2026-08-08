@@ -147,9 +147,9 @@ bool checkStatement(const std::shared_ptr<::app_src_checker_state_::CheckerState
                     const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
                     if (static_cast<int32_t>((tuple->elements)->size()) == static_cast<int32_t>((forOf->bindings)->size())) {
                         for (int32_t i = 0; i < static_cast<int32_t>((forOf->bindings)->size()); ++i) {
-                            const auto name = (*forOf->bindings)[i];
+                            const auto name = doof::array_at(forOf->bindings, i, "src/checker-statements", 116);
                             if (name != std::string("_")) {
-                                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), (*tuple->elements)[i], false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+                                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), doof::array_at(tuple->elements, i, "src/checker-statements", 117), false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
                             }
                         }
                     } else {
@@ -551,7 +551,7 @@ void checkClass(const std::shared_ptr<::app_src_checker_state_::CheckerState>& s
         }
         (field->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(fieldType));
         if (class_->struct_ && (field->weak_ || containsWeakType(fieldType))) {
-            const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : (*field->names)[0]);
+            const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : doof::array_at(field->names, 0, "src/checker-statements", 381));
             ::app_src_checker_common_::typeError(state, ((std::string("Struct field \"") + name) + std::string("\" cannot be weak")), field->span);
         }
         if ((!doof::is_null(field->defaultValue)) && (!doof::is_null(field->type_))) {
@@ -680,23 +680,23 @@ void populateTypeParameters(const std::shared_ptr<::app_src_checker_state_::Chec
         scope->typeParamConstraints->push_back(std::make_shared<::app_src_semantic_::ResolvedTypeConstraint>(std::monostate{}));
     }
     for (int32_t index = 0; index < static_cast<int32_t>((names)->size()); ++index) {
-        if ((index >= static_cast<int32_t>((constraints)->size())) || doof::is_null((*constraints)[index]->type_)) {
+        if ((index >= static_cast<int32_t>((constraints)->size())) || doof::is_null(doof::array_at(constraints, index, "src/checker-statements", 466)->type_)) {
             continue;
         }
-        const auto annotation = doof::unwrap_optional((*constraints)[index]->type_);
+        const auto annotation = doof::unwrap_optional(doof::array_at(constraints, index, "src/checker-statements", 467)->type_);
         {
             auto _case_subject = annotation;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                 const auto& named = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
                 if ((static_cast<int32_t>((named->typeArgs)->size()) == 0) && ((named->name == std::string("JsonSerializable")) || (named->name == std::string("Reflectable")))) {
-                    ((*scope->typeParamConstraintNames)[index] = named->name);
+                    (doof::array_at(scope->typeParamConstraintNames, index, "src/checker-statements", 471) = named->name);
                     continue;
                 }
         }
         else {
         }
         }
-        ((*scope->typeParamConstraints)[index]->type_ = doof::optional_value(::app_src_checker_resolution_::resolveType(state, annotation, doof::unwrap_optional(state->info), scope)));
+        (doof::array_at(scope->typeParamConstraints, index, "src/checker-statements", 477)->type_ = doof::optional_value(::app_src_checker_resolution_::resolveType(state, annotation, doof::unwrap_optional(state->info), scope)));
     }
 }
 void checkEnum(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::EnumDeclaration>& enum_, const std::shared_ptr<::app_src_semantic_::Scope>& scope) {
@@ -900,11 +900,11 @@ void checkDestructuring(const std::shared_ptr<::app_src_checker_state_::CheckerS
         return;
     }
     for (int32_t i = 0; i < static_cast<int32_t>((statement->bindings)->size()); ++i) {
-        const auto name = (*statement->bindings)[i];
+        const auto name = doof::array_at(statement->bindings, i, "src/checker-statements", 628);
         if (name == std::string("_")) {
             continue;
         }
-        const auto bindingType = ((i < static_cast<int32_t>((bindingTypes)->size())) ? (*bindingTypes)[i] : ::app_src_checker_types_::unknownType());
+        const auto bindingType = ((i < static_cast<int32_t>((bindingTypes)->size())) ? doof::array_at(bindingTypes, i, "src/checker-statements", 630) : ::app_src_checker_types_::unknownType());
         if (doof::string_endsWith(statement->kind, std::string("-assignment"))) {
             validateDestructuringTarget(state, scope, name, bindingType, statement->span);
         } else {

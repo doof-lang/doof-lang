@@ -832,8 +832,8 @@ void compressRepeatedHeaderVariants(const std::shared_ptr<HeaderPlan>& plan, con
 }
 std::string preferredHeaderTypeAlias(const std::shared_ptr<HeaderPlan>& plan, const std::string& spelling) {
     for (int32_t index = 0; index < static_cast<int32_t>((plan->preferredTypeAliasSpellings)->size()); ++index) {
-        if ((*plan->preferredTypeAliasSpellings)[index] == spelling) {
-            return (*plan->preferredTypeAliasNames)[index];
+        if (doof::array_at(plan->preferredTypeAliasSpellings, index, "src/emitter-header", 472) == spelling) {
+            return doof::array_at(plan->preferredTypeAliasNames, index, "src/emitter-header", 472);
         }
     }
     return std::string("");
@@ -864,9 +864,9 @@ void collectHeaderTypeUses(const std::shared_ptr<std::vector<std::string>>& valu
 int32_t matchingAngleEnd(const std::string& value, int32_t opening) {
     auto depth = 0;
     for (int32_t index = opening; index < static_cast<int32_t>(value.size()); ++index) {
-        if (value[index] == U'\u003C') {
+        if (doof::string_at(value, index, "src/emitter-header", 497) == U'\u003C') {
             (depth += 1);
-        } else if (value[index] == U'\u003E') {
+        } else if (doof::string_at(value, index, "src/emitter-header", 498) == U'\u003E') {
             (depth -= 1);
             if (depth == 0) {
                 return index;
@@ -882,13 +882,13 @@ bool referenceOnlyVariant(const std::string& spelling) {
     for (int32_t index = 0; index <= static_cast<int32_t>(inner.size()); ++index) {
         const auto atEnd = (index == static_cast<int32_t>(inner.size()));
         if (!atEnd) {
-            if (inner[index] == U'\u003C') {
+            if (doof::string_at(inner, index, "src/emitter-header", 513) == U'\u003C') {
                 (depth += 1);
-            } else if (inner[index] == U'\u003E') {
+            } else if (doof::string_at(inner, index, "src/emitter-header", 514) == U'\u003E') {
                 (depth -= 1);
             }
         }
-        if (atEnd || ((inner[index] == U'\u002C') && (depth == 0))) {
+        if (atEnd || ((doof::string_at(inner, index, "src/emitter-header", 516) == U'\u002C') && (depth == 0))) {
             const auto member = doof::string_trim(doof::string_substring(inner, memberStart, index));
             if ((member != std::string("std::monostate")) && !(doof::string_startsWith(member, std::string("std::shared_ptr<")) && doof::string_endsWith(member, std::string(">")))) {
                 return false;
@@ -910,7 +910,7 @@ void addHeaderTypeUse(const std::shared_ptr<std::vector<std::shared_ptr<HeaderTy
 }
 void replaceHeaderTypeUses(const std::shared_ptr<std::vector<std::string>>& values, const std::string& spelling, const std::string& name) {
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
-        ((*values)[index] = doof::string_replaceAll((*values)[index], spelling, name));
+        (doof::array_at(values, index, "src/emitter-header", 533) = doof::string_replaceAll(doof::array_at(values, index, "src/emitter-header", 533), spelling, name));
     }
 }
 void collectModuleValueDeclaration(const std::shared_ptr<HeaderPlan>& plan, const std::string& declaration, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
@@ -1030,7 +1030,7 @@ std::string nativeNamespace(const std::string& cppName) {
 std::string emitEnumDeclaration(const std::shared_ptr<::app_src_ast_::EnumDeclaration>& declaration, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     auto result = (((::app_src_emitter_decl_::emitDescriptionComment(declaration->description, std::string("")) + std::string("enum class ")) + declaration->name) + std::string(" {\n"));
     for (int32_t i = 0; i < static_cast<int32_t>((declaration->variants)->size()); ++i) {
-        const auto variant = (*declaration->variants)[i];
+        const auto variant = doof::array_at(declaration->variants, i, "src/emitter-header", 604);
         (result = (((result + ::app_src_emitter_decl_::emitDescriptionComment(variant->description, std::string("    "))) + std::string("    ")) + variant->name));
         if (!doof::is_null(variant->value)) {
             (result = ((result + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(variant->value), context, std::monostate{})));

@@ -785,7 +785,7 @@ doof::Result<void, std::string> appendPolicyStrings(const std::shared_ptr<std::v
     if (doof::is_failure(_try_value_40)) return doof::Failure<std::string>{doof::failure_error(_try_value_40)};
     const auto values = doof::success_value(_try_value_40);
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
-        auto _try_value_41 = manifestString((*values)[index], manifestPath, (((((fieldPath + std::string(".")) + name) + std::string("[")) + doof::to_string(index)) + std::string("]")));
+        auto _try_value_41 = manifestString(doof::array_at(values, index, "src/package-manifest", 275), manifestPath, (((((fieldPath + std::string(".")) + name) + std::string("[")) + doof::to_string(index)) + std::string("]")));
         if (doof::is_failure(_try_value_41)) return doof::Failure<std::string>{doof::failure_error(_try_value_41)};
         const auto value = doof::success_value(_try_value_41);
         if (value == std::string("")) {
@@ -906,7 +906,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyF
     std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> result = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{});
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
         const auto entryPath = (((fieldPath + std::string(".copyFiles[")) + doof::to_string(index)) + std::string("]"));
-        auto _try_value_55 = manifestObject((*values)[index], manifestPath, entryPath);
+        auto _try_value_55 = manifestObject(doof::array_at(values, index, "src/package-manifest", 380), manifestPath, entryPath);
         if (doof::is_failure(_try_value_55)) return doof::Failure<std::string>{doof::failure_error(_try_value_55)};
         const auto entry = doof::success_value(_try_value_55);
         auto _try_value_56 = requiredManifestString(entry, std::string("from"), manifestPath, entryPath);
@@ -929,7 +929,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyComma
     std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> result = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{});
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
         const auto entryPath = (((fieldPath + std::string(".commands[")) + doof::to_string(index)) + std::string("]"));
-        auto _try_value_59 = manifestObject((*values)[index], manifestPath, entryPath);
+        auto _try_value_59 = manifestObject(doof::array_at(values, index, "src/package-manifest", 398), manifestPath, entryPath);
         if (doof::is_failure(_try_value_59)) return doof::Failure<std::string>{doof::failure_error(_try_value_59)};
         const auto entry = doof::success_value(_try_value_59);
         auto _try_value_60 = requiredManifestString(entry, std::string("program"), manifestPath, entryPath);
@@ -941,7 +941,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyComma
             if (doof::is_failure(_try_value_61)) return doof::Failure<std::string>{doof::failure_error(_try_value_61)};
             const auto entries = doof::success_value(_try_value_61);
             for (int32_t argumentIndex = 0; argumentIndex < static_cast<int32_t>((entries)->size()); ++argumentIndex) {
-                auto _try_value_62 = manifestString((*entries)[argumentIndex], manifestPath, (((entryPath + std::string(".args[")) + doof::to_string(argumentIndex)) + std::string("]")));
+                auto _try_value_62 = manifestString(doof::array_at(entries, argumentIndex, "src/package-manifest", 404), manifestPath, (((entryPath + std::string(".args[")) + doof::to_string(argumentIndex)) + std::string("]")));
                 if (doof::is_failure(_try_value_62)) return doof::Failure<std::string>{doof::failure_error(_try_value_62)};
                 const auto argument = doof::success_value(_try_value_62);
                 args->push_back(argument);
@@ -1162,7 +1162,7 @@ doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>, std::string>
         if (doof::is_failure(_try_value_90)) return doof::Failure<std::string>{doof::failure_error(_try_value_90)};
         const auto entries = doof::success_value(_try_value_90);
         for (int32_t index = 0; index < static_cast<int32_t>((entries)->size()); ++index) {
-            auto _try_value_91 = manifestObject((*entries)[index], manifestPath, ((std::string("build.macosApp.embeddedLibraries[") + doof::to_string(index)) + std::string("]")));
+            auto _try_value_91 = manifestObject(doof::array_at(entries, index, "src/package-manifest", 601), manifestPath, ((std::string("build.macosApp.embeddedLibraries[") + doof::to_string(index)) + std::string("]")));
             if (doof::is_failure(_try_value_91)) return doof::Failure<std::string>{doof::failure_error(_try_value_91)};
             const auto entry = doof::success_value(_try_value_91);
             const auto hasLibrary = manifestJsonHas(entry, std::string("library"));
@@ -1300,7 +1300,7 @@ doof::Result<std::shared_ptr<::app_src_ios_app_::IOSAppConfig>, std::string> par
         const auto entries = doof::success_value(_try_value_108);
         for (int32_t index = 0; index < static_cast<int32_t>((entries)->size()); ++index) {
             const auto field = ((std::string("build.iosApp.embeddedLibraries[") + doof::to_string(index)) + std::string("]"));
-            auto _try_value_109 = manifestObject((*entries)[index], manifestPath, field);
+            auto _try_value_109 = manifestObject(doof::array_at(entries, index, "src/package-manifest", 723), manifestPath, field);
             if (doof::is_failure(_try_value_109)) return doof::Failure<std::string>{doof::failure_error(_try_value_109)};
             const auto entry = doof::success_value(_try_value_109);
             const auto hasLibrary = manifestJsonHas(entry, std::string("library"));
@@ -1496,7 +1496,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std
         auto source = std::string("");
         auto destination = std::string("");
         {
-            auto _case_subject = (*entries)[index];
+            auto _case_subject = doof::array_at(entries, index, "src/package-manifest", 895);
             if (doof::json_is_string(_case_subject)) {
                 const auto text = doof::json_as_string(_case_subject);
                 if (text == std::string("")) {
@@ -1537,7 +1537,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std
 }
 doof::Result<std::string, std::string> normalizeResourceDestination(const std::string& destination, const std::string& manifestPath, const std::string& fieldPath) {
     const auto portable = doof::string_replaceAll(destination, std::string("\\"), std::string("/"));
-    if (doof::string_startsWith(portable, std::string("/")) || (((static_cast<int32_t>(portable.size()) >= 3) && (portable[1] == U'\u003A')) && (portable[2] == U'\u002F'))) {
+    if (doof::string_startsWith(portable, std::string("/")) || (((static_cast<int32_t>(portable.size()) >= 3) && (doof::string_at(portable, 1, "src/package-manifest", 944) == U'\u003A')) && (doof::string_at(portable, 2, "src/package-manifest", 944) == U'\u002F'))) {
         return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(" must be relative")) };
     }
     std::shared_ptr<std::vector<std::string>> segments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
@@ -1596,7 +1596,7 @@ doof::Result<void, std::string> appendStringArrayField(const std::shared_ptr<std
     if (doof::is_failure(_try_value_140)) return doof::Failure<std::string>{doof::failure_error(_try_value_140)};
     const auto values = doof::success_value(_try_value_140);
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
-        auto _try_value_141 = manifestString((*values)[index], manifestPath, (((((fieldPath + std::string(".")) + name) + std::string("[")) + doof::to_string(index)) + std::string("]")));
+        auto _try_value_141 = manifestString(doof::array_at(values, index, "src/package-manifest", 1000), manifestPath, (((((fieldPath + std::string(".")) + name) + std::string("[")) + doof::to_string(index)) + std::string("]")));
         if (doof::is_failure(_try_value_141)) return doof::Failure<std::string>{doof::failure_error(_try_value_141)};
         const auto value = doof::success_value(_try_value_141);
         const auto normalized = ((pathRoot == std::string("")) ? value : manifestJoinPath(pathRoot, value));

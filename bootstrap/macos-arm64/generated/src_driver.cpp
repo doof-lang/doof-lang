@@ -730,7 +730,7 @@ std::string driverRootLogicalPath(const std::string& path, const std::string& ro
 }
 std::string driverPackageOutputRoot(const std::string& logicalPrefix) {
     auto start = 0;
-    while ((start < static_cast<int32_t>(logicalPrefix.size())) && (logicalPrefix[start] == U'\u002F')) {
+    while ((start < static_cast<int32_t>(logicalPrefix.size())) && (doof::string_at(logicalPrefix, start, "src/driver", 614) == U'\u002F')) {
         (start = (start + 1));
     }
     return doof::string_substring(logicalPrefix, start, static_cast<int32_t>(logicalPrefix.size()));
@@ -966,7 +966,7 @@ bool blobsEqual(const std::shared_ptr<std::vector<uint8_t>>& left, const std::sh
         return false;
     }
     for (int32_t index = 0; index < static_cast<int32_t>((left)->size()); ++index) {
-        if ((*left)[index] != (*right)[index]) {
+        if (doof::array_at(left, index, "src/driver", 841) != doof::array_at(right, index, "src/driver", 841)) {
             return false;
         }
     }
@@ -1082,7 +1082,7 @@ std::string nativeBuildOutputName(const std::string& projectName, const std::str
 void printDiagnostics(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics) {
     const auto displayCount = ((static_cast<int32_t>((diagnostics)->size()) < MAX_PRINTED_DIAGNOSTICS) ? static_cast<int32_t>((diagnostics)->size()) : MAX_PRINTED_DIAGNOSTICS);
     for (int32_t index = 0; index < displayCount; ++index) {
-        const auto diagnostic = (*diagnostics)[index];
+        const auto diagnostic = doof::array_at(diagnostics, index, "src/driver", 972);
         doof::println(((((((((diagnostic->module + std::string(":")) + doof::to_string(diagnostic->span.start.line)) + std::string(":")) + doof::to_string(diagnostic->span.start.column)) + std::string(": ")) + diagnostic->severity) + std::string(": ")) + diagnostic->message));
     }
     if (static_cast<int32_t>((diagnostics)->size()) > displayCount) {
@@ -1148,11 +1148,11 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_test_runner_::DiscoveredTe
 }
 void mergeCoverageGroup(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>>& groupModules, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>>& groupHits, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>>& allModules, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>>& allHits) {
     for (int32_t groupIndex = 0; groupIndex < static_cast<int32_t>((groupModules)->size()); ++groupIndex) {
-        const auto groupModule = (*groupModules)[groupIndex];
+        const auto groupModule = doof::array_at(groupModules, groupIndex, "src/driver", 1033);
         const auto diskPath = driverSourceDiskPath(groupModule->modulePath, configuredDriverSourceState->localRoots, configuredDriverSourceState->acquisitions);
         auto targetIndex = -1;
         for (int32_t index = 0; index < static_cast<int32_t>((allModules)->size()); ++index) {
-            if ((*allModules)[index]->modulePath == diskPath) {
+            if (doof::array_at(allModules, index, "src/driver", 1041)->modulePath == diskPath) {
                 (targetIndex = index);
             }
         }
@@ -1167,17 +1167,17 @@ void mergeCoverageGroup(const std::shared_ptr<std::vector<std::shared_ptr<::app_
             (targetIndex = (static_cast<int32_t>((allModules)->size()) - 1));
         }
         if (groupIndex < static_cast<int32_t>((groupHits)->size())) {
-            const auto& _iterable_63 = (*groupHits)[groupIndex];
+            const auto& _iterable_63 = doof::array_at(groupHits, groupIndex, "src/driver", 1055);
             for (const auto& line : *_iterable_63) {
                 auto found = false;
-                const auto& _iterable_64 = (*allHits)[targetIndex];
+                const auto& _iterable_64 = doof::array_at(allHits, targetIndex, "src/driver", 1057);
                 for (const auto& existing : *_iterable_64) {
                     if (existing == line) {
                         (found = true);
                     }
                 }
                 if (!found) {
-                    (*allHits)[targetIndex]->push_back(line);
+                    doof::array_at(allHits, targetIndex, "src/driver", 1058)->push_back(line);
                 }
             }
         }
@@ -1210,7 +1210,7 @@ std::string writeCoverageHtml(const std::shared_ptr<::app_src_test_runner_::Cove
         ensureOutputDirectory(::app_src_project_::parentPath(pagePath));
         auto depth = 1;
         for (int32_t index = 0; index < static_cast<int32_t>(relativePage.size()); ++index) {
-            if (relativePage[index] == U'\u002F') {
+            if (doof::string_at(relativePage, index, "src/driver", 1088) == U'\u002F') {
                 (depth += 1);
             }
         }
@@ -1292,7 +1292,7 @@ int32_t testRequest(const std::shared_ptr<::app_src_cli_::CliRequest>& request) 
     const auto& _iterable_73 = groups;
     for (const auto& group : *_iterable_73) {
         const auto moduleTests = group->tests;
-        const auto testFile = (*moduleTests)[0]->modulePath;
+        const auto testFile = doof::array_at(moduleTests, 0, "src/driver", 1147)->modulePath;
         const auto project = ::app_src_project_::readProjectSpec(testFile, hostPlatform(), std::string(""));
         const auto buildRoot = ((request->outputDirectory == std::string("")) ? ::app_src_project_::joinPath(project->rootDirectory, project->buildDirectory) : [&]() -> std::string { auto _try_value = ::std_::path::index::absolute(request->outputDirectory); if (doof::is_failure(_try_value)) doof::panic_at("src/driver", 1151, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }());
         const auto coverageSuffix = (request->coverage ? std::string("-coverage") : std::string(""));

@@ -250,6 +250,9 @@ Common APIs:
 
 Deprecated `.buildReadonly()` remains accepted on mutable arrays with a replacement warning and behaves exactly like `.drainToReadonly()`. Readonly arrays expose neither readonly-producing method.
 
+Array bracket reads and writes panic at the access site when the index is
+negative or greater than or equal to `.length`.
+
 ### Tuples
 
 ```doof
@@ -292,7 +295,9 @@ Common APIs:
 | `.cloneReadonly()` | `ReadonlyMap<K, V>` | mutable maps only; shallow-copies and preserves the source |
 | `.cloneMutable()` | `Map<K, V>` | shallow copy into a new mutable map |
 
-Index access reads and writes directly. `ReadonlyMap<K, V>` is the readonly variant.
+Index reads panic at the access site when the key is absent; use `.get(key)`
+when absence is expected. Index writes insert or update the key.
+`ReadonlyMap<K, V>` is the readonly variant.
 
 Deprecated `.buildReadonly()` remains accepted on mutable maps with a replacement warning and behaves exactly like `.drainToReadonly()`. Readonly maps expose neither readonly-producing method.
 

@@ -120,16 +120,16 @@ std::shared_ptr<::std_::time::duration::Duration> TimerBucket::max() {
 }
 std::shared_ptr<::std_::time::duration::Duration> TimerBucket::p95() {
     auto index = ((((this->count * 95) + 99) / 100) - 1);
-    return ::std_::time::duration::Duration::ofNanos((*this->durations)[index]);
+    return ::std_::time::duration::Duration::ofNanos(doof::array_at(this->durations, index, "stopwatch", 53));
 }
 void TimerBucket::insertSorted(int64_t nanos) {
     this->durations->push_back(nanos);
     auto index = (static_cast<int32_t>((this->durations)->size()) - 1);
-    while ((index > 0) && ((*this->durations)[(index - 1)] > nanos)) {
-        ((*this->durations)[index] = (*this->durations)[(index - 1)]);
+    while ((index > 0) && (doof::array_at(this->durations, (index - 1), "stopwatch", 60) > nanos)) {
+        (doof::array_at(this->durations, index, "stopwatch", 61) = doof::array_at(this->durations, (index - 1), "stopwatch", 61));
         (index -= 1);
     }
-    ((*this->durations)[index] = nanos);
+    (doof::array_at(this->durations, index, "stopwatch", 65) = nanos);
 }
 doof::JsonObject TimerBucket::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();

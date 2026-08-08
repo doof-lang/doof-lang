@@ -24,14 +24,14 @@ std::shared_ptr<::app_src_ast_::Program> Parser::parse() {
     return std::make_shared<::app_src_ast_::Program>(std::string("program"), statements, span(start));
 }
 ::app_src_lexer_::Token Parser::current() {
-    return (*this->tokens)[this->pos];
+    return doof::array_at(this->tokens, this->pos, "src/parser", 57);
 }
 ::app_src_lexer_::Token Parser::peek(int32_t offset) {
     const auto index = (this->pos + offset);
     if (index >= static_cast<int32_t>((this->tokens)->size())) {
-        return (*this->tokens)[(static_cast<int32_t>((this->tokens)->size()) - 1)];
+        return doof::array_at(this->tokens, (static_cast<int32_t>((this->tokens)->size()) - 1), "src/parser", 61);
     }
-    return (*this->tokens)[index];
+    return doof::array_at(this->tokens, index, "src/parser", 62);
 }
 bool Parser::atEnd() {
     return (current().kind == ::app_src_lexer_::TokenType::EndOfFile);
@@ -107,26 +107,26 @@ std::string Parser::currentText() {
     return ::app_src_ast_::AstLocation{token.line, token.column, token.offset};
 }
 ::app_src_ast_::SourceSpan Parser::span(::app_src_ast_::AstLocation start) {
-    auto previous = ((this->pos > 0) ? (*this->tokens)[(this->pos - 1)] : current());
+    auto previous = ((this->pos > 0) ? doof::array_at(this->tokens, (this->pos - 1), "src/parser", 118) : current());
     return ::app_src_ast_::SourceSpan{start, ::app_src_ast_::AstLocation{previous.line, (previous.column + previous.length), (previous.offset + previous.length)}};
 }
 bool Parser::sameLineAsPrevious() {
     if (this->pos == 0) {
         return false;
     }
-    return ((*this->tokens)[(this->pos - 1)].line == current().line);
+    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 131).line == current().line);
 }
 bool Parser::previousIs(::app_src_lexer_::TokenType kind) {
     if (this->pos == 0) {
         return false;
     }
-    return ((*this->tokens)[(this->pos - 1)].kind == kind);
+    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 136).kind == kind);
 }
 bool Parser::immediatelyAfterPrevious() {
     if (this->pos == 0) {
         return false;
     }
-    auto previous = (*this->tokens)[(this->pos - 1)];
+    auto previous = doof::array_at(this->tokens, (this->pos - 1), "src/parser", 141);
     return ((previous.offset + previous.length) == current().offset);
 }
 void Parser::consumeSemicolon() {

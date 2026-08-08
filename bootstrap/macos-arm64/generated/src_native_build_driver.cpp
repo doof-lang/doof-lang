@@ -112,7 +112,7 @@ bool isMsvcSourceEcho(const std::string& line, const std::string& sourcePath) {
     const auto normalizedSource = doof::string_replaceAll(sourcePath, std::string("\\"), std::string("/"));
     auto slash = -1;
     for (int32_t index = 0; index < static_cast<int32_t>(normalizedSource.size()); ++index) {
-        if (normalizedSource[index] == U'\u002F') {
+        if (doof::string_at(normalizedSource, index, "src/native-build-driver", 64) == U'\u002F') {
             (slash = index);
         }
     }
@@ -270,15 +270,15 @@ int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_
     }
     auto compileExitCode = 0;
     for (int32_t index = 0; index < static_cast<int32_t>((promises)->size()); ++index) {
-        auto _binding_value_12 = (*promises)[index].get();
+        auto _binding_value_12 = doof::array_at(promises, index, "src/native-build-driver", 195).get();
         if (doof::is_failure(_binding_value_12)) {
             const auto error = doof::failure_error(_binding_value_12);
-            const auto ignoredWorker = (*workers)[index]->retire();
+            const auto ignoredWorker = doof::array_at(workers, index, "src/native-build-driver", 196)->retire();
             doof::println((std::string("error: native compiler worker failed: ") + error));
             return 1;
         }
         const auto batchResult = doof::success_value(_binding_value_12);
-        (*workers)[index]->retire();
+        doof::array_at(workers, index, "src/native-build-driver", 200)->retire();
         const auto& _iterable_13 = batchResult->outputs;
         for (const auto& commandResult : *_iterable_13) {
             (remainingOutputLines = printBuildOutput(commandResult, remainingOutputLines));
@@ -306,10 +306,10 @@ int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_
         }
     }
     for (int32_t index = 0; index < static_cast<int32_t>((plan->compileTasks)->size()); ++index) {
-        const auto task = (*plan->compileTasks)[index];
+        const auto task = doof::array_at(plan->compileTasks, index, "src/native-build-driver", 215);
         objectPaths->push_back(task->outputPath);
         if (contains(dirtyTaskIds, task->id)) {
-            nextState->tasks->push_back(captureTaskState(task, (*taskFingerprints)[index]));
+            nextState->tasks->push_back(captureTaskState(task, doof::array_at(taskFingerprints, index, "src/native-build-driver", 217)));
         } else {
             nextState->tasks->push_back(doof::unwrap_optional(indexedNativeTaskState(previousTasks, task->id)));
         }
@@ -460,8 +460,8 @@ bool nativeTaskStateIsCurrent(const std::shared_ptr<::app_src_native_build_state
         return false;
     }
     for (int32_t index = 0; index < static_cast<int32_t>((previous->inputs)->size()); ++index) {
-        const auto expected = (*previous->inputs)[index];
-        const auto current = (*currentInputs)[index];
+        const auto expected = doof::array_at(previous->inputs, index, "src/native-build-driver", 330);
+        const auto current = doof::array_at(currentInputs, index, "src/native-build-driver", 331);
         if (((((expected->path != current->path) || (expected->signature != current->signature)) || (expected->contentHash != current->contentHash)) || (expected->size != current->size)) || (expected->modifiedNanos != current->modifiedNanos)) {
             return false;
         }
@@ -627,7 +627,7 @@ bool nativeManagedOutputsChanged(const std::shared_ptr<std::vector<std::string>>
         return true;
     }
     for (int32_t index = 0; index < static_cast<int32_t>((previous)->size()); ++index) {
-        if ((*previous)[index] != (*current)[index]) {
+        if (doof::array_at(previous, index, "src/native-build-driver", 461) != doof::array_at(current, index, "src/native-build-driver", 461)) {
             return true;
         }
     }
@@ -667,7 +667,7 @@ std::string joinOutput(const std::string& directory, const std::string& name) {
 }
 std::string parentDirectory(const std::string& path) {
     auto index = (static_cast<int32_t>(path.size()) - 1);
-    while ((index > 0) && (path[index] != U'\u002F')) {
+    while ((index > 0) && (doof::string_at(path, index, "src/native-build-driver", 490) != U'\u002F')) {
         (index -= 1);
     }
     return ((index <= 0) ? std::string("/") : doof::string_substring(path, 0, index));

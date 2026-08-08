@@ -494,7 +494,7 @@ std::string relativeModuleSpecifier(const std::string& fromModule, const std::st
     const auto fromComponents = parentPathComponents(doof::string_replaceAll(fromModule, std::string("\\"), std::string("/")));
     const auto toComponents = doof::string_split(moduleSpecifierPath(doof::string_replaceAll(toModule, std::string("\\"), std::string("/"))), std::string("/"));
     auto common = 0;
-    while (((common < static_cast<int32_t>((fromComponents)->size())) && (common < static_cast<int32_t>((toComponents)->size()))) && ((*fromComponents)[common] == (*toComponents)[common])) {
+    while (((common < static_cast<int32_t>((fromComponents)->size())) && (common < static_cast<int32_t>((toComponents)->size()))) && (doof::array_at(fromComponents, common, "src/analyzer", 430) == doof::array_at(toComponents, common, "src/analyzer", 430))) {
         (common = (common + 1));
     }
     auto result = std::string("");
@@ -505,7 +505,7 @@ std::string relativeModuleSpecifier(const std::string& fromModule, const std::st
         if ((result != std::string("")) && !doof::string_endsWith(result, std::string("/"))) {
             (result = (result + std::string("/")));
         }
-        (result = (result + (*toComponents)[index]));
+        (result = (result + doof::array_at(toComponents, index, "src/analyzer", 435)));
     }
     return (doof::string_startsWith(result, std::string(".")) ? result : (std::string("./") + result));
 }

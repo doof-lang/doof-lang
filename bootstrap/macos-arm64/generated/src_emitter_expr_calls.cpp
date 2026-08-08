@@ -20,7 +20,7 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                     auto _case_subject = doof::unwrap_optional(expression->resolvedType);
                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject)) {
                         const auto& result = std::get<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject);
-                        const auto callback = ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{});
+                        const auto callback = ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 20)->value, context, std::monostate{});
                         const auto successType = ::app_src_emitter_types_::emitResultPayloadType(result->valueType, context->modulePath);
                         if (std::visit([](auto&& _obj) { return _obj->kind; }, result->valueType) == std::string("none")) {
                             return ((std::string("[&]() -> doof::Result<void, std::string> { try { ") + callback) + std::string(".call(); return doof::Success<void>{}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }()"));
@@ -59,7 +59,7 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                             return ((((std::string("doof::") + identifier->name) + std::string("<")) + ::app_src_emitter_types_::emitResultPayloadType(((identifier->name == std::string("Success")) ? result->valueType : result->errorType), context->modulePath)) + std::string(">{}"));
                         }
                         const auto valueType = ((identifier->name == std::string("Success")) ? result->valueType : result->errorType);
-                        const auto value = ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, doof::optional_value(valueType));
+                        const auto value = ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 44)->value, context, doof::optional_value(valueType));
                         const auto payloadType = ::app_src_emitter_types_::emitResultPayloadType(valueType, context->modulePath);
                         return ((((((std::string("doof::") + identifier->name) + std::string("<")) + payloadType) + std::string(">{ ")) + value) + std::string(" }"));
                 }
@@ -94,7 +94,7 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                             const auto temporaryName = (std::string("_result_unwrap_") + doof::to_string(context->tryCounter));
                             (context->tryCounter += 1);
                             const auto object = ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{});
-                            const auto fallback = ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, doof::optional_value(resultType->valueType));
+                            const auto fallback = ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 66)->value, context, doof::optional_value(resultType->valueType));
                             return ((((((((((((std::string("[&]() -> ") + ::app_src_emitter_types_::emitType(resultType->valueType, context->modulePath)) + std::string(" { auto ")) + temporaryName) + std::string(" = ")) + object) + std::string("; if (doof::is_failure(")) + temporaryName) + std::string(")) return ")) + fallback) + std::string("; return std::move(doof::success_value(")) + temporaryName) + std::string(")); }()"));
                         }
                 }
@@ -144,9 +144,9 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                         }
                         std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> expectedArgument = std::monostate{};
                         if ((!doof::is_null(constructorMethod)) && (i < static_cast<int32_t>((constructorMethod->params)->size()))) {
-                            (expectedArgument = (*constructorMethod->params)[i]->resolvedType);
+                            (expectedArgument = doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 100)->resolvedType);
                         }
-                        auto argumentText = ::app_src_emitter_expr_::emitExpression((*expression->args)[i]->value, context, expectedArgument);
+                        auto argumentText = ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, i, "src/emitter-expr-calls", 101)->value, context, expectedArgument);
                         (result = (result + argumentText));
                     }
                     if (!doof::is_null(constructorMethod)) {
@@ -154,10 +154,10 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                             if (result != (nativeName + std::string("::constructor("))) {
                                 (result = (result + std::string(", ")));
                             }
-                            if (doof::is_null((*constructorMethod->params)[i]->defaultValue)) {
+                            if (doof::is_null(doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 107)->defaultValue)) {
                                 doof::panic(((std::string("Native constructor ") + class_->name) + std::string(" is missing a default argument")));
                             }
-                            (result = (result + emitDefaultExpression(doof::unwrap_optional((*constructorMethod->params)[i]->defaultValue), context, (*constructorMethod->params)[i]->resolvedType, expression->span)));
+                            (result = (result + emitDefaultExpression(doof::unwrap_optional(doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 108)->defaultValue), context, doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 108)->resolvedType, expression->span)));
                         }
                     }
                     return (result + std::string(")"));
@@ -173,7 +173,7 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                         if (i > 0) {
                             (values = (values + std::string(", ")));
                         }
-                        (values = (values + ::app_src_emitter_expr_::emitExpression((*expression->args)[i]->value, context, std::monostate{})));
+                        (values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, i, "src/emitter-expr-calls", 120)->value, context, std::monostate{})));
                     }
                     if (!doof::is_null(expression->resolvedClass)) {
                         auto fieldIndex = 0;
@@ -262,34 +262,34 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                             return ((std::string("doof::array_cloneMutable(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                         if (member->property == std::string("contains")) {
-                            return ((((std::string("doof::array_contains(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(", \"\", 0)"));
+                            return ((((std::string("doof::array_contains(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 172)->value, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                         if (member->property == std::string("indexOf")) {
-                            return ((((std::string("doof::array_indexOf(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(", \"\", 0)"));
+                            return ((((std::string("doof::array_indexOf(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 173)->value, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                         if (member->property == std::string("some")) {
-                            return ((((std::string("doof::array_some(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(", \"\", 0)"));
+                            return ((((std::string("doof::array_some(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 174)->value, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                         if (member->property == std::string("every")) {
-                            return ((((std::string("doof::array_every(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(", \"\", 0)"));
+                            return ((((std::string("doof::array_every(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 175)->value, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                         if (member->property == std::string("filter")) {
-                            return ((((std::string("doof::array_filter(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(", \"\", 0)"));
+                            return ((((std::string("doof::array_filter(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 176)->value, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                         if (member->property == std::string("map")) {
-                            return ((((std::string("doof::array_map(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(", \"\", 0)"));
+                            return ((((std::string("doof::array_map(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 177)->value, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                 }
                 else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
                         const auto& map = std::get<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject);
                         if (member->property == std::string("has")) {
-                            return ((((((std::string("(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string("->find(")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(") != ")) + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string("->end())"));
+                            return ((((((std::string("(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string("->find(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 180)->value, context, std::monostate{})) + std::string(") != ")) + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string("->end())"));
                         }
                         if (member->property == std::string("set")) {
-                            return ((((((std::string("doof::map_set(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_utils_::emitExpectedExpression((*expression->args)[0]->value, context, doof::optional_value(map->keyType))) + std::string(", ")) + ::app_src_emitter_expr_utils_::emitExpectedExpression((*expression->args)[1]->value, context, doof::optional_value(map->valueType))) + std::string(", \"\", 0)"));
+                            return ((((((std::string("doof::map_set(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_utils_::emitExpectedExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 181)->value, context, doof::optional_value(map->keyType))) + std::string(", ")) + ::app_src_emitter_expr_utils_::emitExpectedExpression(doof::array_at(expression->args, 1, "src/emitter-expr-calls", 181)->value, context, doof::optional_value(map->valueType))) + std::string(", \"\", 0)"));
                         }
                         if ((member->property == std::string("get")) && (static_cast<int32_t>((expression->args)->size()) > 0)) {
-                            return ((((std::string("doof::map_get(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(", \"\", 0)"));
+                            return ((((std::string("doof::map_get(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 182)->value, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                         if (member->property == std::string("keys")) {
                             return ((std::string("doof::map_keys(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
@@ -309,13 +309,13 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                 }
                 else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::SetResolvedType>>(_case_subject)) {
                         if (member->property == std::string("has")) {
-                            return ((((std::string("(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string("->count(")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(") > 0)"));
+                            return ((((std::string("(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string("->count(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 190)->value, context, std::monostate{})) + std::string(") > 0)"));
                         }
                         if (member->property == std::string("add")) {
-                            return (((::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{}) + std::string("->insert(")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(")"));
+                            return (((::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{}) + std::string("->insert(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 191)->value, context, std::monostate{})) + std::string(")"));
                         }
                         if (member->property == std::string("delete")) {
-                            return (((::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{}) + std::string("->erase(")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(")"));
+                            return (((::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{}) + std::string("->erase(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 192)->value, context, std::monostate{})) + std::string(")"));
                         }
                         if (member->property == std::string("values")) {
                             return ((std::string("doof::set_values(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", \"\", 0)"));
@@ -333,7 +333,7 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                 else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject)) {
                         const auto& enum_ = std::get<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject);
                         if ((member->property == std::string("fromName")) || (member->property == std::string("fromValue"))) {
-                            const auto args = ((static_cast<int32_t>((expression->args)->size()) == 0) ? std::string("") : ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{}));
+                            const auto args = ((static_cast<int32_t>((expression->args)->size()) == 0) ? std::string("") : ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 200)->value, context, std::monostate{}));
                             return (((((::app_src_emitter_types_::emitContextType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(enum_), context) + std::string("_")) + member->property) + std::string("(")) + args) + std::string(")"));
                         }
                 }
@@ -365,7 +365,7 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                     auto _case_subject = doof::unwrap_optional(objectType);
                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
                         if ((member->property == std::string("slice")) && (static_cast<int32_t>((expression->args)->size()) == 2)) {
-                            return ((((((std::string("doof::array_slice(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[1]->value, context, std::monostate{})) + std::string(", \"\", 0)"));
+                            return ((((((std::string("doof::array_slice(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 218)->value, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 1, "src/emitter-expr-calls", 218)->value, context, std::monostate{})) + std::string(", \"\", 0)"));
                         }
                 }
                 else {
@@ -379,23 +379,23 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                 return ((std::string("doof::string_trimStart(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(")"));
             }
             if ((!nominalReceiver && (member->property == std::string("repeat"))) && (static_cast<int32_t>((expression->args)->size()) == 1)) {
-                return ((((std::string("doof::string_repeat(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(")"));
+                return ((((std::string("doof::string_repeat(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 226)->value, context, std::monostate{})) + std::string(")"));
             }
             if (!nominalReceiver && (member->property == std::string("slice"))) {
-                return ((((std::string("doof::string_slice(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(")"));
+                return ((((std::string("doof::string_slice(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 227)->value, context, std::monostate{})) + std::string(")"));
             }
             if (!nominalReceiver && (member->property == std::string("charAt"))) {
-                return ((((std::string("doof::string_at(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(", \"\", 0)"));
+                return ((((std::string("doof::string_at(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 228)->value, context, std::monostate{})) + std::string(", \"\", 0)"));
             }
             if (!nominalReceiver && (member->property == std::string("padStart"))) {
-                const auto fill = ((static_cast<int32_t>((expression->args)->size()) > 1) ? ::app_src_emitter_expr_::emitExpression((*expression->args)[1]->value, context, std::monostate{}) : std::string("' '"));
-                return ((((((std::string("doof::string_padStart(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(", ")) + fill) + std::string(")"));
+                const auto fill = ((static_cast<int32_t>((expression->args)->size()) > 1) ? ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 1, "src/emitter-expr-calls", 230)->value, context, std::monostate{}) : std::string("' '"));
+                return ((((((std::string("doof::string_padStart(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 231)->value, context, std::monostate{})) + std::string(", ")) + fill) + std::string(")"));
             }
             if ((!nominalReceiver && (member->property == std::string("trimEnd"))) && (static_cast<int32_t>((expression->args)->size()) == 0)) {
                 return ((std::string("doof::string_trimEnd(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(")"));
             }
             if ((!nominalReceiver && (member->property == std::string("trimEnd"))) && (static_cast<int32_t>((expression->args)->size()) == 1)) {
-                return ((((std::string("doof::string_trimEnd(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(")"));
+                return ((((std::string("doof::string_trimEnd(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 234)->value, context, std::monostate{})) + std::string(")"));
             }
             if (!nominalReceiver && (member->property == std::string("toLowerCase"))) {
                 return ((std::string("doof::string_toLowerCase(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(")"));
@@ -404,7 +404,7 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                 return ((std::string("doof::string_toUpperCase(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(")"));
             }
             if (!nominalReceiver && (member->property == std::string("split"))) {
-                return ((((std::string("doof::string_split(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression((*expression->args)[0]->value, context, std::monostate{})) + std::string(")"));
+                return ((((std::string("doof::string_split(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, 0, "src/emitter-expr-calls", 237)->value, context, std::monostate{})) + std::string(")"));
             }
             if ((!nominalReceiver && (member->property == std::string("pop"))) && (static_cast<int32_t>((expression->args)->size()) == 0)) {
                 return ((std::string("doof::array_pop(") + ::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{})) + std::string(")"));
@@ -434,7 +434,7 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
                     if (i > 0) {
                         (args = (args + std::string(", ")));
                     }
-                    (args = (args + ::app_src_emitter_expr_::emitExpression((*expression->args)[i]->value, context, std::monostate{})));
+                    (args = (args + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, i, "src/emitter-expr-calls", 255)->value, context, std::monostate{})));
                 }
                 const auto objectType = ::app_src_emitter_expr_utils_::decoratedExpressionType(member->object);
                 if (!doof::is_null(objectType)) {
@@ -559,7 +559,7 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
             if (i > 0) {
                 (callee = (callee + std::string(", ")));
             }
-            (callee = (callee + ::app_src_emitter_types_::emitContextType((*concreteGenericArgs)[i], context)));
+            (callee = (callee + ::app_src_emitter_types_::emitContextType(doof::array_at(concreteGenericArgs, i, "src/emitter-expr-calls", 340), context)));
         }
         (callee = (callee + std::string(">")));
     }
@@ -589,11 +589,11 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
     }
     if (named && (!doof::is_null(functionDeclaration))) {
         for (int32_t i = 0; i < static_cast<int32_t>((functionDeclaration->params)->size()); ++i) {
-            const auto parameter = (*functionDeclaration->params)[i];
+            const auto parameter = doof::array_at(functionDeclaration->params, i, "src/emitter-expr-calls", 358);
             const auto argument = callArgumentNamed(expression, parameter->name);
             std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> expected = parameter->resolvedType;
             if ((!doof::is_null(functionType)) && (i < static_cast<int32_t>((functionType->params)->size()))) {
-                (expected = ::app_src_emitter_expr_utils_::optionalExpectedType((*functionType->params)[i]->type_));
+                (expected = ::app_src_emitter_expr_utils_::optionalExpectedType(doof::array_at(functionType->params, i, "src/emitter-expr-calls", 361)->type_));
             }
             if ((!doof::is_null(argument)) || (!doof::is_null(parameter->defaultValue))) {
                 if (result != callPrefix) {
@@ -624,10 +624,10 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
             }
             std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> expected = std::monostate{};
             if ((!doof::is_null(functionType)) && (i < static_cast<int32_t>((functionType->params)->size()))) {
-                (expected = ::app_src_emitter_expr_utils_::optionalExpectedType((*functionType->params)[i]->type_));
+                (expected = ::app_src_emitter_expr_utils_::optionalExpectedType(doof::array_at(functionType->params, i, "src/emitter-expr-calls", 383)->type_));
             }
             if ((doof::is_null(expected) && (!doof::is_null(functionDeclaration))) && (i < static_cast<int32_t>((functionDeclaration->params)->size()))) {
-                (expected = (*functionDeclaration->params)[i]->resolvedType);
+                (expected = doof::array_at(functionDeclaration->params, i, "src/emitter-expr-calls", 384)->resolvedType);
             }
             {
                 auto _case_subject = expression->callee;
@@ -640,12 +640,12 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
             else {
             }
             }
-            auto argument = ::app_src_emitter_expr_utils_::emitExpectedExpression((*expression->args)[i]->value, context, expected);
+            auto argument = ::app_src_emitter_expr_utils_::emitExpectedExpression(doof::array_at(expression->args, i, "src/emitter-expr-calls", 389)->value, context, expected);
             (result = (result + argument));
         }
         if (!doof::is_null(functionDeclaration)) {
             for (int32_t i = static_cast<int32_t>((expression->args)->size()); i < static_cast<int32_t>((functionDeclaration->params)->size()); ++i) {
-                const auto parameter = (*functionDeclaration->params)[i];
+                const auto parameter = doof::array_at(functionDeclaration->params, i, "src/emitter-expr-calls", 394);
                 if (!doof::is_null(parameter->defaultValue)) {
                     if (result != callPrefix) {
                         (result = (result + std::string(", ")));
@@ -714,7 +714,7 @@ std::string emitInterfaceCall(const std::shared_ptr<::app_src_ast_::MemberExpres
         if (i > 0) {
             (args = (args + std::string(", ")));
         }
-        (args = (args + ::app_src_emitter_expr_::emitExpression((*call->args)[i]->value, context, std::monostate{})));
+        (args = (args + ::app_src_emitter_expr_::emitExpression(doof::array_at(call->args, i, "src/emitter-expr-calls", 448)->value, context, std::monostate{})));
     }
     return ((((((std::string("std::visit([&](auto&& _obj) { return _obj->") + ::app_src_emitter_expr_::cppIdentifier(member->property)) + std::string("(")) + args) + std::string("); }, ")) + object) + std::string(")"));
 }
@@ -729,7 +729,7 @@ std::string emitVariantMemberCall(const std::shared_ptr<::app_src_ast_::MemberEx
         if (i > 0) {
             (args = (args + std::string(", ")));
         }
-        (args = (args + ::app_src_emitter_expr_::emitExpression((*call->args)[i]->value, context, std::monostate{})));
+        (args = (args + ::app_src_emitter_expr_::emitExpression(doof::array_at(call->args, i, "src/emitter-expr-calls", 460)->value, context, std::monostate{})));
     }
     const auto invocation = (member->resolvedCallableField ? std::string(".call(") : std::string("("));
     return ((((((std::string("std::visit([&](auto&& _obj) { return _obj->") + ::app_src_emitter_expr_::cppIdentifier(member->property)) + invocation) + args) + std::string("); }, ")) + ::app_src_emitter_expr_utils_::variantVisitValue(object, doof::unwrap_optional(objectType))) + std::string(")"));
@@ -740,7 +740,7 @@ std::string emitInterfaceJsonCall(const std::shared_ptr<::app_src_ast_::MemberEx
         if (i > 0) {
             (args = (args + std::string(", ")));
         }
-        (args = (args + ::app_src_emitter_expr_::emitExpression((*call->args)[i]->value, context, std::monostate{})));
+        (args = (args + ::app_src_emitter_expr_::emitExpression(doof::array_at(call->args, i, "src/emitter-expr-calls", 470)->value, context, std::monostate{})));
     }
     return (((::app_src_emitter_expr_::emitExpression(member->object, context, std::monostate{}) + std::string("_fromJsonValue(")) + args) + std::string(")"));
 }
@@ -948,18 +948,18 @@ std::string emitConstructorFactoryCall(const std::shared_ptr<::app_src_semantic_
         }
         std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> expectedType = std::monostate{};
         if (i < static_cast<int32_t>((constructorMethod->params)->size())) {
-            (expectedType = (*constructorMethod->params)[i]->resolvedType);
+            (expectedType = doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 599)->resolvedType);
         }
-        (result = (result + ::app_src_emitter_expr_::emitExpression((*args)[i]->value, context, expectedType)));
+        (result = (result + ::app_src_emitter_expr_::emitExpression(doof::array_at(args, i, "src/emitter-expr-calls", 600)->value, context, expectedType)));
     }
     for (int32_t i = static_cast<int32_t>((args)->size()); i < static_cast<int32_t>((constructorMethod->params)->size()); ++i) {
         if (i > 0) {
             (result = (result + std::string(", ")));
         }
-        if (doof::is_null((*constructorMethod->params)[i]->defaultValue)) {
-            doof::panic((((std::string("Constructor ") + owner->name) + std::string(" is missing argument ")) + (*constructorMethod->params)[i]->name));
+        if (doof::is_null(doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 604)->defaultValue)) {
+            doof::panic((((std::string("Constructor ") + owner->name) + std::string(" is missing argument ")) + doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 604)->name));
         }
-        (result = (result + emitDefaultExpression(doof::unwrap_optional((*constructorMethod->params)[i]->defaultValue), context, (*constructorMethod->params)[i]->resolvedType, callSiteSpan)));
+        (result = (result + emitDefaultExpression(doof::unwrap_optional(doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 605)->defaultValue), context, doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 605)->resolvedType, callSiteSpan)));
     }
     return (result + std::string(")"));
 }
@@ -974,7 +974,7 @@ std::string emitNamedConstructorFactoryCall(const std::shared_ptr<::app_src_sema
         if (i > 0) {
             (result = (result + std::string(", ")));
         }
-        const auto parameter = (*constructorMethod->params)[i];
+        const auto parameter = doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 617);
         const auto property = ::app_src_emitter_expr_utils_::findProperty(expression->args, parameter->name);
         if (!doof::is_null(property)) {
             if (doof::is_null(property->value)) {
@@ -999,16 +999,16 @@ std::string emitDefaultExpression(const std::variant<std::shared_ptr<::app_src_a
 }
 std::string concreteFunctionName(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& key) {
     for (int32_t i = 0; i < static_cast<int32_t>((context->concreteFunctionKeys)->size()); ++i) {
-        if ((*context->concreteFunctionKeys)[i] == key) {
-            return (*context->concreteFunctionNames)[i];
+        if (doof::array_at(context->concreteFunctionKeys, i, "src/emitter-expr-calls", 639) == key) {
+            return doof::array_at(context->concreteFunctionNames, i, "src/emitter-expr-calls", 639);
         }
     }
     return std::string("");
 }
 std::string concreteMethodNameFor(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& key) {
     for (int32_t i = 0; i < static_cast<int32_t>((context->concreteMethodKeys)->size()); ++i) {
-        if ((*context->concreteMethodKeys)[i] == key) {
-            return (*context->concreteMethodNames)[i];
+        if (doof::array_at(context->concreteMethodKeys, i, "src/emitter-expr-calls", 646) == key) {
+            return doof::array_at(context->concreteMethodNames, i, "src/emitter-expr-calls", 646);
         }
     }
     return std::string("");
@@ -1035,15 +1035,15 @@ std::string concreteClassName(const std::shared_ptr<::app_src_semantic_::ClassTy
                 if (i > 0) {
                     (name = (name + std::string(", ")));
                 }
-                (name = (name + ::app_src_emitter_types_::emitContextType((*typeArgs)[i], context)));
+                (name = (name + ::app_src_emitter_types_::emitContextType(doof::array_at(typeArgs, i, "src/emitter-expr-calls", 663), context)));
             }
             return (name + std::string(">"));
         }
     }
     const auto key = ::app_src_emitter_monomorphize_::classInstantiationKey(class_->symbol->module, class_->name, typeArgs);
     for (int32_t i = 0; i < static_cast<int32_t>((context->concreteClassKeys)->size()); ++i) {
-        if ((*context->concreteClassKeys)[i] == key) {
-            const auto name = (*context->concreteClassNames)[i];
+        if (doof::array_at(context->concreteClassKeys, i, "src/emitter-expr-calls", 670) == key) {
+            const auto name = doof::array_at(context->concreteClassNames, i, "src/emitter-expr-calls", 671);
             if ((class_->symbol->module != std::string("")) && (class_->symbol->module != context->modulePath)) {
                 return (((std::string("::") + ::app_src_emitter_expr_utils_::exprModuleNamespaceFor(class_->symbol->module)) + std::string("::")) + name);
             }

@@ -53,8 +53,8 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     ::app_src_checker_common_::typeError(state, (named->name + std::string(" requires two type arguments")), named->span);
                     return decorateType(state, annotation, ::app_src_checker_types_::unknownType());
                 }
-                const auto key = resolveType(state, (*named->typeArgs)[0], module, scope);
-                const auto value = resolveType(state, (*named->typeArgs)[1], module, scope);
+                const auto key = resolveType(state, doof::array_at(named->typeArgs, 0, "src/checker-resolution", 64), module, scope);
+                const auto value = resolveType(state, doof::array_at(named->typeArgs, 1, "src/checker-resolution", 65), module, scope);
                 return decorateType(state, annotation, ::app_src_checker_types_::mapType(key, value, (named->name == std::string("ReadonlyMap"))));
             }
             if ((named->name == std::string("Set")) || (named->name == std::string("ReadonlySet"))) {
@@ -62,9 +62,9 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     ::app_src_checker_common_::typeError(state, (named->name + std::string(" requires one type argument")), named->span);
                     return decorateType(state, annotation, ::app_src_checker_types_::unknownType());
                 }
-                const auto element = resolveType(state, (*named->typeArgs)[0], module, scope);
+                const auto element = resolveType(state, doof::array_at(named->typeArgs, 0, "src/checker-resolution", 70), module, scope);
                 if (!::app_src_checker_types_::isSupportedHashCollectionType(element)) {
-                    ::app_src_checker_common_::typeError(state, ((std::string("Set element type \"") + ::app_src_checker_types_::typeName(element)) + std::string("\" is not supported; set elements must be byte, string, int, long, char, bool, or enum")), std::visit([](auto&& _obj) { return _obj->span; }, (*named->typeArgs)[0]));
+                    ::app_src_checker_common_::typeError(state, ((std::string("Set element type \"") + ::app_src_checker_types_::typeName(element)) + std::string("\" is not supported; set elements must be byte, string, int, long, char, bool, or enum")), std::visit([](auto&& _obj) { return _obj->span; }, doof::array_at(named->typeArgs, 0, "src/checker-resolution", 72)));
                 }
                 return decorateType(state, annotation, ::app_src_checker_types_::setType(element, (named->name == std::string("ReadonlySet"))));
             }
@@ -73,14 +73,14 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     ::app_src_checker_common_::typeError(state, std::string("Stream requires one type argument"), named->span);
                     return decorateType(state, annotation, ::app_src_checker_types_::unknownType());
                 }
-                return decorateType(state, annotation, ::app_src_checker_types_::streamType(resolveType(state, (*named->typeArgs)[0], module, scope)));
+                return decorateType(state, annotation, ::app_src_checker_types_::streamType(resolveType(state, doof::array_at(named->typeArgs, 0, "src/checker-resolution", 78), module, scope)));
             }
             if (named->name == std::string("Actor")) {
                 if (static_cast<int32_t>((named->typeArgs)->size()) != 1) {
                     ::app_src_checker_common_::typeError(state, std::string("Actor requires one type argument"), named->span);
                     return decorateType(state, annotation, ::app_src_checker_types_::unknownType());
                 }
-                const auto inner = resolveType(state, (*named->typeArgs)[0], module, scope);
+                const auto inner = resolveType(state, doof::array_at(named->typeArgs, 0, "src/checker-resolution", 82), module, scope);
                 {
                     auto _case_subject = inner;
                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
@@ -99,21 +99,21 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     ::app_src_checker_common_::typeError(state, std::string("Promise requires one type argument"), named->span);
                     return decorateType(state, annotation, ::app_src_checker_types_::unknownType());
                 }
-                return decorateType(state, annotation, ::app_src_checker_types_::promiseType(resolveType(state, (*named->typeArgs)[0], module, scope)));
+                return decorateType(state, annotation, ::app_src_checker_types_::promiseType(resolveType(state, doof::array_at(named->typeArgs, 0, "src/checker-resolution", 90), module, scope)));
             }
             if (named->name == std::string("Result")) {
                 if (static_cast<int32_t>((named->typeArgs)->size()) != 2) {
                     ::app_src_checker_common_::typeError(state, std::string("Result requires two type arguments"), named->span);
                     return decorateType(state, annotation, ::app_src_checker_types_::unknownType());
                 }
-                return decorateType(state, annotation, ::app_src_checker_types_::resultType(resolveType(state, (*named->typeArgs)[0], module, scope), resolveType(state, (*named->typeArgs)[1], module, scope)));
+                return decorateType(state, annotation, ::app_src_checker_types_::resultType(resolveType(state, doof::array_at(named->typeArgs, 0, "src/checker-resolution", 94), module, scope), resolveType(state, doof::array_at(named->typeArgs, 1, "src/checker-resolution", 94), module, scope)));
             }
             if ((named->name == std::string("Success")) || (named->name == std::string("Failure"))) {
                 if (static_cast<int32_t>((named->typeArgs)->size()) != 1) {
                     ::app_src_checker_common_::typeError(state, (named->name + std::string(" requires one type argument")), named->span);
                     return decorateType(state, annotation, ::app_src_checker_types_::unknownType());
                 }
-                const auto payload = resolveType(state, (*named->typeArgs)[0], module, scope);
+                const auto payload = resolveType(state, doof::array_at(named->typeArgs, 0, "src/checker-resolution", 98), module, scope);
                 if (named->name == std::string("Success")) {
                     return decorateType(state, annotation, ::app_src_checker_types_::resultType(payload, ::app_src_checker_types_::unknownType()));
                 }
@@ -251,11 +251,11 @@ void validateTypeArgumentConstraints(const std::shared_ptr<::app_src_checker_sta
         constraintScope->typeParamConstraints->push_back(std::make_shared<::app_src_semantic_::ResolvedTypeConstraint>(std::monostate{}));
     }
     for (int32_t index = 0; index < static_cast<int32_t>((names)->size()); ++index) {
-        if ((index >= static_cast<int32_t>((constraints)->size())) || doof::is_null((*constraints)[index]->type_)) {
+        if ((index >= static_cast<int32_t>((constraints)->size())) || doof::is_null(doof::array_at(constraints, index, "src/checker-resolution", 185)->type_)) {
             continue;
         }
         {
-            auto _case_subject = (*arguments)[index];
+            auto _case_subject = doof::array_at(arguments, index, "src/checker-resolution", 186);
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TypeParameterType>>(_case_subject)) {
                 const auto& parameter = std::get<std::shared_ptr<::app_src_semantic_::TypeParameterType>>(_case_subject);
                 if (doof::is_null(parameter->constraint) && (parameter->constraintName == std::string(""))) {
@@ -265,27 +265,27 @@ void validateTypeArgumentConstraints(const std::shared_ptr<::app_src_checker_sta
         else {
         }
         }
-        const auto annotation = doof::unwrap_optional((*constraints)[index]->type_);
+        const auto annotation = doof::unwrap_optional(doof::array_at(constraints, index, "src/checker-resolution", 190)->type_);
         {
             auto _case_subject = annotation;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                 const auto& named = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
                 if ((static_cast<int32_t>((named->typeArgs)->size()) == 0) && (named->name == std::string("Reflectable"))) {
                     {
-                        auto _case_subject = (*arguments)[index];
+                        auto _case_subject = doof::array_at(arguments, index, "src/checker-resolution", 194);
                         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
-                            memberType(state, (*arguments)[index], std::string("metadata"), span);
+                            memberType(state, doof::array_at(arguments, index, "src/checker-resolution", 195), std::string("metadata"), span);
                     }
                     else {
-                            reportConstraintViolation(state, (*names)[index], (*arguments)[index], std::string("Reflectable"), span);
+                            reportConstraintViolation(state, doof::array_at(names, index, "src/checker-resolution", 196), doof::array_at(arguments, index, "src/checker-resolution", 196), std::string("Reflectable"), span);
                     }
                     }
                     continue;
                 }
                 if ((static_cast<int32_t>((named->typeArgs)->size()) == 0) && (named->name == std::string("JsonSerializable"))) {
-                    const auto result = memberType(state, (*arguments)[index], std::string("fromJsonValue"), span);
+                    const auto result = memberType(state, doof::array_at(arguments, index, "src/checker-resolution", 201), std::string("fromJsonValue"), span);
                     if (std::visit([](auto&& _obj) { return _obj->kind; }, result) == std::string("unknown")) {
-                        reportConstraintViolation(state, (*names)[index], (*arguments)[index], std::string("JsonSerializable"), span);
+                        reportConstraintViolation(state, doof::array_at(names, index, "src/checker-resolution", 202), doof::array_at(arguments, index, "src/checker-resolution", 202), std::string("JsonSerializable"), span);
                     }
                     continue;
                 }
@@ -295,8 +295,8 @@ void validateTypeArgumentConstraints(const std::shared_ptr<::app_src_checker_sta
         }
         const auto resolvedConstraint = resolveType(state, annotation, module, constraintScope);
         const auto substitutedConstraint = ::app_src_checker_types_::substituteTypeParams(resolvedConstraint, names, arguments);
-        if (!::app_src_checker_types_::isAssignable((*arguments)[index], substitutedConstraint)) {
-            reportConstraintViolation(state, (*names)[index], (*arguments)[index], ::app_src_checker_types_::typeName(substitutedConstraint), span);
+        if (!::app_src_checker_types_::isAssignable(doof::array_at(arguments, index, "src/checker-resolution", 210), substitutedConstraint)) {
+            reportConstraintViolation(state, doof::array_at(names, index, "src/checker-resolution", 211), doof::array_at(arguments, index, "src/checker-resolution", 211), ::app_src_checker_types_::typeName(substitutedConstraint), span);
         }
     }
 }

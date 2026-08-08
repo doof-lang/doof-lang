@@ -310,7 +310,7 @@ std::shared_ptr<SetCookie> parseSetCookieHeader(const std::string& header) {
     if (static_cast<int32_t>((parts)->size()) == 0) {
         return nullptr;
     }
-    const auto firstPart = doof::string_trim((*parts)[0]);
+    const auto firstPart = doof::string_trim(doof::array_at(parts, 0, "index", 224));
     const auto firstSeparator = doof::string_indexOf(firstPart, std::string("="));
     if (firstSeparator <= 0) {
         return nullptr;
@@ -328,7 +328,7 @@ std::shared_ptr<SetCookie> parseSetCookieHeader(const std::string& header) {
     std::optional<std::string> sameSite = std::nullopt;
     auto index = 1;
     while (index < static_cast<int32_t>((parts)->size())) {
-        const auto attribute = doof::string_trim((*parts)[index]);
+        const auto attribute = doof::string_trim(doof::array_at(parts, index, "index", 245));
         (index += 1);
         if (attribute == std::string("")) {
             continue;

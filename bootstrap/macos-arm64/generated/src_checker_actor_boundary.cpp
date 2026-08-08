@@ -42,7 +42,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> v
                         if (doof::is_null(violation)) {
                             continue;
                         }
-                        const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : (*field->names)[0]);
+                        const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : doof::array_at(field->names, 0, "src/checker-actor-boundary", 35));
                         diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (((((std::string("Readonly field \"") + class_->name) + std::string(".")) + name) + std::string("\" must be deeply immutable: ")) + violation->reason), semanticSpan(field->span), module->path, std::string("")));
                     }
             }
@@ -200,7 +200,7 @@ std::shared_ptr<ActorBoundaryViolation> findClassViolation(const std::shared_ptr
             continue;
         }
         if (field->let_) {
-            const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : (*field->names)[0]);
+            const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : doof::array_at(field->names, 0, "src/checker-actor-boundary", 135));
             return std::make_shared<ActorBoundaryViolation>(((std::string("field \"") + name) + std::string("\" is mutable")));
         }
         const auto fieldType = field->resolvedType;
@@ -210,7 +210,7 @@ std::shared_ptr<ActorBoundaryViolation> findClassViolation(const std::shared_ptr
         const auto effective = ::app_src_checker_types_::substituteTypeParams(doof::unwrap_optional(fieldType), declaration->typeParams, type_->typeArgs);
         const auto violation = findViolation(result, effective, nextSeen);
         if (!doof::is_null(violation)) {
-            const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : (*field->names)[0]);
+            const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : doof::array_at(field->names, 0, "src/checker-actor-boundary", 143));
             return std::make_shared<ActorBoundaryViolation>((((std::string("field \"") + name) + std::string("\" cannot cross actor boundaries: ")) + violation->reason));
         }
     }

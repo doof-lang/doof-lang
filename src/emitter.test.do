@@ -334,7 +334,7 @@ export function testEscapesShortCppKeywordEverywhere(): none {
 
 export function testEscapesCharCppKeywordEverywhere(): none {
   result := emit("function first(value: string): char { char := value[0]\nreturn char }")
-  Assert.equal(result.source.contains("const auto char_ = value[0]"), true)
+  Assert.stringContains(result.source, "const auto char_ = doof::string_at(value, 0, \"<module>\", 1)")
   Assert.equal(result.source.contains("return char_"), true)
   Assert.equal(result.source.contains("auto char ="), false)
 }
@@ -579,8 +579,26 @@ export function testMainWrapperReportsPanicsForEverySupportedSignature(): none {
 export function testEmitsCheckedCoreExpressions(): none {
   result := emit("function main(): int { values: int[] := [1, 2, 3]\nreturn values[1] + 4 }")
   Assert.equal(result.source.contains("std::make_shared<std::vector<int32_t>>"), true)
-  Assert.equal(result.source.contains("(*values)[1]"), true)
+  Assert.stringContains(result.source, "doof::array_at(values, 1, \"<module>\", 2)")
   Assert.equal(result.source.contains("return ("), true)
+}
+
+export function testEmitsCheckedCollectionIndexReads(): none {
+  result := emit("function readArray(values: int[], index: int): int => values[index]\nfunction readString(value: string, index: int): char => value[index]\nfunction readMap(values: Map<string, int>, key: string): int => values[key]")
+  Assert.stringContains(result.source, "doof::array_at(values, index, \"<module>\", 1)")
+  Assert.stringContains(result.source, "doof::string_at(value, index, \"<module>\", 2)")
+  Assert.stringContains(result.source, "doof::map_at(values, key, \"<module>\", 3)")
+  Assert.stringNotContains(result.source, "(*values)[index]")
+  Assert.stringNotContains(result.source, "value[index]")
+  Assert.stringNotContains(result.source, "(*values)[key]")
+}
+
+export function testEmitsSafeCollectionIndexWrites(): none {
+  result := emit("function writeArray(values: int[], index: int): none { values[index] = 7 }\nfunction writeMap(values: Map<string, int>, key: string): none { values[key] = 7 }")
+  Assert.stringContains(result.source, "doof::array_at(values, index, \"<module>\", 1) = 7")
+  Assert.stringContains(result.source, "doof::map_index(values, key, \"<module>\", 2) = 7")
+  Assert.stringNotContains(result.source, "(*values)[index]")
+  Assert.stringNotContains(result.source, "(*values)[key]")
 }
 
 export function testPreservesFullFloatingPointLiteralText(): none {
@@ -1211,7 +1229,7 @@ export function testEmitsEnumsAndTypeAliases(): none {
 
 export function testEmitsAssignmentsAndArrayLoops(): none {
   result := emit("function main(): int { let values: int[] = [1, 2]\nvalues[0] = 4\nlet total = 0\nfor item of values { total = total + item }\nreturn total }")
-  Assert.equal(result.source.contains("(*values)[0]"), true)
+  Assert.stringContains(result.source, "doof::array_at(values, 0, \"<module>\", 2) = 4")
   Assert.equal(result.source.contains("const auto& _iterable_"), true)
   Assert.equal(result.source.contains("for (const auto& item : *_iterable_"), true)
 }

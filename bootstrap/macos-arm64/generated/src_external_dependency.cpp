@@ -472,7 +472,7 @@ doof::Result<void, std::string> runExternalCommands(const std::shared_ptr<::app_
         return doof::Success<void>{};
     }
     for (int32_t index = 0; index < static_cast<int32_t>((dependency->commands)->size()); ++index) {
-        const auto command = (*dependency->commands)[index];
+        const auto command = doof::array_at(dependency->commands, index, "src/external-dependency", 322);
         const auto workingDirectory = ((command->workingDirectory == std::string("")) ? destination : externalPath(destination, applyExternalDependencySubstitutions(command->workingDirectory, packageRoot, destination, target)));
         if (!externalPathWithinRoot(workingDirectory, destination)) {
             return doof::Failure<std::string>{ ((std::string("External dependency ") + dependency->name) + std::string(" command workingDirectory must stay within the destination")) };

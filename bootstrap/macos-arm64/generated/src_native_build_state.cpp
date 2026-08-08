@@ -159,7 +159,7 @@ std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::strin
     auto colon = -1;
     auto escaped = false;
     for (int32_t index = 0; index < static_cast<int32_t>(flattened.size()); ++index) {
-        const auto char_ = flattened[index];
+        const auto char_ = doof::string_at(flattened, index, "src/native-build-state", 54);
         if (!escaped && (char_ == U'\u003A')) {
             (colon = index);
             break;
@@ -177,7 +177,7 @@ std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::strin
     auto current = std::string("");
     (escaped = false);
     for (int32_t index = (colon + 1); index < static_cast<int32_t>(flattened.size()); ++index) {
-        const auto char_ = flattened[index];
+        const auto char_ = doof::string_at(flattened, index, "src/native-build-state", 63);
         if (escaped) {
             (current = (current + doof::to_string(char_)));
             (escaped = false);

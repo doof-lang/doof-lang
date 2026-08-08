@@ -244,8 +244,8 @@ doof::Result<void, std::string> compileIOSIcon(const std::shared_ptr<::app_src_i
     const auto names = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("iphone_notification_20@2x.png"), std::string("iphone_notification_20@3x.png"), std::string("iphone_settings_29@2x.png"), std::string("iphone_settings_29@3x.png"), std::string("iphone_spotlight_40@2x.png"), std::string("iphone_spotlight_40@3x.png"), std::string("iphone_app_60@2x.png"), std::string("iphone_app_60@3x.png"), std::string("ipad_notification_20.png"), std::string("ipad_notification_20@2x.png"), std::string("ipad_settings_29.png"), std::string("ipad_settings_29@2x.png"), std::string("ipad_spotlight_40.png"), std::string("ipad_spotlight_40@2x.png"), std::string("ipad_app_76.png"), std::string("ipad_app_76@2x.png"), std::string("ipad_pro_83_5@2x.png"), std::string("app_store_1024.png")});
     const auto sizes = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{40, 60, 58, 87, 80, 120, 120, 180, 20, 40, 29, 58, 40, 80, 76, 152, 167, 1024});
     for (int32_t index = 0; index < static_cast<int32_t>((names)->size()); ++index) {
-        const auto size = doof::to_string((*sizes)[index]);
-        auto _try_value_12 = runRequiredCommand(std::string("sips"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-z"), size, size, config->iconPath, std::string("--out"), outputPath(iconSetPath, (*names)[index])}), std::string("resizing the iOS app icon"));
+        const auto size = doof::to_string(doof::array_at(sizes, index, "src/ios-app-driver", 198));
+        auto _try_value_12 = runRequiredCommand(std::string("sips"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-z"), size, size, config->iconPath, std::string("--out"), outputPath(iconSetPath, doof::array_at(names, index, "src/ios-app-driver", 200))}), std::string("resizing the iOS app icon"));
         if (doof::is_failure(_try_value_12)) return doof::Failure<std::string>{doof::failure_error(_try_value_12)};
     }
     const auto partialPlistPath = outputPath(buildDirectory, std::string(".doof-ios-icon-info.plist"));

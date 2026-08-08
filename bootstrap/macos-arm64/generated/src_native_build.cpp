@@ -147,7 +147,7 @@ bool isMsvcCompiler(const std::string& compiler) {
     const auto normalized = doof::string_toLowerCase(doof::string_replaceAll(compiler, std::string("\\"), std::string("/")));
     auto slash = -1;
     for (int32_t index = 0; index < static_cast<int32_t>(normalized.size()); ++index) {
-        if (normalized[index] == U'\u002F') {
+        if (doof::string_at(normalized, index, "src/native-build", 47) == U'\u002F') {
             (slash = index);
         }
     }
@@ -164,7 +164,7 @@ std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCo
         batches->push_back(std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(std::vector<std::shared_ptr<NativeCompileTask>>{}));
     }
     for (int32_t index = 0; index < static_cast<int32_t>((tasks)->size()); ++index) {
-        (*batches)[(index % workerCount)]->push_back((*tasks)[index]);
+        doof::array_at(batches, (index % workerCount), "src/native-build", 61)->push_back(doof::array_at(tasks, index, "src/native-build", 61));
     }
     std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> readonlyBatches = std::make_shared<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>>(std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>{});
     const auto& _iterable_1 = batches;
@@ -235,8 +235,8 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
     std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>> compileTasks = std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(std::vector<std::shared_ptr<NativeCompileTask>>{});
     std::shared_ptr<std::vector<std::string>> objectPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     for (int32_t index = 0; index < static_cast<int32_t>((modules)->size()); ++index) {
-        const auto sourcePath = resolveBuildPath(outputDirectory, (*modules)[index]->sourceName);
-        const auto objectPath = resolveBuildPath(outputDirectory, (std::string(".doof-objects/generated/") + replaceSourceExtension((*modules)[index]->sourceName, std::string(".o"))));
+        const auto sourcePath = resolveBuildPath(outputDirectory, doof::array_at(modules, index, "src/native-build", 149)->sourceName);
+        const auto objectPath = resolveBuildPath(outputDirectory, (std::string(".doof-objects/generated/") + replaceSourceExtension(doof::array_at(modules, index, "src/native-build", 150)->sourceName, std::string(".o"))));
         const auto dependencyFile = (objectPath + std::string(".d"));
         const auto arguments = copyArguments(compileArguments);
         if (clangPchPath != std::string("")) {
@@ -251,9 +251,9 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
         objectPaths->push_back(objectPath);
     }
     for (int32_t index = 0; index < static_cast<int32_t>((native->sourceFiles)->size()); ++index) {
-        const auto sourcePath = resolveBuildPath(outputDirectory, (*native->sourceFiles)[index]);
+        const auto sourcePath = resolveBuildPath(outputDirectory, doof::array_at(native->sourceFiles, index, "src/native-build", 175));
         const auto swiftSource = isSwiftSource(sourcePath);
-        const auto objectPath = resolveBuildPath(outputDirectory, ((std::string(".doof-objects/native/") + ::std_::crypto::index::sha1HexString((*native->sourceFiles)[index])) + std::string(".o")));
+        const auto objectPath = resolveBuildPath(outputDirectory, ((std::string(".doof-objects/native/") + ::std_::crypto::index::sha1HexString(doof::array_at(native->sourceFiles, index, "src/native-build", 177))) + std::string(".o")));
         const auto dependencyFile = (swiftSource ? std::string("") : (objectPath + std::string(".d")));
         const auto cSource = isCSource(sourcePath);
         const auto arguments = (swiftSource ? swiftObjectArguments(sourcePath, objectPath) : copyNativeCompileArguments(compileArguments, cSource));

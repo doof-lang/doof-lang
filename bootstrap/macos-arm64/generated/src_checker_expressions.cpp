@@ -461,13 +461,13 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                             }
                             if (!actorCall && isolatedCall) {
                                 for (int32_t i = 0; i < static_cast<int32_t>((call->args)->size()); ++i) {
-                                    const auto argumentType = std::visit([](auto&& _obj) { return _obj->resolvedType; }, (*call->args)[i]->value);
+                                    const auto argumentType = std::visit([](auto&& _obj) { return _obj->resolvedType; }, doof::array_at(call->args, i, "src/checker-expressions", 345)->value);
                                     if (doof::is_null(argumentType)) {
                                         continue;
                                     }
                                     const auto violation = ::app_src_checker_actor_boundary_::findActorBoundaryViolation(state->result, doof::unwrap_optional(argumentType));
                                     if (!doof::is_null(violation)) {
-                                        ::app_src_checker_common_::typeError(state, (((((std::string("Async call argument ") + doof::to_string((i + 1))) + std::string(" of type \"")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(argumentType))) + std::string("\" cannot cross to the worker: ")) + violation->reason), (*call->args)[i]->span);
+                                        ::app_src_checker_common_::typeError(state, (((((std::string("Async call argument ") + doof::to_string((i + 1))) + std::string(" of type \"")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(argumentType))) + std::string("\" cannot cross to the worker: ")) + violation->reason), doof::array_at(call->args, i, "src/checker-expressions", 351)->span);
                                     }
                                 }
                                 {
@@ -532,12 +532,12 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             for (int32_t i = 0; i < static_cast<int32_t>((actorCreation->args)->size()); ++i) {
                 std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> expectedArgument = std::monostate{};
                 if ((!doof::is_null(constructorMethod)) && (i < static_cast<int32_t>((constructorMethod->params)->size()))) {
-                    (expectedArgument = (*constructorMethod->params)[i]->resolvedType);
+                    (expectedArgument = doof::array_at(constructorMethod->params, i, "src/checker-expressions", 405)->resolvedType);
                 }
-                const auto actual = checkExpression(state, (*actorCreation->args)[i], scope, expectedArgument);
+                const auto actual = checkExpression(state, doof::array_at(actorCreation->args, i, "src/checker-expressions", 406), scope, expectedArgument);
                 const auto violation = ::app_src_checker_actor_boundary_::findActorBoundaryViolation(state->result, actual);
                 if (!doof::is_null(violation)) {
-                    ::app_src_checker_common_::typeError(state, (((((std::string("Actor constructor argument ") + doof::to_string((i + 1))) + std::string(" of type \"")) + ::app_src_checker_types_::typeName(actual)) + std::string("\" cannot cross actor boundary: ")) + violation->reason), std::visit([](auto&& _obj) { return _obj->span; }, (*actorCreation->args)[i]));
+                    ::app_src_checker_common_::typeError(state, (((((std::string("Actor constructor argument ") + doof::to_string((i + 1))) + std::string(" of type \"")) + ::app_src_checker_types_::typeName(actual)) + std::string("\" cannot cross actor boundary: ")) + violation->reason), std::visit([](auto&& _obj) { return _obj->span; }, doof::array_at(actorCreation->args, i, "src/checker-expressions", 411)));
                 }
             }
             return ::app_src_checker_common_::finish(state, expression, ::app_src_checker_types_::actorType(inner));
@@ -963,7 +963,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                 }
             }
             if (static_cast<int32_t>((members)->size()) == 1) {
-                return (*members)[0];
+                return doof::array_at(members, 0, "src/checker-expressions", 733);
             }
             if (static_cast<int32_t>((members)->size()) > 1) {
                 return ::app_src_checker_types_::unionType(members);

@@ -272,11 +272,11 @@ doof::Result<std::string, std::string> selectIOSDeviceIdentifier(const std::stri
             if (index > 0) {
                 (choices += std::string(", "));
             }
-            (choices += ((((*devices)[index]->name + std::string(" (")) + (*devices)[index]->identifier) + std::string(")")));
+            (choices += (((doof::array_at(devices, index, "src/ios-device", 117)->name + std::string(" (")) + doof::array_at(devices, index, "src/ios-device", 117)->identifier) + std::string(")")));
         }
         return doof::Failure<std::string>{ ((std::string("Multiple connected iOS devices found (") + choices) + std::string("). Pass --ios-device to select one.")) };
     }
-    return doof::Success<std::string>{ (*devices)[0]->identifier };
+    return doof::Success<std::string>{ doof::array_at(devices, 0, "src/ios-device", 121)->identifier };
 }
 bool isHexFingerprint(const std::string& value) {
     if (static_cast<int32_t>(value.size()) != 40) {
@@ -398,11 +398,11 @@ doof::Result<std::string, std::string> resolveIOSAdHocSigningIdentity(const std:
             if (index > 0) {
                 (names += std::string(", "));
             }
-            (names += (*matching)[index]->name);
+            (names += doof::array_at(matching, index, "src/ios-device", 242)->name);
         }
         return doof::Failure<std::string>{ ((((std::string("Multiple Apple Distribution identities are included in provisioning profile \"") + profile->profilePath) + std::string("\" (")) + names) + std::string("). Pass --ios-sign-identity.")) };
     }
-    return doof::Success<std::string>{ (*matching)[0]->name };
+    return doof::Success<std::string>{ doof::array_at(matching, 0, "src/ios-device", 249)->name };
 }
 doof::Result<void, std::string> validateIOSAdHocSigning(const std::shared_ptr<IOSProvisioningProfile>& profile, const std::shared_ptr<std::vector<std::shared_ptr<IOSCodesignIdentity>>>& identities, const std::string& identityName, const std::string& bundleId, int64_t nowEpochMs) {
     if (!profileMatchesBundleId(profile->applicationIdentifier, bundleId)) {

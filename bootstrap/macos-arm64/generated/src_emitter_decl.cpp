@@ -42,15 +42,15 @@ std::string emitFunctionSignature(const std::shared_ptr<::app_src_ast_::Function
         if (i > 0) {
             (result = (result + std::string(", ")));
         }
-        const auto parameterType = (doof::is_null((*fn->params)[i]->resolvedType) ? (*functionType->params)[i]->type_ : doof::unwrap_optional((*fn->params)[i]->resolvedType));
+        const auto parameterType = (doof::is_null(doof::array_at(fn->params, i, "src/emitter-decl", 41)->resolvedType) ? doof::array_at(functionType->params, i, "src/emitter-decl", 41)->type_ : doof::unwrap_optional(doof::array_at(fn->params, i, "src/emitter-decl", 41)->resolvedType));
         const auto parameterText = (doof::is_null(defaultContext) ? ::app_src_emitter_types_::emitParameterType(parameterType, modulePath) : ::app_src_emitter_types_::borrowParameterType(parameterType, ::app_src_emitter_types_::emitContextType(parameterType, doof::unwrap_optional(defaultContext))));
-        ensureKnown(parameterType, ((fn->name + std::string(" parameter ")) + (*fn->params)[i]->name));
-        (result = (((result + parameterText) + std::string(" ")) + ::app_src_emitter_expr_::cppIdentifier((*fn->params)[i]->name)));
+        ensureKnown(parameterType, ((fn->name + std::string(" parameter ")) + doof::array_at(fn->params, i, "src/emitter-decl", 45)->name));
+        (result = (((result + parameterText) + std::string(" ")) + ::app_src_emitter_expr_::cppIdentifier(doof::array_at(fn->params, i, "src/emitter-decl", 46)->name)));
         if (includeDefaults && canEmitDefault(fn, i)) {
             if (doof::is_null(defaultContext)) {
                 doof::panic(std::string("Default parameter emission requires an emit context"));
             }
-            (result = ((result + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional((*fn->params)[i]->defaultValue), doof::unwrap_optional(defaultContext), doof::optional_value(parameterType))));
+            (result = ((result + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(doof::array_at(fn->params, i, "src/emitter-decl", 49)->defaultValue), doof::unwrap_optional(defaultContext), doof::optional_value(parameterType))));
         }
     }
     return (result + std::string(")"));
@@ -135,7 +135,7 @@ std::string emitNativeFunctionAdapterDefinition(const std::shared_ptr<::app_src_
         if (i > 0) {
             (call = (call + std::string(", ")));
         }
-        (call = (call + ::app_src_emitter_expr_::cppIdentifier((*fn->params)[i]->name)));
+        (call = (call + ::app_src_emitter_expr_::cppIdentifier(doof::array_at(fn->params, i, "src/emitter-decl", 111)->name)));
     }
     (call = (call + std::string(")")));
     const auto returnType = ::app_src_emitter_types_::specializeEmitType(checkedFunctionType(fn)->returnType, context);
@@ -246,11 +246,11 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
     return std::monostate{};
 }
 bool canEmitDefault(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn, int32_t index) {
-    if (doof::is_null((*fn->params)[index]->defaultValue)) {
+    if (doof::is_null(doof::array_at(fn->params, index, "src/emitter-decl", 175)->defaultValue)) {
         return false;
     }
     for (int32_t i = (index + 1); i < static_cast<int32_t>((fn->params)->size()); ++i) {
-        if (doof::is_null((*fn->params)[i]->defaultValue)) {
+        if (doof::is_null(doof::array_at(fn->params, i, "src/emitter-decl", 177)->defaultValue)) {
             return false;
         }
     }
@@ -273,7 +273,7 @@ void ensureKnown(const std::variant<std::shared_ptr<::app_src_semantic_::Primiti
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
             for (int32_t i = 0; i < static_cast<int32_t>((tuple->elements)->size()); ++i) {
-                ensureKnown((*tuple->elements)[i], (owner + std::string(" tuple element")));
+                ensureKnown(doof::array_at(tuple->elements, i, "src/emitter-decl", 188), (owner + std::string(" tuple element")));
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
@@ -319,7 +319,7 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
             if (index > 0) {
                 (ownershipName = (ownershipName + std::string(", ")));
             }
-            (ownershipName = (ownershipName + (*decl->typeParams)[index]));
+            (ownershipName = (ownershipName + doof::array_at(decl->typeParams, index, "src/emitter-decl", 212)));
         }
         (ownershipName = (ownershipName + std::string(">")));
     }
@@ -328,8 +328,8 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
     const auto& _iterable_5 = decl->fields;
     for (const auto& field : *_iterable_5) {
         for (int32_t index = 0; index < static_cast<int32_t>((field->names)->size()); ++index) {
-            const auto name = (*field->names)[index];
-            const auto description = ((index < static_cast<int32_t>((field->descriptions)->size())) ? (*field->descriptions)[index] : std::string(""));
+            const auto name = doof::array_at(field->names, index, "src/emitter-decl", 220);
+            const auto description = ((index < static_cast<int32_t>((field->descriptions)->size())) ? doof::array_at(field->descriptions, index, "src/emitter-decl", 221) : std::string(""));
             const auto effectiveType = fieldTypeForEmission(field);
             const auto fieldType = fieldTypeTextForEmission(field, effectiveType, context);
             ensureKnown(effectiveType, ((decl->name + std::string(".")) + name));
@@ -595,7 +595,7 @@ std::string templatePrefix(const std::shared_ptr<std::vector<std::string>>& type
         if (i > 0) {
             (result = (result + std::string(", ")));
         }
-        (result = ((result + std::string("typename ")) + (*typeParams)[i]));
+        (result = ((result + std::string("typename ")) + doof::array_at(typeParams, i, "src/emitter-decl", 419)));
     }
     return (result + std::string(">\n"));
 }

@@ -240,7 +240,7 @@ std::string projectParentPath(const std::string& path) {
     auto separator = -1;
     auto index = 0;
     while (index < static_cast<int32_t>(path.size())) {
-        if (path[index] == U'\u002F') {
+        if (doof::string_at(path, index, "src/emitter-project", 168) == U'\u002F') {
             (separator = index);
         }
         (index = (index + 1));

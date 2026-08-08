@@ -215,7 +215,21 @@ std::string emitAssignment(const std::shared_ptr<::app_src_ast_::AssignmentExpre
 std::string emitAssignmentTarget(const std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>& target, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     {
         auto _case_subject = target;
-        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
+        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::IndexExpression>>(_case_subject)) {
+            const auto& index = std::get<std::shared_ptr<::app_src_ast_::IndexExpression>>(_case_subject);
+            const auto objectType = ::app_src_emitter_expr_utils_::decoratedExpressionType(index->object);
+            if (!doof::is_null(objectType)) {
+                {
+                    auto _case_subject = doof::unwrap_optional(objectType);
+                    if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
+                        return ((((((((std::string("doof::map_index(") + ::app_src_emitter_expr_::emitExpression(index->object, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(index->index, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_literals_::quote(::app_src_emitter_names_::moduleDiagnosticPath(context->modulePath, true))) + std::string(", ")) + doof::to_string(index->span.start.line)) + std::string(")"));
+                }
+                else {
+                }
+                }
+            }
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
             const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
             const auto objectType = ::app_src_emitter_expr_utils_::decoratedExpressionType(member->object);
             if ((!doof::is_null(objectType)) && isVariantCarrier(doof::unwrap_optional(objectType))) {
@@ -416,7 +430,7 @@ std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& ex
                                     }
                                 }
                                 if (static_cast<int32_t>((nonNullMembers)->size()) == 1) {
-                                    return ((((std::string("std::get<") + ::app_src_emitter_types_::emitType((*nonNullMembers)[0], context->modulePath)) + std::string(">(")) + operand) + std::string(")"));
+                                    return ((((std::string("std::get<") + ::app_src_emitter_types_::emitType(doof::array_at(nonNullMembers, 0, "src/emitter-expr-ops", 309), context->modulePath)) + std::string(">(")) + operand) + std::string(")"));
                                 }
                             }
                     }
@@ -444,7 +458,7 @@ std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& ex
                             }
                         }
                         if (static_cast<int32_t>((nonNullMembers)->size()) == 1) {
-                            return ((((std::string("std::get<") + ::app_src_emitter_types_::emitType((*nonNullMembers)[0], context->modulePath)) + std::string(">(")) + operand) + std::string(")"));
+                            return ((((std::string("std::get<") + ::app_src_emitter_types_::emitType(doof::array_at(nonNullMembers, 0, "src/emitter-expr-ops", 324), context->modulePath)) + std::string(">(")) + operand) + std::string(")"));
                         }
                     }
                     if (::app_src_emitter_expr_utils_::isNullableVariantType(operandType)) {
@@ -690,20 +704,29 @@ std::string emitMember(const std::shared_ptr<::app_src_ast_::MemberExpression>& 
 }
 std::string emitIndex(const std::shared_ptr<::app_src_ast_::IndexExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     const auto object = ::app_src_emitter_expr_::emitExpression(expression->object, context, std::monostate{});
+    const auto index = ::app_src_emitter_expr_::emitExpression(expression->index, context, std::monostate{});
+    const auto sourcePath = ::app_src_emitter_expr_literals_::quote(::app_src_emitter_names_::moduleDiagnosticPath(context->modulePath, true));
+    const auto sourceLine = doof::to_string(expression->span.start.line);
     const auto objectType = ::app_src_emitter_expr_utils_::decoratedExpressionType(expression->object);
     if (!doof::is_null(objectType)) {
         {
             auto _case_subject = doof::unwrap_optional(objectType);
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
-                return ((((std::string("(*") + object) + std::string(")[")) + ::app_src_emitter_expr_::emitExpression(expression->index, context, std::monostate{})) + std::string("]"));
+                return ((((((((std::string("doof::array_at(") + object) + std::string(", ")) + index) + std::string(", ")) + sourcePath) + std::string(", ")) + sourceLine) + std::string(")"));
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
-                return ((((std::string("(*") + object) + std::string(")[")) + ::app_src_emitter_expr_::emitExpression(expression->index, context, std::monostate{})) + std::string("]"));
+                return ((((((((std::string("doof::map_at(") + object) + std::string(", ")) + index) + std::string(", ")) + sourcePath) + std::string(", ")) + sourceLine) + std::string(")"));
+        }
+        else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
+                const auto& primitive = std::get<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject);
+                if (primitive->name == std::string("string")) {
+                    return ((((((((std::string("doof::string_at(") + object) + std::string(", ")) + index) + std::string(", ")) + sourcePath) + std::string(", ")) + sourceLine) + std::string(")"));
+                }
         }
         else {
         }
         }
     }
-    return (((object + std::string("[")) + ::app_src_emitter_expr_::emitExpression(expression->index, context, std::monostate{})) + std::string("]"));
+    return (((object + std::string("[")) + index) + std::string("]"));
 }
 }

@@ -160,6 +160,17 @@ export function emitAssignment(expression: AssignmentExpression, context: EmitCo
 
 function emitAssignmentTarget(target: Expression, context: EmitContext): string {
   case target {
+    index: IndexExpression -> {
+      objectType := decoratedExpressionType(index.object)
+      if objectType != none {
+        case objectType! {
+          _: MapResolvedType -> {
+            return "doof::map_index(" + emitExpression(index.object, context) + ", " + emitExpression(index.index, context) + ", " + quote(moduleDiagnosticPath(context.modulePath, true)) + ", " + string(index.span.start.line) + ")"
+          }
+          _ -> { }
+        }
+      }
+    }
     member: MemberExpression -> {
       objectType := decoratedExpressionType(member.object)
       if objectType != none && isVariantCarrier(objectType!) {
@@ -475,13 +486,19 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
 
 export function emitIndex(expression: IndexExpression, context: EmitContext): string {
   object := emitExpression(expression.object, context)
+  index := emitExpression(expression.index, context)
+  sourcePath := quote(moduleDiagnosticPath(context.modulePath, true))
+  sourceLine := string(expression.span.start.line)
   objectType := decoratedExpressionType(expression.object)
   if objectType != none {
     case objectType! {
-      _: ArrayResolvedType -> { return "(*" + object + ")[" + emitExpression(expression.index, context) + "]" }
-      _: MapResolvedType -> { return "(*" + object + ")[" + emitExpression(expression.index, context) + "]" }
+      _: ArrayResolvedType -> { return "doof::array_at(" + object + ", " + index + ", " + sourcePath + ", " + sourceLine + ")" }
+      _: MapResolvedType -> { return "doof::map_at(" + object + ", " + index + ", " + sourcePath + ", " + sourceLine + ")" }
+      primitive: PrimitiveType -> {
+        if primitive.name == "string" { return "doof::string_at(" + object + ", " + index + ", " + sourcePath + ", " + sourceLine + ")" }
+      }
       _ -> { }
     }
   }
-  return object + "[" + emitExpression(expression.index, context) + "]"
+  return object + "[" + index + "]"
 }
