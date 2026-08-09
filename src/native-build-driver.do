@@ -234,7 +234,13 @@ function executeNativePlan(
   let linkChanged = false
   if dirtyTasks.length > 0 || !taskIsCurrent(linkPrevious, computedLinkFingerprint) {
     linkChanged = true
-    linkResult := runBuildCommand(plan.linker, plan.linkArguments)
+    let executedLinkArguments = plan.linkArguments
+    if isMsvcLinker(plan.linker) {
+      responsePath := msvcLinkResponsePath(outputDirectory)
+      writeTextIfChanged(responsePath, msvcLinkResponseFile(plan.linkArguments))
+      executedLinkArguments = ["@" + responsePath]
+    }
+    linkResult := runBuildCommand(plan.linker, executedLinkArguments)
     if linkResult.exitCode != 0 {
       printBuildOutput(linkResult)
       if linkResult.truncated && !truncationReported { println("... native linker output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes") }
@@ -402,6 +408,29 @@ export function nativeSupportFileNeedsWrite(previous: string | none, content: st
   return previous == none || previous! != content
 }
 
+/** Renders one quoted MSVC linker argument per line for an @response file. */
+export function msvcLinkResponseFile(arguments: string[]): string {
+  let content = ""
+  for argument of arguments { content = content + quoteMsvcResponseArgument(argument) + "\n" }
+  return content
+}
+
+function quoteMsvcResponseArgument(argument: string): string {
+  let quoted = "\""
+  let backslashes = 0
+  for index of 0..<argument.length {
+    value := argument[index]
+    if value == '\\' { backslashes += 1; continue }
+    if value == '"' {
+      quoted = quoted + "\\".repeat(backslashes * 2 + 1) + "\""
+    } else {
+      quoted = quoted + "\\".repeat(backslashes) + string(value)
+    }
+    backslashes = 0
+  }
+  return quoted + "\\".repeat(backslashes * 2) + "\""
+}
+
 function collectManagedOutputs(outputs: string[], outputDirectory: string, plan: NativeCompilePlan, project: ProjectEmission): none {
   let indexed: Set<string> = []
   for output of outputs { indexed.add(output) }
@@ -435,6 +464,7 @@ function collectManagedOutputsIndexed(
     if task.dependencyFilePath != "" { appendManagedOutput(outputs, indexed, task.dependencyFilePath) }
     for path of task.auxiliaryOutputPaths { appendManagedOutput(outputs, indexed, path) }
   }
+  if isMsvcLinker(plan.linker) { appendManagedOutput(outputs, indexed, msvcLinkResponsePath(outputDirectory)) }
   appendManagedOutput(outputs, indexed, plan.outputPath)
 }
 
@@ -498,6 +528,11 @@ function appendManagedOutput(outputs: string[], indexed: Set<string>, value: str
 }
 
 function joinOutput(directory: string, name: string): string { return if directory.endsWith("/") then directory + name else directory + "/" + name }
+function msvcLinkResponsePath(outputDirectory: string): string { return joinOutput(outputDirectory, ".doof-link.rsp") }
+function isMsvcLinker(linker: string): bool {
+  normalized := linker.replaceAll("\\", "/").toLowerCase()
+  return normalized == "link" || normalized == "link.exe" || normalized.endsWith("/link") || normalized.endsWith("/link.exe")
+}
 function parentDirectory(path: string): string {
   let index = path.length - 1
   while index > 0 && path[index] != '/' { index -= 1 }

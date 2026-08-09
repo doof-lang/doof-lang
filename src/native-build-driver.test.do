@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import {
-  nativeCompilationProgress, nativeCompilationSummary, nativeManagedOutputsChanged, nativeSupportFileNeedsWrite,
+  msvcLinkResponseFile, nativeCompilationProgress, nativeCompilationSummary, nativeManagedOutputsChanged, nativeSupportFileNeedsWrite,
   nativeTaskStateIsCurrent, shouldPrintNativeCommandOutput, staleManagedOutputCandidates,
 } from "./native-build-driver"
 import { NativeInputSignature, NativeTaskState } from "./native-build-state"
@@ -56,6 +56,24 @@ export function testWritesNativeSupportFilesOnlyWhenTheirContentChanges(): none 
   Assert.equal(nativeSupportFileNeedsWrite(none, "pch input\n"), true)
   Assert.equal(nativeSupportFileNeedsWrite("old input\n", "pch input\n"), true)
   Assert.equal(nativeSupportFileNeedsWrite("pch input\n", "pch input\n"), false)
+}
+
+export function testRendersMsvcLinkArgumentsInAResponseFile(): none {
+  Assert.equal(msvcLinkResponseFile([]), "")
+  Assert.equal(
+    msvcLinkResponseFile([
+      "/nologo",
+      "C:/generated objects/main.obj",
+      "/LIBPATH:C:/vendor libraries",
+      "/INCLUDE:\"required symbol\"",
+      "C:\\vendor objects\\",
+    ]),
+    "\"/nologo\"\n" +
+      "\"C:/generated objects/main.obj\"\n" +
+      "\"/LIBPATH:C:/vendor libraries\"\n" +
+      "\"/INCLUDE:\\\"required symbol\\\"\"\n" +
+      "\"C:\\vendor objects\\\\\"\n",
+  )
 }
 
 export function testSelectsOnlyOwnedStaleManagedOutputs(): none {
