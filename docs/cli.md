@@ -46,6 +46,19 @@ but does not natively launch files through POSIX shebangs.
 from its package root. `package` creates an optimized release artifact and
 records provenance. `test` discovers and runs exported test functions.
 
+Successful compilation performed by `run` is silent: the launched program owns
+its inherited standard input, output, and error streams without compiler
+messages mixed into them. Warning-only source diagnostics and successful native
+compiler or linker output are suppressed. If compilation fails and the program
+cannot launch, Doof prints the captured diagnostics.
+
+`build`, `test`, and `package` report native recompilation concisely. When native
+source files are dirty they print `Compiling N files` followed by one dot per
+successfully compiled source, grouped as worker batches finish. Exact native
+cache hits print no compilation progress. Successful compiler and linker
+chatter remains hidden; failed steps print their captured output. `emit` does
+not invoke the native compiler and remains quiet except for source diagnostics.
+
 Native Windows builds use MSVC by default. Run the compiler from an MSVC x64
 developer environment, or pass an explicit compiler with `--compiler`/`CXX`.
 The MSVC plan uses `cl.exe`, `.obj` files, `/sourceDependencies` JSON for

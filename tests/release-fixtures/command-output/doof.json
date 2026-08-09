@@ -1,0 +1,8 @@
+{
+  "name": "doof-release-command-output",
+  "build": {
+    "entry": "main.do",
+    "native": { "extraCopyPaths": ["native.hpp"] },
+    "package": { "distDirectory": "dist" }
+  }
+}

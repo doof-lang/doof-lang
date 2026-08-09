@@ -1,5 +1,9 @@
 import { Assert } from "std/assert"
-import { driverRootLogicalPath, driverRootLogicalPrefix, frontendEmissionCacheSupported, materializeGeneratedText, nativeBuildOutputName, synchronizeExecutableResources } from "./driver"
+import {
+  driverRootLogicalPath, driverRootLogicalPrefix, frontendEmissionCacheSupported, materializeGeneratedText,
+  nativeBuildOutputModeForCommand, nativeBuildOutputName, synchronizeExecutableResources,
+} from "./driver"
+import { NativeBuildOutputMode } from "./native-build-driver"
 import { PackageResource } from "./package-manifest"
 import { exists, isDirectory, metadata, mkdir, readDir, readText, remove, writeText } from "std/fs"
 import { join, tempDirectory } from "std/path"
@@ -58,6 +62,13 @@ export function testPlansMsvcNativeExecutableSuffixOnWindows(): none {
   Assert.equal(nativeBuildOutputName("tools/doof", "windows"), "tools-doof.exe")
   Assert.equal(nativeBuildOutputName("doof.exe", "windows"), "doof.exe")
   Assert.equal(nativeBuildOutputName("doof", "macos"), "doof")
+}
+
+export function testSelectsCommandAwareNativeBuildOutput(): none {
+  Assert.equal(nativeBuildOutputModeForCommand("run"), NativeBuildOutputMode.Silent)
+  for command of ["build", "test", "package"] {
+    Assert.equal(nativeBuildOutputModeForCommand(command), NativeBuildOutputMode.Progress)
+  }
 }
 
 export function testFrontendEmissionCacheSupportsMacOSApps(): none {

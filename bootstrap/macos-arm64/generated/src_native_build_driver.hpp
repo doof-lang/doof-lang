@@ -67,7 +67,6 @@ namespace app_src_native_build_driver_ {
     struct NativeCompilerBatchResult;
     struct NativeCompilerIdentity;
     struct NativeCompilerWorker;
-    extern int32_t MAX_NATIVE_OUTPUT_LINES;
     extern int64_t MAX_NATIVE_OUTPUT_BYTES;
 }
 
@@ -325,6 +324,33 @@ inline std::optional<ProcessGroupMode> ProcessGroupMode_fromValue(int32_t value)
   }
 }
 inline std::ostream& operator<<(std::ostream& output, ProcessGroupMode value) { return output << ProcessGroupMode_name(value); }
+}
+
+namespace app_src_native_build_driver_ {
+    enum class NativeBuildOutputMode {
+    Silent,
+    Progress
+};
+inline const char* NativeBuildOutputMode_name(NativeBuildOutputMode value) {
+  switch (value) {
+    case NativeBuildOutputMode::Silent: return "Silent";
+    case NativeBuildOutputMode::Progress: return "Progress";
+  }
+  return "";
+}
+inline std::optional<NativeBuildOutputMode> NativeBuildOutputMode_fromName(std::string_view value) {
+  if (value == "Silent") return NativeBuildOutputMode::Silent;
+  if (value == "Progress") return NativeBuildOutputMode::Progress;
+  return std::nullopt;
+}
+inline std::optional<NativeBuildOutputMode> NativeBuildOutputMode_fromValue(int32_t value) {
+  switch (static_cast<NativeBuildOutputMode>(value)) {
+    case NativeBuildOutputMode::Silent: return NativeBuildOutputMode::Silent;
+    case NativeBuildOutputMode::Progress: return NativeBuildOutputMode::Progress;
+    default: return std::nullopt;
+  }
+}
+inline std::ostream& operator<<(std::ostream& output, NativeBuildOutputMode value) { return output << NativeBuildOutputMode_name(value); }
 }
 
 namespace app_src_native_build_ {
@@ -676,8 +702,7 @@ namespace app_src_native_build_driver_ {
     std::shared_ptr<std::vector<uint8_t>> output = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
     std::string error = std::string("");
     bool truncated;
-    std::string quietSourcePath = std::string("");
-    NativeCommandResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> output, std::string error, bool truncated, std::string quietSourcePath = std::string("")) : exitCode(exitCode), output(output), error(error), truncated(truncated), quietSourcePath(quietSourcePath) {}
+    NativeCommandResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> output, std::string error, bool truncated) : exitCode(exitCode), output(output), error(error), truncated(truncated) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<NativeCommandResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
@@ -786,12 +811,14 @@ namespace app_src_pkg_config_ {
 }
 
 namespace app_src_native_build_driver_ {
-    std::shared_ptr<NativeCommandResult> runBuildCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& quietSourcePath = std::string(""));
-    bool isMsvcSourceEcho(const std::string& line, const std::string& sourcePath);
-    int32_t printBuildOutput(const std::shared_ptr<NativeCommandResult>& result, int32_t remainingLines);
-    int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, bool release, const std::string& platform);
+    std::shared_ptr<NativeCommandResult> runBuildCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments);
+    void printBuildOutput(const std::shared_ptr<NativeCommandResult>& result);
+    std::string nativeCompilationSummary(int32_t fileCount);
+    std::string nativeCompilationProgress(int32_t fileCount);
+    bool shouldPrintNativeCommandOutput(int32_t exitCode);
+    int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, bool release, const std::string& platform, NativeBuildOutputMode outputMode);
     std::string envCompiler();
-    int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_ptr<::app_src_native_build_::NativeCompilePlan>& plan, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project);
+    int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_ptr<::app_src_native_build_::NativeCompilePlan>& plan, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, NativeBuildOutputMode outputMode);
     std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>> indexNativeTaskStates(const std::shared_ptr<::app_src_native_build_state_::NativeBuildState>& state);
     std::shared_ptr<::app_src_native_build_state_::NativeTaskState> indexedNativeTaskState(const std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>>& indexed, const std::string& id);
     std::string compilerIdentity(const std::string& command, const std::shared_ptr<std::vector<std::shared_ptr<NativeCompilerIdentity>>>& identities);

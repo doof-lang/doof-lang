@@ -1,0 +1,15 @@
+import { Assert } from "std/assert"
+import { add } from "./math"
+import { writeText } from "std/fs"
+
+export function testAddsValues(): none {
+  Assert.equal(add(1, 4), 5)
+}
+
+export function testAddsNegativeValues(): none {
+  Assert.equal(add(5, -2), 3)
+}
+
+export function testUsesPackageRootAsWorkingDirectory(): none {
+  try! writeText("runtime-cwd.txt", "ok")
+}

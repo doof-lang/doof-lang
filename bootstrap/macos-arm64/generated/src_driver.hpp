@@ -1038,6 +1038,33 @@ inline std::optional<DayOfWeek> DayOfWeek_fromValue(int32_t value) {
 inline std::ostream& operator<<(std::ostream& output, DayOfWeek value) { return output << DayOfWeek_name(value); }
 }
 
+namespace app_src_native_build_driver_ {
+    enum class NativeBuildOutputMode {
+    Silent,
+    Progress
+};
+inline const char* NativeBuildOutputMode_name(NativeBuildOutputMode value) {
+  switch (value) {
+    case NativeBuildOutputMode::Silent: return "Silent";
+    case NativeBuildOutputMode::Progress: return "Progress";
+  }
+  return "";
+}
+inline std::optional<NativeBuildOutputMode> NativeBuildOutputMode_fromName(std::string_view value) {
+  if (value == "Silent") return NativeBuildOutputMode::Silent;
+  if (value == "Progress") return NativeBuildOutputMode::Progress;
+  return std::nullopt;
+}
+inline std::optional<NativeBuildOutputMode> NativeBuildOutputMode_fromValue(int32_t value) {
+  switch (static_cast<NativeBuildOutputMode>(value)) {
+    case NativeBuildOutputMode::Silent: return NativeBuildOutputMode::Silent;
+    case NativeBuildOutputMode::Progress: return NativeBuildOutputMode::Progress;
+    default: return std::nullopt;
+  }
+}
+inline std::ostream& operator<<(std::ostream& output, NativeBuildOutputMode value) { return output << NativeBuildOutputMode_name(value); }
+}
+
 namespace app_src_semantic_ {
     using ResolvedType = std::variant<std::shared_ptr<PrimitiveType>, std::shared_ptr<ClassType>, std::shared_ptr<EnumType>, std::shared_ptr<InterfaceType>, std::shared_ptr<FunctionType>, std::shared_ptr<ActorType>, std::shared_ptr<PromiseType>, std::shared_ptr<ArrayResolvedType>, std::shared_ptr<MapResolvedType>, std::shared_ptr<SetResolvedType>, std::shared_ptr<StreamResolvedType>, std::shared_ptr<RangeResolvedType>, std::shared_ptr<JsonValueResolvedType>, std::shared_ptr<ResultResolvedType>, std::shared_ptr<TupleResolvedType>, std::shared_ptr<UnionResolvedType>, std::shared_ptr<WeakResolvedType>, std::shared_ptr<NoneType>, std::shared_ptr<NeverType>, std::shared_ptr<UnknownType>, std::shared_ptr<TypeParameterType>, std::shared_ptr<ClassMetadataResolvedType>, std::shared_ptr<MethodReflectionResolvedType>>;
 }
@@ -3083,7 +3110,7 @@ namespace app_src_module_acquisition_ {
 }
 
 namespace app_src_native_build_driver_ {
-    int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, bool release, const std::string& platform);
+    int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, bool release, const std::string& platform, NativeBuildOutputMode outputMode);
 }
 
 namespace app_src_package_acquisition_ {
@@ -3153,6 +3180,7 @@ namespace app_src_test_runner_ {
 }
 
 namespace app_src_driver_ {
+    ::app_src_native_build_driver_::NativeBuildOutputMode nativeBuildOutputModeForCommand(const std::string& command);
     std::string hostPlatform();
     std::shared_ptr<NativeCommandResult> runNativeCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::optional<std::string>& directory = std::nullopt, bool inheritOutput = false, ::std_::os::index::ProcessGroupMode processGroupMode = ::std_::os::index::ProcessGroupMode::Isolated, int64_t maxOutputBytes = 262144LL);
     int32_t printNativeCommandOutput(const std::shared_ptr<NativeCommandResult>& result, int32_t remainingLines);

@@ -1,5 +1,8 @@
 import { Assert } from "std/assert"
-import { isMsvcSourceEcho, nativeManagedOutputsChanged, nativeSupportFileNeedsWrite, nativeTaskStateIsCurrent, staleManagedOutputCandidates } from "./native-build-driver"
+import {
+  nativeCompilationProgress, nativeCompilationSummary, nativeManagedOutputsChanged, nativeSupportFileNeedsWrite,
+  nativeTaskStateIsCurrent, shouldPrintNativeCommandOutput, staleManagedOutputCandidates,
+} from "./native-build-driver"
 import { NativeInputSignature, NativeTaskState } from "./native-build-state"
 
 function sampleTaskState(): NativeTaskState {
@@ -34,13 +37,19 @@ export function testInvalidatesNativeTaskStateConservatively(): none {
   Assert.equal(nativeTaskStateIsCurrent(none, "compiler-and-arguments", 40L, 50L, []), false)
 }
 
-export function testRecognizesOnlyStandaloneMsvcSourceEchoes(): none {
-  sourcePath := "C:\\project\\build\\generated\\main.cpp"
-  Assert.equal(isMsvcSourceEcho("main.cpp\r", sourcePath), true)
-  Assert.equal(isMsvcSourceEcho("C:\\project\\build\\generated\\main.cpp", sourcePath), true)
-  Assert.equal(isMsvcSourceEcho("generated/main.cpp", sourcePath), false)
-  Assert.equal(isMsvcSourceEcho("main.cpp(12): warning C4100: unused parameter", sourcePath), false)
-  Assert.equal(isMsvcSourceEcho("main.cpp", ""), false)
+export function testRendersNativeCompilationProgress(): none {
+  Assert.equal(nativeCompilationSummary(0), "")
+  Assert.equal(nativeCompilationSummary(1), "Compiling 1 file")
+  Assert.equal(nativeCompilationSummary(3), "Compiling 3 files")
+  Assert.equal(nativeCompilationProgress(0), "")
+  Assert.equal(nativeCompilationProgress(1), ".")
+  Assert.equal(nativeCompilationProgress(4), "....")
+}
+
+export function testDisclosesNativeCommandOutputOnlyOnFailure(): none {
+  Assert.equal(shouldPrintNativeCommandOutput(0), false)
+  Assert.equal(shouldPrintNativeCommandOutput(1), true)
+  Assert.equal(shouldPrintNativeCommandOutput(-1), true)
 }
 
 export function testWritesNativeSupportFilesOnlyWhenTheirContentChanges(): none {

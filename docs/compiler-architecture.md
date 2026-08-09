@@ -31,9 +31,13 @@ The important hand-offs are:
 | `frontend-cache.do` | exact source/configuration fingerprints and emitted-module names | `driver.do` cache validation and materialization |
 
 `compiler.do` coordinates the pure graph pipeline. `driver.do` adapts CLI,
-filesystem, acquired-package, test, app, and process boundaries to it. Source
-loading is inverted through `SourceLoader`, so the analyzer discovers the
-transitive graph without gaining filesystem ownership.
+filesystem, acquired-package, test, app, and process boundaries to it. It also
+selects the command-aware native-build output mode: successful `run`
+compilation is silent, while `build`, `test`, and `package` request concise
+progress. `native-build-driver.do` applies that policy while retaining captured
+output for failed compiler and linker commands. Source loading is inverted
+through `SourceLoader`, so the analyzer discovers the transitive graph without
+gaining filesystem ownership.
 
 ## Horizontal concepts
 

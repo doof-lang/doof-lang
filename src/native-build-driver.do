@@ -14,15 +14,18 @@ import { sha256Hex, sha256HexString } from "std/crypto"
 import { exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, remove, rename, writeText } from "std/fs"
 import { ExecOptions, env, run } from "std/os"
 
-readonly MAX_NATIVE_OUTPUT_LINES = 40
 readonly MAX_NATIVE_OUTPUT_BYTES = 262144L
+
+export enum NativeBuildOutputMode {
+  Silent,
+  Progress,
+}
 
 class NativeCommandResult {
   readonly exitCode: int
   readonly output: readonly byte[] = []
   readonly error: string = ""
   readonly truncated: bool
-  readonly quietSourcePath: string = ""
 }
 
 class NativeCompilerBatchResult {
@@ -38,7 +41,6 @@ class NativeCompilerIdentity {
 isolated function runBuildCommand(
   command: string,
   arguments: string[],
-  quietSourcePath: string = "",
 ): NativeCommandResult {
   executed := run(command, arguments, ExecOptions {
     withStdin: false,
@@ -51,32 +53,31 @@ isolated function runBuildCommand(
     exitCode: executed.exitCode,
     output: executed.stdout,
     truncated: executed.stdoutTruncated,
-    quietSourcePath,
   }
 }
 
-/** Identifies the standalone source-name line emitted by cl.exe for every successful compile. */
-export function isMsvcSourceEcho(line: string, sourcePath: string): bool {
-  if sourcePath == "" { return false }
-  normalizedLine := line.trim().replaceAll("\\", "/")
-  normalizedSource := sourcePath.replaceAll("\\", "/")
-  let slash = -1
-  for index of 0..<normalizedSource.length { if normalizedSource[index] == '/' { slash = index } }
-  sourceName := if slash < 0 then normalizedSource else normalizedSource.substring(slash + 1, normalizedSource.length)
-  return normalizedLine == normalizedSource || normalizedLine == sourceName
-}
-
-function printBuildOutput(result: NativeCommandResult, remainingLines: int): int {
-  let remaining = remainingLines
+function printBuildOutput(result: NativeCommandResult): none {
   output := if result.error != "" then result.error else BlobReader(result.output).readString(long(result.output.length))
   for line of output.split("\n") {
     if line == "" { continue }
-    if isMsvcSourceEcho(line, result.quietSourcePath) { continue }
-    if remaining <= 0 { return 0 }
     println(line)
-    remaining -= 1
   }
-  return remaining
+}
+
+/** Renders the concise native source progress heading, or nothing for a cache hit. */
+export function nativeCompilationSummary(fileCount: int): string {
+  if fileCount <= 0 { return "" }
+  return "Compiling " + string(fileCount) + if fileCount == 1 then " file" else " files"
+}
+
+/** Renders one progress marker per successfully compiled native source. */
+export function nativeCompilationProgress(fileCount: int): string {
+  return if fileCount <= 0 then "" else ".".repeat(fileCount)
+}
+
+/** Successful compiler chatter is hidden; failed commands disclose their captured output. */
+export function shouldPrintNativeCommandOutput(exitCode: int): bool {
+  return exitCode != 0
 }
 
 class NativeCompilerWorker {
@@ -85,11 +86,7 @@ class NativeCompilerWorker {
   compile(): NativeCompilerBatchResult {
     let outputs: NativeCommandResult[] = []
     for task of this.tasks {
-      result := runBuildCommand(
-        task.compiler,
-        mutableArguments(task.arguments),
-        if isMsvcCompiler(task.compiler) then task.sourcePath else "",
-      )
+      result := runBuildCommand(task.compiler, mutableArguments(task.arguments))
       outputs.push(result)
       if result.exitCode != 0 {
         return NativeCompilerBatchResult { exitCode: result.exitCode, outputs: outputs.drainToReadonly() }
@@ -106,6 +103,7 @@ export function buildNativeProject(
   project: ProjectEmission,
   release: bool,
   platform: string,
+  outputMode: NativeBuildOutputMode,
 ): int {
   for packageName of project.nativeBuild.pkgConfigPackages {
     for mode of ["cflags", "libs"] {
@@ -129,7 +127,7 @@ export function buildNativeProject(
   }
   if compiler == "" { compiler = if platform == "windows" then "cl.exe" else "c++" }
   plan := planNativeCompile(compiler, outputDirectory, outputPath, project.modules, project.nativeBuild, release, platform, project.wasmExportNames, wasm)
-  return executeNativePlan(outputDirectory, plan, project)
+  return executeNativePlan(outputDirectory, plan, project, outputMode)
 }
 
 function envCompiler(): string {
@@ -137,7 +135,12 @@ function envCompiler(): string {
   return value
 }
 
-function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, project: ProjectEmission): int {
+function executeNativePlan(
+  outputDirectory: string,
+  plan: NativeCompilePlan,
+  project: ProjectEmission,
+  outputMode: NativeBuildOutputMode,
+): int {
   for supportFile of plan.supportFiles {
     ensureDirectory(parentDirectory(supportFile.outputPath))
     writeTextIfChanged(supportFile.outputPath, supportFile.content)
@@ -147,7 +150,6 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
   previousTasks := indexNativeTaskStates(previousState)
   nextState := NativeBuildState {}
   let identities: NativeCompilerIdentity[] = []
-  let remainingOutputLines = MAX_NATIVE_OUTPUT_LINES
   let truncationReported = false
   let pchChanged = false
 
@@ -159,9 +161,9 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
     if !taskIsCurrent(pchPrevious, pchFingerprint, pchTask.auxiliaryOutputPaths) {
       pchChanged = true
       pchResult := runBuildCommand(pchTask.compiler, mutableArguments(pchTask.arguments))
-      remainingOutputLines = printBuildOutput(pchResult, remainingOutputLines)
-      if pchResult.truncated { println("... native compiler output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes"); truncationReported = true }
       if pchResult.exitCode != 0 {
+        printBuildOutput(pchResult)
+        if pchResult.truncated { println("... native compiler output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes"); truncationReported = true }
         println("error: native compiler failed to build the precompiled runtime header with code " + string(pchResult.exitCode))
         return pchResult.exitCode
       }
@@ -182,6 +184,10 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
     }
   }
 
+  if outputMode == .Progress && dirtyTasks.length > 0 {
+    println(nativeCompilationSummary(dirtyTasks.length))
+  }
+
   let workers: Actor<NativeCompilerWorker>[] = []
   let promises: Promise<NativeCompilerBatchResult>[] = []
   for task of dirtyTasks { ensureDirectory(parentDirectory(task.outputPath)) }
@@ -198,13 +204,17 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
       return 1
     }
     retire workers[index]
+    let completed = 0
     for commandResult of batchResult.outputs {
-      remainingOutputLines = printBuildOutput(commandResult, remainingOutputLines)
-      if commandResult.truncated && !truncationReported { println("... native compiler output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes"); truncationReported = true }
+      if commandResult.exitCode == 0 { completed += 1 }
+      if shouldPrintNativeCommandOutput(commandResult.exitCode) {
+        printBuildOutput(commandResult)
+        if commandResult.truncated && !truncationReported { println("... native compiler output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes"); truncationReported = true }
+      }
     }
+    if outputMode == .Progress && completed > 0 { println(nativeCompilationProgress(completed)) }
     if compileExitCode == 0 && batchResult.exitCode != 0 { compileExitCode = batchResult.exitCode }
   }
-  if remainingOutputLines == 0 && !truncationReported { println("... native compiler output truncated after " + string(MAX_NATIVE_OUTPUT_LINES) + " lines") }
   if compileExitCode != 0 { println("error: native object compiler exited with code " + string(compileExitCode)); return compileExitCode }
 
   let objectPaths: string[] = []
@@ -225,9 +235,12 @@ function executeNativePlan(outputDirectory: string, plan: NativeCompilePlan, pro
   if dirtyTasks.length > 0 || !taskIsCurrent(linkPrevious, computedLinkFingerprint) {
     linkChanged = true
     linkResult := runBuildCommand(plan.linker, plan.linkArguments)
-    ignored := printBuildOutput(linkResult, remainingOutputLines)
-    if linkResult.truncated && !truncationReported { println("... native linker output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes") }
-    if linkResult.exitCode != 0 { println("error: native linker exited with code " + string(linkResult.exitCode)); return linkResult.exitCode }
+    if linkResult.exitCode != 0 {
+      printBuildOutput(linkResult)
+      if linkResult.truncated && !truncationReported { println("... native linker output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes") }
+      println("error: native linker exited with code " + string(linkResult.exitCode))
+      return linkResult.exitCode
+    }
     nextState.tasks.push(captureLinkState(plan.outputPath, computedLinkFingerprint, objectPaths))
   } else { nextState.tasks.push(linkPrevious!) }
 

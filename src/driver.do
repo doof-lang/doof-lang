@@ -23,7 +23,7 @@ import {
   parseFrontendCacheState, renderFrontendCacheState,
 } from "./frontend-cache"
 import { ModuleAcquisition, acquiredManifestPath, acquiredModuleDiskPath, acquiredPackageForModule } from "./module-acquisition"
-import { buildNativeProject } from "./native-build-driver"
+import { NativeBuildOutputMode, buildNativeProject } from "./native-build-driver"
 import {
   ExternalDependency, NativeBuildPlan, PackageDependency, PackageManifest, PackageResource, parsePackageManifest,
 } from "./package-manifest"
@@ -62,6 +62,11 @@ import { absolute } from "std/path"
 readonly MAX_PRINTED_DIAGNOSTICS = 8
 readonly MAX_NATIVE_COMPILER_OUTPUT_BYTES = 262144L
 readonly MAX_COVERAGE_OUTPUT_BYTES = 16777216L
+
+/** Selects whether a top-level command may report successful native build progress. */
+export function nativeBuildOutputModeForCommand(command: string): NativeBuildOutputMode {
+  return if command == "run" then .Silent else .Progress
+}
 
 function hostPlatform(): string {
   value := platform()
@@ -1188,7 +1193,9 @@ function testRequest(request: CliRequest): int {
     materializeRuntimeHeader(outputDirectory)
     binary := joinPath(outputDirectory, "doof-tests")
     println("BUILD " + group.outputName)
-    buildExitCode := buildNativeProject(request.compiler, outputDirectory, binary, emission, false, hostPlatform())
+    buildExitCode := buildNativeProject(
+      request.compiler, outputDirectory, binary, emission, false, hostPlatform(), .Progress,
+    )
     if buildExitCode != 0 { return buildExitCode }
 
     for test of moduleTests {
@@ -1314,8 +1321,11 @@ function emitRequest(request: CliRequest): int {
         frontendConfiguration,
       )
   }
-  if result.diagnostics.length > 0 { printDiagnostics(result.diagnostics) }
-  if hasErrorDiagnostics(result.diagnostics) { return 1 }
+  hasCompilationErrors := hasErrorDiagnostics(result.diagnostics)
+  if result.diagnostics.length > 0 && (request.command != "run" || hasCompilationErrors) {
+    printDiagnostics(result.diagnostics)
+  }
+  if hasCompilationErrors { return 1 }
   if request.command != "check" && request.command != "package" && !reusedFrontend && result.diagnostics.length == 0 {
     writeFrontendState(checkCachePath, frontendStateForCompilation(result, frontendConfiguration, rootManifest))
   }
@@ -1371,7 +1381,10 @@ function emitRequest(request: CliRequest): int {
     if project.macosApp == none && project.iosApp == none {
       synchronizeExecutableResources(project.resources, outputDirectory, frontendCachePath(buildDirectory, "resources"))
     }
-    exitCode := buildNativeProject(request.compiler, outputDirectory, outputPath, emission, false, hostPlatform())
+    exitCode := buildNativeProject(
+      request.compiler, outputDirectory, outputPath, emission, false, hostPlatform(),
+      nativeBuildOutputModeForCommand(request.command),
+    )
     if exitCode != 0 { return exitCode }
     if project.iosApp != none {
       appPath := assembleIOSApp(outputDirectory, outputPath, project.iosApp!, iosDestination) else error {
@@ -1449,7 +1462,9 @@ function emitRequest(request: CliRequest): int {
     outputPath := if project.macosApp == none && project.iosApp == none
       then driverOutputPath(distDirectory, executableName)
       else driverOutputPath(outputDirectory, executableName)
-    exitCode := buildNativeProject(request.compiler, outputDirectory, outputPath, emission, true, hostPlatform())
+    exitCode := buildNativeProject(
+      request.compiler, outputDirectory, outputPath, emission, true, hostPlatform(), .Progress,
+    )
     if exitCode != 0 { return exitCode }
     if project.macosApp == none && project.iosApp == none {
       materializeExecutableResources(project.resources, distDirectory)
