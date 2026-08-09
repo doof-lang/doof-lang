@@ -14,6 +14,8 @@ import { sha256Hex, sha256HexString } from "std/crypto"
 import { exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, remove, rename, writeText } from "std/fs"
 import { ExecOptions, env, run } from "std/os"
 
+import isolated function printFlushed(value: string): none from "doof_runtime.hpp" as doof::print_flushed
+
 readonly MAX_NATIVE_OUTPUT_BYTES = 262144L
 
 export enum NativeBuildOutputMode {
@@ -75,6 +77,11 @@ export function nativeCompilationProgress(fileCount: int): string {
   return if fileCount <= 0 then "" else ".".repeat(fileCount)
 }
 
+/** Selects whether a completed native command should advance visible progress. */
+export function shouldPrintNativeCompilationMarker(outputMode: NativeBuildOutputMode, exitCode: int): bool {
+  return outputMode == .Progress && exitCode == 0
+}
+
 /** Successful compiler chatter is hidden; failed commands disclose their captured output. */
 export function shouldPrintNativeCommandOutput(exitCode: int): bool {
   return exitCode != 0
@@ -82,12 +89,14 @@ export function shouldPrintNativeCommandOutput(exitCode: int): bool {
 
 class NativeCompilerWorker {
   readonly tasks: readonly NativeCompileTask[]
+  readonly outputMode: NativeBuildOutputMode
 
   compile(): NativeCompilerBatchResult {
     let outputs: NativeCommandResult[] = []
     for task of this.tasks {
       result := runBuildCommand(task.compiler, mutableArguments(task.arguments))
       outputs.push(result)
+      if shouldPrintNativeCompilationMarker(this.outputMode, result.exitCode) { printFlushed(".") }
       if result.exitCode != 0 {
         return NativeCompilerBatchResult { exitCode: result.exitCode, outputs: outputs.drainToReadonly() }
       }
@@ -192,27 +201,30 @@ function executeNativePlan(
   let promises: Promise<NativeCompilerBatchResult>[] = []
   for task of dirtyTasks { ensureDirectory(parentDirectory(task.outputPath)) }
   for batch of batchNativeCompileTasks(dirtyTasks) {
-    worker := Actor<NativeCompilerWorker>(batch)
+    worker := Actor<NativeCompilerWorker>(batch, outputMode)
     workers.push(worker)
     promises.push(async worker.compile())
   }
   let compileExitCode = 0
+  let batchResults: NativeCompilerBatchResult[] = []
   for index of 0..<promises.length {
     batchResult := promises[index].get() else error {
       ignoredWorker := retire workers[index]
+      if outputMode == .Progress && dirtyTasks.length > 0 { println("") }
       println("error: native compiler worker failed: " + error)
       return 1
     }
     retire workers[index]
-    let completed = 0
+    batchResults.push(batchResult)
+  }
+  if outputMode == .Progress && dirtyTasks.length > 0 { println("") }
+  for batchResult of batchResults {
     for commandResult of batchResult.outputs {
-      if commandResult.exitCode == 0 { completed += 1 }
       if shouldPrintNativeCommandOutput(commandResult.exitCode) {
         printBuildOutput(commandResult)
         if commandResult.truncated && !truncationReported { println("... native compiler output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes"); truncationReported = true }
       }
     }
-    if outputMode == .Progress && completed > 0 { println(nativeCompilationProgress(completed)) }
     if compileExitCode == 0 && batchResult.exitCode != 0 { compileExitCode = batchResult.exitCode }
   }
   if compileExitCode != 0 { println("error: native object compiler exited with code " + string(compileExitCode)); return compileExitCode }

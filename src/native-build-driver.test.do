@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 import {
-  msvcLinkResponseFile, nativeCompilationProgress, nativeCompilationSummary, nativeManagedOutputsChanged, nativeSupportFileNeedsWrite,
-  nativeTaskStateIsCurrent, shouldPrintNativeCommandOutput, staleManagedOutputCandidates,
+  NativeBuildOutputMode, msvcLinkResponseFile, nativeCompilationProgress, nativeCompilationSummary, nativeManagedOutputsChanged, nativeSupportFileNeedsWrite,
+  nativeTaskStateIsCurrent, shouldPrintNativeCommandOutput, shouldPrintNativeCompilationMarker, staleManagedOutputCandidates,
 } from "./native-build-driver"
 import { NativeInputSignature, NativeTaskState } from "./native-build-state"
 
@@ -50,6 +50,12 @@ export function testDisclosesNativeCommandOutputOnlyOnFailure(): none {
   Assert.equal(shouldPrintNativeCommandOutput(0), false)
   Assert.equal(shouldPrintNativeCommandOutput(1), true)
   Assert.equal(shouldPrintNativeCommandOutput(-1), true)
+}
+
+export function testAdvancesNativeCompilationProgressOnlyForSuccessfulVisibleCommands(): none {
+  Assert.equal(shouldPrintNativeCompilationMarker(NativeBuildOutputMode.Progress, 0), true)
+  Assert.equal(shouldPrintNativeCompilationMarker(NativeBuildOutputMode.Progress, 1), false)
+  Assert.equal(shouldPrintNativeCompilationMarker(NativeBuildOutputMode.Silent, 0), false)
 }
 
 export function testWritesNativeSupportFilesOnlyWhenTheirContentChanges(): none {

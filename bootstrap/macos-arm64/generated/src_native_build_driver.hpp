@@ -6,6 +6,15 @@ namespace std_::blob::types { enum class EncodingError; }
 namespace std_::fs::types { enum class IoError; }
 namespace std_::fs::types { struct FileInfo; }
 namespace std_::fs::types { enum class EntryKind; }
+namespace app_src_native_build_driver_ { enum class NativeBuildOutputMode; }
+namespace app_src_emitter_project_ { struct ProjectEmission; }
+namespace app_src_native_build_ { struct NativeCompilePlan; }
+namespace app_src_native_build_ { struct NativeCompileTask; }
+namespace app_src_native_build_state_ { struct NativeBuildState; }
+namespace app_src_native_build_state_ { struct NativeInputSignature; }
+namespace app_src_native_build_state_ { struct NativeTaskState; }
+namespace app_src_pkg_config_ { struct PkgConfigCommandResult; }
+namespace std_::os::index { struct ExecOptions; }
 
 namespace std_::blob::index {
 }
@@ -720,13 +729,6 @@ namespace app_src_native_build_driver_ {
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<NativeCompilerIdentity>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
-    struct NativeCompilerWorker : public std::enable_shared_from_this<NativeCompilerWorker> {
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>> tasks;
-    NativeCompilerWorker(std::shared_ptr<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>> tasks) : tasks(tasks) {}
-    std::shared_ptr<NativeCompilerBatchResult> compile();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeCompilerWorker>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
-};
 }
 
 namespace doof_blob { using Endian = ::std_::blob::types::Endian; }
@@ -810,11 +812,32 @@ namespace app_src_pkg_config_ {
     doof::Result<void, std::string> applyPkgConfigResult(const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, const std::string& packageName, const std::string& mode, const std::shared_ptr<PkgConfigCommandResult>& result);
 }
 
+namespace doof { using NativeBuildOutputMode = ::app_src_native_build_driver_::NativeBuildOutputMode; }
+namespace doof { using ProjectEmission = ::app_src_emitter_project_::ProjectEmission; }
+namespace doof { using NativeCompilePlan = ::app_src_native_build_::NativeCompilePlan; }
+namespace doof { using NativeCompileTask = ::app_src_native_build_::NativeCompileTask; }
+namespace doof { using NativeBuildState = ::app_src_native_build_state_::NativeBuildState; }
+namespace doof { using NativeInputSignature = ::app_src_native_build_state_::NativeInputSignature; }
+namespace doof { using NativeTaskState = ::app_src_native_build_state_::NativeTaskState; }
+namespace doof { using PkgConfigCommandResult = ::app_src_pkg_config_::PkgConfigCommandResult; }
+namespace doof { using ExecOptions = ::std_::os::index::ExecOptions; }
+#include "doof_runtime.hpp"
+
 namespace app_src_native_build_driver_ {
+    void printFlushed(const std::string& value);
+    struct NativeCompilerWorker : public std::enable_shared_from_this<NativeCompilerWorker> {
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>> tasks;
+    NativeBuildOutputMode outputMode;
+    NativeCompilerWorker(std::shared_ptr<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>> tasks, NativeBuildOutputMode outputMode) : tasks(tasks), outputMode(outputMode) {}
+    std::shared_ptr<NativeCompilerBatchResult> compile();
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<NativeCompilerWorker>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
     std::shared_ptr<NativeCommandResult> runBuildCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments);
     void printBuildOutput(const std::shared_ptr<NativeCommandResult>& result);
     std::string nativeCompilationSummary(int32_t fileCount);
     std::string nativeCompilationProgress(int32_t fileCount);
+    bool shouldPrintNativeCompilationMarker(NativeBuildOutputMode outputMode, int32_t exitCode);
     bool shouldPrintNativeCommandOutput(int32_t exitCode);
     int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, bool release, const std::string& platform, NativeBuildOutputMode outputMode);
     std::string envCompiler();
@@ -834,6 +857,8 @@ namespace app_src_native_build_driver_ {
     void writeBuildState(const std::string& path, const std::shared_ptr<::app_src_native_build_state_::NativeBuildState>& state);
     void writeTextIfChanged(const std::string& path, const std::string& content);
     bool nativeSupportFileNeedsWrite(const std::optional<std::string>& previous, const std::string& content);
+    std::string msvcLinkResponseFile(const std::shared_ptr<std::vector<std::string>>& arguments);
+    std::string quoteMsvcResponseArgument(const std::string& argument);
     void collectManagedOutputs(const std::shared_ptr<std::vector<std::string>>& outputs, const std::string& outputDirectory, const std::shared_ptr<::app_src_native_build_::NativeCompilePlan>& plan, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project);
     void collectManagedOutputsIndexed(const std::shared_ptr<std::vector<std::string>>& outputs, const std::shared_ptr<doof::ordered_set<std::string>>& indexed, const std::string& outputDirectory, const std::shared_ptr<::app_src_native_build_::NativeCompilePlan>& plan, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project);
     void collectManagedNativeCopyOutputs(const std::shared_ptr<std::vector<std::string>>& outputs, const std::shared_ptr<doof::ordered_set<std::string>>& indexed, const std::string& sourcePath, const std::string& outputPath);
@@ -845,6 +870,8 @@ namespace app_src_native_build_driver_ {
     void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
     void appendManagedOutput(const std::shared_ptr<std::vector<std::string>>& outputs, const std::shared_ptr<doof::ordered_set<std::string>>& indexed, const std::string& value);
     std::string joinOutput(const std::string& directory, const std::string& name);
+    std::string msvcLinkResponsePath(const std::string& outputDirectory);
+    bool isMsvcLinker(const std::string& linker);
     std::string parentDirectory(const std::string& path);
     void ensureDirectory(const std::string& path);
 }

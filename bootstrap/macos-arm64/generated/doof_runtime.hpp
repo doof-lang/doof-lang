@@ -2030,6 +2030,12 @@ inline void print(const T& val) {
     }
 }
 
+template <typename T>
+inline void print_flushed(const T& val) {
+    print(val);
+    std::cout.flush();
+}
+
 // ============================================================================
 // Range utilities
 // ============================================================================
