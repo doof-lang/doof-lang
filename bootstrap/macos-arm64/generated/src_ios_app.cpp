@@ -9,17 +9,21 @@ doof::JsonObject IOSAppResource::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<IOSAppResource>, std::string> IOSAppResource::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_sourcePath = _object->find("sourcePath");
     if (_iterator_sourcePath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"sourcePath\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourcePath->second) : doof::json_is_string(_iterator_sourcePath->second)))) { return doof::Failure<std::string>{"Field \"sourcePath\" expected string but got " + std::string(doof::json_type_name(_iterator_sourcePath->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourcePath->second) : doof::json_is_string(_iterator_sourcePath->second)))) { return doof::Failure<std::string>{"Field \"sourcePath\" expected string but got " + std::string(doof::json_type_name(_iterator_sourcePath->second))}; }
     auto _field_sourcePath = (_lenient ? doof::json_as_string_lenient(_iterator_sourcePath->second) : doof::json_as_string(_iterator_sourcePath->second));
     auto _iterator_destination = _object->find("destination");
     if (_iterator_destination == _object->end()) { return doof::Failure<std::string>{"Missing required field \"destination\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_destination->second) : doof::json_is_string(_iterator_destination->second)))) { return doof::Failure<std::string>{"Field \"destination\" expected string but got " + std::string(doof::json_type_name(_iterator_destination->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_destination->second) : doof::json_is_string(_iterator_destination->second)))) { return doof::Failure<std::string>{"Field \"destination\" expected string but got " + std::string(doof::json_type_name(_iterator_destination->second))}; }
     auto _field_destination = (_lenient ? doof::json_as_string_lenient(_iterator_destination->second) : doof::json_as_string(_iterator_destination->second));
-    return doof::Success<std::shared_ptr<IOSAppResource>>{std::make_shared<IOSAppResource>(_field_sourcePath, _field_destination)};
+        return doof::Success<std::shared_ptr<IOSAppResource>>{std::make_shared<IOSAppResource>(_field_sourcePath, _field_destination)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject IOSEmbeddedLibrary::toJsonObject() const {
@@ -29,23 +33,27 @@ doof::JsonObject IOSEmbeddedLibrary::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<IOSEmbeddedLibrary>, std::string> IOSEmbeddedLibrary::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     std::optional<std::string> _field_library;
     if (auto _iterator_library = _object->find("library"); _iterator_library != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_library->second) : doof::json_is_string(_iterator_library->second)))) { return doof::Failure<std::string>{"Field \"library\" expected string but got " + std::string(doof::json_type_name(_iterator_library->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_library->second) : doof::json_is_string(_iterator_library->second)))) { return doof::Failure<std::string>{"Field \"library\" expected string but got " + std::string(doof::json_type_name(_iterator_library->second))}; }
         _field_library = (_lenient ? doof::json_as_string_lenient(_iterator_library->second) : doof::json_as_string(_iterator_library->second));
     } else {
         _field_library = std::string("");
     }
     std::optional<std::string> _field_path;
     if (auto _iterator_path = _object->find("path"); _iterator_path != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_path->second) : doof::json_is_string(_iterator_path->second)))) { return doof::Failure<std::string>{"Field \"path\" expected string but got " + std::string(doof::json_type_name(_iterator_path->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_path->second) : doof::json_is_string(_iterator_path->second)))) { return doof::Failure<std::string>{"Field \"path\" expected string but got " + std::string(doof::json_type_name(_iterator_path->second))}; }
         _field_path = (_lenient ? doof::json_as_string_lenient(_iterator_path->second) : doof::json_as_string(_iterator_path->second));
     } else {
         _field_path = std::string("");
     }
-    return doof::Success<std::shared_ptr<IOSEmbeddedLibrary>>{std::make_shared<IOSEmbeddedLibrary>(_field_library.value(), _field_path.value())};
+        return doof::Success<std::shared_ptr<IOSEmbeddedLibrary>>{std::make_shared<IOSEmbeddedLibrary>(_field_library.value(), _field_path.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject IOSAppConfig::toJsonObject() const {
@@ -62,60 +70,64 @@ doof::JsonObject IOSAppConfig::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<IOSAppConfig>, std::string> IOSAppConfig::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_executableName = _object->find("executableName");
     if (_iterator_executableName == _object->end()) { return doof::Failure<std::string>{"Missing required field \"executableName\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_executableName->second) : doof::json_is_string(_iterator_executableName->second)))) { return doof::Failure<std::string>{"Field \"executableName\" expected string but got " + std::string(doof::json_type_name(_iterator_executableName->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_executableName->second) : doof::json_is_string(_iterator_executableName->second)))) { return doof::Failure<std::string>{"Field \"executableName\" expected string but got " + std::string(doof::json_type_name(_iterator_executableName->second))}; }
     auto _field_executableName = (_lenient ? doof::json_as_string_lenient(_iterator_executableName->second) : doof::json_as_string(_iterator_executableName->second));
     auto _iterator_bundleId = _object->find("bundleId");
     if (_iterator_bundleId == _object->end()) { return doof::Failure<std::string>{"Missing required field \"bundleId\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundleId->second) : doof::json_is_string(_iterator_bundleId->second)))) { return doof::Failure<std::string>{"Field \"bundleId\" expected string but got " + std::string(doof::json_type_name(_iterator_bundleId->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundleId->second) : doof::json_is_string(_iterator_bundleId->second)))) { return doof::Failure<std::string>{"Field \"bundleId\" expected string but got " + std::string(doof::json_type_name(_iterator_bundleId->second))}; }
     auto _field_bundleId = (_lenient ? doof::json_as_string_lenient(_iterator_bundleId->second) : doof::json_as_string(_iterator_bundleId->second));
     auto _iterator_displayName = _object->find("displayName");
     if (_iterator_displayName == _object->end()) { return doof::Failure<std::string>{"Missing required field \"displayName\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_displayName->second) : doof::json_is_string(_iterator_displayName->second)))) { return doof::Failure<std::string>{"Field \"displayName\" expected string but got " + std::string(doof::json_type_name(_iterator_displayName->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_displayName->second) : doof::json_is_string(_iterator_displayName->second)))) { return doof::Failure<std::string>{"Field \"displayName\" expected string but got " + std::string(doof::json_type_name(_iterator_displayName->second))}; }
     auto _field_displayName = (_lenient ? doof::json_as_string_lenient(_iterator_displayName->second) : doof::json_as_string(_iterator_displayName->second));
     auto _iterator_version = _object->find("version");
     if (_iterator_version == _object->end()) { return doof::Failure<std::string>{"Missing required field \"version\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_version->second) : doof::json_is_string(_iterator_version->second)))) { return doof::Failure<std::string>{"Field \"version\" expected string but got " + std::string(doof::json_type_name(_iterator_version->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_version->second) : doof::json_is_string(_iterator_version->second)))) { return doof::Failure<std::string>{"Field \"version\" expected string but got " + std::string(doof::json_type_name(_iterator_version->second))}; }
     auto _field_version = (_lenient ? doof::json_as_string_lenient(_iterator_version->second) : doof::json_as_string(_iterator_version->second));
     std::optional<std::string> _field_iconPath;
     if (auto _iterator_iconPath = _object->find("iconPath"); _iterator_iconPath != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_iconPath->second) : doof::json_is_string(_iterator_iconPath->second)))) { return doof::Failure<std::string>{"Field \"iconPath\" expected string but got " + std::string(doof::json_type_name(_iterator_iconPath->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_iconPath->second) : doof::json_is_string(_iterator_iconPath->second)))) { return doof::Failure<std::string>{"Field \"iconPath\" expected string but got " + std::string(doof::json_type_name(_iterator_iconPath->second))}; }
         _field_iconPath = (_lenient ? doof::json_as_string_lenient(_iterator_iconPath->second) : doof::json_as_string(_iterator_iconPath->second));
     } else {
         _field_iconPath = std::string("");
     }
     std::optional<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>> _field_infoPlist;
     if (auto _iterator_infoPlist = _object->find("infoPlist"); _iterator_infoPlist != _object->end()) {
-        if (!(doof::json_is_null(_iterator_infoPlist->second) || doof::json_is_object(_iterator_infoPlist->second))) { return doof::Failure<std::string>{"Field \"infoPlist\" expected object or null but got " + std::string(doof::json_type_name(_iterator_infoPlist->second))}; }
+            if (!(doof::json_is_null(_iterator_infoPlist->second) || doof::json_is_object(_iterator_infoPlist->second))) { return doof::Failure<std::string>{"Field \"infoPlist\" expected object or null but got " + std::string(doof::json_type_name(_iterator_infoPlist->second))}; }
         _field_infoPlist = (doof::json_is_null(_iterator_infoPlist->second) ? nullptr : [&]() { const auto* _object_value = doof::json_as_object(_iterator_infoPlist->second); auto _values = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = _entry.second; } return _values; }());
     } else {
         _field_infoPlist = std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>{nullptr};
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>>> _field_resources;
     if (auto _iterator_resources = _object->find("resources"); _iterator_resources != _object->end()) {
-        if (!(doof::json_is_array(_iterator_resources->second))) { return doof::Failure<std::string>{"Field \"resources\" expected array but got " + std::string(doof::json_type_name(_iterator_resources->second))}; }
-        _field_resources = [&]() { const auto* _array = doof::json_as_array(_iterator_resources->second); auto _values = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(IOSAppResource::fromJsonValue(_element, _lenient))); } return _values; }();
+            if (!(doof::json_is_array(_iterator_resources->second))) { return doof::Failure<std::string>{"Field \"resources\" expected array but got " + std::string(doof::json_type_name(_iterator_resources->second))}; }
+        _field_resources = [&]() { const auto* _array = doof::json_as_array(_iterator_resources->second); auto _values = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(IOSAppResource::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
         _field_resources = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(std::vector<std::shared_ptr<IOSAppResource>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>> _field_embeddedLibraries;
     if (auto _iterator_embeddedLibraries = _object->find("embeddedLibraries"); _iterator_embeddedLibraries != _object->end()) {
-        if (!(doof::json_is_array(_iterator_embeddedLibraries->second))) { return doof::Failure<std::string>{"Field \"embeddedLibraries\" expected array but got " + std::string(doof::json_type_name(_iterator_embeddedLibraries->second))}; }
-        _field_embeddedLibraries = [&]() { const auto* _array = doof::json_as_array(_iterator_embeddedLibraries->second); auto _values = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(IOSEmbeddedLibrary::fromJsonValue(_element, _lenient))); } return _values; }();
+            if (!(doof::json_is_array(_iterator_embeddedLibraries->second))) { return doof::Failure<std::string>{"Field \"embeddedLibraries\" expected array but got " + std::string(doof::json_type_name(_iterator_embeddedLibraries->second))}; }
+        _field_embeddedLibraries = [&]() { const auto* _array = doof::json_as_array(_iterator_embeddedLibraries->second); auto _values = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(IOSEmbeddedLibrary::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
         _field_embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{});
     }
     std::optional<std::string> _field_minimumDeploymentTarget;
     if (auto _iterator_minimumDeploymentTarget = _object->find("minimumDeploymentTarget"); _iterator_minimumDeploymentTarget != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_minimumDeploymentTarget->second) : doof::json_is_string(_iterator_minimumDeploymentTarget->second)))) { return doof::Failure<std::string>{"Field \"minimumDeploymentTarget\" expected string but got " + std::string(doof::json_type_name(_iterator_minimumDeploymentTarget->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_minimumDeploymentTarget->second) : doof::json_is_string(_iterator_minimumDeploymentTarget->second)))) { return doof::Failure<std::string>{"Field \"minimumDeploymentTarget\" expected string but got " + std::string(doof::json_type_name(_iterator_minimumDeploymentTarget->second))}; }
         _field_minimumDeploymentTarget = (_lenient ? doof::json_as_string_lenient(_iterator_minimumDeploymentTarget->second) : doof::json_as_string(_iterator_minimumDeploymentTarget->second));
     } else {
         _field_minimumDeploymentTarget = std::string("16.0");
     }
-    return doof::Success<std::shared_ptr<IOSAppConfig>>{std::make_shared<IOSAppConfig>(_field_executableName, _field_bundleId, _field_displayName, _field_version, _field_iconPath.value(), _field_infoPlist.value(), _field_resources.value(), _field_embeddedLibraries.value(), _field_minimumDeploymentTarget.value())};
+        return doof::Success<std::shared_ptr<IOSAppConfig>>{std::make_shared<IOSAppConfig>(_field_executableName, _field_bundleId, _field_displayName, _field_version, _field_iconPath.value(), _field_infoPlist.value(), _field_resources.value(), _field_embeddedLibraries.value(), _field_minimumDeploymentTarget.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject IOSPackageConfig::toJsonObject() const {
@@ -125,23 +137,27 @@ doof::JsonObject IOSPackageConfig::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<IOSPackageConfig>, std::string> IOSPackageConfig::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     std::optional<std::string> _field_identity;
     if (auto _iterator_identity = _object->find("identity"); _iterator_identity != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_identity->second) : doof::json_is_string(_iterator_identity->second)))) { return doof::Failure<std::string>{"Field \"identity\" expected string but got " + std::string(doof::json_type_name(_iterator_identity->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_identity->second) : doof::json_is_string(_iterator_identity->second)))) { return doof::Failure<std::string>{"Field \"identity\" expected string but got " + std::string(doof::json_type_name(_iterator_identity->second))}; }
         _field_identity = (_lenient ? doof::json_as_string_lenient(_iterator_identity->second) : doof::json_as_string(_iterator_identity->second));
     } else {
         _field_identity = std::string("");
     }
     std::optional<std::string> _field_provisioningProfilePath;
     if (auto _iterator_provisioningProfilePath = _object->find("provisioningProfilePath"); _iterator_provisioningProfilePath != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_provisioningProfilePath->second) : doof::json_is_string(_iterator_provisioningProfilePath->second)))) { return doof::Failure<std::string>{"Field \"provisioningProfilePath\" expected string but got " + std::string(doof::json_type_name(_iterator_provisioningProfilePath->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_provisioningProfilePath->second) : doof::json_is_string(_iterator_provisioningProfilePath->second)))) { return doof::Failure<std::string>{"Field \"provisioningProfilePath\" expected string but got " + std::string(doof::json_type_name(_iterator_provisioningProfilePath->second))}; }
         _field_provisioningProfilePath = (_lenient ? doof::json_as_string_lenient(_iterator_provisioningProfilePath->second) : doof::json_as_string(_iterator_provisioningProfilePath->second));
     } else {
         _field_provisioningProfilePath = std::string("");
     }
-    return doof::Success<std::shared_ptr<IOSPackageConfig>>{std::make_shared<IOSPackageConfig>(_field_identity.value(), _field_provisioningProfilePath.value())};
+        return doof::Success<std::shared_ptr<IOSPackageConfig>>{std::make_shared<IOSPackageConfig>(_field_identity.value(), _field_provisioningProfilePath.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 std::string iosPackageArchiveName(const std::string& executableName, const std::string& version) {
     auto safeVersion = std::string("");
@@ -213,11 +229,11 @@ std::string renderIOSInfoPlist(const std::shared_ptr<IOSAppConfig>& config) {
             (body += (((std::string("\t<key>") + escapePlistText(key)) + std::string("</key>\n")) + renderPlistValue(value, 1)));
         }
     }
-    return ((((std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n") + std::string("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n")) + std::string("<plist version=\"1.0\">\n<dict>\n")) + body) + std::string("</dict>\n</plist>\n"));
+    return ((std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n") + body) + std::string("</dict>\n</plist>\n"));
 }
 std::string renderIOSMainSource(const std::string& executableName) {
     const auto delegateName = (objectiveCIdentifier(executableName) + std::string("AppDelegate"));
-    return (((((((((((((((((((((std::string("#import <UIKit/UIKit.h>\n#include <thread>\n\n") + std::string("extern \"C\" int doof_entry_main(int argc, char** argv);\n\n")) + std::string("@interface ")) + delegateName) + std::string(" : UIResponder <UIApplicationDelegate>\n")) + std::string("@property(nonatomic, strong) UIWindow* window;\n@end\n\n")) + std::string("@implementation ")) + delegateName) + std::string("\n")) + std::string("- (BOOL)application:(UIApplication*)application didFinishLaunchingWithOptions:(NSDictionary*)launchOptions {\n")) + std::string("  (void)application;\n  (void)launchOptions;\n")) + std::string("  self.window = [[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];\n")) + std::string("  UIViewController* rootViewController = [[UIViewController alloc] init];\n")) + std::string("  rootViewController.view.backgroundColor = UIColor.systemBackgroundColor;\n")) + std::string("  self.window.rootViewController = rootViewController;\n  [self.window makeKeyAndVisible];\n")) + std::string("  std::thread([] { (void)doof_entry_main(0, nullptr); }).detach();\n")) + std::string("  return YES;\n}\n@end\n\n")) + std::string("int main(int argc, char* argv[]) {\n  @autoreleasepool {\n")) + std::string("    return UIApplicationMain(argc, argv, nil, @\"")) + escapeObjectiveCString(delegateName)) + std::string("\");\n")) + std::string("  }\n}\n"));
+    return (((((((((((((((((((std::string("#import <UIKit/UIKit.h>\n#include <thread>\n\nextern \"C\" int doof_entry_main(int argc, char** argv);\n\n@interface ") + delegateName) + std::string(" : UIResponder <UIApplicationDelegate>\n")) + std::string("@property(nonatomic, strong) UIWindow* window;\n@end\n\n")) + std::string("@implementation ")) + delegateName) + std::string("\n")) + std::string("- (BOOL)application:(UIApplication*)application didFinishLaunchingWithOptions:(NSDictionary*)launchOptions {\n")) + std::string("  (void)application;\n  (void)launchOptions;\n")) + std::string("  self.window = [[UIWindow alloc] initWithFrame:UIScreen.mainScreen.bounds];\n")) + std::string("  UIViewController* rootViewController = [[UIViewController alloc] init];\n")) + std::string("  rootViewController.view.backgroundColor = UIColor.systemBackgroundColor;\n")) + std::string("  self.window.rootViewController = rootViewController;\n  [self.window makeKeyAndVisible];\n")) + std::string("  std::thread([] { (void)doof_entry_main(0, nullptr); }).detach();\n")) + std::string("  return YES;\n}\n@end\n\n")) + std::string("int main(int argc, char* argv[]) {\n  @autoreleasepool {\n")) + std::string("    return UIApplicationMain(argc, argv, nil, @\"")) + escapeObjectiveCString(delegateName)) + std::string("\");\n")) + std::string("  }\n}\n"));
 }
 std::string renderIOSIconSetContents() {
     return std::string("{\n  \"images\": [\n    { \"idiom\": \"iphone\", \"scale\": \"2x\", \"size\": \"20x20\", \"filename\": \"iphone_notification_20@2x.png\" },\n    { \"idiom\": \"iphone\", \"scale\": \"3x\", \"size\": \"20x20\", \"filename\": \"iphone_notification_20@3x.png\" },\n    { \"idiom\": \"iphone\", \"scale\": \"2x\", \"size\": \"29x29\", \"filename\": \"iphone_settings_29@2x.png\" },\n    { \"idiom\": \"iphone\", \"scale\": \"3x\", \"size\": \"29x29\", \"filename\": \"iphone_settings_29@3x.png\" },\n    { \"idiom\": \"iphone\", \"scale\": \"2x\", \"size\": \"40x40\", \"filename\": \"iphone_spotlight_40@2x.png\" },\n    { \"idiom\": \"iphone\", \"scale\": \"3x\", \"size\": \"40x40\", \"filename\": \"iphone_spotlight_40@3x.png\" },\n    { \"idiom\": \"iphone\", \"scale\": \"2x\", \"size\": \"60x60\", \"filename\": \"iphone_app_60@2x.png\" },\n    { \"idiom\": \"iphone\", \"scale\": \"3x\", \"size\": \"60x60\", \"filename\": \"iphone_app_60@3x.png\" },\n    { \"idiom\": \"ipad\", \"scale\": \"1x\", \"size\": \"20x20\", \"filename\": \"ipad_notification_20.png\" },\n    { \"idiom\": \"ipad\", \"scale\": \"2x\", \"size\": \"20x20\", \"filename\": \"ipad_notification_20@2x.png\" },\n    { \"idiom\": \"ipad\", \"scale\": \"1x\", \"size\": \"29x29\", \"filename\": \"ipad_settings_29.png\" },\n    { \"idiom\": \"ipad\", \"scale\": \"2x\", \"size\": \"29x29\", \"filename\": \"ipad_settings_29@2x.png\" },\n    { \"idiom\": \"ipad\", \"scale\": \"1x\", \"size\": \"40x40\", \"filename\": \"ipad_spotlight_40.png\" },\n    { \"idiom\": \"ipad\", \"scale\": \"2x\", \"size\": \"40x40\", \"filename\": \"ipad_spotlight_40@2x.png\" },\n    { \"idiom\": \"ipad\", \"scale\": \"1x\", \"size\": \"76x76\", \"filename\": \"ipad_app_76.png\" },\n    { \"idiom\": \"ipad\", \"scale\": \"2x\", \"size\": \"76x76\", \"filename\": \"ipad_app_76@2x.png\" },\n    { \"idiom\": \"ipad\", \"scale\": \"2x\", \"size\": \"83.5x83.5\", \"filename\": \"ipad_pro_83_5@2x.png\" },\n    { \"idiom\": \"ios-marketing\", \"scale\": \"1x\", \"size\": \"1024x1024\", \"filename\": \"app_store_1024.png\" }\n  ],\n  \"info\": { \"author\": \"doof\", \"version\": 1 }\n}");

@@ -166,12 +166,19 @@ export function predeclareModuleBindings(info: ModuleInfo, scope: Scope, result:
     }
   }
   for imported of info.imports {
-    if imported.symbol != none { declare(scope, Binding { name: imported.localName, kind: "import", type_: symbolType(imported.symbol!, info, result), mutable: false, span: checkerSemanticSpan(symbolSpan(info, imported.localName)), module: info.path, symbol: imported.symbol }) }
+    if !imported.typeOnly && imported.symbol != none && isValueSymbol(imported.symbol!) {
+      declare(scope, Binding { name: imported.localName, kind: "import", type_: symbolType(imported.symbol!, info, result), mutable: false, span: checkerSemanticSpan(symbolSpan(info, imported.localName)), module: info.path, symbol: imported.symbol })
+    }
   }
 }
 
 export function isNamespaceImport(info: ModuleInfo, name: string): bool {
   for imported of info.namespaceImports { if imported.localName == name { return true } }
+  return false
+}
+
+export function isTypeOnlyNamespaceImport(info: ModuleInfo, name: string): bool {
+  for imported of info.namespaceImports { if imported.localName == name { return imported.typeOnly } }
   return false
 }
 
@@ -186,10 +193,11 @@ export function namespaceMemberType(info: ModuleInfo, namespaceName: string, mem
 export function namespaceMemberSymbol(info: ModuleInfo, namespaceName: string, memberName: string, result: AnalysisResult): Symbol | none {
   for imported of info.namespaceImports {
     if imported.localName != namespaceName { continue }
+    if imported.typeOnly { return none }
     source := findModule(result, imported.sourceModule)
     if source == none { return none }
     for symbol of source!.exports {
-      if symbol.name == memberName { return symbol }
+      if symbol.name == memberName && isValueSymbol(symbol) { return symbol }
     }
   }
   return none
@@ -343,20 +351,23 @@ export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, 
   return unknownType()
 }
 
-export function declare(scope: Scope, binding: Binding): none {
-  for existing of scope.bindings { if existing.name == binding.name { return } }
+export function declare(scope: Scope, binding: Binding): bool {
+  for existing of scope.bindings { if existing.name == binding.name { return false } }
   scope.bindings.push(binding)
+  return true
 }
 
 // Parameters intentionally shadow implicit field and method bindings.
-export function declareShadowing(scope: Scope, binding: Binding): none {
+export function declareShadowing(scope: Scope, binding: Binding): bool {
   for index of 0..<scope.bindings.length {
     if scope.bindings[index].name == binding.name {
+      if scope.bindings[index].kind != "field" && scope.bindings[index].kind != "method" { return false }
       scope.bindings[index] = binding
-      return
+      return true
     }
   }
   scope.bindings.push(binding)
+  return true
 }
 
 export function hasTypeParam(scope: Scope, name: string): bool {
@@ -479,6 +490,28 @@ export function symbolFor(info: ModuleInfo, name: string): Symbol | none {
   for symbol of info.symbols { if symbol.name == name { return symbol } }
   for imported of info.imports { if imported.localName == name { return imported.symbol } }
   return none
+}
+
+export function valueSymbolFor(info: ModuleInfo, name: string): Symbol | none {
+  for symbol of info.symbols { if symbol.name == name && isValueSymbol(symbol) { return symbol } }
+  for imported of info.imports {
+    if imported.localName == name && !imported.typeOnly && imported.symbol != none && isValueSymbol(imported.symbol!) { return imported.symbol }
+  }
+  return none
+}
+
+export function valueUseDiagnostic(info: ModuleInfo, name: string): string {
+  for imported of info.imports {
+    if imported.localName != name { continue }
+    if imported.typeOnly { return "Type-only import '" + name + "' cannot be used as a value" }
+    if imported.symbol != none && !isValueSymbol(imported.symbol!) { return "Type '" + name + "' cannot be used as a value" }
+  }
+  for symbol of info.symbols { if symbol.name == name && !isValueSymbol(symbol) { return "Type '" + name + "' cannot be used as a value" } }
+  return ""
+}
+
+export function isValueSymbol(symbol: Symbol): bool {
+  return symbol.kind != "type-alias"
 }
 
 export function declaredSymbolName(symbol: Symbol): string {

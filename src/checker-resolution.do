@@ -45,15 +45,34 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
   case annotation {
     named: NamedType -> {
       if named.name == "none" || named.name == "void" || named.name == "null" {
+        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
         if named.name != "none" && named.resolvedType == none { deprecatedNoneAlias(state, named.name, named.span, module.path) }
         return decorateType(state, annotation, noneType())
       }
-      if named.name == "never" { return decorateType(state, annotation, neverType()) }
-      if named.name == "JsonValue" { return decorateType(state, annotation, jsonValueType()) }
-      if named.name == "JsonObject" { return decorateType(state, annotation, jsonObjectType()) }
-      if named.name == "SourceLocation" { return decorateType(state, annotation, builtinSourceLocationType()) }
-      if named.name == "Range" { return decorateType(state, annotation, rangeType()) }
-      if hasTypeParam(scope, named.name) { return decorateType(state, annotation, typeParameter(named.name, typeParamConstraintName(scope, named.name), typeParamConstraint(scope, named.name))) }
+      if named.name == "never" {
+        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
+        return decorateType(state, annotation, neverType())
+      }
+      if named.name == "JsonValue" {
+        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
+        return decorateType(state, annotation, jsonValueType())
+      }
+      if named.name == "JsonObject" {
+        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
+        return decorateType(state, annotation, jsonObjectType())
+      }
+      if named.name == "SourceLocation" {
+        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
+        return decorateType(state, annotation, builtinSourceLocationType())
+      }
+      if named.name == "Range" {
+        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
+        return decorateType(state, annotation, rangeType())
+      }
+      if hasTypeParam(scope, named.name) {
+        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
+        return decorateType(state, annotation, typeParameter(named.name, typeParamConstraintName(scope, named.name), typeParamConstraint(scope, named.name)))
+      }
       if named.name == "Tuple" {
         let elements: ResolvedType[] = []
         for argument of named.typeArgs { elements.push(resolveType(state, argument, module, scope)) }
@@ -100,11 +119,15 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
         return decorateType(state, annotation, resultType(unknownType(), payload))
       }
       if named.name == "byte" || named.name == "int" || named.name == "long" || named.name == "float" || named.name == "double" || named.name == "string" || named.name == "char" || named.name == "bool" {
+        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
         return decorateType(state, annotation, primitive(named.name))
       }
       let symbol: Symbol | none = named.resolvedSymbol
       if symbol == none { symbol = symbolFor(module, named.name) }
-      if symbol == none { return decorateType(state, annotation, unknownType()) }
+      if symbol == none {
+        typeError(state, "Unknown type '" + named.name + "'", named.span)
+        return decorateType(state, annotation, unknownType())
+      }
       if symbol!.kind == "type-alias" {
         declaration := declarationFor(state.result, symbol!)
         if declaration == none { return decorateType(state, annotation, unknownType()) }
@@ -133,6 +156,9 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
         if declaration != none {
           case declaration! {
             interfaceDeclaration: InterfaceDeclaration -> {
+              if !validateNominalTypeArity(state, interfaceDeclaration.name, interfaceDeclaration.typeParams.length, typeArgs.length, named.span) {
+                return decorateType(state, annotation, unknownType())
+              }
               validateTypeArgumentConstraints(state, interfaceDeclaration.typeParams, interfaceDeclaration.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope)
             }
             _ -> { }
@@ -142,17 +168,29 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
         if concreteTypes(typeArgs) { registerConcreteInterfaceImplementations(state.result, concreteInterface) }
         return decorateType(state, annotation, concreteInterface)
       }
-      if symbol!.kind == "enum" { return decorateType(state, annotation, enumType(declaredSymbolName(symbol!), symbol!)) }
+      if symbol!.kind == "enum" {
+        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
+        return decorateType(state, annotation, enumType(declaredSymbolName(symbol!), symbol!))
+      }
       let typeArgs: ResolvedType[] = []
       for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope)) }
       declaration := declarationFor(state.result, symbol!)
       if declaration != none {
         case declaration! {
           classDeclaration: ClassDeclaration -> {
+            if !validateNominalTypeArity(state, classDeclaration.name, classDeclaration.typeParams.length, typeArgs.length, named.span) {
+              return decorateType(state, annotation, unknownType())
+            }
             validateTypeArgumentConstraints(state, classDeclaration.typeParams, classDeclaration.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope)
           }
-          _ -> { }
+          _ -> {
+            typeError(state, "Symbol '" + named.name + "' is not a type", named.span)
+            return decorateType(state, annotation, unknownType())
+          }
         }
+      } else if symbol!.kind != "class" && symbol!.kind != "struct" {
+        typeError(state, "Symbol '" + named.name + "' is not a type", named.span)
+        return decorateType(state, annotation, unknownType())
       }
       return decorateType(state, annotation, classType(declaredSymbolName(symbol!), symbol!, typeArgs))
     }
@@ -170,6 +208,19 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
     weak_: WeakType -> { return decorateType(state, annotation, weakType(resolveType(state, weak_.type_, module, scope))) }
   }
   return decorateType(state, annotation, unknownType())
+}
+
+function rejectUnexpectedTypeArguments(state: CheckerState, named: NamedType, module: ModuleInfo, scope: Scope): bool {
+  if named.typeArgs.length == 0 { return false }
+  for argument of named.typeArgs { resolveType(state, argument, module, scope) }
+  typeError(state, named.name + " does not accept type arguments", named.span)
+  return true
+}
+
+function validateNominalTypeArity(state: CheckerState, name: string, expected: int, actual: int, span: SourceSpan): bool {
+  if expected == actual { return true }
+  typeError(state, name + " requires " + string(expected) + " type argument" + (if expected == 1 then "" else "s") + "; received " + string(actual), span)
+  return false
 }
 
 /** Validates concrete arguments against substituted declaration constraints. */

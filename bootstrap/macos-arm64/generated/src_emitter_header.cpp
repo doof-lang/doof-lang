@@ -37,163 +37,167 @@ doof::JsonObject HeaderPlan::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<HeaderPlan>, std::string> HeaderPlan::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_functionSignatures;
     if (auto _iterator_functionSignatures = _object->find("functionSignatures"); _iterator_functionSignatures != _object->end()) {
-        if (!(doof::json_is_array(_iterator_functionSignatures->second))) { return doof::Failure<std::string>{"Field \"functionSignatures\" expected array but got " + std::string(doof::json_type_name(_iterator_functionSignatures->second))}; }
+            if (!(doof::json_is_array(_iterator_functionSignatures->second))) { return doof::Failure<std::string>{"Field \"functionSignatures\" expected array but got " + std::string(doof::json_type_name(_iterator_functionSignatures->second))}; }
         _field_functionSignatures = [&]() { const auto* _array = doof::json_as_array(_iterator_functionSignatures->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_functionSignatures = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_nativeAdapterSignatures;
     if (auto _iterator_nativeAdapterSignatures = _object->find("nativeAdapterSignatures"); _iterator_nativeAdapterSignatures != _object->end()) {
-        if (!(doof::json_is_array(_iterator_nativeAdapterSignatures->second))) { return doof::Failure<std::string>{"Field \"nativeAdapterSignatures\" expected array but got " + std::string(doof::json_type_name(_iterator_nativeAdapterSignatures->second))}; }
+            if (!(doof::json_is_array(_iterator_nativeAdapterSignatures->second))) { return doof::Failure<std::string>{"Field \"nativeAdapterSignatures\" expected array but got " + std::string(doof::json_type_name(_iterator_nativeAdapterSignatures->second))}; }
         _field_nativeAdapterSignatures = [&]() { const auto* _array = doof::json_as_array(_iterator_nativeAdapterSignatures->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_nativeAdapterSignatures = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_genericFunctionDefinitions;
     if (auto _iterator_genericFunctionDefinitions = _object->find("genericFunctionDefinitions"); _iterator_genericFunctionDefinitions != _object->end()) {
-        if (!(doof::json_is_array(_iterator_genericFunctionDefinitions->second))) { return doof::Failure<std::string>{"Field \"genericFunctionDefinitions\" expected array but got " + std::string(doof::json_type_name(_iterator_genericFunctionDefinitions->second))}; }
+            if (!(doof::json_is_array(_iterator_genericFunctionDefinitions->second))) { return doof::Failure<std::string>{"Field \"genericFunctionDefinitions\" expected array but got " + std::string(doof::json_type_name(_iterator_genericFunctionDefinitions->second))}; }
         _field_genericFunctionDefinitions = [&]() { const auto* _array = doof::json_as_array(_iterator_genericFunctionDefinitions->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_genericFunctionDefinitions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_earlyModuleValueDeclarations;
     if (auto _iterator_earlyModuleValueDeclarations = _object->find("earlyModuleValueDeclarations"); _iterator_earlyModuleValueDeclarations != _object->end()) {
-        if (!(doof::json_is_array(_iterator_earlyModuleValueDeclarations->second))) { return doof::Failure<std::string>{"Field \"earlyModuleValueDeclarations\" expected array but got " + std::string(doof::json_type_name(_iterator_earlyModuleValueDeclarations->second))}; }
+            if (!(doof::json_is_array(_iterator_earlyModuleValueDeclarations->second))) { return doof::Failure<std::string>{"Field \"earlyModuleValueDeclarations\" expected array but got " + std::string(doof::json_type_name(_iterator_earlyModuleValueDeclarations->second))}; }
         _field_earlyModuleValueDeclarations = [&]() { const auto* _array = doof::json_as_array(_iterator_earlyModuleValueDeclarations->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_earlyModuleValueDeclarations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_moduleValueDeclarations;
     if (auto _iterator_moduleValueDeclarations = _object->find("moduleValueDeclarations"); _iterator_moduleValueDeclarations != _object->end()) {
-        if (!(doof::json_is_array(_iterator_moduleValueDeclarations->second))) { return doof::Failure<std::string>{"Field \"moduleValueDeclarations\" expected array but got " + std::string(doof::json_type_name(_iterator_moduleValueDeclarations->second))}; }
+            if (!(doof::json_is_array(_iterator_moduleValueDeclarations->second))) { return doof::Failure<std::string>{"Field \"moduleValueDeclarations\" expected array but got " + std::string(doof::json_type_name(_iterator_moduleValueDeclarations->second))}; }
         _field_moduleValueDeclarations = [&]() { const auto* _array = doof::json_as_array(_iterator_moduleValueDeclarations->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_moduleValueDeclarations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_earlyClassDefinitions;
     if (auto _iterator_earlyClassDefinitions = _object->find("earlyClassDefinitions"); _iterator_earlyClassDefinitions != _object->end()) {
-        if (!(doof::json_is_array(_iterator_earlyClassDefinitions->second))) { return doof::Failure<std::string>{"Field \"earlyClassDefinitions\" expected array but got " + std::string(doof::json_type_name(_iterator_earlyClassDefinitions->second))}; }
+            if (!(doof::json_is_array(_iterator_earlyClassDefinitions->second))) { return doof::Failure<std::string>{"Field \"earlyClassDefinitions\" expected array but got " + std::string(doof::json_type_name(_iterator_earlyClassDefinitions->second))}; }
         _field_earlyClassDefinitions = [&]() { const auto* _array = doof::json_as_array(_iterator_earlyClassDefinitions->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_earlyClassDefinitions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_classDefinitions;
     if (auto _iterator_classDefinitions = _object->find("classDefinitions"); _iterator_classDefinitions != _object->end()) {
-        if (!(doof::json_is_array(_iterator_classDefinitions->second))) { return doof::Failure<std::string>{"Field \"classDefinitions\" expected array but got " + std::string(doof::json_type_name(_iterator_classDefinitions->second))}; }
+            if (!(doof::json_is_array(_iterator_classDefinitions->second))) { return doof::Failure<std::string>{"Field \"classDefinitions\" expected array but got " + std::string(doof::json_type_name(_iterator_classDefinitions->second))}; }
         _field_classDefinitions = [&]() { const auto* _array = doof::json_as_array(_iterator_classDefinitions->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_classDefinitions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_interfaceAliases;
     if (auto _iterator_interfaceAliases = _object->find("interfaceAliases"); _iterator_interfaceAliases != _object->end()) {
-        if (!(doof::json_is_array(_iterator_interfaceAliases->second))) { return doof::Failure<std::string>{"Field \"interfaceAliases\" expected array but got " + std::string(doof::json_type_name(_iterator_interfaceAliases->second))}; }
+            if (!(doof::json_is_array(_iterator_interfaceAliases->second))) { return doof::Failure<std::string>{"Field \"interfaceAliases\" expected array but got " + std::string(doof::json_type_name(_iterator_interfaceAliases->second))}; }
         _field_interfaceAliases = [&]() { const auto* _array = doof::json_as_array(_iterator_interfaceAliases->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_interfaceAliases = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_enumDefinitions;
     if (auto _iterator_enumDefinitions = _object->find("enumDefinitions"); _iterator_enumDefinitions != _object->end()) {
-        if (!(doof::json_is_array(_iterator_enumDefinitions->second))) { return doof::Failure<std::string>{"Field \"enumDefinitions\" expected array but got " + std::string(doof::json_type_name(_iterator_enumDefinitions->second))}; }
+            if (!(doof::json_is_array(_iterator_enumDefinitions->second))) { return doof::Failure<std::string>{"Field \"enumDefinitions\" expected array but got " + std::string(doof::json_type_name(_iterator_enumDefinitions->second))}; }
         _field_enumDefinitions = [&]() { const auto* _array = doof::json_as_array(_iterator_enumDefinitions->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_enumDefinitions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_ephemeralTypeAliases;
     if (auto _iterator_ephemeralTypeAliases = _object->find("ephemeralTypeAliases"); _iterator_ephemeralTypeAliases != _object->end()) {
-        if (!(doof::json_is_array(_iterator_ephemeralTypeAliases->second))) { return doof::Failure<std::string>{"Field \"ephemeralTypeAliases\" expected array but got " + std::string(doof::json_type_name(_iterator_ephemeralTypeAliases->second))}; }
+            if (!(doof::json_is_array(_iterator_ephemeralTypeAliases->second))) { return doof::Failure<std::string>{"Field \"ephemeralTypeAliases\" expected array but got " + std::string(doof::json_type_name(_iterator_ephemeralTypeAliases->second))}; }
         _field_ephemeralTypeAliases = [&]() { const auto* _array = doof::json_as_array(_iterator_ephemeralTypeAliases->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_ephemeralTypeAliases = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_preferredTypeAliasNames;
     if (auto _iterator_preferredTypeAliasNames = _object->find("preferredTypeAliasNames"); _iterator_preferredTypeAliasNames != _object->end()) {
-        if (!(doof::json_is_array(_iterator_preferredTypeAliasNames->second))) { return doof::Failure<std::string>{"Field \"preferredTypeAliasNames\" expected array but got " + std::string(doof::json_type_name(_iterator_preferredTypeAliasNames->second))}; }
+            if (!(doof::json_is_array(_iterator_preferredTypeAliasNames->second))) { return doof::Failure<std::string>{"Field \"preferredTypeAliasNames\" expected array but got " + std::string(doof::json_type_name(_iterator_preferredTypeAliasNames->second))}; }
         _field_preferredTypeAliasNames = [&]() { const auto* _array = doof::json_as_array(_iterator_preferredTypeAliasNames->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_preferredTypeAliasNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_preferredTypeAliasSpellings;
     if (auto _iterator_preferredTypeAliasSpellings = _object->find("preferredTypeAliasSpellings"); _iterator_preferredTypeAliasSpellings != _object->end()) {
-        if (!(doof::json_is_array(_iterator_preferredTypeAliasSpellings->second))) { return doof::Failure<std::string>{"Field \"preferredTypeAliasSpellings\" expected array but got " + std::string(doof::json_type_name(_iterator_preferredTypeAliasSpellings->second))}; }
+            if (!(doof::json_is_array(_iterator_preferredTypeAliasSpellings->second))) { return doof::Failure<std::string>{"Field \"preferredTypeAliasSpellings\" expected array but got " + std::string(doof::json_type_name(_iterator_preferredTypeAliasSpellings->second))}; }
         _field_preferredTypeAliasSpellings = [&]() { const auto* _array = doof::json_as_array(_iterator_preferredTypeAliasSpellings->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_preferredTypeAliasSpellings = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_earlyTypeAliases;
     if (auto _iterator_earlyTypeAliases = _object->find("earlyTypeAliases"); _iterator_earlyTypeAliases != _object->end()) {
-        if (!(doof::json_is_array(_iterator_earlyTypeAliases->second))) { return doof::Failure<std::string>{"Field \"earlyTypeAliases\" expected array but got " + std::string(doof::json_type_name(_iterator_earlyTypeAliases->second))}; }
+            if (!(doof::json_is_array(_iterator_earlyTypeAliases->second))) { return doof::Failure<std::string>{"Field \"earlyTypeAliases\" expected array but got " + std::string(doof::json_type_name(_iterator_earlyTypeAliases->second))}; }
         _field_earlyTypeAliases = [&]() { const auto* _array = doof::json_as_array(_iterator_earlyTypeAliases->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_earlyTypeAliases = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_typeAliases;
     if (auto _iterator_typeAliases = _object->find("typeAliases"); _iterator_typeAliases != _object->end()) {
-        if (!(doof::json_is_array(_iterator_typeAliases->second))) { return doof::Failure<std::string>{"Field \"typeAliases\" expected array but got " + std::string(doof::json_type_name(_iterator_typeAliases->second))}; }
+            if (!(doof::json_is_array(_iterator_typeAliases->second))) { return doof::Failure<std::string>{"Field \"typeAliases\" expected array but got " + std::string(doof::json_type_name(_iterator_typeAliases->second))}; }
         _field_typeAliases = [&]() { const auto* _array = doof::json_as_array(_iterator_typeAliases->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_typeAliases = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_classForwardDeclarations;
     if (auto _iterator_classForwardDeclarations = _object->find("classForwardDeclarations"); _iterator_classForwardDeclarations != _object->end()) {
-        if (!(doof::json_is_array(_iterator_classForwardDeclarations->second))) { return doof::Failure<std::string>{"Field \"classForwardDeclarations\" expected array but got " + std::string(doof::json_type_name(_iterator_classForwardDeclarations->second))}; }
+            if (!(doof::json_is_array(_iterator_classForwardDeclarations->second))) { return doof::Failure<std::string>{"Field \"classForwardDeclarations\" expected array but got " + std::string(doof::json_type_name(_iterator_classForwardDeclarations->second))}; }
         _field_classForwardDeclarations = [&]() { const auto* _array = doof::json_as_array(_iterator_classForwardDeclarations->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_classForwardDeclarations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_typeOnlyForwardDeclarations;
     if (auto _iterator_typeOnlyForwardDeclarations = _object->find("typeOnlyForwardDeclarations"); _iterator_typeOnlyForwardDeclarations != _object->end()) {
-        if (!(doof::json_is_array(_iterator_typeOnlyForwardDeclarations->second))) { return doof::Failure<std::string>{"Field \"typeOnlyForwardDeclarations\" expected array but got " + std::string(doof::json_type_name(_iterator_typeOnlyForwardDeclarations->second))}; }
+            if (!(doof::json_is_array(_iterator_typeOnlyForwardDeclarations->second))) { return doof::Failure<std::string>{"Field \"typeOnlyForwardDeclarations\" expected array but got " + std::string(doof::json_type_name(_iterator_typeOnlyForwardDeclarations->second))}; }
         _field_typeOnlyForwardDeclarations = [&]() { const auto* _array = doof::json_as_array(_iterator_typeOnlyForwardDeclarations->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_typeOnlyForwardDeclarations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_nativeIncludes;
     if (auto _iterator_nativeIncludes = _object->find("nativeIncludes"); _iterator_nativeIncludes != _object->end()) {
-        if (!(doof::json_is_array(_iterator_nativeIncludes->second))) { return doof::Failure<std::string>{"Field \"nativeIncludes\" expected array but got " + std::string(doof::json_type_name(_iterator_nativeIncludes->second))}; }
+            if (!(doof::json_is_array(_iterator_nativeIncludes->second))) { return doof::Failure<std::string>{"Field \"nativeIncludes\" expected array but got " + std::string(doof::json_type_name(_iterator_nativeIncludes->second))}; }
         _field_nativeIncludes = [&]() { const auto* _array = doof::json_as_array(_iterator_nativeIncludes->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_nativeIncludes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_nativeAliases;
     if (auto _iterator_nativeAliases = _object->find("nativeAliases"); _iterator_nativeAliases != _object->end()) {
-        if (!(doof::json_is_array(_iterator_nativeAliases->second))) { return doof::Failure<std::string>{"Field \"nativeAliases\" expected array but got " + std::string(doof::json_type_name(_iterator_nativeAliases->second))}; }
+            if (!(doof::json_is_array(_iterator_nativeAliases->second))) { return doof::Failure<std::string>{"Field \"nativeAliases\" expected array but got " + std::string(doof::json_type_name(_iterator_nativeAliases->second))}; }
         _field_nativeAliases = [&]() { const auto* _array = doof::json_as_array(_iterator_nativeAliases->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_nativeAliases = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_nativeNamespaces;
     if (auto _iterator_nativeNamespaces = _object->find("nativeNamespaces"); _iterator_nativeNamespaces != _object->end()) {
-        if (!(doof::json_is_array(_iterator_nativeNamespaces->second))) { return doof::Failure<std::string>{"Field \"nativeNamespaces\" expected array but got " + std::string(doof::json_type_name(_iterator_nativeNamespaces->second))}; }
+            if (!(doof::json_is_array(_iterator_nativeNamespaces->second))) { return doof::Failure<std::string>{"Field \"nativeNamespaces\" expected array but got " + std::string(doof::json_type_name(_iterator_nativeNamespaces->second))}; }
         _field_nativeNamespaces = [&]() { const auto* _array = doof::json_as_array(_iterator_nativeNamespaces->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_nativeNamespaces = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<bool> _field_hasMain;
     if (auto _iterator_hasMain = _object->find("hasMain"); _iterator_hasMain != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_hasMain->second) : doof::json_is_boolean(_iterator_hasMain->second)))) { return doof::Failure<std::string>{"Field \"hasMain\" expected boolean but got " + std::string(doof::json_type_name(_iterator_hasMain->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_hasMain->second) : doof::json_is_boolean(_iterator_hasMain->second)))) { return doof::Failure<std::string>{"Field \"hasMain\" expected boolean but got " + std::string(doof::json_type_name(_iterator_hasMain->second))}; }
         _field_hasMain = (_lenient ? doof::json_as_bool_lenient(_iterator_hasMain->second) : doof::json_as_bool(_iterator_hasMain->second));
     } else {
         _field_hasMain = false;
     }
     std::optional<bool> _field_mainReturnsInt;
     if (auto _iterator_mainReturnsInt = _object->find("mainReturnsInt"); _iterator_mainReturnsInt != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mainReturnsInt->second) : doof::json_is_boolean(_iterator_mainReturnsInt->second)))) { return doof::Failure<std::string>{"Field \"mainReturnsInt\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mainReturnsInt->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mainReturnsInt->second) : doof::json_is_boolean(_iterator_mainReturnsInt->second)))) { return doof::Failure<std::string>{"Field \"mainReturnsInt\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mainReturnsInt->second))}; }
         _field_mainReturnsInt = (_lenient ? doof::json_as_bool_lenient(_iterator_mainReturnsInt->second) : doof::json_as_bool(_iterator_mainReturnsInt->second));
     } else {
         _field_mainReturnsInt = false;
     }
     std::optional<bool> _field_mainAcceptsArgs;
     if (auto _iterator_mainAcceptsArgs = _object->find("mainAcceptsArgs"); _iterator_mainAcceptsArgs != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mainAcceptsArgs->second) : doof::json_is_boolean(_iterator_mainAcceptsArgs->second)))) { return doof::Failure<std::string>{"Field \"mainAcceptsArgs\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mainAcceptsArgs->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mainAcceptsArgs->second) : doof::json_is_boolean(_iterator_mainAcceptsArgs->second)))) { return doof::Failure<std::string>{"Field \"mainAcceptsArgs\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mainAcceptsArgs->second))}; }
         _field_mainAcceptsArgs = (_lenient ? doof::json_as_bool_lenient(_iterator_mainAcceptsArgs->second) : doof::json_as_bool(_iterator_mainAcceptsArgs->second));
     } else {
         _field_mainAcceptsArgs = false;
     }
-    return doof::Success<std::shared_ptr<HeaderPlan>>{std::make_shared<HeaderPlan>(_field_functionSignatures.value(), _field_nativeAdapterSignatures.value(), _field_genericFunctionDefinitions.value(), _field_earlyModuleValueDeclarations.value(), _field_moduleValueDeclarations.value(), _field_earlyClassDefinitions.value(), _field_classDefinitions.value(), _field_interfaceAliases.value(), _field_enumDefinitions.value(), _field_ephemeralTypeAliases.value(), _field_preferredTypeAliasNames.value(), _field_preferredTypeAliasSpellings.value(), _field_earlyTypeAliases.value(), _field_typeAliases.value(), _field_classForwardDeclarations.value(), _field_typeOnlyForwardDeclarations.value(), _field_nativeIncludes.value(), _field_nativeAliases.value(), _field_nativeNamespaces.value(), _field_hasMain.value(), _field_mainReturnsInt.value(), _field_mainAcceptsArgs.value())};
+        return doof::Success<std::shared_ptr<HeaderPlan>>{std::make_shared<HeaderPlan>(_field_functionSignatures.value(), _field_nativeAdapterSignatures.value(), _field_genericFunctionDefinitions.value(), _field_earlyModuleValueDeclarations.value(), _field_moduleValueDeclarations.value(), _field_earlyClassDefinitions.value(), _field_classDefinitions.value(), _field_interfaceAliases.value(), _field_enumDefinitions.value(), _field_ephemeralTypeAliases.value(), _field_preferredTypeAliasNames.value(), _field_preferredTypeAliasSpellings.value(), _field_earlyTypeAliases.value(), _field_typeAliases.value(), _field_classForwardDeclarations.value(), _field_typeOnlyForwardDeclarations.value(), _field_nativeIncludes.value(), _field_nativeAliases.value(), _field_nativeNamespaces.value(), _field_hasMain.value(), _field_mainReturnsInt.value(), _field_mainAcceptsArgs.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject HeaderSection::toJsonObject() const {
@@ -203,17 +207,21 @@ doof::JsonObject HeaderSection::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<HeaderSection>, std::string> HeaderSection::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_namespaceName = _object->find("namespaceName");
     if (_iterator_namespaceName == _object->end()) { return doof::Failure<std::string>{"Missing required field \"namespaceName\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_namespaceName->second) : doof::json_is_string(_iterator_namespaceName->second)))) { return doof::Failure<std::string>{"Field \"namespaceName\" expected string but got " + std::string(doof::json_type_name(_iterator_namespaceName->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_namespaceName->second) : doof::json_is_string(_iterator_namespaceName->second)))) { return doof::Failure<std::string>{"Field \"namespaceName\" expected string but got " + std::string(doof::json_type_name(_iterator_namespaceName->second))}; }
     auto _field_namespaceName = (_lenient ? doof::json_as_string_lenient(_iterator_namespaceName->second) : doof::json_as_string(_iterator_namespaceName->second));
     auto _iterator_plan = _object->find("plan");
     if (_iterator_plan == _object->end()) { return doof::Failure<std::string>{"Missing required field \"plan\""}; }
-    if (!(doof::json_is_object(_iterator_plan->second))) { return doof::Failure<std::string>{"Field \"plan\" expected object but got " + std::string(doof::json_type_name(_iterator_plan->second))}; }
-    auto _field_plan = doof::success_value(HeaderPlan::fromJsonValue(_iterator_plan->second, _lenient));
-    return doof::Success<std::shared_ptr<HeaderSection>>{std::make_shared<HeaderSection>(_field_namespaceName, _field_plan)};
+        if (!(doof::json_is_object(_iterator_plan->second))) { return doof::Failure<std::string>{"Field \"plan\" expected object but got " + std::string(doof::json_type_name(_iterator_plan->second))}; }
+    auto _field_plan = doof::json_decode_value(HeaderPlan::fromJsonValue(_iterator_plan->second, _lenient));
+        return doof::Success<std::shared_ptr<HeaderSection>>{std::make_shared<HeaderSection>(_field_namespaceName, _field_plan)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 std::shared_ptr<HeaderPlan> planHeader(const std::shared_ptr<::app_src_ast_::Program>& program, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     return planHeaders(std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{program}), context);
@@ -758,20 +766,24 @@ doof::JsonObject HeaderTypeUse::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<HeaderTypeUse>, std::string> HeaderTypeUse::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_spelling = _object->find("spelling");
     if (_iterator_spelling == _object->end()) { return doof::Failure<std::string>{"Missing required field \"spelling\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_spelling->second) : doof::json_is_string(_iterator_spelling->second)))) { return doof::Failure<std::string>{"Field \"spelling\" expected string but got " + std::string(doof::json_type_name(_iterator_spelling->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_spelling->second) : doof::json_is_string(_iterator_spelling->second)))) { return doof::Failure<std::string>{"Field \"spelling\" expected string but got " + std::string(doof::json_type_name(_iterator_spelling->second))}; }
     auto _field_spelling = (_lenient ? doof::json_as_string_lenient(_iterator_spelling->second) : doof::json_as_string(_iterator_spelling->second));
     std::optional<int32_t> _field_count;
     if (auto _iterator_count = _object->find("count"); _iterator_count != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_count->second) : doof::json_is_number(_iterator_count->second)))) { return doof::Failure<std::string>{"Field \"count\" expected number but got " + std::string(doof::json_type_name(_iterator_count->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_number(_iterator_count->second) : doof::json_is_number(_iterator_count->second)))) { return doof::Failure<std::string>{"Field \"count\" expected number but got " + std::string(doof::json_type_name(_iterator_count->second))}; }
         _field_count = (_lenient ? doof::json_as_int_lenient(_iterator_count->second) : doof::json_as_int(_iterator_count->second));
     } else {
         _field_count = 0;
     }
-    return doof::Success<std::shared_ptr<HeaderTypeUse>>{std::make_shared<HeaderTypeUse>(_field_spelling, _field_count.value())};
+        return doof::Success<std::shared_ptr<HeaderTypeUse>>{std::make_shared<HeaderTypeUse>(_field_spelling, _field_count.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject HeaderCompressionState::toJsonObject() const {
@@ -780,16 +792,20 @@ doof::JsonObject HeaderCompressionState::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<HeaderCompressionState>, std::string> HeaderCompressionState::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     std::optional<int32_t> _field_nextAnonymousTypeIndex;
     if (auto _iterator_nextAnonymousTypeIndex = _object->find("nextAnonymousTypeIndex"); _iterator_nextAnonymousTypeIndex != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_nextAnonymousTypeIndex->second) : doof::json_is_number(_iterator_nextAnonymousTypeIndex->second)))) { return doof::Failure<std::string>{"Field \"nextAnonymousTypeIndex\" expected number but got " + std::string(doof::json_type_name(_iterator_nextAnonymousTypeIndex->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_number(_iterator_nextAnonymousTypeIndex->second) : doof::json_is_number(_iterator_nextAnonymousTypeIndex->second)))) { return doof::Failure<std::string>{"Field \"nextAnonymousTypeIndex\" expected number but got " + std::string(doof::json_type_name(_iterator_nextAnonymousTypeIndex->second))}; }
         _field_nextAnonymousTypeIndex = (_lenient ? doof::json_as_int_lenient(_iterator_nextAnonymousTypeIndex->second) : doof::json_as_int(_iterator_nextAnonymousTypeIndex->second));
     } else {
         _field_nextAnonymousTypeIndex = 1;
     }
-    return doof::Success<std::shared_ptr<HeaderCompressionState>>{std::make_shared<HeaderCompressionState>(_field_nextAnonymousTypeIndex.value())};
+        return doof::Success<std::shared_ptr<HeaderCompressionState>>{std::make_shared<HeaderCompressionState>(_field_nextAnonymousTypeIndex.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 void compressRepeatedHeaderVariants(const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<HeaderCompressionState>& state) {
     std::shared_ptr<std::vector<std::shared_ptr<HeaderTypeUse>>> uses = std::make_shared<std::vector<std::shared_ptr<HeaderTypeUse>>>(std::vector<std::shared_ptr<HeaderTypeUse>>{});

@@ -1,6 +1,6 @@
 // Assignment, identifier, operator, member, and index lowering.
 
-import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, ThisExpression, UnaryExpression } from "./ast"
+import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
 import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
@@ -338,6 +338,14 @@ function binaryOperator(operator: string): string {
 }
 
 export function emitBinary(expression: BinaryExpression, context: EmitContext): string {
+  if expression.operator == "+" {
+    let literalParts: string[] = []
+    if appendConstantStringParts(expression, literalParts) {
+      let value = ""
+      for part of literalParts { value = value + part }
+      return "std::string(" + quote(value) + ")"
+    }
+  }
   if expression.operator == ".." {
     return "doof::range(" + emitExpression(expression.left, context) + ", " + emitExpression(expression.right, context) + ")"
   }
@@ -346,8 +354,19 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
   }
   if expression.operator == "??" {
     left := emitExpression(expression.left, context)
-    right := emitExpression(expression.right, context)
-    return "(doof::is_null(" + left + ") ? " + right + " : doof::unwrap_optional(" + left + "))"
+    leftType := requireExpressionType(expression.left, "coalescing source")
+    resultType := requireExpressionType(expression, "coalescing expression")
+    right := emitExpression(expression.right, context, resultType)
+    context.tryCounter = context.tryCounter + 1
+    temporary := "_coalesce_" + string(context.tryCounter)
+    case leftType {
+      _: ResultResolvedType -> {
+        return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + temporary + " = " + left + "; if (doof::is_failure(" + temporary + ")) return " + right + "; return std::move(doof::success_value(" + temporary + ")); }()"
+      }
+      _ -> {
+        return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + temporary + " = " + left + "; if (doof::is_null(" + temporary + ")) return " + right + "; return doof::unwrap_optional(" + temporary + "); }()"
+      }
+    }
   }
   if (expression.operator == "==" || expression.operator == "!=") && expression.right.kind == "none-literal" {
     let test = "doof::is_null(" + emitExpression(expression.left, context) + ")"
@@ -362,6 +381,21 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
   }
   operator := if expression.operator == "\\" then "/" else expression.operator
   return "(" + emitExpression(expression.left, context) + " " + operator + " " + emitExpression(expression.right, context) + ")"
+}
+
+function appendConstantStringParts(expression: Expression, parts: string[]): bool {
+  case expression {
+    string_: StringLiteral -> {
+      if string_.interpolations.length > 0 { return false }
+      parts.push(string_.value)
+      return true
+    }
+    binary: BinaryExpression -> {
+      if binary.operator != "+" { return false }
+      return appendConstantStringParts(binary.left, parts) && appendConstantStringParts(binary.right, parts)
+    }
+    _ -> { return false }
+  }
 }
 
 export function emitMember(expression: MemberExpression, context: EmitContext): string {
@@ -476,6 +510,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       _: MethodReflectionResolvedType -> { return object + "." + cppIdentifier(expression.property) }
       enum_: EnumType -> {
         if expression.property == "value" { return "static_cast<int32_t>(" + object + ")" }
+        if expression.property == "name" { return emitType(enum_, context.modulePath) + "_name(" + object + ")" }
         return object + "::" + cppIdentifier(expression.property)
       }
       _ -> { }

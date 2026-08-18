@@ -3,7 +3,7 @@
 namespace std_::json::index {
 doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> parseJsonObject(const std::string& text) {
     auto _try_value_1 = ::doof_json::parse(text);
-    if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
+    if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_1))};
     const auto result = doof::success_value(_try_value_1);
     {
         auto _case_subject = result;

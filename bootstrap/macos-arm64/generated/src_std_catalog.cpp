@@ -13,29 +13,33 @@ doof::JsonObject StdCatalogPackage::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<StdCatalogPackage>, std::string> StdCatalogPackage::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_name = _object->find("name");
     if (_iterator_name == _object->end()) { return doof::Failure<std::string>{"Missing required field \"name\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
     auto _field_name = (_lenient ? doof::json_as_string_lenient(_iterator_name->second) : doof::json_as_string(_iterator_name->second));
     auto _iterator_url = _object->find("url");
     if (_iterator_url == _object->end()) { return doof::Failure<std::string>{"Missing required field \"url\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_url->second) : doof::json_is_string(_iterator_url->second)))) { return doof::Failure<std::string>{"Field \"url\" expected string but got " + std::string(doof::json_type_name(_iterator_url->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_url->second) : doof::json_is_string(_iterator_url->second)))) { return doof::Failure<std::string>{"Field \"url\" expected string but got " + std::string(doof::json_type_name(_iterator_url->second))}; }
     auto _field_url = (_lenient ? doof::json_as_string_lenient(_iterator_url->second) : doof::json_as_string(_iterator_url->second));
     auto _iterator_ref = _object->find("ref");
     if (_iterator_ref == _object->end()) { return doof::Failure<std::string>{"Missing required field \"ref\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_ref->second) : doof::json_is_string(_iterator_ref->second)))) { return doof::Failure<std::string>{"Field \"ref\" expected string but got " + std::string(doof::json_type_name(_iterator_ref->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_ref->second) : doof::json_is_string(_iterator_ref->second)))) { return doof::Failure<std::string>{"Field \"ref\" expected string but got " + std::string(doof::json_type_name(_iterator_ref->second))}; }
     auto _field_ref = (_lenient ? doof::json_as_string_lenient(_iterator_ref->second) : doof::json_as_string(_iterator_ref->second));
     auto _iterator_version = _object->find("version");
     if (_iterator_version == _object->end()) { return doof::Failure<std::string>{"Missing required field \"version\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_version->second) : doof::json_is_string(_iterator_version->second)))) { return doof::Failure<std::string>{"Field \"version\" expected string but got " + std::string(doof::json_type_name(_iterator_version->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_version->second) : doof::json_is_string(_iterator_version->second)))) { return doof::Failure<std::string>{"Field \"version\" expected string but got " + std::string(doof::json_type_name(_iterator_version->second))}; }
     auto _field_version = (_lenient ? doof::json_as_string_lenient(_iterator_version->second) : doof::json_as_string(_iterator_version->second));
     auto _iterator_commit = _object->find("commit");
     if (_iterator_commit == _object->end()) { return doof::Failure<std::string>{"Missing required field \"commit\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_commit->second) : doof::json_is_string(_iterator_commit->second)))) { return doof::Failure<std::string>{"Field \"commit\" expected string but got " + std::string(doof::json_type_name(_iterator_commit->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_commit->second) : doof::json_is_string(_iterator_commit->second)))) { return doof::Failure<std::string>{"Field \"commit\" expected string but got " + std::string(doof::json_type_name(_iterator_commit->second))}; }
     auto _field_commit = (_lenient ? doof::json_as_string_lenient(_iterator_commit->second) : doof::json_as_string(_iterator_commit->second));
-    return doof::Success<std::shared_ptr<StdCatalogPackage>>{std::make_shared<StdCatalogPackage>(_field_name, _field_url, _field_ref, _field_version, _field_commit)};
+        return doof::Success<std::shared_ptr<StdCatalogPackage>>{std::make_shared<StdCatalogPackage>(_field_name, _field_url, _field_ref, _field_version, _field_commit)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject StdCatalog::toJsonObject() const {
@@ -47,25 +51,29 @@ doof::JsonObject StdCatalog::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<StdCatalog>, std::string> StdCatalog::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_schemaVersion = _object->find("schemaVersion");
     if (_iterator_schemaVersion == _object->end()) { return doof::Failure<std::string>{"Missing required field \"schemaVersion\""}; }
-    if (!((_lenient ? doof::json_is_lenient_number(_iterator_schemaVersion->second) : doof::json_is_number(_iterator_schemaVersion->second)))) { return doof::Failure<std::string>{"Field \"schemaVersion\" expected number but got " + std::string(doof::json_type_name(_iterator_schemaVersion->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_schemaVersion->second) : doof::json_is_number(_iterator_schemaVersion->second)))) { return doof::Failure<std::string>{"Field \"schemaVersion\" expected number but got " + std::string(doof::json_type_name(_iterator_schemaVersion->second))}; }
     auto _field_schemaVersion = (_lenient ? doof::json_as_int_lenient(_iterator_schemaVersion->second) : doof::json_as_int(_iterator_schemaVersion->second));
     auto _iterator_compilerVersion = _object->find("compilerVersion");
     if (_iterator_compilerVersion == _object->end()) { return doof::Failure<std::string>{"Missing required field \"compilerVersion\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_compilerVersion->second) : doof::json_is_string(_iterator_compilerVersion->second)))) { return doof::Failure<std::string>{"Field \"compilerVersion\" expected string but got " + std::string(doof::json_type_name(_iterator_compilerVersion->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_compilerVersion->second) : doof::json_is_string(_iterator_compilerVersion->second)))) { return doof::Failure<std::string>{"Field \"compilerVersion\" expected string but got " + std::string(doof::json_type_name(_iterator_compilerVersion->second))}; }
     auto _field_compilerVersion = (_lenient ? doof::json_as_string_lenient(_iterator_compilerVersion->second) : doof::json_as_string(_iterator_compilerVersion->second));
     auto _iterator_digest = _object->find("digest");
     if (_iterator_digest == _object->end()) { return doof::Failure<std::string>{"Missing required field \"digest\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_digest->second) : doof::json_is_string(_iterator_digest->second)))) { return doof::Failure<std::string>{"Field \"digest\" expected string but got " + std::string(doof::json_type_name(_iterator_digest->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_digest->second) : doof::json_is_string(_iterator_digest->second)))) { return doof::Failure<std::string>{"Field \"digest\" expected string but got " + std::string(doof::json_type_name(_iterator_digest->second))}; }
     auto _field_digest = (_lenient ? doof::json_as_string_lenient(_iterator_digest->second) : doof::json_as_string(_iterator_digest->second));
     auto _iterator_packages = _object->find("packages");
     if (_iterator_packages == _object->end()) { return doof::Failure<std::string>{"Missing required field \"packages\""}; }
-    if (!(doof::json_is_array(_iterator_packages->second))) { return doof::Failure<std::string>{"Field \"packages\" expected array but got " + std::string(doof::json_type_name(_iterator_packages->second))}; }
-    auto _field_packages = [&]() { const auto* _array = doof::json_as_array(_iterator_packages->second); auto _values = std::make_shared<std::vector<std::shared_ptr<StdCatalogPackage>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(StdCatalogPackage::fromJsonValue(_element, _lenient))); } return _values; }();
-    return doof::Success<std::shared_ptr<StdCatalog>>{std::make_shared<StdCatalog>(_field_schemaVersion, _field_compilerVersion, _field_digest, _field_packages)};
+        if (!(doof::json_is_array(_iterator_packages->second))) { return doof::Failure<std::string>{"Field \"packages\" expected array but got " + std::string(doof::json_type_name(_iterator_packages->second))}; }
+    auto _field_packages = [&]() { const auto* _array = doof::json_as_array(_iterator_packages->second); auto _values = std::make_shared<std::vector<std::shared_ptr<StdCatalogPackage>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(StdCatalogPackage::fromJsonValue(_element, _lenient))); } return _values; }();
+        return doof::Success<std::shared_ptr<StdCatalog>>{std::make_shared<StdCatalog>(_field_schemaVersion, _field_compilerVersion, _field_digest, _field_packages)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 std::string canonicalDependencyUrl(const std::string& value) {
     auto result = doof::string_trim(value);
@@ -90,7 +98,7 @@ std::string canonicalDependencyUrl(const std::string& value) {
 }
 doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(const std::string& source) {
     auto _try_value_1 = ::doof_json::parse(source);
-    if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
+    if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_1))};
     const auto parsed = doof::success_value(_try_value_1);
     auto _binding_value_2 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = parsed; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
     if (doof::is_failure(_binding_value_2)) {
@@ -99,16 +107,16 @@ doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(const std
     }
     const auto root = doof::success_value(_binding_value_2);
     auto _try_value_3 = catalogInt(root, std::string("schemaVersion"));
-    if (doof::is_failure(_try_value_3)) return doof::Failure<std::string>{doof::failure_error(_try_value_3)};
+    if (doof::is_failure(_try_value_3)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_3))};
     const auto schemaVersion = doof::success_value(_try_value_3);
     if (schemaVersion != 1) {
         return doof::Failure<std::string>{ (std::string("Unsupported std catalog schema ") + doof::to_string(schemaVersion)) };
     }
     auto _try_value_4 = catalogString(root, std::string("compilerVersion"));
-    if (doof::is_failure(_try_value_4)) return doof::Failure<std::string>{doof::failure_error(_try_value_4)};
+    if (doof::is_failure(_try_value_4)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_4))};
     const auto compilerVersion = doof::success_value(_try_value_4);
     auto _try_value_5 = catalogString(root, std::string("digest"));
-    if (doof::is_failure(_try_value_5)) return doof::Failure<std::string>{doof::failure_error(_try_value_5)};
+    if (doof::is_failure(_try_value_5)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_5))};
     const auto digest = doof::success_value(_try_value_5);
     if (static_cast<int32_t>(digest.size()) != 64) {
         return doof::Failure<std::string>{ std::string("Invalid std catalog digest") };
@@ -130,19 +138,19 @@ doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(const std
         }
         const auto object = doof::success_value(_binding_value_7);
         auto _try_value_8 = catalogString(object, std::string("name"));
-        if (doof::is_failure(_try_value_8)) return doof::Failure<std::string>{doof::failure_error(_try_value_8)};
+        if (doof::is_failure(_try_value_8)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_8))};
         const auto name = doof::success_value(_try_value_8);
         auto _try_value_9 = catalogString(object, std::string("url"));
-        if (doof::is_failure(_try_value_9)) return doof::Failure<std::string>{doof::failure_error(_try_value_9)};
+        if (doof::is_failure(_try_value_9)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_9))};
         const auto url = doof::success_value(_try_value_9);
         auto _try_value_10 = catalogString(object, std::string("ref"));
-        if (doof::is_failure(_try_value_10)) return doof::Failure<std::string>{doof::failure_error(_try_value_10)};
+        if (doof::is_failure(_try_value_10)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_10))};
         const auto ref = doof::success_value(_try_value_10);
         auto _try_value_11 = catalogString(object, std::string("version"));
-        if (doof::is_failure(_try_value_11)) return doof::Failure<std::string>{doof::failure_error(_try_value_11)};
+        if (doof::is_failure(_try_value_11)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_11))};
         const auto version = doof::success_value(_try_value_11);
         auto _try_value_12 = catalogString(object, std::string("commit"));
-        if (doof::is_failure(_try_value_12)) return doof::Failure<std::string>{doof::failure_error(_try_value_12)};
+        if (doof::is_failure(_try_value_12)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_12))};
         const auto commit = doof::success_value(_try_value_12);
         if (!doof::string_startsWith(name, std::string("std/")) || doof::string_contains(doof::string_substring(name, 4, static_cast<int32_t>(name.size())), std::string("/"))) {
             return doof::Failure<std::string>{ (std::string("Invalid std catalog package name ") + name) };

@@ -20,31 +20,35 @@ doof::JsonObject NativeCommandResult::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<NativeCommandResult>, std::string> NativeCommandResult::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_exitCode = _object->find("exitCode");
     if (_iterator_exitCode == _object->end()) { return doof::Failure<std::string>{"Missing required field \"exitCode\""}; }
-    if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
     auto _field_exitCode = (_lenient ? doof::json_as_int_lenient(_iterator_exitCode->second) : doof::json_as_int(_iterator_exitCode->second));
     std::optional<std::shared_ptr<std::vector<uint8_t>>> _field_output;
     if (auto _iterator_output = _object->find("output"); _iterator_output != _object->end()) {
-        if (!(doof::json_is_array(_iterator_output->second))) { return doof::Failure<std::string>{"Field \"output\" expected array but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
+            if (!(doof::json_is_array(_iterator_output->second))) { return doof::Failure<std::string>{"Field \"output\" expected array but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
         _field_output = [&]() { const auto* _array = doof::json_as_array(_iterator_output->second); auto _values = std::make_shared<std::vector<uint8_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(static_cast<uint8_t>(_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
         _field_output = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
     }
     std::optional<std::string> _field_error;
     if (auto _iterator_error = _object->find("error"); _iterator_error != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
         _field_error = (_lenient ? doof::json_as_string_lenient(_iterator_error->second) : doof::json_as_string(_iterator_error->second));
     } else {
         _field_error = std::string("");
     }
     auto _iterator_truncated = _object->find("truncated");
     if (_iterator_truncated == _object->end()) { return doof::Failure<std::string>{"Missing required field \"truncated\""}; }
-    if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_truncated->second) : doof::json_is_boolean(_iterator_truncated->second)))) { return doof::Failure<std::string>{"Field \"truncated\" expected boolean but got " + std::string(doof::json_type_name(_iterator_truncated->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_truncated->second) : doof::json_is_boolean(_iterator_truncated->second)))) { return doof::Failure<std::string>{"Field \"truncated\" expected boolean but got " + std::string(doof::json_type_name(_iterator_truncated->second))}; }
     auto _field_truncated = (_lenient ? doof::json_as_bool_lenient(_iterator_truncated->second) : doof::json_as_bool(_iterator_truncated->second));
-    return doof::Success<std::shared_ptr<NativeCommandResult>>{std::make_shared<NativeCommandResult>(_field_exitCode, _field_output.value(), _field_error.value(), _field_truncated)};
+        return doof::Success<std::shared_ptr<NativeCommandResult>>{std::make_shared<NativeCommandResult>(_field_exitCode, _field_output.value(), _field_error.value(), _field_truncated)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject NativeCompilerBatchResult::toJsonObject() const {
@@ -54,17 +58,21 @@ doof::JsonObject NativeCompilerBatchResult::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<NativeCompilerBatchResult>, std::string> NativeCompilerBatchResult::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_exitCode = _object->find("exitCode");
     if (_iterator_exitCode == _object->end()) { return doof::Failure<std::string>{"Missing required field \"exitCode\""}; }
-    if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
     auto _field_exitCode = (_lenient ? doof::json_as_int_lenient(_iterator_exitCode->second) : doof::json_as_int(_iterator_exitCode->second));
     auto _iterator_outputs = _object->find("outputs");
     if (_iterator_outputs == _object->end()) { return doof::Failure<std::string>{"Missing required field \"outputs\""}; }
-    if (!(doof::json_is_array(_iterator_outputs->second))) { return doof::Failure<std::string>{"Field \"outputs\" expected array but got " + std::string(doof::json_type_name(_iterator_outputs->second))}; }
-    auto _field_outputs = [&]() { const auto* _array = doof::json_as_array(_iterator_outputs->second); auto _values = std::make_shared<std::vector<std::shared_ptr<NativeCommandResult>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(NativeCommandResult::fromJsonValue(_element, _lenient))); } return _values; }();
-    return doof::Success<std::shared_ptr<NativeCompilerBatchResult>>{std::make_shared<NativeCompilerBatchResult>(_field_exitCode, _field_outputs)};
+        if (!(doof::json_is_array(_iterator_outputs->second))) { return doof::Failure<std::string>{"Field \"outputs\" expected array but got " + std::string(doof::json_type_name(_iterator_outputs->second))}; }
+    auto _field_outputs = [&]() { const auto* _array = doof::json_as_array(_iterator_outputs->second); auto _values = std::make_shared<std::vector<std::shared_ptr<NativeCommandResult>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(NativeCommandResult::fromJsonValue(_element, _lenient))); } return _values; }();
+        return doof::Success<std::shared_ptr<NativeCompilerBatchResult>>{std::make_shared<NativeCompilerBatchResult>(_field_exitCode, _field_outputs)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject NativeCompilerIdentity::toJsonObject() const {
@@ -74,17 +82,21 @@ doof::JsonObject NativeCompilerIdentity::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<NativeCompilerIdentity>, std::string> NativeCompilerIdentity::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_command = _object->find("command");
     if (_iterator_command == _object->end()) { return doof::Failure<std::string>{"Missing required field \"command\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_command->second) : doof::json_is_string(_iterator_command->second)))) { return doof::Failure<std::string>{"Field \"command\" expected string but got " + std::string(doof::json_type_name(_iterator_command->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_command->second) : doof::json_is_string(_iterator_command->second)))) { return doof::Failure<std::string>{"Field \"command\" expected string but got " + std::string(doof::json_type_name(_iterator_command->second))}; }
     auto _field_command = (_lenient ? doof::json_as_string_lenient(_iterator_command->second) : doof::json_as_string(_iterator_command->second));
     auto _iterator_signature = _object->find("signature");
     if (_iterator_signature == _object->end()) { return doof::Failure<std::string>{"Missing required field \"signature\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_signature->second) : doof::json_is_string(_iterator_signature->second)))) { return doof::Failure<std::string>{"Field \"signature\" expected string but got " + std::string(doof::json_type_name(_iterator_signature->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_signature->second) : doof::json_is_string(_iterator_signature->second)))) { return doof::Failure<std::string>{"Field \"signature\" expected string but got " + std::string(doof::json_type_name(_iterator_signature->second))}; }
     auto _field_signature = (_lenient ? doof::json_as_string_lenient(_iterator_signature->second) : doof::json_as_string(_iterator_signature->second));
-    return doof::Success<std::shared_ptr<NativeCompilerIdentity>>{std::make_shared<NativeCompilerIdentity>(_field_command, _field_signature)};
+        return doof::Success<std::shared_ptr<NativeCompilerIdentity>>{std::make_shared<NativeCompilerIdentity>(_field_command, _field_signature)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 std::shared_ptr<NativeCommandResult> runBuildCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments) {
     auto _binding_value_1 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_NATIVE_OUTPUT_BYTES, nullptr));
@@ -143,17 +155,21 @@ doof::JsonObject NativeCompilerWorker::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<NativeCompilerWorker>, std::string> NativeCompilerWorker::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_tasks = _object->find("tasks");
     if (_iterator_tasks == _object->end()) { return doof::Failure<std::string>{"Missing required field \"tasks\""}; }
-    if (!(doof::json_is_array(_iterator_tasks->second))) { return doof::Failure<std::string>{"Field \"tasks\" expected array but got " + std::string(doof::json_type_name(_iterator_tasks->second))}; }
-    auto _field_tasks = [&]() { const auto* _array = doof::json_as_array(_iterator_tasks->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(::app_src_native_build_::NativeCompileTask::fromJsonValue(_element, _lenient))); } return _values; }();
+        if (!(doof::json_is_array(_iterator_tasks->second))) { return doof::Failure<std::string>{"Field \"tasks\" expected array but got " + std::string(doof::json_type_name(_iterator_tasks->second))}; }
+    auto _field_tasks = [&]() { const auto* _array = doof::json_as_array(_iterator_tasks->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(::app_src_native_build_::NativeCompileTask::fromJsonValue(_element, _lenient))); } return _values; }();
     auto _iterator_outputMode = _object->find("outputMode");
     if (_iterator_outputMode == _object->end()) { return doof::Failure<std::string>{"Missing required field \"outputMode\""}; }
-    if (!(doof::json_is_string(_iterator_outputMode->second))) { return doof::Failure<std::string>{"Field \"outputMode\" expected string but got " + std::string(doof::json_type_name(_iterator_outputMode->second))}; }
-    auto _field_outputMode = NativeBuildOutputMode_fromName(doof::json_as_string(_iterator_outputMode->second)).value();
-    return doof::Success<std::shared_ptr<NativeCompilerWorker>>{std::make_shared<NativeCompilerWorker>(_field_tasks, _field_outputMode)};
+        if (!(doof::json_is_string(_iterator_outputMode->second))) { return doof::Failure<std::string>{"Field \"outputMode\" expected string but got " + std::string(doof::json_type_name(_iterator_outputMode->second))}; }
+    auto _field_outputMode = doof::json_decode_optional(NativeBuildOutputMode_fromName(doof::json_as_string(_iterator_outputMode->second)), std::string("Unknown enum value: ") + doof::json_as_string(_iterator_outputMode->second));
+        return doof::Success<std::shared_ptr<NativeCompilerWorker>>{std::make_shared<NativeCompilerWorker>(_field_tasks, _field_outputMode)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, bool release, const std::string& platform, NativeBuildOutputMode outputMode) {
     const auto& _iterable_4 = project->nativeBuild->pkgConfigPackages;

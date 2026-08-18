@@ -11,27 +11,31 @@ doof::JsonObject PkgConfigCommandResult::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<PkgConfigCommandResult>, std::string> PkgConfigCommandResult::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_exitCode = _object->find("exitCode");
     if (_iterator_exitCode == _object->end()) { return doof::Failure<std::string>{"Missing required field \"exitCode\""}; }
-    if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
     auto _field_exitCode = (_lenient ? doof::json_as_int_lenient(_iterator_exitCode->second) : doof::json_as_int(_iterator_exitCode->second));
     std::optional<std::string> _field_output;
     if (auto _iterator_output = _object->find("output"); _iterator_output != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_output->second) : doof::json_is_string(_iterator_output->second)))) { return doof::Failure<std::string>{"Field \"output\" expected string but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_output->second) : doof::json_is_string(_iterator_output->second)))) { return doof::Failure<std::string>{"Field \"output\" expected string but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
         _field_output = (_lenient ? doof::json_as_string_lenient(_iterator_output->second) : doof::json_as_string(_iterator_output->second));
     } else {
         _field_output = std::string("");
     }
     std::optional<std::string> _field_error;
     if (auto _iterator_error = _object->find("error"); _iterator_error != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
         _field_error = (_lenient ? doof::json_as_string_lenient(_iterator_error->second) : doof::json_as_string(_iterator_error->second));
     } else {
         _field_error = std::string("");
     }
-    return doof::Success<std::shared_ptr<PkgConfigCommandResult>>{std::make_shared<PkgConfigCommandResult>(_field_exitCode, _field_output.value(), _field_error.value())};
+        return doof::Success<std::shared_ptr<PkgConfigCommandResult>>{std::make_shared<PkgConfigCommandResult>(_field_exitCode, _field_output.value(), _field_error.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 doof::Result<void, std::string> applyPkgConfigResult(const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, const std::string& packageName, const std::string& mode, const std::shared_ptr<PkgConfigCommandResult>& result) {
     if (result->exitCode == -1) {

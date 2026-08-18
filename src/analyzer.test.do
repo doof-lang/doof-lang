@@ -26,6 +26,27 @@ export function testRecognizesBuiltinNeverAnnotations(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testRejectsValueSymbolsInTypePositions(): none {
+  result := createAnalyzer([SourceFile {
+    path: "/main.do", source: "function Factory(): none {}\nfunction consume(value: Factory): none {}",
+  }]).analyze("/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Symbol 'Factory' is not a type")
+}
+
+export function testRejectsDuplicateModuleAndImportBindings(): none {
+  duplicateDeclaration := createAnalyzer([SourceFile {
+    path: "/main.do", source: "function same(): int => 1\nfunction same(): int => 2",
+  }]).analyze("/main.do")
+  Assert.equal(hasDiagnostic(duplicateDeclaration, "Duplicate module binding 'same'"), true)
+
+  duplicateImport := createAnalyzer([
+    SourceFile { path: "/main.do", source: "import { User } from \"./types\"\nimport { Identifier as User } from \"./types\"" },
+    SourceFile { path: "/types.do", source: "export class User {}\nexport type Identifier = int" },
+  ]).analyze("/main.do")
+  Assert.equal(hasDiagnostic(duplicateImport, "Duplicate module binding 'User'"), true)
+}
+
 export function testRewritesMockImportsFromGeneratedHarnessRoot(): none {
   result := createAnalyzer([
     SourceFile { path: "/build/__doof_tests__.do", source: "import { testScene } from \"../game/tests/scene.test\"\nfunction main(): void { testScene() }" },
@@ -108,6 +129,14 @@ export function testRejectsNestedMockRootsAndTestImports(): none {
     SourceFile { path: "/helper.test.do", source: "export function helper(): void {}" },
   ]).analyze("/main.test.do")
   Assert.equal(hasDiagnostic(testImport, "Test file \"/main.test.do\" cannot import another test file \"/helper.test.do\""), true)
+}
+
+export function testRejectsTestImportsWithoutMockDirectives(): none {
+  result := createAnalyzer([
+    SourceFile { path: "/main.test.do", source: "import { helper } from \"./helper.test\"" },
+    SourceFile { path: "/helper.test.do", source: "export function helper(): none {}" },
+  ]).analyze("/main.test.do")
+  Assert.equal(hasDiagnostic(result, "Test file \"/main.test.do\" cannot import another test file \"/helper.test.do\""), true)
 }
 
 export function testResetsMockEnvironmentBetweenAnalyses(): none {

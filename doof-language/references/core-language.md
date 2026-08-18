@@ -309,6 +309,13 @@ multiline := `Line 1
 Line 2: ${value}`
 ```
 
+Interpolation evaluates expressions exactly once from left to right. It accepts
+primitives, enums, `none`, and recursively supported arrays, maps, sets, tuples,
+`Result` values, and unions. Classes, structs, interfaces, callbacks, actors,
+promises, streams, ranges, weak references, metadata, and unconstrained type
+parameters must be converted to a meaningful supported value first. Every
+`${...}` and its surrounding string delimiter must be closed.
+
 ## Common Patterns
 
 ### Discriminated Unions

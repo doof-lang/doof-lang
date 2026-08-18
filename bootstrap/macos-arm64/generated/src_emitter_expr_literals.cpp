@@ -285,15 +285,15 @@ std::string emitString(const std::shared_ptr<::app_src_ast_::StringLiteral>& exp
     if (static_cast<int32_t>((expression->interpolations)->size()) == 0) {
         return ((std::string("std::string(") + quote(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 199))) + std::string(")"));
     }
-    auto result = ((std::string("std::string(") + quote(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 200))) + std::string(")"));
+    auto result = ((std::string("([&]() -> std::string { std::string _interpolation = ") + quote(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 200))) + std::string("; "));
     for (int32_t i = 0; i < static_cast<int32_t>((expression->interpolations)->size()); ++i) {
-        (result = (((result + std::string(" + doof::to_string(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->interpolations, i, "src/emitter-expr-literals", 202), context, std::monostate{})) + std::string(")")));
+        (result = (((result + std::string("_interpolation += doof::to_string(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->interpolations, i, "src/emitter-expr-literals", 202), context, std::monostate{})) + std::string("); ")));
         const auto partIndex = ((i * 2) + 2);
         if (partIndex < static_cast<int32_t>((expression->parts)->size())) {
-            (result = (((result + std::string(" + std::string(")) + quote(doof::array_at(expression->parts, partIndex, "src/emitter-expr-literals", 204))) + std::string(")")));
+            (result = (((result + std::string("_interpolation += ")) + quote(doof::array_at(expression->parts, partIndex, "src/emitter-expr-literals", 204))) + std::string("; ")));
         }
     }
-    return result;
+    return (result + std::string("return _interpolation; }())"));
 }
 std::string quote(const std::string& value) {
     const auto escaped = doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(value, std::string("\\"), std::string("\\\\")), std::string("\""), std::string("\\\"")), std::string("\n"), std::string("\\n")), std::string("\r"), std::string("\\r")), std::string("\t"), std::string("\\t"));

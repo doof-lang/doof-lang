@@ -782,9 +782,9 @@ let name = "Alice"
 let age = 30
 let message = "Hello, ${name}! You are ${age} years old."
 
-// Any expression can be interpolated
+// Values with a defined string representation can be interpolated
 let calc = "Sum: ${x + y}"
-let formatted = "Pi: ${pi.toFixed(2)}"
+let padded = "Value: ${string(age).padStart(5, '0')}"
 ```
 
 ### Multi-line Strings
@@ -798,12 +798,28 @@ let report = `
 `
 ```
 
-**No format specifiers** — formatting is delegated to methods:
+Interpolations are evaluated exactly once, from left to right. Supported values
+are primitives, enum values, `none`, and arrays, maps, sets, tuples, `Result`
+values, and unions whose contained types are themselves supported. A generic
+type parameter is supported when its ordinary constraint contains only
+supported types, such as `T: int | string`.
+
+Classes, structs, interfaces, callbacks, actors, promises, streams, ranges,
+weak references, metadata, and unconstrained type parameters have no implicit
+string representation. Interpolating one is a compile-time error; select a
+meaningful field or explicitly construct a string representation instead. This
+prevents native pointer addresses or C++ streamability from becoming observable
+language behavior.
+
+Every `${` must have a matching `}`, and the surrounding quote or backtick must
+also be closed. Unterminated interpolation is a syntax error even at end of
+file.
+
+**No format specifiers** — prepare a string value before interpolation:
 
 ```javascript
-// ✅ Use methods
-let hex = "Color: ${255.toHex()}"
-let padded = "Value: ${num.toString().padStart(5, '0')}"
+// ✅ Convert, then use supported string methods
+let padded = "Value: ${string(num).padStart(5, '0')}"
 
 // ❌ No special syntax
 let hex = "Color: ${255:x}"  // Not supported

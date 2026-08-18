@@ -49,6 +49,11 @@ namespace std_::http::index { struct BodyChunkStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
+namespace std_::fs::index { struct BlockReadStream; }
+namespace std_::http::index { struct BodyChunkStream; }
+namespace std_::os::index { struct ExecStdoutStream; }
+namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::stream::index { struct DecodedLineStream; }
 namespace std_::event::index { enum class Backpressure; }
 namespace std_::event::index { enum class SendError; }
 namespace std_::event::index { struct Timer; }
@@ -576,6 +581,11 @@ namespace std_::http::types {
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
 }
 
+namespace std_::http::transport_url {
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
+    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
+}
+
 namespace std_::event::index {
     using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
@@ -1020,6 +1030,10 @@ namespace std_::fs::index {
     bool next();
     std::shared_ptr<std::vector<uint8_t>> value();
 };
+}
+
+namespace std_::http::transport_url {
+    doof::Result<std::string, std::shared_ptr<::std_::http::types::HttpError>> prepareTransportUrl(const std::string& url);
 }
 
 namespace doof_event { using Backpressure = ::std_::event::index::Backpressure; }

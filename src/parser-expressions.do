@@ -267,7 +267,7 @@ function parsePrimary(parser: Parser): Expression {
     value := parseDoubleValue(parser, raw)
     return DoubleLiteral { kind: "double-literal", value, raw, span: parser.span(start) }
   }
-  if parser.check(TokenType.StringLiteral) || parser.check(TokenType.TemplateLiteralStart) || parser.check(TokenType.TemplateLiteralMiddle) {
+  if parser.check(TokenType.StringLiteral) || parser.check(TokenType.TemplateLiteralStart) {
     return parseStringLiteral(parser)
   }
   if parser.check(TokenType.CharLiteral) {
@@ -365,15 +365,13 @@ function parseStringLiteral(parser: Parser): Expression {
     return StringLiteral { kind: "string-literal", value, parts, interpolations, span: parser.span(start) }
   }
   let value = ""
-  if parser.check(TokenType.TemplateLiteralStart) {
-    raw := tokenValue(parser.advance(), parser.source)
-    parts.push(raw)
-    value = value + raw
-    expression := parser.parseExpression()
-    interpolations.push(expression)
-    parts.push("<expression>")
-    value = value + "<expression>"
-  }
+  raw := tokenValue(parser.expect(TokenType.TemplateLiteralStart), parser.source)
+  parts.push(raw)
+  value = value + raw
+  expression := parser.parseExpression()
+  interpolations.push(expression)
+  parts.push("<expression>")
+  value = value + "<expression>"
   while parser.check(TokenType.TemplateLiteralMiddle) {
     raw := tokenValue(parser.advance(), parser.source)
     parts.push(raw)
@@ -383,11 +381,9 @@ function parseStringLiteral(parser: Parser): Expression {
     parts.push("<expression>")
     value = value + "<expression>"
   }
-  if parser.check(TokenType.TemplateLiteralEnd) {
-    raw := tokenValue(parser.advance(), parser.source)
-    parts.push(raw)
-    value = value + raw
-  }
+  endRaw := tokenValue(parser.expect(TokenType.TemplateLiteralEnd, "Expected end of string interpolation"), parser.source)
+  parts.push(endRaw)
+  value = value + endRaw
   return StringLiteral { kind: "string-literal", value, parts, interpolations, span: parser.span(start) }
 }
 

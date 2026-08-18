@@ -19,7 +19,7 @@ import {
   ExpressionStatement, DestructuringStatement, ImportDeclaration, TypeAliasDeclaration, UnionType,
   CaseStatement, MockImportDirective, WeakType, YieldBlockAssignmentStatement, TypeParameterConstraint,
 } from "./ast"
-import type { ImportDeclaration, Program, SourceSpan, Statement, TryStatement, TypeAnnotation } from "./ast"
+import type { Program, SourceSpan, Statement, TryStatement, TypeAnnotation } from "./ast"
 import { sha256HexString } from "std/crypto"
 
 export class ModuleInfo {
@@ -116,6 +116,10 @@ export class ModuleAnalyzer {
       symbol := symbolFor(statement, info.path)
       if symbol == none { continue }
       decorateDeclarationSymbol(statement, symbol!)
+      if findSymbol(info, symbol!.name) != none {
+        addError(info, "Duplicate module binding '" + symbol!.name + "'", statement.span)
+        continue
+      }
       info.symbols.push(symbol!)
       if symbol!.exported { info.exports.push(symbol!) }
     }
@@ -187,7 +191,7 @@ export class ModuleAnalyzer {
       case statement {
         import_: ImportDeclaration -> {
           sourcePath := resolveImportPath(info, import_.source)
-          if info.path.endsWith(".test.do") && info.mockRootPath == info.path && sourcePath.endsWith(".test.do") {
+          if info.path.endsWith(".test.do") && sourcePath.endsWith(".test.do") {
             addError(info, "Test file \"" + info.path + "\" cannot import another test file \"" + sourcePath + "\"", import_.span)
             continue
           }
@@ -203,6 +207,10 @@ export class ModuleAnalyzer {
                   addError(info, "Module '" + import_.source + "' does not export '" + named.name + "'", named.span)
                 }
                 localName := if named.alias == none then named.name else named.alias!
+                if hasModuleBinding(info, localName) {
+                  addError(info, "Duplicate module binding '" + localName + "'", named.span)
+                  continue
+                }
                 if imported == none {
                   info.imports.push(ImportBinding {
                     localName, sourceName: named.name, sourceModule: sourcePath,
@@ -216,6 +224,10 @@ export class ModuleAnalyzer {
                 }
               }
               namespace: NamespaceImport -> {
+                if hasModuleBinding(info, namespace.alias) {
+                  addError(info, "Duplicate module binding '" + namespace.alias + "'", namespace.span)
+                  continue
+                }
                 info.namespaceImports.push(NamespaceBinding {
                   localName: namespace.alias,
                   sourceModule: sourcePath,
@@ -320,7 +332,12 @@ export class ModuleAnalyzer {
             }
           }
           if symbol == none { symbol = findExport(info, named.name) }
-          if symbol == none { addError(info, "Unknown type '" + named.name + "'", named.span) }
+          if symbol == none {
+            addError(info, "Unknown type '" + named.name + "'", named.span)
+          } else if !isTypeSymbol(symbol!) {
+            addError(info, "Symbol '" + named.name + "' is not a type", named.span)
+            symbol = none
+          }
           named.resolvedSymbol = symbol
         }
         for argument of named.typeArgs { visitType(argument, info, typeParams) }
@@ -479,6 +496,18 @@ function findSymbol(info: ModuleInfo, name: string): Symbol | none {
 function findExport(info: ModuleInfo, name: string): Symbol | none {
   for symbol of info.exports { if symbol.name == name { return symbol } }
   return none
+}
+
+function hasModuleBinding(info: ModuleInfo, name: string): bool {
+  if findSymbol(info, name) != none { return true }
+  for imported of info.imports { if imported.localName == name { return true } }
+  for imported of info.namespaceImports { if imported.localName == name { return true } }
+  return false
+}
+
+function isTypeSymbol(symbol: Symbol): bool {
+  return symbol.kind == "class" || symbol.kind == "struct" || symbol.kind == "interface" ||
+    symbol.kind == "enum" || symbol.kind == "type-alias"
 }
 
 function isBuiltin(name: string): bool {

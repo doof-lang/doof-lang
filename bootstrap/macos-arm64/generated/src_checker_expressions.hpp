@@ -1279,6 +1279,7 @@ namespace app_src_checker_types_ {
     bool isAssignable(const __type9& value, const __type9& target);
     __type9 joinTypes(const __type9& left, const __type9& right);
     bool isNumeric(const __type9& resolvedType);
+    bool isStringInterpolatable(const __type9& type_);
     __type9 numericResult(const __type9& left, const __type9& right);
 }
 
@@ -1295,10 +1296,11 @@ namespace app_src_checker_symbols_ {
     std::string casePatternName(const std::shared_ptr<::app_src_ast_::TypePattern>& pattern);
     __type10 optionalResolvedType(const __type11& value);
     bool isNamespaceImport(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& name);
+    bool isTypeOnlyNamespaceImport(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& name);
     __type11 namespaceMemberType(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& namespaceName, const std::string& memberName, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result);
     std::shared_ptr<::app_src_semantic_::Symbol> namespaceMemberSymbol(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& namespaceName, const std::string& memberName, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result);
     __type11 resolveAnnotation(const std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>& annotation, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<std::vector<std::string>>& typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
-    void declare(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::shared_ptr<::app_src_semantic_::Binding>& binding);
+    bool declare(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::shared_ptr<::app_src_semantic_::Binding>& binding);
     bool hasTypeParam(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::string& name);
     std::string typeParamConstraintName(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::string& name);
     __type10 typeParamConstraint(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::string& name);
@@ -1307,6 +1309,7 @@ namespace app_src_checker_symbols_ {
     bool isBuiltinCallable(const std::string& name);
     __type11 builtinCallable(const std::string& name);
     std::shared_ptr<::app_src_semantic_::Symbol> symbolFor(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& name);
+    std::string valueUseDiagnostic(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& name);
     std::variant<std::monostate, std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> declarationFor(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol);
 }
 
@@ -1361,6 +1364,8 @@ namespace app_src_checker_expressions_ {
     std::shared_ptr<::app_src_semantic_::Binding> implicitMethod(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::string& name, ::app_src_ast_::SourceSpan span);
     void addClassMethods(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::shared_ptr<::app_src_semantic_::ClassType>& owner);
     __type18 checkBinary(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::BinaryExpression>& expression, const std::shared_ptr<::app_src_semantic_::Scope>& scope);
+    void validateNoneComparison(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::string& operator_, const __type18& left, const __type18& right, ::app_src_ast_::SourceSpan span);
+    bool admitsNone(const __type18& type_);
     void validateRangeOperand(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::string& operator_, const std::string& side, const __type18& operand, ::app_src_ast_::SourceSpan span);
     __type18 coalescedType(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const __type18& left, const __type18& right);
     __type18 checkUnary(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::UnaryExpression>& expression, const std::shared_ptr<::app_src_semantic_::Scope>& scope);

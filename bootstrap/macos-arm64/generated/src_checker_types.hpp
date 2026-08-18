@@ -325,6 +325,7 @@ namespace app_src_checker_types_ {
     bool isJsonValueAssignable(const __type3& value);
     __type3 joinTypes(const __type3& left, const __type3& right);
     bool isNumeric(const __type3& resolvedType);
+    bool isStringInterpolatable(const __type3& type_);
     bool isSupportedHashCollectionType(const __type3& type_);
     __type3 numericResult(const __type3& left, const __type3& right);
     __type3 typeFromAnnotation(const std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>& annotation);

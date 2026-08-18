@@ -38,7 +38,7 @@ doof::Result<std::string, std::string> resourcesDirectory() {
 }
 doof::Result<std::string, std::string> resourcePath(const std::string& path) {
     auto _try_value_1 = resourcesDirectory();
-    if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
+    if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_1))};
     const auto resources = doof::success_value(_try_value_1);
     const auto resolved = join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{resources, path}));
     if ((resolved == resources) || doof::string_startsWith(resolved, (resources + std::string("/")))) {

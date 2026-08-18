@@ -1821,6 +1821,8 @@ namespace app_src_analyzer_ {
     std::shared_ptr<ModuleAnalyzer> createAnalyzerWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader);
     std::shared_ptr<::app_src_semantic_::Symbol> findSymbol(const std::shared_ptr<ModuleInfo>& info, const std::string& name);
     std::shared_ptr<::app_src_semantic_::Symbol> findExport(const std::shared_ptr<ModuleInfo>& info, const std::string& name);
+    bool hasModuleBinding(const std::shared_ptr<ModuleInfo>& info, const std::string& name);
+    bool isTypeSymbol(const std::shared_ptr<::app_src_semantic_::Symbol>& symbol);
     bool isBuiltin(const std::string& name);
     bool contains(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
     void addError(const std::shared_ptr<ModuleInfo>& info, const std::string& message, ::app_src_ast_::SourceSpan span);

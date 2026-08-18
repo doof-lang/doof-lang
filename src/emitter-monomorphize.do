@@ -2,7 +2,9 @@
 //
 // The checker decorates calls and nominal types with inferred type arguments.
 // This pass follows those decorations to a fixed point before header planning,
-// so C++ emission never delegates Doof specialization to C++ templates.
+// so ordinary generic functions and generic nominal types do not delegate Doof
+// specialization to C++ templates. Generic methods on non-generic owners are
+// the deliberate exception documented in addMethod below.
 
 import {
   ActorCreationExpression, ArrayLiteral, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression, CaseExpression, CaseStatement,

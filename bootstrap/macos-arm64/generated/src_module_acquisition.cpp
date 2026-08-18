@@ -9,17 +9,21 @@ doof::JsonObject ModuleAcquisition::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<ModuleAcquisition>, std::string> ModuleAcquisition::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_logicalPrefix = _object->find("logicalPrefix");
     if (_iterator_logicalPrefix == _object->end()) { return doof::Failure<std::string>{"Missing required field \"logicalPrefix\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_logicalPrefix->second) : doof::json_is_string(_iterator_logicalPrefix->second)))) { return doof::Failure<std::string>{"Field \"logicalPrefix\" expected string but got " + std::string(doof::json_type_name(_iterator_logicalPrefix->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_logicalPrefix->second) : doof::json_is_string(_iterator_logicalPrefix->second)))) { return doof::Failure<std::string>{"Field \"logicalPrefix\" expected string but got " + std::string(doof::json_type_name(_iterator_logicalPrefix->second))}; }
     auto _field_logicalPrefix = (_lenient ? doof::json_as_string_lenient(_iterator_logicalPrefix->second) : doof::json_as_string(_iterator_logicalPrefix->second));
     auto _iterator_diskRoot = _object->find("diskRoot");
     if (_iterator_diskRoot == _object->end()) { return doof::Failure<std::string>{"Missing required field \"diskRoot\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_diskRoot->second) : doof::json_is_string(_iterator_diskRoot->second)))) { return doof::Failure<std::string>{"Field \"diskRoot\" expected string but got " + std::string(doof::json_type_name(_iterator_diskRoot->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_diskRoot->second) : doof::json_is_string(_iterator_diskRoot->second)))) { return doof::Failure<std::string>{"Field \"diskRoot\" expected string but got " + std::string(doof::json_type_name(_iterator_diskRoot->second))}; }
     auto _field_diskRoot = (_lenient ? doof::json_as_string_lenient(_iterator_diskRoot->second) : doof::json_as_string(_iterator_diskRoot->second));
-    return doof::Success<std::shared_ptr<ModuleAcquisition>>{std::make_shared<ModuleAcquisition>(_field_logicalPrefix, _field_diskRoot)};
+        return doof::Success<std::shared_ptr<ModuleAcquisition>>{std::make_shared<ModuleAcquisition>(_field_logicalPrefix, _field_diskRoot)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions) {
     const auto selected = selectedAcquisition(logicalPath, acquisitions);

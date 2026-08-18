@@ -619,6 +619,35 @@ export function isNumeric(resolvedType: ResolvedType): bool {
   return false
 }
 
+/** Values accepted by interpolation must have a backend-independent string representation. */
+export function isStringInterpolatable(type_: ResolvedType): bool {
+  case type_ {
+    _: PrimitiveType -> { return true }
+    _: EnumType -> { return true }
+    _: NoneType -> { return true }
+    _: NeverType -> { return true }
+    _: UnknownType -> { return true }
+    array: ArrayResolvedType -> { return isStringInterpolatable(array.elementType) }
+    map: MapResolvedType -> { return isStringInterpolatable(map.keyType) && isStringInterpolatable(map.valueType) }
+    set: SetResolvedType -> { return isStringInterpolatable(set.elementType) }
+    tuple: TupleResolvedType -> {
+      for element of tuple.elements { if !isStringInterpolatable(element) { return false } }
+      return true
+    }
+    result: ResultResolvedType -> { return isStringInterpolatable(result.valueType) && isStringInterpolatable(result.errorType) }
+    union_: UnionResolvedType -> {
+      for member of union_.types { if !isStringInterpolatable(member) { return false } }
+      return true
+    }
+    parameter: TypeParameterType -> {
+      if parameter.constraint != none { return isStringInterpolatable(parameter.constraint!) }
+      return false
+    }
+    _ -> { return false }
+  }
+  return false
+}
+
 /** Hash collections deliberately support only stable primitive and enum keys. */
 export function isSupportedHashCollectionType(type_: ResolvedType): bool {
   case type_ {

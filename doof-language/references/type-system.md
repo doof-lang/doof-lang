@@ -89,6 +89,15 @@ function decode<T: JsonSerializable>(json: JsonValue): Result<T, string> {
 }
 ```
 
+Functions, classes, structs, interfaces, aliases, and class or struct methods
+can declare type parameters; interface methods use their interface's parameters.
+Names must be unique and must not shadow a visible type parameter from an
+enclosing generic declaration. Calls either provide every argument
+explicitly or infer the complete list from value arguments; expected return
+types do not infer otherwise-unresolved parameters. Closed-world emission
+specializes reached generic functions and nominal types, while generic methods
+on non-generic owners remain C++ member templates.
+
 ## Type Inference
 
 Doof uses single-step, context-aware inference.

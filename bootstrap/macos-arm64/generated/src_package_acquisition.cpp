@@ -20,32 +20,36 @@ doof::JsonObject ExactPackageSource::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<ExactPackageSource>, std::string> ExactPackageSource::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_name = _object->find("name");
     if (_iterator_name == _object->end()) { return doof::Failure<std::string>{"Missing required field \"name\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
     auto _field_name = (_lenient ? doof::json_as_string_lenient(_iterator_name->second) : doof::json_as_string(_iterator_name->second));
     std::optional<std::string> _field_expectedManifestName;
     if (auto _iterator_expectedManifestName = _object->find("expectedManifestName"); _iterator_expectedManifestName != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_expectedManifestName->second) : doof::json_is_string(_iterator_expectedManifestName->second)))) { return doof::Failure<std::string>{"Field \"expectedManifestName\" expected string but got " + std::string(doof::json_type_name(_iterator_expectedManifestName->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_expectedManifestName->second) : doof::json_is_string(_iterator_expectedManifestName->second)))) { return doof::Failure<std::string>{"Field \"expectedManifestName\" expected string but got " + std::string(doof::json_type_name(_iterator_expectedManifestName->second))}; }
         _field_expectedManifestName = (_lenient ? doof::json_as_string_lenient(_iterator_expectedManifestName->second) : doof::json_as_string(_iterator_expectedManifestName->second));
     } else {
         _field_expectedManifestName = std::string("");
     }
     auto _iterator_url = _object->find("url");
     if (_iterator_url == _object->end()) { return doof::Failure<std::string>{"Missing required field \"url\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_url->second) : doof::json_is_string(_iterator_url->second)))) { return doof::Failure<std::string>{"Field \"url\" expected string but got " + std::string(doof::json_type_name(_iterator_url->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_url->second) : doof::json_is_string(_iterator_url->second)))) { return doof::Failure<std::string>{"Field \"url\" expected string but got " + std::string(doof::json_type_name(_iterator_url->second))}; }
     auto _field_url = (_lenient ? doof::json_as_string_lenient(_iterator_url->second) : doof::json_as_string(_iterator_url->second));
     auto _iterator_ref = _object->find("ref");
     if (_iterator_ref == _object->end()) { return doof::Failure<std::string>{"Missing required field \"ref\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_ref->second) : doof::json_is_string(_iterator_ref->second)))) { return doof::Failure<std::string>{"Field \"ref\" expected string but got " + std::string(doof::json_type_name(_iterator_ref->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_ref->second) : doof::json_is_string(_iterator_ref->second)))) { return doof::Failure<std::string>{"Field \"ref\" expected string but got " + std::string(doof::json_type_name(_iterator_ref->second))}; }
     auto _field_ref = (_lenient ? doof::json_as_string_lenient(_iterator_ref->second) : doof::json_as_string(_iterator_ref->second));
     auto _iterator_commit = _object->find("commit");
     if (_iterator_commit == _object->end()) { return doof::Failure<std::string>{"Missing required field \"commit\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_commit->second) : doof::json_is_string(_iterator_commit->second)))) { return doof::Failure<std::string>{"Field \"commit\" expected string but got " + std::string(doof::json_type_name(_iterator_commit->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_commit->second) : doof::json_is_string(_iterator_commit->second)))) { return doof::Failure<std::string>{"Field \"commit\" expected string but got " + std::string(doof::json_type_name(_iterator_commit->second))}; }
     auto _field_commit = (_lenient ? doof::json_as_string_lenient(_iterator_commit->second) : doof::json_as_string(_iterator_commit->second));
-    return doof::Success<std::shared_ptr<ExactPackageSource>>{std::make_shared<ExactPackageSource>(_field_name, _field_expectedManifestName.value(), _field_url, _field_ref, _field_commit)};
+        return doof::Success<std::shared_ptr<ExactPackageSource>>{std::make_shared<ExactPackageSource>(_field_name, _field_expectedManifestName.value(), _field_url, _field_ref, _field_commit)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject AcquiredPackage::toJsonObject() const {
@@ -56,24 +60,28 @@ doof::JsonObject AcquiredPackage::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<AcquiredPackage>, std::string> AcquiredPackage::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_source = _object->find("source");
     if (_iterator_source == _object->end()) { return doof::Failure<std::string>{"Missing required field \"source\""}; }
-    if (!(doof::json_is_object(_iterator_source->second))) { return doof::Failure<std::string>{"Field \"source\" expected object but got " + std::string(doof::json_type_name(_iterator_source->second))}; }
-    auto _field_source = doof::success_value(ExactPackageSource::fromJsonValue(_iterator_source->second, _lenient));
+        if (!(doof::json_is_object(_iterator_source->second))) { return doof::Failure<std::string>{"Field \"source\" expected object but got " + std::string(doof::json_type_name(_iterator_source->second))}; }
+    auto _field_source = doof::json_decode_value(ExactPackageSource::fromJsonValue(_iterator_source->second, _lenient));
     auto _iterator_rootDirectory = _object->find("rootDirectory");
     if (_iterator_rootDirectory == _object->end()) { return doof::Failure<std::string>{"Missing required field \"rootDirectory\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_rootDirectory->second) : doof::json_is_string(_iterator_rootDirectory->second)))) { return doof::Failure<std::string>{"Field \"rootDirectory\" expected string but got " + std::string(doof::json_type_name(_iterator_rootDirectory->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_rootDirectory->second) : doof::json_is_string(_iterator_rootDirectory->second)))) { return doof::Failure<std::string>{"Field \"rootDirectory\" expected string but got " + std::string(doof::json_type_name(_iterator_rootDirectory->second))}; }
     auto _field_rootDirectory = (_lenient ? doof::json_as_string_lenient(_iterator_rootDirectory->second) : doof::json_as_string(_iterator_rootDirectory->second));
     std::optional<bool> _field_mutable_;
     if (auto _iterator_mutable_ = _object->find("mutable"); _iterator_mutable_ != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mutable_->second) : doof::json_is_boolean(_iterator_mutable_->second)))) { return doof::Failure<std::string>{"Field \"mutable\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mutable_->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mutable_->second) : doof::json_is_boolean(_iterator_mutable_->second)))) { return doof::Failure<std::string>{"Field \"mutable\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mutable_->second))}; }
         _field_mutable_ = (_lenient ? doof::json_as_bool_lenient(_iterator_mutable_->second) : doof::json_as_bool(_iterator_mutable_->second));
     } else {
         _field_mutable_ = false;
     }
-    return doof::Success<std::shared_ptr<AcquiredPackage>>{std::make_shared<AcquiredPackage>(_field_source, _field_rootDirectory, _field_mutable_.value())};
+        return doof::Success<std::shared_ptr<AcquiredPackage>>{std::make_shared<AcquiredPackage>(_field_source, _field_rootDirectory, _field_mutable_.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 std::string workspacePackageAcquisitionRoot(const std::string& workspaceRoot) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{workspaceRoot, std::string(".doof"), std::string("packages")}));
@@ -96,11 +104,11 @@ doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPacka
         return doof::Success<std::shared_ptr<AcquiredPackage>>{ std::make_shared<AcquiredPackage>(source, root, false) };
     }
     auto _try_value_1 = ensurePackageDirectory(::std_::path::index::dirname(root));
-    if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::failure_error(_try_value_1)};
+    if (doof::is_failure(_try_value_1)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_1))};
     const auto staging = ((root + std::string(".staging-")) + doof::to_string(::std_::os::index::pid()));
     if (::doof_fs::exists(staging)) {
         auto _try_value_2 = removePackageTree(staging);
-        if (doof::is_failure(_try_value_2)) return doof::Failure<std::string>{doof::failure_error(_try_value_2)};
+        if (doof::is_failure(_try_value_2)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_2))};
     }
     const auto clone = packageCommand(std::string("git"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("clone"), std::string("--depth"), std::string("1"), std::string("--branch"), source->ref, source->url, staging}));
     auto _binding_value_3 = clone;
@@ -112,33 +120,33 @@ doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPacka
     if (doof::is_failure(_binding_value_4)) {
         const auto error = doof::failure_error(_binding_value_4);
         auto _try_value_5 = removePackageTree(staging);
-        if (doof::is_failure(_try_value_5)) return doof::Failure<std::string>{doof::failure_error(_try_value_5)};
+        if (doof::is_failure(_try_value_5)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_5))};
         return doof::Failure<std::string>{ (((std::string("Failed to inspect package ") + source->name) + std::string(": ")) + error) };
     }
     const auto actual = doof::success_value(_binding_value_4);
     if (doof::string_toLowerCase(actual) != doof::string_toLowerCase(source->commit)) {
         auto _try_value_6 = removePackageTree(staging);
-        if (doof::is_failure(_try_value_6)) return doof::Failure<std::string>{doof::failure_error(_try_value_6)};
+        if (doof::is_failure(_try_value_6)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_6))};
         return doof::Failure<std::string>{ (((((std::string("Package ") + source->name) + std::string(" commit mismatch: expected ")) + doof::string_toLowerCase(source->commit)) + std::string(", got ")) + doof::string_toLowerCase(actual)) };
     }
     auto _binding_value_7 = validateAcquiredPackage(staging, source);
     if (doof::is_failure(_binding_value_7)) {
         const auto error = doof::failure_error(_binding_value_7);
         auto _try_value_8 = removePackageTree(staging);
-        if (doof::is_failure(_try_value_8)) return doof::Failure<std::string>{doof::failure_error(_try_value_8)};
+        if (doof::is_failure(_try_value_8)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_8))};
         return doof::Failure<std::string>{ error };
     }
     auto _binding_value_9 = removePackageTree(::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{staging, std::string(".git")})));
     if (doof::is_failure(_binding_value_9)) {
         const auto error = doof::failure_error(_binding_value_9);
         auto _try_value_10 = removePackageTree(staging);
-        if (doof::is_failure(_try_value_10)) return doof::Failure<std::string>{doof::failure_error(_try_value_10)};
+        if (doof::is_failure(_try_value_10)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_10))};
         return doof::Failure<std::string>{ (((std::string("Could not remove Git metadata for package ") + source->name) + std::string(": ")) + error) };
     }
     auto _binding_value_11 = ::doof_fs::writeText(packageAcquisitionReceiptPath(staging), renderAcquisitionReceipt(source));
     if (doof::is_failure(_binding_value_11)) {
         auto _try_value_12 = removePackageTree(staging);
-        if (doof::is_failure(_try_value_12)) return doof::Failure<std::string>{doof::failure_error(_try_value_12)};
+        if (doof::is_failure(_try_value_12)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_12))};
         return doof::Failure<std::string>{ (std::string("Could not write acquisition receipt for package ") + source->name) };
     }
     if (::doof_fs::exists(root)) {
@@ -146,14 +154,14 @@ doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPacka
         if (doof::is_failure(_binding_value_13)) {
             const auto error = doof::failure_error(_binding_value_13);
             auto _try_value_14 = removePackageTree(staging);
-            if (doof::is_failure(_try_value_14)) return doof::Failure<std::string>{doof::failure_error(_try_value_14)};
+            if (doof::is_failure(_try_value_14)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_14))};
             return doof::Failure<std::string>{ (((std::string("Could not replace acquired package ") + source->name) + std::string(": ")) + error) };
         }
     }
     auto _binding_value_15 = ::doof_fs::rename(staging, root);
     if (doof::is_failure(_binding_value_15)) {
         auto _try_value_16 = removePackageTree(staging);
-        if (doof::is_failure(_try_value_16)) return doof::Failure<std::string>{doof::failure_error(_try_value_16)};
+        if (doof::is_failure(_try_value_16)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_16))};
         return doof::Failure<std::string>{ (std::string("Could not finalize package ") + source->name) };
     }
     return doof::Success<std::shared_ptr<AcquiredPackage>>{ std::make_shared<AcquiredPackage>(source, root, false) };
@@ -302,7 +310,7 @@ doof::Result<void, std::string> ensurePackageDirectory(const std::string& path) 
     const auto parent = ::std_::path::index::dirname(path);
     if (parent != path) {
         auto _try_value_32 = ensurePackageDirectory(parent);
-        if (doof::is_failure(_try_value_32)) return doof::Failure<std::string>{doof::failure_error(_try_value_32)};
+        if (doof::is_failure(_try_value_32)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_32))};
     }
     auto _binding_value_33 = ::doof_fs::mkdir(path);
     if (doof::is_failure(_binding_value_33)) {
@@ -324,7 +332,7 @@ doof::Result<void, std::string> removePackageTree(const std::string& path) {
         const auto& _iterable_35 = entries;
         for (const auto& entry : *_iterable_35) {
             auto _try_value_36 = removePackageTree(::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{path, entry->name})));
-            if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::failure_error(_try_value_36)};
+            if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_36))};
         }
     }
     auto _binding_value_37 = ::doof_fs::remove(path);

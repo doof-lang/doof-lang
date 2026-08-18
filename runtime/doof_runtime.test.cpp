@@ -310,6 +310,16 @@ void test_collection_indexing() {
     require(doof::array_at(values, 0, "runtime-test", 1) == 2, "ordinary array indexing changed");
 }
 
+void test_null_carriers() {
+    require(doof::is_null(doof::JsonValue{}), "JSON null was not recognized");
+    require(!doof::is_null(doof::JsonValue{int32_t{1}}), "JSON value was treated as null");
+
+    std::optional<int32_t> optional;
+    require(doof::is_null(optional), "empty optional was not recognized");
+    optional = 1;
+    require(!doof::is_null(optional), "present optional was treated as null");
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -327,6 +337,7 @@ int main(int argc, char** argv) {
     else if (mode == "priority") test_reacquire_priority();
     else if (mode == "configuration") test_configuration();
     else if (mode == "collections") test_collection_indexing();
+    else if (mode == "nulls") test_null_carriers();
     else fail("unknown test mode: " + mode);
     return 0;
 }

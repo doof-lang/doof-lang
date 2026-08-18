@@ -993,6 +993,60 @@ function toolName<T: Reflectable>(tool: T): string {
 }
 ```
 
+### Generic Declarations
+
+Functions, classes, structs, interfaces, class or struct methods, and type
+aliases may declare type parameters. Interface methods use the type parameters
+of their interface and do not declare an additional parameter list. Each
+parameter name must be unique within its declaration. A nested generic
+declaration, including a method, must not redeclare a type parameter visible
+from an enclosing generic declaration.
+
+```javascript
+function identity<T>(value: T): T => value
+
+class Box<T> {
+  value: T
+  map<U>(transform: (value: T): U): Box<U> => Box<U> { value: transform(value) }
+}
+
+interface Reader<T> {
+  read(): T
+}
+```
+
+Calls may supply every type argument explicitly or omit the complete argument
+list and use inference:
+
+```javascript
+explicit := identity<int>(1)
+inferred := identity(1)
+```
+
+Partial explicit argument lists are not supported. Inference structurally
+matches each type parameter against call arguments. All candidates for a type
+parameter must be mutually assignable; otherwise inference fails. Type
+parameters that occur only in the return type cannot be inferred from the
+expected result type and must be supplied explicitly.
+
+Constraints are checked for explicit and inferred arguments. Ordinary
+constraints restrict admissible concrete arguments; `JsonSerializable` and
+`Reflectable` additionally provide only their documented compiler intrinsics.
+
+### Generic Emission
+
+Doof uses closed-world compilation. Generic functions and generic nominal types
+are emitted as concrete specializations reached from the program. Discovery
+continues to a fixed point and reports an error after 256 concrete function,
+class, and method instantiations, which bounds non-converging patterns such as a
+generic recursively calling itself with `T[]`.
+
+Generic methods on a non-generic class are currently emitted as C++ member
+templates; generic methods on specialized generic classes participate in the
+whole-program specialization plan. This is an implementation boundary rather
+than an additional source-language capability: checking and constraints are
+the same in both cases.
+
 ```javascript
 scores: Map := { "Alice": 100, "Bob": 95 }        // Map<string, int>
 readonlyScores: ReadonlyMap := { "Alice": 100 }    // ReadonlyMap<string, int>

@@ -197,13 +197,13 @@ export function emitTuple(expression: TupleLiteral, context: EmitContext): strin
 
 export function emitString(expression: StringLiteral, context: EmitContext): string {
   if expression.interpolations.length == 0 { return "std::string(" + quote(expression.parts[0]) + ")" }
-  let result = "std::string(" + quote(expression.parts[0]) + ")"
+  let result = "([&]() -> std::string { std::string _interpolation = " + quote(expression.parts[0]) + "; "
   for i of 0..<expression.interpolations.length {
-    result = result + " + doof::to_string(" + emitExpression(expression.interpolations[i], context) + ")"
+    result = result + "_interpolation += doof::to_string(" + emitExpression(expression.interpolations[i], context) + "); "
     partIndex := i * 2 + 2
-    if partIndex < expression.parts.length { result = result + " + std::string(" + quote(expression.parts[partIndex]) + ")" }
+    if partIndex < expression.parts.length { result = result + "_interpolation += " + quote(expression.parts[partIndex]) + "; " }
   }
-  return result
+  return result + "return _interpolation; }())"
 }
 
 export function quote(value: string): string {

@@ -2,7 +2,7 @@ import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker, validateCheckedTypes, validateDeepReadonlyFields, validateIsolationEffects } from "./checker"
 import { CheckResult, Diagnostic, FunctionType, SourceFile } from "./semantic"
-import { AsExpression, AssignmentExpression, Block, CallExpression, CaseStatement, ClassDeclaration, ConstructExpression, Expression, ExpressionStatement, Identifier, IfStatement, FunctionDeclaration, ImmutableBinding, LetDeclaration, MemberExpression, ObjectLiteral, ReadonlyDeclaration, WithStatement } from "./ast"
+import { AsExpression, AssignmentExpression, BinaryExpression, Block, CallExpression, CaseStatement, ClassDeclaration, ConstructExpression, Expression, ExpressionStatement, Identifier, IfStatement, FunctionDeclaration, ImmutableBinding, LetDeclaration, MemberExpression, ObjectLiteral, ReadonlyDeclaration, ReturnStatement, WithStatement } from "./ast"
 import { typeName, unknownType } from "./checker-types"
 
 function checkedIncludingDeprecations(source: string): CheckResult {
@@ -31,6 +31,98 @@ function checked(source: string): CheckResult {
 function checkedEntry(source: string, entryMode: string = "executable"): CheckResult {
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
   return createChecker(analysis, "/main.do", entryMode).check("/main.do")
+}
+
+export function testRejectsDuplicateLocalAndParameterBindings(): none {
+  locals := checked("function run(): none { value := 1\nvalue := 2 }")
+  Assert.equal(locals.diagnostics.length, 1)
+  Assert.equal(locals.diagnostics[0].message, "Binding 'value' is already declared in this scope")
+
+  parameters := checked("function run(value: int, value: string): none {}")
+  Assert.equal(parameters.diagnostics.length, 1)
+  Assert.equal(parameters.diagnostics[0].message, "Binding 'value' is already declared in this scope")
+
+  lambdaParameters := checked("function run(callback: (value: int): int): none { ignored := (value: int, value: int): int => value }")
+  Assert.equal(lambdaParameters.diagnostics.length, 1)
+  Assert.equal(lambdaParameters.diagnostics[0].message, "Binding 'value' is already declared in this scope")
+}
+
+export function testRejectsRuntimeUseOfTypeOnlyAndTypeSymbols(): none {
+  typeOnly := checkedSources([
+    SourceFile { path: "/main.do", source: "import type { User } from \"./types\"\nfunction main(): none { ignored := User {} }" },
+    SourceFile { path: "/types.do", source: "export class User {}" },
+  ], "/main.do")
+  Assert.equal(typeOnly.diagnostics.length, 1)
+  Assert.equal(typeOnly.diagnostics[0].message, "Type-only import 'User' cannot be used as a value")
+
+  aliasValue := checkedSources([
+    SourceFile { path: "/main.do", source: "import { Identifier } from \"./types\"\nfunction value(): Identifier => Identifier" },
+    SourceFile { path: "/types.do", source: "export type Identifier = int" },
+  ], "/main.do")
+  Assert.equal(aliasValue.diagnostics.length, 1)
+  Assert.equal(aliasValue.diagnostics[0].message, "Type 'Identifier' cannot be used as a value")
+
+  namespaceValue := checkedSources([
+    SourceFile { path: "/main.do", source: "import type * as types from \"./types\"\nfunction main(): none { ignored := types.value }" },
+    SourceFile { path: "/types.do", source: "export readonly value = 1" },
+  ], "/main.do")
+  Assert.equal(namespaceValue.diagnostics.length, 1)
+  Assert.equal(namespaceValue.diagnostics[0].message, "Type-only namespace import 'types' cannot be used as a value")
+}
+
+export function testRejectsInvalidNominalAndScalarTypeArguments(): none {
+  result := checked(
+    "class Box<T> { value: T }\n" +
+    "interface Marker<T> {}\n" +
+    "function missingClass(value: Box): none {}\n" +
+    "function extraClass(value: Box<int, string>): none {}\n" +
+    "function missingInterface(value: Marker): none {}\n" +
+    "function extraInterface(value: Marker<int, string>): none {}\n" +
+    "function scalar(value: int<string>): none {}",
+  )
+  Assert.equal(result.diagnostics.length, 5)
+  Assert.equal(result.diagnostics[0].message, "Box requires 1 type argument; received 0")
+  Assert.equal(result.diagnostics[1].message, "Box requires 1 type argument; received 2")
+  Assert.equal(result.diagnostics[2].message, "Marker requires 1 type argument; received 0")
+  Assert.equal(result.diagnostics[3].message, "Marker requires 1 type argument; received 2")
+  Assert.equal(result.diagnostics[4].message, "int does not accept type arguments")
+}
+
+export function testRejectsDuplicateGenericTypeParameters(): none {
+  function_ := checked("function pick<T, T>(first: T, second: T): T => first")
+  Assert.equal(function_.diagnostics.length, 1)
+  Assert.stringContains(function_.diagnostics[0].message, "Type parameter \"T\" is already declared")
+
+  method := checked("class Picker { pick<T, T>(first: T, second: T): T => first }")
+  Assert.equal(method.diagnostics.length, 1)
+  Assert.stringContains(method.diagnostics[0].message, "Type parameter \"T\" is already declared")
+
+  class_ := checked("class Pair<T, T> { first: T }")
+  Assert.equal(class_.diagnostics.length, 1)
+  Assert.stringContains(class_.diagnostics[0].message, "Type parameter \"T\" is already declared")
+
+  struct_ := checked("struct Pair<T, T> { first: T }")
+  Assert.equal(struct_.diagnostics.length, 1)
+  Assert.stringContains(struct_.diagnostics[0].message, "Type parameter \"T\" is already declared")
+
+  interface_ := checked("interface Pair<T, T> { first: T }")
+  Assert.equal(interface_.diagnostics.length, 1)
+  Assert.stringContains(interface_.diagnostics[0].message, "Type parameter \"T\" is already declared")
+
+  alias := checked("type Pair<T, T> = Tuple<T, T>")
+  Assert.equal(alias.diagnostics.length, 1)
+  Assert.stringContains(alias.diagnostics[0].message, "Type parameter \"T\" is already declared")
+
+  shadowedMethod := checked("class Box<T> { map<T>(value: T): T => value }")
+  Assert.equal(shadowedMethod.diagnostics.length, 1)
+  Assert.stringContains(shadowedMethod.diagnostics[0].message, "shadows a type parameter from the enclosing declaration")
+
+}
+
+export function testReportsNestedUnknownTypesWithSourceDiagnostic(): none {
+  result := checked("function main(): none { function consume(value: MissingType): none {} }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Unknown type 'MissingType'")
 }
 
 export function testChecksNativeEntryScriptScopeAndArguments(): none {
@@ -105,6 +197,26 @@ export function testRejectsExecutableModuleInitializers(): none {
   )
   Assert.equal(customConstructor.diagnostics.length, 1)
   Assert.stringContains(customConstructor.diagnostics[0].message, "must be a literal tree")
+}
+
+export function testChecksStringInterpolationRepresentations(): none {
+  supported := checked("enum State { Ready }\nfunction render(value: int | none): string => \"value=\${value}, values=\${[1, 2]}, state=\${State.Ready}\"")
+  Assert.equal(supported.diagnostics.length, 0)
+
+  callback := checked("function render(fn: (value: int): int): string => \"fn=\${fn}\"")
+  Assert.equal(callback.diagnostics.length, 1)
+  Assert.stringContains(callback.diagnostics[0].message, "cannot be used in string interpolation")
+
+  classValue := checked("class Point { x: int }\nfunction render(point: Point): string => \"point=\${point}\"")
+  Assert.equal(classValue.diagnostics.length, 1)
+  Assert.stringContains(classValue.diagnostics[0].message, "Type \"Point\" cannot be used in string interpolation")
+
+  constrained := checked("function render<T: int | string>(value: T): string => \"value=\${value}\"")
+  Assert.equal(constrained.diagnostics.length, 0)
+
+  unconstrained := checked("function render<T>(value: T): string => \"value=\${value}\"")
+  Assert.equal(unconstrained.diagnostics.length, 1)
+  Assert.stringContains(unconstrained.diagnostics[0].message, "cannot be used in string interpolation")
 }
 
 export function testAcceptsStructModuleAndStaticInitializers(): none {
@@ -200,6 +312,53 @@ export function testInfersExpressionsAndCalls(): none {
   case analysis.modules[0].program.statements[0] {
     binding: ImmutableBinding -> { Assert.equal(typeName(binding.resolvedType ?? unknownType()), "int[]") }
     _ -> { panic("expected an immutable binding") }
+  }
+}
+
+export function testChecksNoneComparisonOperands(): none {
+  resultEquality := checked("function load(): Result<int, string> => Success(1)\nfunction main(): bool => load() == none")
+  Assert.equal(resultEquality.diagnostics.length, 1)
+  Assert.stringContains(resultEquality.diagnostics[0].message, "Operator '==' is not defined for Result<int, string> and none")
+
+  resultInequality := checked("function load(): Result<int, string> => Success(1)\nfunction main(): bool => none != load()")
+  Assert.equal(resultInequality.diagnostics.length, 1)
+  Assert.stringContains(resultInequality.diagnostics[0].message, "Operator '!=' is not defined for none and Result<int, string>")
+
+  nonNullableUnion := checked("function present(value: int | string): bool => value != none")
+  Assert.equal(nonNullableUnion.diagnostics.length, 1)
+  Assert.stringContains(nonNullableUnion.diagnostics[0].message, "is not defined for int | string and none")
+
+  generic := checked("function present<T>(value: T): bool => value != none")
+  Assert.equal(generic.diagnostics.length, 1)
+  Assert.stringContains(generic.diagnostics[0].message, "is not defined for T and none")
+
+  nullable := checked("class Box {}\nfunction hasBox(value: Box | none): bool => value != none\nfunction hasScalar(value: int | none): bool => none != value\nfunction isJsonNull(value: JsonValue): bool => value == none")
+  Assert.equal(nullable.diagnostics.length, 0)
+}
+
+export function testPreservesCallableFieldDecorationThroughNullableReceiver(): none {
+  source := "struct Handler { callback: (value: int): int }\nfunction findHandler(): Handler | none => Handler { callback: (value: int): int => value + 1 }\nfunction invoke(): int { handler := findHandler()\nif handler != none { return handler!.callback(41) }\nreturn 0 }"
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+  semantic := createChecker(analysis).check("/main.do")
+  Assert.equal(semantic.diagnostics.length, 0)
+  case analysis.modules[0].program.statements[2] {
+    function_: FunctionDeclaration -> { case function_.body {
+      body: Block -> { case body.statements[1] {
+        if_: IfStatement -> { case if_.body.statements[0] {
+          return_: ReturnStatement -> { case return_.value! {
+            call: CallExpression -> { case call.callee {
+              member: MemberExpression -> { Assert.equal(member.resolvedCallableField, true) }
+              _ -> { panic("expected callback member") }
+            } }
+            _ -> { panic("expected callback call") }
+          } }
+          _ -> { panic("expected return") }
+        } }
+        _ -> { panic("expected if") }
+      } }
+      _ -> { panic("expected function body") }
+    } }
+    _ -> { panic("expected invoke function") }
   }
 }
 
@@ -1254,6 +1413,19 @@ export function testChecksResultStatusMethods(): none {
 export function testChecksResultUnwrapOrFallback(): none {
   result := checked("function load(): Result<JsonValue, string> => Failure { error: \"no\" }\nfunction value(): JsonValue => load().unwrapOr(null)")
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testChecksResultCoalescingAsSuccessPayload(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function load(): Result<int, string> => Success(7)\nfunction value(): int => load() ?? 0" }]).analyze("/main.do")
+  semantic := createChecker(analysis).check("/main.do")
+  Assert.equal(semantic.diagnostics.length, 0)
+  case analysis.modules[0].program.statements[1] {
+    function_: FunctionDeclaration -> { case function_.body {
+      expression: BinaryExpression -> { Assert.equal(typeName(expression.resolvedType!), "int") }
+      _ -> { panic("expected coalescing expression") }
+    } }
+    _ -> { panic("expected value function") }
+  }
 }
 
 export function testAcceptsUnconditionalNonTerminatingLoop(): none {

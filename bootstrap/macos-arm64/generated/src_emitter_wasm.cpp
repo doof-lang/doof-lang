@@ -19,20 +19,24 @@ doof::JsonObject WasmEmission::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<WasmEmission>, std::string> WasmEmission::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_source = _object->find("source");
     if (_iterator_source == _object->end()) { return doof::Failure<std::string>{"Missing required field \"source\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_source->second) : doof::json_is_string(_iterator_source->second)))) { return doof::Failure<std::string>{"Field \"source\" expected string but got " + std::string(doof::json_type_name(_iterator_source->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_source->second) : doof::json_is_string(_iterator_source->second)))) { return doof::Failure<std::string>{"Field \"source\" expected string but got " + std::string(doof::json_type_name(_iterator_source->second))}; }
     auto _field_source = (_lenient ? doof::json_as_string_lenient(_iterator_source->second) : doof::json_as_string(_iterator_source->second));
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_exportNames;
     if (auto _iterator_exportNames = _object->find("exportNames"); _iterator_exportNames != _object->end()) {
-        if (!(doof::json_is_array(_iterator_exportNames->second))) { return doof::Failure<std::string>{"Field \"exportNames\" expected array but got " + std::string(doof::json_type_name(_iterator_exportNames->second))}; }
+            if (!(doof::json_is_array(_iterator_exportNames->second))) { return doof::Failure<std::string>{"Field \"exportNames\" expected array but got " + std::string(doof::json_type_name(_iterator_exportNames->second))}; }
         _field_exportNames = [&]() { const auto* _array = doof::json_as_array(_iterator_exportNames->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_exportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
-    return doof::Success<std::shared_ptr<WasmEmission>>{std::make_shared<WasmEmission>(_field_source, _field_exportNames.value())};
+        return doof::Success<std::shared_ptr<WasmEmission>>{std::make_shared<WasmEmission>(_field_source, _field_exportNames.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& entry) {
     const auto info = findModule(result, entry);
@@ -49,7 +53,7 @@ doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const s
             continue;
         }
         auto _try_value_2 = validateWasmFunction(fn, result);
-        if (doof::is_failure(_try_value_2)) return doof::Failure<std::string>{doof::failure_error(_try_value_2)};
+        if (doof::is_failure(_try_value_2)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_2))};
         const auto name = (std::string("doof_export_") + ::app_src_emitter_expr_::cppIdentifier(fn->name));
         const auto& _iterable_3 = functionNames;
         for (const auto& existing : *_iterable_3) {

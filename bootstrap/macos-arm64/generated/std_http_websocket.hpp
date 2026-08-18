@@ -401,6 +401,10 @@ namespace doof_blob { using TextEncoding = ::std_::blob::types::TextEncoding; }
 namespace doof_blob { using EncodingError = ::std_::blob::types::EncodingError; }
 #include "native_blob.hpp"
 
+namespace std_::http::transport_url {
+    doof::Result<std::string, std::shared_ptr<::std_::http::types::HttpError>> prepareTransportUrl(const std::string& url);
+}
+
 namespace doof_event { using Backpressure = ::std_::event::index::Backpressure; }
 namespace doof_event { using SendError = ::std_::event::index::SendError; }
 namespace doof_event { using Timer = ::std_::event::index::Timer; }

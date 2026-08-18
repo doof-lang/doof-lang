@@ -14,41 +14,45 @@ doof::JsonObject EmitModuleSurface::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<EmitModuleSurface>, std::string> EmitModuleSurface::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_path = _object->find("path");
     if (_iterator_path == _object->end()) { return doof::Failure<std::string>{"Missing required field \"path\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_path->second) : doof::json_is_string(_iterator_path->second)))) { return doof::Failure<std::string>{"Field \"path\" expected string but got " + std::string(doof::json_type_name(_iterator_path->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_path->second) : doof::json_is_string(_iterator_path->second)))) { return doof::Failure<std::string>{"Field \"path\" expected string but got " + std::string(doof::json_type_name(_iterator_path->second))}; }
     auto _field_path = (_lenient ? doof::json_as_string_lenient(_iterator_path->second) : doof::json_as_string(_iterator_path->second));
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>> _field_exports;
     if (auto _iterator_exports = _object->find("exports"); _iterator_exports != _object->end()) {
-        if (!(doof::json_is_array(_iterator_exports->second))) { return doof::Failure<std::string>{"Field \"exports\" expected array but got " + std::string(doof::json_type_name(_iterator_exports->second))}; }
-        _field_exports = [&]() { const auto* _array = doof::json_as_array(_iterator_exports->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(::app_src_semantic_::Symbol::fromJsonValue(_element, _lenient))); } return _values; }();
+            if (!(doof::json_is_array(_iterator_exports->second))) { return doof::Failure<std::string>{"Field \"exports\" expected array but got " + std::string(doof::json_type_name(_iterator_exports->second))}; }
+        _field_exports = [&]() { const auto* _array = doof::json_as_array(_iterator_exports->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(::app_src_semantic_::Symbol::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
         _field_exports = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>(std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>> _field_imports;
     if (auto _iterator_imports = _object->find("imports"); _iterator_imports != _object->end()) {
-        if (!(doof::json_is_array(_iterator_imports->second))) { return doof::Failure<std::string>{"Field \"imports\" expected array but got " + std::string(doof::json_type_name(_iterator_imports->second))}; }
-        _field_imports = [&]() { const auto* _array = doof::json_as_array(_iterator_imports->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(::app_src_semantic_::ImportBinding::fromJsonValue(_element, _lenient))); } return _values; }();
+            if (!(doof::json_is_array(_iterator_imports->second))) { return doof::Failure<std::string>{"Field \"imports\" expected array but got " + std::string(doof::json_type_name(_iterator_imports->second))}; }
+        _field_imports = [&]() { const auto* _array = doof::json_as_array(_iterator_imports->second); auto _values = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(::app_src_semantic_::ImportBinding::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
         _field_imports = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_genericTypes;
     if (auto _iterator_genericTypes = _object->find("genericTypes"); _iterator_genericTypes != _object->end()) {
-        if (!(doof::json_is_array(_iterator_genericTypes->second))) { return doof::Failure<std::string>{"Field \"genericTypes\" expected array but got " + std::string(doof::json_type_name(_iterator_genericTypes->second))}; }
+            if (!(doof::json_is_array(_iterator_genericTypes->second))) { return doof::Failure<std::string>{"Field \"genericTypes\" expected array but got " + std::string(doof::json_type_name(_iterator_genericTypes->second))}; }
         _field_genericTypes = [&]() { const auto* _array = doof::json_as_array(_iterator_genericTypes->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_genericTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_genericFunctions;
     if (auto _iterator_genericFunctions = _object->find("genericFunctions"); _iterator_genericFunctions != _object->end()) {
-        if (!(doof::json_is_array(_iterator_genericFunctions->second))) { return doof::Failure<std::string>{"Field \"genericFunctions\" expected array but got " + std::string(doof::json_type_name(_iterator_genericFunctions->second))}; }
+            if (!(doof::json_is_array(_iterator_genericFunctions->second))) { return doof::Failure<std::string>{"Field \"genericFunctions\" expected array but got " + std::string(doof::json_type_name(_iterator_genericFunctions->second))}; }
         _field_genericFunctions = [&]() { const auto* _array = doof::json_as_array(_iterator_genericFunctions->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_genericFunctions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
-    return doof::Success<std::shared_ptr<EmitModuleSurface>>{std::make_shared<EmitModuleSurface>(_field_path, _field_exports.value(), _field_imports.value(), _field_genericTypes.value(), _field_genericFunctions.value())};
+        return doof::Success<std::shared_ptr<EmitModuleSurface>>{std::make_shared<EmitModuleSurface>(_field_path, _field_exports.value(), _field_imports.value(), _field_genericTypes.value(), _field_genericFunctions.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject SourceLocationSpanOverride::toJsonObject() const {
@@ -57,13 +61,17 @@ doof::JsonObject SourceLocationSpanOverride::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<SourceLocationSpanOverride>, std::string> SourceLocationSpanOverride::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_span = _object->find("span");
     if (_iterator_span == _object->end()) { return doof::Failure<std::string>{"Missing required field \"span\""}; }
-    if (!(doof::json_is_object(_iterator_span->second))) { return doof::Failure<std::string>{"Field \"span\" expected object but got " + std::string(doof::json_type_name(_iterator_span->second))}; }
-    auto _field_span = doof::success_value(::app_src_ast_::SourceSpan::fromJsonValue(_iterator_span->second, _lenient));
-    return doof::Success<std::shared_ptr<SourceLocationSpanOverride>>{std::make_shared<SourceLocationSpanOverride>(_field_span)};
+        if (!(doof::json_is_object(_iterator_span->second))) { return doof::Failure<std::string>{"Field \"span\" expected object but got " + std::string(doof::json_type_name(_iterator_span->second))}; }
+    auto _field_span = doof::json_decode_value(::app_src_ast_::SourceSpan::fromJsonValue(_iterator_span->second, _lenient));
+        return doof::Success<std::shared_ptr<SourceLocationSpanOverride>>{std::make_shared<SourceLocationSpanOverride>(_field_span)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 void recordCoverageLine(const std::shared_ptr<EmitContext>& context, int32_t line) {

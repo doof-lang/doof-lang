@@ -246,6 +246,8 @@ export class Lexer {
   diagnostics: LexerDiagnostic[] = []
   templateDelimiters: char[] = []
   braceDepth: int[] = []
+  interpolationLines: int[] = []
+  interpolationColumns: int[] = []
 
   function tokenize(): Token[] {
     // Reserve a conservative token estimate before the scan. Doof arrays map
@@ -262,6 +264,8 @@ export class Lexer {
       if templateDelimiters.length > 0 && peek() == '}' && braceDepth[braceDepth.length - 1] == 0 {
         advance()
         ignoredBrace := try! braceDepth.pop()
+        ignoredLine := try! interpolationLines.pop()
+        ignoredColumn := try! interpolationColumns.pop()
         readTemplateContinuation()
         continue
       }
@@ -278,6 +282,10 @@ export class Lexer {
       } else {
         readOperatorOrPunctuation()
       }
+    }
+
+    if braceDepth.length > 0 {
+      diagnostic("Unterminated string interpolation", interpolationLines[interpolationLines.length - 1], interpolationColumns[interpolationColumns.length - 1])
     }
 
     addToken(TokenType.EndOfFile, pos, 0, pos, 0, false, line, column)
@@ -470,6 +478,8 @@ export class Lexer {
     while pos < source.length && peek() != delimiter {
       if peek() == '$' && peek(1) == '{' {
         addToken(TokenType.TemplateLiteralStart, start, pos - start, contentStart, pos - contentStart, needsDecode, tokenLine, tokenColumn)
+        interpolationLines.push(line)
+        interpolationColumns.push(column)
         advance()
         advance()
         templateDelimiters.push(delimiter)
@@ -507,6 +517,8 @@ export class Lexer {
     while pos < source.length && peek() != delimiter {
       if peek() == '$' && peek(1) == '{' {
         addToken(TokenType.TemplateLiteralMiddle, start, pos - start, contentStart, pos - contentStart, needsDecode, tokenLine, tokenColumn)
+        interpolationLines.push(line)
+        interpolationColumns.push(column)
         advance()
         advance()
         braceDepth.push(0)

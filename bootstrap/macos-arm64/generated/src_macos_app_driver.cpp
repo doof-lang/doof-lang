@@ -16,27 +16,31 @@ doof::JsonObject MacOSCommandResult::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<MacOSCommandResult>, std::string> MacOSCommandResult::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_exitCode = _object->find("exitCode");
     if (_iterator_exitCode == _object->end()) { return doof::Failure<std::string>{"Missing required field \"exitCode\""}; }
-    if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
     auto _field_exitCode = (_lenient ? doof::json_as_int_lenient(_iterator_exitCode->second) : doof::json_as_int(_iterator_exitCode->second));
     std::optional<std::shared_ptr<std::vector<uint8_t>>> _field_output;
     if (auto _iterator_output = _object->find("output"); _iterator_output != _object->end()) {
-        if (!(doof::json_is_array(_iterator_output->second))) { return doof::Failure<std::string>{"Field \"output\" expected array but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
+            if (!(doof::json_is_array(_iterator_output->second))) { return doof::Failure<std::string>{"Field \"output\" expected array but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
         _field_output = [&]() { const auto* _array = doof::json_as_array(_iterator_output->second); auto _values = std::make_shared<std::vector<uint8_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(static_cast<uint8_t>(_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
         _field_output = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
     }
     std::optional<std::string> _field_error;
     if (auto _iterator_error = _object->find("error"); _iterator_error != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
         _field_error = (_lenient ? doof::json_as_string_lenient(_iterator_error->second) : doof::json_as_string(_iterator_error->second));
     } else {
         _field_error = std::string("");
     }
-    return doof::Success<std::shared_ptr<MacOSCommandResult>>{std::make_shared<MacOSCommandResult>(_field_exitCode, _field_output.value(), _field_error.value())};
+        return doof::Success<std::shared_ptr<MacOSCommandResult>>{std::make_shared<MacOSCommandResult>(_field_exitCode, _field_output.value(), _field_error.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 std::string hostPlatform() {
     const auto value = ::std_::os::index::platform();
@@ -197,7 +201,7 @@ doof::Result<void, std::string> generateMacOSIcon(const std::string& iconPath, c
     const auto names = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("icon_16x16.png"), std::string("icon_16x16@2x.png"), std::string("icon_32x32.png"), std::string("icon_32x32@2x.png"), std::string("icon_128x128.png"), std::string("icon_128x128@2x.png"), std::string("icon_256x256.png"), std::string("icon_256x256@2x.png"), std::string("icon_512x512.png"), std::string("icon_512x512@2x.png")});
     for (int32_t index = 0; index < static_cast<int32_t>((sizes)->size()); ++index) {
         auto _try_value_7 = runRequiredCommand(std::string("sips"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-z"), doof::to_string(doof::array_at(sizes, index, "src/macos-app-driver", 152)), doof::to_string(doof::array_at(sizes, index, "src/macos-app-driver", 152)), iconPath, std::string("--out"), outputPath(iconset, doof::array_at(names, index, "src/macos-app-driver", 152))}), std::string("macOS icon resize"));
-        if (doof::is_failure(_try_value_7)) return doof::Failure<std::string>{doof::failure_error(_try_value_7)};
+        if (doof::is_failure(_try_value_7)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_7))};
     }
     const auto result = runRequiredCommand(std::string("iconutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-c"), std::string("icns"), iconset, std::string("-o"), destinationPath}), std::string("macOS icon generation"));
     removeTree(iconset);
@@ -214,32 +218,36 @@ doof::JsonObject EmbeddedCode::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<EmbeddedCode>, std::string> EmbeddedCode::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_sourcePath = _object->find("sourcePath");
     if (_iterator_sourcePath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"sourcePath\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourcePath->second) : doof::json_is_string(_iterator_sourcePath->second)))) { return doof::Failure<std::string>{"Field \"sourcePath\" expected string but got " + std::string(doof::json_type_name(_iterator_sourcePath->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourcePath->second) : doof::json_is_string(_iterator_sourcePath->second)))) { return doof::Failure<std::string>{"Field \"sourcePath\" expected string but got " + std::string(doof::json_type_name(_iterator_sourcePath->second))}; }
     auto _field_sourcePath = (_lenient ? doof::json_as_string_lenient(_iterator_sourcePath->second) : doof::json_as_string(_iterator_sourcePath->second));
     auto _iterator_bundledRoot = _object->find("bundledRoot");
     if (_iterator_bundledRoot == _object->end()) { return doof::Failure<std::string>{"Missing required field \"bundledRoot\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundledRoot->second) : doof::json_is_string(_iterator_bundledRoot->second)))) { return doof::Failure<std::string>{"Field \"bundledRoot\" expected string but got " + std::string(doof::json_type_name(_iterator_bundledRoot->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundledRoot->second) : doof::json_is_string(_iterator_bundledRoot->second)))) { return doof::Failure<std::string>{"Field \"bundledRoot\" expected string but got " + std::string(doof::json_type_name(_iterator_bundledRoot->second))}; }
     auto _field_bundledRoot = (_lenient ? doof::json_as_string_lenient(_iterator_bundledRoot->second) : doof::json_as_string(_iterator_bundledRoot->second));
     auto _iterator_bundledPath = _object->find("bundledPath");
     if (_iterator_bundledPath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"bundledPath\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundledPath->second) : doof::json_is_string(_iterator_bundledPath->second)))) { return doof::Failure<std::string>{"Field \"bundledPath\" expected string but got " + std::string(doof::json_type_name(_iterator_bundledPath->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundledPath->second) : doof::json_is_string(_iterator_bundledPath->second)))) { return doof::Failure<std::string>{"Field \"bundledPath\" expected string but got " + std::string(doof::json_type_name(_iterator_bundledPath->second))}; }
     auto _field_bundledPath = (_lenient ? doof::json_as_string_lenient(_iterator_bundledPath->second) : doof::json_as_string(_iterator_bundledPath->second));
     auto _iterator_bundleReference = _object->find("bundleReference");
     if (_iterator_bundleReference == _object->end()) { return doof::Failure<std::string>{"Missing required field \"bundleReference\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundleReference->second) : doof::json_is_string(_iterator_bundleReference->second)))) { return doof::Failure<std::string>{"Field \"bundleReference\" expected string but got " + std::string(doof::json_type_name(_iterator_bundleReference->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundleReference->second) : doof::json_is_string(_iterator_bundleReference->second)))) { return doof::Failure<std::string>{"Field \"bundleReference\" expected string but got " + std::string(doof::json_type_name(_iterator_bundleReference->second))}; }
     auto _field_bundleReference = (_lenient ? doof::json_as_string_lenient(_iterator_bundleReference->second) : doof::json_as_string(_iterator_bundleReference->second));
     std::optional<std::string> _field_installId;
     if (auto _iterator_installId = _object->find("installId"); _iterator_installId != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_installId->second) : doof::json_is_string(_iterator_installId->second)))) { return doof::Failure<std::string>{"Field \"installId\" expected string but got " + std::string(doof::json_type_name(_iterator_installId->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_installId->second) : doof::json_is_string(_iterator_installId->second)))) { return doof::Failure<std::string>{"Field \"installId\" expected string but got " + std::string(doof::json_type_name(_iterator_installId->second))}; }
         _field_installId = (_lenient ? doof::json_as_string_lenient(_iterator_installId->second) : doof::json_as_string(_iterator_installId->second));
     } else {
         _field_installId = std::string("");
     }
-    return doof::Success<std::shared_ptr<EmbeddedCode>>{std::make_shared<EmbeddedCode>(_field_sourcePath, _field_bundledRoot, _field_bundledPath, _field_bundleReference, _field_installId.value())};
+        return doof::Success<std::shared_ptr<EmbeddedCode>>{std::make_shared<EmbeddedCode>(_field_sourcePath, _field_bundledRoot, _field_bundledPath, _field_bundleReference, _field_installId.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 doof::Result<std::string, std::string> commandText(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& description) {
     const auto result = runMacOSCommand(command, arguments);
@@ -279,7 +287,7 @@ std::string firstNonemptyOutputLine(const std::string& output) {
 }
 doof::Result<std::string, std::string> readMachOInstallId(const std::string& path) {
     auto _try_value_11 = commandText(std::string("otool"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-D"), path}), std::string("reading embedded library install name"));
-    if (doof::is_failure(_try_value_11)) return doof::Failure<std::string>{doof::failure_error(_try_value_11)};
+    if (doof::is_failure(_try_value_11)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_11))};
     const auto commandOutput = doof::success_value(_try_value_11);
     auto first = true;
     const auto& _iterable_12 = doof::string_split(commandOutput, std::string("\n"));
@@ -328,10 +336,10 @@ doof::Result<std::shared_ptr<EmbeddedCode>, std::string> planEmbeddedCode(const 
             return doof::Failure<std::string>{ (std::string("Embedded framework must be a directory: ") + sourcePath) };
         }
         auto _try_value_13 = frameworkBinary(sourcePath);
-        if (doof::is_failure(_try_value_13)) return doof::Failure<std::string>{doof::failure_error(_try_value_13)};
+        if (doof::is_failure(_try_value_13)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_13))};
         const auto sourceBinary = doof::success_value(_try_value_13);
         auto _try_value_14 = readMachOInstallId(sourceBinary);
-        if (doof::is_failure(_try_value_14)) return doof::Failure<std::string>{doof::failure_error(_try_value_14)};
+        if (doof::is_failure(_try_value_14)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_14))};
         const auto installId = doof::success_value(_try_value_14);
         const auto frameworkName = fileName(sourcePath);
         const auto bundledRoot = outputPath(frameworksDirectory, frameworkName);
@@ -344,7 +352,7 @@ doof::Result<std::shared_ptr<EmbeddedCode>, std::string> planEmbeddedCode(const 
         return doof::Failure<std::string>{ (std::string("Embedded library must be a .dylib, .so, or .framework: ") + sourcePath) };
     }
     auto _try_value_15 = readMachOInstallId(sourcePath);
-    if (doof::is_failure(_try_value_15)) return doof::Failure<std::string>{doof::failure_error(_try_value_15)};
+    if (doof::is_failure(_try_value_15)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_15))};
     const auto installId = doof::success_value(_try_value_15);
     const auto destinationName = ((installId == std::string("")) ? fileName(sourcePath) : fileName(installId));
     const auto bundledPath = outputPath(frameworksDirectory, destinationName);
@@ -352,7 +360,7 @@ doof::Result<std::shared_ptr<EmbeddedCode>, std::string> planEmbeddedCode(const 
 }
 doof::Result<std::shared_ptr<std::vector<std::string>>, std::string> machODependencies(const std::string& path) {
     auto _try_value_16 = commandText(std::string("otool"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-L"), path}), std::string("reading Mach-O dependencies"));
-    if (doof::is_failure(_try_value_16)) return doof::Failure<std::string>{doof::failure_error(_try_value_16)};
+    if (doof::is_failure(_try_value_16)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_16))};
     const auto commandOutput = doof::success_value(_try_value_16);
     std::shared_ptr<std::vector<std::string>> dependencies = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     auto first = true;
@@ -390,7 +398,7 @@ std::shared_ptr<EmbeddedCode> embeddedDependency(const std::string& dependency, 
 }
 doof::Result<void, std::string> rewriteEmbeddedDependencies(const std::string& codePath, const std::shared_ptr<std::vector<std::shared_ptr<EmbeddedCode>>>& embedded) {
     auto _try_value_19 = machODependencies(codePath);
-    if (doof::is_failure(_try_value_19)) return doof::Failure<std::string>{doof::failure_error(_try_value_19)};
+    if (doof::is_failure(_try_value_19)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_19))};
     const auto dependencies = doof::success_value(_try_value_19);
     const auto& _iterable_20 = dependencies;
     for (const auto& dependency : *_iterable_20) {
@@ -403,14 +411,14 @@ doof::Result<void, std::string> rewriteEmbeddedDependencies(const std::string& c
         }
         if (dependency != target->bundleReference) {
             auto _try_value_21 = runRequiredCommand(std::string("install_name_tool"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-change"), dependency, target->bundleReference, codePath}), std::string("rewriting embedded library dependency"));
-            if (doof::is_failure(_try_value_21)) return doof::Failure<std::string>{doof::failure_error(_try_value_21)};
+            if (doof::is_failure(_try_value_21)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_21))};
         }
     }
     return doof::Success<void>{};
 }
 doof::Result<void, std::string> ensureMachORPath(const std::string& codePath, const std::string& rpath) {
     auto _try_value_22 = commandText(std::string("otool"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-l"), codePath}), std::string("reading Mach-O rpaths"));
-    if (doof::is_failure(_try_value_22)) return doof::Failure<std::string>{doof::failure_error(_try_value_22)};
+    if (doof::is_failure(_try_value_22)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_22))};
     const auto loadCommands = doof::success_value(_try_value_22);
     if (doof::string_contains(loadCommands, ((std::string("path ") + rpath) + std::string(" ")))) {
         return doof::Success<void>{};
@@ -430,12 +438,12 @@ doof::Result<void, std::string> embedMacOSLibraries(const std::string& executabl
         auto sourcePath = entry->path;
         if (sourcePath == std::string("")) {
             auto _try_value_24 = resolveEmbeddedLibrary(entry->library, libraryPaths, buildDirectory);
-            if (doof::is_failure(_try_value_24)) return doof::Failure<std::string>{doof::failure_error(_try_value_24)};
+            if (doof::is_failure(_try_value_24)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_24))};
             const auto resolvedSourcePath = doof::success_value(_try_value_24);
             (sourcePath = resolvedSourcePath);
         }
         auto _try_value_25 = planEmbeddedCode(sourcePath, frameworksDirectory);
-        if (doof::is_failure(_try_value_25)) return doof::Failure<std::string>{doof::failure_error(_try_value_25)};
+        if (doof::is_failure(_try_value_25)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_25))};
         const auto code = doof::success_value(_try_value_25);
         if (doof::array_contains(destinations, code->bundledRoot, "", 0)) {
             return doof::Failure<std::string>{ (std::string("Duplicate embedded library destination: ") + code->bundledRoot) };
@@ -445,23 +453,23 @@ doof::Result<void, std::string> embedMacOSLibraries(const std::string& executabl
         copyPath(code->sourcePath, code->bundledRoot);
         if (!::doof_fs::isDirectory(code->bundledRoot)) {
             auto _try_value_26 = runRequiredCommand(std::string("chmod"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("+x"), code->bundledRoot}), std::string("marking embedded library executable"));
-            if (doof::is_failure(_try_value_26)) return doof::Failure<std::string>{doof::failure_error(_try_value_26)};
+            if (doof::is_failure(_try_value_26)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_26))};
         }
         embedded->push_back(code);
     }
     auto _try_value_27 = rewriteEmbeddedDependencies(executablePath, embedded);
-    if (doof::is_failure(_try_value_27)) return doof::Failure<std::string>{doof::failure_error(_try_value_27)};
+    if (doof::is_failure(_try_value_27)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_27))};
     const auto& _iterable_28 = embedded;
     for (const auto& code : *_iterable_28) {
         auto _try_value_29 = rewriteEmbeddedDependencies(code->bundledPath, embedded);
-        if (doof::is_failure(_try_value_29)) return doof::Failure<std::string>{doof::failure_error(_try_value_29)};
+        if (doof::is_failure(_try_value_29)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_29))};
         auto _try_value_30 = runRequiredCommand(std::string("install_name_tool"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-id"), code->bundleReference, code->bundledPath}), std::string("setting embedded library install name"));
-        if (doof::is_failure(_try_value_30)) return doof::Failure<std::string>{doof::failure_error(_try_value_30)};
+        if (doof::is_failure(_try_value_30)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_30))};
         auto _try_value_31 = ensureMachORPath(code->bundledPath, std::string("@loader_path"));
-        if (doof::is_failure(_try_value_31)) return doof::Failure<std::string>{doof::failure_error(_try_value_31)};
+        if (doof::is_failure(_try_value_31)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_31))};
     }
     auto _try_value_32 = ensureMachORPath(executablePath, std::string("@executable_path/../Frameworks"));
-    if (doof::is_failure(_try_value_32)) return doof::Failure<std::string>{doof::failure_error(_try_value_32)};
+    if (doof::is_failure(_try_value_32)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_32))};
     return doof::Success<void>{};
 }
 void collectNestedMacOSCode(const std::string& path, const std::shared_ptr<std::vector<std::string>>& results) {
@@ -496,25 +504,25 @@ doof::Result<std::string, std::string> assembleMacOSApp(const std::string& build
     const auto bundleExecutable = outputPath(macosDirectory, config->executableName);
     copyPath(executablePath, bundleExecutable);
     auto _try_value_34 = runRequiredCommand(std::string("chmod"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("+x"), bundleExecutable}), std::string("marking bundled executable"));
-    if (doof::is_failure(_try_value_34)) return doof::Failure<std::string>{doof::failure_error(_try_value_34)};
+    if (doof::is_failure(_try_value_34)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_34))};
     [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(contentsDirectory, std::string("Info.plist")), ::app_src_macos_app_::renderMacOSInfoPlist(config)); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 374, std::string("try! failed"));  }();
     [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(contentsDirectory, std::string("PkgInfo")), std::string("APPL????")); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 375, std::string("try! failed"));  }();
     if (config->iconPath != std::string("")) {
         auto _try_value_35 = generateMacOSIcon(config->iconPath, outputPath(resourcesDirectory, (config->executableName + std::string(".icns"))), buildDirectory);
-        if (doof::is_failure(_try_value_35)) return doof::Failure<std::string>{doof::failure_error(_try_value_35)};
+        if (doof::is_failure(_try_value_35)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_35))};
     }
     materializeMacOSResources(config, resourcesDirectory);
     auto _try_value_36 = embedMacOSLibraries(bundleExecutable, config, libraryPaths, buildDirectory, contentsDirectory);
-    if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::failure_error(_try_value_36)};
+    if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_36))};
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     collectNestedMacOSCode(outputPath(contentsDirectory, std::string("Frameworks")), nested);
     const auto& _iterable_37 = nested;
     for (const auto& path : *_iterable_37) {
         auto _try_value_38 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(path, std::string("-"), std::string("ad-hoc"), std::string("")), std::string("ad-hoc signing nested macOS code"));
-        if (doof::is_failure(_try_value_38)) return doof::Failure<std::string>{doof::failure_error(_try_value_38)};
+        if (doof::is_failure(_try_value_38)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_38))};
     }
     auto _try_value_39 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(appPath, std::string("-"), std::string("ad-hoc"), std::string("")), std::string("ad-hoc signing macOS app"));
-    if (doof::is_failure(_try_value_39)) return doof::Failure<std::string>{doof::failure_error(_try_value_39)};
+    if (doof::is_failure(_try_value_39)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_39))};
     return doof::Success<std::string>{ appPath };
 }
 doof::Result<std::string, std::string> developerIdIdentity(const std::string& configured) {
@@ -573,7 +581,7 @@ doof::Result<std::string, std::string> effectiveEntitlements(const std::shared_p
         const auto replaced = runMacOSCommand(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-replace"), std::string("com.apple.security.app-sandbox"), std::string("-bool"), std::string("YES"), destinationPath}));
         if (replaced->exitCode != 0) {
             auto _try_value_41 = runRequiredCommand(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-insert"), std::string("com.apple.security.app-sandbox"), std::string("-bool"), std::string("YES"), destinationPath}), std::string("enabling App Sandbox"));
-            if (doof::is_failure(_try_value_41)) return doof::Failure<std::string>{doof::failure_error(_try_value_41)};
+            if (doof::is_failure(_try_value_41)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_41))};
         }
     } else {
         [&]() -> void { auto _try_value = ::doof_fs::writeText(destinationPath, std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>\n")); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 429, std::string("try! failed"));  }();
@@ -584,12 +592,12 @@ doof::Result<void, std::string> signAndArchiveMacOSApp(const std::string& appPat
     auto identity = std::string("-");
     if (config->signing != std::string("ad-hoc")) {
         auto _try_value_42 = developerIdIdentity(config->identity);
-        if (doof::is_failure(_try_value_42)) return doof::Failure<std::string>{doof::failure_error(_try_value_42)};
+        if (doof::is_failure(_try_value_42)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_42))};
         const auto resolvedIdentity = doof::success_value(_try_value_42);
         (identity = resolvedIdentity);
     }
     auto _try_value_43 = effectiveEntitlements(config, buildDirectory);
-    if (doof::is_failure(_try_value_43)) return doof::Failure<std::string>{doof::failure_error(_try_value_43)};
+    if (doof::is_failure(_try_value_43)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_43))};
     const auto entitlementsPath = doof::success_value(_try_value_43);
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     collectNestedMacOSCode(outputPath(appPath, std::string("Contents/Frameworks")), nested);
@@ -598,18 +606,18 @@ doof::Result<void, std::string> signAndArchiveMacOSApp(const std::string& appPat
     const auto& _iterable_44 = nested;
     for (const auto& path : *_iterable_44) {
         auto _try_value_45 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(path, identity, config->signing, std::string("")), std::string("signing nested macOS code"));
-        if (doof::is_failure(_try_value_45)) return doof::Failure<std::string>{doof::failure_error(_try_value_45)};
+        if (doof::is_failure(_try_value_45)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_45))};
     }
     auto _try_value_46 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(appPath, identity, config->signing, entitlementsPath), std::string("signing macOS app"));
-    if (doof::is_failure(_try_value_46)) return doof::Failure<std::string>{doof::failure_error(_try_value_46)};
+    if (doof::is_failure(_try_value_46)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_46))};
     auto _try_value_47 = runRequiredCommand(std::string("codesign"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("--verify"), std::string("--deep"), std::string("--strict"), std::string("--verbose=2"), appPath}), std::string("verifying macOS app signature"));
-    if (doof::is_failure(_try_value_47)) return doof::Failure<std::string>{doof::failure_error(_try_value_47)};
+    if (doof::is_failure(_try_value_47)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_47))};
     ensureDirectory(parentPath(archivePath));
     if (::doof_fs::exists(archivePath)) {
         [&]() -> void { auto _try_value = ::doof_fs::remove(archivePath); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 455, std::string("try! failed"));  }();
     }
     auto _try_value_48 = runRequiredCommand(std::string("ditto"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-c"), std::string("-k"), std::string("--sequesterRsrc"), std::string("--keepParent"), appPath, archivePath}), std::string("archiving macOS app"));
-    if (doof::is_failure(_try_value_48)) return doof::Failure<std::string>{doof::failure_error(_try_value_48)};
+    if (doof::is_failure(_try_value_48)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_48))};
     return doof::Success<void>{};
 }
 }

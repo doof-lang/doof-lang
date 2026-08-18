@@ -212,6 +212,13 @@ export function testEmitsDotShorthandEnumMapKeys(): none {
   Assert.stringContains(result.header, "{Suit::Hearts, std::make_shared<Pile>()}")
 }
 
+export function testEmitsEnumInstanceNameLookup(): none {
+  result := emit("enum Terrain { Normal, Dangerous }\nfunction terrainName(terrain: Terrain): string => terrain.name\nfunction dangerousName(): string => Terrain.Dangerous.name")
+  Assert.stringContains(result.source, "return Terrain_name(terrain);")
+  Assert.stringContains(result.source, "return Terrain_name(Terrain::Dangerous);")
+  Assert.stringNotContains(result.source, "terrain::name")
+}
+
 export function testEmitsIntegerMapKeys(): none {
   result := emit("function ints(): Map<int, string> => { 1: \"one\", 2: \"two\" }\nfunction longs(): Map<long, string> => { 1L: \"one\", 2L: \"two\" }")
   Assert.stringContains(result.source, "{1, std::string(\"one\")}")
@@ -801,6 +808,29 @@ export function testInvokesCallbackValuedMemberThroughCallMethod(): none {
   Assert.equal(result.source.contains("route->get.call(1)"), false)
 }
 
+export function testInvokesCallbackFieldAfterPostfixNullableStructUnwrap(): none {
+  result := emit("struct Handler { callback: (value: int): int }\nfunction findHandler(): Handler | none => Handler { callback: (value: int): int => value + 1 }\nfunction invoke(): int { handler := findHandler()\nif handler != none { return handler!.callback(41) }\nreturn 0 }")
+  Assert.stringContains(result.source, "handler->callback.call(41)")
+  Assert.equal(result.source.contains("handler->callback(41)"), false)
+}
+
+export function testEmitsInterpolationInSourceOrder(): none {
+  result := emit("function first(): int => 1\nfunction second(): int => 2\nfunction render(): string => \"a=\${first()}, b=\${second()}\"")
+  Assert.stringContains(result.source, "std::string _interpolation = \"a=\"")
+  firstPosition := result.source.indexOf("doof::to_string(first())")
+  secondPosition := result.source.indexOf("doof::to_string(second())")
+  Assert.equal(firstPosition >= 0, true)
+  Assert.equal(secondPosition > firstPosition, true)
+  Assert.stringContains(result.source, "return _interpolation; }())")
+}
+
+export function testFoldsConstantStringConcatenation(): none {
+  result := emit("function constant(): string => \"alpha\" + \"\\n\" + \"beta\"\nfunction mixed(value: string): string => \"left\" + \"-\" + value")
+  Assert.stringContains(result.source, "return std::string(\"alpha\\nbeta\");")
+  Assert.stringNotContains(result.source, "std::string(\"alpha\") + std::string")
+  Assert.stringContains(result.source, "std::string(\"left-\") + value")
+}
+
 export function testOrdersNamedCallbackArgumentsByFunctionType(): none {
   result := emit("function invoke(callback: (left: int, right: int): int): int => callback{right: 2, left: 1}")
   Assert.equal(result.source.contains("callback.call(1, 2)"), true)
@@ -841,6 +871,23 @@ export function testEmitsDeclarationElseNarrowingAndCapture(): none {
   Assert.equal(result.source.contains("const auto value = doof::success_value(_binding_value_"), true)
 }
 
+export function testKeepsDeclarationElseStructBindingsShallowImmutable(): none {
+  result := emit(
+    "struct Evaluation { readonly skulls: int\nhasSkull(): bool => skulls > 0 }\n" +
+    "function evaluate(): Result<Evaluation, string> => Success(Evaluation { skulls: 1 })\n" +
+    "function maybeEvaluate(): Evaluation | none => Evaluation { skulls: 1 }\n" +
+    "function main(): bool { fromResult := evaluate() else { return false }\n" +
+    "fromOptional := maybeEvaluate() else { return false }\n" +
+    "return fromResult.hasSkull() && fromOptional.hasSkull() }",
+  )
+  Assert.stringContains(result.source, "auto fromResult = doof::success_value(_binding_value_")
+  Assert.stringContains(result.source, "auto fromOptional = doof::unwrap_optional(_binding_value_")
+  Assert.stringNotContains(result.source, "const auto fromResult")
+  Assert.stringNotContains(result.source, "const auto fromOptional")
+  Assert.stringContains(result.header, "bool hasSkull();")
+  Assert.stringNotContains(result.header, "bool hasSkull() const;")
+}
+
 export function testEmitsPostfixBangResultUnwrap(): none {
   result := emit("function decode(): Result<string, string> => Success { value: \"ok\" }\nfunction main(): string => decode()!")
   Assert.equal(result.source.contains("if (doof::is_failure(_assert_value)) doof::panic(\"! failed\")"), true)
@@ -861,11 +908,50 @@ export function testEmitsResultUnwrapOrWithSingleEvaluation(): none {
   Assert.stringContains(result.source, "return std::move(doof::success_value(_result_unwrap_")
 }
 
+export function testEmitsCoalescingWithSingleEvaluationAndCarrierSpecificChecks(): none {
+  result := emit("function nullable(): int | none => 7\nfunction fallible(): Result<int, string> => Success(8)\nfunction fromNullable(): int => nullable() ?? 0\nfunction fromResult(): int => fallible() ?? 0")
+  Assert.stringContains(result.source, "auto _coalesce_")
+  Assert.stringContains(result.source, "= nullable(); if (doof::is_null(_coalesce_")
+  Assert.stringContains(result.source, "= fallible(); if (doof::is_failure(_coalesce_")
+  Assert.equal(result.source.contains("doof::is_null(fallible())"), false)
+  Assert.equal(result.source.contains("doof::unwrap_optional(fallible())"), false)
+}
+
+export function testPromotesTryErrorsIntoWiderReturnUnion(): none {
+  result := emit("function inner(): Result<int, string | int> => Failure(1)\nfunction outer(): Result<int, string | int | bool> { try value := inner()\nreturn Success(value) }")
+  target := "std::variant<std::string, int32_t, bool>"
+  Assert.stringContains(result.source, "doof::Failure<" + target + ">{doof::variant_promote<" + target + ">(doof::failure_error(_try_value_")
+}
+
+export function testEvaluatesComputedMapHasReceiverOnce(): none {
+  result := emit("function values(): Map<string, int> => { key: 1 }\nfunction found(): bool => values().has(\"key\")")
+  Assert.stringContains(result.source, "auto _map_has_")
+  Assert.stringContains(result.source, "= values(); return _map_has_")
+  Assert.equal(result.source.contains("values()->find"), false)
+}
+
 export function testEmitsTryValueDeclarationsWithMutability(): none {
-  result := emit("function load(): Result<int, string> => Success { value: 1 }\nfunction run(): Result<int, string> { try const first = load()\ntry readonly second = load()\ntry let third = load()\nthird = third + first\nreturn Success { value: third + second } }")
+  result := emit("struct Frozen { readonly value: int }\nfunction load(): Result<int, string> => Success { value: 1 }\nfunction loadFrozen(): Result<Frozen, string> => Success(Frozen { value: 2 })\nfunction run(): Result<int, string> { try const first = load()\ntry readonly second = load()\ntry let third = load()\ntry readonly frozen = loadFrozen()\nthird = third + first\nreturn Success { value: third + second + frozen.value } }")
   Assert.equal(result.source.contains("const auto first = doof::success_value("), true)
   Assert.equal(result.source.contains("const auto second = doof::success_value("), true)
   Assert.equal(result.source.contains("auto third = doof::success_value("), true)
+  Assert.equal(result.source.contains("const auto frozen = doof::success_value("), true)
+}
+
+export function testKeepsTryStructBindingsShallowImmutableAcrossFailureContexts(): none {
+  result := emit(
+    "struct Evaluation { readonly skulls: int\nhasSkull(): bool => skulls > 0 }\n" +
+    "function evaluate(): Result<Evaluation, string> => Success(Evaluation { skulls: 1 })\n" +
+    "function propagated(): Result<bool, string> { try propagatedValue := evaluate()\nreturn Success(propagatedValue.hasSkull()) }\n" +
+    "function captured(): bool { ignored := catch { try capturedValue := evaluate()\nif capturedValue.hasSkull() { println(\"skull\") } }\nreturn ignored == none }\n" +
+    "try scriptValue := evaluate()\nprintln(string(scriptValue.hasSkull()))",
+  )
+  Assert.stringContains(result.source, "auto propagatedValue = doof::success_value(_try_value_")
+  Assert.stringContains(result.source, "auto capturedValue = doof::success_value(_try_value_")
+  Assert.stringContains(result.source, "auto scriptValue = doof::success_value(_try_value_")
+  Assert.stringNotContains(result.source, "const auto propagatedValue")
+  Assert.stringNotContains(result.source, "const auto capturedValue")
+  Assert.stringNotContains(result.source, "const auto scriptValue")
 }
 
 export function testEmitsWithBindingsInOrderedLexicalScope(): none {
@@ -983,6 +1069,16 @@ export function testEmitsRecursiveAutomaticJsonTypes(): none {
   Assert.equal(result.source.contains("this->kind"), true)
   Assert.equal(result.source.contains("for (const auto& _element : *this->ids)"), true)
   Assert.equal(result.source.contains("Point::fromJsonValue"), true)
+  Assert.stringContains(result.source, "doof::json_decode_value(Point::fromJsonValue")
+  Assert.stringContains(result.source, "catch (const doof::JsonDecodeError& _error)")
+}
+
+export function testEmitsUnicodeCharJsonConversionAndValidation(): none {
+  result := emit("class Mark { value: char }\nfunction decode(value: JsonValue): Result<Mark, string> => Mark.fromJsonValue(value)\nfunction encode(value: Mark): JsonObject => value.toJsonObject()")
+  Assert.stringContains(result.source, "doof::json_is_char(_iterator_value->second, _lenient)")
+  Assert.stringContains(result.source, "doof::json_as_char(_iterator_value->second, _lenient)")
+  Assert.stringContains(result.source, "doof::json_value(doof::char_to_utf8(this->value))")
+  Assert.equal(result.source.contains("json_as_string(_iterator_value->second)[0]"), false)
 }
 
 export function testEmitsTupleAutomaticJsonTypes(): none {
@@ -1200,6 +1296,13 @@ export function testEmitsNullableStructParametersAsOptionalValues(): none {
   Assert.equal(result.source.contains("doof::is_null(point)"), true)
   Assert.equal(result.header.contains("bool legacy(std::optional<Point> point = std::nullopt)"), true)
   Assert.equal(result.source.contains("bool legacy"), true)
+}
+
+export function testEmitsUniformNoneComparisons(): none {
+  result := emit("function nullable(value: int | none): bool => value != none\nfunction jsonNull(value: JsonValue): bool => none == value")
+  Assert.stringContains(result.source, "(!doof::is_null(value))")
+  Assert.stringContains(result.source, "doof::is_null(value)")
+  Assert.stringNotContains(result.source, "doof::json_is_null(value)")
 }
 
 export function testEmitsPositionAwareNoneRepresentations(): none {

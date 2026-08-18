@@ -42,7 +42,7 @@ std::string emitFunctionSignature(const std::shared_ptr<::app_src_ast_::Function
         if (i > 0) {
             (result = (result + std::string(", ")));
         }
-        const auto parameterType = (doof::is_null(doof::array_at(fn->params, i, "src/emitter-decl", 41)->resolvedType) ? doof::array_at(functionType->params, i, "src/emitter-decl", 41)->type_ : doof::unwrap_optional(doof::array_at(fn->params, i, "src/emitter-decl", 41)->resolvedType));
+        const auto parameterType = [&]() -> std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> { auto _coalesce_3 = doof::array_at(fn->params, i, "src/emitter-decl", 41)->resolvedType; if (doof::is_null(_coalesce_3)) return doof::array_at(functionType->params, i, "src/emitter-decl", 41)->type_; return doof::unwrap_optional(_coalesce_3); }();
         const auto parameterText = (doof::is_null(defaultContext) ? ::app_src_emitter_types_::emitParameterType(parameterType, modulePath) : ::app_src_emitter_types_::borrowParameterType(parameterType, ::app_src_emitter_types_::emitContextType(parameterType, doof::unwrap_optional(defaultContext))));
         ensureKnown(parameterType, ((fn->name + std::string(" parameter ")) + doof::array_at(fn->params, i, "src/emitter-decl", 45)->name));
         (result = (((result + parameterText) + std::string(" ")) + ::app_src_emitter_expr_::cppIdentifier(doof::array_at(fn->params, i, "src/emitter-decl", 46)->name)));
@@ -278,15 +278,15 @@ void ensureKnown(const std::variant<std::shared_ptr<::app_src_semantic_::Primiti
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_3 = union_->types;
-            for (const auto& member : *_iterable_3) {
+            const auto& _iterable_4 = union_->types;
+            for (const auto& member : *_iterable_4) {
                 ensureKnown(member, (owner + std::string(" union member")));
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_4 = function_->params;
-            for (const auto& parameter : *_iterable_4) {
+            const auto& _iterable_5 = function_->params;
+            for (const auto& parameter : *_iterable_5) {
                 ensureKnown(parameter->type_, (owner + std::string(" callback parameter")));
             }
             ensureKnown(function_->returnType, (owner + std::string(" callback return")));
@@ -325,8 +325,8 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
     }
     auto inheritance = (decl->struct_ ? std::string("") : ((std::string(" : public std::enable_shared_from_this<") + ownershipName) + std::string(">")));
     auto result = (((((emitDescriptionComment(decl->description, std::string("")) + (doof::is_null(context->substitution) ? templatePrefix(decl->typeParams) : std::string(""))) + std::string("struct ")) + className) + inheritance) + std::string(" {\n"));
-    const auto& _iterable_5 = decl->fields;
-    for (const auto& field : *_iterable_5) {
+    const auto& _iterable_6 = decl->fields;
+    for (const auto& field : *_iterable_6) {
         for (int32_t index = 0; index < static_cast<int32_t>((field->names)->size()); ++index) {
             const auto name = doof::array_at(field->names, index, "src/emitter-decl", 220);
             const auto description = ((index < static_cast<int32_t>((field->descriptions)->size())) ? doof::array_at(field->descriptions, index, "src/emitter-decl", 221) : std::string(""));
@@ -347,13 +347,13 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
     if (hasInstanceFields(decl)) {
         auto lastRequiredParameter = -1;
         auto parameterIndex = 0;
-        const auto& _iterable_6 = decl->fields;
-        for (const auto& field : *_iterable_6) {
+        const auto& _iterable_7 = decl->fields;
+        for (const auto& field : *_iterable_7) {
             if (field->static_ || field->const_) {
                 continue;
             }
-            const auto& _iterable_7 = field->names;
-            for (const auto& name : *_iterable_7) {
+            const auto& _iterable_8 = field->names;
+            for (const auto& name : *_iterable_8) {
                 if (doof::is_null(field->defaultValue)) {
                     (lastRequiredParameter = parameterIndex);
                 }
@@ -362,13 +362,13 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
         }
         auto suppressTrailingDefaults = false;
         (parameterIndex = 0);
-        const auto& _iterable_8 = decl->fields;
-        for (const auto& field : *_iterable_8) {
+        const auto& _iterable_9 = decl->fields;
+        for (const auto& field : *_iterable_9) {
             if (field->static_ || field->const_) {
                 continue;
             }
-            const auto& _iterable_9 = field->names;
-            for (const auto& name : *_iterable_9) {
+            const auto& _iterable_10 = field->names;
+            for (const auto& name : *_iterable_10) {
                 if ((parameterIndex > lastRequiredParameter) && (!doof::is_null(field->defaultValue))) {
                     const auto defaultText = ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(field->defaultValue), context, doof::optional_value(fieldTypeForEmission(field)));
                     if (defaultNeedsImportedDefinition(defaultText, context)) {
@@ -381,13 +381,13 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
         (result = (((result + std::string("    ")) + className) + std::string("(")));
         auto firstParameter = true;
         (parameterIndex = 0);
-        const auto& _iterable_10 = decl->fields;
-        for (const auto& field : *_iterable_10) {
+        const auto& _iterable_11 = decl->fields;
+        for (const auto& field : *_iterable_11) {
             if (field->static_ || field->const_) {
                 continue;
             }
-            const auto& _iterable_11 = field->names;
-            for (const auto& name : *_iterable_11) {
+            const auto& _iterable_12 = field->names;
+            for (const auto& name : *_iterable_12) {
                 if (!firstParameter) {
                     (result = (result + std::string(", ")));
                 }
@@ -406,13 +406,13 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
         }
         (result = (result + std::string(") : ")));
         auto firstInitializer = true;
-        const auto& _iterable_12 = decl->fields;
-        for (const auto& field : *_iterable_12) {
+        const auto& _iterable_13 = decl->fields;
+        for (const auto& field : *_iterable_13) {
             if (field->static_ || field->const_) {
                 continue;
             }
-            const auto& _iterable_13 = field->names;
-            for (const auto& name : *_iterable_13) {
+            const auto& _iterable_14 = field->names;
+            for (const auto& name : *_iterable_14) {
                 if (!firstInitializer) {
                     (result = (result + std::string(", ")));
                 }
@@ -427,14 +427,14 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
     } else if (!decl->struct_) {
         (result = (((result + std::string("    ")) + className) + std::string("() {}\n")));
     }
-    const auto& _iterable_14 = decl->methods;
-    for (const auto& method : *_iterable_14) {
+    const auto& _iterable_15 = decl->methods;
+    for (const auto& method : *_iterable_15) {
         if (static_cast<int32_t>((method->typeParams)->size()) > 0) {
             if (static_cast<int32_t>((decl->typeParams)->size()) == 0) {
                 (result = (result + emitInlineClassMethod(decl, method, context, std::string(""))));
             } else {
-                const auto& _iterable_15 = concreteMethods;
-                for (const auto& instantiation : *_iterable_15) {
+                const auto& _iterable_16 = concreteMethods;
+                for (const auto& instantiation : *_iterable_16) {
                     if (instantiation->declaration->name != method->name) {
                         continue;
                     }
@@ -461,8 +461,8 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
     return (result + std::string("};\n"));
 }
 bool defaultNeedsImportedDefinition(const std::string& defaultText, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    const auto& _iterable_16 = context->imports;
-    for (const auto& imported : *_iterable_16) {
+    const auto& _iterable_17 = context->imports;
+    for (const auto& imported : *_iterable_17) {
         if (doof::string_contains(defaultText, ((std::string("::") + ::app_src_emitter_names_::moduleNamespace(imported->sourceModule)) + std::string("::")))) {
             return true;
         }
@@ -505,8 +505,8 @@ std::string fieldTypeTextForEmission(const std::shared_ptr<::app_src_ast_::Class
     return typeText;
 }
 bool hasInstanceFields(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& decl) {
-    const auto& _iterable_17 = decl->fields;
-    for (const auto& field : *_iterable_17) {
+    const auto& _iterable_18 = decl->fields;
+    for (const auto& field : *_iterable_18) {
         if (!field->static_ && !field->const_) {
             return true;
         }
@@ -518,13 +518,13 @@ std::string emitStaticClassFieldDefinitions(const std::shared_ptr<::app_src_ast_
         return std::string("");
     }
     auto result = std::string("");
-    const auto& _iterable_18 = owner->fields;
-    for (const auto& field : *_iterable_18) {
+    const auto& _iterable_19 = owner->fields;
+    for (const auto& field : *_iterable_19) {
         if (!field->static_ || doof::is_null(field->defaultValue)) {
             continue;
         }
-        const auto& _iterable_19 = field->names;
-        for (const auto& name : *_iterable_19) {
+        const auto& _iterable_20 = field->names;
+        for (const auto& name : *_iterable_20) {
             const auto resolvedType = fieldTypeForEmission(field);
             (result = ((((((result + fieldTypeTextForEmission(field, resolvedType, context)) + std::string(" ")) + owner->name) + std::string("::")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(";\n")));
         }
@@ -555,12 +555,12 @@ std::string emitInlineClassMethod(const std::shared_ptr<::app_src_ast_::ClassDec
             (context->capturedMutables = ::app_src_emitter_expr_lambda_::scanCapturedMutablesInBlock(block));
     }
     }
-    const auto& _iterable_20 = owner->typeParams;
-    for (const auto& typeParam : *_iterable_20) {
+    const auto& _iterable_21 = owner->typeParams;
+    for (const auto& typeParam : *_iterable_21) {
         context->genericTypeParams->push_back(typeParam);
     }
-    const auto& _iterable_21 = method->typeParams;
-    for (const auto& typeParam : *_iterable_21) {
+    const auto& _iterable_22 = method->typeParams;
+    for (const auto& typeParam : *_iterable_22) {
         context->genericTypeParams->push_back(typeParam);
     }
     const auto staticPrefix = (method->static_ ? std::string("static ") : std::string(""));
@@ -607,8 +607,8 @@ std::string emitDescriptionComment(const std::string& description, const std::st
 }
 std::string emitCallableDescription(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn, const std::string& indent) {
     auto result = emitDescriptionComment(fn->description, indent);
-    const auto& _iterable_22 = fn->params;
-    for (const auto& parameter : *_iterable_22) {
+    const auto& _iterable_23 = fn->params;
+    for (const auto& parameter : *_iterable_23) {
         if (parameter->description != std::string("")) {
             (result = ((((((result + indent) + std::string("// @param ")) + parameter->name) + std::string(" ")) + doof::string_replaceAll(parameter->description, std::string("\n"), std::string(" "))) + std::string("\n")));
         }
@@ -625,8 +625,8 @@ std::string emitInterfaceAlias(const std::shared_ptr<::app_src_ast_::InterfaceDe
     }
     auto result = (((emitDescriptionComment(decl->description, std::string("")) + std::string("using ")) + decl->name) + std::string(" = std::variant<"));
     auto first = true;
-    const auto& _iterable_23 = implementations;
-    for (const auto& symbol : *_iterable_23) {
+    const auto& _iterable_24 = implementations;
+    for (const auto& symbol : *_iterable_24) {
         if (!first) {
             (result = (result + std::string(", ")));
         }

@@ -81,6 +81,10 @@ void ModuleAnalyzer::collectSymbols(const std::shared_ptr<ModuleInfo>& info) {
             continue;
         }
         decorateDeclarationSymbol(statement, doof::unwrap_optional(symbol));
+        if (!doof::is_null(findSymbol(info, symbol->name))) {
+            addError(info, ((std::string("Duplicate module binding '") + symbol->name) + std::string("'")), std::visit([](auto&& _obj) { return _obj->span; }, statement));
+            continue;
+        }
         info->symbols->push_back(doof::unwrap_optional(symbol));
         if (symbol->exported) {
             info->exports->push_back(doof::unwrap_optional(symbol));
@@ -155,7 +159,7 @@ void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject)) {
                 const auto& import_ = std::get<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject);
                 const auto sourcePath = resolveImportPath(info, import_->source);
-                if ((doof::string_endsWith(info->path, std::string(".test.do")) && (info->mockRootPath == info->path)) && doof::string_endsWith(sourcePath, std::string(".test.do"))) {
+                if (doof::string_endsWith(info->path, std::string(".test.do")) && doof::string_endsWith(sourcePath, std::string(".test.do"))) {
                     addError(info, ((((std::string("Test file \"") + info->path) + std::string("\" cannot import another test file \"")) + sourcePath) + std::string("\"")), import_->span);
                     continue;
                 }
@@ -174,6 +178,10 @@ void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
                                 addError(info, ((((std::string("Module '") + import_->source) + std::string("' does not export '")) + named->name) + std::string("'")), named->span);
                             }
                             const auto localName = (doof::is_null(named->alias) ? named->name : doof::unwrap_optional(named->alias));
+                            if (hasModuleBinding(info, localName)) {
+                                addError(info, ((std::string("Duplicate module binding '") + localName) + std::string("'")), named->span);
+                                continue;
+                            }
                             if (doof::is_null(imported)) {
                                 info->imports->push_back(std::make_shared<::app_src_semantic_::ImportBinding>(localName, named->name, sourcePath, import_->typeOnly, nullptr));
                             } else {
@@ -182,6 +190,10 @@ void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
                     }
                     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamespaceImport>>(_case_subject)) {
                             const auto& namespace_ = std::get<std::shared_ptr<::app_src_ast_::NamespaceImport>>(_case_subject);
+                            if (hasModuleBinding(info, namespace_->alias)) {
+                                addError(info, ((std::string("Duplicate module binding '") + namespace_->alias) + std::string("'")), namespace_->span);
+                                continue;
+                            }
                             info->namespaceImports->push_back(std::make_shared<::app_src_semantic_::NamespaceBinding>(namespace_->alias, sourcePath, import_->typeOnly));
                     }
                     }
@@ -364,6 +376,9 @@ void ModuleAnalyzer::visitType(const std::variant<std::shared_ptr<::app_src_ast_
                 }
                 if (doof::is_null(symbol)) {
                     addError(info, ((std::string("Unknown type '") + named->name) + std::string("'")), named->span);
+                } else if (!isTypeSymbol(doof::unwrap_optional(symbol))) {
+                    addError(info, ((std::string("Symbol '") + named->name) + std::string("' is not a type")), named->span);
+                    (symbol = nullptr);
                 }
                 (named->resolvedSymbol = symbol);
             }
@@ -494,7 +509,7 @@ std::string relativeModuleSpecifier(const std::string& fromModule, const std::st
     const auto fromComponents = parentPathComponents(doof::string_replaceAll(fromModule, std::string("\\"), std::string("/")));
     const auto toComponents = doof::string_split(moduleSpecifierPath(doof::string_replaceAll(toModule, std::string("\\"), std::string("/"))), std::string("/"));
     auto common = 0;
-    while (((common < static_cast<int32_t>((fromComponents)->size())) && (common < static_cast<int32_t>((toComponents)->size()))) && (doof::array_at(fromComponents, common, "src/analyzer", 430) == doof::array_at(toComponents, common, "src/analyzer", 430))) {
+    while (((common < static_cast<int32_t>((fromComponents)->size())) && (common < static_cast<int32_t>((toComponents)->size()))) && (doof::array_at(fromComponents, common, "src/analyzer", 447) == doof::array_at(toComponents, common, "src/analyzer", 447))) {
         (common = (common + 1));
     }
     auto result = std::string("");
@@ -505,14 +520,14 @@ std::string relativeModuleSpecifier(const std::string& fromModule, const std::st
         if ((result != std::string("")) && !doof::string_endsWith(result, std::string("/"))) {
             (result = (result + std::string("/")));
         }
-        (result = (result + doof::array_at(toComponents, index, "src/analyzer", 435)));
+        (result = (result + doof::array_at(toComponents, index, "src/analyzer", 452)));
     }
     return (doof::string_startsWith(result, std::string(".")) ? result : (std::string("./") + result));
 }
 std::shared_ptr<std::vector<std::string>> parentPathComponents(const std::string& path) {
     const auto components = doof::string_split(path, std::string("/"));
     if (static_cast<int32_t>((components)->size()) > 0) {
-        const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 442, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+        const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 459, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }
     return components;
 }
@@ -564,12 +579,33 @@ std::shared_ptr<::app_src_semantic_::Symbol> findExport(const std::shared_ptr<Mo
     }
     return nullptr;
 }
+bool hasModuleBinding(const std::shared_ptr<ModuleInfo>& info, const std::string& name) {
+    if (!doof::is_null(findSymbol(info, name))) {
+        return true;
+    }
+    const auto& _iterable_36 = info->imports;
+    for (const auto& imported : *_iterable_36) {
+        if (imported->localName == name) {
+            return true;
+        }
+    }
+    const auto& _iterable_37 = info->namespaceImports;
+    for (const auto& imported : *_iterable_37) {
+        if (imported->localName == name) {
+            return true;
+        }
+    }
+    return false;
+}
+bool isTypeSymbol(const std::shared_ptr<::app_src_semantic_::Symbol>& symbol) {
+    return (((((symbol->kind == std::string("class")) || (symbol->kind == std::string("struct"))) || (symbol->kind == std::string("interface"))) || (symbol->kind == std::string("enum"))) || (symbol->kind == std::string("type-alias")));
+}
 bool isBuiltin(const std::string& name) {
     if ((name == std::string("JsonSerializable")) || (name == std::string("Reflectable"))) {
         return true;
     }
-    const auto& _iterable_36 = BUILTIN_TYPES;
-    for (const auto& builtin : *_iterable_36) {
+    const auto& _iterable_38 = BUILTIN_TYPES;
+    for (const auto& builtin : *_iterable_38) {
         if (builtin == name) {
             return true;
         }
@@ -577,8 +613,8 @@ bool isBuiltin(const std::string& name) {
     return false;
 }
 bool contains(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
-    const auto& _iterable_37 = values;
-    for (const auto& item : *_iterable_37) {
+    const auto& _iterable_39 = values;
+    for (const auto& item : *_iterable_39) {
         if (item == value) {
             return true;
         }

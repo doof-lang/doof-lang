@@ -55,6 +55,7 @@ bool checkStatement(const std::shared_ptr<::app_src_checker_state_::CheckerState
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>>(_case_subject)) {
             const auto& alias = std::get<std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>>(_case_subject);
+            validateUniqueTypeParameters(state, alias->typeParams, alias->span);
             const auto aliasScope = std::make_shared<::app_src_semantic_::Scope>(scope, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>{}), std::monostate{}, std::monostate{}, std::string(""), false, std::monostate{}, false, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}), false);
             populateTypeParameters(state, aliasScope, alias->typeParams, alias->typeParamConstraints);
             const auto resolvedAlias = ::app_src_checker_resolution_::resolveType(state, alias->type_, doof::unwrap_optional(state->info), aliasScope);
@@ -147,16 +148,16 @@ bool checkStatement(const std::shared_ptr<::app_src_checker_state_::CheckerState
                     const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
                     if (static_cast<int32_t>((tuple->elements)->size()) == static_cast<int32_t>((forOf->bindings)->size())) {
                         for (int32_t i = 0; i < static_cast<int32_t>((forOf->bindings)->size()); ++i) {
-                            const auto name = doof::array_at(forOf->bindings, i, "src/checker-statements", 116);
+                            const auto name = doof::array_at(forOf->bindings, i, "src/checker-statements", 117);
                             if (name != std::string("_")) {
-                                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), doof::array_at(tuple->elements, i, "src/checker-statements", 117), false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+                                declareUserBinding(state, bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), doof::array_at(tuple->elements, i, "src/checker-statements", 118), false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")), forOf->span);
                             }
                         }
                     } else {
                         const auto& _iterable_3 = forOf->bindings;
                         for (const auto& name : *_iterable_3) {
                             if (name != std::string("_")) {
-                                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), element, false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+                                declareUserBinding(state, bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), element, false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")), forOf->span);
                             }
                         }
                     }
@@ -165,7 +166,7 @@ bool checkStatement(const std::shared_ptr<::app_src_checker_state_::CheckerState
                     const auto& _iterable_4 = forOf->bindings;
                     for (const auto& name : *_iterable_4) {
                         if (name != std::string("_")) {
-                            ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), element, false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+                            declareUserBinding(state, bodyScope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("for-binding"), element, false, ::app_src_checker_validation_::checkerSemanticSpan(forOf->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")), forOf->span);
                         }
                     }
             }
@@ -191,7 +192,7 @@ bool checkStatement(const std::shared_ptr<::app_src_checker_state_::CheckerState
                 if (!::app_src_checker_types_::isAssignable(valueType, declaredType)) {
                     ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(valueType)) + std::string(" to ")) + ::app_src_checker_types_::typeName(declaredType)), binding->span);
                 }
-                ::app_src_checker_symbols_::declare(bodyScope, std::make_shared<::app_src_semantic_::Binding>(binding->name, std::string("with"), declaredType, false, ::app_src_checker_validation_::checkerSemanticSpan(binding->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+                declareUserBinding(state, bodyScope, std::make_shared<::app_src_semantic_::Binding>(binding->name, std::string("with"), declaredType, false, ::app_src_checker_validation_::checkerSemanticSpan(binding->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")), binding->span);
             }
             checkBlock(state, with_->body, bodyScope);
             return bindingsComplete;
@@ -435,11 +436,13 @@ bool checkValueDeclaration(const std::shared_ptr<::app_src_checker_state_::Check
         if (doof::is_null(scope->parent)) {
             (declarationSymbol = ::app_src_checker_symbols_::symbolFor(doof::unwrap_optional(state->info), name));
         }
-        ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(name, kind, declaredType, mutable_, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, declarationSymbol, std::string(""), std::string(""), std::string("")));
+        declareUserBinding(state, scope, std::make_shared<::app_src_semantic_::Binding>(name, kind, declaredType, mutable_, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, declarationSymbol, std::string(""), std::string(""), std::string("")), span);
     }
     return (std::visit([](auto&& _obj) { return _obj->kind; }, valueType) != std::string("never"));
 }
 std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> checkFunction(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn, const std::shared_ptr<::app_src_semantic_::Scope>& outer, const std::shared_ptr<::app_src_semantic_::ClassType>& owner) {
+    validateUniqueTypeParameters(state, fn->typeParams, fn->span);
+    validateTypeParameterShadowing(state, fn->typeParams, outer, fn->span);
     const auto scope = std::make_shared<::app_src_semantic_::Scope>(outer, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>{}), std::monostate{}, doof::optional_value((doof::is_null(owner) ? ::app_src_checker_types_::unknownType() : doof::unwrap_optional(owner))), fn->name, false, std::monostate{}, false, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}), false);
     populateTypeParameters(state, scope, fn->typeParams, fn->typeParamConstraints);
     if (!doof::is_null(owner)) {
@@ -471,7 +474,9 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
         if (!doof::is_null(parameter->defaultValue)) {
             ::app_src_checker_expressions_::checkExpression(state, doof::unwrap_optional(parameter->defaultValue), scope, ::app_src_checker_symbols_::optionalResolvedType(parameterType));
         }
-        ::app_src_checker_symbols_::declareShadowing(scope, std::make_shared<::app_src_semantic_::Binding>(parameter->name, std::string("parameter"), parameterType, false, ::app_src_checker_validation_::checkerSemanticSpan(parameter->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+        if (!::app_src_checker_symbols_::declareShadowing(scope, std::make_shared<::app_src_semantic_::Binding>(parameter->name, std::string("parameter"), parameterType, false, ::app_src_checker_validation_::checkerSemanticSpan(parameter->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")))) {
+            ::app_src_checker_common_::typeError(state, ((std::string("Binding '") + parameter->name) + std::string("' is already declared in this scope")), parameter->span);
+        }
     }
     if (fn->bodyless) {
         return functionValue;
@@ -520,6 +525,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamTy
     return parameters;
 }
 void checkClass(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::shared_ptr<::app_src_semantic_::Scope>& scope) {
+    validateUniqueTypeParameters(state, class_->typeParams, class_->span);
     const auto symbol = ::app_src_checker_symbols_::symbolFor(doof::unwrap_optional(state->info), class_->name);
     if (doof::is_null(symbol)) {
         return;
@@ -551,7 +557,7 @@ void checkClass(const std::shared_ptr<::app_src_checker_state_::CheckerState>& s
         }
         (field->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(fieldType));
         if (class_->struct_ && (field->weak_ || containsWeakType(fieldType))) {
-            const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : doof::array_at(field->names, 0, "src/checker-statements", 381));
+            const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : doof::array_at(field->names, 0, "src/checker-statements", 387));
             ::app_src_checker_common_::typeError(state, ((std::string("Struct field \"") + name) + std::string("\" cannot be weak")), field->span);
         }
         if ((!doof::is_null(field->defaultValue)) && (!doof::is_null(field->type_))) {
@@ -657,6 +663,7 @@ bool containsWeakType(const std::variant<std::shared_ptr<::app_src_semantic_::Pr
     return false;
 }
 void checkInterface(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& interface_, const std::shared_ptr<::app_src_semantic_::Scope>& scope) {
+    validateUniqueTypeParameters(state, interface_->typeParams, interface_->span);
     const auto interfaceScope = std::make_shared<::app_src_semantic_::Scope>(scope, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>{}), std::monostate{}, std::monostate{}, std::string(""), false, std::monostate{}, false, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}), false);
     populateTypeParameters(state, interfaceScope, interface_->typeParams, interface_->typeParamConstraints);
     const auto& _iterable_16 = interface_->fields;
@@ -680,28 +687,53 @@ void populateTypeParameters(const std::shared_ptr<::app_src_checker_state_::Chec
         scope->typeParamConstraints->push_back(std::make_shared<::app_src_semantic_::ResolvedTypeConstraint>(std::monostate{}));
     }
     for (int32_t index = 0; index < static_cast<int32_t>((names)->size()); ++index) {
-        if ((index >= static_cast<int32_t>((constraints)->size())) || doof::is_null(doof::array_at(constraints, index, "src/checker-statements", 466)->type_)) {
+        if ((index >= static_cast<int32_t>((constraints)->size())) || doof::is_null(doof::array_at(constraints, index, "src/checker-statements", 473)->type_)) {
             continue;
         }
-        const auto annotation = doof::unwrap_optional(doof::array_at(constraints, index, "src/checker-statements", 467)->type_);
+        const auto annotation = doof::unwrap_optional(doof::array_at(constraints, index, "src/checker-statements", 474)->type_);
         {
             auto _case_subject = annotation;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                 const auto& named = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
                 if ((static_cast<int32_t>((named->typeArgs)->size()) == 0) && ((named->name == std::string("JsonSerializable")) || (named->name == std::string("Reflectable")))) {
-                    (doof::array_at(scope->typeParamConstraintNames, index, "src/checker-statements", 471) = named->name);
+                    (doof::array_at(scope->typeParamConstraintNames, index, "src/checker-statements", 478) = named->name);
                     continue;
                 }
         }
         else {
         }
         }
-        (doof::array_at(scope->typeParamConstraints, index, "src/checker-statements", 477)->type_ = doof::optional_value(::app_src_checker_resolution_::resolveType(state, annotation, doof::unwrap_optional(state->info), scope)));
+        (doof::array_at(scope->typeParamConstraints, index, "src/checker-statements", 484)->type_ = doof::optional_value(::app_src_checker_resolution_::resolveType(state, annotation, doof::unwrap_optional(state->info), scope)));
+    }
+}
+void validateUniqueTypeParameters(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<std::vector<std::string>>& names, ::app_src_ast_::SourceSpan span) {
+    for (int32_t index = 0; index < static_cast<int32_t>((names)->size()); ++index) {
+        for (int32_t previous = 0; previous < index; ++previous) {
+            if (doof::array_at(names, previous, "src/checker-statements", 491) == doof::array_at(names, index, "src/checker-statements", 491)) {
+                ::app_src_checker_common_::typeError(state, ((std::string("Type parameter \"") + doof::array_at(names, index, "src/checker-statements", 492)) + std::string("\" is already declared in this declaration")), span);
+                break;
+            }
+        }
+    }
+}
+void validateTypeParameterShadowing(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<std::vector<std::string>>& names, const std::shared_ptr<::app_src_semantic_::Scope>& outer, ::app_src_ast_::SourceSpan span) {
+    std::shared_ptr<::app_src_semantic_::Scope> current = outer;
+    while (!doof::is_null(current)) {
+        const auto& _iterable_19 = names;
+        for (const auto& name : *_iterable_19) {
+            const auto& _iterable_20 = current->typeParams;
+            for (const auto& visible : *_iterable_20) {
+                if (name == visible) {
+                    ::app_src_checker_common_::typeError(state, ((std::string("Type parameter \"") + name) + std::string("\" shadows a type parameter from the enclosing declaration")), span);
+                }
+            }
+        }
+        (current = current->parent);
     }
 }
 void checkEnum(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::EnumDeclaration>& enum_, const std::shared_ptr<::app_src_semantic_::Scope>& scope) {
-    const auto& _iterable_19 = enum_->variants;
-    for (const auto& variant : *_iterable_19) {
+    const auto& _iterable_21 = enum_->variants;
+    for (const auto& variant : *_iterable_21) {
         if (!doof::is_null(variant->value)) {
             const auto valueType = ::app_src_checker_expressions_::checkExpression(state, doof::unwrap_optional(variant->value), scope, ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::primitive(std::string("int"))));
             if (!::app_src_checker_types_::isAssignable(valueType, ::app_src_checker_types_::primitive(std::string("int")))) {
@@ -711,8 +743,8 @@ void checkEnum(const std::shared_ptr<::app_src_checker_state_::CheckerState>& st
     }
 }
 void validateInterfaces(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& module) {
-    const auto& _iterable_20 = module->symbols;
-    for (const auto& symbol : *_iterable_20) {
+    const auto& _iterable_22 = module->symbols;
+    for (const auto& symbol : *_iterable_22) {
         if ((symbol->kind != std::string("interface")) || (static_cast<int32_t>((symbol->implementations)->size()) > 0)) {
             continue;
         }
@@ -763,8 +795,8 @@ bool checkBlock(const std::shared_ptr<::app_src_checker_state_::CheckerState>& s
     const auto scope = std::make_shared<::app_src_semantic_::Scope>(parent, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>{}), std::monostate{}, std::monostate{}, std::string(""), false, std::monostate{}, false, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}), false);
     auto completes = true;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>> retiredActors = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{});
-    const auto& _iterable_21 = block->statements;
-    for (const auto& statement : *_iterable_21) {
+    const auto& _iterable_23 = block->statements;
+    for (const auto& statement : *_iterable_23) {
         if (completes) {
             (completes = checkStatement(state, statement, scope));
         } else {
@@ -823,25 +855,25 @@ bool checkTry(const std::shared_ptr<::app_src_checker_state_::CheckerState>& sta
                     const auto& declaration = std::get<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject);
                     (std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->resolvedType); }, declaration->value) = ::app_src_checker_symbols_::optionalResolvedType(resultValue));
                     (declaration->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(result->valueType));
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("const"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+                    declareUserBinding(state, scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("const"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")), declaration->span);
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject)) {
                     const auto& declaration = std::get<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject);
                     (std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->resolvedType); }, declaration->value) = ::app_src_checker_symbols_::optionalResolvedType(resultValue));
                     (declaration->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(result->valueType));
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("readonly"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+                    declareUserBinding(state, scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("readonly"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")), declaration->span);
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject)) {
                     const auto& binding = std::get<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject);
                     (std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->resolvedType); }, binding->value) = ::app_src_checker_symbols_::optionalResolvedType(resultValue));
                     (binding->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(result->valueType));
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(binding->name, std::string("immutable-binding"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(binding->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+                    declareUserBinding(state, scope, std::make_shared<::app_src_semantic_::Binding>(binding->name, std::string("immutable-binding"), result->valueType, false, ::app_src_checker_validation_::checkerSemanticSpan(binding->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")), binding->span);
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject)) {
                     const auto& declaration = std::get<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject);
                     (std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->resolvedType); }, declaration->value) = ::app_src_checker_symbols_::optionalResolvedType(resultValue));
                     (declaration->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(result->valueType));
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("let"), result->valueType, true, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+                    declareUserBinding(state, scope, std::make_shared<::app_src_semantic_::Binding>(declaration->name, std::string("let"), result->valueType, true, ::app_src_checker_validation_::checkerSemanticSpan(declaration->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")), declaration->span);
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExpressionStatement>>(_case_subject)) {
                     const auto& expression = std::get<std::shared_ptr<::app_src_ast_::ExpressionStatement>>(_case_subject);
@@ -868,8 +900,8 @@ void checkDestructuring(const std::shared_ptr<::app_src_checker_state_::CheckerS
             auto _case_subject = valueType;
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
                 const auto& array = std::get<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject);
-                const auto& _iterable_22 = statement->bindings;
-                for (const auto& ignored : *_iterable_22) {
+                const auto& _iterable_24 = statement->bindings;
+                for (const auto& ignored : *_iterable_24) {
                     bindingTypes->push_back(array->elementType);
                 }
         }
@@ -884,9 +916,9 @@ void checkDestructuring(const std::shared_ptr<::app_src_checker_state_::CheckerS
         }
     }
     if (doof::string_startsWith(statement->kind, std::string("named-destructuring"))) {
-        const auto& _iterable_23 = statement->namedBindings;
-        for (const auto& named : *_iterable_23) {
-            const auto localName = (doof::is_null(named->alias) ? named->name : doof::unwrap_optional(named->alias));
+        const auto& _iterable_25 = statement->namedBindings;
+        for (const auto& named : *_iterable_25) {
+            const auto localName = [&]() -> std::string { auto _coalesce_26 = named->alias; if (doof::is_null(_coalesce_26)) return named->name; return doof::unwrap_optional(_coalesce_26); }();
             const auto fieldType = ::app_src_checker_resolution_::memberType(state, valueType, named->name, named->span);
             if (std::visit([](auto&& _obj) { return _obj->kind; }, fieldType) == std::string("unknown")) {
                 ::app_src_checker_common_::typeError(state, ((((std::string("Type \"") + ::app_src_checker_types_::typeName(valueType)) + std::string("\" has no field \"")) + named->name) + std::string("\"")), named->span);
@@ -900,11 +932,11 @@ void checkDestructuring(const std::shared_ptr<::app_src_checker_state_::CheckerS
         return;
     }
     for (int32_t i = 0; i < static_cast<int32_t>((statement->bindings)->size()); ++i) {
-        const auto name = doof::array_at(statement->bindings, i, "src/checker-statements", 628);
+        const auto name = doof::array_at(statement->bindings, i, "src/checker-statements", 660);
         if (name == std::string("_")) {
             continue;
         }
-        const auto bindingType = ((i < static_cast<int32_t>((bindingTypes)->size())) ? doof::array_at(bindingTypes, i, "src/checker-statements", 630) : ::app_src_checker_types_::unknownType());
+        const auto bindingType = ((i < static_cast<int32_t>((bindingTypes)->size())) ? doof::array_at(bindingTypes, i, "src/checker-statements", 662) : ::app_src_checker_types_::unknownType());
         if (doof::string_endsWith(statement->kind, std::string("-assignment"))) {
             validateDestructuringTarget(state, scope, name, bindingType, statement->span);
         } else {
@@ -918,8 +950,8 @@ std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::Pr
         auto _case_subject = valueType;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_24 = tuple->elements;
-            for (const auto& element : *_iterable_24) {
+            const auto& _iterable_27 = tuple->elements;
+            for (const auto& element : *_iterable_27) {
                 result->push_back(element);
             }
     }
@@ -931,13 +963,13 @@ std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::Pr
                     auto _case_subject = doof::unwrap_optional(declaration);
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
                         const auto& owner = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-                        const auto& _iterable_25 = owner->fields;
-                        for (const auto& field : *_iterable_25) {
+                        const auto& _iterable_28 = owner->fields;
+                        for (const auto& field : *_iterable_28) {
                             if (field->static_) {
                                 continue;
                             }
-                            const auto& _iterable_26 = field->names;
-                            for (const auto& name : *_iterable_26) {
+                            const auto& _iterable_29 = field->names;
+                            for (const auto& name : *_iterable_29) {
                                 result->push_back(::app_src_checker_resolution_::memberType(state, doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(class_), name, field->span));
                             }
                         }
@@ -954,7 +986,12 @@ std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::Pr
     return result;
 }
 void declareDestructuredBinding(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::string& name, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::string& bindingKind, ::app_src_ast_::SourceSpan span) {
-    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(name, ((bindingKind == std::string("let")) ? std::string("let") : std::string("immutable-binding")), type_, (bindingKind == std::string("let")), ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
+    declareUserBinding(state, scope, std::make_shared<::app_src_semantic_::Binding>(name, ((bindingKind == std::string("let")) ? std::string("let") : std::string("immutable-binding")), type_, (bindingKind == std::string("let")), ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")), span);
+}
+void declareUserBinding(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::shared_ptr<::app_src_semantic_::Binding>& binding, ::app_src_ast_::SourceSpan span) {
+    if (!::app_src_checker_symbols_::declare(scope, binding)) {
+        ::app_src_checker_common_::typeError(state, ((std::string("Binding '") + binding->name) + std::string("' is already declared in this scope")), span);
+    }
 }
 void validateDestructuringTarget(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::string& name, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& valueType, ::app_src_ast_::SourceSpan span) {
     const auto target = ::app_src_checker_symbols_::lookup(scope, name);
@@ -980,8 +1017,8 @@ std::shared_ptr<::app_src_semantic_::Scope> catchErrorScope(const std::shared_pt
 std::shared_ptr<::app_src_semantic_::Binding> lookupYieldBinding(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::string& name) {
     std::shared_ptr<::app_src_semantic_::Scope> current = scope;
     while (!doof::is_null(current)) {
-        const auto& _iterable_27 = current->bindings;
-        for (const auto& binding : *_iterable_27) {
+        const auto& _iterable_30 = current->bindings;
+        for (const auto& binding : *_iterable_30) {
             if (binding->name == name) {
                 return binding;
             }
@@ -996,12 +1033,12 @@ bool checkCase(const std::shared_ptr<::app_src_checker_state_::CheckerState>& st
     auto hasSuccessArm = false;
     auto hasFailureArm = false;
     auto allArmsReturn = (static_cast<int32_t>((statement->arms)->size()) > 0);
-    const auto& _iterable_28 = statement->arms;
-    for (const auto& arm : *_iterable_28) {
+    const auto& _iterable_31 = statement->arms;
+    for (const auto& arm : *_iterable_31) {
         const auto armScope = std::make_shared<::app_src_semantic_::Scope>(scope, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>{}), std::monostate{}, std::monostate{}, std::string(""), false, std::monostate{}, false, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}), false);
         ::app_src_checker_expressions_::checkCasePatterns(state, arm->patterns, subjectType, armScope);
-        const auto& _iterable_29 = arm->patterns;
-        for (const auto& pattern : *_iterable_29) {
+        const auto& _iterable_32 = arm->patterns;
+        for (const auto& pattern : *_iterable_32) {
             {
                 auto _case_subject = pattern;
                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::WildcardPattern>>(_case_subject)) {
@@ -1078,13 +1115,13 @@ bool enumCaseExhaustive(const std::shared_ptr<::app_src_checker_state_::CheckerS
         auto _case_subject = doof::unwrap_optional(declaration);
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::EnumDeclaration>>(_case_subject)) {
             const auto& enumDeclaration = std::get<std::shared_ptr<::app_src_ast_::EnumDeclaration>>(_case_subject);
-            const auto& _iterable_30 = enumDeclaration->variants;
-            for (const auto& variant : *_iterable_30) {
+            const auto& _iterable_33 = enumDeclaration->variants;
+            for (const auto& variant : *_iterable_33) {
                 auto found = false;
-                const auto& _iterable_31 = arms;
-                for (const auto& arm : *_iterable_31) {
-                    const auto& _iterable_32 = arm->patterns;
-                    for (const auto& pattern : *_iterable_32) {
+                const auto& _iterable_34 = arms;
+                for (const auto& arm : *_iterable_34) {
+                    const auto& _iterable_35 = arm->patterns;
+                    for (const auto& pattern : *_iterable_35) {
                         {
                             auto _case_subject = pattern;
                             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ValuePattern>>(_case_subject)) {
@@ -1118,13 +1155,13 @@ bool enumCaseExhaustive(const std::shared_ptr<::app_src_checker_state_::CheckerS
     return false;
 }
 bool unionCaseExhaustive(const std::shared_ptr<::app_src_semantic_::UnionResolvedType>& union_, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::CaseArm>>>& arms) {
-    const auto& _iterable_33 = union_->types;
-    for (const auto& member : *_iterable_33) {
+    const auto& _iterable_36 = union_->types;
+    for (const auto& member : *_iterable_36) {
         auto found = false;
-        const auto& _iterable_34 = arms;
-        for (const auto& arm : *_iterable_34) {
-            const auto& _iterable_35 = arm->patterns;
-            for (const auto& pattern : *_iterable_35) {
+        const auto& _iterable_37 = arms;
+        for (const auto& arm : *_iterable_37) {
+            const auto& _iterable_38 = arm->patterns;
+            for (const auto& pattern : *_iterable_38) {
                 {
                     auto _case_subject = pattern;
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TypePattern>>(_case_subject)) {
@@ -1158,8 +1195,8 @@ bool unionCaseExhaustive(const std::shared_ptr<::app_src_semantic_::UnionResolve
     return true;
 }
 std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> inferredReturn(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::Block>& block) {
-    const auto& _iterable_36 = block->statements;
-    for (const auto& statement : *_iterable_36) {
+    const auto& _iterable_39 = block->statements;
+    for (const auto& statement : *_iterable_39) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ReturnStatement>>(_case_subject)) {
@@ -1168,7 +1205,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     return ::app_src_checker_types_::noneType();
                 }
                 const auto value = doof::unwrap_optional(return_->value);
-                return (doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, value)) ? ::app_src_checker_types_::unknownType() : doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, value)));
+                return [&]() -> std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> { auto _coalesce_40 = std::visit([](auto&& _obj) { return _obj->resolvedType; }, value); if (doof::is_null(_coalesce_40)) return ::app_src_checker_types_::unknownType(); return doof::unwrap_optional(_coalesce_40); }();
         }
         else {
         }
@@ -1185,11 +1222,11 @@ void addClassFields(const std::shared_ptr<::app_src_checker_state_::CheckerState
         auto _case_subject = doof::unwrap_optional(declaration);
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-            const auto& _iterable_37 = class_->fields;
-            for (const auto& field : *_iterable_37) {
-                const auto& _iterable_38 = field->names;
-                for (const auto& name : *_iterable_38) {
-                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("field"), (doof::is_null(field->resolvedType) ? ::app_src_checker_types_::unknownType() : doof::unwrap_optional(field->resolvedType)), field->let_, ::app_src_checker_validation_::checkerSemanticSpan(field->span), state->info->path, nullptr, std::string(""), (field->readonly_ ? std::string("readonly") : (field->const_ ? std::string("const") : (field->let_ ? std::string("let") : std::string("implicit")))), class_->name));
+            const auto& _iterable_41 = class_->fields;
+            for (const auto& field : *_iterable_41) {
+                const auto& _iterable_42 = field->names;
+                for (const auto& name : *_iterable_42) {
+                    ::app_src_checker_symbols_::declare(scope, std::make_shared<::app_src_semantic_::Binding>(name, std::string("field"), [&]() -> std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> { auto _coalesce_43 = field->resolvedType; if (doof::is_null(_coalesce_43)) return ::app_src_checker_types_::unknownType(); return doof::unwrap_optional(_coalesce_43); }(), field->let_, ::app_src_checker_validation_::checkerSemanticSpan(field->span), state->info->path, nullptr, std::string(""), (field->readonly_ ? std::string("readonly") : (field->const_ ? std::string("const") : (field->let_ ? std::string("let") : std::string("implicit")))), class_->name));
                 }
             }
     }

@@ -694,6 +694,16 @@ export function testPreservesTemplateInterpolationParts(): none {
   }
 }
 
+export function testRequiresTemplateInterpolationEndToken(): none {
+  parser := Parser { source: "function message(): string => \"value: \${42" }
+  result := catchPanic(=> parser.parse())
+  case result {
+    _: Failure<string> -> { }
+    _ -> { panic("expected parse failure") }
+  }
+  Assert.equal(parser.errorMessage, "Expected end of string interpolation")
+}
+
 export function testParsesBindingsFunctionsAndClasses(): none {
   program := parse(`
     readonly answer: int = 42

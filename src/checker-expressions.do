@@ -28,7 +28,7 @@ import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType,
+  isStringInterpolatable, substituteTypeParams, typeParameter, unknownType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -42,7 +42,7 @@ import { checkCall, checkLambda, checkConstruct, callableField } from "./checker
 import { checkArray, checkObject } from "./checker-literals"
 import { fieldAssignmentBinding, resolveType, memberType, indexType } from "./checker-resolution"
 import { deprecatedNoneAlias, finish, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
-import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, namespaceMemberSymbol, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
+import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, isTypeOnlyNamespaceImport, namespaceMemberSymbol, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
 import { constructorForClass, staticMemberOwner } from "./checker-generics"
 import { checkerSemanticSpan } from "./checker-validation"
 
@@ -196,7 +196,11 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     string_: StringLiteral -> {
       let diverges = false
       for interpolation of string_.interpolations {
-        if checkExpression(state, interpolation, scope, none).kind == "never" { diverges = true }
+        interpolationType := checkExpression(state, interpolation, scope, none)
+        if interpolationType.kind == "never" { diverges = true }
+        else if !isStringInterpolatable(interpolationType) {
+          typeError(state, "Type \"" + typeName(interpolationType) + "\" cannot be used in string interpolation", interpolation.span)
+        }
       }
       if diverges { return finish(state, expression, neverType()) }
       return finish(state, expression, primitive("string"))
@@ -226,8 +230,13 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
           if localBinding == none && isNamespaceImport(state.info!, identifier.name) {
             namespaceName = identifier.name
             member.resolvedNamespaceAccess = true
-            member.resolvedNamespaceSymbol = namespaceMemberSymbol(state.info!, identifier.name, member.property, state.result)
-            namespaceMember = namespaceMemberType(state.info!, identifier.name, member.property, state.result)
+            if isTypeOnlyNamespaceImport(state.info!, identifier.name) {
+              typeError(state, "Type-only namespace import '" + identifier.name + "' cannot be used as a value", member.span)
+              return finish(state, expression, unknownType())
+            } else {
+              member.resolvedNamespaceSymbol = namespaceMemberSymbol(state.info!, identifier.name, member.property, state.result)
+              namespaceMember = namespaceMemberType(state.info!, identifier.name, member.property, state.result)
+            }
           } else {
             objectType = checkExpression(state, member.object, scope, none)
           }
@@ -483,7 +492,8 @@ export function checkIdentifier(state: CheckerState, identifier: Identifier, sco
     binding = Binding { name: identifier.name, kind: "builtin", type_: builtinCallable(identifier.name), mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
   }
   if binding == none {
-    typeError(state, "Unknown identifier '" + identifier.name + "'", identifier.span)
+    message := valueUseDiagnostic(state.info!, identifier.name)
+    typeError(state, if message == "" then "Unknown identifier '" + identifier.name + "'" else message, identifier.span)
     return finish(state, identifier, unknownType())
   }
   identifier.resolvedBinding = binding
@@ -593,7 +603,11 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
     validateRangeOperand(state, operator, "right", right, expression.right.span)
     return finish(state, expression, rangeType())
   }
-  if operator == "==" || operator == "!=" || operator == "<" || operator == "<=" || operator == ">" || operator == ">=" {
+  if operator == "==" || operator == "!=" {
+    validateNoneComparison(state, operator, left, right, expression.span)
+    return finish(state, expression, primitive("bool"))
+  }
+  if operator == "<" || operator == "<=" || operator == ">" || operator == ">=" {
     return finish(state, expression, primitive("bool"))
   }
   if operator == "+" && typeName(left) == "string" && (typeName(right) == "string" || typeName(right) == "char" || typeName(right) == "unknown") { return finish(state, expression, primitive("string")) }
@@ -601,6 +615,27 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   if isNumeric(left) && isNumeric(right) { return finish(state, expression, numericResult(left, right)) }
   typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span)
   return finish(state, expression, unknownType())
+}
+
+function validateNoneComparison(state: CheckerState, operator: string, left: ResolvedType, right: ResolvedType, span: SourceSpan): none {
+  if left.kind == "none" && !admitsNone(right) {
+    typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), span)
+  } else if right.kind == "none" && !admitsNone(left) {
+    typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), span)
+  }
+}
+
+function admitsNone(type_: ResolvedType): bool {
+  case type_ {
+    _: NoneType -> { return true }
+    _: UnknownType -> { return true }
+    _: JsonValueResolvedType -> { return true }
+    union_: UnionResolvedType -> {
+      for member of union_.types { if member.kind == "none" { return true } }
+    }
+    _ -> { }
+  }
+  return false
 }
 
 function validateRangeOperand(state: CheckerState, operator: string, side: string, operand: ResolvedType, span: SourceSpan): none {
@@ -619,6 +654,7 @@ function validateRangeOperand(state: CheckerState, operator: string, side: strin
 
 export function coalescedType(state: CheckerState, left: ResolvedType, right: ResolvedType): ResolvedType {
   case left {
+    result: ResultResolvedType -> { return joinTypes(result.valueType, right) }
     union_: UnionResolvedType -> {
       let nonNull: ResolvedType | none = none
       for member of union_.types {

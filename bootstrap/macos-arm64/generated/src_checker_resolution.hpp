@@ -1315,6 +1315,8 @@ namespace app_src_checker_common_ {
 
 namespace app_src_checker_resolution_ {
     __type12 resolveType(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const __type13& annotation, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& module, const std::shared_ptr<::app_src_semantic_::Scope>& scope);
+    bool rejectUnexpectedTypeArguments(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::NamedType>& named, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& module, const std::shared_ptr<::app_src_semantic_::Scope>& scope);
+    bool validateNominalTypeArity(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::string& name, int32_t expected, int32_t actual, ::app_src_ast_::SourceSpan span);
     void validateTypeArgumentConstraints(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<std::vector<std::string>>& names, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::TypeParameterConstraint>>>& constraints, const std::shared_ptr<std::vector<__type12>>& arguments, ::app_src_ast_::SourceSpan span, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& module, const std::shared_ptr<::app_src_semantic_::Scope>& outer);
     void reportConstraintViolation(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::string& typeParam, const __type12& argument, const std::string& constraint, ::app_src_ast_::SourceSpan span);
     __type12 decorateType(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const __type13& annotation, const __type12& resolvedType);

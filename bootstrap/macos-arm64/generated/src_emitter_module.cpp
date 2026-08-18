@@ -26,25 +26,29 @@ doof::JsonObject ModulePlan::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<ModulePlan>, std::string> ModulePlan::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_path = _object->find("path");
     if (_iterator_path == _object->end()) { return doof::Failure<std::string>{"Missing required field \"path\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_path->second) : doof::json_is_string(_iterator_path->second)))) { return doof::Failure<std::string>{"Field \"path\" expected string but got " + std::string(doof::json_type_name(_iterator_path->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_path->second) : doof::json_is_string(_iterator_path->second)))) { return doof::Failure<std::string>{"Field \"path\" expected string but got " + std::string(doof::json_type_name(_iterator_path->second))}; }
     auto _field_path = (_lenient ? doof::json_as_string_lenient(_iterator_path->second) : doof::json_as_string(_iterator_path->second));
     auto _iterator_namespaceName = _object->find("namespaceName");
     if (_iterator_namespaceName == _object->end()) { return doof::Failure<std::string>{"Missing required field \"namespaceName\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_namespaceName->second) : doof::json_is_string(_iterator_namespaceName->second)))) { return doof::Failure<std::string>{"Field \"namespaceName\" expected string but got " + std::string(doof::json_type_name(_iterator_namespaceName->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_namespaceName->second) : doof::json_is_string(_iterator_namespaceName->second)))) { return doof::Failure<std::string>{"Field \"namespaceName\" expected string but got " + std::string(doof::json_type_name(_iterator_namespaceName->second))}; }
     auto _field_namespaceName = (_lenient ? doof::json_as_string_lenient(_iterator_namespaceName->second) : doof::json_as_string(_iterator_namespaceName->second));
     auto _iterator_headerName = _object->find("headerName");
     if (_iterator_headerName == _object->end()) { return doof::Failure<std::string>{"Missing required field \"headerName\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_headerName->second) : doof::json_is_string(_iterator_headerName->second)))) { return doof::Failure<std::string>{"Field \"headerName\" expected string but got " + std::string(doof::json_type_name(_iterator_headerName->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_headerName->second) : doof::json_is_string(_iterator_headerName->second)))) { return doof::Failure<std::string>{"Field \"headerName\" expected string but got " + std::string(doof::json_type_name(_iterator_headerName->second))}; }
     auto _field_headerName = (_lenient ? doof::json_as_string_lenient(_iterator_headerName->second) : doof::json_as_string(_iterator_headerName->second));
     auto _iterator_sourceName = _object->find("sourceName");
     if (_iterator_sourceName == _object->end()) { return doof::Failure<std::string>{"Missing required field \"sourceName\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceName->second) : doof::json_is_string(_iterator_sourceName->second)))) { return doof::Failure<std::string>{"Field \"sourceName\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceName->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceName->second) : doof::json_is_string(_iterator_sourceName->second)))) { return doof::Failure<std::string>{"Field \"sourceName\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceName->second))}; }
     auto _field_sourceName = (_lenient ? doof::json_as_string_lenient(_iterator_sourceName->second) : doof::json_as_string(_iterator_sourceName->second));
-    return doof::Success<std::shared_ptr<ModulePlan>>{std::make_shared<ModulePlan>(_field_path, _field_namespaceName, _field_headerName, _field_sourceName)};
+        return doof::Success<std::shared_ptr<ModulePlan>>{std::make_shared<ModulePlan>(_field_path, _field_namespaceName, _field_headerName, _field_sourceName)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject ModuleGraphPlan::toJsonObject() const {
@@ -53,16 +57,20 @@ doof::JsonObject ModuleGraphPlan::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<ModuleGraphPlan>, std::string> ModuleGraphPlan::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<ModulePlan>>>> _field_modules;
     if (auto _iterator_modules = _object->find("modules"); _iterator_modules != _object->end()) {
-        if (!(doof::json_is_array(_iterator_modules->second))) { return doof::Failure<std::string>{"Field \"modules\" expected array but got " + std::string(doof::json_type_name(_iterator_modules->second))}; }
-        _field_modules = [&]() { const auto* _array = doof::json_as_array(_iterator_modules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ModulePlan>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(ModulePlan::fromJsonValue(_element, _lenient))); } return _values; }();
+            if (!(doof::json_is_array(_iterator_modules->second))) { return doof::Failure<std::string>{"Field \"modules\" expected array but got " + std::string(doof::json_type_name(_iterator_modules->second))}; }
+        _field_modules = [&]() { const auto* _array = doof::json_as_array(_iterator_modules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ModulePlan>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(ModulePlan::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
         _field_modules = std::make_shared<std::vector<std::shared_ptr<ModulePlan>>>(std::vector<std::shared_ptr<ModulePlan>>{});
     }
-    return doof::Success<std::shared_ptr<ModuleGraphPlan>>{std::make_shared<ModuleGraphPlan>(_field_modules.value())};
+        return doof::Success<std::shared_ptr<ModuleGraphPlan>>{std::make_shared<ModuleGraphPlan>(_field_modules.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 std::shared_ptr<ModuleGraphPlan> planModuleGraph(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     const auto plan = std::make_shared<ModuleGraphPlan>(std::make_shared<std::vector<std::shared_ptr<ModulePlan>>>(std::vector<std::shared_ptr<ModulePlan>>{}));
@@ -88,57 +96,61 @@ doof::JsonObject ModuleEmission::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<ModuleEmission>, std::string> ModuleEmission::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_modulePath = _object->find("modulePath");
     if (_iterator_modulePath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"modulePath\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_modulePath->second) : doof::json_is_string(_iterator_modulePath->second)))) { return doof::Failure<std::string>{"Field \"modulePath\" expected string but got " + std::string(doof::json_type_name(_iterator_modulePath->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_modulePath->second) : doof::json_is_string(_iterator_modulePath->second)))) { return doof::Failure<std::string>{"Field \"modulePath\" expected string but got " + std::string(doof::json_type_name(_iterator_modulePath->second))}; }
     auto _field_modulePath = (_lenient ? doof::json_as_string_lenient(_iterator_modulePath->second) : doof::json_as_string(_iterator_modulePath->second));
     auto _iterator_header = _object->find("header");
     if (_iterator_header == _object->end()) { return doof::Failure<std::string>{"Missing required field \"header\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_header->second) : doof::json_is_string(_iterator_header->second)))) { return doof::Failure<std::string>{"Field \"header\" expected string but got " + std::string(doof::json_type_name(_iterator_header->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_header->second) : doof::json_is_string(_iterator_header->second)))) { return doof::Failure<std::string>{"Field \"header\" expected string but got " + std::string(doof::json_type_name(_iterator_header->second))}; }
     auto _field_header = (_lenient ? doof::json_as_string_lenient(_iterator_header->second) : doof::json_as_string(_iterator_header->second));
     auto _iterator_source = _object->find("source");
     if (_iterator_source == _object->end()) { return doof::Failure<std::string>{"Missing required field \"source\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_source->second) : doof::json_is_string(_iterator_source->second)))) { return doof::Failure<std::string>{"Field \"source\" expected string but got " + std::string(doof::json_type_name(_iterator_source->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_source->second) : doof::json_is_string(_iterator_source->second)))) { return doof::Failure<std::string>{"Field \"source\" expected string but got " + std::string(doof::json_type_name(_iterator_source->second))}; }
     auto _field_source = (_lenient ? doof::json_as_string_lenient(_iterator_source->second) : doof::json_as_string(_iterator_source->second));
     auto _iterator_headerName = _object->find("headerName");
     if (_iterator_headerName == _object->end()) { return doof::Failure<std::string>{"Missing required field \"headerName\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_headerName->second) : doof::json_is_string(_iterator_headerName->second)))) { return doof::Failure<std::string>{"Field \"headerName\" expected string but got " + std::string(doof::json_type_name(_iterator_headerName->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_headerName->second) : doof::json_is_string(_iterator_headerName->second)))) { return doof::Failure<std::string>{"Field \"headerName\" expected string but got " + std::string(doof::json_type_name(_iterator_headerName->second))}; }
     auto _field_headerName = (_lenient ? doof::json_as_string_lenient(_iterator_headerName->second) : doof::json_as_string(_iterator_headerName->second));
     auto _iterator_sourceName = _object->find("sourceName");
     if (_iterator_sourceName == _object->end()) { return doof::Failure<std::string>{"Missing required field \"sourceName\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceName->second) : doof::json_is_string(_iterator_sourceName->second)))) { return doof::Failure<std::string>{"Field \"sourceName\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceName->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceName->second) : doof::json_is_string(_iterator_sourceName->second)))) { return doof::Failure<std::string>{"Field \"sourceName\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceName->second))}; }
     auto _field_sourceName = (_lenient ? doof::json_as_string_lenient(_iterator_sourceName->second) : doof::json_as_string(_iterator_sourceName->second));
     std::optional<int32_t> _field_coverageModuleId;
     if (auto _iterator_coverageModuleId = _object->find("coverageModuleId"); _iterator_coverageModuleId != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_coverageModuleId->second) : doof::json_is_number(_iterator_coverageModuleId->second)))) { return doof::Failure<std::string>{"Field \"coverageModuleId\" expected number but got " + std::string(doof::json_type_name(_iterator_coverageModuleId->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_number(_iterator_coverageModuleId->second) : doof::json_is_number(_iterator_coverageModuleId->second)))) { return doof::Failure<std::string>{"Field \"coverageModuleId\" expected number but got " + std::string(doof::json_type_name(_iterator_coverageModuleId->second))}; }
         _field_coverageModuleId = (_lenient ? doof::json_as_int_lenient(_iterator_coverageModuleId->second) : doof::json_as_int(_iterator_coverageModuleId->second));
     } else {
         _field_coverageModuleId = -1;
     }
     std::optional<std::shared_ptr<std::vector<int32_t>>> _field_instrumentedLines;
     if (auto _iterator_instrumentedLines = _object->find("instrumentedLines"); _iterator_instrumentedLines != _object->end()) {
-        if (!(doof::json_is_array(_iterator_instrumentedLines->second))) { return doof::Failure<std::string>{"Field \"instrumentedLines\" expected array but got " + std::string(doof::json_type_name(_iterator_instrumentedLines->second))}; }
+            if (!(doof::json_is_array(_iterator_instrumentedLines->second))) { return doof::Failure<std::string>{"Field \"instrumentedLines\" expected array but got " + std::string(doof::json_type_name(_iterator_instrumentedLines->second))}; }
         _field_instrumentedLines = [&]() { const auto* _array = doof::json_as_array(_iterator_instrumentedLines->second); auto _values = std::make_shared<std::vector<int32_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
         _field_instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     }
     std::optional<bool> _field_reused;
     if (auto _iterator_reused = _object->find("reused"); _iterator_reused != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_reused->second) : doof::json_is_boolean(_iterator_reused->second)))) { return doof::Failure<std::string>{"Field \"reused\" expected boolean but got " + std::string(doof::json_type_name(_iterator_reused->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_reused->second) : doof::json_is_boolean(_iterator_reused->second)))) { return doof::Failure<std::string>{"Field \"reused\" expected boolean but got " + std::string(doof::json_type_name(_iterator_reused->second))}; }
         _field_reused = (_lenient ? doof::json_as_bool_lenient(_iterator_reused->second) : doof::json_as_bool(_iterator_reused->second));
     } else {
         _field_reused = false;
     }
     std::optional<std::string> _field_fingerprint;
     if (auto _iterator_fingerprint = _object->find("fingerprint"); _iterator_fingerprint != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_fingerprint->second) : doof::json_is_string(_iterator_fingerprint->second)))) { return doof::Failure<std::string>{"Field \"fingerprint\" expected string but got " + std::string(doof::json_type_name(_iterator_fingerprint->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_fingerprint->second) : doof::json_is_string(_iterator_fingerprint->second)))) { return doof::Failure<std::string>{"Field \"fingerprint\" expected string but got " + std::string(doof::json_type_name(_iterator_fingerprint->second))}; }
         _field_fingerprint = (_lenient ? doof::json_as_string_lenient(_iterator_fingerprint->second) : doof::json_as_string(_iterator_fingerprint->second));
     } else {
         _field_fingerprint = std::string("");
     }
-    return doof::Success<std::shared_ptr<ModuleEmission>>{std::make_shared<ModuleEmission>(_field_modulePath, _field_header, _field_source, _field_headerName, _field_sourceName, _field_coverageModuleId.value(), _field_instrumentedLines.value(), _field_reused.value(), _field_fingerprint.value())};
+        return doof::Success<std::shared_ptr<ModuleEmission>>{std::make_shared<ModuleEmission>(_field_modulePath, _field_header, _field_source, _field_headerName, _field_sourceName, _field_coverageModuleId.value(), _field_instrumentedLines.value(), _field_reused.value(), _field_fingerprint.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject ModuleEmissionCacheKey::toJsonObject() const {
@@ -148,17 +160,21 @@ doof::JsonObject ModuleEmissionCacheKey::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<ModuleEmissionCacheKey>, std::string> ModuleEmissionCacheKey::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_modulePath = _object->find("modulePath");
     if (_iterator_modulePath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"modulePath\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_modulePath->second) : doof::json_is_string(_iterator_modulePath->second)))) { return doof::Failure<std::string>{"Field \"modulePath\" expected string but got " + std::string(doof::json_type_name(_iterator_modulePath->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_modulePath->second) : doof::json_is_string(_iterator_modulePath->second)))) { return doof::Failure<std::string>{"Field \"modulePath\" expected string but got " + std::string(doof::json_type_name(_iterator_modulePath->second))}; }
     auto _field_modulePath = (_lenient ? doof::json_as_string_lenient(_iterator_modulePath->second) : doof::json_as_string(_iterator_modulePath->second));
     auto _iterator_fingerprint = _object->find("fingerprint");
     if (_iterator_fingerprint == _object->end()) { return doof::Failure<std::string>{"Missing required field \"fingerprint\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_fingerprint->second) : doof::json_is_string(_iterator_fingerprint->second)))) { return doof::Failure<std::string>{"Field \"fingerprint\" expected string but got " + std::string(doof::json_type_name(_iterator_fingerprint->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_fingerprint->second) : doof::json_is_string(_iterator_fingerprint->second)))) { return doof::Failure<std::string>{"Field \"fingerprint\" expected string but got " + std::string(doof::json_type_name(_iterator_fingerprint->second))}; }
     auto _field_fingerprint = (_lenient ? doof::json_as_string_lenient(_iterator_fingerprint->second) : doof::json_as_string(_iterator_fingerprint->second));
-    return doof::Success<std::shared_ptr<ModuleEmissionCacheKey>>{std::make_shared<ModuleEmissionCacheKey>(_field_modulePath, _field_fingerprint)};
+        return doof::Success<std::shared_ptr<ModuleEmissionCacheKey>>{std::make_shared<ModuleEmissionCacheKey>(_field_modulePath, _field_fingerprint)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject CoverageModuleMetadata::toJsonObject() const {
@@ -169,24 +185,28 @@ doof::JsonObject CoverageModuleMetadata::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<CoverageModuleMetadata>, std::string> CoverageModuleMetadata::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_moduleId = _object->find("moduleId");
     if (_iterator_moduleId == _object->end()) { return doof::Failure<std::string>{"Missing required field \"moduleId\""}; }
-    if (!((_lenient ? doof::json_is_lenient_number(_iterator_moduleId->second) : doof::json_is_number(_iterator_moduleId->second)))) { return doof::Failure<std::string>{"Field \"moduleId\" expected number but got " + std::string(doof::json_type_name(_iterator_moduleId->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_moduleId->second) : doof::json_is_number(_iterator_moduleId->second)))) { return doof::Failure<std::string>{"Field \"moduleId\" expected number but got " + std::string(doof::json_type_name(_iterator_moduleId->second))}; }
     auto _field_moduleId = (_lenient ? doof::json_as_int_lenient(_iterator_moduleId->second) : doof::json_as_int(_iterator_moduleId->second));
     auto _iterator_modulePath = _object->find("modulePath");
     if (_iterator_modulePath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"modulePath\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_modulePath->second) : doof::json_is_string(_iterator_modulePath->second)))) { return doof::Failure<std::string>{"Field \"modulePath\" expected string but got " + std::string(doof::json_type_name(_iterator_modulePath->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_modulePath->second) : doof::json_is_string(_iterator_modulePath->second)))) { return doof::Failure<std::string>{"Field \"modulePath\" expected string but got " + std::string(doof::json_type_name(_iterator_modulePath->second))}; }
     auto _field_modulePath = (_lenient ? doof::json_as_string_lenient(_iterator_modulePath->second) : doof::json_as_string(_iterator_modulePath->second));
     std::optional<std::shared_ptr<std::vector<int32_t>>> _field_instrumentedLines;
     if (auto _iterator_instrumentedLines = _object->find("instrumentedLines"); _iterator_instrumentedLines != _object->end()) {
-        if (!(doof::json_is_array(_iterator_instrumentedLines->second))) { return doof::Failure<std::string>{"Field \"instrumentedLines\" expected array but got " + std::string(doof::json_type_name(_iterator_instrumentedLines->second))}; }
+            if (!(doof::json_is_array(_iterator_instrumentedLines->second))) { return doof::Failure<std::string>{"Field \"instrumentedLines\" expected array but got " + std::string(doof::json_type_name(_iterator_instrumentedLines->second))}; }
         _field_instrumentedLines = [&]() { const auto* _array = doof::json_as_array(_iterator_instrumentedLines->second); auto _values = std::make_shared<std::vector<int32_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
     } else {
         _field_instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     }
-    return doof::Success<std::shared_ptr<CoverageModuleMetadata>>{std::make_shared<CoverageModuleMetadata>(_field_moduleId, _field_modulePath, _field_instrumentedLines.value())};
+        return doof::Success<std::shared_ptr<CoverageModuleMetadata>>{std::make_shared<CoverageModuleMetadata>(_field_moduleId, _field_modulePath, _field_instrumentedLines.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject ModuleGraphEmission::toJsonObject() const {
@@ -198,37 +218,41 @@ doof::JsonObject ModuleGraphEmission::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<ModuleGraphEmission>, std::string> ModuleGraphEmission::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<ModuleEmission>>>> _field_modules;
     if (auto _iterator_modules = _object->find("modules"); _iterator_modules != _object->end()) {
-        if (!(doof::json_is_array(_iterator_modules->second))) { return doof::Failure<std::string>{"Field \"modules\" expected array but got " + std::string(doof::json_type_name(_iterator_modules->second))}; }
-        _field_modules = [&]() { const auto* _array = doof::json_as_array(_iterator_modules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ModuleEmission>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(ModuleEmission::fromJsonValue(_element, _lenient))); } return _values; }();
+            if (!(doof::json_is_array(_iterator_modules->second))) { return doof::Failure<std::string>{"Field \"modules\" expected array but got " + std::string(doof::json_type_name(_iterator_modules->second))}; }
+        _field_modules = [&]() { const auto* _array = doof::json_as_array(_iterator_modules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<ModuleEmission>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(ModuleEmission::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
         _field_modules = std::make_shared<std::vector<std::shared_ptr<ModuleEmission>>>(std::vector<std::shared_ptr<ModuleEmission>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<CoverageModuleMetadata>>>> _field_coverageModules;
     if (auto _iterator_coverageModules = _object->find("coverageModules"); _iterator_coverageModules != _object->end()) {
-        if (!(doof::json_is_array(_iterator_coverageModules->second))) { return doof::Failure<std::string>{"Field \"coverageModules\" expected array but got " + std::string(doof::json_type_name(_iterator_coverageModules->second))}; }
-        _field_coverageModules = [&]() { const auto* _array = doof::json_as_array(_iterator_coverageModules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<CoverageModuleMetadata>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::success_value(CoverageModuleMetadata::fromJsonValue(_element, _lenient))); } return _values; }();
+            if (!(doof::json_is_array(_iterator_coverageModules->second))) { return doof::Failure<std::string>{"Field \"coverageModules\" expected array but got " + std::string(doof::json_type_name(_iterator_coverageModules->second))}; }
+        _field_coverageModules = [&]() { const auto* _array = doof::json_as_array(_iterator_coverageModules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<CoverageModuleMetadata>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(CoverageModuleMetadata::fromJsonValue(_element, _lenient))); } return _values; }();
     } else {
         _field_coverageModules = std::make_shared<std::vector<std::shared_ptr<CoverageModuleMetadata>>>(std::vector<std::shared_ptr<CoverageModuleMetadata>>{});
     }
     std::optional<std::string> _field_wasmSupportSource;
     if (auto _iterator_wasmSupportSource = _object->find("wasmSupportSource"); _iterator_wasmSupportSource != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_wasmSupportSource->second) : doof::json_is_string(_iterator_wasmSupportSource->second)))) { return doof::Failure<std::string>{"Field \"wasmSupportSource\" expected string but got " + std::string(doof::json_type_name(_iterator_wasmSupportSource->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_wasmSupportSource->second) : doof::json_is_string(_iterator_wasmSupportSource->second)))) { return doof::Failure<std::string>{"Field \"wasmSupportSource\" expected string but got " + std::string(doof::json_type_name(_iterator_wasmSupportSource->second))}; }
         _field_wasmSupportSource = (_lenient ? doof::json_as_string_lenient(_iterator_wasmSupportSource->second) : doof::json_as_string(_iterator_wasmSupportSource->second));
     } else {
         _field_wasmSupportSource = std::string("");
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_wasmExportNames;
     if (auto _iterator_wasmExportNames = _object->find("wasmExportNames"); _iterator_wasmExportNames != _object->end()) {
-        if (!(doof::json_is_array(_iterator_wasmExportNames->second))) { return doof::Failure<std::string>{"Field \"wasmExportNames\" expected array but got " + std::string(doof::json_type_name(_iterator_wasmExportNames->second))}; }
+            if (!(doof::json_is_array(_iterator_wasmExportNames->second))) { return doof::Failure<std::string>{"Field \"wasmExportNames\" expected array but got " + std::string(doof::json_type_name(_iterator_wasmExportNames->second))}; }
         _field_wasmExportNames = [&]() { const auto* _array = doof::json_as_array(_iterator_wasmExportNames->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
-    return doof::Success<std::shared_ptr<ModuleGraphEmission>>{std::make_shared<ModuleGraphEmission>(_field_modules.value(), _field_coverageModules.value(), _field_wasmSupportSource.value(), _field_wasmExportNames.value())};
+        return doof::Success<std::shared_ptr<ModuleGraphEmission>>{std::make_shared<ModuleGraphEmission>(_field_modules.value(), _field_coverageModules.value(), _field_wasmSupportSource.value(), _field_wasmExportNames.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 std::shared_ptr<ModuleEmission> CxxModuleEmitter::emit(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& entryMode) {
@@ -597,14 +621,14 @@ void addNamespace(const std::shared_ptr<std::vector<std::string>>& namespaces, c
 }
 std::shared_ptr<ModuleGraphEmission> emitModuleGraph(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& entry, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations, const std::string& entryMode, bool coverage, const std::shared_ptr<std::vector<std::shared_ptr<ModuleEmissionCacheKey>>>& reusableModules, const std::string& configurationFingerprint) {
     const auto graph = std::make_shared<ModuleGraphEmission>(std::make_shared<std::vector<std::shared_ptr<ModuleEmission>>>(std::vector<std::shared_ptr<ModuleEmission>>{}), std::make_shared<std::vector<std::shared_ptr<CoverageModuleMetadata>>>(std::vector<std::shared_ptr<CoverageModuleMetadata>>{}), std::string(""), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
-    const auto concretePlan = (doof::is_null(instantiations) ? ::app_src_emitter_monomorphize_::buildInstantiationPlan(result) : doof::unwrap_optional(instantiations));
+    const auto concretePlan = [&]() -> std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan> { auto _coalesce_18 = instantiations; if (doof::is_null(_coalesce_18)) return ::app_src_emitter_monomorphize_::buildInstantiationPlan(result); return doof::unwrap_optional(_coalesce_18); }();
     const auto plan = planModuleGraph(result);
     const auto initializationOrder = planModuleInitializationOrder(result, entry, entryMode);
     const auto graphPrograms = allPrograms(result);
     const auto graphSurfaces = emitModuleSurfaces(result);
     auto nextCoverageModuleId = 0;
-    const auto& _iterable_18 = plan->modules;
-    for (const auto& module : *_iterable_18) {
+    const auto& _iterable_19 = plan->modules;
+    for (const auto& module : *_iterable_19) {
         const auto info = findGraphModule(result, module->path);
         if (doof::is_null(info)) {
             continue;
@@ -633,8 +657,8 @@ std::shared_ptr<ModuleGraphEmission> emitModuleGraph(const std::shared_ptr<::app
     return graph;
 }
 bool reusableModuleMatches(const std::shared_ptr<std::vector<std::shared_ptr<ModuleEmissionCacheKey>>>& keys, const std::string& path, const std::string& fingerprint) {
-    const auto& _iterable_19 = keys;
-    for (const auto& key : *_iterable_19) {
+    const auto& _iterable_20 = keys;
+    for (const auto& key : *_iterable_20) {
         if ((key->modulePath == path) && (key->fingerprint == fingerprint)) {
             return true;
         }
@@ -645,39 +669,39 @@ std::string moduleEmissionFingerprint(const std::shared_ptr<::app_src_analyzer_:
     auto value = (((((((std::string("doof-module-emission-2\n") + configurationFingerprint) + std::string("\n")) + path) + std::string("\n")) + entryMode) + std::string("\n")) + doof::to_string(coverage));
     std::shared_ptr<std::vector<std::string>> reachable = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     collectModuleDependencyClosure(result, path, reachable);
-    const auto& _iterable_20 = result->modules;
-    for (const auto& candidate : *_iterable_20) {
+    const auto& _iterable_21 = result->modules;
+    for (const auto& candidate : *_iterable_21) {
         if (containsString(reachable, candidate->path)) {
             (value = ((((value + std::string("\nsource:")) + candidate->path) + std::string(":")) + candidate->sourceHash));
         }
     }
-    const auto& _iterable_21 = instantiations->functions;
-    for (const auto& item : *_iterable_21) {
+    const auto& _iterable_22 = instantiations->functions;
+    for (const auto& item : *_iterable_22) {
         (value = ((value + std::string("\nfunction:")) + item->key));
     }
-    const auto& _iterable_22 = instantiations->classes;
-    for (const auto& item : *_iterable_22) {
+    const auto& _iterable_23 = instantiations->classes;
+    for (const auto& item : *_iterable_23) {
         (value = ((value + std::string("\nclass:")) + item->key));
     }
-    const auto& _iterable_23 = instantiations->methods;
-    for (const auto& item : *_iterable_23) {
+    const auto& _iterable_24 = instantiations->methods;
+    for (const auto& item : *_iterable_24) {
         (value = ((value + std::string("\nmethod:")) + item->key));
     }
-    const auto& _iterable_24 = instantiations->interfaces;
-    for (const auto& item : *_iterable_24) {
+    const auto& _iterable_25 = instantiations->interfaces;
+    for (const auto& item : *_iterable_25) {
         (value = ((value + std::string("\ninterface:")) + item->key));
-        const auto& _iterable_25 = item->implementations;
-        for (const auto& implementation : *_iterable_25) {
+        const auto& _iterable_26 = item->implementations;
+        for (const auto& implementation : *_iterable_26) {
             (value = ((((value + std::string(":")) + implementation->modulePath) + std::string(":")) + implementation->typeName));
         }
     }
-    const auto& _iterable_26 = instantiations->nativeTemplateClassKeys;
-    for (const auto& key : *_iterable_26) {
+    const auto& _iterable_27 = instantiations->nativeTemplateClassKeys;
+    for (const auto& key : *_iterable_27) {
         (value = ((value + std::string("\nnative:")) + key));
     }
     if (path == entry) {
-        const auto& _iterable_27 = initializationOrder;
-        for (const auto& initialized : *_iterable_27) {
+        const auto& _iterable_28 = initializationOrder;
+        for (const auto& initialized : *_iterable_28) {
             (value = ((value + std::string("\ninitialize:")) + initialized));
         }
     }
@@ -692,16 +716,16 @@ void collectModuleDependencyClosure(const std::shared_ptr<::app_src_analyzer_::A
     if (doof::is_null(module)) {
         return;
     }
-    const auto& _iterable_28 = module->imports;
-    for (const auto& imported : *_iterable_28) {
-        collectModuleDependencyClosure(result, imported->sourceModule, reachable);
-    }
-    const auto& _iterable_29 = module->namespaceImports;
+    const auto& _iterable_29 = module->imports;
     for (const auto& imported : *_iterable_29) {
         collectModuleDependencyClosure(result, imported->sourceModule, reachable);
     }
-    const auto& _iterable_30 = module->reExports;
-    for (const auto& reExport : *_iterable_30) {
+    const auto& _iterable_30 = module->namespaceImports;
+    for (const auto& imported : *_iterable_30) {
+        collectModuleDependencyClosure(result, imported->sourceModule, reachable);
+    }
+    const auto& _iterable_31 = module->reExports;
+    for (const auto& reExport : *_iterable_31) {
         collectModuleDependencyClosure(result, reExport, reachable);
     }
 }
@@ -713,8 +737,8 @@ std::shared_ptr<std::vector<int32_t>> sortedCoverageLines(const std::shared_ptr<
     auto last = -1;
     for (int32_t count = 0; count < static_cast<int32_t>((lines)->size()); ++count) {
         std::optional<int32_t> candidate = std::nullopt;
-        const auto& _iterable_31 = lines;
-        for (const auto& line : *_iterable_31) {
+        const auto& _iterable_32 = lines;
+        for (const auto& line : *_iterable_32) {
             if ((line > last) && (doof::is_null(candidate) || (line < candidate.value()))) {
                 (candidate = line);
             }
@@ -727,34 +751,34 @@ std::shared_ptr<std::vector<int32_t>> sortedCoverageLines(const std::shared_ptr<
     return result;
 }
 void configureInstantiationRegistry(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& plan) {
-    const auto& _iterable_32 = plan->nativeTemplateClassKeys;
-    for (const auto& key : *_iterable_32) {
+    const auto& _iterable_33 = plan->nativeTemplateClassKeys;
+    for (const auto& key : *_iterable_33) {
         context->nativeTemplateClassKeys->push_back(key);
     }
-    const auto& _iterable_33 = plan->functions;
-    for (const auto& instantiation : *_iterable_33) {
+    const auto& _iterable_34 = plan->functions;
+    for (const auto& instantiation : *_iterable_34) {
         context->concreteFunctionKeys->push_back(instantiation->key);
         context->concreteFunctionNames->push_back(instantiation->emittedName);
     }
-    const auto& _iterable_34 = plan->classes;
-    for (const auto& instantiation : *_iterable_34) {
+    const auto& _iterable_35 = plan->classes;
+    for (const auto& instantiation : *_iterable_35) {
         context->concreteClassKeys->push_back(instantiation->key);
         context->concreteClassNames->push_back(instantiation->emittedName);
     }
-    const auto& _iterable_35 = plan->methods;
-    for (const auto& instantiation : *_iterable_35) {
+    const auto& _iterable_36 = plan->methods;
+    for (const auto& instantiation : *_iterable_36) {
         context->concreteMethodKeys->push_back(instantiation->key);
         context->concreteMethodNames->push_back(instantiation->emittedName);
     }
-    const auto& _iterable_36 = plan->interfaces;
-    for (const auto& instantiation : *_iterable_36) {
+    const auto& _iterable_37 = plan->interfaces;
+    for (const auto& instantiation : *_iterable_37) {
         context->concreteInterfaceKeys->push_back(instantiation->key);
         context->concreteInterfaceNames->push_back(instantiation->emittedName);
     }
 }
 void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_header_::HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations, const std::shared_ptr<::app_src_ast_::Program>& program, const std::shared_ptr<std::vector<std::string>>& interfaceKeys) {
-    const auto& _iterable_37 = instantiations->interfaces;
-    for (const auto& interface_ : *_iterable_37) {
+    const auto& _iterable_38 = instantiations->interfaces;
+    for (const auto& interface_ : *_iterable_38) {
         if (!containsString(interfaceKeys, interface_->key)) {
             continue;
         }
@@ -765,8 +789,8 @@ void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_heade
             continue;
         }
         auto alternatives = std::string("");
-        const auto& _iterable_38 = interface_->implementations;
-        for (const auto& implementation : *_iterable_38) {
+        const auto& _iterable_39 = interface_->implementations;
+        for (const auto& implementation : *_iterable_39) {
             if (alternatives != std::string("")) {
                 (alternatives = (alternatives + std::string(", ")));
             }
@@ -783,23 +807,23 @@ void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_heade
         }
         plan->interfaceAliases->push_back(((((std::string("using ") + interface_->emittedName) + std::string(" = std::variant<")) + alternatives) + std::string(">;\n")));
     }
-    const auto& _iterable_39 = instantiations->classes;
-    for (const auto& instantiation : *_iterable_39) {
+    const auto& _iterable_40 = instantiations->classes;
+    for (const auto& instantiation : *_iterable_40) {
         if (instantiation->modulePath != context->modulePath) {
             continue;
         }
         if (!programDeclares(program, instantiation->declaration->name)) {
             continue;
         }
-        const auto& _iterable_40 = instantiation->substitution->arguments;
-        for (const auto& argument : *_iterable_40) {
+        const auto& _iterable_41 = instantiation->substitution->arguments;
+        for (const auto& argument : *_iterable_41) {
             addConcreteTypeForwardDeclarations(plan, context, argument);
         }
         plan->classForwardDeclarations->push_back(((std::string("struct ") + instantiation->emittedName) + std::string(";\n")));
         (context->substitution = instantiation->substitution);
         std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>> methods = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>>(std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>{});
-        const auto& _iterable_41 = instantiations->methods;
-        for (const auto& method : *_iterable_41) {
+        const auto& _iterable_42 = instantiations->methods;
+        for (const auto& method : *_iterable_42) {
             if (method->ownerKey == instantiation->key) {
                 methods->push_back(method);
             }
@@ -807,16 +831,16 @@ void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_heade
         plan->classDefinitions->push_back(::app_src_emitter_decl_::emitClassDeclaration(instantiation->declaration, context, instantiation->emittedName, methods));
         clearInstantiation(context);
     }
-    const auto& _iterable_42 = instantiations->functions;
-    for (const auto& instantiation : *_iterable_42) {
+    const auto& _iterable_43 = instantiations->functions;
+    for (const auto& instantiation : *_iterable_43) {
         if (instantiation->modulePath != context->modulePath) {
             continue;
         }
         if (!programDeclares(program, instantiation->declaration->name)) {
             continue;
         }
-        const auto& _iterable_43 = instantiation->substitution->arguments;
-        for (const auto& argument : *_iterable_43) {
+        const auto& _iterable_44 = instantiation->substitution->arguments;
+        for (const auto& argument : *_iterable_44) {
             addConcreteTypeForwardDeclarations(plan, context, argument);
         }
         (context->substitution = instantiation->substitution);
@@ -830,8 +854,8 @@ void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_heade
     }
 }
 bool programDeclares(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& name) {
-    const auto& _iterable_44 = program->statements;
-    for (const auto& statement : *_iterable_44) {
+    const auto& _iterable_45 = program->statements;
+    for (const auto& statement : *_iterable_45) {
         if (headerDeclarationName(statement) == name) {
             return true;
         }
@@ -875,15 +899,15 @@ void addConcreteTypeForwardDeclarations(const std::shared_ptr<::app_src_emitter_
                     plan->typeOnlyForwardDeclarations->push_back(declaration);
                 }
             }
-            const auto& _iterable_45 = class_->typeArgs;
-            for (const auto& argument : *_iterable_45) {
+            const auto& _iterable_46 = class_->typeArgs;
+            for (const auto& argument : *_iterable_46) {
                 addConcreteTypeForwardDeclarations(plan, context, argument);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject)) {
             const auto& interface_ = std::get<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject);
-            const auto& _iterable_46 = interface_->typeArgs;
-            for (const auto& argument : *_iterable_46) {
+            const auto& _iterable_47 = interface_->typeArgs;
+            for (const auto& argument : *_iterable_47) {
                 addConcreteTypeForwardDeclarations(plan, context, argument);
             }
     }
@@ -911,15 +935,15 @@ void addConcreteTypeForwardDeclarations(const std::shared_ptr<::app_src_emitter_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_47 = tuple->elements;
-            for (const auto& element : *_iterable_47) {
+            const auto& _iterable_48 = tuple->elements;
+            for (const auto& element : *_iterable_48) {
                 addConcreteTypeForwardDeclarations(plan, context, element);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_48 = union_->types;
-            for (const auto& member : *_iterable_48) {
+            const auto& _iterable_49 = union_->types;
+            for (const auto& member : *_iterable_49) {
                 addConcreteTypeForwardDeclarations(plan, context, member);
             }
     }
@@ -929,8 +953,8 @@ void addConcreteTypeForwardDeclarations(const std::shared_ptr<::app_src_emitter_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_49 = function_->params;
-            for (const auto& parameter : *_iterable_49) {
+            const auto& _iterable_50 = function_->params;
+            for (const auto& parameter : *_iterable_50) {
                 addConcreteTypeForwardDeclarations(plan, context, parameter->type_);
             }
             addConcreteTypeForwardDeclarations(plan, context, function_->returnType);
@@ -941,8 +965,8 @@ void addConcreteTypeForwardDeclarations(const std::shared_ptr<::app_src_emitter_
 }
 std::string emitConcreteFunctions(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations) {
     auto result = std::string("");
-    const auto& _iterable_50 = instantiations->functions;
-    for (const auto& instantiation : *_iterable_50) {
+    const auto& _iterable_51 = instantiations->functions;
+    for (const auto& instantiation : *_iterable_51) {
         if (instantiation->modulePath != context->modulePath) {
             continue;
         }
@@ -964,12 +988,12 @@ void clearInstantiation(const std::shared_ptr<::app_src_emitter_context_::EmitCo
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>> emitModuleSurfaces(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>> surfaces = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>>(std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>{});
-    const auto& _iterable_51 = result->modules;
-    for (const auto& module : *_iterable_51) {
+    const auto& _iterable_52 = result->modules;
+    for (const auto& module : *_iterable_52) {
         std::shared_ptr<std::vector<std::string>> genericTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
         std::shared_ptr<std::vector<std::string>> genericFunctions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-        const auto& _iterable_52 = module->program->statements;
-        for (const auto& statement : *_iterable_52) {
+        const auto& _iterable_53 = module->program->statements;
+        for (const auto& statement : *_iterable_53) {
             collectGenericSurfaceSymbols(statement, genericTypes, genericFunctions);
         }
         surfaces->push_back(std::make_shared<::app_src_emitter_context_::EmitModuleSurface>(module->path, module->exports, module->imports, genericTypes, genericFunctions));
@@ -1013,15 +1037,15 @@ void collectGenericSurfaceSymbols(const std::variant<std::shared_ptr<::app_src_a
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{});
-    const auto& _iterable_53 = result->modules;
-    for (const auto& module : *_iterable_53) {
+    const auto& _iterable_54 = result->modules;
+    for (const auto& module : *_iterable_54) {
         programs->push_back(module->program);
     }
     return programs;
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> surfaceImports(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>>& surfaces, const std::string& path) {
-    const auto& _iterable_54 = surfaces;
-    for (const auto& surface : *_iterable_54) {
+    const auto& _iterable_55 = surfaces;
+    for (const auto& surface : *_iterable_55) {
         if (surface->path == path) {
             return surface->imports;
         }
@@ -1029,8 +1053,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>
     return std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{});
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> infoNamespaceImports(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path) {
-    const auto& _iterable_55 = result->modules;
-    for (const auto& module : *_iterable_55) {
+    const auto& _iterable_56 = result->modules;
+    for (const auto& module : *_iterable_56) {
         if (module->path == path) {
             return module->namespaceImports;
         }
@@ -1038,8 +1062,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBindin
     return std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{});
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> infoImports(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path) {
-    const auto& _iterable_56 = result->modules;
-    for (const auto& module : *_iterable_56) {
+    const auto& _iterable_57 = result->modules;
+    for (const auto& module : *_iterable_57) {
         if (module->path == path) {
             return module->imports;
         }
@@ -1047,8 +1071,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>
     return std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{});
 }
 std::shared_ptr<::app_src_analyzer_::ModuleInfo> findGraphModule(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path) {
-    const auto& _iterable_57 = result->modules;
-    for (const auto& module : *_iterable_57) {
+    const auto& _iterable_58 = result->modules;
+    for (const auto& module : *_iterable_58) {
         if (module->path == path) {
             return module;
         }
@@ -1071,20 +1095,20 @@ void visitInitializationModule(const std::shared_ptr<::app_src_analyzer_::Analys
         return;
     }
     visiting->push_back(path);
-    const auto& _iterable_58 = info->imports;
-    for (const auto& imported : *_iterable_58) {
-        if (!imported->typeOnly) {
-            visitInitializationModule(result, imported->sourceModule, entry, entryMode, visiting, visited, order);
-        }
-    }
-    const auto& _iterable_59 = info->namespaceImports;
+    const auto& _iterable_59 = info->imports;
     for (const auto& imported : *_iterable_59) {
         if (!imported->typeOnly) {
             visitInitializationModule(result, imported->sourceModule, entry, entryMode, visiting, visited, order);
         }
     }
-    const auto& _iterable_60 = info->reExports;
-    for (const auto& reExport : *_iterable_60) {
+    const auto& _iterable_60 = info->namespaceImports;
+    for (const auto& imported : *_iterable_60) {
+        if (!imported->typeOnly) {
+            visitInitializationModule(result, imported->sourceModule, entry, entryMode, visiting, visited, order);
+        }
+    }
+    const auto& _iterable_61 = info->reExports;
+    for (const auto& reExport : *_iterable_61) {
         visitInitializationModule(result, reExport, entry, entryMode, visiting, visited, order);
     }
     auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(visiting); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-module", 675, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
@@ -1096,8 +1120,8 @@ void visitInitializationModule(const std::shared_ptr<::app_src_analyzer_::Analys
 }
 std::shared_ptr<std::vector<std::string>> moduleInitializationNamespaces(const std::shared_ptr<std::vector<std::string>>& paths) {
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_61 = paths;
-    for (const auto& path : *_iterable_61) {
+    const auto& _iterable_62 = paths;
+    for (const auto& path : *_iterable_62) {
         result->push_back(::app_src_emitter_names_::moduleNamespace(path));
     }
     return result;
@@ -1122,8 +1146,8 @@ std::string emitSourceStatement(const std::variant<std::shared_ptr<::app_src_ast
             }
             auto result = (std::string("\n") + ::app_src_emitter_decl_::emitStaticClassFieldDefinitions(class_, context));
             if (static_cast<int32_t>((class_->typeParams)->size()) == 0) {
-                const auto& _iterable_62 = class_->methods;
-                for (const auto& method : *_iterable_62) {
+                const auto& _iterable_63 = class_->methods;
+                for (const auto& method : *_iterable_63) {
                     (result = (result + ::app_src_emitter_decl_::emitClassMethodDefinition(class_, method, context)));
                 }
             }
@@ -1222,8 +1246,8 @@ bool isCxxConstantInitializer(const std::variant<std::shared_ptr<::app_src_ast_:
     return false;
 }
 bool moduleHasDeferredInitialization(const std::shared_ptr<::app_src_ast_::Program>& program) {
-    const auto& _iterable_63 = program->statements;
-    for (const auto& statement : *_iterable_63) {
+    const auto& _iterable_64 = program->statements;
+    for (const auto& statement : *_iterable_64) {
         if (statementHasDeferredInitialization(statement)) {
             return true;
         }
@@ -1254,8 +1278,8 @@ bool statementHasDeferredInitialization(const std::variant<std::shared_ptr<::app
             if (class_->native_ || (static_cast<int32_t>((class_->typeParams)->size()) > 0)) {
                 return false;
             }
-            const auto& _iterable_64 = class_->fields;
-            for (const auto& field : *_iterable_64) {
+            const auto& _iterable_65 = class_->fields;
+            for (const auto& field : *_iterable_65) {
                 if (field->static_ && (!doof::is_null(field->defaultValue))) {
                     return true;
                 }
@@ -1276,10 +1300,10 @@ bool statementHasDeferredInitialization(const std::variant<std::shared_ptr<::app
 std::string emitModuleInitializer(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, bool includeValues) {
     auto assignments = std::string("");
     if (includeValues) {
-        const auto& _iterable_65 = programs;
-        for (const auto& program : *_iterable_65) {
-            const auto& _iterable_66 = program->statements;
-            for (const auto& statement : *_iterable_66) {
+        const auto& _iterable_66 = programs;
+        for (const auto& program : *_iterable_66) {
+            const auto& _iterable_67 = program->statements;
+            for (const auto& statement : *_iterable_67) {
                 (assignments = (assignments + emitModuleInitializerStatement(statement, context)));
             }
         }
@@ -1314,13 +1338,13 @@ std::string emitModuleInitializerStatement(const std::variant<std::shared_ptr<::
             if (class_->native_ || (static_cast<int32_t>((class_->typeParams)->size()) > 0)) {
                 return result;
             }
-            const auto& _iterable_67 = class_->fields;
-            for (const auto& field : *_iterable_67) {
+            const auto& _iterable_68 = class_->fields;
+            for (const auto& field : *_iterable_68) {
                 if (!field->static_ || doof::is_null(field->defaultValue)) {
                     continue;
                 }
-                const auto& _iterable_68 = field->names;
-                for (const auto& name : *_iterable_68) {
+                const auto& _iterable_69 = field->names;
+                for (const auto& name : *_iterable_69) {
                     (result = (((((((result + std::string("        ")) + class_->name) + std::string("::")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(field->defaultValue), context, field->resolvedType)) + std::string(";\n")));
                 }
             }
@@ -1349,18 +1373,18 @@ std::string emitModuleValueAssignment(const std::variant<std::shared_ptr<::app_s
 }
 std::string emitGraphInitializationCall(const std::shared_ptr<std::vector<std::string>>& namespaces) {
     auto result = std::string("");
-    const auto& _iterable_69 = namespaces;
-    for (const auto& namespace_ : *_iterable_69) {
+    const auto& _iterable_70 = namespaces;
+    for (const auto& namespace_ : *_iterable_70) {
         (result = (((result + std::string("::")) + namespace_) + std::string("::__doof_initialize_module(); ")));
     }
     return result;
 }
 std::string emitNativeClassMethods(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     auto result = std::string("");
-    const auto& _iterable_70 = programs;
-    for (const auto& program : *_iterable_70) {
-        const auto& _iterable_71 = program->statements;
-        for (const auto& statement : *_iterable_71) {
+    const auto& _iterable_71 = programs;
+    for (const auto& program : *_iterable_71) {
+        const auto& _iterable_72 = program->statements;
+        for (const auto& statement : *_iterable_72) {
             (result = (result + emitNativeClassMethodsForStatement(statement, context)));
         }
     }
@@ -1375,8 +1399,8 @@ std::string emitNativeClassMethodsForStatement(const std::variant<std::shared_pt
                 return std::string("");
             }
             auto result = std::string("");
-            const auto& _iterable_72 = class_->methods;
-            for (const auto& method : *_iterable_72) {
+            const auto& _iterable_73 = class_->methods;
+            for (const auto& method : *_iterable_73) {
                 if (!method->bodyless) {
                     (result = (result + ::app_src_emitter_decl_::emitClassMethodDefinition(class_, method, context)));
                 }

@@ -101,24 +101,24 @@ std::string Duration::toISOString() {
     (remaining = (remaining % 60000000000LL));
     auto seconds = (remaining / 1000000000LL);
     auto subsecNanos = (remaining % 1000000000LL);
-    auto result = std::string("") + doof::to_string(sign) + std::string("P");
+    auto result = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(sign); _interpolation += "P"; return _interpolation; }());
     if (days != 0LL) {
-        (result = std::string("") + doof::to_string(result) + std::string("") + doof::to_string(days) + std::string("D"));
+        (result = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(result); _interpolation += ""; _interpolation += doof::to_string(days); _interpolation += "D"; return _interpolation; }()));
     }
     auto timePart = std::string("");
     if (hours != 0LL) {
-        (timePart = std::string("") + doof::to_string(timePart) + std::string("") + doof::to_string(hours) + std::string("H"));
+        (timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(hours); _interpolation += "H"; return _interpolation; }()));
     }
     if (minutes != 0LL) {
-        (timePart = std::string("") + doof::to_string(timePart) + std::string("") + doof::to_string(minutes) + std::string("M"));
+        (timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(minutes); _interpolation += "M"; return _interpolation; }()));
     }
     if (subsecNanos != 0LL) {
-        (timePart = std::string("") + doof::to_string(timePart) + std::string("") + doof::to_string(seconds) + std::string(".") + doof::to_string(doof::string_trimEnd(doof::string_padStart(doof::to_string(subsecNanos), 9, U'\u0030'), U'\u0030')) + std::string("S"));
+        (timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(seconds); _interpolation += "."; _interpolation += doof::to_string(doof::string_trimEnd(doof::string_padStart(doof::to_string(subsecNanos), 9, U'\u0030'), U'\u0030')); _interpolation += "S"; return _interpolation; }()));
     } else if ((seconds != 0LL) || (((days == 0LL) && (hours == 0LL)) && (minutes == 0LL))) {
-        (timePart = std::string("") + doof::to_string(timePart) + std::string("") + doof::to_string(seconds) + std::string("S"));
+        (timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(seconds); _interpolation += "S"; return _interpolation; }()));
     }
     if (static_cast<int32_t>(timePart.size()) > 0) {
-        (result = std::string("") + doof::to_string(result) + std::string("T") + doof::to_string(timePart) + std::string(""));
+        (result = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(result); _interpolation += "T"; _interpolation += doof::to_string(timePart); _interpolation += ""; return _interpolation; }()));
     }
     return result;
 }
@@ -128,13 +128,17 @@ doof::JsonObject Duration::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<Duration>, std::string> Duration::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_nanos = _object->find("nanos");
     if (_iterator_nanos == _object->end()) { return doof::Failure<std::string>{"Missing required field \"nanos\""}; }
-    if (!((_lenient ? doof::json_is_lenient_number(_iterator_nanos->second) : doof::json_is_number(_iterator_nanos->second)))) { return doof::Failure<std::string>{"Field \"nanos\" expected number but got " + std::string(doof::json_type_name(_iterator_nanos->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_nanos->second) : doof::json_is_number(_iterator_nanos->second)))) { return doof::Failure<std::string>{"Field \"nanos\" expected number but got " + std::string(doof::json_type_name(_iterator_nanos->second))}; }
     auto _field_nanos = (_lenient ? doof::json_as_long_lenient(_iterator_nanos->second) : doof::json_as_long(_iterator_nanos->second));
-    return doof::Success<std::shared_ptr<Duration>>{std::make_shared<Duration>(_field_nanos)};
+        return doof::Success<std::shared_ptr<Duration>>{std::make_shared<Duration>(_field_nanos)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 doof::Result<std::shared_ptr<Duration>, std::string> parseDuration(const std::string& s) {
     if (static_cast<int32_t>(s.size()) < 2) {
@@ -289,9 +293,13 @@ doof::JsonObject Thread::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<Thread>, std::string> Thread::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    return doof::Success<std::shared_ptr<Thread>>{std::make_shared<Thread>()};
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+        return doof::Success<std::shared_ptr<Thread>>{std::make_shared<Thread>()};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 void __doof_initialize_module() {

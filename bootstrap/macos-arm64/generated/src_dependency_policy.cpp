@@ -20,74 +20,78 @@ doof::JsonObject ReachedPackageInput::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<ReachedPackageInput>, std::string> ReachedPackageInput::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_logicalPrefix = _object->find("logicalPrefix");
     if (_iterator_logicalPrefix == _object->end()) { return doof::Failure<std::string>{"Missing required field \"logicalPrefix\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_logicalPrefix->second) : doof::json_is_string(_iterator_logicalPrefix->second)))) { return doof::Failure<std::string>{"Field \"logicalPrefix\" expected string but got " + std::string(doof::json_type_name(_iterator_logicalPrefix->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_logicalPrefix->second) : doof::json_is_string(_iterator_logicalPrefix->second)))) { return doof::Failure<std::string>{"Field \"logicalPrefix\" expected string but got " + std::string(doof::json_type_name(_iterator_logicalPrefix->second))}; }
     auto _field_logicalPrefix = (_lenient ? doof::json_as_string_lenient(_iterator_logicalPrefix->second) : doof::json_as_string(_iterator_logicalPrefix->second));
     auto _iterator_introducedBy = _object->find("introducedBy");
     if (_iterator_introducedBy == _object->end()) { return doof::Failure<std::string>{"Missing required field \"introducedBy\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_introducedBy->second) : doof::json_is_string(_iterator_introducedBy->second)))) { return doof::Failure<std::string>{"Field \"introducedBy\" expected string but got " + std::string(doof::json_type_name(_iterator_introducedBy->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_introducedBy->second) : doof::json_is_string(_iterator_introducedBy->second)))) { return doof::Failure<std::string>{"Field \"introducedBy\" expected string but got " + std::string(doof::json_type_name(_iterator_introducedBy->second))}; }
     auto _field_introducedBy = (_lenient ? doof::json_as_string_lenient(_iterator_introducedBy->second) : doof::json_as_string(_iterator_introducedBy->second));
     auto _iterator_manifest = _object->find("manifest");
     if (_iterator_manifest == _object->end()) { return doof::Failure<std::string>{"Missing required field \"manifest\""}; }
-    if (!(doof::json_is_object(_iterator_manifest->second))) { return doof::Failure<std::string>{"Field \"manifest\" expected object but got " + std::string(doof::json_type_name(_iterator_manifest->second))}; }
-    auto _field_manifest = doof::success_value(::app_src_package_manifest_::PackageManifest::fromJsonValue(_iterator_manifest->second, _lenient));
+        if (!(doof::json_is_object(_iterator_manifest->second))) { return doof::Failure<std::string>{"Field \"manifest\" expected object but got " + std::string(doof::json_type_name(_iterator_manifest->second))}; }
+    auto _field_manifest = doof::json_decode_value(::app_src_package_manifest_::PackageManifest::fromJsonValue(_iterator_manifest->second, _lenient));
     auto _iterator_sourceKind = _object->find("sourceKind");
     if (_iterator_sourceKind == _object->end()) { return doof::Failure<std::string>{"Missing required field \"sourceKind\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceKind->second) : doof::json_is_string(_iterator_sourceKind->second)))) { return doof::Failure<std::string>{"Field \"sourceKind\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceKind->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceKind->second) : doof::json_is_string(_iterator_sourceKind->second)))) { return doof::Failure<std::string>{"Field \"sourceKind\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceKind->second))}; }
     auto _field_sourceKind = (_lenient ? doof::json_as_string_lenient(_iterator_sourceKind->second) : doof::json_as_string(_iterator_sourceKind->second));
     std::optional<std::string> _field_sourceUrl;
     if (auto _iterator_sourceUrl = _object->find("sourceUrl"); _iterator_sourceUrl != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceUrl->second) : doof::json_is_string(_iterator_sourceUrl->second)))) { return doof::Failure<std::string>{"Field \"sourceUrl\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceUrl->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceUrl->second) : doof::json_is_string(_iterator_sourceUrl->second)))) { return doof::Failure<std::string>{"Field \"sourceUrl\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceUrl->second))}; }
         _field_sourceUrl = (_lenient ? doof::json_as_string_lenient(_iterator_sourceUrl->second) : doof::json_as_string(_iterator_sourceUrl->second));
     } else {
         _field_sourceUrl = std::string("");
     }
     std::optional<std::string> _field_sourceRef;
     if (auto _iterator_sourceRef = _object->find("sourceRef"); _iterator_sourceRef != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceRef->second) : doof::json_is_string(_iterator_sourceRef->second)))) { return doof::Failure<std::string>{"Field \"sourceRef\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceRef->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceRef->second) : doof::json_is_string(_iterator_sourceRef->second)))) { return doof::Failure<std::string>{"Field \"sourceRef\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceRef->second))}; }
         _field_sourceRef = (_lenient ? doof::json_as_string_lenient(_iterator_sourceRef->second) : doof::json_as_string(_iterator_sourceRef->second));
     } else {
         _field_sourceRef = std::string("");
     }
     std::optional<std::string> _field_sourceCommit;
     if (auto _iterator_sourceCommit = _object->find("sourceCommit"); _iterator_sourceCommit != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceCommit->second) : doof::json_is_string(_iterator_sourceCommit->second)))) { return doof::Failure<std::string>{"Field \"sourceCommit\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceCommit->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourceCommit->second) : doof::json_is_string(_iterator_sourceCommit->second)))) { return doof::Failure<std::string>{"Field \"sourceCommit\" expected string but got " + std::string(doof::json_type_name(_iterator_sourceCommit->second))}; }
         _field_sourceCommit = (_lenient ? doof::json_as_string_lenient(_iterator_sourceCommit->second) : doof::json_as_string(_iterator_sourceCommit->second));
     } else {
         _field_sourceCommit = std::string("");
     }
     std::optional<std::string> _field_requestedUrl;
     if (auto _iterator_requestedUrl = _object->find("requestedUrl"); _iterator_requestedUrl != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedUrl->second) : doof::json_is_string(_iterator_requestedUrl->second)))) { return doof::Failure<std::string>{"Field \"requestedUrl\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedUrl->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedUrl->second) : doof::json_is_string(_iterator_requestedUrl->second)))) { return doof::Failure<std::string>{"Field \"requestedUrl\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedUrl->second))}; }
         _field_requestedUrl = (_lenient ? doof::json_as_string_lenient(_iterator_requestedUrl->second) : doof::json_as_string(_iterator_requestedUrl->second));
     } else {
         _field_requestedUrl = std::string("");
     }
     std::optional<std::string> _field_requestedRef;
     if (auto _iterator_requestedRef = _object->find("requestedRef"); _iterator_requestedRef != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedRef->second) : doof::json_is_string(_iterator_requestedRef->second)))) { return doof::Failure<std::string>{"Field \"requestedRef\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedRef->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedRef->second) : doof::json_is_string(_iterator_requestedRef->second)))) { return doof::Failure<std::string>{"Field \"requestedRef\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedRef->second))}; }
         _field_requestedRef = (_lenient ? doof::json_as_string_lenient(_iterator_requestedRef->second) : doof::json_as_string(_iterator_requestedRef->second));
     } else {
         _field_requestedRef = std::string("");
     }
     std::optional<std::string> _field_requestedCommit;
     if (auto _iterator_requestedCommit = _object->find("requestedCommit"); _iterator_requestedCommit != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedCommit->second) : doof::json_is_string(_iterator_requestedCommit->second)))) { return doof::Failure<std::string>{"Field \"requestedCommit\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedCommit->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_requestedCommit->second) : doof::json_is_string(_iterator_requestedCommit->second)))) { return doof::Failure<std::string>{"Field \"requestedCommit\" expected string but got " + std::string(doof::json_type_name(_iterator_requestedCommit->second))}; }
         _field_requestedCommit = (_lenient ? doof::json_as_string_lenient(_iterator_requestedCommit->second) : doof::json_as_string(_iterator_requestedCommit->second));
     } else {
         _field_requestedCommit = std::string("");
     }
     std::optional<bool> _field_mutable_;
     if (auto _iterator_mutable_ = _object->find("mutable"); _iterator_mutable_ != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mutable_->second) : doof::json_is_boolean(_iterator_mutable_->second)))) { return doof::Failure<std::string>{"Field \"mutable\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mutable_->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_mutable_->second) : doof::json_is_boolean(_iterator_mutable_->second)))) { return doof::Failure<std::string>{"Field \"mutable\" expected boolean but got " + std::string(doof::json_type_name(_iterator_mutable_->second))}; }
         _field_mutable_ = (_lenient ? doof::json_as_bool_lenient(_iterator_mutable_->second) : doof::json_as_bool(_iterator_mutable_->second));
     } else {
         _field_mutable_ = false;
     }
-    return doof::Success<std::shared_ptr<ReachedPackageInput>>{std::make_shared<ReachedPackageInput>(_field_logicalPrefix, _field_introducedBy, _field_manifest, _field_sourceKind, _field_sourceUrl.value(), _field_sourceRef.value(), _field_sourceCommit.value(), _field_requestedUrl.value(), _field_requestedRef.value(), _field_requestedCommit.value(), _field_mutable_.value())};
+        return doof::Success<std::shared_ptr<ReachedPackageInput>>{std::make_shared<ReachedPackageInput>(_field_logicalPrefix, _field_introducedBy, _field_manifest, _field_sourceKind, _field_sourceUrl.value(), _field_sourceRef.value(), _field_sourceCommit.value(), _field_requestedUrl.value(), _field_requestedRef.value(), _field_requestedCommit.value(), _field_mutable_.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject ResolvedExternalInput::toJsonObject() const {
@@ -103,53 +107,57 @@ doof::JsonObject ResolvedExternalInput::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<ResolvedExternalInput>, std::string> ResolvedExternalInput::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_owner = _object->find("owner");
     if (_iterator_owner == _object->end()) { return doof::Failure<std::string>{"Missing required field \"owner\""}; }
-    if (!(doof::json_is_object(_iterator_owner->second))) { return doof::Failure<std::string>{"Field \"owner\" expected object but got " + std::string(doof::json_type_name(_iterator_owner->second))}; }
-    auto _field_owner = doof::success_value(ReachedPackageInput::fromJsonValue(_iterator_owner->second, _lenient));
+        if (!(doof::json_is_object(_iterator_owner->second))) { return doof::Failure<std::string>{"Field \"owner\" expected object but got " + std::string(doof::json_type_name(_iterator_owner->second))}; }
+    auto _field_owner = doof::json_decode_value(ReachedPackageInput::fromJsonValue(_iterator_owner->second, _lenient));
     auto _iterator_dependency = _object->find("dependency");
     if (_iterator_dependency == _object->end()) { return doof::Failure<std::string>{"Missing required field \"dependency\""}; }
-    if (!(doof::json_is_object(_iterator_dependency->second))) { return doof::Failure<std::string>{"Field \"dependency\" expected object but got " + std::string(doof::json_type_name(_iterator_dependency->second))}; }
-    auto _field_dependency = doof::success_value(::app_src_package_manifest_::ExternalDependency::fromJsonValue(_iterator_dependency->second, _lenient));
+        if (!(doof::json_is_object(_iterator_dependency->second))) { return doof::Failure<std::string>{"Field \"dependency\" expected object but got " + std::string(doof::json_type_name(_iterator_dependency->second))}; }
+    auto _field_dependency = doof::json_decode_value(::app_src_package_manifest_::ExternalDependency::fromJsonValue(_iterator_dependency->second, _lenient));
     auto _iterator_selectedKind = _object->find("selectedKind");
     if (_iterator_selectedKind == _object->end()) { return doof::Failure<std::string>{"Missing required field \"selectedKind\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_selectedKind->second) : doof::json_is_string(_iterator_selectedKind->second)))) { return doof::Failure<std::string>{"Field \"selectedKind\" expected string but got " + std::string(doof::json_type_name(_iterator_selectedKind->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_selectedKind->second) : doof::json_is_string(_iterator_selectedKind->second)))) { return doof::Failure<std::string>{"Field \"selectedKind\" expected string but got " + std::string(doof::json_type_name(_iterator_selectedKind->second))}; }
     auto _field_selectedKind = (_lenient ? doof::json_as_string_lenient(_iterator_selectedKind->second) : doof::json_as_string(_iterator_selectedKind->second));
     auto _iterator_selectedUrl = _object->find("selectedUrl");
     if (_iterator_selectedUrl == _object->end()) { return doof::Failure<std::string>{"Missing required field \"selectedUrl\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_selectedUrl->second) : doof::json_is_string(_iterator_selectedUrl->second)))) { return doof::Failure<std::string>{"Field \"selectedUrl\" expected string but got " + std::string(doof::json_type_name(_iterator_selectedUrl->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_selectedUrl->second) : doof::json_is_string(_iterator_selectedUrl->second)))) { return doof::Failure<std::string>{"Field \"selectedUrl\" expected string but got " + std::string(doof::json_type_name(_iterator_selectedUrl->second))}; }
     auto _field_selectedUrl = (_lenient ? doof::json_as_string_lenient(_iterator_selectedUrl->second) : doof::json_as_string(_iterator_selectedUrl->second));
     std::optional<std::string> _field_selectedRef;
     if (auto _iterator_selectedRef = _object->find("selectedRef"); _iterator_selectedRef != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_selectedRef->second) : doof::json_is_string(_iterator_selectedRef->second)))) { return doof::Failure<std::string>{"Field \"selectedRef\" expected string but got " + std::string(doof::json_type_name(_iterator_selectedRef->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_selectedRef->second) : doof::json_is_string(_iterator_selectedRef->second)))) { return doof::Failure<std::string>{"Field \"selectedRef\" expected string but got " + std::string(doof::json_type_name(_iterator_selectedRef->second))}; }
         _field_selectedRef = (_lenient ? doof::json_as_string_lenient(_iterator_selectedRef->second) : doof::json_as_string(_iterator_selectedRef->second));
     } else {
         _field_selectedRef = std::string("");
     }
     std::optional<std::string> _field_selectedCommit;
     if (auto _iterator_selectedCommit = _object->find("selectedCommit"); _iterator_selectedCommit != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_selectedCommit->second) : doof::json_is_string(_iterator_selectedCommit->second)))) { return doof::Failure<std::string>{"Field \"selectedCommit\" expected string but got " + std::string(doof::json_type_name(_iterator_selectedCommit->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_selectedCommit->second) : doof::json_is_string(_iterator_selectedCommit->second)))) { return doof::Failure<std::string>{"Field \"selectedCommit\" expected string but got " + std::string(doof::json_type_name(_iterator_selectedCommit->second))}; }
         _field_selectedCommit = (_lenient ? doof::json_as_string_lenient(_iterator_selectedCommit->second) : doof::json_as_string(_iterator_selectedCommit->second));
     } else {
         _field_selectedCommit = std::string("");
     }
     std::optional<std::string> _field_selectedSha256;
     if (auto _iterator_selectedSha256 = _object->find("selectedSha256"); _iterator_selectedSha256 != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_selectedSha256->second) : doof::json_is_string(_iterator_selectedSha256->second)))) { return doof::Failure<std::string>{"Field \"selectedSha256\" expected string but got " + std::string(doof::json_type_name(_iterator_selectedSha256->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_selectedSha256->second) : doof::json_is_string(_iterator_selectedSha256->second)))) { return doof::Failure<std::string>{"Field \"selectedSha256\" expected string but got " + std::string(doof::json_type_name(_iterator_selectedSha256->second))}; }
         _field_selectedSha256 = (_lenient ? doof::json_as_string_lenient(_iterator_selectedSha256->second) : doof::json_as_string(_iterator_selectedSha256->second));
     } else {
         _field_selectedSha256 = std::string("");
     }
     std::optional<bool> _field_overridden;
     if (auto _iterator_overridden = _object->find("overridden"); _iterator_overridden != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_overridden->second) : doof::json_is_boolean(_iterator_overridden->second)))) { return doof::Failure<std::string>{"Field \"overridden\" expected boolean but got " + std::string(doof::json_type_name(_iterator_overridden->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_overridden->second) : doof::json_is_boolean(_iterator_overridden->second)))) { return doof::Failure<std::string>{"Field \"overridden\" expected boolean but got " + std::string(doof::json_type_name(_iterator_overridden->second))}; }
         _field_overridden = (_lenient ? doof::json_as_bool_lenient(_iterator_overridden->second) : doof::json_as_bool(_iterator_overridden->second));
     } else {
         _field_overridden = false;
     }
-    return doof::Success<std::shared_ptr<ResolvedExternalInput>>{std::make_shared<ResolvedExternalInput>(_field_owner, _field_dependency, _field_selectedKind, _field_selectedUrl, _field_selectedRef.value(), _field_selectedCommit.value(), _field_selectedSha256.value(), _field_overridden.value())};
+        return doof::Success<std::shared_ptr<ResolvedExternalInput>>{std::make_shared<ResolvedExternalInput>(_field_owner, _field_dependency, _field_selectedKind, _field_selectedUrl, _field_selectedRef.value(), _field_selectedCommit.value(), _field_selectedSha256.value(), _field_overridden.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 bool hasMutableStdPackageInputs(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages) {
     const auto& _iterable_1 = packages;
@@ -218,7 +226,7 @@ doof::Result<void, std::string> validateDependencyPolicy(const std::shared_ptr<s
             }
         }
         auto _try_value_7 = validateTransitiveNativePolicy(package, policy);
-        if (doof::is_failure(_try_value_7)) return doof::Failure<std::string>{doof::failure_error(_try_value_7)};
+        if (doof::is_failure(_try_value_7)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_7))};
     }
     const auto& _iterable_8 = externals;
     for (const auto& external : *_iterable_8) {

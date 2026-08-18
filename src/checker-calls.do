@@ -40,7 +40,7 @@ import { checkBlock } from "./checker-statements"
 import { checkExpression } from "./checker-expressions"
 import { resolveType, memberType, validateTypeArgumentConstraints } from "./checker-resolution"
 import { finish, typeError } from "./checker-common"
-import { decorateAnnotationWithResolved, optionalResolvedType, functionParameterIndex, containsString, hasObjectProperty, methodSignature, declare, lookup, isBuiltinPrintlnCall, symbolFor, declarationFor } from "./checker-symbols"
+import { decorateAnnotationWithResolved, optionalResolvedType, functionParameterIndex, containsString, hasObjectProperty, methodSignature, declare, lookup, isBuiltinPrintlnCall, symbolFor, valueSymbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
 import { inferTypeArgument, functionDeclarationForCallee, constructorForClass, insideConstructorFactory } from "./checker-generics"
 import { classModuleFor } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -372,7 +372,9 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
     parameterType := if parameter.type_ == none then if expectedFunction != none && i < expectedFunction!.params.length then expectedFunction!.params[i].type_ else unknownType() else resolveType(state, parameter.type_!, state.info!, lambdaScope)
     parameter.resolvedType = optionalResolvedType(parameterType)
     params.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
-    declare(lambdaScope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path })
+    if !declare(lambdaScope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
+      typeError(state, "Binding '" + parameter.name + "' is already declared in this scope", parameter.span)
+    }
   }
   let returnType = if expectedFunction == none then unknownType() else expectedFunction!.returnType
   if expression.returnType != none {
@@ -414,8 +416,12 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
     if expression.type_ == "Success" { return finish(state, expression, resultType(valueType, unknownType())) }
     return finish(state, expression, resultType(unknownType(), valueType))
   }
-  symbol := symbolFor(state.info!, expression.type_)
-  if symbol == none { typeError(state, "Unknown constructed type '" + expression.type_ + "'", expression.span); return finish(state, expression, unknownType()) }
+  symbol := valueSymbolFor(state.info!, expression.type_)
+  if symbol == none {
+    message := valueUseDiagnostic(state.info!, expression.type_)
+    typeError(state, if message == "" then "Unknown constructed type '" + expression.type_ + "'" else message, expression.span)
+    return finish(state, expression, unknownType())
+  }
   declaration := declarationFor(state.result, symbol!)
   if declaration != none {
     case declaration! {
@@ -492,6 +498,15 @@ export function callableField(state: CheckerState, objectType: ResolvedType, pro
   case objectType {
     class_: ClassType -> { symbol = class_.symbol }
     interface_: InterfaceType -> { symbol = interface_.symbol }
+    union_: UnionResolvedType -> {
+      let found = false
+      for member of union_.types {
+        if member.kind == "none" { continue }
+        found = true
+        if !callableField(state, member, property) { return false }
+      }
+      return found
+    }
     _ -> { return false }
   }
   declaration := declarationFor(state.result, symbol!)

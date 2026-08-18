@@ -202,7 +202,7 @@ function emitAssignmentTarget(name: string, context: EmitContext): string {
 
 function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitContext): string {
   ind := indent(level)
-  if binding.else_ == none { return emitLocalDeclaration(ind, binding.name, binding.type_, binding.resolvedType!, binding.value, context, true) }
+  if binding.else_ == none { return emitLocalDeclaration(ind, binding.name, binding.type_, binding.resolvedType!, binding.value, context, true, true) }
   context.tryCounter = context.tryCounter + 1
   temporaryName := "_binding_value_" + string(context.tryCounter)
   if binding.value.resolvedType != none && isSingleOptional(binding.value.resolvedType!) {
@@ -212,7 +212,7 @@ function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitCon
     output = output + emitBlock(binding.else_!, level + 1, context)
     output = output + ind + "}\n"
     if binding.name == "_" { return output }
-    return output + ind + "const auto " + cppIdentifier(binding.name) + " = doof::unwrap_optional(" + temporaryName + ");\n"
+    return output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, "doof::unwrap_optional(" + temporaryName + ")", true, true)
   }
   let output = ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
   output = output + ind + "if (doof::is_failure(" + temporaryName + ")) {\n"
@@ -224,7 +224,7 @@ function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitCon
   output = output + emitBlock(binding.else_!, level + 1, context)
   output = output + ind + "}\n"
   if binding.name == "_" { return output }
-  return output + ind + "const auto " + cppIdentifier(binding.name) + " = doof::success_value(" + temporaryName + ");\n"
+  return output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, "doof::success_value(" + temporaryName + ")", true, true)
 }
 
 function isSingleOptional(resolvedType: ResolvedType): bool {
@@ -277,10 +277,10 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
       }
       output = output + "break; }\n"
       case statement.binding {
-        declaration: ConstDeclaration -> { output = output + ind + "const auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n" }
-        declaration: ReadonlyDeclaration -> { output = output + ind + "const auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n" }
-        binding: ImmutableBinding -> { output = output + ind + "const auto " + cppIdentifier(binding.name) + " = doof::success_value(" + temporaryName + ");\n" }
-        declaration: LetDeclaration -> { output = output + ind + "auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n" }
+        declaration: ConstDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true) }
+        declaration: ReadonlyDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true) }
+        binding: ImmutableBinding -> { output = output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, "doof::success_value(" + temporaryName + ")", true, true) }
+        declaration: LetDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", false) }
         _: ExpressionStatement -> { }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
       }
@@ -289,19 +289,19 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
   if context.currentReturnErrorType != "" {
       errorType := context.currentReturnErrorType
       let output = ind + "auto " + temporaryName + " = " + emitExpression(value, context) + ";\n"
-      output = output + ind + "if (doof::is_failure(" + temporaryName + ")) return doof::Failure<" + errorType + ">{doof::failure_error(" + temporaryName + ")};\n"
+      output = output + ind + "if (doof::is_failure(" + temporaryName + ")) return doof::Failure<" + errorType + ">{doof::variant_promote<" + errorType + ">(doof::failure_error(" + temporaryName + "))};\n"
       case statement.binding {
         declaration: ConstDeclaration -> {
-          output = output + ind + "const auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n"
+          output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true)
         }
         declaration: ReadonlyDeclaration -> {
-          output = output + ind + "const auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n"
+          output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true)
         }
         binding: ImmutableBinding -> {
-          output = output + ind + "const auto " + cppIdentifier(binding.name) + " = doof::success_value(" + temporaryName + ");\n"
+          output = output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, "doof::success_value(" + temporaryName + ")", true, true)
         }
         declaration: LetDeclaration -> {
-          output = output + ind + "auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n"
+          output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", false)
         }
         _: ExpressionStatement -> { }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
@@ -320,10 +320,10 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
       }
       output = output + ind + "if (doof::is_failure(" + temporaryName + ")) doof::panic_at(" + quote(context.modulePath) + ", " + string(statement.span.start.line) + ", " + failureMessage + ");\n"
       case statement.binding {
-        declaration: ConstDeclaration -> { output = output + ind + "const auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n" }
-        declaration: ReadonlyDeclaration -> { output = output + ind + "const auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n" }
-        binding: ImmutableBinding -> { output = output + ind + "const auto " + cppIdentifier(binding.name) + " = doof::success_value(" + temporaryName + ");\n" }
-        declaration: LetDeclaration -> { output = output + ind + "auto " + cppIdentifier(declaration.name) + " = doof::success_value(" + temporaryName + ");\n" }
+        declaration: ConstDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true) }
+        declaration: ReadonlyDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true) }
+        binding: ImmutableBinding -> { output = output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, "doof::success_value(" + temporaryName + ")", true, true) }
+        declaration: LetDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", false) }
         _: ExpressionStatement -> { }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
       }
@@ -347,18 +347,27 @@ function emitTryDestructuring(statement: DestructuringStatement, temporaryName: 
 function emitLocalDeclaration(ind: string, name: string, annotation: TypeAnnotation | none, resolvedType: ResolvedType | none, value: Expression, context: EmitContext, readonly_: bool, shallowImmutable: bool = false): string {
   if resolvedType == none { panic("Local declaration was not resolved before emission") }
   let typeText = if annotation == none then "auto" else emitType(resolvedType!, context.modulePath)
-  let shallowStruct = false
-  case resolvedType! {
-    class_: ClassType -> { shallowStruct = shallowImmutable && class_.symbol.kind == "struct" }
-    _ -> { }
-  }
-  let prefix = if readonly_ && !shallowStruct then "const " else ""
+  prefix := localConstPrefix(resolvedType!, readonly_, shallowImmutable)
   let expected: ResolvedType | none = resolvedType
   let valueText = emitExpression(value, context, expected)
   if !readonly_ && isCapturedMutable(context, name) {
     return ind + "auto " + cppIdentifier(name) + " = std::make_shared<" + emitType(resolvedType!, context.modulePath) + ">(" + valueText + ");\n"
   }
   return ind + prefix + typeText + " " + cppIdentifier(name) + " = " + valueText + ";\n"
+}
+
+/** Emits an already-lowered value with the same mutability rules as an ordinary local declaration. */
+function emitExtractedLocal(ind: string, name: string, resolvedType: ResolvedType, value: string, readonly_: bool, shallowImmutable: bool = false): string {
+  return ind + localConstPrefix(resolvedType, readonly_, shallowImmutable) + "auto " + cppIdentifier(name) + " = " + value + ";\n"
+}
+
+function localConstPrefix(resolvedType: ResolvedType, readonly_: bool, shallowImmutable: bool): string {
+  if !readonly_ { return "" }
+  case resolvedType {
+    class_: ClassType -> { if shallowImmutable && class_.symbol.kind == "struct" { return "" } }
+    _ -> { }
+  }
+  return "const "
 }
 
 function emitCase(statement: CaseStatement, level: int, context: EmitContext): string {

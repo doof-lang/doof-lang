@@ -1320,6 +1320,101 @@ inline std::string json_as_string_lenient(const JsonValue& value) {
     panic("Expected lenient JSON string");
 }
 
+inline std::optional<char32_t> utf8_single_code_point(const std::string& text) {
+    if (text.empty()) return std::nullopt;
+    const auto byte = [&text](size_t index) { return static_cast<uint8_t>(text[index]); };
+    const uint8_t first = byte(0);
+    char32_t value = 0;
+    size_t length = 0;
+    if (first <= 0x7f) {
+        value = first;
+        length = 1;
+    } else if (first >= 0xc2 && first <= 0xdf) {
+        value = first & 0x1f;
+        length = 2;
+    } else if (first >= 0xe0 && first <= 0xef) {
+        value = first & 0x0f;
+        length = 3;
+    } else if (first >= 0xf0 && first <= 0xf4) {
+        value = first & 0x07;
+        length = 4;
+    } else {
+        return std::nullopt;
+    }
+    if (text.size() != length) return std::nullopt;
+    for (size_t index = 1; index < length; ++index) {
+        const uint8_t continuation = byte(index);
+        if ((continuation & 0xc0) != 0x80) return std::nullopt;
+        value = (value << 6) | (continuation & 0x3f);
+    }
+    if ((length == 2 && value < 0x80)
+        || (length == 3 && value < 0x800)
+        || (length == 4 && value < 0x10000)
+        || value > 0x10ffff
+        || (value >= 0xd800 && value <= 0xdfff)) {
+        return std::nullopt;
+    }
+    return value;
+}
+
+inline std::string char_to_utf8(char32_t value) {
+    if (value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff)) {
+        panic("Invalid Unicode code point");
+    }
+    std::string result;
+    if (value <= 0x7f) {
+        result.push_back(static_cast<char>(value));
+    } else if (value <= 0x7ff) {
+        result.push_back(static_cast<char>(0xc0 | (value >> 6)));
+        result.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+    } else if (value <= 0xffff) {
+        result.push_back(static_cast<char>(0xe0 | (value >> 12)));
+        result.push_back(static_cast<char>(0x80 | ((value >> 6) & 0x3f)));
+        result.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+    } else {
+        result.push_back(static_cast<char>(0xf0 | (value >> 18)));
+        result.push_back(static_cast<char>(0x80 | ((value >> 12) & 0x3f)));
+        result.push_back(static_cast<char>(0x80 | ((value >> 6) & 0x3f)));
+        result.push_back(static_cast<char>(0x80 | (value & 0x3f)));
+    }
+    return result;
+}
+
+inline bool json_is_char(const JsonValue& value, bool lenient) {
+    if (lenient) {
+        if (!json_is_lenient_string(value)) return false;
+        return utf8_single_code_point(json_as_string_lenient(value)).has_value();
+    }
+    return json_is_string(value) && utf8_single_code_point(json_as_string(value)).has_value();
+}
+
+inline char32_t json_as_char(const JsonValue& value, bool lenient) {
+    const auto decoded = utf8_single_code_point(lenient ? json_as_string_lenient(value) : json_as_string(value));
+    if (!decoded.has_value()) panic("Expected one Unicode character");
+    return decoded.value();
+}
+
+class JsonDecodeError final {
+public:
+    explicit JsonDecodeError(std::string message) : message_(std::move(message)) {}
+    const std::string& message() const noexcept { return message_; }
+
+private:
+    std::string message_;
+};
+
+template <typename T>
+T json_decode_value(Result<T, std::string> result) {
+    if (is_failure(result)) throw JsonDecodeError(failure_error(result));
+    return std::move(success_value(result));
+}
+
+template <typename T>
+T json_decode_optional(std::optional<T> value, std::string message) {
+    if (!value.has_value()) throw JsonDecodeError(std::move(message));
+    return std::move(value.value());
+}
+
 
 // ============================================================================
 // String utilities
@@ -1337,10 +1432,7 @@ inline std::string to_string(const T& val) {
     } else if constexpr (std::is_same_v<T, uint8_t>) {
         return std::to_string(static_cast<uint32_t>(val));
     } else if constexpr (std::is_same_v<T, char32_t>) {
-        // Simple ASCII conversion for now
-        std::string result;
-        result += static_cast<char>(val);
-        return result;
+        return char_to_utf8(val);
     } else {
         std::ostringstream oss;
         oss << val;
@@ -1581,6 +1673,10 @@ inline std::string string_repeat(const std::string& s, int32_t count) {
 
 // Representation-dependent helpers used by generated code. Operations whose
 // receiver representation is statically known are lowered directly instead.
+inline bool is_null(const JsonValue& value) {
+    return json_is_null(value);
+}
+
 template <typename T>
 bool is_null(const std::shared_ptr<T>& value) {
     return value == nullptr;

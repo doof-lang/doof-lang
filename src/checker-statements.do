@@ -55,6 +55,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     interface_: InterfaceDeclaration -> { checkInterface(state, interface_, scope); return true }
     enum_: EnumDeclaration -> { checkEnum(state, enum_, scope); return true }
     alias: TypeAliasDeclaration -> {
+      validateUniqueTypeParameters(state, alias.typeParams, alias.span)
       aliasScope := Scope { parent: scope }
       populateTypeParameters(state, aliasScope, alias.typeParams, alias.typeParamConstraints)
       resolvedAlias := resolveType(state, alias.type_, state.info!, aliasScope)
@@ -114,14 +115,14 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
           if tuple.elements.length == forOf.bindings.length {
             for i of 0..<forOf.bindings.length {
               name := forOf.bindings[i]
-              if name != "_" { declare(bodyScope, Binding { name, kind: "for-binding", type_: tuple.elements[i], mutable: false, span: checkerSemanticSpan(forOf.span), module: state.info!.path }) }
+              if name != "_" { declareUserBinding(state, bodyScope, Binding { name, kind: "for-binding", type_: tuple.elements[i], mutable: false, span: checkerSemanticSpan(forOf.span), module: state.info!.path }, forOf.span) }
             }
           } else {
-            for name of forOf.bindings { if name != "_" { declare(bodyScope, Binding { name, kind: "for-binding", type_: element, mutable: false, span: checkerSemanticSpan(forOf.span), module: state.info!.path }) } }
+            for name of forOf.bindings { if name != "_" { declareUserBinding(state, bodyScope, Binding { name, kind: "for-binding", type_: element, mutable: false, span: checkerSemanticSpan(forOf.span), module: state.info!.path }, forOf.span) } }
           }
         }
         _ -> {
-          for name of forOf.bindings { if name != "_" { declare(bodyScope, Binding { name, kind: "for-binding", type_: element, mutable: false, span: checkerSemanticSpan(forOf.span), module: state.info!.path }) } }
+          for name of forOf.bindings { if name != "_" { declareUserBinding(state, bodyScope, Binding { name, kind: "for-binding", type_: element, mutable: false, span: checkerSemanticSpan(forOf.span), module: state.info!.path }, forOf.span) } }
         }
       }
       checkBlock(state, forOf.body, bodyScope)
@@ -137,7 +138,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         declaredType := if binding.type_ == none then valueType else resolveType(state, binding.type_!, state.info!, scope)
         binding.resolvedType = optionalResolvedType(declaredType)
         if !isAssignable(valueType, declaredType) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(declaredType), binding.span) }
-        declare(bodyScope, Binding { name: binding.name, kind: "with", type_: declaredType, mutable: false, span: checkerSemanticSpan(binding.span), module: state.info!.path })
+        declareUserBinding(state, bodyScope, Binding { name: binding.name, kind: "with", type_: declaredType, mutable: false, span: checkerSemanticSpan(binding.span), module: state.info!.path }, binding.span)
       }
       checkBlock(state, with_.body, bodyScope)
       return bindingsComplete
@@ -291,12 +292,14 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
   if name != "_" {
     let declarationSymbol: Symbol | none = none
     if scope.parent == none { declarationSymbol = symbolFor(state.info!, name) }
-    declare(scope, Binding { name, kind, type_: declaredType, mutable, span: checkerSemanticSpan(span), module: state.info!.path, symbol: declarationSymbol })
+    declareUserBinding(state, scope, Binding { name, kind, type_: declaredType, mutable, span: checkerSemanticSpan(span), module: state.info!.path, symbol: declarationSymbol }, span)
   }
   return valueType.kind != "never"
 }
 
 export function checkFunction(state: CheckerState, fn: FunctionDeclaration, outer: Scope, owner: ClassType | none): ResolvedType {
+  validateUniqueTypeParameters(state, fn.typeParams, fn.span)
+  validateTypeParameterShadowing(state, fn.typeParams, outer, fn.span)
   scope := Scope { parent: outer, typeParams: [], thisType: if owner == none then unknownType() else owner!, functionName: fn.name }
   populateTypeParameters(state, scope, fn.typeParams, fn.typeParamConstraints)
   if owner != none {
@@ -317,7 +320,9 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
     parameterType := if parameter.type_ == none then unknownType() else resolveType(state, parameter.type_!, state.info!, scope)
     parameter.resolvedType = optionalResolvedType(parameterType)
     if parameter.defaultValue != none { checkExpression(state, parameter.defaultValue!, scope, optionalResolvedType(parameterType)) }
-    declareShadowing(scope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path })
+    if !declareShadowing(scope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
+      typeError(state, "Binding '" + parameter.name + "' is already declared in this scope", parameter.span)
+    }
   }
   if fn.bodyless { return functionValue }
   let actualReturn = noneType()
@@ -358,6 +363,7 @@ export function functionParameters(state: CheckerState, fn: FunctionDeclaration,
 }
 
 export function checkClass(state: CheckerState, class_: ClassDeclaration, scope: Scope): none {
+  validateUniqueTypeParameters(state, class_.typeParams, class_.span)
   symbol := symbolFor(state.info!, class_.name)
   if symbol == none { return }
   classScope := Scope { parent: scope, typeParams: [] }
@@ -443,6 +449,7 @@ function containsWeakType(type_: ResolvedType): bool {
 }
 
 export function checkInterface(state: CheckerState, interface_: InterfaceDeclaration, scope: Scope): none {
+  validateUniqueTypeParameters(state, interface_.typeParams, interface_.span)
   interfaceScope := Scope { parent: scope, typeParams: [] }
   populateTypeParameters(state, interfaceScope, interface_.typeParams, interface_.typeParamConstraints)
   for field of interface_.fields {
@@ -475,6 +482,31 @@ function populateTypeParameters(state: CheckerState, scope: Scope, names: string
       _ -> { }
     }
     scope.typeParamConstraints[index].type_ = resolveType(state, annotation, state.info!, scope)
+  }
+}
+
+function validateUniqueTypeParameters(state: CheckerState, names: string[], span: SourceSpan): none {
+  for index of 0..<names.length {
+    for previous of 0..<index {
+      if names[previous] == names[index] {
+        typeError(state, "Type parameter \"" + names[index] + "\" is already declared in this declaration", span)
+        break
+      }
+    }
+  }
+}
+
+function validateTypeParameterShadowing(state: CheckerState, names: string[], outer: Scope, span: SourceSpan): none {
+  let current: Scope | none = outer
+  while current != none {
+    for name of names {
+      for visible of current!.typeParams {
+        if name == visible {
+          typeError(state, "Type parameter \"" + name + "\" shadows a type parameter from the enclosing declaration", span)
+        }
+      }
+    }
+    current = current!.parent
   }
 }
 
@@ -564,25 +596,25 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
         declaration: ConstDeclaration -> {
           declaration.value.resolvedType = optionalResolvedType(resultValue)
           declaration.resolvedType = optionalResolvedType(result.valueType)
-          declare(scope, Binding { name: declaration.name, kind: "const", type_: result.valueType, mutable: false, span: checkerSemanticSpan(declaration.span), module: state.info!.path })
+          declareUserBinding(state, scope, Binding { name: declaration.name, kind: "const", type_: result.valueType, mutable: false, span: checkerSemanticSpan(declaration.span), module: state.info!.path }, declaration.span)
         }
         declaration: ReadonlyDeclaration -> {
           declaration.value.resolvedType = optionalResolvedType(resultValue)
           declaration.resolvedType = optionalResolvedType(result.valueType)
-          declare(scope, Binding { name: declaration.name, kind: "readonly", type_: result.valueType, mutable: false, span: checkerSemanticSpan(declaration.span), module: state.info!.path })
+          declareUserBinding(state, scope, Binding { name: declaration.name, kind: "readonly", type_: result.valueType, mutable: false, span: checkerSemanticSpan(declaration.span), module: state.info!.path }, declaration.span)
         }
         binding: ImmutableBinding -> {
           binding.value.resolvedType = optionalResolvedType(resultValue)
           binding.resolvedType = optionalResolvedType(result.valueType)
-          declare(scope, Binding {
+          declareUserBinding(state, scope, Binding {
             name: binding.name, kind: "immutable-binding", type_: result.valueType,
             mutable: false, span: checkerSemanticSpan(binding.span), module: state.info!.path,
-          })
+          }, binding.span)
         }
         declaration: LetDeclaration -> {
           declaration.value.resolvedType = optionalResolvedType(resultValue)
           declaration.resolvedType = optionalResolvedType(result.valueType)
-          declare(scope, Binding { name: declaration.name, kind: "let", type_: result.valueType, mutable: true, span: checkerSemanticSpan(declaration.span), module: state.info!.path })
+          declareUserBinding(state, scope, Binding { name: declaration.name, kind: "let", type_: result.valueType, mutable: true, span: checkerSemanticSpan(declaration.span), module: state.info!.path }, declaration.span)
         }
         expression: ExpressionStatement -> { expression.expression.resolvedType = optionalResolvedType(resultValue) }
         destructuring: DestructuringStatement -> {
@@ -655,11 +687,15 @@ function positionalDestructuringTypes(state: CheckerState, valueType: ResolvedTy
 }
 
 function declareDestructuredBinding(state: CheckerState, scope: Scope, name: string, type_: ResolvedType, bindingKind: string, span: SourceSpan): none {
-  declare(scope, Binding {
+  declareUserBinding(state, scope, Binding {
     name,
     kind: if bindingKind == "let" then "let" else "immutable-binding",
     type_, mutable: bindingKind == "let", span: checkerSemanticSpan(span), module: state.info!.path,
-  })
+  }, span)
+}
+
+function declareUserBinding(state: CheckerState, scope: Scope, binding: Binding, span: SourceSpan): none {
+  if !declare(scope, binding) { typeError(state, "Binding '" + binding.name + "' is already declared in this scope", span) }
 }
 
 function validateDestructuringTarget(state: CheckerState, scope: Scope, name: string, valueType: ResolvedType, span: SourceSpan): none {

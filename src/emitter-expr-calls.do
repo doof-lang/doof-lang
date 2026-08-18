@@ -177,7 +177,11 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
             if member.property == "map" { return "doof::array_map(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
           }
           map: MapResolvedType -> {
-            if member.property == "has" { return "(" + emitExpression(member.object, context) + "->find(" + emitExpression(expression.args[0].value, context) + ") != " + emitExpression(member.object, context) + "->end())" }
+            if member.property == "has" {
+              context.tryCounter = context.tryCounter + 1
+              temporary := "_map_has_" + string(context.tryCounter)
+              return "[&]() -> bool { auto " + temporary + " = " + emitExpression(member.object, context) + "; return " + temporary + "->find(" + emitExpression(expression.args[0].value, context) + ") != " + temporary + "->end(); }()"
+            }
             if member.property == "set" { return "doof::map_set(" + emitExpression(member.object, context) + ", " + emitExpectedExpression(expression.args[0].value, context, map.keyType) + ", " + emitExpectedExpression(expression.args[1].value, context, map.valueType) + ", \"\", 0)" }
             if member.property == "get" && expression.args.length > 0 { return "doof::map_get(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
             if member.property == "keys" { return "doof::map_keys(" + emitExpression(member.object, context) + ", \"\", 0)" }

@@ -1271,7 +1271,7 @@ namespace app_src_checker_validation_ {
 
 namespace app_src_checker_symbols_ {
     void predeclareModuleBindings(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result);
-    void declare(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::shared_ptr<::app_src_semantic_::Binding>& binding);
+    bool declare(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::shared_ptr<::app_src_semantic_::Binding>& binding);
 }
 
 namespace app_src_checker_common_ {

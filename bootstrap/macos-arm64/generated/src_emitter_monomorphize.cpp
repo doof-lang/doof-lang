@@ -17,17 +17,21 @@ doof::JsonObject ImplementationRef::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<ImplementationRef>, std::string> ImplementationRef::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_modulePath = _object->find("modulePath");
     if (_iterator_modulePath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"modulePath\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_modulePath->second) : doof::json_is_string(_iterator_modulePath->second)))) { return doof::Failure<std::string>{"Field \"modulePath\" expected string but got " + std::string(doof::json_type_name(_iterator_modulePath->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_modulePath->second) : doof::json_is_string(_iterator_modulePath->second)))) { return doof::Failure<std::string>{"Field \"modulePath\" expected string but got " + std::string(doof::json_type_name(_iterator_modulePath->second))}; }
     auto _field_modulePath = (_lenient ? doof::json_as_string_lenient(_iterator_modulePath->second) : doof::json_as_string(_iterator_modulePath->second));
     auto _iterator_typeName = _object->find("typeName");
     if (_iterator_typeName == _object->end()) { return doof::Failure<std::string>{"Missing required field \"typeName\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_typeName->second) : doof::json_is_string(_iterator_typeName->second)))) { return doof::Failure<std::string>{"Field \"typeName\" expected string but got " + std::string(doof::json_type_name(_iterator_typeName->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_typeName->second) : doof::json_is_string(_iterator_typeName->second)))) { return doof::Failure<std::string>{"Field \"typeName\" expected string but got " + std::string(doof::json_type_name(_iterator_typeName->second))}; }
     auto _field_typeName = (_lenient ? doof::json_as_string_lenient(_iterator_typeName->second) : doof::json_as_string(_iterator_typeName->second));
-    return doof::Success<std::shared_ptr<ImplementationRef>>{std::make_shared<ImplementationRef>(_field_modulePath, _field_typeName)};
+        return doof::Success<std::shared_ptr<ImplementationRef>>{std::make_shared<ImplementationRef>(_field_modulePath, _field_typeName)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 
@@ -54,19 +58,19 @@ std::shared_ptr<InstantiationPlan> buildInstantiationPlan(const std::shared_ptr<
             return plan;
         }
         if (functionIndex < static_cast<int32_t>((plan->functions)->size())) {
-            const auto instantiation = doof::array_at(plan->functions, functionIndex, "src/emitter-monomorphize", 94);
+            const auto instantiation = doof::array_at(plan->functions, functionIndex, "src/emitter-monomorphize", 96);
             (functionIndex = (functionIndex + 1));
             (plan->currentTrace = instantiation->trace);
             collectFunctionBody(instantiation->declaration, instantiation->modulePath, result, plan, instantiation->substitution->names, instantiation->substitution->arguments);
         }
         if (classIndex < static_cast<int32_t>((plan->classes)->size())) {
-            const auto instantiation = doof::array_at(plan->classes, classIndex, "src/emitter-monomorphize", 101);
+            const auto instantiation = doof::array_at(plan->classes, classIndex, "src/emitter-monomorphize", 103);
             (classIndex = (classIndex + 1));
             (plan->currentTrace = instantiation->trace);
             collectClassBody(instantiation->declaration, instantiation->modulePath, result, plan, instantiation->substitution->names, instantiation->substitution->arguments);
         }
         if (methodIndex < static_cast<int32_t>((plan->methods)->size())) {
-            const auto instantiation = doof::array_at(plan->methods, methodIndex, "src/emitter-monomorphize", 108);
+            const auto instantiation = doof::array_at(plan->methods, methodIndex, "src/emitter-monomorphize", 110);
             (methodIndex = (methodIndex + 1));
             (plan->currentTrace = instantiation->trace);
             collectFunctionBody(instantiation->declaration, instantiation->modulePath, result, plan, instantiation->substitution->names, instantiation->substitution->arguments);
@@ -848,7 +852,7 @@ std::shared_ptr<std::vector<std::string>> extendedTrace(const std::shared_ptr<st
     std::shared_ptr<std::vector<std::string>> trace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     auto start = ((static_cast<int32_t>((parent)->size()) > 11) ? (static_cast<int32_t>((parent)->size()) - 11) : 0);
     for (int32_t index = start; index < static_cast<int32_t>((parent)->size()); ++index) {
-        trace->push_back(doof::array_at(parent, index, "src/emitter-monomorphize", 458));
+        trace->push_back(doof::array_at(parent, index, "src/emitter-monomorphize", 460));
     }
     trace->push_back(item);
     return trace;
@@ -918,7 +922,7 @@ bool classImplementsConcreteInterface(const std::shared_ptr<::app_src_ast_::Clas
                 auto _case_subject = specialize(doof::unwrap_optional(implementation->resolvedType), class_->typeParams, classArgs);
                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::StreamResolvedType>>(_case_subject)) {
                     const auto& stream = std::get<std::shared_ptr<::app_src_semantic_::StreamResolvedType>>(_case_subject);
-                    if (::app_src_checker_types_::sameType(stream->elementType, doof::array_at(interface_->substitution->arguments, 0, "src/emitter-monomorphize", 502))) {
+                    if (::app_src_checker_types_::sameType(stream->elementType, doof::array_at(interface_->substitution->arguments, 0, "src/emitter-monomorphize", 504))) {
                         return true;
                     }
             }
@@ -949,7 +953,7 @@ bool classImplementsConcreteInterface(const std::shared_ptr<::app_src_ast_::Clas
             auto _case_subject = valueType;
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
                 const auto& fn = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-                return ((static_cast<int32_t>((fn->params)->size()) == 0) && ::app_src_checker_types_::sameType(fn->returnType, doof::array_at(interface_->substitution->arguments, 0, "src/emitter-monomorphize", 516)));
+                return ((static_cast<int32_t>((fn->params)->size()) == 0) && ::app_src_checker_types_::sameType(fn->returnType, doof::array_at(interface_->substitution->arguments, 0, "src/emitter-monomorphize", 518)));
         }
         else {
                 return false;
@@ -1012,7 +1016,7 @@ bool sameConcreteMethodType(const std::variant<std::shared_ptr<::app_src_semanti
                         return false;
                     }
                     for (int32_t index = 0; index < static_cast<int32_t>((actualFunction->params)->size()); ++index) {
-                        if (!::app_src_checker_types_::sameType(doof::array_at(actualFunction->params, index, "src/emitter-monomorphize", 551)->type_, doof::array_at(expectedFunction->params, index, "src/emitter-monomorphize", 551)->type_)) {
+                        if (!::app_src_checker_types_::sameType(doof::array_at(actualFunction->params, index, "src/emitter-monomorphize", 553)->type_, doof::array_at(expectedFunction->params, index, "src/emitter-monomorphize", 553)->type_)) {
                             return false;
                         }
                     }

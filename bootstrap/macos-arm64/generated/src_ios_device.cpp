@@ -18,17 +18,21 @@ doof::JsonObject IOSDevice::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<IOSDevice>, std::string> IOSDevice::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_identifier = _object->find("identifier");
     if (_iterator_identifier == _object->end()) { return doof::Failure<std::string>{"Missing required field \"identifier\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_identifier->second) : doof::json_is_string(_iterator_identifier->second)))) { return doof::Failure<std::string>{"Field \"identifier\" expected string but got " + std::string(doof::json_type_name(_iterator_identifier->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_identifier->second) : doof::json_is_string(_iterator_identifier->second)))) { return doof::Failure<std::string>{"Field \"identifier\" expected string but got " + std::string(doof::json_type_name(_iterator_identifier->second))}; }
     auto _field_identifier = (_lenient ? doof::json_as_string_lenient(_iterator_identifier->second) : doof::json_as_string(_iterator_identifier->second));
     auto _iterator_name = _object->find("name");
     if (_iterator_name == _object->end()) { return doof::Failure<std::string>{"Missing required field \"name\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
     auto _field_name = (_lenient ? doof::json_as_string_lenient(_iterator_name->second) : doof::json_as_string(_iterator_name->second));
-    return doof::Success<std::shared_ptr<IOSDevice>>{std::make_shared<IOSDevice>(_field_identifier, _field_name)};
+        return doof::Success<std::shared_ptr<IOSDevice>>{std::make_shared<IOSDevice>(_field_identifier, _field_name)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject IOSCodesignIdentity::toJsonObject() const {
@@ -38,17 +42,21 @@ doof::JsonObject IOSCodesignIdentity::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<IOSCodesignIdentity>, std::string> IOSCodesignIdentity::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_fingerprint = _object->find("fingerprint");
     if (_iterator_fingerprint == _object->end()) { return doof::Failure<std::string>{"Missing required field \"fingerprint\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_fingerprint->second) : doof::json_is_string(_iterator_fingerprint->second)))) { return doof::Failure<std::string>{"Field \"fingerprint\" expected string but got " + std::string(doof::json_type_name(_iterator_fingerprint->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_fingerprint->second) : doof::json_is_string(_iterator_fingerprint->second)))) { return doof::Failure<std::string>{"Field \"fingerprint\" expected string but got " + std::string(doof::json_type_name(_iterator_fingerprint->second))}; }
     auto _field_fingerprint = (_lenient ? doof::json_as_string_lenient(_iterator_fingerprint->second) : doof::json_as_string(_iterator_fingerprint->second));
     auto _iterator_name = _object->find("name");
     if (_iterator_name == _object->end()) { return doof::Failure<std::string>{"Missing required field \"name\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
     auto _field_name = (_lenient ? doof::json_as_string_lenient(_iterator_name->second) : doof::json_as_string(_iterator_name->second));
-    return doof::Success<std::shared_ptr<IOSCodesignIdentity>>{std::make_shared<IOSCodesignIdentity>(_field_fingerprint, _field_name)};
+        return doof::Success<std::shared_ptr<IOSCodesignIdentity>>{std::make_shared<IOSCodesignIdentity>(_field_fingerprint, _field_name)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject IOSProvisioningProfile::toJsonObject() const {
@@ -63,49 +71,53 @@ doof::JsonObject IOSProvisioningProfile::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> IOSProvisioningProfile::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_profilePath = _object->find("profilePath");
     if (_iterator_profilePath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"profilePath\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_profilePath->second) : doof::json_is_string(_iterator_profilePath->second)))) { return doof::Failure<std::string>{"Field \"profilePath\" expected string but got " + std::string(doof::json_type_name(_iterator_profilePath->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_profilePath->second) : doof::json_is_string(_iterator_profilePath->second)))) { return doof::Failure<std::string>{"Field \"profilePath\" expected string but got " + std::string(doof::json_type_name(_iterator_profilePath->second))}; }
     auto _field_profilePath = (_lenient ? doof::json_as_string_lenient(_iterator_profilePath->second) : doof::json_as_string(_iterator_profilePath->second));
     auto _iterator_applicationIdentifier = _object->find("applicationIdentifier");
     if (_iterator_applicationIdentifier == _object->end()) { return doof::Failure<std::string>{"Missing required field \"applicationIdentifier\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_applicationIdentifier->second) : doof::json_is_string(_iterator_applicationIdentifier->second)))) { return doof::Failure<std::string>{"Field \"applicationIdentifier\" expected string but got " + std::string(doof::json_type_name(_iterator_applicationIdentifier->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_applicationIdentifier->second) : doof::json_is_string(_iterator_applicationIdentifier->second)))) { return doof::Failure<std::string>{"Field \"applicationIdentifier\" expected string but got " + std::string(doof::json_type_name(_iterator_applicationIdentifier->second))}; }
     auto _field_applicationIdentifier = (_lenient ? doof::json_as_string_lenient(_iterator_applicationIdentifier->second) : doof::json_as_string(_iterator_applicationIdentifier->second));
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_certFingerprints;
     if (auto _iterator_certFingerprints = _object->find("certFingerprints"); _iterator_certFingerprints != _object->end()) {
-        if (!(doof::json_is_array(_iterator_certFingerprints->second))) { return doof::Failure<std::string>{"Field \"certFingerprints\" expected array but got " + std::string(doof::json_type_name(_iterator_certFingerprints->second))}; }
+            if (!(doof::json_is_array(_iterator_certFingerprints->second))) { return doof::Failure<std::string>{"Field \"certFingerprints\" expected array but got " + std::string(doof::json_type_name(_iterator_certFingerprints->second))}; }
         _field_certFingerprints = [&]() { const auto* _array = doof::json_as_array(_iterator_certFingerprints->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
     } else {
         _field_certFingerprints = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     auto _iterator_expirationEpochMs = _object->find("expirationEpochMs");
     if (_iterator_expirationEpochMs == _object->end()) { return doof::Failure<std::string>{"Missing required field \"expirationEpochMs\""}; }
-    if (!((_lenient ? doof::json_is_lenient_number(_iterator_expirationEpochMs->second) : doof::json_is_number(_iterator_expirationEpochMs->second)))) { return doof::Failure<std::string>{"Field \"expirationEpochMs\" expected number but got " + std::string(doof::json_type_name(_iterator_expirationEpochMs->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_expirationEpochMs->second) : doof::json_is_number(_iterator_expirationEpochMs->second)))) { return doof::Failure<std::string>{"Field \"expirationEpochMs\" expected number but got " + std::string(doof::json_type_name(_iterator_expirationEpochMs->second))}; }
     auto _field_expirationEpochMs = (_lenient ? doof::json_as_long_lenient(_iterator_expirationEpochMs->second) : doof::json_as_long(_iterator_expirationEpochMs->second));
     std::optional<int32_t> _field_provisionedDeviceCount;
     if (auto _iterator_provisionedDeviceCount = _object->find("provisionedDeviceCount"); _iterator_provisionedDeviceCount != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_provisionedDeviceCount->second) : doof::json_is_number(_iterator_provisionedDeviceCount->second)))) { return doof::Failure<std::string>{"Field \"provisionedDeviceCount\" expected number but got " + std::string(doof::json_type_name(_iterator_provisionedDeviceCount->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_number(_iterator_provisionedDeviceCount->second) : doof::json_is_number(_iterator_provisionedDeviceCount->second)))) { return doof::Failure<std::string>{"Field \"provisionedDeviceCount\" expected number but got " + std::string(doof::json_type_name(_iterator_provisionedDeviceCount->second))}; }
         _field_provisionedDeviceCount = (_lenient ? doof::json_as_int_lenient(_iterator_provisionedDeviceCount->second) : doof::json_as_int(_iterator_provisionedDeviceCount->second));
     } else {
         _field_provisionedDeviceCount = 0;
     }
     std::optional<bool> _field_provisionsAllDevices;
     if (auto _iterator_provisionsAllDevices = _object->find("provisionsAllDevices"); _iterator_provisionsAllDevices != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_provisionsAllDevices->second) : doof::json_is_boolean(_iterator_provisionsAllDevices->second)))) { return doof::Failure<std::string>{"Field \"provisionsAllDevices\" expected boolean but got " + std::string(doof::json_type_name(_iterator_provisionsAllDevices->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_provisionsAllDevices->second) : doof::json_is_boolean(_iterator_provisionsAllDevices->second)))) { return doof::Failure<std::string>{"Field \"provisionsAllDevices\" expected boolean but got " + std::string(doof::json_type_name(_iterator_provisionsAllDevices->second))}; }
         _field_provisionsAllDevices = (_lenient ? doof::json_as_bool_lenient(_iterator_provisionsAllDevices->second) : doof::json_as_bool(_iterator_provisionsAllDevices->second));
     } else {
         _field_provisionsAllDevices = false;
     }
     std::optional<bool> _field_getTaskAllow;
     if (auto _iterator_getTaskAllow = _object->find("getTaskAllow"); _iterator_getTaskAllow != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_getTaskAllow->second) : doof::json_is_boolean(_iterator_getTaskAllow->second)))) { return doof::Failure<std::string>{"Field \"getTaskAllow\" expected boolean but got " + std::string(doof::json_type_name(_iterator_getTaskAllow->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_getTaskAllow->second) : doof::json_is_boolean(_iterator_getTaskAllow->second)))) { return doof::Failure<std::string>{"Field \"getTaskAllow\" expected boolean but got " + std::string(doof::json_type_name(_iterator_getTaskAllow->second))}; }
         _field_getTaskAllow = (_lenient ? doof::json_as_bool_lenient(_iterator_getTaskAllow->second) : doof::json_as_bool(_iterator_getTaskAllow->second));
     } else {
         _field_getTaskAllow = false;
     }
-    return doof::Success<std::shared_ptr<IOSProvisioningProfile>>{std::make_shared<IOSProvisioningProfile>(_field_profilePath, _field_applicationIdentifier, _field_certFingerprints.value(), _field_expirationEpochMs, _field_provisionedDeviceCount.value(), _field_provisionsAllDevices.value(), _field_getTaskAllow.value())};
+        return doof::Success<std::shared_ptr<IOSProvisioningProfile>>{std::make_shared<IOSProvisioningProfile>(_field_profilePath, _field_applicationIdentifier, _field_certFingerprints.value(), _field_expirationEpochMs, _field_provisionedDeviceCount.value(), _field_provisionsAllDevices.value(), _field_getTaskAllow.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject IOSDeviceSigningOptions::toJsonObject() const {
@@ -115,17 +127,21 @@ doof::JsonObject IOSDeviceSigningOptions::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<IOSDeviceSigningOptions>, std::string> IOSDeviceSigningOptions::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_signIdentity = _object->find("signIdentity");
     if (_iterator_signIdentity == _object->end()) { return doof::Failure<std::string>{"Missing required field \"signIdentity\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_signIdentity->second) : doof::json_is_string(_iterator_signIdentity->second)))) { return doof::Failure<std::string>{"Field \"signIdentity\" expected string but got " + std::string(doof::json_type_name(_iterator_signIdentity->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_signIdentity->second) : doof::json_is_string(_iterator_signIdentity->second)))) { return doof::Failure<std::string>{"Field \"signIdentity\" expected string but got " + std::string(doof::json_type_name(_iterator_signIdentity->second))}; }
     auto _field_signIdentity = (_lenient ? doof::json_as_string_lenient(_iterator_signIdentity->second) : doof::json_as_string(_iterator_signIdentity->second));
     auto _iterator_provisioningProfilePath = _object->find("provisioningProfilePath");
     if (_iterator_provisioningProfilePath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"provisioningProfilePath\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_provisioningProfilePath->second) : doof::json_is_string(_iterator_provisioningProfilePath->second)))) { return doof::Failure<std::string>{"Field \"provisioningProfilePath\" expected string but got " + std::string(doof::json_type_name(_iterator_provisioningProfilePath->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_provisioningProfilePath->second) : doof::json_is_string(_iterator_provisioningProfilePath->second)))) { return doof::Failure<std::string>{"Field \"provisioningProfilePath\" expected string but got " + std::string(doof::json_type_name(_iterator_provisioningProfilePath->second))}; }
     auto _field_provisioningProfilePath = (_lenient ? doof::json_as_string_lenient(_iterator_provisioningProfilePath->second) : doof::json_as_string(_iterator_provisioningProfilePath->second));
-    return doof::Success<std::shared_ptr<IOSDeviceSigningOptions>>{std::make_shared<IOSDeviceSigningOptions>(_field_signIdentity, _field_provisioningProfilePath)};
+        return doof::Success<std::shared_ptr<IOSDeviceSigningOptions>>{std::make_shared<IOSDeviceSigningOptions>(_field_signIdentity, _field_provisioningProfilePath)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 
 doof::JsonObject IOSDeviceCommandResult::toJsonObject() const {
@@ -136,38 +152,42 @@ doof::JsonObject IOSDeviceCommandResult::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<IOSDeviceCommandResult>, std::string> IOSDeviceCommandResult::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_exitCode = _object->find("exitCode");
     if (_iterator_exitCode == _object->end()) { return doof::Failure<std::string>{"Missing required field \"exitCode\""}; }
-    if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
     auto _field_exitCode = (_lenient ? doof::json_as_int_lenient(_iterator_exitCode->second) : doof::json_as_int(_iterator_exitCode->second));
     std::optional<std::string> _field_output;
     if (auto _iterator_output = _object->find("output"); _iterator_output != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_output->second) : doof::json_is_string(_iterator_output->second)))) { return doof::Failure<std::string>{"Field \"output\" expected string but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_output->second) : doof::json_is_string(_iterator_output->second)))) { return doof::Failure<std::string>{"Field \"output\" expected string but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
         _field_output = (_lenient ? doof::json_as_string_lenient(_iterator_output->second) : doof::json_as_string(_iterator_output->second));
     } else {
         _field_output = std::string("");
     }
     std::optional<std::string> _field_error;
     if (auto _iterator_error = _object->find("error"); _iterator_error != _object->end()) {
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
         _field_error = (_lenient ? doof::json_as_string_lenient(_iterator_error->second) : doof::json_as_string(_iterator_error->second));
     } else {
         _field_error = std::string("");
     }
-    return doof::Success<std::shared_ptr<IOSDeviceCommandResult>>{std::make_shared<IOSDeviceCommandResult>(_field_exitCode, _field_output.value(), _field_error.value())};
+        return doof::Success<std::shared_ptr<IOSDeviceCommandResult>>{std::make_shared<IOSDeviceCommandResult>(_field_exitCode, _field_output.value(), _field_error.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 std::variant<std::monostate, doof::JsonValue> jsonObjectField(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
-    if (!(object->find(name) != object->end())) {
+    if (![&]() -> bool { auto _map_has_1 = object; return _map_has_1->find(name) != _map_has_1->end(); }()) {
         return std::monostate{};
     }
-    auto _binding_value_1 = doof::map_get(object, name, "", 0);
-    if (doof::is_failure(_binding_value_1)) {
-        const auto& value = _binding_value_1;
+    auto _binding_value_2 = doof::map_get(object, name, "", 0);
+    if (doof::is_failure(_binding_value_2)) {
+        const auto& value = _binding_value_2;
         return std::monostate{};
     }
-    const auto value = doof::success_value(_binding_value_1);
+    const auto value = doof::success_value(_binding_value_2);
     return value;
 }
 std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> jsonObjectValue(const std::variant<std::monostate, doof::JsonValue>& value) {
@@ -219,12 +239,12 @@ std::string jsonStringValue(const std::variant<std::monostate, doof::JsonValue>&
     doof::unreachable();
 }
 doof::Result<std::shared_ptr<std::vector<std::shared_ptr<IOSDevice>>>, std::string> parseConnectedIOSDevices(const std::string& rawJson) {
-    auto _binding_value_2 = ::doof_json::parse(rawJson);
-    if (doof::is_failure(_binding_value_2)) {
-        const auto error = doof::failure_error(_binding_value_2);
+    auto _binding_value_3 = ::doof_json::parse(rawJson);
+    if (doof::is_failure(_binding_value_3)) {
+        const auto error = doof::failure_error(_binding_value_3);
         return doof::Failure<std::string>{ error };
     }
-    const auto parsed = doof::success_value(_binding_value_2);
+    const auto parsed = doof::success_value(_binding_value_3);
     const auto root = jsonObjectValue(parsed);
     if (doof::is_null(root)) {
         return doof::Failure<std::string>{ std::string("Invalid devicectl device JSON: expected an object") };
@@ -235,8 +255,8 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<IOSDevice>>>, std::stri
     }
     const auto values = jsonArrayValue(jsonObjectField(doof::unwrap_optional(result), std::string("devices")));
     std::shared_ptr<std::vector<std::shared_ptr<IOSDevice>>> devices = std::make_shared<std::vector<std::shared_ptr<IOSDevice>>>(std::vector<std::shared_ptr<IOSDevice>>{});
-    const auto& _iterable_3 = values;
-    for (const auto& value : *_iterable_3) {
+    const auto& _iterable_4 = values;
+    for (const auto& value : *_iterable_4) {
         const auto device = jsonObjectValue(value);
         if (doof::is_null(device)) {
             continue;
@@ -292,8 +312,8 @@ bool isHexFingerprint(const std::string& value) {
 }
 std::shared_ptr<std::vector<std::shared_ptr<IOSCodesignIdentity>>> parseCodesignIdentities(const std::string& output) {
     std::shared_ptr<std::vector<std::shared_ptr<IOSCodesignIdentity>>> identities = std::make_shared<std::vector<std::shared_ptr<IOSCodesignIdentity>>>(std::vector<std::shared_ptr<IOSCodesignIdentity>>{});
-    const auto& _iterable_4 = doof::string_split(output, std::string("\n"));
-    for (const auto& line : *_iterable_4) {
+    const auto& _iterable_5 = doof::string_split(output, std::string("\n"));
+    for (const auto& line : *_iterable_5) {
         const auto closeParen = doof::string_indexOf(line, std::string(")"));
         if (closeParen < 0) {
             continue;
@@ -348,8 +368,8 @@ bool betterProvisioningProfile(const std::shared_ptr<IOSProvisioningProfile>& ca
 }
 doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> selectProvisioningProfile(const std::string& bundleId, const std::shared_ptr<std::vector<std::shared_ptr<IOSProvisioningProfile>>>& profiles, int64_t nowEpochMs) {
     std::shared_ptr<IOSProvisioningProfile> selected = nullptr;
-    const auto& _iterable_5 = profiles;
-    for (const auto& profile : *_iterable_5) {
+    const auto& _iterable_6 = profiles;
+    for (const auto& profile : *_iterable_6) {
         if (!profileMatchesBundleId(profile->applicationIdentifier, bundleId)) {
             continue;
         }
@@ -366,10 +386,10 @@ doof::Result<std::string, std::string> selectSigningIdentity(const std::shared_p
     if (static_cast<int32_t>((profile->certFingerprints)->size()) == 0) {
         return doof::Failure<std::string>{ ((std::string("Provisioning profile \"") + profile->profilePath) + std::string("\" does not include DeveloperCertificates. Pass --ios-sign-identity.")) };
     }
-    const auto& _iterable_6 = identities;
-    for (const auto& identity : *_iterable_6) {
-        const auto& _iterable_7 = profile->certFingerprints;
-        for (const auto& fingerprint : *_iterable_7) {
+    const auto& _iterable_7 = identities;
+    for (const auto& identity : *_iterable_7) {
+        const auto& _iterable_8 = profile->certFingerprints;
+        for (const auto& fingerprint : *_iterable_8) {
             if (identity->fingerprint == fingerprint) {
                 return doof::Success<std::string>{ identity->name };
             }
@@ -382,8 +402,8 @@ doof::Result<std::string, std::string> resolveIOSAdHocSigningIdentity(const std:
         return doof::Success<std::string>{ configuredIdentity };
     }
     std::shared_ptr<std::vector<std::shared_ptr<IOSCodesignIdentity>>> matching = std::make_shared<std::vector<std::shared_ptr<IOSCodesignIdentity>>>(std::vector<std::shared_ptr<IOSCodesignIdentity>>{});
-    const auto& _iterable_8 = identities;
-    for (const auto& identity : *_iterable_8) {
+    const auto& _iterable_9 = identities;
+    for (const auto& identity : *_iterable_9) {
         const auto distribution = (doof::string_startsWith(identity->name, std::string("Apple Distribution:")) || doof::string_startsWith(identity->name, std::string("iPhone Distribution:")));
         if (distribution && doof::array_contains(profile->certFingerprints, identity->fingerprint, "", 0)) {
             matching->push_back(identity);
@@ -424,8 +444,8 @@ doof::Result<void, std::string> validateIOSAdHocSigning(const std::shared_ptr<IO
         return doof::Failure<std::string>{ ((std::string("iOS Ad Hoc packaging requires an Apple Distribution signing identity, got \"") + identityName) + std::string("\"")) };
     }
     std::shared_ptr<IOSCodesignIdentity> selected = nullptr;
-    const auto& _iterable_9 = identities;
-    for (const auto& identity : *_iterable_9) {
+    const auto& _iterable_10 = identities;
+    for (const auto& identity : *_iterable_10) {
         if (identity->name == identityName) {
             (selected = identity);
             break;
@@ -461,20 +481,20 @@ void removeTree(const std::string& path) {
         return;
     }
     if (::doof_fs::isDirectory(path)) {
-        const auto& _iterable_10 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 314, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
-        for (const auto& entry : *_iterable_10) {
+        const auto& _iterable_11 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 314, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
+        for (const auto& entry : *_iterable_11) {
             removeTree(devicePath(path, entry->name));
         }
     }
     [&]() -> void { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 316, std::string("try! failed"));  }();
 }
 std::shared_ptr<IOSDeviceCommandResult> runDeviceCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments) {
-    auto _binding_value_11 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_IOS_DEVICE_COMMAND_OUTPUT_BYTES, nullptr));
-    if (doof::is_failure(_binding_value_11)) {
-        const auto error = doof::failure_error(_binding_value_11);
+    auto _binding_value_12 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_IOS_DEVICE_COMMAND_OUTPUT_BYTES, nullptr));
+    if (doof::is_failure(_binding_value_12)) {
+        const auto error = doof::failure_error(_binding_value_12);
         return std::make_shared<IOSDeviceCommandResult>(-1, std::string(""), error);
     }
-    const auto executed = doof::success_value(_binding_value_11);
+    const auto executed = doof::success_value(_binding_value_12);
     const auto output = doof::string_trim(::doof_blob::NativeBlobReader::constructor(executed->stdout_, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((executed->stdout_)->size()))));
     return std::make_shared<IOSDeviceCommandResult>(executed->exitCode, output, std::string(""));
 }
@@ -515,12 +535,12 @@ void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const
     }
 }
 doof::Result<std::string, std::string> certificateFingerprint(const std::string& certificateData) {
-    auto _binding_value_12 = ::doof_crypto::decode_base64(certificateData);
-    if (doof::is_failure(_binding_value_12)) {
-        const auto error = doof::failure_error(_binding_value_12);
+    auto _binding_value_13 = ::doof_crypto::decode_base64(certificateData);
+    if (doof::is_failure(_binding_value_13)) {
+        const auto error = doof::failure_error(_binding_value_13);
         return doof::Failure<std::string>{ error };
     }
-    const auto decoded = doof::success_value(_binding_value_12);
+    const auto decoded = doof::success_value(_binding_value_13);
     const auto fingerprint = doof::string_toUpperCase(::std_::crypto::index::sha1Hex(decoded));
     if (!isHexFingerprint(fingerprint)) {
         return doof::Failure<std::string>{ std::string("Could not parse provisioning profile certificate fingerprint") };
@@ -530,11 +550,11 @@ doof::Result<std::string, std::string> certificateFingerprint(const std::string&
 doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisioningProfile(const std::string& profilePath, const std::string& workDirectory) {
     ensureDirectory(workDirectory);
     const auto decodedPath = devicePath(workDirectory, std::string("profile.plist"));
-    auto _try_value_13 = decodeProvisioningProfile(profilePath, decodedPath);
-    if (doof::is_failure(_try_value_13)) return doof::Failure<std::string>{doof::failure_error(_try_value_13)};
-    auto _try_value_14 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), std::string("Entitlements.application-identifier"), std::string("raw"), std::string("-o"), std::string("-"), decodedPath}), std::string("reading provisioning profile application identifier"));
-    if (doof::is_failure(_try_value_14)) return doof::Failure<std::string>{doof::failure_error(_try_value_14)};
-    const auto applicationIdentifier = doof::success_value(_try_value_14);
+    auto _try_value_14 = decodeProvisioningProfile(profilePath, decodedPath);
+    if (doof::is_failure(_try_value_14)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_14))};
+    auto _try_value_15 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), std::string("Entitlements.application-identifier"), std::string("raw"), std::string("-o"), std::string("-"), decodedPath}), std::string("reading provisioning profile application identifier"));
+    if (doof::is_failure(_try_value_15)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_15))};
+    const auto applicationIdentifier = doof::success_value(_try_value_15);
     if (applicationIdentifier == std::string("")) {
         return doof::Failure<std::string>{ (std::string("Provisioning profile missing Entitlements.application-identifier: ") + profilePath) };
     }
@@ -619,21 +639,21 @@ doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisio
     }
     }
     for (int32_t index = 0; index < certificateCount; ++index) {
-        auto _binding_value_15 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), (std::string("DeveloperCertificates.") + doof::to_string(index)), std::string("raw"), std::string("-o"), std::string("-"), decodedPath}), std::string("reading provisioning profile certificate"));
-        if (doof::is_failure(_binding_value_15)) {
-            const auto& encoded = _binding_value_15;
+        auto _binding_value_16 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), (std::string("DeveloperCertificates.") + doof::to_string(index)), std::string("raw"), std::string("-o"), std::string("-"), decodedPath}), std::string("reading provisioning profile certificate"));
+        if (doof::is_failure(_binding_value_16)) {
+            const auto& encoded = _binding_value_16;
             continue;
         }
-        const auto encoded = doof::success_value(_binding_value_15);
+        const auto encoded = doof::success_value(_binding_value_16);
         if (encoded == std::string("")) {
             continue;
         }
-        auto _binding_value_16 = certificateFingerprint(encoded);
-        if (doof::is_failure(_binding_value_16)) {
-            const auto& fingerprint = _binding_value_16;
+        auto _binding_value_17 = certificateFingerprint(encoded);
+        if (doof::is_failure(_binding_value_17)) {
+            const auto& fingerprint = _binding_value_17;
             continue;
         }
-        const auto fingerprint = doof::success_value(_binding_value_16);
+        const auto fingerprint = doof::success_value(_binding_value_17);
         appendUnique(certFingerprints, fingerprint);
     }
     return doof::Success<std::shared_ptr<IOSProvisioningProfile>>{ std::make_shared<IOSProvisioningProfile>(profilePath, applicationIdentifier, certFingerprints, expirationEpochMs, provisionedDeviceCount, provisionsAllDevices, getTaskAllow) };
@@ -641,14 +661,14 @@ doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisio
 std::shared_ptr<std::vector<std::string>> collectProvisioningProfilePaths(const std::shared_ptr<std::vector<std::string>>& profileDirectories) {
     const auto directories = ((static_cast<int32_t>((profileDirectories)->size()) > 0) ? profileDirectories : std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("~/Library/Developer/Xcode/UserData/Provisioning Profiles"), std::string("~/Library/MobileDevice/Provisioning Profiles")}));
     std::shared_ptr<std::vector<std::string>> paths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_17 = directories;
-    for (const auto& directory : *_iterable_17) {
+    const auto& _iterable_18 = directories;
+    for (const auto& directory : *_iterable_18) {
         const auto expanded = resolveUserPath(directory);
         if (!::doof_fs::isDirectory(expanded)) {
             continue;
         }
-        const auto& _iterable_18 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(expanded); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 474, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
-        for (const auto& entry : *_iterable_18) {
+        const auto& _iterable_19 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(expanded); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 474, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
+        for (const auto& entry : *_iterable_19) {
             if (doof::string_endsWith(entry->name, std::string(".mobileprovision"))) {
                 appendUnique(paths, devicePath(expanded, entry->name));
             }
@@ -658,14 +678,14 @@ std::shared_ptr<std::vector<std::string>> collectProvisioningProfilePaths(const 
 }
 doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> autoResolveProvisioningProfile(const std::string& bundleId, const std::string& workDirectory, const std::shared_ptr<std::vector<std::string>>& profileDirectories) {
     std::shared_ptr<std::vector<std::shared_ptr<IOSProvisioningProfile>>> profiles = std::make_shared<std::vector<std::shared_ptr<IOSProvisioningProfile>>>(std::vector<std::shared_ptr<IOSProvisioningProfile>>{});
-    const auto& _iterable_19 = collectProvisioningProfilePaths(profileDirectories);
-    for (const auto& profilePath : *_iterable_19) {
-        auto _binding_value_20 = parseProvisioningProfile(profilePath, workDirectory);
-        if (doof::is_failure(_binding_value_20)) {
-            const auto& profile = _binding_value_20;
+    const auto& _iterable_20 = collectProvisioningProfilePaths(profileDirectories);
+    for (const auto& profilePath : *_iterable_20) {
+        auto _binding_value_21 = parseProvisioningProfile(profilePath, workDirectory);
+        if (doof::is_failure(_binding_value_21)) {
+            const auto& profile = _binding_value_21;
             continue;
         }
-        const auto profile = doof::success_value(_binding_value_20);
+        const auto profile = doof::success_value(_binding_value_21);
         profiles->push_back(profile);
     }
     return selectProvisioningProfile(bundleId, profiles, ::std_::time::temporal::Instant::now()->toEpochMillis());
@@ -679,21 +699,21 @@ doof::Result<std::shared_ptr<IOSDeviceSigningOptions>, std::string> resolveIOSDe
         return doof::Success<std::shared_ptr<IOSDeviceSigningOptions>>{ std::make_shared<IOSDeviceSigningOptions>(signIdentityOverride, profilePath) };
     }
     const auto profile = ((profilePath == std::string("")) ? autoResolveProvisioningProfile(bundleId, workDirectory, profileDirectories) : parseProvisioningProfile(profilePath, workDirectory));
-    auto _binding_value_21 = profile;
-    if (doof::is_failure(_binding_value_21)) {
-        const auto error = doof::failure_error(_binding_value_21);
+    auto _binding_value_22 = profile;
+    if (doof::is_failure(_binding_value_22)) {
+        const auto error = doof::failure_error(_binding_value_22);
         return doof::Failure<std::string>{ error };
     }
-    const auto selectedProfile = doof::success_value(_binding_value_21);
+    const auto selectedProfile = doof::success_value(_binding_value_22);
     if (signIdentityOverride != std::string("")) {
         return doof::Success<std::shared_ptr<IOSDeviceSigningOptions>>{ std::make_shared<IOSDeviceSigningOptions>(signIdentityOverride, selectedProfile->profilePath) };
     }
-    auto _try_value_22 = deviceCommandText(std::string("security"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("find-identity"), std::string("-v"), std::string("-p"), std::string("codesigning")}), std::string("listing code-signing identities"));
-    if (doof::is_failure(_try_value_22)) return doof::Failure<std::string>{doof::failure_error(_try_value_22)};
-    const auto identitiesOutput = doof::success_value(_try_value_22);
-    auto _try_value_23 = selectSigningIdentity(selectedProfile, parseCodesignIdentities(identitiesOutput));
-    if (doof::is_failure(_try_value_23)) return doof::Failure<std::string>{doof::failure_error(_try_value_23)};
-    const auto identity = doof::success_value(_try_value_23);
+    auto _try_value_23 = deviceCommandText(std::string("security"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("find-identity"), std::string("-v"), std::string("-p"), std::string("codesigning")}), std::string("listing code-signing identities"));
+    if (doof::is_failure(_try_value_23)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_23))};
+    const auto identitiesOutput = doof::success_value(_try_value_23);
+    auto _try_value_24 = selectSigningIdentity(selectedProfile, parseCodesignIdentities(identitiesOutput));
+    if (doof::is_failure(_try_value_24)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_24))};
+    const auto identity = doof::success_value(_try_value_24);
     return doof::Success<std::shared_ptr<IOSDeviceSigningOptions>>{ std::make_shared<IOSDeviceSigningOptions>(identity, selectedProfile->profilePath) };
 }
 doof::Result<std::string, std::string> resolveIOSDeviceIdentifier(const std::string& overrideIdentifier, const std::string& workDirectory) {
@@ -708,24 +728,24 @@ doof::Result<std::string, std::string> resolveIOSDeviceIdentifier(const std::str
     if (::doof_fs::exists(devicesPath)) {
         [&]() -> void { auto _try_value = ::doof_fs::remove(devicesPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 536, std::string("try! failed"));  }();
     }
-    auto _binding_value_24 = deviceCommandText(std::string("xcrun"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("devicectl"), std::string("list"), std::string("devices"), std::string("--json-output"), devicesPath}), std::string("listing connected iOS devices"));
-    if (doof::is_failure(_binding_value_24)) {
-        const auto error = doof::failure_error(_binding_value_24);
+    auto _binding_value_25 = deviceCommandText(std::string("xcrun"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("devicectl"), std::string("list"), std::string("devices"), std::string("--json-output"), devicesPath}), std::string("listing connected iOS devices"));
+    if (doof::is_failure(_binding_value_25)) {
+        const auto error = doof::failure_error(_binding_value_25);
         return doof::Failure<std::string>{ error };
     }
-    const auto result = doof::success_value(_binding_value_24);
-    auto _binding_value_25 = ::doof_fs::readText(devicesPath);
-    if (doof::is_failure(_binding_value_25)) {
-        const auto& rawJson = _binding_value_25;
+    const auto result = doof::success_value(_binding_value_25);
+    auto _binding_value_26 = ::doof_fs::readText(devicesPath);
+    if (doof::is_failure(_binding_value_26)) {
+        const auto& rawJson = _binding_value_26;
         return doof::Failure<std::string>{ std::string("Could not read devicectl device output") };
     }
-    const auto rawJson = doof::success_value(_binding_value_25);
-    auto _binding_value_26 = parseConnectedIOSDevices(rawJson);
-    if (doof::is_failure(_binding_value_26)) {
-        const auto error = doof::failure_error(_binding_value_26);
+    const auto rawJson = doof::success_value(_binding_value_26);
+    auto _binding_value_27 = parseConnectedIOSDevices(rawJson);
+    if (doof::is_failure(_binding_value_27)) {
+        const auto error = doof::failure_error(_binding_value_27);
         return doof::Failure<std::string>{ error };
     }
-    const auto devices = doof::success_value(_binding_value_26);
+    const auto devices = doof::success_value(_binding_value_27);
     if (::doof_fs::exists(devicesPath)) {
         [&]() -> void { auto _try_value = ::doof_fs::remove(devicesPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 543, std::string("try! failed"));  }();
     }
@@ -740,8 +760,8 @@ void collectNestedIOSCode(const std::string& path, const std::shared_ptr<std::ve
             results->push_back(path);
             return;
         }
-        const auto& _iterable_27 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 551, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
-        for (const auto& entry : *_iterable_27) {
+        const auto& _iterable_28 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 551, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
+        for (const auto& entry : *_iterable_28) {
             collectNestedIOSCode(devicePath(path, entry->name), results);
         }
         return;
@@ -761,31 +781,31 @@ doof::Result<void, std::string> signIOSDeviceApp(const std::string& appPath, con
     ensureDirectory(workDirectory);
     const auto decodedPath = devicePath(workDirectory, std::string("profile.plist"));
     const auto entitlementsPath = devicePath(workDirectory, std::string("entitlements.plist"));
-    auto _try_value_28 = decodeProvisioningProfile(options->provisioningProfilePath, decodedPath);
-    if (doof::is_failure(_try_value_28)) return doof::Failure<std::string>{doof::failure_error(_try_value_28)};
-    auto _try_value_29 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), std::string("Entitlements.application-identifier"), std::string("raw"), std::string("-o"), std::string("-"), decodedPath}), std::string("reading provisioning profile application identifier"));
-    if (doof::is_failure(_try_value_29)) return doof::Failure<std::string>{doof::failure_error(_try_value_29)};
-    const auto applicationIdentifier = doof::success_value(_try_value_29);
+    auto _try_value_29 = decodeProvisioningProfile(options->provisioningProfilePath, decodedPath);
+    if (doof::is_failure(_try_value_29)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_29))};
+    auto _try_value_30 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), std::string("Entitlements.application-identifier"), std::string("raw"), std::string("-o"), std::string("-"), decodedPath}), std::string("reading provisioning profile application identifier"));
+    if (doof::is_failure(_try_value_30)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_30))};
+    const auto applicationIdentifier = doof::success_value(_try_value_30);
     if (!profileMatchesBundleId(applicationIdentifier, bundleId)) {
         removeTree(workDirectory);
         return doof::Failure<std::string>{ ((((std::string("Provisioning profile application-identifier \"") + applicationIdentifier) + std::string("\" does not match bundle id \"")) + bundleId) + std::string("\"")) };
     }
-    auto _try_value_30 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), std::string("Entitlements"), std::string("xml1"), std::string("-o"), entitlementsPath, decodedPath}), std::string("extracting iOS signing entitlements"));
-    if (doof::is_failure(_try_value_30)) return doof::Failure<std::string>{doof::failure_error(_try_value_30)};
-    const auto ignored = doof::success_value(_try_value_30);
+    auto _try_value_31 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), std::string("Entitlements"), std::string("xml1"), std::string("-o"), entitlementsPath, decodedPath}), std::string("extracting iOS signing entitlements"));
+    if (doof::is_failure(_try_value_31)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_31))};
+    const auto ignored = doof::success_value(_try_value_31);
     [&]() -> void { auto _try_value = ::doof_fs::writeBlob(devicePath(appPath, std::string("embedded.mobileprovision")), [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(options->provisioningProfilePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 588, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 588, std::string("try! failed"));  }();
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     collectNestedIOSCode(devicePath(appPath, std::string("Frameworks")), nested);
     collectNestedIOSCode(devicePath(appPath, std::string("PlugIns")), nested);
-    const auto& _iterable_31 = nested;
-    for (const auto& path : *_iterable_31) {
-        auto _try_value_32 = deviceCommandText(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(path, options->signIdentity, std::string("")), std::string("signing nested iOS code"));
-        if (doof::is_failure(_try_value_32)) return doof::Failure<std::string>{doof::failure_error(_try_value_32)};
-        const auto nestedIgnored = doof::success_value(_try_value_32);
+    const auto& _iterable_32 = nested;
+    for (const auto& path : *_iterable_32) {
+        auto _try_value_33 = deviceCommandText(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(path, options->signIdentity, std::string("")), std::string("signing nested iOS code"));
+        if (doof::is_failure(_try_value_33)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_33))};
+        const auto nestedIgnored = doof::success_value(_try_value_33);
     }
-    auto _try_value_33 = deviceCommandText(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(appPath, options->signIdentity, entitlementsPath), std::string("signing the iOS app"));
-    if (doof::is_failure(_try_value_33)) return doof::Failure<std::string>{doof::failure_error(_try_value_33)};
-    const auto appIgnored = doof::success_value(_try_value_33);
+    auto _try_value_34 = deviceCommandText(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(appPath, options->signIdentity, entitlementsPath), std::string("signing the iOS app"));
+    if (doof::is_failure(_try_value_34)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_34))};
+    const auto appIgnored = doof::success_value(_try_value_34);
     removeTree(workDirectory);
     return doof::Success<void>{};
 }

@@ -144,6 +144,15 @@ export function testMultipleInterpolations(): none {
   Assert.equal(tokens[5].kind, TokenType.EndOfFile)
 }
 
+export function testDiagnosesInterpolationThatEndsAtEof(): none {
+  lexer := Lexer { source: "\"value: \${42" }
+  lexer.tokenize()
+  Assert.equal(lexer.diagnostics.length, 1)
+  Assert.equal(lexer.diagnostics[0].message, "Unterminated string interpolation")
+  Assert.equal(lexer.diagnostics[0].line, 1)
+  Assert.equal(lexer.diagnostics[0].column, 9)
+}
+
 export function testDiagnostics(): none {
   lexer := Lexer { source: "/* never ends" }
   lexer.tokenize()

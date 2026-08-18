@@ -11,24 +11,28 @@ doof::JsonObject FileInfo::toJsonObject() const {
     return _json;
 }
 doof::Result<std::shared_ptr<FileInfo>, std::string> FileInfo::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    const auto* _object = doof::json_as_object(_json);
-    if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
     auto _iterator_name = _object->find("name");
     if (_iterator_name == _object->end()) { return doof::Failure<std::string>{"Missing required field \"name\""}; }
-    if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
     auto _field_name = (_lenient ? doof::json_as_string_lenient(_iterator_name->second) : doof::json_as_string(_iterator_name->second));
     auto _iterator_kind = _object->find("kind");
     if (_iterator_kind == _object->end()) { return doof::Failure<std::string>{"Missing required field \"kind\""}; }
-    if (!(doof::json_is_string(_iterator_kind->second))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
-    auto _field_kind = EntryKind_fromName(doof::json_as_string(_iterator_kind->second)).value();
+        if (!(doof::json_is_string(_iterator_kind->second))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
+    auto _field_kind = doof::json_decode_optional(EntryKind_fromName(doof::json_as_string(_iterator_kind->second)), std::string("Unknown enum value: ") + doof::json_as_string(_iterator_kind->second));
     auto _iterator_size = _object->find("size");
     if (_iterator_size == _object->end()) { return doof::Failure<std::string>{"Missing required field \"size\""}; }
-    if (!((_lenient ? doof::json_is_lenient_number(_iterator_size->second) : doof::json_is_number(_iterator_size->second)))) { return doof::Failure<std::string>{"Field \"size\" expected number but got " + std::string(doof::json_type_name(_iterator_size->second))}; }
+        if (!((_lenient ? doof::json_is_lenient_number(_iterator_size->second) : doof::json_is_number(_iterator_size->second)))) { return doof::Failure<std::string>{"Field \"size\" expected number but got " + std::string(doof::json_type_name(_iterator_size->second))}; }
     auto _field_size = (_lenient ? doof::json_as_long_lenient(_iterator_size->second) : doof::json_as_long(_iterator_size->second));
     auto _iterator_modifiedAt = _object->find("modifiedAt");
     if (_iterator_modifiedAt == _object->end()) { return doof::Failure<std::string>{"Missing required field \"modifiedAt\""}; }
-    if (!(doof::json_is_object(_iterator_modifiedAt->second))) { return doof::Failure<std::string>{"Field \"modifiedAt\" expected object but got " + std::string(doof::json_type_name(_iterator_modifiedAt->second))}; }
-    auto _field_modifiedAt = doof::success_value(::std_::time::temporal::Instant::fromJsonValue(_iterator_modifiedAt->second, _lenient));
-    return doof::Success<std::shared_ptr<FileInfo>>{std::make_shared<FileInfo>(_field_name, _field_kind, _field_size, _field_modifiedAt)};
+        if (!(doof::json_is_object(_iterator_modifiedAt->second))) { return doof::Failure<std::string>{"Field \"modifiedAt\" expected object but got " + std::string(doof::json_type_name(_iterator_modifiedAt->second))}; }
+    auto _field_modifiedAt = doof::json_decode_value(::std_::time::temporal::Instant::fromJsonValue(_iterator_modifiedAt->second, _lenient));
+        return doof::Success<std::shared_ptr<FileInfo>>{std::make_shared<FileInfo>(_field_name, _field_kind, _field_size, _field_modifiedAt)};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
 }
 }
