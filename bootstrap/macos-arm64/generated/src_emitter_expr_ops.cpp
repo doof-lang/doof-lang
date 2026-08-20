@@ -348,7 +348,7 @@ std::string cppIdentifier(const std::string& name) {
     return name;
 }
 std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    if ((expression->operator_ == std::string("try!")) || (expression->operator_ == std::string("try?"))) {
+    if ((expression->operator_ == std::string("try!")) || (expression->operator_ == std::string("try\?"))) {
         const auto operand = ::app_src_emitter_expr_::emitExpression(expression->operand, context, std::monostate{});
         const auto operandType = ::app_src_emitter_expr_utils_::requireExpressionType(expression->operand, (expression->operator_ + std::string(" operand")));
         {
@@ -378,7 +378,7 @@ std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& ex
                 else {
                 }
                 }
-                if (expression->operator_ == std::string("try?")) {
+                if (expression->operator_ == std::string("try\?")) {
                     return ((((std::string("[&]() -> std::optional<") + valueType) + std::string("> { ")) + body) + std::string("return std::move(doof::success_value(_try_value)); }()"));
                 }
                 return ((((std::string("[&]() -> ") + valueType) + std::string(" { ")) + body) + std::string("return std::move(doof::success_value(_try_value)); }()"));
@@ -494,7 +494,7 @@ std::string emitBinary(const std::shared_ptr<::app_src_ast_::BinaryExpression>& 
     if (expression->operator_ == std::string("..<")) {
         return ((((std::string("doof::range_exclusive(") + ::app_src_emitter_expr_::emitExpression(expression->left, context, std::monostate{})) + std::string(", ")) + ::app_src_emitter_expr_::emitExpression(expression->right, context, std::monostate{})) + std::string(")"));
     }
-    if (expression->operator_ == std::string("??")) {
+    if (expression->operator_ == std::string("\?\?")) {
         const auto left = ::app_src_emitter_expr_::emitExpression(expression->left, context, std::monostate{});
         const auto leftType = ::app_src_emitter_expr_utils_::requireExpressionType(expression->left, std::string("coalescing source"));
         const auto resultType = ::app_src_emitter_expr_utils_::requireExpressionType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(expression), std::string("coalescing expression"));

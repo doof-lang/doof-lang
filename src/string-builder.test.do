@@ -19,3 +19,19 @@ export function testCanBeReusedAfterDrainTransfersTheResult(): none {
   builder.append("second")
   Assert.equal(builder.drainToString(), "second")
 }
+
+export function testSupportsLinesLengthReserveAndClear(): none {
+  builder := StringBuilder()
+  builder.reserve(64)
+  builder.appendLine("alpha")
+  builder.appendLine()
+  builder.append("omega")
+  Assert.equal(builder.length(), 12)
+  Assert.equal(builder.drainToString(), "alpha\n\nomega")
+  Assert.equal(builder.length(), 0)
+
+  builder.append("discarded")
+  builder.clear()
+  Assert.equal(builder.length(), 0)
+  Assert.equal(builder.drainToString(), "")
+}

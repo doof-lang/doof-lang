@@ -285,5 +285,5 @@ function joinStrings(values: string[]): string {
 }
 
 function escapeCpp(value: string): string {
-  return value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"").replaceAll("\n", "\\n")
+  return value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"").replaceAll("?", "\\?").replaceAll("\n", "\\n")
 }

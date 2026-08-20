@@ -91,7 +91,7 @@ export function moduleNativeHeaderPath(modulePath: string, headerPath: string): 
   while relativeModulePath.startsWith("/") {
     relativeModulePath = relativeModulePath.substring(1, relativeModulePath.length)
   }
-  components := relativeModulePath.split("/")
+  components := relativeModulePath.split("/").cloneMutable()
   if components.length > 0 { ignoredModuleName := try! components.pop() }
   for component of headerPath.replaceAll("\\", "/").split("/") {
     if component == "" || component == "." { continue }

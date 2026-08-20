@@ -502,13 +502,13 @@ std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_
 std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> parseTryStatement(const std::shared_ptr<::app_src_parser_::Parser>& parser) {
     auto start = parser->location();
     parser->expect(::app_src_lexer_::TokenType::Try, std::string(""));
-    if (parser->check(::app_src_lexer_::TokenType::Bang) || (parser->check(::app_src_lexer_::TokenType::Identifier) && (parser->text(parser->current()) == std::string("?")))) {
+    if (parser->check(::app_src_lexer_::TokenType::Bang) || (parser->check(::app_src_lexer_::TokenType::Identifier) && (parser->text(parser->current()) == std::string("\?")))) {
         auto operator_ = std::string("try!");
         if (parser->match(::app_src_lexer_::TokenType::Bang)) {
             (operator_ = std::string("try!"));
         } else {
             parser->advance();
-            (operator_ = std::string("try?"));
+            (operator_ = std::string("try\?"));
         }
         const auto operand = parser->parseUnary();
         parser->consumeSemicolon();

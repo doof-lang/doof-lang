@@ -39,7 +39,7 @@ export class Parser {
   let errorColumn: int = 0
   let errorOffset: int = 0
 
-  function parse(): Program {
+  parse(): Program {
     errorMessage = ""
     errorLine = 0
     errorColumn = 0

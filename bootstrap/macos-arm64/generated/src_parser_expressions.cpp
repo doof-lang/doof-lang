@@ -134,7 +134,7 @@ std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_
         const auto value = static_cast<int32_t>(-parseLongValue(parser, parser->text(parser->advance())));
         return doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(std::make_shared<::app_src_ast_::IntLiteral>(std::string("int-literal"), value, std::monostate{}, parser->span(start)));
     }
-    if (parser->check(::app_src_lexer_::TokenType::Identifier) && ((parser->text(parser->current()) == std::string("try!")) || (parser->text(parser->current()) == std::string("try?")))) {
+    if (parser->check(::app_src_lexer_::TokenType::Identifier) && ((parser->text(parser->current()) == std::string("try!")) || (parser->text(parser->current()) == std::string("try\?")))) {
         auto start = parser->location();
         const auto operator_ = parser->text(parser->advance());
         const auto operand = parseUnary(parser);
@@ -146,9 +146,9 @@ std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_
         auto operator_ = std::string("try");
         if (parser->match(::app_src_lexer_::TokenType::Bang)) {
             (operator_ = std::string("try!"));
-        } else if (parser->check(::app_src_lexer_::TokenType::Identifier) && (parser->text(parser->current()) == std::string("?"))) {
+        } else if (parser->check(::app_src_lexer_::TokenType::Identifier) && (parser->text(parser->current()) == std::string("\?"))) {
             parser->advance();
-            (operator_ = std::string("try?"));
+            (operator_ = std::string("try\?"));
         }
         const auto operand = parseUnary(parser);
         return doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(std::make_shared<::app_src_ast_::UnaryExpression>(std::string("unary-expression"), operator_, operand, true, std::monostate{}, ::app_src_ast_::SourceSpan{start, std::visit([](auto&& _obj) { return _obj->span; }, operand).end}));
@@ -290,12 +290,9 @@ std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_
         return parseStringLiteral(parser);
     }
     if (parser->check(::app_src_lexer_::TokenType::CharLiteral)) {
-        const auto value = ::app_src_lexer_::tokenValue(parser->advance(), parser->source);
-        auto charValue = U'\0';
-        if (static_cast<int32_t>(value.size()) > 0) {
-            (charValue = doof::string_at(value, 0, "src/parser-expressions", 277));
-        }
-        return doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(std::make_shared<::app_src_ast_::CharLiteral>(std::string("char-literal"), charValue, std::monostate{}, parser->span(start)));
+        auto token = parser->advance();
+        const auto value = ::app_src_lexer_::charTokenValue(token, parser->source);
+        return doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(std::make_shared<::app_src_ast_::CharLiteral>(std::string("char-literal"), value, std::monostate{}, parser->span(start)));
     }
     if (parser->match(::app_src_lexer_::TokenType::True)) {
         return doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(std::make_shared<::app_src_ast_::BoolLiteral>(std::string("bool-literal"), true, std::monostate{}, parser->span(start)));
@@ -499,7 +496,7 @@ std::string normalizeTagText(const std::string& raw) {
     const auto lines = doof::string_split(doof::string_replaceAll(doof::string_replaceAll(raw, std::string("\r\n"), std::string("\n")), std::string("\r"), std::string("\n")), std::string("\n"));
     auto result = std::string("");
     for (int32_t i = 0; i < static_cast<int32_t>((lines)->size()); ++i) {
-        auto line = doof::array_at(lines, i, "src/parser-expressions", 447);
+        auto line = doof::array_at(lines, i, "src/parser-expressions", 446);
         if (i > 0) {
             (line = doof::string_trimStart(line));
         }
@@ -772,16 +769,16 @@ bool looksLikeGenericTypeArguments(const std::shared_ptr<::app_src_parser_::Pars
 int32_t parseIntValue(const std::shared_ptr<::app_src_parser_::Parser>& parser, const std::string& raw) {
     auto base = 10;
     auto index = 0;
-    if (((static_cast<int32_t>(raw.size()) >= 2) && (doof::string_at(raw, 0, "src/parser-expressions", 697) == U'\u0030')) && ((doof::string_at(raw, 1, "src/parser-expressions", 697) == U'\u0078') || (doof::string_at(raw, 1, "src/parser-expressions", 697) == U'\u0058'))) {
+    if (((static_cast<int32_t>(raw.size()) >= 2) && (doof::string_at(raw, 0, "src/parser-expressions", 696) == U'\u0030')) && ((doof::string_at(raw, 1, "src/parser-expressions", 696) == U'\u0078') || (doof::string_at(raw, 1, "src/parser-expressions", 696) == U'\u0058'))) {
         (base = 16);
         (index = 2);
-    } else if (((static_cast<int32_t>(raw.size()) >= 2) && (doof::string_at(raw, 0, "src/parser-expressions", 700) == U'\u0030')) && ((doof::string_at(raw, 1, "src/parser-expressions", 700) == U'\u0062') || (doof::string_at(raw, 1, "src/parser-expressions", 700) == U'\u0042'))) {
+    } else if (((static_cast<int32_t>(raw.size()) >= 2) && (doof::string_at(raw, 0, "src/parser-expressions", 699) == U'\u0030')) && ((doof::string_at(raw, 1, "src/parser-expressions", 699) == U'\u0062') || (doof::string_at(raw, 1, "src/parser-expressions", 699) == U'\u0042'))) {
         (base = 2);
         (index = 2);
     }
     auto result = 0;
     while (index < static_cast<int32_t>(raw.size())) {
-        const auto ch = doof::string_at(raw, index, "src/parser-expressions", 706);
+        const auto ch = doof::string_at(raw, index, "src/parser-expressions", 705);
         if (ch == U'\u005F') {
             (index = (index + 1));
             continue;
@@ -796,16 +793,16 @@ int64_t parseLongValue(const std::shared_ptr<::app_src_parser_::Parser>& parser,
     const auto clean = doof::string_replaceAll(doof::string_replaceAll(raw, std::string("L"), std::string("")), std::string("l"), std::string(""));
     int64_t base = 10LL;
     auto index = 0;
-    if (((static_cast<int32_t>(clean.size()) >= 2) && (doof::string_at(clean, 0, "src/parser-expressions", 719) == U'\u0030')) && ((doof::string_at(clean, 1, "src/parser-expressions", 719) == U'\u0078') || (doof::string_at(clean, 1, "src/parser-expressions", 719) == U'\u0058'))) {
+    if (((static_cast<int32_t>(clean.size()) >= 2) && (doof::string_at(clean, 0, "src/parser-expressions", 718) == U'\u0030')) && ((doof::string_at(clean, 1, "src/parser-expressions", 718) == U'\u0078') || (doof::string_at(clean, 1, "src/parser-expressions", 718) == U'\u0058'))) {
         (base = 16LL);
         (index = 2);
-    } else if (((static_cast<int32_t>(clean.size()) >= 2) && (doof::string_at(clean, 0, "src/parser-expressions", 722) == U'\u0030')) && ((doof::string_at(clean, 1, "src/parser-expressions", 722) == U'\u0062') || (doof::string_at(clean, 1, "src/parser-expressions", 722) == U'\u0042'))) {
+    } else if (((static_cast<int32_t>(clean.size()) >= 2) && (doof::string_at(clean, 0, "src/parser-expressions", 721) == U'\u0030')) && ((doof::string_at(clean, 1, "src/parser-expressions", 721) == U'\u0062') || (doof::string_at(clean, 1, "src/parser-expressions", 721) == U'\u0042'))) {
         (base = 2LL);
         (index = 2);
     }
     int64_t result = 0LL;
     while (index < static_cast<int32_t>(clean.size())) {
-        const auto ch = doof::string_at(clean, index, "src/parser-expressions", 728);
+        const auto ch = doof::string_at(clean, index, "src/parser-expressions", 727);
         if (ch == U'\u005F') {
             (index = (index + 1));
             continue;
@@ -866,7 +863,7 @@ int32_t digitValue(char32_t ch) {
 double parseDoubleValue(const std::shared_ptr<::app_src_parser_::Parser>& parser, const std::string& raw) {
     auto dot = -1;
     for (int32_t i = 0; i < static_cast<int32_t>(raw.size()); ++i) {
-        if (doof::string_at(raw, i, "src/parser-expressions", 757) == U'\u002E') {
+        if (doof::string_at(raw, i, "src/parser-expressions", 756) == U'\u002E') {
             (dot = i);
             break;
         }
@@ -879,7 +876,7 @@ double parseDoubleValue(const std::shared_ptr<::app_src_parser_::Parser>& parser
     auto fraction = 0.0;
     auto divisor = 1.0;
     for (int32_t i = 0; i < static_cast<int32_t>(fractionText.size()); ++i) {
-        (fraction = ((fraction * 10.0) + static_cast<double>(digitValue(doof::string_at(fractionText, i, "src/parser-expressions", 766)))));
+        (fraction = ((fraction * 10.0) + static_cast<double>(digitValue(doof::string_at(fractionText, i, "src/parser-expressions", 765)))));
         (divisor = (divisor * 10.0));
     }
     return (static_cast<double>(whole) + (fraction / divisor));
@@ -891,7 +888,7 @@ bool startsWithUppercase(const std::string& name) {
     if (static_cast<int32_t>(name.size()) == 0) {
         return false;
     }
-    return ((doof::string_at(name, 0, "src/parser-expressions", 782) >= U'\u0041') && (doof::string_at(name, 0, "src/parser-expressions", 782) <= U'\u005A'));
+    return ((doof::string_at(name, 0, "src/parser-expressions", 781) >= U'\u0041') && (doof::string_at(name, 0, "src/parser-expressions", 781) <= U'\u005A'));
 }
 std::string operatorText(const std::shared_ptr<::app_src_parser_::Parser>& parser, ::app_src_lexer_::Token token) {
     return parser->text(token);

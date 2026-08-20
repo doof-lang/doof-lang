@@ -1,5 +1,6 @@
 import { Assert } from "std/assert"
-import { Lexer, TokenType, tokenValue } from "./lexer"
+import { Lexer, TokenType, charTokenValue, tokenValue } from "./lexer"
+import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
 
 function types(source: string): TokenType[] {
   return Lexer { source }.tokenize().map(=> it.kind)
@@ -73,6 +74,18 @@ export function testPositionsAndValues(): none {
   Assert.equal(tokens[1].column, 3)
   Assert.equal(tokenValue(tokens[3], source), "30000")
   Assert.equal(tokens[3].offset, 10)
+}
+
+export function testUnicodeCharacterLiteralsAreSingleTokens(): none {
+  accent := codePointToUtf8(233)
+  face := codePointToUtf8(128578)
+  source := "'" + accent + "' '" + face + "'"
+  tokens := Lexer { source }.tokenize()
+  assertTypes(tokens.map(=> it.kind), [TokenType.CharLiteral, TokenType.CharLiteral, TokenType.EndOfFile])
+  Assert.equal(tokenValue(tokens[0], source), accent)
+  Assert.equal(tokenValue(tokens[1], source), face)
+  Assert.equal(int(charTokenValue(tokens[0], source)), 233)
+  Assert.equal(int(charTokenValue(tokens[1], source)), 128578)
 }
 
 export function testShebangIsIgnoredAtSourceStart(): none {

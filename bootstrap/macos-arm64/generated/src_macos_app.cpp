@@ -224,7 +224,7 @@ std::string renderMacOSInfoPlist(const std::shared_ptr<MacOSAppConfig>& config) 
             (body = ((((body + std::string("\t<key>")) + escapePlistText(key)) + std::string("</key>\n")) + renderPlistValue(value, 1)));
         }
     }
-    return ((std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n") + body) + std::string("</dict>\n</plist>\n"));
+    return ((std::string("<\?xml version=\"1.0\" encoding=\"UTF-8\"\?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n") + body) + std::string("</dict>\n</plist>\n"));
 }
 std::shared_ptr<std::vector<std::string>> macOSCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& signing, const std::string& entitlementsPath) {
     auto arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("--force"), std::string("--sign"), identity});

@@ -346,6 +346,36 @@ void test_null_carriers() {
     require(!doof::is_null(optional), "present optional was treated as null");
 }
 
+void test_string_builder() {
+    auto builder = doof::StringBuilder::constructor();
+    require(builder->length() == 0, "new string builder was not empty");
+
+    builder->reserve(64);
+    builder->appendLine("alpha");
+    builder->appendLine("");
+    builder->append("omega");
+    require(builder->length() == 12, "string builder length was incorrect");
+    require(builder->drainToString() == "alpha\n\nomega", "string builder output was incorrect");
+    require(builder->length() == 0, "draining did not empty the string builder");
+
+    builder->append("discarded");
+    builder->clear();
+    require(builder->length() == 0, "clearing did not empty the string builder");
+    require(builder->drainToString().empty(), "cleared string builder produced output");
+}
+
+void test_string_padding() {
+    require(doof::char_from_utf8("é") == U'é', "two-byte UTF-8 character was not decoded");
+    require(doof::char_from_utf8("🙂") == U'🙂', "four-byte UTF-8 character was not decoded");
+    require(doof::string_padStart("7", 3, U'0') == "007", "ASCII start padding was incorrect");
+    require(doof::string_padEnd("7", 3, U'0') == "700", "ASCII end padding was incorrect");
+    require(doof::string_padStart("7", 3, U'é') == "é7", "Unicode start padding was not UTF-8 encoded");
+    require(doof::string_padEnd("7", 3, U'🙂') == "7🙂", "Unicode end padding did not stop after reaching the byte target");
+    require(doof::string_padEnd("7", 2, U'é') == "7é", "Unicode padding did not cross a partial fill boundary");
+    require(doof::string_padStart("done", 4, U'x') == "done", "equal-length start padding changed the string");
+    require(doof::string_padEnd("done", 2, U'x') == "done", "shorter end padding changed the string");
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -365,6 +395,8 @@ int main(int argc, char** argv) {
     else if (mode == "configuration") test_configuration();
     else if (mode == "collections") test_collection_indexing();
     else if (mode == "nulls") test_null_carriers();
+    else if (mode == "string-builder") test_string_builder();
+    else if (mode == "string-padding") test_string_padding();
     else fail("unknown test mode: " + mode);
     return 0;
 }

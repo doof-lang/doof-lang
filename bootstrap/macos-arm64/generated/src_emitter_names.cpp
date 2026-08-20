@@ -112,7 +112,7 @@ std::string moduleNativeHeaderPath(const std::string& modulePath, const std::str
     while (doof::string_startsWith(relativeModulePath, std::string("/"))) {
         (relativeModulePath = doof::string_substring(relativeModulePath, 1, static_cast<int32_t>(relativeModulePath.size())));
     }
-    const auto components = doof::string_split(relativeModulePath, std::string("/"));
+    const auto components = doof::array_cloneMutable(doof::string_split(relativeModulePath, std::string("/")), "", 0);
     if (static_cast<int32_t>((components)->size()) > 0) {
         const auto ignoredModuleName = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-names", 95, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }

@@ -1,7 +1,7 @@
 // Expression and literal parsing for the Doof parser.
 
 import type { Parser } from "./parser"
-import { Token, TokenType, tokenValue } from "./lexer"
+import { Token, TokenType, charTokenValue, tokenValue } from "./lexer"
 import {
   Parameter, Identifier, CallArgument, ObjectProperty,
   SourceSpan, AstLocation, AssignmentExpression, BinaryExpression,
@@ -99,7 +99,7 @@ function contains(values: TokenType[], value: TokenType): bool {
   return false
 }
 
-export function parseUnary(parser: Parser): Expression {
+export isolated function parseUnary(parser: Parser): Expression {
   // The positive magnitude of int.min is one greater than int.max, so parsing
   // it as an IntLiteral first would wrap before unary negation is represented.
   // Fold this boundary spelling while its magnitude can still be read as long.
@@ -185,7 +185,7 @@ function parseIfExpression(parser: Parser): Expression {
   return IfExpression { kind: "if-expression", condition, then_: thenValue, else_: elseValue, span: parser.span(start) }
 }
 
-function parsePostfix(parser: Parser): Expression {
+isolated function parsePostfix(parser: Parser): Expression {
   let expression = parsePrimary(parser)
   let typeArgs: TypeAnnotation[] = []
   while true {
@@ -248,7 +248,7 @@ function parseNamedCall(parser: Parser, callee: Expression, typeArgs: TypeAnnota
   return CallExpression { kind: "call-expression", callee, args, typeArgs, span: SourceSpan { start: callee.span.start, end: parser.location() } }
 }
 
-function parsePrimary(parser: Parser): Expression {
+isolated function parsePrimary(parser: Parser): Expression {
   start := parser.location()
   if parser.check(TokenType.IntLiteral) {
     value := parseIntValue(parser, parser.text(parser.advance()))
@@ -272,10 +272,9 @@ function parsePrimary(parser: Parser): Expression {
     return parseStringLiteral(parser)
   }
   if parser.check(TokenType.CharLiteral) {
-    value := tokenValue(parser.advance(), parser.source)
-    let charValue = '\0'
-    if value.length > 0 { charValue = value[0] }
-    return CharLiteral { kind: "char-literal", value: charValue, span: parser.span(start) }
+    token := parser.advance()
+    value := charTokenValue(token, parser.source)
+    return CharLiteral { kind: "char-literal", value, span: parser.span(start) }
   }
   if parser.match(TokenType.True) { return BoolLiteral { kind: "bool-literal", value: true, span: parser.span(start) } }
   if parser.match(TokenType.False) { return BoolLiteral { kind: "bool-literal", value: false, span: parser.span(start) } }

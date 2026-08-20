@@ -402,11 +402,11 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
         if (property == std::string("charAt")) {
             return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{std::make_shared<::app_src_semantic_::FunctionParamType>(std::string("index"), ::app_src_checker_types_::primitive(std::string("int")), false)}), ::app_src_checker_types_::primitive(std::string("char")), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
         }
-        if (property == std::string("padStart")) {
+        if ((property == std::string("padStart")) || (property == std::string("padEnd"))) {
             return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{std::make_shared<::app_src_semantic_::FunctionParamType>(std::string("length"), ::app_src_checker_types_::primitive(std::string("int")), false), std::make_shared<::app_src_semantic_::FunctionParamType>(std::string("fill"), ::app_src_checker_types_::primitive(std::string("char")), true)}), ::app_src_checker_types_::primitive(std::string("string")), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
         }
         if (property == std::string("split")) {
-            return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{std::make_shared<::app_src_semantic_::FunctionParamType>(std::string("separator"), ::app_src_checker_types_::primitive(std::string("string")), false)}), ::app_src_checker_types_::arrayType(::app_src_checker_types_::primitive(std::string("string")), false), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+            return ::app_src_checker_types_::functionType(std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{std::make_shared<::app_src_semantic_::FunctionParamType>(std::string("separator"), ::app_src_checker_types_::primitive(std::string("string")), false)}), ::app_src_checker_types_::arrayType(::app_src_checker_types_::primitive(std::string("string")), true), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
         }
     }
     {

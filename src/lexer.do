@@ -5,6 +5,8 @@
 // C++. Tokens keep source spans instead of eagerly copying their text; callers
 // can materialize a value with tokenValue only when a parser needs it.
 
+import isolated function charFromUtf8(value: string): char from "doof_runtime.hpp" as doof::char_from_utf8
+
 export enum TokenType {
   IntLiteral,
   LongLiteral,
@@ -179,6 +181,21 @@ export function tokenValue(token: Token, source: string): string {
     index = index + 1
   }
   return value
+}
+
+function utf8SequenceLength(first: char): int {
+  value := int(first)
+  if value < 128 { return 1 }
+  if value >= 194 && value <= 223 { return 2 }
+  if value >= 224 && value <= 239 { return 3 }
+  if value >= 240 && value <= 244 { return 4 }
+  return 1
+}
+
+export isolated function charTokenValue(token: Token, source: string): char {
+  value := tokenValue(token, source)
+  if value.length == 0 { return '\0' }
+  return charFromUtf8(value)
 }
 
 function keywordType(word: string): TokenType {
@@ -669,7 +686,12 @@ export class Lexer {
       advance()
       advance()
     } else if pos < source.length {
-      advance()
+      width := utf8SequenceLength(peek())
+      let consumed = 0
+      while consumed < width && pos < source.length {
+        advance()
+        consumed = consumed + 1
+      }
     }
     valueEnd := pos
     if pos < source.length && peek() == '\'' { advance() }

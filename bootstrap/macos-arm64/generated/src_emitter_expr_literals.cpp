@@ -296,7 +296,7 @@ std::string emitString(const std::shared_ptr<::app_src_ast_::StringLiteral>& exp
     return (result + std::string("return _interpolation; }())"));
 }
 std::string quote(const std::string& value) {
-    const auto escaped = doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(value, std::string("\\"), std::string("\\\\")), std::string("\""), std::string("\\\"")), std::string("\n"), std::string("\\n")), std::string("\r"), std::string("\\r")), std::string("\t"), std::string("\\t"));
+    const auto escaped = doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(value, std::string("\\"), std::string("\\\\")), std::string("\""), std::string("\\\"")), std::string("\?"), std::string("\\\?")), std::string("\n"), std::string("\\n")), std::string("\r"), std::string("\\r")), std::string("\t"), std::string("\\t"));
     return ((std::string("\"") + escaped) + std::string("\""));
 }
 }

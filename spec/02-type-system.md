@@ -226,9 +226,18 @@ Strings support a `.length` property and the following built-in methods:
 | `.toLowerCase()` | `(): string` | Convert to lowercase |
 | `.replace(search, repl)` | `(string, string): string` | Replace first occurrence |
 | `.replaceAll(search, repl)` | `(string, string): string` | Replace all occurrences |
-| `.split(delim)` | `(string): string[]` | Split into array of strings |
+| `.split(delim)` | `(string): readonly string[]` | Split into a readonly array of strings |
 | `.charAt(index)` | `(int): char` | Character at a byte index; panics if the index is out of bounds |
 | `.repeat(count)` | `(int): string` | Repeat string N times |
+| `.padStart(length, fill = ' ')` | `(int, char): string` | Pad the start to at least the requested byte length |
+| `.padEnd(length, fill = ' ')` | `(int, char): string` | Pad the end to at least the requested byte length |
+
+Padding never splits the UTF-8 encoding of `fill`. If the missing byte count is
+not divisible by the encoded width of `fill`, the result crosses the requested
+length by the smallest possible amount (at most three bytes).
+
+Character literals contain one Unicode code point, including non-ASCII forms
+such as `'é'` and `'🙂'`.
 
 ```javascript
 s := "Hello, World!"

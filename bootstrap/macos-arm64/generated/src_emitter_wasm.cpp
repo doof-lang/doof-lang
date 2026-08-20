@@ -244,7 +244,7 @@ std::string emitWasmWrapper(const std::shared_ptr<::app_src_ast_::FunctionDeclar
     (source = (source + std::string("        if (__doof_wasm_initialization_state != 2) return __doof_wasm_failure_message(503, \"Call doof_initialize before invoking Doof exports\");\n")));
     (source = (source + std::string("        const bool _lenient = false;\n")));
     (source = (source + std::string("        auto& __domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __scope(&__domain);\n")));
-    (source = (source + std::string("        auto __parsed = doof_json::parse(params_json == nullptr ? std::string(\"{}\") : std::string(params_json));\n")));
+    (source = (source + std::string("        auto __parsed = doof_json::parse(params_json == nullptr \? std::string(\"{}\") : std::string(params_json));\n")));
     (source = (source + std::string("        if (doof::is_failure(__parsed)) return __doof_wasm_failure_message(400, std::string(\"Invalid JSON params: \" ) + doof::failure_error(__parsed));\n")));
     (source = (source + std::string("        const auto* __params = doof::json_as_object(doof::success_value(__parsed));\n")));
     (source = (source + std::string("        if (__params == nullptr) return __doof_wasm_failure_message(400, \"Invalid JSON params: expected object\");\n")));

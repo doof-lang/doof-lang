@@ -189,15 +189,15 @@ std::string emitJsonTypeCheck(const std::string& json, const std::variant<std::s
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
             const auto& primitive = std::get<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject);
             if (primitive->name == std::string("bool")) {
-                return ((((std::string("(_lenient ? doof::json_is_lenient_boolean(") + json) + std::string(") : doof::json_is_boolean(")) + json) + std::string("))"));
+                return ((((std::string("(_lenient \? doof::json_is_lenient_boolean(") + json) + std::string(") : doof::json_is_boolean(")) + json) + std::string("))"));
             }
             if (primitive->name == std::string("char")) {
                 return ((std::string("doof::json_is_char(") + json) + std::string(", _lenient)"));
             }
             if (primitive->name == std::string("string")) {
-                return ((((std::string("(_lenient ? doof::json_is_lenient_string(") + json) + std::string(") : doof::json_is_string(")) + json) + std::string("))"));
+                return ((((std::string("(_lenient \? doof::json_is_lenient_string(") + json) + std::string(") : doof::json_is_string(")) + json) + std::string("))"));
             }
-            return ((((std::string("(_lenient ? doof::json_is_lenient_number(") + json) + std::string(") : doof::json_is_number(")) + json) + std::string("))"));
+            return ((((std::string("(_lenient \? doof::json_is_lenient_number(") + json) + std::string(") : doof::json_is_number(")) + json) + std::string("))"));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>>(_case_subject)) {
             return std::string("true");
@@ -276,27 +276,27 @@ std::string emitJsonRead(const std::string& json, const std::variant<std::shared
             const auto inner = doof::unwrap_optional(::app_src_json_semantics_::nullableJsonMember(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(union_)));
             if (::app_src_emitter_types_::usesVariantRepresentation(type_)) {
                 const auto optionalType = ::app_src_emitter_types_::emitContextType(type_, context);
-                return ((((((((std::string("(doof::json_is_null(") + json) + std::string(") ? ")) + optionalType) + std::string("{std::monostate{}} : ")) + optionalType) + std::string("{")) + emitJsonRead(json, inner, context)) + std::string("})"));
+                return ((((((((std::string("(doof::json_is_null(") + json) + std::string(") \? ")) + optionalType) + std::string("{std::monostate{}} : ")) + optionalType) + std::string("{")) + emitJsonRead(json, inner, context)) + std::string("})"));
             }
             {
                 auto _case_subject = inner;
                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                     const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
                     if (class_->symbol->kind != std::string("struct")) {
-                        return ((((std::string("(doof::json_is_null(") + json) + std::string(") ? nullptr : ")) + emitJsonRead(json, inner, context)) + std::string(")"));
+                        return ((((std::string("(doof::json_is_null(") + json) + std::string(") \? nullptr : ")) + emitJsonRead(json, inner, context)) + std::string(")"));
                     }
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
-                    return ((((std::string("(doof::json_is_null(") + json) + std::string(") ? nullptr : ")) + emitJsonRead(json, inner, context)) + std::string(")"));
+                    return ((((std::string("(doof::json_is_null(") + json) + std::string(") \? nullptr : ")) + emitJsonRead(json, inner, context)) + std::string(")"));
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
-                    return ((((std::string("(doof::json_is_null(") + json) + std::string(") ? nullptr : ")) + emitJsonRead(json, inner, context)) + std::string(")"));
+                    return ((((std::string("(doof::json_is_null(") + json) + std::string(") \? nullptr : ")) + emitJsonRead(json, inner, context)) + std::string(")"));
             }
             else {
             }
             }
             const auto optionalType = ::app_src_emitter_types_::emitContextType(type_, context);
-            return ((((((((std::string("(doof::json_is_null(") + json) + std::string(") ? ")) + optionalType) + std::string("{std::nullopt} : ")) + optionalType) + std::string("{")) + emitJsonRead(json, inner, context)) + std::string("})"));
+            return ((((((((std::string("(doof::json_is_null(") + json) + std::string(") \? ")) + optionalType) + std::string("{std::nullopt} : ")) + optionalType) + std::string("{")) + emitJsonRead(json, inner, context)) + std::string("})"));
     }
     else {
             return std::string("{}");
@@ -307,27 +307,27 @@ std::string emitJsonRead(const std::string& json, const std::variant<std::shared
 }
 std::string emitPrimitiveJsonRead(const std::string& json, const std::string& name) {
     if (name == std::string("bool")) {
-        return ((((std::string("(_lenient ? doof::json_as_bool_lenient(") + json) + std::string(") : doof::json_as_bool(")) + json) + std::string("))"));
+        return ((((std::string("(_lenient \? doof::json_as_bool_lenient(") + json) + std::string(") : doof::json_as_bool(")) + json) + std::string("))"));
     }
     if (name == std::string("byte")) {
-        return ((((std::string("static_cast<uint8_t>(_lenient ? doof::json_as_int_lenient(") + json) + std::string(") : doof::json_as_int(")) + json) + std::string("))"));
+        return ((((std::string("static_cast<uint8_t>(_lenient \? doof::json_as_int_lenient(") + json) + std::string(") : doof::json_as_int(")) + json) + std::string("))"));
     }
     if (name == std::string("int")) {
-        return ((((std::string("(_lenient ? doof::json_as_int_lenient(") + json) + std::string(") : doof::json_as_int(")) + json) + std::string("))"));
+        return ((((std::string("(_lenient \? doof::json_as_int_lenient(") + json) + std::string(") : doof::json_as_int(")) + json) + std::string("))"));
     }
     if (name == std::string("long")) {
-        return ((((std::string("(_lenient ? doof::json_as_long_lenient(") + json) + std::string(") : doof::json_as_long(")) + json) + std::string("))"));
+        return ((((std::string("(_lenient \? doof::json_as_long_lenient(") + json) + std::string(") : doof::json_as_long(")) + json) + std::string("))"));
     }
     if (name == std::string("float")) {
-        return ((((std::string("(_lenient ? doof::json_as_float_lenient(") + json) + std::string(") : doof::json_as_float(")) + json) + std::string("))"));
+        return ((((std::string("(_lenient \? doof::json_as_float_lenient(") + json) + std::string(") : doof::json_as_float(")) + json) + std::string("))"));
     }
     if (name == std::string("double")) {
-        return ((((std::string("(_lenient ? doof::json_as_double_lenient(") + json) + std::string(") : doof::json_as_double(")) + json) + std::string("))"));
+        return ((((std::string("(_lenient \? doof::json_as_double_lenient(") + json) + std::string(") : doof::json_as_double(")) + json) + std::string("))"));
     }
     if (name == std::string("char")) {
         return ((std::string("doof::json_as_char(") + json) + std::string(", _lenient)"));
     }
-    return ((((std::string("(_lenient ? doof::json_as_string_lenient(") + json) + std::string(") : doof::json_as_string(")) + json) + std::string("))"));
+    return ((((std::string("(_lenient \? doof::json_as_string_lenient(") + json) + std::string(") : doof::json_as_string(")) + json) + std::string("))"));
 }
 std::string jsonTypeName(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
     {
@@ -406,25 +406,25 @@ std::string emitJsonField(const std::string& value, const std::variant<std::shar
             const auto inner = doof::unwrap_optional(::app_src_json_semantics_::nullableJsonMember(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(union_)));
             if (::app_src_emitter_types_::usesVariantRepresentation(resolvedType)) {
                 const auto innerType = ::app_src_emitter_types_::emitContextType(inner, context);
-                return ((((std::string("(std::holds_alternative<std::monostate>(") + value) + std::string(") ? doof::json_value(nullptr) : ")) + emitJsonField(((((std::string("std::get<") + innerType) + std::string(">(")) + value) + std::string(")")), inner, context)) + std::string(")"));
+                return ((((std::string("(std::holds_alternative<std::monostate>(") + value) + std::string(") \? doof::json_value(nullptr) : ")) + emitJsonField(((((std::string("std::get<") + innerType) + std::string(">(")) + value) + std::string(")")), inner, context)) + std::string(")"));
             }
             {
                 auto _case_subject = inner;
                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                     const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
                     if (class_->symbol->kind == std::string("struct")) {
-                        return ((((std::string("(") + value) + std::string(".has_value() ? ")) + emitJsonField((value + std::string(".value()")), inner, context)) + std::string(" : doof::json_value(nullptr))"));
+                        return ((((std::string("(") + value) + std::string(".has_value() \? ")) + emitJsonField((value + std::string(".value()")), inner, context)) + std::string(" : doof::json_value(nullptr))"));
                     }
-                    return ((((std::string("(") + value) + std::string(" ? ")) + emitJsonField(value, inner, context)) + std::string(" : doof::json_value(nullptr))"));
+                    return ((((std::string("(") + value) + std::string(" \? ")) + emitJsonField(value, inner, context)) + std::string(" : doof::json_value(nullptr))"));
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
-                    return ((((std::string("(") + value) + std::string(" ? ")) + emitJsonField(value, inner, context)) + std::string(" : doof::json_value(nullptr))"));
+                    return ((((std::string("(") + value) + std::string(" \? ")) + emitJsonField(value, inner, context)) + std::string(" : doof::json_value(nullptr))"));
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
-                    return ((((std::string("(") + value) + std::string(" ? ")) + emitJsonField(value, inner, context)) + std::string(" : doof::json_value(nullptr))"));
+                    return ((((std::string("(") + value) + std::string(" \? ")) + emitJsonField(value, inner, context)) + std::string(" : doof::json_value(nullptr))"));
             }
             else {
-                    return ((((std::string("(") + value) + std::string(".has_value() ? ")) + emitJsonField((value + std::string(".value()")), inner, context)) + std::string(" : doof::json_value(nullptr))"));
+                    return ((((std::string("(") + value) + std::string(".has_value() \? ")) + emitJsonField((value + std::string(".value()")), inner, context)) + std::string(" : doof::json_value(nullptr))"));
             }
             }
             doof::unreachable();

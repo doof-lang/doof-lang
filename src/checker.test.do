@@ -1,4 +1,5 @@
 import { Assert } from "std/assert"
+import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
 import { createAnalyzer } from "./analyzer"
 import { createChecker, validateCheckedTypes, validateDeepReadonlyFields, validateIsolationEffects } from "./checker"
 import { CheckResult, Diagnostic, FunctionType, SourceFile } from "./semantic"
@@ -167,6 +168,23 @@ export function testRejectsReadonlyCollectionMutators(): none {
     "function mutateMap(values: Map<string, int>): none { values.set(\"one\", 1)\nvalues.delete(\"one\") }",
   )
   Assert.equal(mutableCollections.diagnostics.length, 0)
+}
+
+export function testStringSplitReturnsReadonlyArray(): none {
+  accepted := checked(
+    "function consume(values: readonly string[]): none {}\n" +
+    "function parts(): readonly string[] => \"left,right\".split(\",\")\n" +
+    "function main(): none { values := parts()\nconsume(values) }",
+  )
+  Assert.equal(accepted.diagnostics.length, 0)
+
+  mutation := checked("function main(): none { values := \"left,right\".split(\",\")\nvalues.push(\"extra\") }")
+  Assert.equal(mutation.diagnostics.length, 1)
+  Assert.equal(mutation.diagnostics[0].message, "Method \"push\" is not available on readonly array")
+
+  mutableReturn := checked("function parts(): string[] => \"left,right\".split(\",\")")
+  Assert.equal(mutableReturn.diagnostics.length, 1)
+  Assert.equal(mutableReturn.diagnostics[0].message, "Cannot return readonly string[] from function returning string[]")
 }
 
 export function testRequiresExhaustiveCaseExpressions(): none {
@@ -592,6 +610,15 @@ export function testChecksArrayAndStringSearchMembers(): none {
 export function testChecksTrimStartAssignmentInsideConditional(): none {
   result := checked("function normalize(value: string, shouldTrim: bool): string { let result = value\nif shouldTrim { result = result.trimStart() }\nreturn result }")
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testChecksStringPaddingMethods(): none {
+  result := checked("function padded(value: string): string => value.padStart(4) + value.padEnd(4, '" + codePointToUtf8(233) + "')")
+  Assert.equal(result.diagnostics.length, 0)
+
+  invalid := checked("function padded(value: string): string => value.padEnd(4, \"x\")")
+  Assert.equal(invalid.diagnostics.length, 1)
+  Assert.stringContains(invalid.diagnostics[0].message, "expected char")
 }
 
 export function testReportsUnknownMembersAcrossResolvedTypes(): none {

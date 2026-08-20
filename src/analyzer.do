@@ -551,7 +551,7 @@ function relativeModuleSpecifier(fromModule: string, toModule: string): string {
 }
 
 function parentPathComponents(path: string): string[] {
-  components := path.split("/")
+  components := path.split("/").cloneMutable()
   if components.length > 0 { ignored := try! components.pop() }
   return components
 }

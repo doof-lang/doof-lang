@@ -506,7 +506,7 @@ doof::Result<std::string, std::string> assembleMacOSApp(const std::string& build
     auto _try_value_52 = runRequiredCommand(std::string("chmod"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("+x"), bundleExecutable}), std::string("marking bundled executable"));
     if (doof::is_failure(_try_value_52)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_52))};
     [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(contentsDirectory, std::string("Info.plist")), ::app_src_macos_app_::renderMacOSInfoPlist(config)); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 374, std::string("try! failed"));  }();
-    [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(contentsDirectory, std::string("PkgInfo")), std::string("APPL????")); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 375, std::string("try! failed"));  }();
+    [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(contentsDirectory, std::string("PkgInfo")), std::string("APPL\?\?\?\?")); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 375, std::string("try! failed"));  }();
     if (config->iconPath != std::string("")) {
         auto _try_value_53 = generateMacOSIcon(config->iconPath, outputPath(resourcesDirectory, (config->executableName + std::string(".icns"))), buildDirectory);
         if (doof::is_failure(_try_value_53)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_53))};
@@ -584,7 +584,7 @@ doof::Result<std::string, std::string> effectiveEntitlements(const std::shared_p
             if (doof::is_failure(_try_value_62)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_62))};
         }
     } else {
-        [&]() -> void { auto _try_value = ::doof_fs::writeText(destinationPath, std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<plist version=\"1.0\"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>\n")); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 429, std::string("try! failed"));  }();
+        [&]() -> void { auto _try_value = ::doof_fs::writeText(destinationPath, std::string("<\?xml version=\"1.0\" encoding=\"UTF-8\"\?>\n<plist version=\"1.0\"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>\n")); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 429, std::string("try! failed"));  }();
     }
     return doof::Success<std::string>{ destinationPath };
 }

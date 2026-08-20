@@ -236,8 +236,12 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if !nominalReceiver && member.property == "slice" { return "doof::string_slice(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ")" }
       if !nominalReceiver && member.property == "charAt" { return "doof::string_at(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
       if !nominalReceiver && member.property == "padStart" {
-        fill := if expression.args.length > 1 then emitExpression(expression.args[1].value, context) else "' '"
+        fill := if expression.args.length > 1 then emitExpression(expression.args[1].value, context) else "U' '"
         return "doof::string_padStart(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", " + fill + ")"
+      }
+      if !nominalReceiver && member.property == "padEnd" {
+        fill := if expression.args.length > 1 then emitExpression(expression.args[1].value, context) else "U' '"
+        return "doof::string_padEnd(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", " + fill + ")"
       }
       if !nominalReceiver && member.property == "trimEnd" && expression.args.length == 0 { return "doof::string_trimEnd(" + emitExpression(member.object, context) + ")" }
       if !nominalReceiver && member.property == "trimEnd" && expression.args.length == 1 { return "doof::string_trimEnd(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ")" }

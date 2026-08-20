@@ -207,7 +207,7 @@ export function emitString(expression: StringLiteral, context: EmitContext): str
 }
 
 export function quote(value: string): string {
-  escaped := value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")
+  escaped := value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"").replaceAll("?", "\\?")
     .replaceAll("\n", "\\n").replaceAll("\r", "\\r").replaceAll("\t", "\\t")
   return "\"" + escaped + "\""
 }

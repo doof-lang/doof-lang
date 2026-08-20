@@ -1418,6 +1418,12 @@ inline std::string char_to_utf8(char32_t value) {
     return result;
 }
 
+inline char32_t char_from_utf8(const std::string& value) {
+    const auto decoded = utf8_single_code_point(value);
+    if (!decoded.has_value()) panic("Expected one valid UTF-8 character");
+    return *decoded;
+}
+
 inline bool json_is_char(const JsonValue& value, bool lenient) {
     if (lenient) {
         if (!json_is_lenient_string(value)) return false;
@@ -1580,6 +1586,25 @@ public:
         value_.append(value);
     }
 
+    void appendLine(const std::string& value) {
+        value_.append(value);
+        value_.push_back('\n');
+    }
+
+    int32_t length() const {
+        return static_cast<int32_t>(value_.size());
+    }
+
+    void reserve(int32_t capacity) {
+        if (capacity > 0) {
+            value_.reserve(static_cast<size_t>(capacity));
+        }
+    }
+
+    void clear() {
+        value_.clear();
+    }
+
     std::string drainToString() {
         std::string result = std::move(value_);
         value_.clear();
@@ -1637,9 +1662,21 @@ inline std::string string_slice(const std::string& s, int32_t start) {
     return s.substr(static_cast<size_t>(start));
 }
 
-inline std::string string_padStart(const std::string& s, int32_t length, char fill) {
+inline std::string string_padding(int32_t minimum_bytes, char32_t fill) {
+    std::string result;
+    const std::string encoded = char_to_utf8(fill);
+    while (result.size() < static_cast<size_t>(minimum_bytes)) result += encoded;
+    return result;
+}
+
+inline std::string string_padStart(const std::string& s, int32_t length, char32_t fill) {
     if (length <= static_cast<int32_t>(s.size())) return s;
-    return std::string(static_cast<size_t>(length - static_cast<int32_t>(s.size())), fill) + s;
+    return string_padding(length - static_cast<int32_t>(s.size()), fill) + s;
+}
+
+inline std::string string_padEnd(const std::string& s, int32_t length, char32_t fill) {
+    if (length <= static_cast<int32_t>(s.size())) return s;
+    return s + string_padding(length - static_cast<int32_t>(s.size()), fill);
 }
 
 inline std::string string_trim(const std::string& s) {

@@ -854,6 +854,7 @@ namespace app_src_lexer_ {
     static doof::Result<Token, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     std::string tokenValue(Token token, const std::string& source);
+    char32_t charTokenValue(Token token, const std::string& source);
 }
 
 namespace app_src_semantic_ {

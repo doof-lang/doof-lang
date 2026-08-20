@@ -388,7 +388,7 @@ std::string compilerIdentity(const std::string& command, const std::shared_ptr<s
             return identity->signature;
         }
     }
-    const auto result = runBuildCommand(command, (::app_src_native_build_::isMsvcCompiler(command) ? std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("/?")}) : std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("--version")})));
+    const auto result = runBuildCommand(command, (::app_src_native_build_::isMsvcCompiler(command) ? std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("/\?")}) : std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("--version")})));
     auto description = command;
     if (result->exitCode == 0) {
         (description = ((description + std::string("\n")) + ::doof_blob::NativeBlobReader::constructor(result->output, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((result->output)->size())))));

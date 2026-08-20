@@ -1,5 +1,10 @@
 #pragma once
 #include "doof_runtime.hpp"
+namespace app_src_lexer_ { enum class TokenType; }
+namespace app_src_lexer_ { struct Token; }
+namespace app_src_lexer_ { struct LexerDiagnostic; }
+namespace app_src_lexer_ { struct Lexer; }
+
 namespace app_src_lexer_ {
     struct Token;
     struct LexerDiagnostic;
@@ -506,7 +511,14 @@ namespace app_src_lexer_ {
 };
 }
 
+namespace doof { using TokenType = ::app_src_lexer_::TokenType; }
+namespace doof { using Token = ::app_src_lexer_::Token; }
+namespace doof { using LexerDiagnostic = ::app_src_lexer_::LexerDiagnostic; }
+namespace doof { using Lexer = ::app_src_lexer_::Lexer; }
+#include "doof_runtime.hpp"
+
 namespace app_src_lexer_ {
+    char32_t charFromUtf8(const std::string& value);
     struct Token {
     TokenType kind;
     int32_t length;
@@ -566,5 +578,7 @@ namespace app_src_lexer_ {
 };
     std::string decodeEscapeCharacter(char32_t escaped);
     std::string tokenValue(Token token, const std::string& source);
+    int32_t utf8SequenceLength(char32_t first);
+    char32_t charTokenValue(Token token, const std::string& source);
     TokenType keywordType(const std::string& word);
 }

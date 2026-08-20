@@ -433,7 +433,7 @@ function relativeImportSpecifier(harnessPath: string, modulePath: string): strin
 }
 
 function parentComponents(path: string): string[] {
-  components := path.split("/")
+  components := path.split("/").cloneMutable()
   if components.length > 0 { let ignored = try! components.pop() }
   return components
 }

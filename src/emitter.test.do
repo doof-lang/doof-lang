@@ -1,4 +1,5 @@
 import { Assert } from "std/assert"
+import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
 import { createAnalyzer } from "./analyzer"
 import { createChecker, validateIsolationEffects } from "./checker"
 import { AnalysisResult } from "./analyzer"
@@ -70,6 +71,12 @@ export function testEmitsTypedTagsThroughNamedCallAndConstructorPaths(): none {
   Assert.stringContains(result.source, "render(2, std::string(\"item\"))")
   Assert.stringContains(result.source, "Custom::constructor(std::string(\"custom\"), 3)")
   Assert.stringContains(result.source, "std::string(\"hello\")")
+}
+
+export function testEscapesQuestionMarksInCppStringLiteralsToAvoidTrigraphs(): none {
+  result := emit("function main(): string => \"Operator '??=' remains readable\"")
+  Assert.stringContains(result.source, "std::string(\"Operator '\\?\\?=' remains readable\")")
+  Assert.stringNotContains(result.source, "Operator '??='")
 }
 
 export function testOmitsEmptyNamespaceBlocksFromHeaders(): none {
@@ -685,6 +692,12 @@ export function testEmitsArrayAndStringSearchMembers(): none {
 export function testEmitsTrimStartAssignmentInsideConditional(): none {
   result := emit("function normalize(value: string, shouldTrim: bool): string { let result = value\nif shouldTrim { result = result.trimStart() }\nreturn result }")
   Assert.equal(result.source.contains("result = doof::string_trimStart(result)"), true)
+}
+
+export function testEmitsStringPaddingMethodsWithUnicodeChars(): none {
+  result := emit("function padded(value: string): string => value.padStart(4) + value.padEnd(4, '" + codePointToUtf8(233) + "')")
+  Assert.stringContains(result.source, "doof::string_padStart(value, 4, U' ')")
+  Assert.stringContains(result.source, "doof::string_padEnd(value, 4, U'\\u00E9')")
 }
 
 export function testEmitsShadowedBuiltinCallsFromResolvedBindings(): none {

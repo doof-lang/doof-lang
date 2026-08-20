@@ -618,7 +618,7 @@ std::string relativeModuleSpecifier(const std::string& fromModule, const std::st
     return (doof::string_startsWith(result, std::string(".")) ? result : (std::string("./") + result));
 }
 std::shared_ptr<std::vector<std::string>> parentPathComponents(const std::string& path) {
-    const auto components = doof::string_split(path, std::string("/"));
+    const auto components = doof::array_cloneMutable(doof::string_split(path, std::string("/")), "", 0);
     if (static_cast<int32_t>((components)->size()) > 0) {
         const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 555, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }

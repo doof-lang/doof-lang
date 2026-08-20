@@ -433,6 +433,6 @@ std::string joinStrings(const std::shared_ptr<std::vector<std::string>>& values)
     return result;
 }
 std::string escapeCpp(const std::string& value) {
-    return doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(value, std::string("\\"), std::string("\\\\")), std::string("\""), std::string("\\\"")), std::string("\n"), std::string("\\n"));
+    return doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(value, std::string("\\"), std::string("\\\\")), std::string("\""), std::string("\\\"")), std::string("\?"), std::string("\\\?")), std::string("\n"), std::string("\\n"));
 }
 }

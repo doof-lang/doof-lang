@@ -1,10 +1,11 @@
 import { Assert } from "std/assert"
 import { Parser, parse } from "./parser"
+import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
 import {
   IntLiteral, LongLiteral, DoubleLiteral, BinaryExpression, CallExpression,
   MemberExpression, FunctionDeclaration, ClassDeclaration, ArrayLiteral, Block,
   IfStatement, ExpressionStatement, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding, LetDeclaration, TryStatement,
-  StringLiteral, LambdaExpression, AsyncExpression, RetireExpression, AsExpression,
+  StringLiteral, CharLiteral, LambdaExpression, AsyncExpression, RetireExpression, AsExpression,
   ActorCreationExpression, CaseExpression, EnumDeclaration, InterfaceDeclaration, NamedType, NoneLiteral, ObjectLiteral, RangePattern, TypeAliasDeclaration, UnionType, ValuePattern, YieldStatement,
   MockImportDirective, WeakType, CatchExpression, YieldBlockExpression, YieldBlockAssignmentStatement, DestructuringStatement, DotShorthand, ForOfStatement, WithStatement,
 } from "./ast"
@@ -12,6 +13,24 @@ import type { Statement, Expression } from "./ast"
 
 function first(source: string): Statement {
   return parse(source).statements[0]
+}
+
+export function testParsesUnicodeCharacterLiteralsAsCodePoints(): none {
+  program := parse("accent := '" + codePointToUtf8(233) + "'\nface := '" + codePointToUtf8(128578) + "'")
+  case program.statements[0] {
+    binding: ImmutableBinding -> { case binding.value {
+      literal: CharLiteral -> { Assert.equal(int(literal.value), 233, "decoded accent was " + string(int(literal.value))) }
+      _ -> { panic("expected character literal") }
+    } }
+    _ -> { panic("expected binding") }
+  }
+  case program.statements[1] {
+    binding: ImmutableBinding -> { case binding.value {
+      literal: CharLiteral -> { Assert.equal(int(literal.value), 128578, "decoded face was " + string(int(literal.value))) }
+      _ -> { panic("expected character literal") }
+    } }
+    _ -> { panic("expected binding") }
+  }
 }
 
 export function testParsesNoneInTypeLiteralGenericAndPatternPositions(): none {

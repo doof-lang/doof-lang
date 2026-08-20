@@ -13,7 +13,7 @@ import {
 } from "./ast"
 import type { Statement, Expression, TypeAnnotation } from "./ast"
 
-export function parseStatement(parser: Parser): Statement {
+export isolated function parseStatement(parser: Parser): Statement {
   if parser.check(TokenType.Mock) { return parser.parseMockImport() }
   if parser.check(TokenType.Export) { return parser.parseExport() }
   if parser.check(TokenType.Import) { return parser.parseImport() }
@@ -446,7 +446,7 @@ function parseTrailingLambdaExpressionStatement(parser: Parser, expression: Expr
   }
 }
 
-export function parseTryStatement(parser: Parser): Statement {
+export isolated function parseTryStatement(parser: Parser): Statement {
   start := parser.location()
   parser.expect(TokenType.Try)
   if parser.check(TokenType.Bang) || (parser.check(TokenType.Identifier) && parser.text(parser.current()) == "?") {

@@ -29,6 +29,17 @@ when the index is negative or outside the string's byte range. Convert the
 result with `string(c)` when a one-character string is needed; `char` values
 also work with equality checks and string concatenation.
 
+`string.split(separator)` returns `readonly string[]`. Clone it with
+`.cloneMutable()` when subsequent mutation is required.
+
+`string.padStart(length, fill = ' ')` and `string.padEnd(length, fill = ' ')`
+pad on the named side. The target length follows `string.length` and is a byte
+length; the `char` fill is encoded as UTF-8, including non-ASCII code points.
+Whole fill characters are appended until the result reaches or crosses the
+target, so padding never emits partial UTF-8.
+
+Character literals may contain one Unicode code point, such as `'é'` or `'🙂'`.
+
 `Range` is the built-in finite integer range type created by `a..b` and
 `a..<b`. It can be stored, passed to functions, returned, and iterated with
 `for of`; iteration yields `int`. Open-ended forms such as `5..` and `..<10`

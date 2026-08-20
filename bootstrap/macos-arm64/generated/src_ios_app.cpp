@@ -229,7 +229,7 @@ std::string renderIOSInfoPlist(const std::shared_ptr<IOSAppConfig>& config) {
             (body += (((std::string("\t<key>") + escapePlistText(key)) + std::string("</key>\n")) + renderPlistValue(value, 1)));
         }
     }
-    return ((std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n") + body) + std::string("</dict>\n</plist>\n"));
+    return ((std::string("<\?xml version=\"1.0\" encoding=\"UTF-8\"\?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n") + body) + std::string("</dict>\n</plist>\n"));
 }
 std::string renderIOSMainSource(const std::string& executableName) {
     const auto delegateName = (objectiveCIdentifier(executableName) + std::string("AppDelegate"));
