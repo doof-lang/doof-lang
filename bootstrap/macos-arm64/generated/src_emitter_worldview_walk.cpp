@@ -42,8 +42,8 @@ void collectWorldviewStatementExpressions(const std::variant<std::shared_ptr<::a
             const auto& if_ = std::get<std::shared_ptr<::app_src_ast_::IfStatement>>(_case_subject);
             result->push_back(if_->condition);
             collectWorldviewBlockExpressions(if_->body, result);
-            const auto& _iterable_1 = if_->elseIfs;
-            for (const auto& branch : *_iterable_1) {
+            const auto& _iterable_2 = if_->elseIfs;
+            for (const auto& branch : *_iterable_2) {
                 result->push_back(branch->condition);
                 collectWorldviewBlockExpressions(branch->body, result);
             }
@@ -67,8 +67,8 @@ void collectWorldviewStatementExpressions(const std::variant<std::shared_ptr<::a
             if (!doof::is_null(for_->condition)) {
                 result->push_back(doof::unwrap_optional(for_->condition));
             }
-            const auto& _iterable_2 = for_->update;
-            for (const auto& update : *_iterable_2) {
+            const auto& _iterable_4 = for_->update;
+            for (const auto& update : *_iterable_4) {
                 result->push_back(update);
             }
             collectWorldviewBlockExpressions(for_->body, result);
@@ -86,8 +86,8 @@ void collectWorldviewStatementExpressions(const std::variant<std::shared_ptr<::a
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::WithStatement>>(_case_subject)) {
             const auto& with_ = std::get<std::shared_ptr<::app_src_ast_::WithStatement>>(_case_subject);
-            const auto& _iterable_3 = with_->bindings;
-            for (const auto& binding : *_iterable_3) {
+            const auto& _iterable_6 = with_->bindings;
+            for (const auto& binding : *_iterable_6) {
                 result->push_back(binding->value);
             }
             collectWorldviewBlockExpressions(with_->body, result);
@@ -95,10 +95,10 @@ void collectWorldviewStatementExpressions(const std::variant<std::shared_ptr<::a
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CaseStatement>>(_case_subject)) {
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseStatement>>(_case_subject);
             result->push_back(case_->subject);
-            const auto& _iterable_4 = case_->arms;
-            for (const auto& arm : *_iterable_4) {
-                const auto& _iterable_5 = arm->patterns;
-                for (const auto& pattern : *_iterable_5) {
+            const auto& _iterable_8 = case_->arms;
+            for (const auto& arm : *_iterable_8) {
+                const auto& _iterable_10 = arm->patterns;
+                for (const auto& pattern : *_iterable_10) {
                     {
                         auto _case_subject = pattern;
                         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ValuePattern>>(_case_subject)) {
@@ -182,8 +182,8 @@ void collectWorldviewStatementExpressions(const std::variant<std::shared_ptr<::a
     }
 }
 void collectWorldviewBlockExpressions(const std::shared_ptr<::app_src_ast_::Block>& block, const std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>>& result) {
-    const auto& _iterable_6 = block->statements;
-    for (const auto& statement : *_iterable_6) {
+    const auto& _iterable_12 = block->statements;
+    for (const auto& statement : *_iterable_12) {
         collectWorldviewStatementExpressions(statement, result);
     }
 }
@@ -192,8 +192,8 @@ void collectWorldviewNestedExpressions(const std::variant<std::shared_ptr<::app_
         auto _case_subject = expression;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject)) {
             const auto& string_ = std::get<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject);
-            const auto& _iterable_7 = string_->interpolations;
-            for (const auto& interpolation : *_iterable_7) {
+            const auto& _iterable_14 = string_->interpolations;
+            for (const auto& interpolation : *_iterable_14) {
                 result->push_back(interpolation);
             }
     }
@@ -223,15 +223,15 @@ void collectWorldviewNestedExpressions(const std::variant<std::shared_ptr<::app_
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject)) {
             const auto& call = std::get<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject);
             result->push_back(call->callee);
-            const auto& _iterable_8 = call->args;
-            for (const auto& argument : *_iterable_8) {
+            const auto& _iterable_16 = call->args;
+            for (const auto& argument : *_iterable_16) {
                 result->push_back(argument->value);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ArrayLiteral>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_ast_::ArrayLiteral>>(_case_subject);
-            const auto& _iterable_9 = array->elements;
-            for (const auto& element : *_iterable_9) {
+            const auto& _iterable_18 = array->elements;
+            for (const auto& element : *_iterable_18) {
                 result->push_back(element);
             }
     }
@@ -240,8 +240,8 @@ void collectWorldviewNestedExpressions(const std::variant<std::shared_ptr<::app_
             if (!doof::is_null(object->spread)) {
                 result->push_back(doof::unwrap_optional(object->spread));
             }
-            const auto& _iterable_10 = object->properties;
-            for (const auto& property : *_iterable_10) {
+            const auto& _iterable_20 = object->properties;
+            for (const auto& property : *_iterable_20) {
                 if (!doof::is_null(property->key)) {
                     result->push_back(doof::unwrap_optional(property->key));
                 }
@@ -252,8 +252,8 @@ void collectWorldviewNestedExpressions(const std::variant<std::shared_ptr<::app_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TupleLiteral>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_ast_::TupleLiteral>>(_case_subject);
-            const auto& _iterable_11 = tuple->elements;
-            for (const auto& element : *_iterable_11) {
+            const auto& _iterable_22 = tuple->elements;
+            for (const auto& element : *_iterable_22) {
                 result->push_back(element);
             }
     }
@@ -280,10 +280,10 @@ void collectWorldviewNestedExpressions(const std::variant<std::shared_ptr<::app_
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject)) {
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject);
             result->push_back(case_->subject);
-            const auto& _iterable_12 = case_->arms;
-            for (const auto& arm : *_iterable_12) {
-                const auto& _iterable_13 = arm->patterns;
-                for (const auto& pattern : *_iterable_13) {
+            const auto& _iterable_24 = case_->arms;
+            for (const auto& arm : *_iterable_24) {
+                const auto& _iterable_26 = arm->patterns;
+                for (const auto& pattern : *_iterable_26) {
                     {
                         auto _case_subject = pattern;
                         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ValuePattern>>(_case_subject)) {
@@ -344,15 +344,15 @@ void collectWorldviewNestedExpressions(const std::variant<std::shared_ptr<::app_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject)) {
             const auto& actor = std::get<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject);
-            const auto& _iterable_14 = actor->args;
-            for (const auto& argument : *_iterable_14) {
+            const auto& _iterable_28 = actor->args;
+            for (const auto& argument : *_iterable_28) {
                 result->push_back(argument);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject)) {
             const auto& construct = std::get<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject);
-            const auto& _iterable_15 = construct->args;
-            for (const auto& property : *_iterable_15) {
+            const auto& _iterable_30 = construct->args;
+            for (const auto& property : *_iterable_30) {
                 if (!doof::is_null(property->value)) {
                     result->push_back(doof::unwrap_optional(property->value));
                 }

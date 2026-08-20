@@ -33,6 +33,19 @@ export function testRetainsPathNamespaceWithoutPackageOwnership(): none {
   Assert.equal(moduleNamespace("/app/main.do"), "app_app_main_")
 }
 
+export function testInvalidatesCachedModuleNamespacesWhenMappingsChange(): none {
+  configureModuleNamespaces([])
+  Assert.equal(moduleNamespace("/vendor/cache/index.do"), "app_vendor_cache_index_")
+
+  configureModuleNamespaces([
+    ModuleNamespaceMapping { logicalPrefix: "/vendor/cache", packageName: "acme-clock" },
+  ])
+  Assert.equal(moduleNamespace("/vendor/cache/index.do"), "acme_clock::index")
+
+  configureModuleNamespaces([])
+  Assert.equal(moduleNamespace("/vendor/cache/index.do"), "app_vendor_cache_index_")
+}
+
 export function testFormatsPackageRelativeDiagnosticPaths(): none {
   configureModuleNamespaces([
     ModuleNamespaceMapping { logicalPrefix: "/workspace/assert", packageName: "std/assert" },

@@ -131,27 +131,27 @@ doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(const std
     std::shared_ptr<std::vector<std::shared_ptr<StdCatalogPackage>>> result = std::make_shared<std::vector<std::shared_ptr<StdCatalogPackage>>>(std::vector<std::shared_ptr<StdCatalogPackage>>{});
     auto previous = std::string("");
     for (int32_t index = 0; index < static_cast<int32_t>((packages)->size()); ++index) {
-        auto _binding_value_7 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = doof::array_at(packages, index, "src/std-catalog", 47); if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
-        if (doof::is_failure(_binding_value_7)) {
-            const auto& object = _binding_value_7;
+        auto _binding_value_8 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = doof::array_at(packages, index, "src/std-catalog", 47); if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+        if (doof::is_failure(_binding_value_8)) {
+            const auto& object = _binding_value_8;
             return doof::Failure<std::string>{ (std::string("Invalid std catalog package at index ") + doof::to_string(index)) };
         }
-        const auto object = doof::success_value(_binding_value_7);
-        auto _try_value_8 = catalogString(object, std::string("name"));
-        if (doof::is_failure(_try_value_8)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_8))};
-        const auto name = doof::success_value(_try_value_8);
-        auto _try_value_9 = catalogString(object, std::string("url"));
+        const auto object = doof::success_value(_binding_value_8);
+        auto _try_value_9 = catalogString(object, std::string("name"));
         if (doof::is_failure(_try_value_9)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_9))};
-        const auto url = doof::success_value(_try_value_9);
-        auto _try_value_10 = catalogString(object, std::string("ref"));
+        const auto name = doof::success_value(_try_value_9);
+        auto _try_value_10 = catalogString(object, std::string("url"));
         if (doof::is_failure(_try_value_10)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_10))};
-        const auto ref = doof::success_value(_try_value_10);
-        auto _try_value_11 = catalogString(object, std::string("version"));
+        const auto url = doof::success_value(_try_value_10);
+        auto _try_value_11 = catalogString(object, std::string("ref"));
         if (doof::is_failure(_try_value_11)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_11))};
-        const auto version = doof::success_value(_try_value_11);
-        auto _try_value_12 = catalogString(object, std::string("commit"));
+        const auto ref = doof::success_value(_try_value_11);
+        auto _try_value_12 = catalogString(object, std::string("version"));
         if (doof::is_failure(_try_value_12)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_12))};
-        const auto commit = doof::success_value(_try_value_12);
+        const auto version = doof::success_value(_try_value_12);
+        auto _try_value_13 = catalogString(object, std::string("commit"));
+        if (doof::is_failure(_try_value_13)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_13))};
+        const auto commit = doof::success_value(_try_value_13);
         if (!doof::string_startsWith(name, std::string("std/")) || doof::string_contains(doof::string_substring(name, 4, static_cast<int32_t>(name.size())), std::string("/"))) {
             return doof::Failure<std::string>{ (std::string("Invalid std catalog package name ") + name) };
         }
@@ -167,8 +167,8 @@ doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(const std
     return doof::Success<std::shared_ptr<StdCatalog>>{ std::make_shared<StdCatalog>(schemaVersion, compilerVersion, doof::string_toLowerCase(digest), result) };
 }
 std::shared_ptr<StdCatalogPackage> stdCatalogPackage(const std::shared_ptr<StdCatalog>& catalog, const std::string& name) {
-    const auto& _iterable_13 = catalog->packages;
-    for (const auto& package : *_iterable_13) {
+    const auto& _iterable_15 = catalog->packages;
+    for (const auto& package : *_iterable_15) {
         if (package->name == name) {
             return package;
         }
@@ -176,36 +176,36 @@ std::shared_ptr<StdCatalogPackage> stdCatalogPackage(const std::shared_ptr<StdCa
     return nullptr;
 }
 doof::Result<std::string, std::string> catalogString(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
-    auto _binding_value_14 = doof::map_get(object, name, "", 0);
-    if (doof::is_failure(_binding_value_14)) {
-        const auto& value = _binding_value_14;
-        return doof::Failure<std::string>{ ((std::string("Invalid std catalog: ") + name) + std::string(" is required")) };
-    }
-    const auto value = doof::success_value(_binding_value_14);
-    auto _binding_value_15 = [&]() -> doof::Result<std::string, std::string> { auto _as_value = value; if (doof::json_is_string(_as_value)) return doof::Success<std::string>{doof::json_as_string(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
-    if (doof::is_failure(_binding_value_15)) {
-        const auto& text = _binding_value_15;
-        return doof::Failure<std::string>{ ((std::string("Invalid std catalog: ") + name) + std::string(" must be a string")) };
-    }
-    const auto text = doof::success_value(_binding_value_15);
-    if (text == std::string("")) {
-        return doof::Failure<std::string>{ ((std::string("Invalid std catalog: ") + name) + std::string(" must not be empty")) };
-    }
-    return doof::Success<std::string>{ text };
-}
-doof::Result<int32_t, std::string> catalogInt(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
     auto _binding_value_16 = doof::map_get(object, name, "", 0);
     if (doof::is_failure(_binding_value_16)) {
         const auto& value = _binding_value_16;
         return doof::Failure<std::string>{ ((std::string("Invalid std catalog: ") + name) + std::string(" is required")) };
     }
     const auto value = doof::success_value(_binding_value_16);
-    auto _binding_value_17 = [&]() -> doof::Result<int32_t, std::string> { auto _as_value = value; if (doof::json_is_number(_as_value)) return doof::Success<int32_t>{doof::json_as_int(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    auto _binding_value_17 = [&]() -> doof::Result<std::string, std::string> { auto _as_value = value; if (doof::json_is_string(_as_value)) return doof::Success<std::string>{doof::json_as_string(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
     if (doof::is_failure(_binding_value_17)) {
-        const auto& number = _binding_value_17;
+        const auto& text = _binding_value_17;
+        return doof::Failure<std::string>{ ((std::string("Invalid std catalog: ") + name) + std::string(" must be a string")) };
+    }
+    const auto text = doof::success_value(_binding_value_17);
+    if (text == std::string("")) {
+        return doof::Failure<std::string>{ ((std::string("Invalid std catalog: ") + name) + std::string(" must not be empty")) };
+    }
+    return doof::Success<std::string>{ text };
+}
+doof::Result<int32_t, std::string> catalogInt(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
+    auto _binding_value_18 = doof::map_get(object, name, "", 0);
+    if (doof::is_failure(_binding_value_18)) {
+        const auto& value = _binding_value_18;
+        return doof::Failure<std::string>{ ((std::string("Invalid std catalog: ") + name) + std::string(" is required")) };
+    }
+    const auto value = doof::success_value(_binding_value_18);
+    auto _binding_value_19 = [&]() -> doof::Result<int32_t, std::string> { auto _as_value = value; if (doof::json_is_number(_as_value)) return doof::Success<int32_t>{doof::json_as_int(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    if (doof::is_failure(_binding_value_19)) {
+        const auto& number = _binding_value_19;
         return doof::Failure<std::string>{ ((std::string("Invalid std catalog: ") + name) + std::string(" must be an integer")) };
     }
-    const auto number = doof::success_value(_binding_value_17);
+    const auto number = doof::success_value(_binding_value_19);
     return doof::Success<int32_t>{ number };
 }
 }

@@ -33,6 +33,8 @@ export class Symbol {
   nativeCppName: string = ""
   implementations: Symbol[] = []
   implementedInterfaceTypes: string[] = []
+  typeParams: string[] = []
+  streamElementTypes: ResolvedType[] = []
 }
 
 export class ImportBinding {

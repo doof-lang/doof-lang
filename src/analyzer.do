@@ -41,6 +41,17 @@ export class AnalysisResult {
   diagnostics: Diagnostic[] = []
 }
 
+class ModuleParseResult {
+  path: string
+  source: string
+  inheritedMockRootPath: string | none = none
+  program: Program | none = none
+  errorMessage: string = ""
+  errorLine: int = 0
+  errorColumn: int = 0
+  errorOffset: int = 0
+}
+
 readonly BUILTIN_TYPES = ["byte", "int", "long", "float", "double", "string", "char", "bool", "none", "never", "void", "null", "JsonValue", "JsonObject", "SourceLocation", "Map", "ReadonlyMap", "Set", "ReadonlySet", "Result", "Stream", "Range", "Tuple", "Actor", "Promise"]
 
 export class ModuleAnalyzer {
@@ -48,24 +59,32 @@ export class ModuleAnalyzer {
   let modules: ModuleInfo[] = []
   let diagnostics: Diagnostic[] = []
   let inProgress: string[] = []
+  let resolvedPaths: string[] = []
 
   function analyze(entry: string): AnalysisResult {
     modules = []
     diagnostics = []
     inProgress = []
+    resolvedPaths = []
     resolver.loadedPaths = []
     resolver.diagnostics = []
     resolver.failedPaths = []
-    ignored := analyzeModule(if entry.endsWith(".do") then entry else entry + ".do", none)
+    entryPath := if entry.endsWith(".do") then entry else entry + ".do"
+    parseReachableModules(entryPath)
+    orderModules(entryPath)
+    ignored := resolveModule(entryPath)
     for diagnostic of resolver.diagnostics { diagnostics.push(diagnostic) }
     return AnalysisResult { modules, diagnostics }
   }
 
-  private function analyzeModule(path: string, inheritedMockRootPath: string | none): ModuleInfo | none {
-    existing := findModule(path)
-    if existing != none { return existing }
-    if contains(inProgress, path) { return none }
-
+  private function queueModuleParse(
+    path: string,
+    inheritedMockRootPath: string | none,
+    scheduled: string[],
+    pending: Promise<ModuleParseResult>[],
+  ): none {
+    if contains(scheduled, path) { return }
+    scheduled.push(path)
     source := resolver.find(path)
     if source == none {
       if !resolver.failed(path) {
@@ -76,37 +95,111 @@ export class ModuleAnalyzer {
           module: path,
         })
       }
-      return none
+      return
     }
 
+    sourceText := source.source
+    modulePath := path
+    mockRootPath := inheritedMockRootPath
+    pending.push(async {
+      parser := Parser { source: sourceText }
+      parsed := catchPanic(=> parser.parse())
+      program := parsed else failure {
+        if parser.errorMessage == "" { panic(failure) }
+        yield ModuleParseResult {
+          path: modulePath, source: sourceText, inheritedMockRootPath: mockRootPath,
+          errorMessage: parser.errorMessage,
+          errorLine: parser.errorLine, errorColumn: parser.errorColumn, errorOffset: parser.errorOffset,
+        }
+      }
+      yield ModuleParseResult { path: modulePath, source: sourceText, inheritedMockRootPath: mockRootPath, program }
+    })
+  }
+
+  private function parseReachableModules(entryPath: string): none {
+    let scheduled: string[] = []
+    let pending: Promise<ModuleParseResult>[] = []
+    queueModuleParse(entryPath, none, scheduled, pending)
+    while pending.length > 0 {
+      completed := pending.takeFirstCompleted() else failure { panic("Parser worker failed: " + failure) }
+      if completed.program == none {
+        location := SemanticLocation { line: completed.errorLine, column: completed.errorColumn, offset: completed.errorOffset }
+        diagnostics.push(Diagnostic {
+          severity: "error",
+          message: completed.errorMessage,
+          span: SemanticSpan { start: location, end: location },
+          module: completed.path,
+        })
+        continue
+      }
+      program := completed.program!
+      mockImportDirectives := collectMockImportDirectives(program)
+      let mockRootPath = completed.inheritedMockRootPath
+      if mockRootPath == none && mockImportDirectives.length > 0 && completed.path.endsWith(".test.do") {
+        mockRootPath = completed.path
+      }
+      info := ModuleInfo {
+        path: completed.path,
+        sourceHash: sha256HexString(completed.source),
+        program,
+        mockImportDirectives,
+        mockRootPath,
+      }
+      modules.push(info)
+      validateMockImportDirectives(info, completed.inheritedMockRootPath)
+      collectSymbols(info)
+      for statement of program.statements {
+        case statement {
+          import_: ImportDeclaration -> {
+            sourcePath := resolveImportPath(info, import_.source)
+            queueModuleParse(sourcePath, info.mockRootPath, scheduled, pending)
+          }
+          list: ExportList -> {
+            if list.source != none {
+              sourcePath := resolveImportPath(info, list.source!)
+              queueModuleParse(sourcePath, info.mockRootPath, scheduled, pending)
+            }
+          }
+          _ -> { }
+        }
+      }
+    }
+  }
+
+  private function orderModules(entryPath: string): none {
+    let ordered: ModuleInfo[] = []
+    let visited: string[] = []
+    appendModuleOrder(entryPath, ordered, visited)
+    modules = ordered
+  }
+
+  private function appendModuleOrder(path: string, ordered: ModuleInfo[], visited: string[]): none {
+    if contains(visited, path) { return }
+    visited.push(path)
+    info := findModule(path)
+    if info == none { return }
+    ordered.push(info!)
+    for statement of info!.program.statements {
+      case statement {
+        import_: ImportDeclaration -> { appendModuleOrder(resolveImportPath(info!, import_.source), ordered, visited) }
+        list: ExportList -> { if list.source != none { appendModuleOrder(resolveImportPath(info!, list.source!), ordered, visited) } }
+        _ -> { }
+      }
+    }
+  }
+
+  private function resolveModule(path: string): ModuleInfo | none {
+    existing := findModule(path)
+    if existing == none { return none }
+    if contains(resolvedPaths, path) { return existing }
+    if contains(inProgress, path) { return existing }
     inProgress.push(path)
-    parser := Parser { source: source.source }
-    parsed := catchPanic(=> parser.parse())
-    program := parsed else failure {
-      if parser.errorMessage == "" { panic(failure) }
-      location := SemanticLocation { line: parser.errorLine, column: parser.errorColumn, offset: parser.errorOffset }
-      diagnostics.push(Diagnostic {
-        severity: "error",
-        message: parser.errorMessage,
-        span: SemanticSpan { start: location, end: location },
-        module: path,
-      })
-      ignored := try! inProgress.pop()
-      return none
-    }
-    mockImportDirectives := collectMockImportDirectives(program)
-    let mockRootPath = inheritedMockRootPath
-    if mockRootPath == none && mockImportDirectives.length > 0 && path.endsWith(".test.do") {
-      mockRootPath = path
-    }
-    info := ModuleInfo { path, sourceHash: sha256HexString(source.source), program, mockImportDirectives, mockRootPath }
-    modules.push(info)
-    validateMockImportDirectives(info, inheritedMockRootPath)
-    collectSymbols(info)
+    info := existing!
     resolveImports(info)
     resolveExportLists(info)
     resolveNamedTypes(info)
     ignored := try! inProgress.pop()
+    resolvedPaths.push(path)
     for item of info.diagnostics { diagnostics.push(item) }
     return info
   }
@@ -139,6 +232,7 @@ export class ModuleAnalyzer {
         return Symbol {
           kind: if value.struct_ then "struct" else "class", name: value.name, module, exported: value.exported,
           native_: value.native_, nativeHeader: value.nativeHeader, nativeCppName: value.nativeCppName,
+          typeParams: value.typeParams,
         }
       }
       value: InterfaceDeclaration -> {
@@ -183,6 +277,8 @@ export class ModuleAnalyzer {
       nativeCppName: symbol.nativeCppName,
       implementations: symbol.implementations,
       implementedInterfaceTypes: symbol.implementedInterfaceTypes,
+      typeParams: symbol.typeParams,
+      streamElementTypes: symbol.streamElementTypes,
     }
   }
 
@@ -195,7 +291,7 @@ export class ModuleAnalyzer {
             addError(info, "Test file \"" + info.path + "\" cannot import another test file \"" + sourcePath + "\"", import_.span)
             continue
           }
-          source := analyzeModule(sourcePath, info.mockRootPath)
+          source := resolveModule(sourcePath)
           for specifier of import_.specifiers {
             case specifier {
               named: NamedImport -> {
@@ -248,7 +344,7 @@ export class ModuleAnalyzer {
         list: ExportList -> {
           if list.source != none {
             sourcePath := resolveImportPath(info, list.source!)
-            source := analyzeModule(sourcePath, info.mockRootPath)
+            source := resolveModule(sourcePath)
             info.reExports.push(sourcePath)
             for specifier of list.specifiers {
               let exported: Symbol | none = none

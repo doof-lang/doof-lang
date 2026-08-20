@@ -5,15 +5,45 @@ using namespace ::app_src_ast_;
 using namespace ::app_src_semantic_;
 
 
-std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs) {
+
+doof::JsonObject JsonEligibilityCache::toJsonObject() const {
+    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
+    (*_json)["serialization"] = [&]() { auto _object_value = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(); for (const auto& _entry : *this->serialization) { (*_object_value)[_entry.first] = doof::json_value(_entry.second); } return doof::json_value(_object_value); }();
+    (*_json)["deserialization"] = [&]() { auto _object_value = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(); for (const auto& _entry : *this->deserialization) { (*_object_value)[_entry.first] = doof::json_value(_entry.second); } return doof::json_value(_object_value); }();
+    return _json;
+}
+doof::Result<std::shared_ptr<JsonEligibilityCache>, std::string> JsonEligibilityCache::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
+    try {
+        const auto* _object = doof::json_as_object(_json);
+        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
+    std::optional<std::shared_ptr<doof::ordered_map<std::string, bool>>> _field_serialization;
+    if (auto _iterator_serialization = _object->find("serialization"); _iterator_serialization != _object->end()) {
+            if (!(doof::json_is_object(_iterator_serialization->second))) { return doof::Failure<std::string>{"Field \"serialization\" expected object but got " + std::string(doof::json_type_name(_iterator_serialization->second))}; }
+        _field_serialization = [&]() { const auto* _object_value = doof::json_as_object(_iterator_serialization->second); auto _values = std::make_shared<doof::ordered_map<std::string, bool>>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = (_lenient ? doof::json_as_bool_lenient(_entry.second) : doof::json_as_bool(_entry.second)); } return _values; }();
+    } else {
+        _field_serialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{});
+    }
+    std::optional<std::shared_ptr<doof::ordered_map<std::string, bool>>> _field_deserialization;
+    if (auto _iterator_deserialization = _object->find("deserialization"); _iterator_deserialization != _object->end()) {
+            if (!(doof::json_is_object(_iterator_deserialization->second))) { return doof::Failure<std::string>{"Field \"deserialization\" expected object but got " + std::string(doof::json_type_name(_iterator_deserialization->second))}; }
+        _field_deserialization = [&]() { const auto* _object_value = doof::json_as_object(_iterator_deserialization->second); auto _values = std::make_shared<doof::ordered_map<std::string, bool>>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = (_lenient ? doof::json_as_bool_lenient(_entry.second) : doof::json_as_bool(_entry.second)); } return _values; }();
+    } else {
+        _field_deserialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{});
+    }
+        return doof::Success<std::shared_ptr<JsonEligibilityCache>>{std::make_shared<JsonEligibilityCache>(_field_serialization.value(), _field_deserialization.value())};
+    } catch (const doof::JsonDecodeError& _error) {
+        return doof::Failure<std::string>{_error.message()};
+    }
+}
+std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<JsonEligibilityCache>& cache) {
     if (doof::is_null(owner->resolvedSymbol) || (static_cast<int32_t>((owner->resolvedSymbol->implementations)->size()) == 0)) {
         return nullptr;
     }
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>> implementations = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>>(std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>{});
-    const auto& _iterable_1 = owner->resolvedSymbol->implementations;
-    for (const auto& symbol : *_iterable_1) {
+    const auto& _iterable_2 = owner->resolvedSymbol->implementations;
+    for (const auto& symbol : *_iterable_2) {
         const auto declaration = findJsonClassDeclaration(programs, symbol);
-        if (doof::is_null(declaration) || !canGenerateJsonDeserialization(doof::unwrap_optional(declaration), programs)) {
+        if (doof::is_null(declaration) || !canGenerateJsonDeserialization(doof::unwrap_optional(declaration), programs, cache)) {
             return nullptr;
         }
         implementations->push_back(doof::unwrap_optional(declaration));
@@ -21,8 +51,8 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
     if (static_cast<int32_t>((implementations)->size()) == 0) {
         return nullptr;
     }
-    const auto& _iterable_2 = doof::array_at(implementations, 0, "src/json-semantics", 34)->fields;
-    for (const auto& candidate : *_iterable_2) {
+    const auto& _iterable_4 = doof::array_at(implementations, 0, "src/json-semantics", 44)->fields;
+    for (const auto& candidate : *_iterable_4) {
         if (((candidate->static_ || !candidate->const_) || (static_cast<int32_t>((candidate->names)->size()) != 1)) || doof::is_null(candidate->defaultValue)) {
             continue;
         }
@@ -30,9 +60,9 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
             auto _case_subject = doof::unwrap_optional(candidate->defaultValue);
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject)) {
                 const auto& firstValue = std::get<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject);
-                const auto discriminator = std::make_shared<JsonDiscriminator>(doof::array_at(candidate->names, 0, "src/json-semantics", 38), std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{}));
-                const auto& _iterable_3 = implementations;
-                for (const auto& implementation : *_iterable_3) {
+                const auto discriminator = std::make_shared<JsonDiscriminator>(doof::array_at(candidate->names, 0, "src/json-semantics", 48), std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{}));
+                const auto& _iterable_6 = implementations;
+                for (const auto& implementation : *_iterable_6) {
                     const auto matching = fixedStringField(implementation, discriminator->fieldName);
                     if (doof::is_null(matching) || discriminatorHasValue(discriminator, matching.value())) {
                         (discriminator->entries = std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{}));
@@ -51,14 +81,14 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
     return nullptr;
 }
 std::optional<std::string> fixedStringField(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::string& name) {
-    const auto& _iterable_4 = owner->fields;
-    for (const auto& field : *_iterable_4) {
+    const auto& _iterable_8 = owner->fields;
+    for (const auto& field : *_iterable_8) {
         if ((field->static_ || !field->const_) || doof::is_null(field->defaultValue)) {
             continue;
         }
         auto matches = false;
-        const auto& _iterable_5 = field->names;
-        for (const auto& fieldName : *_iterable_5) {
+        const auto& _iterable_10 = field->names;
+        for (const auto& fieldName : *_iterable_10) {
             if (fieldName == name) {
                 (matches = true);
             }
@@ -81,17 +111,25 @@ std::optional<std::string> fixedStringField(const std::shared_ptr<::app_src_ast_
     return std::nullopt;
 }
 bool discriminatorHasValue(const std::shared_ptr<JsonDiscriminator>& discriminator, const std::string& value) {
-    const auto& _iterable_6 = discriminator->entries;
-    for (const auto& entry : *_iterable_6) {
+    const auto& _iterable_12 = discriminator->entries;
+    for (const auto& entry : *_iterable_12) {
         if (entry->value == value) {
             return true;
         }
     }
     return false;
 }
-bool canGenerateJsonSerialization(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs) {
+bool canGenerateJsonSerialization(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<JsonEligibilityCache>& cache) {
+    const auto key = jsonOwnerKey(owner);
+    if ((!doof::is_null(cache)) && [&]() -> bool { auto _map_has_13 = cache->serialization; return _map_has_13->find(key) != _map_has_13->end(); }()) {
+        return [&]() -> bool { auto _try_value = doof::map_get(cache->serialization, key, "", 0); if (doof::is_failure(_try_value)) doof::panic_at("src/json-semantics", 87, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    }
     std::shared_ptr<std::vector<std::string>> visited = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    return canGenerateJsonSerializationInner(owner, programs, visited);
+    const auto result = canGenerateJsonSerializationInner(owner, programs, visited);
+    if (!doof::is_null(cache)) {
+        doof::map_set(cache->serialization, key, result, "", 0);
+    }
+    return result;
 }
 bool canGenerateJsonSerializationInner(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<std::vector<std::string>>& visited) {
     if ((owner->native_ || (static_cast<int32_t>((owner->typeParams)->size()) > 0)) || hasDedicatedConstructor(owner)) {
@@ -100,8 +138,8 @@ bool canGenerateJsonSerializationInner(const std::shared_ptr<::app_src_ast_::Cla
     if (markJsonOwnerVisited(owner, visited)) {
         return true;
     }
-    const auto& _iterable_7 = owner->fields;
-    for (const auto& field : *_iterable_7) {
+    const auto& _iterable_15 = owner->fields;
+    for (const auto& field : *_iterable_15) {
         if (field->static_) {
             continue;
         }
@@ -111,9 +149,17 @@ bool canGenerateJsonSerializationInner(const std::shared_ptr<::app_src_ast_::Cla
     }
     return true;
 }
-bool canGenerateJsonDeserialization(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs) {
+bool canGenerateJsonDeserialization(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<JsonEligibilityCache>& cache) {
+    const auto key = jsonOwnerKey(owner);
+    if ((!doof::is_null(cache)) && [&]() -> bool { auto _map_has_16 = cache->deserialization; return _map_has_16->find(key) != _map_has_16->end(); }()) {
+        return [&]() -> bool { auto _try_value = doof::map_get(cache->deserialization, key, "", 0); if (doof::is_failure(_try_value)) doof::panic_at("src/json-semantics", 110, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    }
     std::shared_ptr<std::vector<std::string>> visited = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    return canGenerateJsonDeserializationInner(owner, programs, visited);
+    const auto result = canGenerateJsonDeserializationInner(owner, programs, visited);
+    if (!doof::is_null(cache)) {
+        doof::map_set(cache->deserialization, key, result, "", 0);
+    }
+    return result;
 }
 bool canGenerateJsonDeserializationInner(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<std::vector<std::string>>& visited) {
     if ((owner->native_ || (static_cast<int32_t>((owner->typeParams)->size()) > 0)) || hasDedicatedConstructor(owner)) {
@@ -122,8 +168,8 @@ bool canGenerateJsonDeserializationInner(const std::shared_ptr<::app_src_ast_::C
     if (markJsonOwnerVisited(owner, visited)) {
         return true;
     }
-    const auto& _iterable_8 = owner->fields;
-    for (const auto& field : *_iterable_8) {
+    const auto& _iterable_18 = owner->fields;
+    for (const auto& field : *_iterable_18) {
         if (field->static_) {
             continue;
         }
@@ -193,8 +239,8 @@ bool isGeneratedJsonType(const std::variant<std::shared_ptr<::app_src_semantic_:
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_9 = tuple->elements;
-            for (const auto& element : *_iterable_9) {
+            const auto& _iterable_20 = tuple->elements;
+            for (const auto& element : *_iterable_20) {
                 if (!isGeneratedJsonType(element, programs, visited)) {
                     return false;
                 }
@@ -250,8 +296,8 @@ bool isGeneratedJsonSerializationType(const std::variant<std::shared_ptr<::app_s
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_10 = tuple->elements;
-            for (const auto& element : *_iterable_10) {
+            const auto& _iterable_22 = tuple->elements;
+            for (const auto& element : *_iterable_22) {
                 if (!isGeneratedJsonSerializationType(element, programs, visited)) {
                     return false;
                 }
@@ -316,8 +362,8 @@ bool isGeneratedJsonSerializationType(const std::variant<std::shared_ptr<::app_s
 std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> nullableJsonMemberUnchecked(const std::shared_ptr<::app_src_semantic_::UnionResolvedType>& union_) {
     std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> value = std::monostate{};
     auto nullCount = 0;
-    const auto& _iterable_11 = union_->types;
-    for (const auto& member : *_iterable_11) {
+    const auto& _iterable_24 = union_->types;
+    for (const auto& member : *_iterable_24) {
         {
             auto _case_subject = member;
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::NoneType>>(_case_subject)) {
@@ -406,8 +452,8 @@ bool isGeneratedJsonDeserializationAnnotation(const std::variant<std::shared_ptr
                 if (static_cast<int32_t>((named->typeArgs)->size()) == 0) {
                     return false;
                 }
-                const auto& _iterable_12 = named->typeArgs;
-                for (const auto& element : *_iterable_12) {
+                const auto& _iterable_26 = named->typeArgs;
+                for (const auto& element : *_iterable_26) {
                     if (!isGeneratedJsonDeserializationAnnotation(element, programs, visited)) {
                         return false;
                     }
@@ -419,10 +465,10 @@ bool isGeneratedJsonDeserializationAnnotation(const std::variant<std::shared_ptr
                     return false;
                 }
                 {
-                    auto _case_subject = doof::array_at(named->typeArgs, 0, "src/json-semantics", 253);
+                    auto _case_subject = doof::array_at(named->typeArgs, 0, "src/json-semantics", 279);
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                         const auto& key = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
-                        return ((key->name == std::string("string")) && isGeneratedJsonDeserializationAnnotation(doof::array_at(named->typeArgs, 1, "src/json-semantics", 254), programs, visited));
+                        return ((key->name == std::string("string")) && isGeneratedJsonDeserializationAnnotation(doof::array_at(named->typeArgs, 1, "src/json-semantics", 280), programs, visited));
                 }
                 else {
                         return false;
@@ -456,8 +502,8 @@ bool isGeneratedJsonDeserializationAnnotation(const std::variant<std::shared_ptr
             }
             auto hasNull = false;
             auto hasPrimitive = false;
-            const auto& _iterable_13 = union_->types;
-            for (const auto& member : *_iterable_13) {
+            const auto& _iterable_28 = union_->types;
+            for (const auto& member : *_iterable_28) {
                 {
                     auto _case_subject = member;
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
@@ -496,8 +542,8 @@ bool isGeneratedJsonSerializationAnnotation(const std::variant<std::shared_ptr<:
                 if (static_cast<int32_t>((named->typeArgs)->size()) == 0) {
                     return false;
                 }
-                const auto& _iterable_14 = named->typeArgs;
-                for (const auto& element : *_iterable_14) {
+                const auto& _iterable_30 = named->typeArgs;
+                for (const auto& element : *_iterable_30) {
                     if (!isGeneratedJsonSerializationAnnotation(element, programs, visited)) {
                         return false;
                     }
@@ -509,10 +555,10 @@ bool isGeneratedJsonSerializationAnnotation(const std::variant<std::shared_ptr<:
                     return false;
                 }
                 {
-                    auto _case_subject = doof::array_at(named->typeArgs, 0, "src/json-semantics", 302);
+                    auto _case_subject = doof::array_at(named->typeArgs, 0, "src/json-semantics", 328);
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                         const auto& key = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
-                        return ((key->name == std::string("string")) && isGeneratedJsonSerializationAnnotation(doof::array_at(named->typeArgs, 1, "src/json-semantics", 303), programs, visited));
+                        return ((key->name == std::string("string")) && isGeneratedJsonSerializationAnnotation(doof::array_at(named->typeArgs, 1, "src/json-semantics", 329), programs, visited));
                 }
                 else {
                         return false;
@@ -547,11 +593,11 @@ bool isGeneratedJsonSerializationAnnotation(const std::variant<std::shared_ptr<:
             }
             if (((named->name == std::string("Map")) || (named->name == std::string("ReadonlyMap"))) && (static_cast<int32_t>((named->typeArgs)->size()) == 2)) {
                 {
-                    auto _case_subject = doof::array_at(named->typeArgs, 0, "src/json-semantics", 323);
+                    auto _case_subject = doof::array_at(named->typeArgs, 0, "src/json-semantics", 349);
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                         const auto& key = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
                         {
-                            auto _case_subject = doof::array_at(named->typeArgs, 1, "src/json-semantics", 325);
+                            auto _case_subject = doof::array_at(named->typeArgs, 1, "src/json-semantics", 351);
                             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                                 const auto& value = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
                                 return ((key->name == std::string("string")) && (value->name == std::string("JsonValue")));
@@ -592,10 +638,9 @@ bool isGeneratedJsonSerializationAnnotation(const std::variant<std::shared_ptr<:
     return false;
 }
 bool markJsonOwnerVisited(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::string>>& visited) {
-    const auto module = (doof::is_null(owner->resolvedSymbol) ? std::string("") : owner->resolvedSymbol->module);
-    const auto key = ((module + std::string("::")) + owner->name);
-    const auto& _iterable_15 = visited;
-    for (const auto& existing : *_iterable_15) {
+    const auto key = jsonOwnerKey(owner);
+    const auto& _iterable_32 = visited;
+    for (const auto& existing : *_iterable_32) {
         if (existing == key) {
             return true;
         }
@@ -603,11 +648,15 @@ bool markJsonOwnerVisited(const std::shared_ptr<::app_src_ast_::ClassDeclaration
     visited->push_back(key);
     return false;
 }
+std::string jsonOwnerKey(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner) {
+    const auto module = (doof::is_null(owner->resolvedSymbol) ? std::string("") : owner->resolvedSymbol->module);
+    return ((module + std::string("::")) + owner->name);
+}
 std::shared_ptr<::app_src_ast_::ClassDeclaration> findJsonClassDeclaration(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol) {
-    const auto& _iterable_16 = programs;
-    for (const auto& program : *_iterable_16) {
-        const auto& _iterable_17 = program->statements;
-        for (const auto& statement : *_iterable_17) {
+    const auto& _iterable_34 = programs;
+    for (const auto& program : *_iterable_34) {
+        const auto& _iterable_36 = program->statements;
+        for (const auto& statement : *_iterable_36) {
             const auto declaration = jsonClassDeclaration(statement);
             if (doof::is_null(declaration) || doof::is_null(declaration->resolvedSymbol)) {
                 continue;
@@ -638,8 +687,8 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> jsonClassDeclaration(const std
     return nullptr;
 }
 bool hasDedicatedConstructor(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner) {
-    const auto& _iterable_18 = owner->methods;
-    for (const auto& method : *_iterable_18) {
+    const auto& _iterable_38 = owner->methods;
+    for (const auto& method : *_iterable_38) {
         if (method->static_ && (method->name == std::string("constructor"))) {
             return true;
         }

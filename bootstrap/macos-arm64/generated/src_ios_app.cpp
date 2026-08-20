@@ -224,8 +224,8 @@ std::string renderIOSInfoPlist(const std::shared_ptr<IOSAppConfig>& config) {
     (body += plistString(std::string("UILaunchStoryboardName"), std::string("")));
     (body += std::string("\t<key>UIApplicationSceneManifest</key>\n\t<dict>\n\t\t<key>UIApplicationSupportsMultipleScenes</key>\n\t\t<false/>\n\t</dict>\n"));
     if (!doof::is_null(config->infoPlist)) {
-        const auto& _iterable_1 = doof::unwrap_optional(config->infoPlist);
-        for (const auto& [key, value] : *_iterable_1) {
+        const auto& _iterable_3 = doof::unwrap_optional(config->infoPlist);
+        for (const auto& [key, value] : *_iterable_3) {
             (body += (((std::string("\t<key>") + escapePlistText(key)) + std::string("</key>\n")) + renderPlistValue(value, 1)));
         }
     }
@@ -298,8 +298,8 @@ std::string renderPlistValue(const doof::JsonValue& value, int32_t depth) {
     else if (doof::json_is_array(_case_subject)) {
             const auto array = std::get<doof::JsonArray>(doof::json_storage(_case_subject));
             auto result = (indent + std::string("<array>\n"));
-            const auto& _iterable_2 = array;
-            for (const auto& item : *_iterable_2) {
+            const auto& _iterable_7 = array;
+            for (const auto& item : *_iterable_7) {
                 (result += renderPlistValue(item, (depth + 1)));
             }
             return ((result + indent) + std::string("</array>\n"));
@@ -307,8 +307,8 @@ std::string renderPlistValue(const doof::JsonValue& value, int32_t depth) {
     else if (doof::json_is_object(_case_subject)) {
             const auto object = doof::json_object(_case_subject);
             auto result = (indent + std::string("<dict>\n"));
-            const auto& _iterable_3 = object;
-            for (const auto& [key, item] : *_iterable_3) {
+            const auto& _iterable_9 = object;
+            for (const auto& [key, item] : *_iterable_9) {
                 (result += (((plistIndent((depth + 1)) + std::string("<key>")) + escapePlistText(key)) + std::string("</key>\n")));
                 (result += renderPlistValue(item, (depth + 1)));
             }

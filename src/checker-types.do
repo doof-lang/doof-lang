@@ -534,7 +534,13 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
           }
           return false
         }
-        _: StreamResolvedType -> { return true }
+        targetStream: StreamResolvedType -> {
+          for elementPattern of class_.symbol.streamElementTypes {
+            element := substituteTypeParams(elementPattern, class_.symbol.typeParams, class_.typeArgs)
+            if sameType(element, targetStream.elementType) { return true }
+          }
+          return false
+        }
         _ -> { }
       }
     }

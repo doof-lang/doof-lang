@@ -19,15 +19,25 @@ export class JsonDiscriminator {
   let entries: JsonDiscriminatorEntry[] = []
 }
 
+/** Whole-graph memoization for repeated emitter eligibility queries. */
+export class JsonEligibilityCache {
+  serialization: Map<string, bool> = {}
+  deserialization: Map<string, bool> = {}
+}
+
 // Automatic dispatch deliberately uses only fixed string fields. Shape-based
 // unique-field matching belongs to contextual object literal inference and is
 // not stable enough for decoding untrusted JSON.
-export function interfaceJsonDiscriminator(owner: InterfaceDeclaration, programs: Program[]): JsonDiscriminator | none {
+export function interfaceJsonDiscriminator(
+  owner: InterfaceDeclaration,
+  programs: Program[],
+  cache: JsonEligibilityCache | none = none,
+): JsonDiscriminator | none {
   if owner.resolvedSymbol == none || owner.resolvedSymbol!.implementations.length == 0 { return none }
   let implementations: ClassDeclaration[] = []
   for symbol of owner.resolvedSymbol!.implementations {
     declaration := findJsonClassDeclaration(programs, symbol)
-    if declaration == none || !canGenerateJsonDeserialization(declaration!, programs) { return none }
+    if declaration == none || !canGenerateJsonDeserialization(declaration!, programs, cache) { return none }
     implementations.push(declaration!)
   }
   if implementations.length == 0 { return none }
@@ -68,9 +78,17 @@ function discriminatorHasValue(discriminator: JsonDiscriminator, value: string):
   return false
 }
 
-export function canGenerateJsonSerialization(owner: ClassDeclaration, programs: Program[] = []): bool {
+export function canGenerateJsonSerialization(
+  owner: ClassDeclaration,
+  programs: Program[] = [],
+  cache: JsonEligibilityCache | none = none,
+): bool {
+  key := jsonOwnerKey(owner)
+  if cache != none && cache!.serialization.has(key) { return try! cache!.serialization.get(key) }
   let visited: string[] = []
-  return canGenerateJsonSerializationInner(owner, programs, visited)
+  result := canGenerateJsonSerializationInner(owner, programs, visited)
+  if cache != none { cache!.serialization.set(key, result) }
+  return result
 }
 
 function canGenerateJsonSerializationInner(owner: ClassDeclaration, programs: Program[], visited: string[]): bool {
@@ -83,9 +101,17 @@ function canGenerateJsonSerializationInner(owner: ClassDeclaration, programs: Pr
   return true
 }
 
-export function canGenerateJsonDeserialization(owner: ClassDeclaration, programs: Program[] = []): bool {
+export function canGenerateJsonDeserialization(
+  owner: ClassDeclaration,
+  programs: Program[] = [],
+  cache: JsonEligibilityCache | none = none,
+): bool {
+  key := jsonOwnerKey(owner)
+  if cache != none && cache!.deserialization.has(key) { return try! cache!.deserialization.get(key) }
   let visited: string[] = []
-  return canGenerateJsonDeserializationInner(owner, programs, visited)
+  result := canGenerateJsonDeserializationInner(owner, programs, visited)
+  if cache != none { cache!.deserialization.set(key, result) }
+  return result
 }
 
 function canGenerateJsonDeserializationInner(owner: ClassDeclaration, programs: Program[], visited: string[]): bool {
@@ -344,11 +370,15 @@ function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, prog
 }
 
 function markJsonOwnerVisited(owner: ClassDeclaration, visited: string[]): bool {
-  module := if owner.resolvedSymbol == none then "" else owner.resolvedSymbol!.module
-  key := module + "::" + owner.name
+  key := jsonOwnerKey(owner)
   for existing of visited { if existing == key { return true } }
   visited.push(key)
   return false
+}
+
+function jsonOwnerKey(owner: ClassDeclaration): string {
+  module := if owner.resolvedSymbol == none then "" else owner.resolvedSymbol!.module
+  return module + "::" + owner.name
 }
 
 function findJsonClassDeclaration(programs: Program[], symbol: Symbol): ClassDeclaration | none {

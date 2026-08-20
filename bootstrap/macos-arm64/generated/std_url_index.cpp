@@ -134,8 +134,8 @@ int32_t QueryParams::size() {
     return static_cast<int32_t>((this->entries)->size());
 }
 bool QueryParams::has(const std::string& name) {
-    const auto& _iterable_1 = this->entries;
-    for (const auto& entry : *_iterable_1) {
+    const auto& _iterable_2 = this->entries;
+    for (const auto& entry : *_iterable_2) {
         if (entry->name == name) {
             return true;
         }
@@ -143,8 +143,8 @@ bool QueryParams::has(const std::string& name) {
     return false;
 }
 std::shared_ptr<QueryParam> QueryParams::first(const std::string& name) {
-    const auto& _iterable_2 = this->entries;
-    for (const auto& entry : *_iterable_2) {
+    const auto& _iterable_4 = this->entries;
+    for (const auto& entry : *_iterable_4) {
         if (entry->name == name) {
             return entry;
         }
@@ -153,8 +153,8 @@ std::shared_ptr<QueryParam> QueryParams::first(const std::string& name) {
 }
 std::shared_ptr<std::vector<std::shared_ptr<QueryParam>>> QueryParams::all(const std::string& name) {
     const std::shared_ptr<std::vector<std::shared_ptr<QueryParam>>> matches = std::make_shared<std::vector<std::shared_ptr<QueryParam>>>(std::vector<std::shared_ptr<QueryParam>>{});
-    const auto& _iterable_3 = this->entries;
-    for (const auto& entry : *_iterable_3) {
+    const auto& _iterable_6 = this->entries;
+    for (const auto& entry : *_iterable_6) {
         if (entry->name == name) {
             matches->push_back(entry);
         }
@@ -188,9 +188,9 @@ doof::Result<std::shared_ptr<Path>, std::shared_ptr<UrlError>> parsePath(const s
     auto firstSegment = (doof::string_startsWith(text, std::string("/")) ? 1 : 0);
     for (int32_t index = firstSegment; index < static_cast<int32_t>((rawSegments)->size()); ++index) {
         const auto rawSegment = doof::array_at(rawSegments, index, "index", 100);
-        auto _try_value_4 = decodeComponent(rawSegment, false);
-        if (doof::is_failure(_try_value_4)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_4))};
-        const auto segment = doof::success_value(_try_value_4);
+        auto _try_value_8 = decodeComponent(rawSegment, false);
+        if (doof::is_failure(_try_value_8)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_8))};
+        const auto segment = doof::success_value(_try_value_8);
         segments->push_back(segment);
     }
     return doof::Success<std::shared_ptr<Path>>{ std::make_shared<Path>(doof::string_startsWith(text, std::string("/")), doof::array_drainToReadonly(segments, "", 0)) };
@@ -200,9 +200,9 @@ doof::Result<std::shared_ptr<Authority>, std::shared_ptr<UrlError>> parseAuthori
     auto hostPort = text;
     const auto atIndex = findLastChar(text, U'\u0040');
     if (atIndex >= 0) {
-        auto _try_value_5 = decodeComponent(doof::string_substring(text, 0, atIndex), false);
-        if (doof::is_failure(_try_value_5)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_5))};
-        const auto decodedUserinfo = doof::success_value(_try_value_5);
+        auto _try_value_9 = decodeComponent(doof::string_substring(text, 0, atIndex), false);
+        if (doof::is_failure(_try_value_9)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_9))};
+        const auto decodedUserinfo = doof::success_value(_try_value_9);
         (userinfo = decodedUserinfo);
         (hostPort = doof::string_slice(text, (atIndex + 1)));
     }
@@ -227,9 +227,9 @@ doof::Result<std::shared_ptr<Authority>, std::shared_ptr<UrlError>> parseAuthori
             (port = doof::string_slice(hostPort, (portSeparator + 1)));
         }
     }
-    auto _try_value_6 = decodeComponent(hostText, false);
-    if (doof::is_failure(_try_value_6)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_6))};
-    const auto host = doof::success_value(_try_value_6);
+    auto _try_value_10 = decodeComponent(hostText, false);
+    if (doof::is_failure(_try_value_10)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_10))};
+    const auto host = doof::success_value(_try_value_10);
     return doof::Success<std::shared_ptr<Authority>>{ std::make_shared<Authority>(userinfo, host, port) };
 }
 doof::Result<std::shared_ptr<QueryParams>, std::shared_ptr<UrlError>> parseQueryParams(const std::string& text) {
@@ -238,25 +238,25 @@ doof::Result<std::shared_ptr<QueryParams>, std::shared_ptr<UrlError>> parseQuery
     }
     const std::shared_ptr<std::vector<std::shared_ptr<QueryParam>>> entries = std::make_shared<std::vector<std::shared_ptr<QueryParam>>>(std::vector<std::shared_ptr<QueryParam>>{});
     const auto rawEntries = doof::string_split(text, std::string("&"));
-    const auto& _iterable_7 = rawEntries;
-    for (const auto& rawEntry : *_iterable_7) {
+    const auto& _iterable_12 = rawEntries;
+    for (const auto& rawEntry : *_iterable_12) {
         if (static_cast<int32_t>(rawEntry.size()) == 0) {
             continue;
         }
         const auto separator = doof::string_indexOf(rawEntry, std::string("="));
         if (separator < 0) {
-            auto _try_value_8 = decodeComponent(rawEntry, true);
-            if (doof::is_failure(_try_value_8)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_8))};
-            const auto name = doof::success_value(_try_value_8);
+            auto _try_value_13 = decodeComponent(rawEntry, true);
+            if (doof::is_failure(_try_value_13)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_13))};
+            const auto name = doof::success_value(_try_value_13);
             entries->push_back(std::make_shared<QueryParam>(name, std::nullopt));
             continue;
         }
-        auto _try_value_9 = decodeComponent(doof::string_substring(rawEntry, 0, separator), true);
-        if (doof::is_failure(_try_value_9)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_9))};
-        const auto name = doof::success_value(_try_value_9);
-        auto _try_value_10 = decodeComponent(doof::string_slice(rawEntry, (separator + 1)), true);
-        if (doof::is_failure(_try_value_10)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_10))};
-        const auto value = doof::success_value(_try_value_10);
+        auto _try_value_14 = decodeComponent(doof::string_substring(rawEntry, 0, separator), true);
+        if (doof::is_failure(_try_value_14)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_14))};
+        const auto name = doof::success_value(_try_value_14);
+        auto _try_value_15 = decodeComponent(doof::string_slice(rawEntry, (separator + 1)), true);
+        if (doof::is_failure(_try_value_15)) return doof::Failure<std::shared_ptr<UrlError>>{doof::variant_promote<std::shared_ptr<UrlError>>(doof::failure_error(_try_value_15))};
+        const auto value = doof::success_value(_try_value_15);
         entries->push_back(std::make_shared<QueryParam>(name, value));
     }
     return doof::Success<std::shared_ptr<QueryParams>>{ std::make_shared<QueryParams>(doof::array_drainToReadonly(entries, "", 0)) };

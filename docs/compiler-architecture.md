@@ -39,6 +39,14 @@ output for failed compiler and linker commands. Source loading is inverted
 through `SourceLoader`, so the analyzer discovers the transitive graph without
 gaining filesystem ownership.
 
+The analyzer keeps source resolution, graph deduplication, module ordering, and
+all semantic mutation on its calling thread. Parser workers capture only source
+text and module identity, return independently owned mutable ASTs, and are
+consumed through a first-completed promise queue. Completed modules reveal more
+imports to the main-thread driver; a deterministic depth-first ordering pass
+runs before symbol/import/type resolution so worker completion order is not a
+semantic input.
+
 ## Horizontal concepts
 
 Each row names the authoritative path for a concept. A change normally follows

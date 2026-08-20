@@ -49,8 +49,8 @@ doof::Result<std::string, std::string> resourcePath(const std::string& path) {
 std::string join(const std::shared_ptr<std::vector<std::string>>& parts) {
     auto prefix = std::string("");
     std::shared_ptr<std::vector<std::string>> segments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_2 = parts;
-    for (const auto& part : *_iterable_2) {
+    const auto& _iterable_3 = parts;
+    for (const auto& part : *_iterable_3) {
         if (static_cast<int32_t>(part.size()) == 0) {
             continue;
         }
@@ -68,8 +68,8 @@ std::string join(const std::shared_ptr<std::vector<std::string>>& parts) {
             }
         }
         const auto rawSegments = doof::string_split(segmentSource, std::string("/"));
-        const auto& _iterable_3 = rawSegments;
-        for (const auto& rawSegment : *_iterable_3) {
+        const auto& _iterable_5 = rawSegments;
+        for (const auto& rawSegment : *_iterable_5) {
             if ((static_cast<int32_t>(rawSegment.size()) == 0) || (rawSegment == std::string("."))) {
                 continue;
             }

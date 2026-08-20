@@ -328,8 +328,17 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
 // while breaking a generated-header cycle. Call sites already materialize
 // Doof defaults, so those expressions do not also belong in the C++ header.
 function defaultNeedsImportedDefinition(defaultText: string, context: EmitContext): bool {
-  for imported of context.imports {
-    if defaultText.contains("::" + moduleNamespace(imported.sourceModule) + "::") { return true }
+  if !context.importedDefinitionNeedlesReady {
+    for imported of context.imports {
+      needle := "::" + moduleNamespace(imported.sourceModule) + "::"
+      let retained = false
+      for existing of context.importedDefinitionNeedles { if existing == needle { retained = true } }
+      if !retained { context.importedDefinitionNeedles.push(needle) }
+    }
+    context.importedDefinitionNeedlesReady = true
+  }
+  for needle of context.importedDefinitionNeedles {
+    if defaultText.contains(needle) { return true }
   }
   return false
 }

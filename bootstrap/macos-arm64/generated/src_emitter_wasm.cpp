@@ -47,16 +47,16 @@ doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const s
     collectExportedFunctions(doof::unwrap_optional(info), exports);
     std::shared_ptr<std::vector<std::string>> names = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("doof_initialize")});
     std::shared_ptr<std::vector<std::string>> functionNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_1 = exports;
-    for (const auto& fn : *_iterable_1) {
+    const auto& _iterable_2 = exports;
+    for (const auto& fn : *_iterable_2) {
         if (fn->name == std::string("main")) {
             continue;
         }
-        auto _try_value_2 = validateWasmFunction(fn, result);
-        if (doof::is_failure(_try_value_2)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_2))};
+        auto _try_value_3 = validateWasmFunction(fn, result);
+        if (doof::is_failure(_try_value_3)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_3))};
         const auto name = (std::string("doof_export_") + ::app_src_emitter_expr_::cppIdentifier(fn->name));
-        const auto& _iterable_3 = functionNames;
-        for (const auto& existing : *_iterable_3) {
+        const auto& _iterable_5 = functionNames;
+        for (const auto& existing : *_iterable_5) {
             if (existing == name) {
                 return doof::Failure<std::string>{ (((std::string("WebAssembly export name collision for ") + fn->name) + std::string(" at ")) + name) };
             }
@@ -69,23 +69,23 @@ doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const s
     (context->namespaceImports = info->namespaceImports);
     auto source = wasmPreamble(doof::unwrap_optional(info), result, entry);
     auto exportIndex = 0;
-    const auto& _iterable_4 = exports;
-    for (const auto& fn : *_iterable_4) {
+    const auto& _iterable_7 = exports;
+    for (const auto& fn : *_iterable_7) {
         if (fn->name == std::string("main")) {
             continue;
         }
         (source = (source + emitWasmWrapper(fn, doof::array_at(functionNames, exportIndex, "src/emitter-wasm", 53), context)));
         (exportIndex += 1);
     }
-    const auto& _iterable_5 = functionNames;
-    for (const auto& name : *_iterable_5) {
+    const auto& _iterable_9 = functionNames;
+    for (const auto& name : *_iterable_9) {
         names->push_back(name);
     }
     return doof::Success<std::shared_ptr<WasmEmission>>{ std::make_shared<WasmEmission>(source, names) };
 }
 void collectExportedFunctions(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>>& result) {
-    const auto& _iterable_6 = info->program->statements;
-    for (const auto& statement : *_iterable_6) {
+    const auto& _iterable_11 = info->program->statements;
+    for (const auto& statement : *_iterable_11) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
@@ -112,8 +112,8 @@ void collectExportedFunctions(const std::shared_ptr<::app_src_analyzer_::ModuleI
     }
 }
 bool moduleExportsFunction(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& name) {
-    const auto& _iterable_7 = info->exports;
-    for (const auto& symbol : *_iterable_7) {
+    const auto& _iterable_13 = info->exports;
+    for (const auto& symbol : *_iterable_13) {
         const auto sourceName = ((symbol->originalName == std::string("")) ? symbol->name : symbol->originalName);
         if (((symbol->kind == std::string("function")) && (symbol->module == info->path)) && (sourceName == name)) {
             return true;
@@ -125,18 +125,18 @@ doof::Result<void, std::string> validateWasmFunction(const std::shared_ptr<::app
     if (static_cast<int32_t>((fn->typeParams)->size()) > 0) {
         return doof::Failure<std::string>{ ((std::string("WebAssembly export \"") + fn->name) + std::string("\" cannot be generic")) };
     }
-    auto _binding_value_8 = fn->resolvedType;
-    if (doof::is_null(_binding_value_8)) {
-        const auto& resolved = _binding_value_8;
+    auto _binding_value_14 = fn->resolvedType;
+    if (doof::is_null(_binding_value_14)) {
+        const auto& resolved = _binding_value_14;
         return doof::Failure<std::string>{ ((std::string("WebAssembly export \"") + fn->name) + std::string("\" is missing a resolved function type")) };
     }
-    const auto resolved = doof::unwrap_optional(_binding_value_8);
+    const auto resolved = doof::unwrap_optional(_binding_value_14);
     {
         auto _case_subject = resolved;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& type_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_9 = fn->params;
-            for (const auto& parameter : *_iterable_9) {
+            const auto& _iterable_16 = fn->params;
+            for (const auto& parameter : *_iterable_16) {
                 if (doof::is_null(parameter->resolvedType) || !isWasmJsonType(doof::unwrap_optional(parameter->resolvedType), analysis)) {
                     return doof::Failure<std::string>{ ((((std::string("Parameter \"") + parameter->name) + std::string("\" of WebAssembly export \"")) + fn->name) + std::string("\" must be supported by the JSON ABI")) };
                 }
@@ -197,7 +197,7 @@ bool isWasmJsonType(const std::variant<std::shared_ptr<::app_src_semantic_::Prim
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
             const auto declaration = findClass(analysis, class_);
-            return (((!doof::is_null(declaration)) && ::app_src_json_semantics_::canGenerateJsonSerialization(doof::unwrap_optional(declaration), allPrograms(analysis))) && ::app_src_json_semantics_::canGenerateJsonDeserialization(doof::unwrap_optional(declaration), allPrograms(analysis)));
+            return (((!doof::is_null(declaration)) && ::app_src_json_semantics_::canGenerateJsonSerialization(doof::unwrap_optional(declaration), allPrograms(analysis), nullptr)) && ::app_src_json_semantics_::canGenerateJsonDeserialization(doof::unwrap_optional(declaration), allPrograms(analysis), nullptr));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject);
@@ -218,8 +218,8 @@ bool isWasmJsonType(const std::variant<std::shared_ptr<::app_src_semantic_::Prim
 std::string wasmPreamble(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& entry) {
     auto declarations = std::string("");
     auto calls = std::string("");
-    const auto& _iterable_10 = ::app_src_emitter_module_::planModuleInitializationOrder(result, entry, std::string("wasm"));
-    for (const auto& path : *_iterable_10) {
+    const auto& _iterable_18 = ::app_src_emitter_module_::planModuleInitializationOrder(result, entry, std::string("wasm"));
+    for (const auto& path : *_iterable_18) {
         const auto namespace_ = ::app_src_emitter_names_::moduleNamespace(path);
         (declarations = (((declarations + std::string("namespace ")) + namespace_) + std::string(" { void __doof_initialize_module(); }\n")));
         (calls = (((calls + std::string("        ::")) + namespace_) + std::string("::__doof_initialize_module();\n")));
@@ -227,18 +227,18 @@ std::string wasmPreamble(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>&
     return ((((((((((((((((((((((((((std::string("#include \"") + ::app_src_emitter_names_::moduleHeaderName(info->path)) + std::string("\"\n")) + std::string("#include \"doof_runtime.hpp\"\n#include \"std/json/native_json.hpp\"\n#include <cstring>\n\n")) + declarations) + std::string("\n")) + std::string("namespace {\n")) + std::string("int __doof_wasm_initialization_state = 0;\n")) + std::string("char* __doof_wasm_return_text(const std::string& text) { auto* out = static_cast<char*>(std::malloc(text.size() + 1)); if (out == nullptr) return nullptr; std::memcpy(out, text.c_str(), text.size() + 1); return out; }\n")) + std::string("doof::JsonValue __doof_wasm_object(std::initializer_list<std::pair<std::string, doof::JsonValue>> values) { return doof::json_value(std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(values)); }\n")) + std::string("char* __doof_wasm_success(const doof::JsonValue& value) { return __doof_wasm_return_text(doof_json::format(__doof_wasm_object({{\"ok\", doof::json_value(true)}, {\"value\", value}}))); }\n")) + std::string("char* __doof_wasm_failure(const doof::JsonValue& error) { return __doof_wasm_return_text(doof_json::format(__doof_wasm_object({{\"ok\", doof::json_value(false)}, {\"error\", error}}))); }\n")) + std::string("char* __doof_wasm_failure_message(int32_t code, const std::string& message) { return __doof_wasm_failure(doof::json_error(code, message)); }\n")) + std::string("}\n\nextern \"C\" void doof_free(char* ptr) { std::free(ptr); }\n\n")) + std::string("extern \"C\" char* doof_initialize() {\n")) + std::string("    try {\n")) + std::string("        if (__doof_wasm_initialization_state == 2) return __doof_wasm_success(doof::json_value(nullptr));\n")) + std::string("        if (__doof_wasm_initialization_state == 1) return __doof_wasm_failure_message(500, \"Doof module initialization is already in progress\");\n")) + std::string("        if (__doof_wasm_initialization_state == 3) return __doof_wasm_failure_message(500, \"Doof module initialization previously failed\");\n")) + std::string("        __doof_wasm_initialization_state = 1;\n")) + std::string("        auto& __domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __scope(&__domain);\n")) + calls) + std::string("        __doof_wasm_initialization_state = 2;\n")) + std::string("        return __doof_wasm_success(doof::json_value(nullptr));\n")) + std::string("    } catch (const doof::Panic& error) { __doof_wasm_initialization_state = 3; return __doof_wasm_failure_message(500, std::string(\"panic: \") + error.what()); }\n")) + std::string("      catch (const std::exception& error) { __doof_wasm_initialization_state = 3; return __doof_wasm_failure_message(500, error.what()); }\n")) + std::string("}\n\n"));
 }
 std::string emitWasmWrapper(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn, const std::string& exportName, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    auto _binding_value_11 = fn->resolvedType;
-    if (doof::is_null(_binding_value_11)) {
-        const auto& resolved = _binding_value_11;
+    auto _binding_value_19 = fn->resolvedType;
+    if (doof::is_null(_binding_value_19)) {
+        const auto& resolved = _binding_value_19;
         doof::panic(std::string("checked wasm function lost its resolved type"));
     }
-    const auto resolved = doof::unwrap_optional(_binding_value_11);
-    auto _binding_value_12 = [&]() -> doof::Result<std::shared_ptr<::app_src_semantic_::FunctionType>, std::string> { auto _as_value = resolved; if (doof::variant_is<std::shared_ptr<::app_src_semantic_::FunctionType>>(_as_value)) return doof::Success<std::shared_ptr<::app_src_semantic_::FunctionType>>{doof::variant_narrow<std::shared_ptr<::app_src_semantic_::FunctionType>>(_as_value)}; return doof::Failure<std::string>{"Union narrowing failed"}; }();
-    if (doof::is_failure(_binding_value_12)) {
-        const auto& type_ = _binding_value_12;
+    const auto resolved = doof::unwrap_optional(_binding_value_19);
+    auto _binding_value_20 = [&]() -> doof::Result<std::shared_ptr<::app_src_semantic_::FunctionType>, std::string> { auto _as_value = resolved; if (doof::variant_is<std::shared_ptr<::app_src_semantic_::FunctionType>>(_as_value)) return doof::Success<std::shared_ptr<::app_src_semantic_::FunctionType>>{doof::variant_narrow<std::shared_ptr<::app_src_semantic_::FunctionType>>(_as_value)}; return doof::Failure<std::string>{"Union narrowing failed"}; }();
+    if (doof::is_failure(_binding_value_20)) {
+        const auto& type_ = _binding_value_20;
         doof::panic(std::string("checked wasm function lost its function type"));
     }
-    const auto type_ = doof::success_value(_binding_value_12);
+    const auto type_ = doof::success_value(_binding_value_20);
     auto source = ((std::string("extern \"C\" char* ") + exportName) + std::string("(const char* params_json) {\n    try {\n"));
     (source = (source + std::string("        if (__doof_wasm_initialization_state == 3) return __doof_wasm_failure_message(500, \"Doof module initialization previously failed\");\n")));
     (source = (source + std::string("        if (__doof_wasm_initialization_state != 2) return __doof_wasm_failure_message(503, \"Call doof_initialize before invoking Doof exports\");\n")));
@@ -248,13 +248,13 @@ std::string emitWasmWrapper(const std::shared_ptr<::app_src_ast_::FunctionDeclar
     (source = (source + std::string("        if (doof::is_failure(__parsed)) return __doof_wasm_failure_message(400, std::string(\"Invalid JSON params: \" ) + doof::failure_error(__parsed));\n")));
     (source = (source + std::string("        const auto* __params = doof::json_as_object(doof::success_value(__parsed));\n")));
     (source = (source + std::string("        if (__params == nullptr) return __doof_wasm_failure_message(400, \"Invalid JSON params: expected object\");\n")));
-    const auto& _iterable_13 = fn->params;
-    for (const auto& parameter : *_iterable_13) {
+    const auto& _iterable_22 = fn->params;
+    for (const auto& parameter : *_iterable_22) {
         (source = (source + emitParameter(parameter, context)));
     }
     auto arguments = std::string("");
-    const auto& _iterable_14 = fn->params;
-    for (const auto& parameter : *_iterable_14) {
+    const auto& _iterable_24 = fn->params;
+    for (const auto& parameter : *_iterable_24) {
         if (arguments != std::string("")) {
             (arguments = (arguments + std::string(", ")));
         }
@@ -300,8 +300,8 @@ std::string emitParameter(const std::shared_ptr<::app_src_ast_::Parameter>& para
     return (((((source + std::string("        auto ")) + name) + std::string(" = ")) + ::app_src_emitter_json_::emitJsonRead((iterator + std::string("->second")), type_, context)) + std::string(";\n"));
 }
 std::shared_ptr<::app_src_analyzer_::ModuleInfo> findModule(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path) {
-    const auto& _iterable_15 = result->modules;
-    for (const auto& module : *_iterable_15) {
+    const auto& _iterable_26 = result->modules;
+    for (const auto& module : *_iterable_26) {
         if (module->path == path) {
             return module;
         }
@@ -310,8 +310,8 @@ std::shared_ptr<::app_src_analyzer_::ModuleInfo> findModule(const std::shared_pt
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{});
-    const auto& _iterable_16 = result->modules;
-    for (const auto& module : *_iterable_16) {
+    const auto& _iterable_28 = result->modules;
+    for (const auto& module : *_iterable_28) {
         programs->push_back(module->program);
     }
     return programs;
@@ -321,8 +321,8 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> findClass(const std::shared_pt
     if (doof::is_null(module)) {
         return nullptr;
     }
-    const auto& _iterable_17 = module->program->statements;
-    for (const auto& statement : *_iterable_17) {
+    const auto& _iterable_30 = module->program->statements;
+    for (const auto& statement : *_iterable_30) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {

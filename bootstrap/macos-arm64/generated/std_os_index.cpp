@@ -102,8 +102,8 @@ doof::Result<std::shared_ptr<ExecOptions>, std::string> ExecOptions::fromJsonVal
 doof::Result<std::shared_ptr<::NativeExecProcess>, std::string> spawnNative(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options) {
     const std::shared_ptr<std::vector<std::string>> envKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const std::shared_ptr<std::vector<std::string>> envValues = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_1 = options->env;
-    for (const auto& [key, value] : *_iterable_1) {
+    const auto& _iterable_2 = options->env;
+    for (const auto& [key, value] : *_iterable_2) {
         envKeys->push_back(key);
         envValues->push_back(value);
     }

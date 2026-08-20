@@ -24,15 +24,15 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
 
 | File | Owns | Does not own |
 | --- | --- | --- |
-| `lexer.do` | Tokens, lexical scanning, token source spans | Grammar or diagnostics about program meaning |
+| `lexer.do` | Tokens, lexical scanning, token source spans, and typed-tag header/text lexical modes | Grammar or diagnostics about program meaning |
 | `parser.do` | Parser façade and token cursor | Individual grammar families |
 | `parser-declarations.do` | Declarations, imports, exports | Expressions, control flow, type grammar |
 | `parser-statements.do` | Statements, control flow, case patterns | Declaration and expression internals |
-| `parser-expressions.do` | Expressions, literals, precedence | Type annotations |
+| `parser-expressions.do` | Expressions, literals, precedence, and typed-tag desugaring into named calls | Type annotations |
 | `parser-types.do` | Type annotation grammar | Type resolution |
 | `ast.do` | Syntax node shapes, source spans, semantic decoration slots | Resolved-type definitions or checking policy |
 | `resolver.do` | Logical module-path resolution, lazy source loading, source cache | Disk/package acquisition |
-| `analyzer.do` | Declaration collection, imports/re-exports, module symbols, named-type decoration | Lexical scopes or expression typing |
+| `analyzer.do` | Main-thread module discovery, parallel parse scheduling, deterministic graph ordering, declaration collection, imports/re-exports, module symbols, named-type decoration | Lexical scopes or expression typing |
 | `semantic.do` | Diagnostics, symbols, bindings, scopes, resolved-type records | Pass orchestration |
 | `diagnostics.do` | Shared diagnostic severity queries | Creation of feature-specific diagnostics |
 | `compiler.do` | Analyze → check all modules → graph validations → specialize → emit orchestration | Filesystem, package, or native compiler operations |
@@ -53,7 +53,7 @@ modules own the following decisions:
 | `checker-common.do` | State-aware diagnostics, expression type decoration, and centralized assignment-binding validation |
 | `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, and control-flow continuation |
 | `checker-expressions.do` | Expression dispatch, operators, narrowing, assignment, and case expressions |
-| `checker-calls.do` | Calls, construction, lambdas, generic calls, and actor-call boundaries |
+| `checker-calls.do` | Calls, positional/named construction, lambdas, generic calls, and actor-call boundaries |
 | `checker-literals.do` | Contextual array and object literal inference |
 | `checker-generics.do` | Generic inference and decorated call-target resolution |
 | `checker-interfaces.do` | Structural conformance and closed-world implementation discovery |
@@ -83,11 +83,12 @@ emitter or individual expression branch.
 | `emitter-worldview.do` | Consumer-projected declaration closure from checked symbol/type uses |
 | `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, and header/source pairing |
 | `emitter-header.do` | Multi-namespace worldview declaration ordering and rendering |
+| `string-builder.do` | Runtime-backed append-only construction for large generated text |
 | `emitter-decl.do` | Functions, classes, top-level declarations, signatures, and definitions |
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering |
 | `emitter-expr.do` | Single expression dispatch façade |
 | `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as` |
-| `emitter-expr-calls.do` | Calls, native construction, and class construction |
+| `emitter-expr-calls.do` | Calls, native construction, and positional/named class construction |
 | `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering |
 | `emitter-expr-control.do` | Conditional, case, catch, dot-shorthand, and yield-block expressions |
 | `emitter-expr-lambda.do` | Lambda capture analysis, mutable capture boxing, and callback lowering |

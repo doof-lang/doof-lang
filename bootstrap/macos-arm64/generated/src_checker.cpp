@@ -31,16 +31,16 @@ std::shared_ptr<::app_src_semantic_::CheckResult> checkModule(const std::shared_
     auto scriptEntry = false;
     auto rejectedWasmScript = false;
     if (state->info->path == state->entry) {
-        const auto& _iterable_1 = state->info->program->statements;
-        for (const auto& statement : *_iterable_1) {
+        const auto& _iterable_2 = state->info->program->statements;
+        for (const auto& statement : *_iterable_2) {
             if (!isModuleDeclaration(statement)) {
                 (scriptEntry = true);
             }
         }
     }
     if (scriptEntry && (state->entryMode == std::string("wasm"))) {
-        const auto& _iterable_2 = state->info->program->statements;
-        for (const auto& statement : *_iterable_2) {
+        const auto& _iterable_4 = state->info->program->statements;
+        for (const auto& statement : *_iterable_4) {
             if (!isModuleDeclaration(statement)) {
                 ::app_src_checker_common_::typeError(state, std::string("WebAssembly entry modules do not support top-level executable statements"), std::visit([](auto&& _obj) { return _obj->span; }, statement));
             }
@@ -49,8 +49,8 @@ std::shared_ptr<::app_src_semantic_::CheckResult> checkModule(const std::shared_
         (scriptEntry = false);
     }
     if (scriptEntry) {
-        const auto& _iterable_3 = state->info->program->statements;
-        for (const auto& statement : *_iterable_3) {
+        const auto& _iterable_6 = state->info->program->statements;
+        for (const auto& statement : *_iterable_6) {
             if (isExport(statement)) {
                 ::app_src_checker_common_::typeError(state, std::string("Native script entry modules cannot export declarations"), std::visit([](auto&& _obj) { return _obj->span; }, statement));
             }
@@ -64,18 +64,18 @@ std::shared_ptr<::app_src_semantic_::CheckResult> checkModule(const std::shared_
         ::app_src_checker_symbols_::declare(scriptScope, std::make_shared<::app_src_semantic_::Binding>(std::string("arguments"), std::string("script-arguments"), ::app_src_checker_types_::arrayType(::app_src_checker_types_::primitive(std::string("string")), false), false, ::app_src_checker_validation_::checkerSemanticSpan(state->info->program->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")));
     }
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>> retiredActors = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{});
-    const auto& _iterable_4 = state->info->program->statements;
-    for (const auto& statement : *_iterable_4) {
+    const auto& _iterable_8 = state->info->program->statements;
+    for (const auto& statement : *_iterable_8) {
         if (scriptEntry && isScriptGlobalDeclaration(statement)) {
-            ::app_src_checker_statements_::checkStatement(state, statement, scriptScope);
+            ::app_src_checker_statements_::checkStatement(state, statement, scriptScope, false);
             promoteScriptBinding(statement, scriptScope, doof::unwrap_optional(state->moduleScope));
         } else if (scriptEntry && !isModuleDeclaration(statement)) {
-            ::app_src_checker_statements_::checkStatement(state, statement, scriptScope);
+            ::app_src_checker_statements_::checkStatement(state, statement, scriptScope, false);
         } else {
             if ((!scriptEntry && !rejectedWasmScript) && !isModuleDeclaration(statement)) {
                 ::app_src_checker_common_::typeError(state, std::string("Top-level executable statements are only allowed in a native entry module"), std::visit([](auto&& _obj) { return _obj->span; }, statement));
             }
-            ::app_src_checker_statements_::checkStatement(state, statement, doof::unwrap_optional(state->moduleScope));
+            ::app_src_checker_statements_::checkStatement(state, statement, doof::unwrap_optional(state->moduleScope), false);
             if (!scriptEntry) {
                 ::app_src_checker_module_initialization_::validateModuleInitializerStatement(state, statement);
             }
@@ -282,8 +282,8 @@ void promoteScriptBinding(const std::variant<std::shared_ptr<::app_src_ast_::Con
     if ((name == std::string("")) || (name == std::string("_"))) {
         return;
     }
-    const auto& _iterable_5 = scriptScope->bindings;
-    for (const auto& binding : *_iterable_5) {
+    const auto& _iterable_10 = scriptScope->bindings;
+    for (const auto& binding : *_iterable_10) {
         if ((binding->name == name) && (binding->kind != std::string("script-arguments"))) {
             (binding->kind = std::string("script-global"));
             moduleScope->bindings->push_back(binding);
@@ -292,7 +292,7 @@ void promoteScriptBinding(const std::variant<std::shared_ptr<::app_src_ast_::Con
     }
 }
 std::shared_ptr<ModuleChecker> createChecker(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& entry, const std::string& entryMode) {
-    return std::make_shared<ModuleChecker>(std::make_shared<::app_src_checker_state_::CheckerState>(result, (doof::string_endsWith(entry, std::string(".do")) ? entry : (entry + std::string(".do"))), entryMode, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}), nullptr, nullptr));
+    return std::make_shared<ModuleChecker>(std::make_shared<::app_src_checker_state_::CheckerState>(result, (doof::string_endsWith(entry, std::string(".do")) ? entry : (entry + std::string(".do"))), entryMode, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}), nullptr, nullptr, false));
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateCheckedTypes(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     return ::app_src_checker_validation_::validateCheckedTypes(result);

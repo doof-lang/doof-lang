@@ -18,10 +18,12 @@ import { emitStatement } from "./emitter-stmt"
 import { emitContextType } from "./emitter-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { HeaderPlan, HeaderSection, planHeader, renderProjectedHeader } from "./emitter-header"
-import { planWorldview, WorldviewModule } from "./emitter-worldview"
+import { indexWorldviewGraph, planWorldview, WorldviewModule } from "./emitter-worldview"
 import { buildInstantiationPlan, ClassInstantiation, FunctionInstantiation, InstantiationPlan, MethodInstantiation, nativeTemplateClassKey } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
 import { sha256HexString } from "std/crypto"
+import { JsonEligibilityCache } from "./json-semantics"
+import { StringBuilder } from "./string-builder"
 import {
   ArrayResolvedType, ClassType, FunctionType, ImportBinding, InterfaceType, MapResolvedType, NamespaceBinding,
   ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeSubstitution, UnionResolvedType, WeakResolvedType,
@@ -100,12 +102,14 @@ export class CxxModuleEmitter {
   instantiations: InstantiationPlan | none = none
   coverageModuleId: int = -1
   initializationModuleNamespaces: string[] = []
+  jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}
 
   function emit(program: Program, entryMode: string = "executable"): ModuleEmission {
     context := if modulePath == "" then createEmitContext(program) else createEmitContextForModule(program, modulePath, allPrograms)
     context.namespaceImports = namespaceImports
     context.imports = imports
     context.moduleSurfaces = moduleSurfaces
+    context.jsonEligibility = jsonEligibility
     if coverageModuleId >= 0 {
       context.coverageEnabled = true
       context.coverageModuleId = coverageModuleId
@@ -119,6 +123,7 @@ export class CxxModuleEmitter {
       sectionContext := createEmitContextForModule(view.program, view.path, allPrograms)
       sectionContext.imports = surfaceImports(moduleSurfaces, view.path)
       sectionContext.moduleSurfaces = moduleSurfaces
+      sectionContext.jsonEligibility = jsonEligibility
       if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
       sectionPlan := planHeader(view.program, sectionContext)
       if instantiations != none {
@@ -140,33 +145,34 @@ export class CxxModuleEmitter {
     sourceName := if sourceNameOverride == "" then moduleName + ".cpp" else sourceNameOverride
     namespaceName := if namespaceNameOverride == "" then moduleName + "_" else namespaceNameOverride
     header := renderProjectedHeader(sections)
-    let source = "#include \"" + headerName + "\"\n"
-    source = source + "\n"
+    sourceBuilder := StringBuilder()
+    sourceBuilder.append("#include \"" + headerName + "\"\n\n")
     for namespace of initializationModuleNamespaces {
-      source = source + "namespace " + namespace + " { void __doof_initialize_module(); }\n"
+      sourceBuilder.append("namespace " + namespace + " { void __doof_initialize_module(); }\n")
     }
-    if initializationModuleNamespaces.length > 0 { source = source + "\n" }
-    source = source + "namespace " + namespaceName + " {\n"
-    source = source + emitImportedNamespaces(context, worldviewModules)
-    if context.scriptEntry { source = source + emitScriptStorage(programs, context) }
+    if initializationModuleNamespaces.length > 0 { sourceBuilder.append("\n") }
+    sourceBuilder.append("namespace " + namespaceName + " {\n")
+    sourceBuilder.append(emitImportedNamespaces(context, worldviewModules))
+    if context.scriptEntry { sourceBuilder.append(emitScriptStorage(programs, context)) }
     for program of programs {
       for statement of program.statements {
         if !(context.scriptEntry && scriptGlobalDeclaration(statement) != none) {
-          source = source + emitSourceStatement(statement, context)
+          sourceBuilder.append(emitSourceStatement(statement, context))
         }
       }
     }
-    source = source + emitModuleInitializer(programs, context, !context.scriptEntry)
-    if context.scriptEntry { source = source + emitScriptRunner(programs, context) }
-    if instantiations != none { source = source + emitConcreteFunctions(context, instantiations!) }
-    source = source + "}\n"
+    sourceBuilder.append(emitModuleInitializer(programs, context, !context.scriptEntry))
+    if context.scriptEntry { sourceBuilder.append(emitScriptRunner(programs, context)) }
+    if instantiations != none { sourceBuilder.append(emitConcreteFunctions(context, instantiations!)) }
+    sourceBuilder.append("}\n")
     nativeMethods := emitNativeClassMethods(programs, context)
     if nativeMethods != "" {
-      source = source + "\nusing namespace ::" + namespaceName + ";\n\n" + nativeMethods
+      sourceBuilder.append("\nusing namespace ::" + namespaceName + ";\n\n" + nativeMethods)
     }
     initializationCall := emitGraphInitializationCall(initializationModuleNamespaces)
-    if entryMode == "executable" && (plan.hasMain || context.scriptEntry) { source = source + emitMainWrapper(namespaceName, plan, context.scriptEntry, initializationCall) }
-    if entryMode == "ios-app" && (plan.hasMain || context.scriptEntry) { source = source + emitAppEntryWrapper(namespaceName, plan, context.scriptEntry, initializationCall) }
+    if entryMode == "executable" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(emitMainWrapper(namespaceName, plan, context.scriptEntry, initializationCall)) }
+    if entryMode == "ios-app" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(emitAppEntryWrapper(namespaceName, plan, context.scriptEntry, initializationCall)) }
+    source := sourceBuilder.drainToString()
     return ModuleEmission {
       modulePath: context.modulePath, header, source, headerName, sourceName,
       coverageModuleId: context.coverageModuleId,
@@ -338,9 +344,14 @@ export function emitModuleGraph(
   initializationOrder := planModuleInitializationOrder(result, entry, entryMode)
   graphPrograms := allPrograms(result)
   graphSurfaces := emitModuleSurfaces(result)
+  moduleIndex := indexGraphModules(result)
+  reusableFingerprints := indexReusableModuleFingerprints(reusableModules)
+  instantiationFingerprintInput := moduleInstantiationFingerprintInput(concretePlan)
+  jsonEligibility := JsonEligibilityCache {}
+  worldviewGraphIndex := indexWorldviewGraph(result)
   let nextCoverageModuleId = 0
   for module of plan.modules {
-    info := findGraphModule(result, module.path)
+    info := indexedGraphModule(moduleIndex, module.path)
     if info == none { continue }
     let coverageModuleId = -1
     if coverage && isCoverageEligible(module.path) {
@@ -348,10 +359,10 @@ export function emitModuleGraph(
       nextCoverageModuleId += 1
     }
     fingerprint := moduleEmissionFingerprint(
-      result, info!, concretePlan, module.path, entry, entryMode, coverage,
-      initializationOrder, configurationFingerprint,
+      result, moduleIndex, module.path, entry, entryMode, coverage,
+      initializationOrder, configurationFingerprint, instantiationFingerprintInput,
     )
-    if !coverage && reusableModuleMatches(reusableModules, module.path, fingerprint) {
+    if !coverage && reusableModuleMatches(reusableFingerprints, module.path, fingerprint) {
       graph.modules.push(ModuleEmission {
         modulePath: module.path, headerName: module.headerName, sourceName: module.sourceName,
         header: "", source: "", reused: true, fingerprint,
@@ -371,8 +382,9 @@ export function emitModuleGraph(
       instantiations: concretePlan,
       coverageModuleId,
       initializationModuleNamespaces: if module.path == entry then moduleInitializationNamespaces(initializationOrder) else [],
+      jsonEligibility,
     }
-    worldview := planWorldview(result, module.path, concretePlan)
+    worldview := planWorldview(result, module.path, concretePlan, worldviewGraphIndex)
     emitter.worldviewModules = worldview.modules
     emitter.worldviewInterfaceKeys = worldview.interfaceKeys
     emitted := emitter.emit(info!.program, if module.path == entry then entryMode else "none")
@@ -389,34 +401,34 @@ export function emitModuleGraph(
   return graph
 }
 
-function reusableModuleMatches(keys: ModuleEmissionCacheKey[], path: string, fingerprint: string): bool {
-  for key of keys { if key.modulePath == path && key.fingerprint == fingerprint { return true } }
-  return false
+function indexGraphModules(result: AnalysisResult): Map<string, ModuleInfo> {
+  let indexed: Map<string, ModuleInfo> = {}
+  for module of result.modules { indexed.set(module.path, module) }
+  return indexed
 }
 
-function moduleEmissionFingerprint(
-  result: AnalysisResult,
-  module: ModuleInfo,
-  instantiations: InstantiationPlan,
-  path: string,
-  entry: string,
-  entryMode: string,
-  coverage: bool,
-  initializationOrder: string[],
-  configurationFingerprint: string,
-): string {
-  let value = "doof-module-emission-2\n" + configurationFingerprint + "\n" + path + "\n" +
-    entryMode + "\n" + string(coverage)
-  let reachable: string[] = []
-  collectModuleDependencyClosure(result, path, reachable)
-  for candidate of result.modules {
-    if containsString(reachable, candidate.path) {
-      value = value + "\nsource:" + candidate.path + ":" + candidate.sourceHash
-    }
+function indexedGraphModule(indexed: Map<string, ModuleInfo>, path: string): ModuleInfo | none {
+  module := indexed.get(path) else { return none }
+  return module
+}
+
+function indexReusableModuleFingerprints(keys: ModuleEmissionCacheKey[]): Map<string, string> {
+  let indexed: Map<string, string> = {}
+  for key of keys {
+    if !indexed.has(key.modulePath) { indexed.set(key.modulePath, key.fingerprint) }
   }
-  // Concrete specialization ownership can flow opposite to import edges: a
-  // caller may add code to a generic declaration's module. Include the global
-  // plan conservatively so such changes can never retain stale C++.
+  return indexed
+}
+
+function reusableModuleMatches(indexed: Map<string, string>, path: string, fingerprint: string): bool {
+  cached := indexed.get(path) else { return false }
+  return cached == fingerprint
+}
+
+// Every module fingerprint includes the same closed-world specialization plan.
+// Build that potentially large input once per graph rather than once per module.
+function moduleInstantiationFingerprintInput(instantiations: InstantiationPlan): string {
+  let value = ""
   for item of instantiations.functions { value = value + "\nfunction:" + item.key }
   for item of instantiations.classes { value = value + "\nclass:" + item.key }
   for item of instantiations.methods { value = value + "\nmethod:" + item.key }
@@ -427,20 +439,47 @@ function moduleEmissionFingerprint(
     }
   }
   for key of instantiations.nativeTemplateClassKeys { value = value + "\nnative:" + key }
+  return value
+}
+
+function moduleEmissionFingerprint(
+  result: AnalysisResult,
+  moduleIndex: Map<string, ModuleInfo>,
+  path: string,
+  entry: string,
+  entryMode: string,
+  coverage: bool,
+  initializationOrder: string[],
+  configurationFingerprint: string,
+  instantiationFingerprintInput: string,
+): string {
+  let value = "doof-module-emission-2\n" + configurationFingerprint + "\n" + path + "\n" +
+    entryMode + "\n" + string(coverage)
+  let reachable: Set<string> = []
+  collectModuleDependencyClosure(moduleIndex, path, reachable)
+  for candidate of result.modules {
+    if reachable.has(candidate.path) {
+      value = value + "\nsource:" + candidate.path + ":" + candidate.sourceHash
+    }
+  }
+  // Concrete specialization ownership can flow opposite to import edges: a
+  // caller may add code to a generic declaration's module. Include the global
+  // plan conservatively so such changes can never retain stale C++.
+  value = value + instantiationFingerprintInput
   if path == entry {
     for initialized of initializationOrder { value = value + "\ninitialize:" + initialized }
   }
   return sha256HexString(value)
 }
 
-function collectModuleDependencyClosure(result: AnalysisResult, path: string, reachable: string[]): none {
-  if containsString(reachable, path) { return }
-  reachable.push(path)
-  module := findGraphModule(result, path)
+function collectModuleDependencyClosure(moduleIndex: Map<string, ModuleInfo>, path: string, reachable: Set<string>): none {
+  if reachable.has(path) { return }
+  reachable.add(path)
+  module := indexedGraphModule(moduleIndex, path)
   if module == none { return }
-  for imported of module!.imports { collectModuleDependencyClosure(result, imported.sourceModule, reachable) }
-  for imported of module!.namespaceImports { collectModuleDependencyClosure(result, imported.sourceModule, reachable) }
-  for reExport of module!.reExports { collectModuleDependencyClosure(result, reExport, reachable) }
+  for imported of module!.imports { collectModuleDependencyClosure(moduleIndex, imported.sourceModule, reachable) }
+  for imported of module!.namespaceImports { collectModuleDependencyClosure(moduleIndex, imported.sourceModule, reachable) }
+  for reExport of module!.reExports { collectModuleDependencyClosure(moduleIndex, reExport, reachable) }
 }
 
 function isCoverageEligible(modulePath: string): bool {

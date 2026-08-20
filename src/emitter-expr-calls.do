@@ -115,22 +115,26 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         concrete := concreteClassName(class_, context)
         if concrete != "" { cppName = concrete }
         let values = ""
-        for i of 0..<expression.args.length {
-          if i > 0 { values = values + ", " }
-          values = values + emitExpression(expression.args[i].value, context)
-        }
+        let namedConstruction = false
+        for argument of expression.args { if argument.name != none { namedConstruction = true } }
         if expression.resolvedClass != none {
-          let fieldIndex = 0
+          let positionalIndex = 0
           for field of expression.resolvedClass!.fields {
             if field.static_ || field.const_ { continue }
             for name of field.names {
-              if fieldIndex >= expression.args.length {
-                if values != "" { values = values + ", " }
-                if field.defaultValue == none { panic("Construction of '" + class_.name + "' is missing required field '" + name + "'") }
-                values = values + emitDefaultExpression(field.defaultValue!, context, field.resolvedType, expression.span)
-              }
-              fieldIndex = fieldIndex + 1
+              if values != "" { values = values + ", " }
+              argument := if namedConstruction then callArgumentNamed(expression, name) else if positionalIndex < expression.args.length then expression.args[positionalIndex] else none
+              if argument != none {
+                values = values + emitExpectedExpression(argument!.value, context, field.resolvedType)
+                if !namedConstruction { positionalIndex = positionalIndex + 1 }
+              } else if field.defaultValue != none { values = values + emitDefaultExpression(field.defaultValue!, context, field.resolvedType, expression.span) }
+              else { panic("Construction of '" + class_.name + "' is missing required field '" + name + "'") }
             }
+          }
+        } else {
+          for i of 0..<expression.args.length {
+            if i > 0 { values = values + ", " }
+            values = values + emitExpression(expression.args[i].value, context)
           }
         }
         return if class_.symbol.kind == "struct" then cppName + "{" + values + "}" else "std::make_shared<" + cppName + ">(" + values + ")"
@@ -166,6 +170,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           _: StreamResolvedType -> { return emitInterfaceCall(member, expression, context) }
           union_: UnionResolvedType -> { if usesVariantRepresentation(union_) { return emitVariantMemberCall(member, expression, context) } }
           _: ArrayResolvedType -> {
+            if member.property == "takeFirstCompleted" { return "doof::promise_take_first_completed(" + emitExpression(member.object, context) + ")" }
             if member.property == "buildReadonly" || member.property == "drainToReadonly" { return "doof::array_drainToReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "cloneReadonly" { return "doof::array_cloneReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "cloneMutable" { return "doof::array_cloneMutable(" + emitExpression(member.object, context) + ", \"\", 0)" }
@@ -597,18 +602,24 @@ function emitConstructorFactoryCall(owner: ClassType, constructorMethod: Functio
   concrete := concreteClassName(owner, context)
   if concrete != "" { cppName = concrete }
   let result = cppName + "::constructor("
-  for i of 0..<args.length {
+  let named = false
+  for argument of args { if argument.name != none { named = true } }
+  for i of 0..<constructorMethod.params.length {
     if i > 0 { result = result + ", " }
-    let expectedType: ResolvedType | none = none
-    if i < constructorMethod.params.length { expectedType = constructorMethod.params[i].resolvedType }
-    result = result + emitExpression(args[i].value, context, expectedType)
-  }
-  for i of args.length..<constructorMethod.params.length {
-    if i > 0 { result = result + ", " }
-    if constructorMethod.params[i].defaultValue == none { panic("Constructor " + owner.name + " is missing argument " + constructorMethod.params[i].name) }
-    result = result + emitDefaultExpression(constructorMethod.params[i].defaultValue!, context, constructorMethod.params[i].resolvedType, callSiteSpan)
+    parameter := constructorMethod.params[i]
+    argument := if named then callArgumentNamedFromArgs(args, parameter.name) else if i < args.length then args[i] else none
+    if argument != none { result = result + emitExpression(argument!.value, context, parameter.resolvedType) }
+    else {
+      if parameter.defaultValue == none { panic("Constructor " + owner.name + " is missing argument " + parameter.name) }
+      result = result + emitDefaultExpression(parameter.defaultValue!, context, parameter.resolvedType, callSiteSpan)
+    }
   }
   return result + ")"
+}
+
+function callArgumentNamedFromArgs(args: CallArgument[], name: string): CallArgument | none {
+  for argument of args { if argument.name == name { return argument } }
+  return none
 }
 
 function emitNamedConstructorFactoryCall(owner: ClassType, constructorMethod: FunctionDeclaration, expression: ConstructExpression, context: EmitContext): string {

@@ -86,6 +86,7 @@ function parseBinaryLevel(parser: Parser, level: int): Expression {
 function parseBinaryLoop(parser: Parser, initial: Expression, kinds: TokenType[], level: int): Expression {
   let left = initial
   while contains(kinds, parser.current().kind) {
+    if parser.inTagAttribute && (parser.check(TokenType.Greater) || (parser.check(TokenType.Slash) && parser.peek(1).kind == TokenType.Greater)) { break }
     operator := operatorText(parser, parser.advance())
     right := if level == 0 then parseLogicalOr(parser) else if level == 1 then parseLogicalAnd(parser) else if level == 2 then parseBitwiseOr(parser) else if level == 3 then parseBitwiseXor(parser) else if level == 4 then parseBitwiseAnd(parser) else if level == 5 then parseEquality(parser) else if level == 6 then parseComparison(parser) else if level == 7 then parseShift(parser) else if level == 8 then parseAdditive(parser) else if level == 9 then parseMultiplicative(parser) else parseExponentiation(parser)
     left = BinaryExpression { kind: "binary-expression", operator, left, right, span: SourceSpan { start: left.span.start, end: right.span.end } }
@@ -295,6 +296,7 @@ function parsePrimary(parser: Parser): Expression {
   if parser.check(TokenType.LeftBracket) { return parseArrayLiteral(parser) }
   if parser.check(TokenType.LeftParen) { return parseParenExpression(parser) }
   if parser.check(TokenType.LeftBrace) { return parseObjectLiteral(parser) }
+  if parser.check(TokenType.TagOpen) { return parseTagCall(parser) }
   if parser.check(TokenType.Dot) && parser.peek(1).kind == TokenType.Identifier {
     parser.advance()
     return DotShorthand { kind: "dot-shorthand", name: parser.text(parser.expect(TokenType.Identifier)), span: parser.span(start) }
@@ -335,6 +337,121 @@ function parsePrimary(parser: Parser): Expression {
   }
   parser.fail("Expected an expression")
   return NoneLiteral { kind: "none-literal", span: parser.span(start) }
+}
+
+function parseTagCall(parser: Parser): Expression {
+  start := parser.location()
+  parser.expect(TokenType.TagOpen)
+  calleeStart := parser.location()
+  firstName := parser.text(parser.expect(TokenType.Identifier, "Expected callable name after '<'"))
+  let closingName = firstName
+  let callee: Expression = Identifier { kind: "identifier", name: firstName, span: parser.span(calleeStart) }
+  while parser.match(TokenType.Dot) {
+    memberName := parser.text(parser.expect(TokenType.Identifier, "Expected member name in tag"))
+    closingName = closingName + "." + memberName
+    callee = MemberExpression { kind: "member-expression", object: callee, property: memberName, optional: false, force: false, span: SourceSpan { start: calleeStart, end: parser.location() } }
+  }
+
+  let typeArgs: TypeAnnotation[] = []
+  if parser.check(TokenType.Less) { typeArgs = parseGenericCallTypeArguments(parser) }
+  let args: CallArgument[] = []
+  let attributeNames: string[] = []
+  while !parser.check(TokenType.Greater) && !parser.check(TokenType.Slash) && !parser.atEnd() {
+    attributeStart := parser.location()
+    name := parser.text(parser.expect(TokenType.Identifier, "Expected tag attribute name"))
+    if stringArrayContains(attributeNames, name) { parser.fail("Duplicate tag attribute '" + name + "'") }
+    attributeNames.push(name)
+    let value: Expression = NoneLiteral { kind: "none-literal", span: parser.locationSpan() }
+    if parser.check(TokenType.Arrow) {
+      parser.inTagAttribute = true
+      value = parser.parseExpression()
+      parser.inTagAttribute = false
+    } else {
+      parser.expect(TokenType.Equal, "Expected '=' or '=>' after tag attribute '" + name + "'")
+      value = parseTagAttributeValue(parser, name)
+    }
+    args.push(CallArgument { name, value, span: parser.span(attributeStart) })
+  }
+
+  if parser.match(TokenType.Slash) {
+    parser.expect(TokenType.Greater, "Expected '>' after '/' in self-closing tag")
+    return CallExpression { kind: "call-expression", callee, args, typeArgs, span: parser.span(start) }
+  }
+  parser.expect(TokenType.Greater, "Expected '>' after tag attributes")
+
+  let children: Expression[] = []
+  while !(parser.check(TokenType.Less) && parser.peek(1).kind == TokenType.Slash) && !parser.atEnd() {
+    if parser.check(TokenType.TagText) {
+      textStart := parser.location()
+      value := normalizeTagText(parser.text(parser.advance()))
+      if value != "" { children.push(StringLiteral { kind: "string-literal", value, parts: [value], interpolations: [], span: parser.span(textStart) }) }
+    } else if parser.match(TokenType.LeftBrace) {
+      children.push(parser.parseExpression())
+      parser.expect(TokenType.RightBrace, "Expected '}' after tag child expression")
+    } else if parser.check(TokenType.TagOpen) {
+      children.push(parseTagCall(parser))
+    } else {
+      parser.fail("Expected tag text, child expression, nested tag, or closing tag")
+    }
+  }
+  if parser.atEnd() { parser.fail("Unterminated tag '<" + closingName + ">'") }
+  parser.expect(TokenType.Less)
+  parser.expect(TokenType.Slash)
+  closeStart := parser.location()
+  let actualClosingName = parser.text(parser.expect(TokenType.Identifier, "Expected closing tag name"))
+  while parser.match(TokenType.Dot) {
+    actualClosingName = actualClosingName + "." + parser.text(parser.expect(TokenType.Identifier, "Expected member name in closing tag"))
+  }
+  if actualClosingName != closingName { parser.fail("Closing tag '</" + actualClosingName + ">' does not match '<" + closingName + ">' ") }
+  parser.expect(TokenType.Greater, "Expected '>' after closing tag")
+
+  if children.length > 0 {
+    if stringArrayContains(attributeNames, "children") { parser.fail("Tag cannot use both a 'children' attribute and nested content") }
+    childrenValue := ArrayLiteral { kind: "array-literal", elements: children, readonly_: false, span: SourceSpan { start: closeStart, end: parser.location() } }
+    args.push(CallArgument { name: "children", value: childrenValue, span: childrenValue.span })
+  }
+  return CallExpression { kind: "call-expression", callee, args, typeArgs, span: parser.span(start) }
+}
+
+function parseTagAttributeValue(parser: Parser, name: string): Expression {
+  if parser.match(TokenType.LeftBrace) {
+    value := parser.parseExpression()
+    parser.expect(TokenType.RightBrace, "Expected '}' after tag attribute '" + name + "'")
+    return value
+  }
+  if parser.check(TokenType.StringLiteral) || parser.check(TokenType.CharLiteral)
+      || parser.check(TokenType.IntLiteral) || parser.check(TokenType.LongLiteral)
+      || parser.check(TokenType.FloatLiteral) || parser.check(TokenType.DoubleLiteral)
+      || parser.check(TokenType.True) || parser.check(TokenType.False)
+      || parser.check(TokenType.None) || parser.check(TokenType.Null)
+      || (parser.check(TokenType.Minus) && isNumericLiteralToken(parser.peek(1).kind)) {
+    return parseUnary(parser)
+  }
+  parser.fail("Tag attribute '" + name + "' requires a scalar literal or '{expression}'")
+  return NoneLiteral { kind: "none-literal", span: parser.locationSpan() }
+}
+
+function isNumericLiteralToken(kind: TokenType): bool {
+  return kind == TokenType.IntLiteral || kind == TokenType.LongLiteral || kind == TokenType.FloatLiteral || kind == TokenType.DoubleLiteral
+}
+
+function stringArrayContains(values: string[], value: string): bool {
+  for item of values { if item == value { return true } }
+  return false
+}
+
+function normalizeTagText(raw: string): string {
+  lines := raw.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n")
+  let result = ""
+  for i of 0..<lines.length {
+    let line = lines[i]
+    if i > 0 { line = line.trimStart() }
+    if i + 1 < lines.length { line = line.trimEnd() }
+    if line == "" { continue }
+    if result != "" && i > 0 { result = result + " " }
+    result = result + line
+  }
+  return result
 }
 
 function parseCatchExpression(parser: Parser): Expression {
@@ -454,7 +571,9 @@ function parseLambdaParameters(parser: Parser): Parameter[] {
   let params: Parameter[] = []
   while !parser.check(TokenType.RightParen) && !parser.atEnd() {
     start := parser.location()
-    name := parser.text(parser.expect(TokenType.Identifier, "Expected lambda parameter name"))
+    let name = "_"
+    if parser.check(TokenType.Underscore) { parser.advance() }
+    else { name = parser.text(parser.expect(TokenType.Identifier, "Expected lambda parameter name or '_'")) }
     type_ := parser.parseOptionalType()
     let defaultValue: Expression | none = none
     if parser.match(TokenType.Equal) { defaultValue = parser.parseExpression() }

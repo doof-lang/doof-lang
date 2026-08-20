@@ -158,8 +158,8 @@ std::string renderNativeBuildState(const std::shared_ptr<NativeBuildState>& stat
     return (::doof_json::format(doof::json_value(state->toJsonObject())) + std::string("\n"));
 }
 std::shared_ptr<NativeTaskState> findNativeTaskState(const std::shared_ptr<NativeBuildState>& state, const std::string& id) {
-    const auto& _iterable_3 = state->tasks;
-    for (const auto& task : *_iterable_3) {
+    const auto& _iterable_4 = state->tasks;
+    for (const auto& task : *_iterable_4) {
         if (task->id == id) {
             return task;
         }
@@ -217,58 +217,58 @@ std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::strin
     return result;
 }
 std::shared_ptr<std::vector<std::string>> parseMsvcDependencies(const std::string& source) {
-    auto _binding_value_4 = ::doof_json::parse(source);
-    if (doof::is_failure(_binding_value_4)) {
-        const auto& parsed = _binding_value_4;
-        return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    }
-    const auto parsed = doof::success_value(_binding_value_4);
-    auto _binding_value_5 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = parsed; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
-    if (doof::is_failure(_binding_value_5)) {
-        const auto& root = _binding_value_5;
-        return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    }
-    const auto root = doof::success_value(_binding_value_5);
-    auto _binding_value_6 = doof::map_get(root, std::string("Data"), "", 0);
-    if (doof::is_failure(_binding_value_6)) {
-        const auto& dataValue = _binding_value_6;
-        return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    }
-    const auto dataValue = doof::success_value(_binding_value_6);
-    auto _binding_value_7 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = dataValue; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    auto _binding_value_7 = ::doof_json::parse(source);
     if (doof::is_failure(_binding_value_7)) {
-        const auto& data = _binding_value_7;
+        const auto& parsed = _binding_value_7;
         return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
-    const auto data = doof::success_value(_binding_value_7);
-    auto _binding_value_8 = doof::map_get(data, std::string("Includes"), "", 0);
+    const auto parsed = doof::success_value(_binding_value_7);
+    auto _binding_value_8 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = parsed; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
     if (doof::is_failure(_binding_value_8)) {
-        const auto& includesValue = _binding_value_8;
+        const auto& root = _binding_value_8;
         return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
-    const auto includesValue = doof::success_value(_binding_value_8);
-    auto _binding_value_9 = [&]() -> doof::Result<std::shared_ptr<std::vector<doof::JsonValue>>, std::string> { auto _as_value = includesValue; if (doof::json_is_array(_as_value)) return doof::Success<std::shared_ptr<std::vector<doof::JsonValue>>>{std::get<doof::JsonArray>(doof::json_storage(_as_value))}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    const auto root = doof::success_value(_binding_value_8);
+    auto _binding_value_9 = doof::map_get(root, std::string("Data"), "", 0);
     if (doof::is_failure(_binding_value_9)) {
-        const auto& includes = _binding_value_9;
+        const auto& dataValue = _binding_value_9;
         return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
-    const auto includes = doof::success_value(_binding_value_9);
+    const auto dataValue = doof::success_value(_binding_value_9);
+    auto _binding_value_10 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = dataValue; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    if (doof::is_failure(_binding_value_10)) {
+        const auto& data = _binding_value_10;
+        return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    }
+    const auto data = doof::success_value(_binding_value_10);
+    auto _binding_value_11 = doof::map_get(data, std::string("Includes"), "", 0);
+    if (doof::is_failure(_binding_value_11)) {
+        const auto& includesValue = _binding_value_11;
+        return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    }
+    const auto includesValue = doof::success_value(_binding_value_11);
+    auto _binding_value_12 = [&]() -> doof::Result<std::shared_ptr<std::vector<doof::JsonValue>>, std::string> { auto _as_value = includesValue; if (doof::json_is_array(_as_value)) return doof::Success<std::shared_ptr<std::vector<doof::JsonValue>>>{std::get<doof::JsonArray>(doof::json_storage(_as_value))}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    if (doof::is_failure(_binding_value_12)) {
+        const auto& includes = _binding_value_12;
+        return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    }
+    const auto includes = doof::success_value(_binding_value_12);
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_10 = includes;
-    for (const auto& value : *_iterable_10) {
-        auto _binding_value_11 = [&]() -> doof::Result<std::string, std::string> { auto _as_value = value; if (doof::json_is_string(_as_value)) return doof::Success<std::string>{doof::json_as_string(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
-        if (doof::is_failure(_binding_value_11)) {
-            const auto& path = _binding_value_11;
+    const auto& _iterable_14 = includes;
+    for (const auto& value : *_iterable_14) {
+        auto _binding_value_15 = [&]() -> doof::Result<std::string, std::string> { auto _as_value = value; if (doof::json_is_string(_as_value)) return doof::Success<std::string>{doof::json_as_string(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+        if (doof::is_failure(_binding_value_15)) {
+            const auto& path = _binding_value_15;
             continue;
         }
-        const auto path = doof::success_value(_binding_value_11);
+        const auto path = doof::success_value(_binding_value_15);
         appendUnique(result, path);
     }
     return result;
 }
 void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
-    const auto& _iterable_12 = values;
-    for (const auto& existing : *_iterable_12) {
+    const auto& _iterable_17 = values;
+    for (const auto& existing : *_iterable_17) {
         if (existing == value) {
             return;
         }

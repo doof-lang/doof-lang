@@ -185,7 +185,8 @@ inline std::ostream& operator<<(std::ostream& output, EntryKind value) { return 
     NotDirectory = 4,
     InvalidPath = 5,
     Interrupted = 6,
-    Other = 7
+    Other = 7,
+    Unsupported = 8
 };
 inline const char* IoError_name(IoError value) {
   switch (value) {
@@ -197,6 +198,7 @@ inline const char* IoError_name(IoError value) {
     case IoError::InvalidPath: return "InvalidPath";
     case IoError::Interrupted: return "Interrupted";
     case IoError::Other: return "Other";
+    case IoError::Unsupported: return "Unsupported";
   }
   return "";
 }
@@ -209,6 +211,7 @@ inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "InvalidPath") return IoError::InvalidPath;
   if (value == "Interrupted") return IoError::Interrupted;
   if (value == "Other") return IoError::Other;
+  if (value == "Unsupported") return IoError::Unsupported;
   return std::nullopt;
 }
 inline std::optional<IoError> IoError_fromValue(int32_t value) {
@@ -221,6 +224,7 @@ inline std::optional<IoError> IoError_fromValue(int32_t value) {
     case IoError::InvalidPath: return IoError::InvalidPath;
     case IoError::Interrupted: return IoError::Interrupted;
     case IoError::Other: return IoError::Other;
+    case IoError::Unsupported: return IoError::Unsupported;
     default: return std::nullopt;
   }
 }

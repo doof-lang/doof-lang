@@ -7,27 +7,27 @@ doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<:
 }
 
 std::shared_ptr<::app_src_semantic_::SourceFile> ModuleResolver::find(const std::string& path) {
-    const auto& _iterable_1 = this->sources;
-    for (const auto& source : *_iterable_1) {
+    const auto& _iterable_2 = this->sources;
+    for (const auto& source : *_iterable_2) {
         if (source->path == path) {
             return source;
         }
     }
-    const auto& _iterable_2 = this->loadedPaths;
-    for (const auto& loaded : *_iterable_2) {
+    const auto& _iterable_4 = this->loadedPaths;
+    for (const auto& loaded : *_iterable_4) {
         if (loaded == path) {
             return nullptr;
         }
     }
     this->loadedPaths->push_back(path);
-    auto _binding_value_3 = this->loader.call(path);
-    if (doof::is_failure(_binding_value_3)) {
-        const auto diagnostic = doof::failure_error(_binding_value_3);
+    auto _binding_value_5 = this->loader.call(path);
+    if (doof::is_failure(_binding_value_5)) {
+        const auto diagnostic = doof::failure_error(_binding_value_5);
         this->failedPaths->push_back(path);
         this->diagnostics->push_back(diagnostic);
         return nullptr;
     }
-    const auto loaded = doof::success_value(_binding_value_3);
+    const auto loaded = doof::success_value(_binding_value_5);
     if (!doof::is_null(loaded)) {
         this->sources->push_back(doof::unwrap_optional(loaded));
         return doof::unwrap_optional(loaded);
@@ -35,8 +35,8 @@ std::shared_ptr<::app_src_semantic_::SourceFile> ModuleResolver::find(const std:
     return nullptr;
 }
 bool ModuleResolver::failed(const std::string& path) {
-    const auto& _iterable_4 = this->failedPaths;
-    for (const auto& failed : *_iterable_4) {
+    const auto& _iterable_7 = this->failedPaths;
+    for (const auto& failed : *_iterable_7) {
         if (failed == path) {
             return true;
         }

@@ -135,6 +135,7 @@ namespace app_src_analyzer_ {
 namespace app_src_json_semantics_ {
     struct JsonDiscriminatorEntry;
     struct JsonDiscriminator;
+    struct JsonEligibilityCache;
 }
 
 namespace app_src_checker_state_ {
@@ -202,9 +203,9 @@ namespace app_src_semantic_ {
     std::string nativeCppName = std::string("");
     std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{});
     std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    Symbol(std::string kind, std::string name, std::string module, bool exported, std::string originalName = std::string(""), bool native_ = false, std::string nativeHeader = std::string(""), std::string nativeCppName = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{}), std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : kind(kind), name(name), module(module), exported(exported), originalName(originalName), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), implementations(implementations), implementedInterfaceTypes(implementedInterfaceTypes) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Symbol>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<ResolvedType>> streamElementTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{});
+    Symbol(std::string kind, std::string name, std::string module, bool exported, std::string originalName = std::string(""), bool native_ = false, std::string nativeHeader = std::string(""), std::string nativeCppName = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{}), std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<ResolvedType>> streamElementTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{})) : kind(kind), name(name), module(module), exported(exported), originalName(originalName), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), implementations(implementations), implementedInterfaceTypes(implementedInterfaceTypes), typeParams(typeParams), streamElementTypes(streamElementTypes) {}
 };
     struct ImportBinding : public std::enable_shared_from_this<ImportBinding> {
     std::string localName;
@@ -213,8 +214,6 @@ namespace app_src_semantic_ {
     bool typeOnly;
     std::shared_ptr<Symbol> symbol = nullptr;
     ImportBinding(std::string localName, std::string sourceName, std::string sourceModule, bool typeOnly, std::shared_ptr<Symbol> symbol = nullptr) : localName(localName), sourceName(sourceName), sourceModule(sourceModule), typeOnly(typeOnly), symbol(symbol) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ImportBinding>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NamespaceBinding : public std::enable_shared_from_this<NamespaceBinding> {
     std::string localName;
@@ -243,8 +242,6 @@ namespace app_src_semantic_ {
     std::string name;
     std::shared_ptr<Symbol> symbol;
     EnumType(std::string kind, std::string name, std::shared_ptr<Symbol> symbol) : kind(kind), name(name), symbol(symbol) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<EnumType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct InterfaceType : public std::enable_shared_from_this<InterfaceType> {
     std::string kind = std::string("interface");
@@ -439,6 +436,13 @@ namespace app_src_json_semantics_ {
     std::shared_ptr<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>> entries = std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{});
     JsonDiscriminator(std::string fieldName, std::shared_ptr<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>> entries = std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{})) : fieldName(fieldName), entries(entries) {}
 };
+    struct JsonEligibilityCache : public std::enable_shared_from_this<JsonEligibilityCache> {
+    std::shared_ptr<doof::ordered_map<std::string, bool>> serialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{});
+    std::shared_ptr<doof::ordered_map<std::string, bool>> deserialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{});
+    JsonEligibilityCache(std::shared_ptr<doof::ordered_map<std::string, bool>> serialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{}), std::shared_ptr<doof::ordered_map<std::string, bool>> deserialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{})) : serialization(serialization), deserialization(deserialization) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<JsonEligibilityCache>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+};
 }
 
 namespace app_src_checker_state_ {
@@ -449,7 +453,8 @@ namespace app_src_checker_state_ {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics;
     std::shared_ptr<::app_src_analyzer_::ModuleInfo> info = nullptr;
     std::shared_ptr<::app_src_semantic_::Scope> moduleScope = nullptr;
-    CheckerState(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string entry, std::string entryMode, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics, std::shared_ptr<::app_src_analyzer_::ModuleInfo> info, std::shared_ptr<::app_src_semantic_::Scope> moduleScope) : result(result), entry(entry), entryMode(entryMode), diagnostics(diagnostics), info(info), moduleScope(moduleScope) {}
+    bool allowsCaller = false;
+    CheckerState(std::shared_ptr<::app_src_analyzer_::AnalysisResult> result, std::string entry, std::string entryMode, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics, std::shared_ptr<::app_src_analyzer_::ModuleInfo> info, std::shared_ptr<::app_src_semantic_::Scope> moduleScope, bool allowsCaller) : result(result), entry(entry), entryMode(entryMode), diagnostics(diagnostics), info(info), moduleScope(moduleScope), allowsCaller(allowsCaller) {}
 };
 }
 
@@ -1246,6 +1251,13 @@ namespace app_src_ast_ {
 };
 }
 
+namespace app_src_json_semantics_ {
+    std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<JsonEligibilityCache>& cache = nullptr);
+    bool canGenerateJsonSerialization(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}), const std::shared_ptr<JsonEligibilityCache>& cache = nullptr);
+    bool canGenerateJsonDeserialization(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}), const std::shared_ptr<JsonEligibilityCache>& cache = nullptr);
+    bool isGeneratedJsonType(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}), const std::shared_ptr<std::vector<std::string>>& visited = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+}
+
 namespace app_src_checker_types_ {
     __type9 primitive(const std::string& name);
     __type9 unknownType();
@@ -1276,13 +1288,6 @@ namespace app_src_checker_types_ {
     bool isAssignable(const __type9& value, const __type9& target);
     __type9 joinTypes(const __type9& left, const __type9& right);
     bool isSupportedHashCollectionType(const __type9& type_);
-}
-
-namespace app_src_json_semantics_ {
-    std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs);
-    bool canGenerateJsonSerialization(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}));
-    bool canGenerateJsonDeserialization(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}));
-    bool isGeneratedJsonType(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}), const std::shared_ptr<std::vector<std::string>>& visited = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
 }
 
 namespace app_src_checker_interfaces_ {

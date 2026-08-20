@@ -9,6 +9,7 @@ using namespace ::app_src_emitter_json_;
 using namespace ::app_src_emitter_types_;
 using namespace ::app_src_semantic_;
 using namespace ::app_src_emitter_names_;
+using namespace ::app_src_string_builder_;
 
 doof::JsonObject HeaderPlan::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
@@ -228,33 +229,33 @@ std::shared_ptr<HeaderPlan> planHeader(const std::shared_ptr<::app_src_ast_::Pro
 }
 std::shared_ptr<HeaderPlan> planHeaders(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     const auto plan = std::make_shared<HeaderPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, false, false);
-    const auto& _iterable_1 = programs;
-    for (const auto& program : *_iterable_1) {
-        const auto& _iterable_2 = program->statements;
-        for (const auto& statement : *_iterable_2) {
+    const auto& _iterable_2 = programs;
+    for (const auto& program : *_iterable_2) {
+        const auto& _iterable_4 = program->statements;
+        for (const auto& statement : *_iterable_4) {
             collect(statement, plan, context);
         }
     }
-    const auto& _iterable_3 = plan->nativeNamespaces;
-    for (const auto& namespace_ : *_iterable_3) {
+    const auto& _iterable_6 = plan->nativeNamespaces;
+    for (const auto& namespace_ : *_iterable_6) {
         collectNativeModuleTypeAliases(context->modulePath, namespace_, plan, context);
     }
     return plan;
 }
 void collectNativeModuleTypeAliases(const std::string& modulePath, const std::string& namespace_, const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    const auto& _iterable_4 = context->moduleSurfaces;
-    for (const auto& surface : *_iterable_4) {
+    const auto& _iterable_8 = context->moduleSurfaces;
+    for (const auto& surface : *_iterable_8) {
         if (surface->path != modulePath) {
             continue;
         }
-        const auto& _iterable_5 = surface->exports;
-        for (const auto& symbol : *_iterable_5) {
+        const auto& _iterable_10 = surface->exports;
+        for (const auto& symbol : *_iterable_10) {
             if (isNativeAliasType(symbol) && !surfaceTypeIsGeneric(surface, symbol->name)) {
                 addNativeSymbolAlias(symbol, namespace_, plan);
             }
         }
-        const auto& _iterable_6 = surface->imports;
-        for (const auto& imported : *_iterable_6) {
+        const auto& _iterable_12 = surface->imports;
+        for (const auto& imported : *_iterable_12) {
             if (((!doof::is_null(imported->symbol)) && isNativeAliasType(doof::unwrap_optional(imported->symbol))) && !surfaceSymbolIsGeneric(context, doof::unwrap_optional(imported->symbol))) {
                 addNativeSymbolAlias(doof::unwrap_optional(imported->symbol), namespace_, plan);
             }
@@ -263,8 +264,8 @@ void collectNativeModuleTypeAliases(const std::string& modulePath, const std::st
     }
 }
 bool surfaceTypeIsGeneric(const std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>& surface, const std::string& name) {
-    const auto& _iterable_7 = surface->genericTypes;
-    for (const auto& genericName : *_iterable_7) {
+    const auto& _iterable_14 = surface->genericTypes;
+    for (const auto& genericName : *_iterable_14) {
         if (genericName == name) {
             return true;
         }
@@ -375,8 +376,8 @@ bool classCanEmitBeforeModuleIncludes(const std::shared_ptr<::app_src_ast_::Clas
     if (static_cast<int32_t>((class_->typeParams)->size()) > 0) {
         return false;
     }
-    const auto& _iterable_8 = class_->fields;
-    for (const auto& field : *_iterable_8) {
+    const auto& _iterable_16 = class_->fields;
+    for (const auto& field : *_iterable_16) {
         if ((!field->static_ && (!doof::is_null(field->resolvedType))) && typeNeedsCompleteNominalDefinition(doof::unwrap_optional(field->resolvedType))) {
             return false;
         }
@@ -391,8 +392,8 @@ bool typeNeedsCompleteNominalDefinition(const std::variant<std::shared_ptr<::app
             if ((class_->symbol->kind == std::string("struct")) || class_->symbol->native_) {
                 return true;
             }
-            const auto& _iterable_9 = class_->typeArgs;
-            for (const auto& argument : *_iterable_9) {
+            const auto& _iterable_18 = class_->typeArgs;
+            for (const auto& argument : *_iterable_18) {
                 if (typeNeedsCompleteNominalDefinition(argument)) {
                     return true;
                 }
@@ -405,8 +406,8 @@ bool typeNeedsCompleteNominalDefinition(const std::variant<std::shared_ptr<::app
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject)) {
             const auto& interface_ = std::get<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject);
-            const auto& _iterable_10 = interface_->typeArgs;
-            for (const auto& argument : *_iterable_10) {
+            const auto& _iterable_20 = interface_->typeArgs;
+            for (const auto& argument : *_iterable_20) {
                 if (typeNeedsCompleteNominalDefinition(argument)) {
                     return true;
                 }
@@ -435,8 +436,8 @@ bool typeNeedsCompleteNominalDefinition(const std::variant<std::shared_ptr<::app
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_11 = tuple->elements;
-            for (const auto& element : *_iterable_11) {
+            const auto& _iterable_22 = tuple->elements;
+            for (const auto& element : *_iterable_22) {
                 if (typeNeedsCompleteNominalDefinition(element)) {
                     return true;
                 }
@@ -445,8 +446,8 @@ bool typeNeedsCompleteNominalDefinition(const std::variant<std::shared_ptr<::app
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_12 = union_->types;
-            for (const auto& member : *_iterable_12) {
+            const auto& _iterable_24 = union_->types;
+            for (const auto& member : *_iterable_24) {
                 if (typeNeedsCompleteNominalDefinition(member)) {
                     return true;
                 }
@@ -455,8 +456,8 @@ bool typeNeedsCompleteNominalDefinition(const std::variant<std::shared_ptr<::app
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_13 = function_->params;
-            for (const auto& parameter : *_iterable_13) {
+            const auto& _iterable_26 = function_->params;
+            for (const auto& parameter : *_iterable_26) {
                 if (typeNeedsCompleteNominalDefinition(parameter->type_)) {
                     return true;
                 }
@@ -475,8 +476,8 @@ bool typeNeedsCompleteNominalDefinition(const std::variant<std::shared_ptr<::app
 }
 bool isNativeTemplateClass(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& name) {
     const auto key = ((context->modulePath + std::string("::")) + name);
-    const auto& _iterable_14 = context->nativeTemplateClassKeys;
-    for (const auto& existing : *_iterable_14) {
+    const auto& _iterable_28 = context->nativeTemplateClassKeys;
+    for (const auto& existing : *_iterable_28) {
         if (existing == key) {
             return true;
         }
@@ -484,14 +485,14 @@ bool isNativeTemplateClass(const std::shared_ptr<::app_src_emitter_context_::Emi
     return false;
 }
 void collectNativeClassAliases(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::string& namespace_, const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    const auto& _iterable_15 = class_->fields;
-    for (const auto& field : *_iterable_15) {
+    const auto& _iterable_30 = class_->fields;
+    for (const auto& field : *_iterable_30) {
         if (!doof::is_null(field->resolvedType)) {
             collectNativeTypeAliases(doof::unwrap_optional(field->resolvedType), namespace_, plan, context);
         }
     }
-    const auto& _iterable_16 = class_->methods;
-    for (const auto& method : *_iterable_16) {
+    const auto& _iterable_32 = class_->methods;
+    for (const auto& method : *_iterable_32) {
         if (!doof::is_null(method->resolvedType)) {
             collectNativeTypeAliases(doof::unwrap_optional(method->resolvedType), namespace_, plan, context);
         }
@@ -505,8 +506,8 @@ void collectNativeTypeAliases(const std::variant<std::shared_ptr<::app_src_seman
             if (!surfaceSymbolIsGeneric(context, class_->symbol)) {
                 addNativeSymbolAlias(class_->symbol, namespace_, plan);
             }
-            const auto& _iterable_17 = class_->typeArgs;
-            for (const auto& argument : *_iterable_17) {
+            const auto& _iterable_34 = class_->typeArgs;
+            for (const auto& argument : *_iterable_34) {
                 collectNativeTypeAliases(argument, namespace_, plan, context);
             }
     }
@@ -544,15 +545,15 @@ void collectNativeTypeAliases(const std::variant<std::shared_ptr<::app_src_seman
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_18 = tuple->elements;
-            for (const auto& element : *_iterable_18) {
+            const auto& _iterable_36 = tuple->elements;
+            for (const auto& element : *_iterable_36) {
                 collectNativeTypeAliases(element, namespace_, plan, context);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_19 = union_->types;
-            for (const auto& member : *_iterable_19) {
+            const auto& _iterable_38 = union_->types;
+            for (const auto& member : *_iterable_38) {
                 collectNativeTypeAliases(member, namespace_, plan, context);
             }
     }
@@ -562,8 +563,8 @@ void collectNativeTypeAliases(const std::variant<std::shared_ptr<::app_src_seman
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_20 = function_->params;
-            for (const auto& parameter : *_iterable_20) {
+            const auto& _iterable_40 = function_->params;
+            for (const auto& parameter : *_iterable_40) {
                 collectNativeTypeAliases(parameter->type_, namespace_, plan, context);
             }
             collectNativeTypeAliases(function_->returnType, namespace_, plan, context);
@@ -573,8 +574,8 @@ void collectNativeTypeAliases(const std::variant<std::shared_ptr<::app_src_seman
     }
 }
 bool surfaceSymbolIsGeneric(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol) {
-    const auto& _iterable_21 = context->moduleSurfaces;
-    for (const auto& surface : *_iterable_21) {
+    const auto& _iterable_42 = context->moduleSurfaces;
+    for (const auto& surface : *_iterable_42) {
         if (surface->path == symbol->module) {
             return surfaceTypeIsGeneric(surface, symbol->name);
         }
@@ -598,162 +599,163 @@ std::string renderHeader(const std::shared_ptr<HeaderPlan>& plan, const std::str
 }
 std::string renderProjectedHeader(const std::shared_ptr<std::vector<std::shared_ptr<HeaderSection>>>& sections) {
     const auto compression = std::make_shared<HeaderCompressionState>(1);
-    const auto& _iterable_22 = sections;
-    for (const auto& section : *_iterable_22) {
+    const auto& _iterable_44 = sections;
+    for (const auto& section : *_iterable_44) {
         compressRepeatedHeaderVariants(section->plan, compression);
     }
-    auto result = std::string("#pragma once\n");
-    (result = (result + std::string("#include \"doof_runtime.hpp\"\n")));
+    const auto result = ::doof::StringBuilder::constructor();
+    result->append(std::string("#pragma once\n"));
+    result->append(std::string("#include \"doof_runtime.hpp\"\n"));
     auto emittedForward = false;
-    const auto& _iterable_23 = sections;
-    for (const auto& section : *_iterable_23) {
-        const auto& _iterable_24 = section->plan->typeOnlyForwardDeclarations;
-        for (const auto& declaration : *_iterable_24) {
-            (result = (result + declaration));
+    const auto& _iterable_46 = sections;
+    for (const auto& section : *_iterable_46) {
+        const auto& _iterable_48 = section->plan->typeOnlyForwardDeclarations;
+        for (const auto& declaration : *_iterable_48) {
+            result->append(declaration);
             (emittedForward = true);
         }
     }
     if (emittedForward) {
-        (result = (result + std::string("\n")));
+        result->append(std::string("\n"));
     }
-    const auto& _iterable_25 = sections;
-    for (const auto& section : *_iterable_25) {
+    const auto& _iterable_50 = sections;
+    for (const auto& section : *_iterable_50) {
         if (((static_cast<int32_t>((section->plan->classForwardDeclarations)->size()) == 0) && (static_cast<int32_t>((section->plan->earlyModuleValueDeclarations)->size()) == 0)) && headerPlanEmitsNamespaceContent(section->plan)) {
             continue;
         }
-        (result = (((result + std::string("namespace ")) + section->namespaceName) + std::string(" {\n")));
-        const auto& _iterable_26 = section->plan->classForwardDeclarations;
-        for (const auto& declaration : *_iterable_26) {
-            (result = ((result + std::string("    ")) + declaration));
+        result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+        const auto& _iterable_52 = section->plan->classForwardDeclarations;
+        for (const auto& declaration : *_iterable_52) {
+            result->append((std::string("    ") + declaration));
         }
-        const auto& _iterable_27 = section->plan->earlyModuleValueDeclarations;
-        for (const auto& declaration : *_iterable_27) {
-            (result = ((result + std::string("    ")) + declaration));
+        const auto& _iterable_54 = section->plan->earlyModuleValueDeclarations;
+        for (const auto& declaration : *_iterable_54) {
+            result->append((std::string("    ") + declaration));
         }
-        (result = (result + std::string("}\n\n")));
+        result->append(std::string("}\n\n"));
     }
-    const auto& _iterable_28 = sections;
-    for (const auto& section : *_iterable_28) {
+    const auto& _iterable_56 = sections;
+    for (const auto& section : *_iterable_56) {
         if (static_cast<int32_t>((section->plan->ephemeralTypeAliases)->size()) > 0) {
-            (result = (((result + std::string("namespace ")) + section->namespaceName) + std::string(" {\n")));
-            const auto& _iterable_29 = section->plan->ephemeralTypeAliases;
-            for (const auto& alias : *_iterable_29) {
-                (result = ((result + std::string("    ")) + alias));
+            result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+            const auto& _iterable_58 = section->plan->ephemeralTypeAliases;
+            for (const auto& alias : *_iterable_58) {
+                result->append((std::string("    ") + alias));
             }
-            (result = (result + std::string("}\n\n")));
+            result->append(std::string("}\n\n"));
         }
     }
-    const auto& _iterable_30 = sections;
-    for (const auto& section : *_iterable_30) {
+    const auto& _iterable_60 = sections;
+    for (const auto& section : *_iterable_60) {
         if (static_cast<int32_t>((section->plan->enumDefinitions)->size()) > 0) {
-            (result = (((result + std::string("namespace ")) + section->namespaceName) + std::string(" {\n")));
-            const auto& _iterable_31 = section->plan->enumDefinitions;
-            for (const auto& definition : *_iterable_31) {
-                (result = ((result + std::string("    ")) + definition));
+            result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+            const auto& _iterable_62 = section->plan->enumDefinitions;
+            for (const auto& definition : *_iterable_62) {
+                result->append((std::string("    ") + definition));
             }
-            (result = (result + std::string("}\n\n")));
+            result->append(std::string("}\n\n"));
         }
     }
-    const auto& _iterable_32 = sections;
-    for (const auto& section : *_iterable_32) {
+    const auto& _iterable_64 = sections;
+    for (const auto& section : *_iterable_64) {
         if (static_cast<int32_t>((section->plan->interfaceAliases)->size()) > 0) {
-            (result = (((result + std::string("namespace ")) + section->namespaceName) + std::string(" {\n")));
-            const auto& _iterable_33 = section->plan->interfaceAliases;
-            for (const auto& alias : *_iterable_33) {
-                (result = ((result + std::string("    ")) + alias));
+            result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+            const auto& _iterable_66 = section->plan->interfaceAliases;
+            for (const auto& alias : *_iterable_66) {
+                result->append((std::string("    ") + alias));
             }
-            (result = (result + std::string("}\n\n")));
+            result->append(std::string("}\n\n"));
         }
     }
-    const auto& _iterable_34 = sections;
-    for (const auto& section : *_iterable_34) {
+    const auto& _iterable_68 = sections;
+    for (const auto& section : *_iterable_68) {
         if (static_cast<int32_t>((section->plan->earlyTypeAliases)->size()) > 0) {
-            (result = (((result + std::string("namespace ")) + section->namespaceName) + std::string(" {\n")));
-            const auto& _iterable_35 = section->plan->earlyTypeAliases;
-            for (const auto& alias : *_iterable_35) {
-                (result = ((result + std::string("    ")) + alias));
+            result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+            const auto& _iterable_70 = section->plan->earlyTypeAliases;
+            for (const auto& alias : *_iterable_70) {
+                result->append((std::string("    ") + alias));
             }
-            (result = (result + std::string("}\n\n")));
+            result->append(std::string("}\n\n"));
         }
     }
-    const auto& _iterable_36 = sections;
-    for (const auto& section : *_iterable_36) {
+    const auto& _iterable_72 = sections;
+    for (const auto& section : *_iterable_72) {
         if (static_cast<int32_t>((section->plan->earlyClassDefinitions)->size()) > 0) {
-            (result = (((result + std::string("namespace ")) + section->namespaceName) + std::string(" {\n")));
-            const auto& _iterable_37 = section->plan->earlyClassDefinitions;
-            for (const auto& definition : *_iterable_37) {
-                (result = ((result + std::string("    ")) + definition));
+            result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+            const auto& _iterable_74 = section->plan->earlyClassDefinitions;
+            for (const auto& definition : *_iterable_74) {
+                result->append((std::string("    ") + definition));
             }
-            (result = (result + std::string("}\n\n")));
+            result->append(std::string("}\n\n"));
         }
     }
-    const auto& _iterable_38 = sections;
-    for (const auto& section : *_iterable_38) {
+    const auto& _iterable_76 = sections;
+    for (const auto& section : *_iterable_76) {
         auto emittedNative = false;
-        const auto& _iterable_39 = section->plan->nativeAliases;
-        for (const auto& alias : *_iterable_39) {
-            (result = (result + alias));
+        const auto& _iterable_78 = section->plan->nativeAliases;
+        for (const auto& alias : *_iterable_78) {
+            result->append(alias);
             (emittedNative = true);
         }
-        const auto& _iterable_40 = section->plan->nativeIncludes;
-        for (const auto& include : *_iterable_40) {
+        const auto& _iterable_80 = section->plan->nativeIncludes;
+        for (const auto& include : *_iterable_80) {
             if (doof::string_startsWith(include, std::string("<"))) {
-                (result = (((result + std::string("#include ")) + include) + std::string("\n")));
+                result->append(((std::string("#include ") + include) + std::string("\n")));
             } else {
-                (result = (((result + std::string("#include \"")) + include) + std::string("\"\n")));
+                result->append(((std::string("#include \"") + include) + std::string("\"\n")));
             }
             (emittedNative = true);
         }
         if (emittedNative) {
-            (result = (result + std::string("\n")));
+            result->append(std::string("\n"));
         }
-        (result = renderFinalSection(result, section));
+        renderFinalSection(result, section);
     }
-    const auto& _iterable_41 = sections;
-    for (const auto& section : *_iterable_41) {
+    const auto& _iterable_82 = sections;
+    for (const auto& section : *_iterable_82) {
         if (static_cast<int32_t>((section->plan->genericFunctionDefinitions)->size()) == 0) {
             continue;
         }
-        (result = (((result + std::string("namespace ")) + section->namespaceName) + std::string(" {\n")));
-        const auto& _iterable_42 = section->plan->genericFunctionDefinitions;
-        for (const auto& definition : *_iterable_42) {
-            (result = (result + definition));
+        result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+        const auto& _iterable_84 = section->plan->genericFunctionDefinitions;
+        for (const auto& definition : *_iterable_84) {
+            result->append(definition);
         }
-        (result = (result + std::string("}\n")));
+        result->append(std::string("}\n"));
     }
-    while (doof::string_endsWith(result, std::string("\n\n"))) {
-        (result = doof::string_substring(result, 0, (static_cast<int32_t>(result.size()) - 1)));
+    auto rendered = result->drainToString();
+    while (doof::string_endsWith(rendered, std::string("\n\n"))) {
+        (rendered = doof::string_substring(rendered, 0, (static_cast<int32_t>(rendered.size()) - 1)));
     }
-    return result;
+    return rendered;
 }
-std::string renderFinalSection(const std::string& result_, const std::shared_ptr<HeaderSection>& section) {
-    auto result = result_;
+void renderFinalSection(const std::shared_ptr<::doof::StringBuilder>& result, const std::shared_ptr<HeaderSection>& section) {
     const auto plan = section->plan;
     if (((((static_cast<int32_t>((plan->nativeAdapterSignatures)->size()) == 0) && (static_cast<int32_t>((plan->moduleValueDeclarations)->size()) == 0)) && (static_cast<int32_t>((plan->classDefinitions)->size()) == 0)) && (static_cast<int32_t>((plan->typeAliases)->size()) == 0)) && (static_cast<int32_t>((plan->functionSignatures)->size()) == 0)) {
-        return result;
+        return;
     }
-    (result = (((result + std::string("namespace ")) + section->namespaceName) + std::string(" {\n")));
-    const auto& _iterable_43 = plan->nativeAdapterSignatures;
-    for (const auto& signature : *_iterable_43) {
-        (result = ((result + std::string("    ")) + signature));
+    result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+    const auto& _iterable_86 = plan->nativeAdapterSignatures;
+    for (const auto& signature : *_iterable_86) {
+        result->append((std::string("    ") + signature));
     }
-    const auto& _iterable_44 = plan->moduleValueDeclarations;
-    for (const auto& declaration : *_iterable_44) {
-        (result = ((result + std::string("    ")) + declaration));
+    const auto& _iterable_88 = plan->moduleValueDeclarations;
+    for (const auto& declaration : *_iterable_88) {
+        result->append((std::string("    ") + declaration));
     }
-    const auto& _iterable_45 = plan->classDefinitions;
-    for (const auto& definition : *_iterable_45) {
-        (result = ((result + std::string("    ")) + definition));
+    const auto& _iterable_90 = plan->classDefinitions;
+    for (const auto& definition : *_iterable_90) {
+        result->append((std::string("    ") + definition));
     }
-    const auto& _iterable_46 = plan->typeAliases;
-    for (const auto& alias : *_iterable_46) {
-        (result = ((result + std::string("    ")) + alias));
+    const auto& _iterable_92 = plan->typeAliases;
+    for (const auto& alias : *_iterable_92) {
+        result->append((std::string("    ") + alias));
     }
-    const auto& _iterable_47 = plan->functionSignatures;
-    for (const auto& signature : *_iterable_47) {
-        (result = ((result + std::string("    ")) + signature));
+    const auto& _iterable_94 = plan->functionSignatures;
+    for (const auto& signature : *_iterable_94) {
+        result->append((std::string("    ") + signature));
     }
-    return (result + std::string("}\n\n"));
+    result->append(std::string("}\n\n"));
 }
 bool headerPlanEmitsNamespaceContent(const std::shared_ptr<HeaderPlan>& plan) {
     return (((((((((((static_cast<int32_t>((plan->ephemeralTypeAliases)->size()) > 0) || (static_cast<int32_t>((plan->enumDefinitions)->size()) > 0)) || (static_cast<int32_t>((plan->interfaceAliases)->size()) > 0)) || (static_cast<int32_t>((plan->earlyClassDefinitions)->size()) > 0)) || (static_cast<int32_t>((plan->earlyTypeAliases)->size()) > 0)) || (static_cast<int32_t>((plan->nativeAdapterSignatures)->size()) > 0)) || (static_cast<int32_t>((plan->moduleValueDeclarations)->size()) > 0)) || (static_cast<int32_t>((plan->classDefinitions)->size()) > 0)) || (static_cast<int32_t>((plan->typeAliases)->size()) > 0)) || (static_cast<int32_t>((plan->functionSignatures)->size()) > 0)) || (static_cast<int32_t>((plan->genericFunctionDefinitions)->size()) > 0));
@@ -820,8 +822,8 @@ void compressRepeatedHeaderVariants(const std::shared_ptr<HeaderPlan>& plan, con
     collectHeaderTypeUses(plan->enumDefinitions, uses);
     collectHeaderTypeUses(plan->earlyTypeAliases, uses);
     collectHeaderTypeUses(plan->typeAliases, uses);
-    const auto& _iterable_48 = uses;
-    for (const auto& use : *_iterable_48) {
+    const auto& _iterable_96 = uses;
+    for (const auto& use : *_iterable_96) {
         if (use->count < 2) {
             continue;
         }
@@ -848,15 +850,15 @@ void compressRepeatedHeaderVariants(const std::shared_ptr<HeaderPlan>& plan, con
 }
 std::string preferredHeaderTypeAlias(const std::shared_ptr<HeaderPlan>& plan, const std::string& spelling) {
     for (int32_t index = 0; index < static_cast<int32_t>((plan->preferredTypeAliasSpellings)->size()); ++index) {
-        if (doof::array_at(plan->preferredTypeAliasSpellings, index, "src/emitter-header", 472) == spelling) {
-            return doof::array_at(plan->preferredTypeAliasNames, index, "src/emitter-header", 472);
+        if (doof::array_at(plan->preferredTypeAliasSpellings, index, "src/emitter-header", 474) == spelling) {
+            return doof::array_at(plan->preferredTypeAliasNames, index, "src/emitter-header", 474);
         }
     }
     return std::string("");
 }
 void collectHeaderTypeUses(const std::shared_ptr<std::vector<std::string>>& values, const std::shared_ptr<std::vector<std::shared_ptr<HeaderTypeUse>>>& uses) {
-    const auto& _iterable_49 = values;
-    for (const auto& value : *_iterable_49) {
+    const auto& _iterable_99 = values;
+    for (const auto& value : *_iterable_99) {
         auto offset = 0;
         const auto prefix = std::string("std::variant<");
         while (offset < static_cast<int32_t>(value.size())) {
@@ -880,9 +882,9 @@ void collectHeaderTypeUses(const std::shared_ptr<std::vector<std::string>>& valu
 int32_t matchingAngleEnd(const std::string& value, int32_t opening) {
     auto depth = 0;
     for (int32_t index = opening; index < static_cast<int32_t>(value.size()); ++index) {
-        if (doof::string_at(value, index, "src/emitter-header", 497) == U'\u003C') {
+        if (doof::string_at(value, index, "src/emitter-header", 499) == U'\u003C') {
             (depth += 1);
-        } else if (doof::string_at(value, index, "src/emitter-header", 498) == U'\u003E') {
+        } else if (doof::string_at(value, index, "src/emitter-header", 500) == U'\u003E') {
             (depth -= 1);
             if (depth == 0) {
                 return index;
@@ -898,13 +900,13 @@ bool referenceOnlyVariant(const std::string& spelling) {
     for (int32_t index = 0; index <= static_cast<int32_t>(inner.size()); ++index) {
         const auto atEnd = (index == static_cast<int32_t>(inner.size()));
         if (!atEnd) {
-            if (doof::string_at(inner, index, "src/emitter-header", 513) == U'\u003C') {
+            if (doof::string_at(inner, index, "src/emitter-header", 515) == U'\u003C') {
                 (depth += 1);
-            } else if (doof::string_at(inner, index, "src/emitter-header", 514) == U'\u003E') {
+            } else if (doof::string_at(inner, index, "src/emitter-header", 516) == U'\u003E') {
                 (depth -= 1);
             }
         }
-        if (atEnd || ((doof::string_at(inner, index, "src/emitter-header", 516) == U'\u002C') && (depth == 0))) {
+        if (atEnd || ((doof::string_at(inner, index, "src/emitter-header", 518) == U'\u002C') && (depth == 0))) {
             const auto member = doof::string_trim(doof::string_substring(inner, memberStart, index));
             if ((member != std::string("std::monostate")) && !(doof::string_startsWith(member, std::string("std::shared_ptr<")) && doof::string_endsWith(member, std::string(">")))) {
                 return false;
@@ -915,8 +917,8 @@ bool referenceOnlyVariant(const std::string& spelling) {
     return true;
 }
 void addHeaderTypeUse(const std::shared_ptr<std::vector<std::shared_ptr<HeaderTypeUse>>>& uses, const std::string& spelling) {
-    const auto& _iterable_50 = uses;
-    for (const auto& use : *_iterable_50) {
+    const auto& _iterable_103 = uses;
+    for (const auto& use : *_iterable_103) {
         if (use->spelling == spelling) {
             (use->count += 1);
             return;
@@ -926,7 +928,7 @@ void addHeaderTypeUse(const std::shared_ptr<std::vector<std::shared_ptr<HeaderTy
 }
 void replaceHeaderTypeUses(const std::shared_ptr<std::vector<std::string>>& values, const std::string& spelling, const std::string& name) {
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
-        (doof::array_at(values, index, "src/emitter-header", 533) = doof::string_replaceAll(doof::array_at(values, index, "src/emitter-header", 533), spelling, name));
+        (doof::array_at(values, index, "src/emitter-header", 535) = doof::string_replaceAll(doof::array_at(values, index, "src/emitter-header", 535), spelling, name));
     }
 }
 void collectModuleValueDeclaration(const std::shared_ptr<HeaderPlan>& plan, const std::string& declaration, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
@@ -944,8 +946,8 @@ bool moduleValueDeclarationNeedsIncludes(const std::variant<std::shared_ptr<::ap
             if ((class_->symbol->kind == std::string("struct")) || class_->symbol->native_) {
                 return true;
             }
-            const auto& _iterable_51 = class_->typeArgs;
-            for (const auto& argument : *_iterable_51) {
+            const auto& _iterable_106 = class_->typeArgs;
+            for (const auto& argument : *_iterable_106) {
                 if (moduleValueDeclarationNeedsIncludes(argument)) {
                     return true;
                 }
@@ -980,8 +982,8 @@ bool moduleValueDeclarationNeedsIncludes(const std::variant<std::shared_ptr<::ap
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_52 = tuple->elements;
-            for (const auto& element : *_iterable_52) {
+            const auto& _iterable_108 = tuple->elements;
+            for (const auto& element : *_iterable_108) {
                 if (moduleValueDeclarationNeedsIncludes(element)) {
                     return true;
                 }
@@ -990,8 +992,8 @@ bool moduleValueDeclarationNeedsIncludes(const std::variant<std::shared_ptr<::ap
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_53 = union_->types;
-            for (const auto& member : *_iterable_53) {
+            const auto& _iterable_110 = union_->types;
+            for (const auto& member : *_iterable_110) {
                 if (moduleValueDeclarationNeedsIncludes(member)) {
                     return true;
                 }
@@ -1004,8 +1006,8 @@ bool moduleValueDeclarationNeedsIncludes(const std::variant<std::shared_ptr<::ap
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_54 = function_->params;
-            for (const auto& parameter : *_iterable_54) {
+            const auto& _iterable_112 = function_->params;
+            for (const auto& parameter : *_iterable_112) {
                 if (moduleValueDeclarationNeedsIncludes(parameter->type_)) {
                     return true;
                 }
@@ -1023,8 +1025,8 @@ std::string emitModuleValueDeclaration(const std::string& name, const std::varia
     return ((((std::string("extern ") + ::app_src_emitter_types_::emitContextType(type_, context)) + std::string(" ")) + name) + std::string(";\n"));
 }
 void addUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
-    const auto& _iterable_55 = values;
-    for (const auto& existing : *_iterable_55) {
+    const auto& _iterable_114 = values;
+    for (const auto& existing : *_iterable_114) {
         if (existing == value) {
             return;
         }
@@ -1046,7 +1048,7 @@ std::string nativeNamespace(const std::string& cppName) {
 std::string emitEnumDeclaration(const std::shared_ptr<::app_src_ast_::EnumDeclaration>& declaration, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     auto result = (((::app_src_emitter_decl_::emitDescriptionComment(declaration->description, std::string("")) + std::string("enum class ")) + declaration->name) + std::string(" {\n"));
     for (int32_t i = 0; i < static_cast<int32_t>((declaration->variants)->size()); ++i) {
-        const auto variant = doof::array_at(declaration->variants, i, "src/emitter-header", 604);
+        const auto variant = doof::array_at(declaration->variants, i, "src/emitter-header", 606);
         (result = (((result + ::app_src_emitter_decl_::emitDescriptionComment(variant->description, std::string("    "))) + std::string("    ")) + variant->name));
         if (!doof::is_null(variant->value)) {
             (result = ((result + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(variant->value), context, std::monostate{})));
@@ -1059,21 +1061,21 @@ std::string emitEnumDeclaration(const std::shared_ptr<::app_src_ast_::EnumDeclar
     (result = (result + std::string("};\n")));
     (result = (((((result + std::string("inline const char* ")) + declaration->name) + std::string("_name(")) + declaration->name) + std::string(" value) {\n")));
     (result = (result + std::string("  switch (value) {\n")));
-    const auto& _iterable_56 = declaration->variants;
-    for (const auto& variant : *_iterable_56) {
+    const auto& _iterable_118 = declaration->variants;
+    for (const auto& variant : *_iterable_118) {
         (result = (((((((result + std::string("    case ")) + declaration->name) + std::string("::")) + variant->name) + std::string(": return \"")) + variant->name) + std::string("\";\n")));
     }
     (result = (result + std::string("  }\n  return \"\";\n}\n")));
     (result = (((((result + std::string("inline std::optional<")) + declaration->name) + std::string("> ")) + declaration->name) + std::string("_fromName(std::string_view value) {\n")));
-    const auto& _iterable_57 = declaration->variants;
-    for (const auto& variant : *_iterable_57) {
+    const auto& _iterable_120 = declaration->variants;
+    for (const auto& variant : *_iterable_120) {
         (result = (((((((result + std::string("  if (value == \"")) + variant->name) + std::string("\") return ")) + declaration->name) + std::string("::")) + variant->name) + std::string(";\n")));
     }
     (result = (result + std::string("  return std::nullopt;\n}\n")));
     (result = (((((result + std::string("inline std::optional<")) + declaration->name) + std::string("> ")) + declaration->name) + std::string("_fromValue(int32_t value) {\n")));
     (result = (((result + std::string("  switch (static_cast<")) + declaration->name) + std::string(">(value)) {\n")));
-    const auto& _iterable_58 = declaration->variants;
-    for (const auto& variant : *_iterable_58) {
+    const auto& _iterable_122 = declaration->variants;
+    for (const auto& variant : *_iterable_122) {
         (result = (((((((((result + std::string("    case ")) + declaration->name) + std::string("::")) + variant->name) + std::string(": return ")) + declaration->name) + std::string("::")) + variant->name) + std::string(";\n")));
     }
     (result = (result + std::string("    default: return std::nullopt;\n  }\n}\n")));

@@ -7,10 +7,10 @@ using namespace ::app_src_ast_;
 using namespace ::app_src_checker_symbols_;
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateCheckedTypes(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{});
-    const auto& _iterable_1 = result->modules;
-    for (const auto& module : *_iterable_1) {
-        const auto& _iterable_2 = module->program->statements;
-        for (const auto& statement : *_iterable_2) {
+    const auto& _iterable_2 = result->modules;
+    for (const auto& module : *_iterable_2) {
+        const auto& _iterable_4 = module->program->statements;
+        for (const auto& statement : *_iterable_4) {
             validateStatement(statement, module->path, diagnostics);
         }
     }
@@ -52,12 +52,12 @@ void validateStatement(const std::variant<std::shared_ptr<::app_src_ast_::ConstD
                 addValidationError(module, class_->span, ((std::string("Class '") + class_->name) + std::string("' has no resolved symbol")), diagnostics);
             }
             validateTypeParameterConstraints(class_->typeParamConstraints, module, diagnostics);
-            const auto& _iterable_3 = class_->implements_;
-            for (const auto& implementation : *_iterable_3) {
+            const auto& _iterable_6 = class_->implements_;
+            for (const auto& implementation : *_iterable_6) {
                 validateTypeAnnotation(doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(implementation), module, diagnostics);
             }
-            const auto& _iterable_4 = class_->fields;
-            for (const auto& field : *_iterable_4) {
+            const auto& _iterable_8 = class_->fields;
+            for (const auto& field : *_iterable_8) {
                 if (!doof::is_null(field->type_)) {
                     validateTypeAnnotation(doof::unwrap_optional(field->type_), module, diagnostics);
                 }
@@ -66,8 +66,8 @@ void validateStatement(const std::variant<std::shared_ptr<::app_src_ast_::ConstD
                     validateExpression(doof::unwrap_optional(field->defaultValue), module, diagnostics);
                 }
             }
-            const auto& _iterable_5 = class_->methods;
-            for (const auto& method : *_iterable_5) {
+            const auto& _iterable_10 = class_->methods;
+            for (const auto& method : *_iterable_10) {
                 validateFunction(method, module, diagnostics);
             }
     }
@@ -77,20 +77,20 @@ void validateStatement(const std::variant<std::shared_ptr<::app_src_ast_::ConstD
                 addValidationError(module, interface_->span, ((std::string("Interface '") + interface_->name) + std::string("' has no resolved symbol")), diagnostics);
             }
             validateTypeParameterConstraints(interface_->typeParamConstraints, module, diagnostics);
-            const auto& _iterable_6 = interface_->fields;
-            for (const auto& field : *_iterable_6) {
+            const auto& _iterable_12 = interface_->fields;
+            for (const auto& field : *_iterable_12) {
                 validateTypeAnnotation(field->type_, module, diagnostics);
                 validateResolved(field->resolvedType, field->span, module, (std::string("interface field ") + interface_->name), diagnostics);
             }
-            const auto& _iterable_7 = interface_->methods;
-            for (const auto& method : *_iterable_7) {
+            const auto& _iterable_14 = interface_->methods;
+            for (const auto& method : *_iterable_14) {
                 validateFunction(method, module, diagnostics);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::EnumDeclaration>>(_case_subject)) {
             const auto& enum_ = std::get<std::shared_ptr<::app_src_ast_::EnumDeclaration>>(_case_subject);
-            const auto& _iterable_8 = enum_->variants;
-            for (const auto& variant : *_iterable_8) {
+            const auto& _iterable_16 = enum_->variants;
+            for (const auto& variant : *_iterable_16) {
                 if (!doof::is_null(variant->value)) {
                     validateExpression(doof::unwrap_optional(variant->value), module, diagnostics);
                 }
@@ -106,8 +106,8 @@ void validateStatement(const std::variant<std::shared_ptr<::app_src_ast_::ConstD
             const auto& if_ = std::get<std::shared_ptr<::app_src_ast_::IfStatement>>(_case_subject);
             validateExpression(if_->condition, module, diagnostics);
             validateBlock(if_->body, module, diagnostics);
-            const auto& _iterable_9 = if_->elseIfs;
-            for (const auto& branch : *_iterable_9) {
+            const auto& _iterable_18 = if_->elseIfs;
+            for (const auto& branch : *_iterable_18) {
                 validateExpression(branch->condition, module, diagnostics);
                 validateBlock(branch->body, module, diagnostics);
             }
@@ -121,10 +121,10 @@ void validateStatement(const std::variant<std::shared_ptr<::app_src_ast_::ConstD
                 addValidationError(module, case_->span, std::string("Case statement has no resolved control-flow completion"), diagnostics);
             }
             validateExpression(case_->subject, module, diagnostics);
-            const auto& _iterable_10 = case_->arms;
-            for (const auto& arm : *_iterable_10) {
-                const auto& _iterable_11 = arm->patterns;
-                for (const auto& pattern : *_iterable_11) {
+            const auto& _iterable_20 = case_->arms;
+            for (const auto& arm : *_iterable_20) {
+                const auto& _iterable_22 = arm->patterns;
+                for (const auto& pattern : *_iterable_22) {
                     validatePattern(pattern, module, diagnostics);
                 }
                 {
@@ -156,8 +156,8 @@ void validateStatement(const std::variant<std::shared_ptr<::app_src_ast_::ConstD
             if (!doof::is_null(for_->condition)) {
                 validateExpression(doof::unwrap_optional(for_->condition), module, diagnostics);
             }
-            const auto& _iterable_12 = for_->update;
-            for (const auto& update : *_iterable_12) {
+            const auto& _iterable_24 = for_->update;
+            for (const auto& update : *_iterable_24) {
                 validateExpression(update, module, diagnostics);
             }
             validateBlock(for_->body, module, diagnostics);
@@ -175,8 +175,8 @@ void validateStatement(const std::variant<std::shared_ptr<::app_src_ast_::ConstD
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::WithStatement>>(_case_subject)) {
             const auto& with_ = std::get<std::shared_ptr<::app_src_ast_::WithStatement>>(_case_subject);
-            const auto& _iterable_13 = with_->bindings;
-            for (const auto& binding : *_iterable_13) {
+            const auto& _iterable_26 = with_->bindings;
+            for (const auto& binding : *_iterable_26) {
                 if (!doof::is_null(binding->type_)) {
                     validateTypeAnnotation(doof::unwrap_optional(binding->type_), module, diagnostics);
                 }
@@ -262,8 +262,8 @@ void validateFunction(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>
     if (!doof::is_null(fn->returnType)) {
         validateTypeAnnotation(doof::unwrap_optional(fn->returnType), module, diagnostics);
     }
-    const auto& _iterable_14 = fn->params;
-    for (const auto& parameter : *_iterable_14) {
+    const auto& _iterable_28 = fn->params;
+    for (const auto& parameter : *_iterable_28) {
         if (!doof::is_null(parameter->type_)) {
             validateTypeAnnotation(doof::unwrap_optional(parameter->type_), module, diagnostics);
         }
@@ -285,8 +285,8 @@ void validateFunction(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>
     }
 }
 void validateTypeParameterConstraints(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::TypeParameterConstraint>>>& constraints, const std::string& module, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics) {
-    const auto& _iterable_15 = constraints;
-    for (const auto& constraint : *_iterable_15) {
+    const auto& _iterable_30 = constraints;
+    for (const auto& constraint : *_iterable_30) {
         if (doof::is_null(constraint->type_)) {
             continue;
         }
@@ -305,8 +305,8 @@ void validateTypeParameterConstraints(const std::shared_ptr<std::vector<std::sha
     }
 }
 void validateBlock(const std::shared_ptr<::app_src_ast_::Block>& block, const std::string& module, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics) {
-    const auto& _iterable_16 = block->statements;
-    for (const auto& statement : *_iterable_16) {
+    const auto& _iterable_32 = block->statements;
+    for (const auto& statement : *_iterable_32) {
         validateStatement(statement, module, diagnostics);
     }
 }
@@ -341,8 +341,8 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
         auto _case_subject = expression;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject)) {
             const auto& string_ = std::get<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject);
-            const auto& _iterable_17 = string_->interpolations;
-            for (const auto& interpolation : *_iterable_17) {
+            const auto& _iterable_34 = string_->interpolations;
+            for (const auto& interpolation : *_iterable_34) {
                 validateExpression(interpolation, module, diagnostics);
             }
     }
@@ -378,23 +378,23 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject)) {
             const auto& call = std::get<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject);
             validateExpression(call->callee, module, diagnostics);
-            const auto& _iterable_18 = call->typeArgs;
-            for (const auto& argument : *_iterable_18) {
+            const auto& _iterable_36 = call->typeArgs;
+            for (const auto& argument : *_iterable_36) {
                 validateTypeAnnotation(argument, module, diagnostics);
             }
-            const auto& _iterable_19 = call->resolvedGenericTypeArgs;
-            for (const auto& argument : *_iterable_19) {
+            const auto& _iterable_38 = call->resolvedGenericTypeArgs;
+            for (const auto& argument : *_iterable_38) {
                 validateResolved(::app_src_checker_symbols_::optionalResolvedType(argument), call->span, module, std::string("generic call argument"), diagnostics);
             }
-            const auto& _iterable_20 = call->args;
-            for (const auto& argument : *_iterable_20) {
+            const auto& _iterable_40 = call->args;
+            for (const auto& argument : *_iterable_40) {
                 validateExpression(argument->value, module, diagnostics);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ArrayLiteral>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_ast_::ArrayLiteral>>(_case_subject);
-            const auto& _iterable_21 = array->elements;
-            for (const auto& item : *_iterable_21) {
+            const auto& _iterable_42 = array->elements;
+            for (const auto& item : *_iterable_42) {
                 validateExpression(item, module, diagnostics);
             }
     }
@@ -403,8 +403,8 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
             if (!doof::is_null(object->spread)) {
                 validateExpression(doof::unwrap_optional(object->spread), module, diagnostics);
             }
-            const auto& _iterable_22 = object->properties;
-            for (const auto& property : *_iterable_22) {
+            const auto& _iterable_44 = object->properties;
+            for (const auto& property : *_iterable_44) {
                 validateResolved(property->resolvedType, property->span, module, std::string("object property"), diagnostics);
                 if (!doof::is_null(property->key)) {
                     validateExpression(doof::unwrap_optional(property->key), module, diagnostics);
@@ -428,8 +428,8 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TupleLiteral>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_ast_::TupleLiteral>>(_case_subject);
-            const auto& _iterable_23 = tuple->elements;
-            for (const auto& item : *_iterable_23) {
+            const auto& _iterable_46 = tuple->elements;
+            for (const auto& item : *_iterable_46) {
                 validateExpression(item, module, diagnostics);
             }
     }
@@ -438,8 +438,8 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
             if (!doof::is_null(lambda->returnType)) {
                 validateTypeAnnotation(doof::unwrap_optional(lambda->returnType), module, diagnostics);
             }
-            const auto& _iterable_24 = lambda->params;
-            for (const auto& parameter : *_iterable_24) {
+            const auto& _iterable_48 = lambda->params;
+            for (const auto& parameter : *_iterable_48) {
                 if (!doof::is_null(parameter->type_)) {
                     validateTypeAnnotation(doof::unwrap_optional(parameter->type_), module, diagnostics);
                 }
@@ -470,10 +470,10 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject);
             validateExpression(case_->subject, module, diagnostics);
             validateResolved(case_->resolvedType, case_->span, module, std::string("case expression"), diagnostics);
-            const auto& _iterable_25 = case_->arms;
-            for (const auto& arm : *_iterable_25) {
-                const auto& _iterable_26 = arm->patterns;
-                for (const auto& pattern : *_iterable_26) {
+            const auto& _iterable_50 = case_->arms;
+            for (const auto& arm : *_iterable_50) {
+                const auto& _iterable_52 = arm->patterns;
+                for (const auto& pattern : *_iterable_52) {
                     validatePattern(pattern, module, diagnostics);
                 }
                 {
@@ -513,12 +513,12 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
             if (!doof::is_null(construct->resolvedConstructor)) {
                 validateResolved(construct->resolvedConstructor->resolvedType, construct->span, module, (std::string("constructor ") + construct->type_), diagnostics);
             }
-            const auto& _iterable_27 = construct->typeArgs;
-            for (const auto& argument : *_iterable_27) {
+            const auto& _iterable_54 = construct->typeArgs;
+            for (const auto& argument : *_iterable_54) {
                 validateTypeAnnotation(argument, module, diagnostics);
             }
-            const auto& _iterable_28 = construct->args;
-            for (const auto& property : *_iterable_28) {
+            const auto& _iterable_56 = construct->args;
+            for (const auto& property : *_iterable_56) {
                 validateResolved(property->resolvedType, property->span, module, std::string("constructor property"), diagnostics);
                 if (!doof::is_null(property->value)) {
                     validateExpression(doof::unwrap_optional(property->value), module, diagnostics);
@@ -545,8 +545,8 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject)) {
             const auto& actor = std::get<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject);
-            const auto& _iterable_29 = actor->args;
-            for (const auto& argument : *_iterable_29) {
+            const auto& _iterable_58 = actor->args;
+            for (const auto& argument : *_iterable_58) {
                 validateExpression(argument, module, diagnostics);
             }
     }
@@ -568,8 +568,8 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
     }
 }
 std::shared_ptr<::app_src_ast_::FunctionDeclaration> classConstructor(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_) {
-    const auto& _iterable_30 = class_->methods;
-    for (const auto& method : *_iterable_30) {
+    const auto& _iterable_60 = class_->methods;
+    for (const auto& method : *_iterable_60) {
         if (method->name == std::string("constructor")) {
             return method;
         }
@@ -596,8 +596,8 @@ void validateTypeAnnotation(const std::variant<std::shared_ptr<::app_src_ast_::N
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
             const auto& named = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
             validateResolved(named->resolvedType, named->span, module, std::string("type annotation"), diagnostics);
-            const auto& _iterable_31 = named->typeArgs;
-            for (const auto& argument : *_iterable_31) {
+            const auto& _iterable_62 = named->typeArgs;
+            for (const auto& argument : *_iterable_62) {
                 validateTypeAnnotation(argument, module, diagnostics);
             }
     }
@@ -609,16 +609,16 @@ void validateTypeAnnotation(const std::variant<std::shared_ptr<::app_src_ast_::N
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::UnionType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_ast_::UnionType>>(_case_subject);
             validateResolved(union_->resolvedType, union_->span, module, std::string("type annotation"), diagnostics);
-            const auto& _iterable_32 = union_->types;
-            for (const auto& member : *_iterable_32) {
+            const auto& _iterable_64 = union_->types;
+            for (const auto& member : *_iterable_64) {
                 validateTypeAnnotation(member, module, diagnostics);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::AstFunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_ast_::AstFunctionType>>(_case_subject);
             validateResolved(function_->resolvedType, function_->span, module, std::string("type annotation"), diagnostics);
-            const auto& _iterable_33 = function_->params;
-            for (const auto& parameter : *_iterable_33) {
+            const auto& _iterable_66 = function_->params;
+            for (const auto& parameter : *_iterable_66) {
                 validateTypeAnnotation(parameter->type_, module, diagnostics);
             }
             validateTypeAnnotation(function_->returnType, module, diagnostics);
@@ -642,8 +642,8 @@ void validateResolved(const std::variant<std::monostate, std::shared_ptr<::app_s
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-            const auto& _iterable_34 = class_->typeArgs;
-            for (const auto& argument : *_iterable_34) {
+            const auto& _iterable_68 = class_->typeArgs;
+            for (const auto& argument : *_iterable_68) {
                 validateResolved(doof::optional_value(argument), span, module, (owner + std::string(" type argument")), diagnostics);
             }
     }
@@ -683,8 +683,8 @@ void validateResolved(const std::variant<std::monostate, std::shared_ptr<::app_s
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_35 = tuple->elements;
-            for (const auto& item : *_iterable_35) {
+            const auto& _iterable_70 = tuple->elements;
+            for (const auto& item : *_iterable_70) {
                 validateResolved(doof::optional_value(item), span, module, (owner + std::string(" tuple element")), diagnostics);
             }
     }
@@ -693,15 +693,15 @@ void validateResolved(const std::variant<std::monostate, std::shared_ptr<::app_s
             if (static_cast<int32_t>((union_->types)->size()) == 0) {
                 addValidationError(module, span, (std::string("Empty resolved union for ") + owner), diagnostics);
             }
-            const auto& _iterable_36 = union_->types;
-            for (const auto& member : *_iterable_36) {
+            const auto& _iterable_72 = union_->types;
+            for (const auto& member : *_iterable_72) {
                 validateResolved(doof::optional_value(member), span, module, (owner + std::string(" union member")), diagnostics);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_37 = function_->params;
-            for (const auto& parameter : *_iterable_37) {
+            const auto& _iterable_74 = function_->params;
+            for (const auto& parameter : *_iterable_74) {
                 validateResolved(doof::optional_value(parameter->type_), span, module, (owner + std::string(" parameter")), diagnostics);
             }
             validateResolved(doof::optional_value(function_->returnType), span, module, (owner + std::string(" return")), diagnostics);

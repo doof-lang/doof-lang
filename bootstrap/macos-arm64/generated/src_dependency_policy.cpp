@@ -160,8 +160,8 @@ doof::Result<std::shared_ptr<ResolvedExternalInput>, std::string> ResolvedExtern
     }
 }
 bool hasMutableStdPackageInputs(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages) {
-    const auto& _iterable_1 = packages;
-    for (const auto& package : *_iterable_1) {
+    const auto& _iterable_2 = packages;
+    for (const auto& package : *_iterable_2) {
         if (package->mutable_ && doof::string_startsWith(package->logicalPrefix, std::string("/std/"))) {
             return true;
         }
@@ -170,8 +170,8 @@ bool hasMutableStdPackageInputs(const std::shared_ptr<std::vector<std::shared_pt
 }
 std::shared_ptr<::app_src_package_manifest_::DependencyResolution> resolutionForUrl(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::DependencyResolution>>>& resolutions, const std::string& url) {
     const auto canonical = ::app_src_std_catalog_::canonicalDependencyUrl(url);
-    const auto& _iterable_2 = resolutions;
-    for (const auto& resolution : *_iterable_2) {
+    const auto& _iterable_4 = resolutions;
+    for (const auto& resolution : *_iterable_4) {
         if (::app_src_std_catalog_::canonicalDependencyUrl(resolution->url) == canonical) {
             return resolution;
         }
@@ -190,17 +190,17 @@ std::shared_ptr<::app_src_package_manifest_::PackageDependency> selectedPackageS
 }
 doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>, std::string> resolveExternalInputs(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest) {
     std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>> result = std::make_shared<std::vector<std::shared_ptr<ResolvedExternalInput>>>(std::vector<std::shared_ptr<ResolvedExternalInput>>{});
-    const auto& _iterable_3 = packages;
-    for (const auto& owner : *_iterable_3) {
-        const auto& _iterable_4 = owner->manifest->externalDependencies;
-        for (const auto& dependency : *_iterable_4) {
+    const auto& _iterable_6 = packages;
+    for (const auto& owner : *_iterable_6) {
+        const auto& _iterable_8 = owner->manifest->externalDependencies;
+        for (const auto& dependency : *_iterable_8) {
             const auto resolution = resolutionForUrl(rootManifest->externalResolutions, dependency->url);
             if ((!doof::is_null(resolution)) && (resolution->kind != dependency->kind)) {
                 return doof::Failure<std::string>{ (((std::string("External resolution for ") + ::app_src_std_catalog_::canonicalDependencyUrl(dependency->url)) + std::string(" must keep kind ")) + dependency->kind) };
             }
             const auto selected = resolvedExternalInput(owner, dependency, resolution);
-            const auto& _iterable_5 = result;
-            for (const auto& existing : *_iterable_5) {
+            const auto& _iterable_10 = result;
+            for (const auto& existing : *_iterable_10) {
                 if (::app_src_std_catalog_::canonicalDependencyUrl(existing->selectedUrl) != ::app_src_std_catalog_::canonicalDependencyUrl(selected->selectedUrl)) {
                     continue;
                 }
@@ -215,8 +215,8 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>
 }
 doof::Result<void, std::string> validateDependencyPolicy(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages, const std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>& externals, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest) {
     const auto policy = rootManifest->policy;
-    const auto& _iterable_6 = packages;
-    for (const auto& package : *_iterable_6) {
+    const auto& _iterable_12 = packages;
+    for (const auto& package : *_iterable_12) {
         if (package->sourceKind == std::string("root")) {
             continue;
         }
@@ -225,11 +225,11 @@ doof::Result<void, std::string> validateDependencyPolicy(const std::shared_ptr<s
                 return doof::Failure<std::string>{ (((std::string("Policy rejected transitive package ") + package->sourceUrl) + std::string(" introduced by ")) + package->introducedBy) };
             }
         }
-        auto _try_value_7 = validateTransitiveNativePolicy(package, policy);
-        if (doof::is_failure(_try_value_7)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_7))};
+        auto _try_value_13 = validateTransitiveNativePolicy(package, policy);
+        if (doof::is_failure(_try_value_13)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_13))};
     }
-    const auto& _iterable_8 = externals;
-    for (const auto& external : *_iterable_8) {
+    const auto& _iterable_15 = externals;
+    for (const auto& external : *_iterable_15) {
         if (external->owner->sourceKind == std::string("root")) {
             continue;
         }
@@ -256,8 +256,8 @@ bool sameSelectedExternal(const std::shared_ptr<ResolvedExternalInput>& left, co
 }
 bool containsCanonicalUrl(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
     const auto canonical = ::app_src_std_catalog_::canonicalDependencyUrl(value);
-    const auto& _iterable_9 = values;
-    for (const auto& existing : *_iterable_9) {
+    const auto& _iterable_17 = values;
+    for (const auto& existing : *_iterable_17) {
         if (::app_src_std_catalog_::canonicalDependencyUrl(existing) == canonical) {
             return true;
         }
@@ -266,24 +266,24 @@ bool containsCanonicalUrl(const std::shared_ptr<std::vector<std::string>>& value
 }
 doof::Result<void, std::string> validateTransitiveNativePolicy(const std::shared_ptr<ReachedPackageInput>& package, const std::shared_ptr<::app_src_package_manifest_::DependencyPolicy>& policy) {
     if (policy->hasLinkLibraryAllowlist) {
-        const auto& _iterable_10 = package->manifest->nativeBuild->linkLibraries;
-        for (const auto& value : *_iterable_10) {
+        const auto& _iterable_19 = package->manifest->nativeBuild->linkLibraries;
+        for (const auto& value : *_iterable_19) {
             if (!doof::array_contains(policy->allowedLinkLibraries, value, "", 0)) {
                 return doof::Failure<std::string>{ (((std::string("Policy rejected transitive link library ") + value) + std::string(" introduced by ")) + package->logicalPrefix) };
             }
         }
     }
     if (policy->hasFrameworkAllowlist) {
-        const auto& _iterable_11 = package->manifest->nativeBuild->frameworks;
-        for (const auto& value : *_iterable_11) {
+        const auto& _iterable_21 = package->manifest->nativeBuild->frameworks;
+        for (const auto& value : *_iterable_21) {
             if (!doof::array_contains(policy->allowedFrameworks, value, "", 0)) {
                 return doof::Failure<std::string>{ (((std::string("Policy rejected transitive framework ") + value) + std::string(" introduced by ")) + package->logicalPrefix) };
             }
         }
     }
     if (policy->hasPkgConfigAllowlist) {
-        const auto& _iterable_12 = package->manifest->nativeBuild->pkgConfigPackages;
-        for (const auto& value : *_iterable_12) {
+        const auto& _iterable_23 = package->manifest->nativeBuild->pkgConfigPackages;
+        for (const auto& value : *_iterable_23) {
             if (!doof::array_contains(policy->allowedPkgConfigPackages, value, "", 0)) {
                 return doof::Failure<std::string>{ (((std::string("Policy rejected transitive pkg-config package ") + value) + std::string(" introduced by ")) + package->logicalPrefix) };
             }

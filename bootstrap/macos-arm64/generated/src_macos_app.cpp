@@ -219,8 +219,8 @@ std::string renderMacOSInfoPlist(const std::shared_ptr<MacOSAppConfig>& config) 
     (body = (body + std::string("\t<key>NSHighResolutionCapable</key>\n\t<true/>\n")));
     (body = (body + plistString(std::string("NSPrincipalClass"), std::string("NSApplication"))));
     if (!doof::is_null(config->infoPlist)) {
-        const auto& _iterable_1 = doof::unwrap_optional(config->infoPlist);
-        for (const auto& [key, value] : *_iterable_1) {
+        const auto& _iterable_3 = doof::unwrap_optional(config->infoPlist);
+        for (const auto& [key, value] : *_iterable_3) {
             (body = ((((body + std::string("\t<key>")) + escapePlistText(key)) + std::string("</key>\n")) + renderPlistValue(value, 1)));
         }
     }
@@ -284,8 +284,8 @@ std::string renderPlistValue(const doof::JsonValue& value, int32_t depth) {
     else if (doof::json_is_array(_case_subject)) {
             const auto array = std::get<doof::JsonArray>(doof::json_storage(_case_subject));
             auto result = (indent + std::string("<array>\n"));
-            const auto& _iterable_2 = array;
-            for (const auto& item : *_iterable_2) {
+            const auto& _iterable_6 = array;
+            for (const auto& item : *_iterable_6) {
                 (result = (result + renderPlistValue(item, (depth + 1))));
             }
             return ((result + indent) + std::string("</array>\n"));
@@ -293,8 +293,8 @@ std::string renderPlistValue(const doof::JsonValue& value, int32_t depth) {
     else if (doof::json_is_object(_case_subject)) {
             const auto object = doof::json_object(_case_subject);
             auto result = (indent + std::string("<dict>\n"));
-            const auto& _iterable_3 = object;
-            for (const auto& [key, item] : *_iterable_3) {
+            const auto& _iterable_8 = object;
+            for (const auto& [key, item] : *_iterable_8) {
                 (result = ((((result + plistIndent((depth + 1))) + std::string("<key>")) + escapePlistText(key)) + std::string("</key>\n")));
                 (result = (result + renderPlistValue(item, (depth + 1))));
             }

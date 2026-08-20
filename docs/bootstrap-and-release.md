@@ -10,7 +10,10 @@ than another compiler implementation or a committed executable.
 3. B5 compiles the same graph into B6.
 
 The gate compares every generated C/C++/Objective-C++ header and source from B5
-and B6 byte-for-byte. Only a matching B6 is copied to `dist/doof`.
+and B6 byte-for-byte. After a match, B6 packages the same compiler sources with
+the optimized release graph and publishes that executable and its explicit
+resources to `dist/`. B5 and B6 remain ordinary development builds because the
+fixed-point decision concerns their generated source, not their native flags.
 
 Bootstrap snapshots are source-only and must not contain binaries, objects,
 PCH files, build databases, or absolute developer paths. Refresh them only
@@ -25,6 +28,13 @@ updates the source-only snapshot, and reruns the complete release gate from the
 refreshed stage 0. If the final gate fails, it restores the original snapshot.
 Set `DOOF_REFRESH_MAX_GENERATIONS` to change the default six-generation
 convergence limit.
+
+When a compiler change uses a new self-hosted language/runtime surface that the
+checked-in snapshot cannot compile yet, set `DOOF_REFRESH_SEED_COMPILER` to a
+candidate compiler. The refresh still requires two consecutive generated
+source graphs to match, verifies that fixed-point compiler before changing the
+snapshot, and reruns the complete gate from the refreshed stage 0. The seed is
+therefore a transition input, never the refreshed trust root by itself.
 
 `./scripts/release.sh` adds compiler coverage and CLI/native/resource/package
 fixtures, plus macOS framework and iOS simulator acceptance checks. Release

@@ -379,6 +379,20 @@ with connection := openDatabase() {
 // connection is out of scope — no accidental use after the block
 ```
 
+Use `_` when the value must remain alive for the block but does not need a
+source-level binding. The initializer is still evaluated and the retained value
+is destroyed at the ordinary end of the `with` scope:
+
+```doof
+with _ := acquireGuard() {
+    updateProtectedState()
+}
+```
+
+`_` is a discard target, not a binding, so it cannot be referenced and may be
+used more than once in the same `with` statement. A scoped discard cannot
+discard a `Result`; handle or unwrap the `Result` before entering the scope.
+
 ### Multiple Bindings
 
 Multiple bindings are separated by commas. They are evaluated left-to-right, and later bindings can reference earlier ones:

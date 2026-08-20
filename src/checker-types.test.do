@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { FunctionParamType, Symbol } from "./semantic"
-import { arrayType, classType, functionType, isAssignable, primitive, sameType, unionType } from "./checker-types"
+import { arrayType, classType, functionType, isAssignable, primitive, sameType, streamType, typeParameter, unionType } from "./checker-types"
 
 function symbol(name: string, module: string): Symbol {
   return Symbol { kind: "class", name, module, exported: false }
@@ -80,4 +80,17 @@ export function testUsesNominalIdentityForSameNamedClasses(): none {
 
   Assert.isTrue(sameType(left, same))
   Assert.isFalse(sameType(left, other))
+}
+
+export function testRequiresRecordedStructuralStreamConformance(): none {
+  plainSymbol := symbol("Plain", "/main.do")
+  plain := classType("Plain", plainSymbol)
+  Assert.isFalse(isAssignable(plain, streamType(primitive("int"))))
+
+  streamSymbol := symbol("Values", "/main.do")
+  streamSymbol.typeParams.push("T")
+  streamSymbol.streamElementTypes.push(typeParameter("T"))
+  ints := classType("Values", streamSymbol, [primitive("int")])
+  Assert.isTrue(isAssignable(ints, streamType(primitive("int"))))
+  Assert.isFalse(isAssignable(ints, streamType(primitive("string"))))
 }

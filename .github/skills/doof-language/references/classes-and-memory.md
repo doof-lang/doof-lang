@@ -69,6 +69,9 @@ user := User { id: 1, name }
 
 extended := ExtendedConfig { ...base, timeout: 30 }
 line := Line { start: { x: 0.0, y: 0.0 }, end: { x: 1.0, y: 1.0 } }
+
+button := <Button id=1 label="Save"/>
+panel := <Panel title="Welcome">Hello {user.name}</Panel>
 ```
 
 Rules:
@@ -84,6 +87,13 @@ Rules:
   JSON serialization/deserialization.
 - Name-value shorthand such as `{ name }` expands to `{ name: name }`.
 - Spread fields work in named construction.
+- Typed tags are named calls: classes and structs construct normally, while
+  functions, callbacks, and callable members are invoked normally. Scalar
+  attributes may be bare; general expressions use `{expression}`. Paired
+  content becomes a contextually typed array argument named `children`.
+- Tag callbacks may use the ordinary parameterless-lambda syntax directly,
+  such as `<Button onClick=>println("clicked")/>` or
+  `<Button onClick=>{ refresh() }/>`.
 - A bare object literal expected as a class/struct union constructs the unique
   member matching its field shape. Value types do not resolve shape ties;
   ambiguous, unmatched, and spread-based literals require explicit nominal

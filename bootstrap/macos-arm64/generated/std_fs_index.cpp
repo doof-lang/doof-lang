@@ -77,34 +77,34 @@ doof::Result<void, ::std_::fs::types::IoError> writeBlobStream(const std::string
     auto _try_value_8 = ::NativeFileWriteStream::open(path);
     if (doof::is_failure(_try_value_8)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_8))};
     const auto writer = doof::success_value(_try_value_8);
-    const auto& _iterable_9 = chunks;
-    while (std::visit([](auto&& _obj) { return _obj->next(); }, _iterable_9)) {
-        const auto chunk = std::visit([](auto&& _obj) { return _obj->value(); }, _iterable_9);
-        auto _try_value_10 = writer->writeBlob(chunk);
-        if (doof::is_failure(_try_value_10)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_10))};
+    const auto& _iterable_10 = chunks;
+    while (std::visit([](auto&& _obj) { return _obj->next(); }, _iterable_10)) {
+        const auto chunk = std::visit([](auto&& _obj) { return _obj->value(); }, _iterable_10);
+        auto _try_value_11 = writer->writeBlob(chunk);
+        if (doof::is_failure(_try_value_11)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_11))};
     }
-    auto _try_value_11 = writer->close();
-    if (doof::is_failure(_try_value_11)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_11))};
+    auto _try_value_12 = writer->close();
+    if (doof::is_failure(_try_value_12)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_12))};
     return doof::Success<void>{};
 }
 doof::Result<void, ::std_::fs::types::IoError> writeLineStream(const std::string& path, const Stream__string& lines) {
-    auto _try_value_12 = ::NativeFileWriteStream::open(path);
-    if (doof::is_failure(_try_value_12)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_12))};
-    const auto writer = doof::success_value(_try_value_12);
-    const auto& _iterable_13 = lines;
-    while (std::visit([](auto&& _obj) { return _obj->next(); }, _iterable_13)) {
-        const auto line = std::visit([](auto&& _obj) { return _obj->value(); }, _iterable_13);
-        auto _try_value_14 = writer->writeLine(line);
-        if (doof::is_failure(_try_value_14)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_14))};
+    auto _try_value_13 = ::NativeFileWriteStream::open(path);
+    if (doof::is_failure(_try_value_13)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_13))};
+    const auto writer = doof::success_value(_try_value_13);
+    const auto& _iterable_15 = lines;
+    while (std::visit([](auto&& _obj) { return _obj->next(); }, _iterable_15)) {
+        const auto line = std::visit([](auto&& _obj) { return _obj->value(); }, _iterable_15);
+        auto _try_value_16 = writer->writeLine(line);
+        if (doof::is_failure(_try_value_16)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_16))};
     }
-    auto _try_value_15 = writer->close();
-    if (doof::is_failure(_try_value_15)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_15))};
+    auto _try_value_17 = writer->close();
+    if (doof::is_failure(_try_value_17)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_17))};
     return doof::Success<void>{};
 }
 doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readResourceDir(const std::string& path) {
-    auto _try_value_16 = resolveResourcePath(path);
-    if (doof::is_failure(_try_value_16)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_16))};
-    const auto resolved = doof::success_value(_try_value_16);
+    auto _try_value_18 = resolveResourcePath(path);
+    if (doof::is_failure(_try_value_18)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_18))};
+    const auto resolved = doof::success_value(_try_value_18);
     return ::doof_fs::readDir(resolved);
 }
 bool exists(const std::string& path) {

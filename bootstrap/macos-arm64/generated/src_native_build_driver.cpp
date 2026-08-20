@@ -109,8 +109,8 @@ std::shared_ptr<NativeCommandResult> runBuildCommand(const std::string& command,
 }
 void printBuildOutput(const std::shared_ptr<NativeCommandResult>& result) {
     const auto output = ((result->error != std::string("")) ? result->error : ::doof_blob::NativeBlobReader::constructor(result->output, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((result->output)->size()))));
-    const auto& _iterable_2 = doof::string_split(output, std::string("\n"));
-    for (const auto& line : *_iterable_2) {
+    const auto& _iterable_3 = doof::string_split(output, std::string("\n"));
+    for (const auto& line : *_iterable_3) {
         if (line == std::string("")) {
             continue;
         }
@@ -135,8 +135,8 @@ bool shouldPrintNativeCommandOutput(int32_t exitCode) {
 
 std::shared_ptr<NativeCompilerBatchResult> NativeCompilerWorker::compile() {
     std::shared_ptr<std::vector<std::shared_ptr<NativeCommandResult>>> outputs = std::make_shared<std::vector<std::shared_ptr<NativeCommandResult>>>(std::vector<std::shared_ptr<NativeCommandResult>>{});
-    const auto& _iterable_3 = this->tasks;
-    for (const auto& task : *_iterable_3) {
+    const auto& _iterable_5 = this->tasks;
+    for (const auto& task : *_iterable_5) {
         const auto result = runBuildCommand(task->compiler, mutableArguments(task->arguments));
         outputs->push_back(result);
         if (shouldPrintNativeCompilationMarker(this->outputMode, result->exitCode)) {
@@ -172,16 +172,16 @@ doof::Result<std::shared_ptr<NativeCompilerWorker>, std::string> NativeCompilerW
     }
 }
 int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, bool release, const std::string& platform, NativeBuildOutputMode outputMode) {
-    const auto& _iterable_4 = project->nativeBuild->pkgConfigPackages;
-    for (const auto& packageName : *_iterable_4) {
-        const auto& _iterable_5 = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("cflags"), std::string("libs")});
-        for (const auto& mode : *_iterable_5) {
+    const auto& _iterable_7 = project->nativeBuild->pkgConfigPackages;
+    for (const auto& packageName : *_iterable_7) {
+        const auto& _iterable_9 = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("cflags"), std::string("libs")});
+        for (const auto& mode : *_iterable_9) {
             const auto pkgConfigResult = runBuildCommand(std::string("pkg-config"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{(std::string("--") + mode), packageName}));
             const auto output = ::doof_blob::NativeBlobReader::constructor(pkgConfigResult->output, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((pkgConfigResult->output)->size())));
             const auto applied = ::app_src_pkg_config_::applyPkgConfigResult(project->nativeBuild, packageName, mode, std::make_shared<::app_src_pkg_config_::PkgConfigCommandResult>(pkgConfigResult->exitCode, output, pkgConfigResult->error));
-            auto _binding_value_6 = applied;
-            if (doof::is_failure(_binding_value_6)) {
-                const auto error = doof::failure_error(_binding_value_6);
+            auto _binding_value_10 = applied;
+            if (doof::is_failure(_binding_value_10)) {
+                const auto error = doof::failure_error(_binding_value_10);
                 doof::println((std::string("error: ") + error));
                 return 1;
             }
@@ -205,17 +205,17 @@ int32_t buildNativeProject(const std::string& compilerOverride, const std::strin
     return executeNativePlan(outputDirectory, plan, project, outputMode);
 }
 std::string envCompiler() {
-    auto _binding_value_7 = ::std_::os::index::env(std::string("CXX"));
-    if (doof::is_failure(_binding_value_7)) {
-        const auto& value = _binding_value_7;
+    auto _binding_value_11 = ::std_::os::index::env(std::string("CXX"));
+    if (doof::is_failure(_binding_value_11)) {
+        const auto& value = _binding_value_11;
         return std::string("");
     }
-    const auto value = doof::success_value(_binding_value_7);
+    const auto value = doof::success_value(_binding_value_11);
     return value;
 }
 int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_ptr<::app_src_native_build_::NativeCompilePlan>& plan, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, NativeBuildOutputMode outputMode) {
-    const auto& _iterable_8 = plan->supportFiles;
-    for (const auto& supportFile : *_iterable_8) {
+    const auto& _iterable_13 = plan->supportFiles;
+    for (const auto& supportFile : *_iterable_13) {
         ensureDirectory(parentDirectory(supportFile->outputPath));
         writeTextIfChanged(supportFile->outputPath, supportFile->content);
     }
@@ -251,8 +251,8 @@ int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>> dirtyTasks = std::make_shared<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>>(std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>{});
     std::shared_ptr<std::vector<std::string>> dirtyTaskIds = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> taskFingerprints = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_9 = plan->compileTasks;
-    for (const auto& task : *_iterable_9) {
+    const auto& _iterable_15 = plan->compileTasks;
+    for (const auto& task : *_iterable_15) {
         const auto fingerprint = taskFingerprint(task, identities);
         taskFingerprints->push_back(fingerprint);
         const auto previous = indexedNativeTaskState(previousTasks, task->id);
@@ -266,12 +266,12 @@ int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_
     }
     std::shared_ptr<std::vector<std::shared_ptr<doof::Actor<NativeCompilerWorker>>>> workers = std::make_shared<std::vector<std::shared_ptr<doof::Actor<NativeCompilerWorker>>>>(std::vector<std::shared_ptr<doof::Actor<NativeCompilerWorker>>>{});
     std::shared_ptr<std::vector<doof::Promise<std::shared_ptr<NativeCompilerBatchResult>>>> promises = std::make_shared<std::vector<doof::Promise<std::shared_ptr<NativeCompilerBatchResult>>>>(std::vector<doof::Promise<std::shared_ptr<NativeCompilerBatchResult>>>{});
-    const auto& _iterable_10 = dirtyTasks;
-    for (const auto& task : *_iterable_10) {
+    const auto& _iterable_17 = dirtyTasks;
+    for (const auto& task : *_iterable_17) {
         ensureDirectory(parentDirectory(task->outputPath));
     }
-    const auto& _iterable_11 = ::app_src_native_build_::batchNativeCompileTasks(dirtyTasks, 4);
-    for (const auto& batch : *_iterable_11) {
+    const auto& _iterable_19 = ::app_src_native_build_::batchNativeCompileTasks(dirtyTasks, 4);
+    for (const auto& batch : *_iterable_19) {
         const auto worker = std::make_shared<doof::Actor<NativeCompilerWorker>>(NativeCompilerWorker{batch, outputMode});
         workers->push_back(worker);
         promises->push_back(worker->template call_async<std::shared_ptr<NativeCompilerBatchResult>>([](NativeCompilerWorker& _self) -> std::shared_ptr<NativeCompilerBatchResult> { return _self.compile(); }));
@@ -279,9 +279,9 @@ int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_
     auto compileExitCode = 0;
     std::shared_ptr<std::vector<std::shared_ptr<NativeCompilerBatchResult>>> batchResults = std::make_shared<std::vector<std::shared_ptr<NativeCompilerBatchResult>>>(std::vector<std::shared_ptr<NativeCompilerBatchResult>>{});
     for (int32_t index = 0; index < static_cast<int32_t>((promises)->size()); ++index) {
-        auto _binding_value_12 = doof::array_at(promises, index, "src/native-build-driver", 211).get();
-        if (doof::is_failure(_binding_value_12)) {
-            const auto error = doof::failure_error(_binding_value_12);
+        auto _binding_value_21 = doof::array_at(promises, index, "src/native-build-driver", 211).get();
+        if (doof::is_failure(_binding_value_21)) {
+            const auto error = doof::failure_error(_binding_value_21);
             const auto ignoredWorker = doof::array_at(workers, index, "src/native-build-driver", 212)->retire();
             if ((outputMode == NativeBuildOutputMode::Progress) && (static_cast<int32_t>((dirtyTasks)->size()) > 0)) {
                 doof::println(std::string(""));
@@ -289,17 +289,17 @@ int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_
             doof::println((std::string("error: native compiler worker failed: ") + error));
             return 1;
         }
-        const auto batchResult = doof::success_value(_binding_value_12);
+        const auto batchResult = doof::success_value(_binding_value_21);
         doof::array_at(workers, index, "src/native-build-driver", 217)->retire();
         batchResults->push_back(batchResult);
     }
     if ((outputMode == NativeBuildOutputMode::Progress) && (static_cast<int32_t>((dirtyTasks)->size()) > 0)) {
         doof::println(std::string(""));
     }
-    const auto& _iterable_13 = batchResults;
-    for (const auto& batchResult : *_iterable_13) {
-        const auto& _iterable_14 = batchResult->outputs;
-        for (const auto& commandResult : *_iterable_14) {
+    const auto& _iterable_23 = batchResults;
+    for (const auto& batchResult : *_iterable_23) {
+        const auto& _iterable_25 = batchResult->outputs;
+        for (const auto& commandResult : *_iterable_25) {
             if (shouldPrintNativeCommandOutput(commandResult->exitCode)) {
                 printBuildOutput(commandResult);
                 if (commandResult->truncated && !truncationReported) {
@@ -318,8 +318,8 @@ int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_
     }
     std::shared_ptr<std::vector<std::string>> objectPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     if (!doof::is_null(plan->precompiledHeaderTask)) {
-        const auto& _iterable_15 = plan->precompiledHeaderTask->auxiliaryOutputPaths;
-        for (const auto& path : *_iterable_15) {
+        const auto& _iterable_27 = plan->precompiledHeaderTask->auxiliaryOutputPaths;
+        for (const auto& path : *_iterable_27) {
             objectPaths->push_back(path);
         }
     }
@@ -366,24 +366,24 @@ int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_
 }
 std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>> indexNativeTaskStates(const std::shared_ptr<::app_src_native_build_state_::NativeBuildState>& state) {
     std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>> indexed = std::make_shared<doof::ordered_map<std::string, std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>>{});
-    const auto& _iterable_16 = state->tasks;
-    for (const auto& task : *_iterable_16) {
+    const auto& _iterable_30 = state->tasks;
+    for (const auto& task : *_iterable_30) {
         doof::map_set(indexed, task->id, task, "", 0);
     }
     return indexed;
 }
 std::shared_ptr<::app_src_native_build_state_::NativeTaskState> indexedNativeTaskState(const std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>>& indexed, const std::string& id) {
-    auto _binding_value_17 = doof::map_get(indexed, id, "", 0);
-    if (doof::is_failure(_binding_value_17)) {
-        const auto& task = _binding_value_17;
+    auto _binding_value_31 = doof::map_get(indexed, id, "", 0);
+    if (doof::is_failure(_binding_value_31)) {
+        const auto& task = _binding_value_31;
         return nullptr;
     }
-    const auto task = doof::success_value(_binding_value_17);
+    const auto task = doof::success_value(_binding_value_31);
     return task;
 }
 std::string compilerIdentity(const std::string& command, const std::shared_ptr<std::vector<std::shared_ptr<NativeCompilerIdentity>>>& identities) {
-    const auto& _iterable_18 = identities;
-    for (const auto& identity : *_iterable_18) {
+    const auto& _iterable_33 = identities;
+    for (const auto& identity : *_iterable_33) {
         if (identity->command == command) {
             return identity->signature;
         }
@@ -399,16 +399,16 @@ std::string compilerIdentity(const std::string& command, const std::shared_ptr<s
 }
 std::string taskFingerprint(const std::shared_ptr<::app_src_native_build_::NativeCompileTask>& task, const std::shared_ptr<std::vector<std::shared_ptr<NativeCompilerIdentity>>>& identities) {
     auto value = ((task->id + std::string("\n")) + compilerIdentity(task->compiler, identities));
-    const auto& _iterable_19 = task->arguments;
-    for (const auto& argument : *_iterable_19) {
+    const auto& _iterable_35 = task->arguments;
+    for (const auto& argument : *_iterable_35) {
         (value = ((value + std::string("\n")) + argument));
     }
     return ::std_::crypto::index::sha256HexString(value);
 }
 std::string linkFingerprint(const std::string& linker, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<NativeCompilerIdentity>>>& identities) {
     auto value = (((std::string("link:") + outputPath) + std::string("\n")) + compilerIdentity(linker, identities));
-    const auto& _iterable_20 = arguments;
-    for (const auto& argument : *_iterable_20) {
+    const auto& _iterable_37 = arguments;
+    for (const auto& argument : *_iterable_37) {
         (value = ((value + std::string("\n")) + argument));
     }
     return ::std_::crypto::index::sha256HexString(value);
@@ -417,12 +417,12 @@ std::shared_ptr<::app_src_native_build_state_::NativeInputSignature> pathSignatu
     if (!::doof_fs::exists(path) || ::doof_fs::isDirectory(path)) {
         return nullptr;
     }
-    auto _binding_value_21 = ::doof_fs::metadata(path);
-    if (doof::is_failure(_binding_value_21)) {
-        const auto& info = _binding_value_21;
+    auto _binding_value_38 = ::doof_fs::metadata(path);
+    if (doof::is_failure(_binding_value_38)) {
+        const auto& info = _binding_value_38;
         return nullptr;
     }
-    const auto info = doof::success_value(_binding_value_21);
+    const auto info = doof::success_value(_binding_value_38);
     const auto modifiedNanos = info->modifiedAt->toEpochNanos();
     const auto signature = (contentHash ? ::std_::crypto::index::sha256Hex([&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(path); if (doof::is_failure(_try_value)) doof::panic_at("src/native-build-driver", 313, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()) : ((doof::to_string(info->size) + std::string(":")) + doof::to_string(modifiedNanos)));
     return std::make_shared<::app_src_native_build_state_::NativeInputSignature>(path, signature, contentHash, info->size, modifiedNanos);
@@ -431,12 +431,12 @@ std::shared_ptr<::app_src_native_build_state_::NativeInputSignature> currentInpu
     if (!::doof_fs::exists(previous->path) || ::doof_fs::isDirectory(previous->path)) {
         return nullptr;
     }
-    auto _binding_value_22 = ::doof_fs::metadata(previous->path);
-    if (doof::is_failure(_binding_value_22)) {
-        const auto& info = _binding_value_22;
+    auto _binding_value_39 = ::doof_fs::metadata(previous->path);
+    if (doof::is_failure(_binding_value_39)) {
+        const auto& info = _binding_value_39;
         return nullptr;
     }
-    const auto info = doof::success_value(_binding_value_22);
+    const auto info = doof::success_value(_binding_value_39);
     const auto modifiedNanos = info->modifiedAt->toEpochNanos();
     if ((previous->size == info->size) && (previous->modifiedNanos == modifiedNanos)) {
         return std::make_shared<::app_src_native_build_state_::NativeInputSignature>(previous->path, previous->signature, previous->contentHash, info->size, modifiedNanos);
@@ -447,21 +447,21 @@ bool taskIsCurrent(const std::shared_ptr<::app_src_native_build_state_::NativeTa
     if (doof::is_null(previous) || !::doof_fs::exists(previous->outputPath)) {
         return false;
     }
-    const auto& _iterable_23 = auxiliaryOutputPaths;
-    for (const auto& path : *_iterable_23) {
+    const auto& _iterable_41 = auxiliaryOutputPaths;
+    for (const auto& path : *_iterable_41) {
         if (!::doof_fs::exists(path) || ::doof_fs::isDirectory(path)) {
             return false;
         }
     }
-    auto _binding_value_24 = ::doof_fs::metadata(previous->outputPath);
-    if (doof::is_failure(_binding_value_24)) {
-        const auto& info = _binding_value_24;
+    auto _binding_value_42 = ::doof_fs::metadata(previous->outputPath);
+    if (doof::is_failure(_binding_value_42)) {
+        const auto& info = _binding_value_42;
         return false;
     }
-    const auto info = doof::success_value(_binding_value_24);
+    const auto info = doof::success_value(_binding_value_42);
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_native_build_state_::NativeInputSignature>>> currentInputs = std::make_shared<std::vector<std::shared_ptr<::app_src_native_build_state_::NativeInputSignature>>>(std::vector<std::shared_ptr<::app_src_native_build_state_::NativeInputSignature>>{});
-    const auto& _iterable_25 = previous->inputs;
-    for (const auto& input : *_iterable_25) {
+    const auto& _iterable_44 = previous->inputs;
+    for (const auto& input : *_iterable_44) {
         const auto signature = currentInputSignature(input);
         if (doof::is_null(signature)) {
             return false;
@@ -499,13 +499,13 @@ std::shared_ptr<::app_src_native_build_state_::NativeTaskState> captureTaskState
     if ((task->dependencyFilePath != std::string("")) && ::doof_fs::exists(task->dependencyFilePath)) {
         const auto dependencySource = [&]() -> std::string { auto _try_value = ::doof_fs::readText(task->dependencyFilePath); if (doof::is_failure(_try_value)) doof::panic_at("src/native-build-driver", 374, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         const auto dependencies = (doof::string_endsWith(doof::string_toLowerCase(task->dependencyFilePath), std::string(".json")) ? ::app_src_native_build_state_::parseMsvcDependencies(dependencySource) : ::app_src_native_build_state_::parseMakeDependencies(dependencySource));
-        const auto& _iterable_26 = dependencies;
-        for (const auto& path : *_iterable_26) {
+        const auto& _iterable_47 = dependencies;
+        for (const auto& path : *_iterable_47) {
             appendUnique(paths, path);
         }
     }
-    const auto& _iterable_27 = paths;
-    for (const auto& path : *_iterable_27) {
+    const auto& _iterable_49 = paths;
+    for (const auto& path : *_iterable_49) {
         const auto signature = pathSignature(path, true);
         if (!doof::is_null(signature)) {
             state->inputs->push_back(doof::unwrap_optional(signature));
@@ -516,8 +516,8 @@ std::shared_ptr<::app_src_native_build_state_::NativeTaskState> captureTaskState
 std::shared_ptr<::app_src_native_build_state_::NativeTaskState> captureLinkState(const std::string& outputPath, const std::string& fingerprint, const std::shared_ptr<std::vector<std::string>>& objectPaths) {
     const auto info = [&]() -> std::shared_ptr<::std_::fs::types::FileInfo> { auto _try_value = ::doof_fs::metadata(outputPath); if (doof::is_failure(_try_value)) doof::panic_at("src/native-build-driver", 388, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
     const auto state = std::make_shared<::app_src_native_build_state_::NativeTaskState>((std::string("link:") + outputPath), fingerprint, outputPath, info->size, info->modifiedAt->toEpochNanos(), std::make_shared<std::vector<std::shared_ptr<::app_src_native_build_state_::NativeInputSignature>>>(std::vector<std::shared_ptr<::app_src_native_build_state_::NativeInputSignature>>{}));
-    const auto& _iterable_28 = objectPaths;
-    for (const auto& path : *_iterable_28) {
+    const auto& _iterable_51 = objectPaths;
+    for (const auto& path : *_iterable_51) {
         const auto signature = pathSignature(path, false);
         if (!doof::is_null(signature)) {
             state->inputs->push_back(doof::unwrap_optional(signature));
@@ -529,12 +529,12 @@ std::shared_ptr<::app_src_native_build_state_::NativeBuildState> readBuildState(
     if (!::doof_fs::exists(path)) {
         return std::make_shared<::app_src_native_build_state_::NativeBuildState>(2, std::make_shared<std::vector<std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>>(std::vector<std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     }
-    auto _binding_value_29 = ::doof_fs::readText(path);
-    if (doof::is_failure(_binding_value_29)) {
-        const auto& source = _binding_value_29;
+    auto _binding_value_52 = ::doof_fs::readText(path);
+    if (doof::is_failure(_binding_value_52)) {
+        const auto& source = _binding_value_52;
         return std::make_shared<::app_src_native_build_state_::NativeBuildState>(2, std::make_shared<std::vector<std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>>(std::vector<std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     }
-    const auto source = doof::success_value(_binding_value_29);
+    const auto source = doof::success_value(_binding_value_52);
     const auto parsed = ::app_src_native_build_state_::parseNativeBuildState(source);
     return (doof::is_null(parsed) ? std::make_shared<::app_src_native_build_state_::NativeBuildState>(2, std::make_shared<std::vector<std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>>(std::vector<std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : doof::unwrap_optional(parsed));
 }
@@ -545,13 +545,13 @@ void writeBuildState(const std::string& path, const std::shared_ptr<::app_src_na
 }
 void writeTextIfChanged(const std::string& path, const std::string& content) {
     if (::doof_fs::exists(path)) {
-        auto _binding_value_30 = ::doof_fs::readText(path);
-        if (doof::is_failure(_binding_value_30)) {
-            const auto& previous = _binding_value_30;
+        auto _binding_value_53 = ::doof_fs::readText(path);
+        if (doof::is_failure(_binding_value_53)) {
+            const auto& previous = _binding_value_53;
             [&]() -> void { auto _try_value = ::doof_fs::writeText(path, content); if (doof::is_failure(_try_value)) doof::panic_at("src/native-build-driver", 412, std::string("try! failed"));  }();
             return;
         }
-        const auto previous = doof::success_value(_binding_value_30);
+        const auto previous = doof::success_value(_binding_value_53);
         if (!nativeSupportFileNeedsWrite(previous, content)) {
             return;
         }
@@ -563,8 +563,8 @@ bool nativeSupportFileNeedsWrite(const std::optional<std::string>& previous, con
 }
 std::string msvcLinkResponseFile(const std::shared_ptr<std::vector<std::string>>& arguments) {
     auto content = std::string("");
-    const auto& _iterable_31 = arguments;
-    for (const auto& argument : *_iterable_31) {
+    const auto& _iterable_55 = arguments;
+    for (const auto& argument : *_iterable_55) {
         (content = ((content + quoteMsvcResponseArgument(argument)) + std::string("\n")));
     }
     return content;
@@ -589,29 +589,29 @@ std::string quoteMsvcResponseArgument(const std::string& argument) {
 }
 void collectManagedOutputs(const std::shared_ptr<std::vector<std::string>>& outputs, const std::string& outputDirectory, const std::shared_ptr<::app_src_native_build_::NativeCompilePlan>& plan, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project) {
     std::shared_ptr<doof::ordered_set<std::string>> indexed = std::make_shared<doof::ordered_set<std::string>>(doof::ordered_set<std::string>{});
-    const auto& _iterable_32 = outputs;
-    for (const auto& output : *_iterable_32) {
+    const auto& _iterable_58 = outputs;
+    for (const auto& output : *_iterable_58) {
         indexed->insert(output);
     }
     collectManagedOutputsIndexed(outputs, indexed, outputDirectory, plan, project);
 }
 void collectManagedOutputsIndexed(const std::shared_ptr<std::vector<std::string>>& outputs, const std::shared_ptr<doof::ordered_set<std::string>>& indexed, const std::string& outputDirectory, const std::shared_ptr<::app_src_native_build_::NativeCompilePlan>& plan, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project) {
     appendManagedOutput(outputs, indexed, joinOutput(outputDirectory, std::string("doof_runtime.hpp")));
-    const auto& _iterable_33 = plan->supportFiles;
-    for (const auto& supportFile : *_iterable_33) {
+    const auto& _iterable_60 = plan->supportFiles;
+    for (const auto& supportFile : *_iterable_60) {
         appendManagedOutput(outputs, indexed, supportFile->outputPath);
     }
-    const auto& _iterable_34 = project->modules;
-    for (const auto& module : *_iterable_34) {
+    const auto& _iterable_62 = project->modules;
+    for (const auto& module : *_iterable_62) {
         appendManagedOutput(outputs, indexed, joinOutput(outputDirectory, module->headerName));
         appendManagedOutput(outputs, indexed, joinOutput(outputDirectory, module->sourceName));
     }
-    const auto& _iterable_35 = project->supportFiles;
-    for (const auto& supportFile : *_iterable_35) {
+    const auto& _iterable_64 = project->supportFiles;
+    for (const auto& supportFile : *_iterable_64) {
         appendManagedOutput(outputs, indexed, joinOutput(outputDirectory, supportFile->relativePath));
     }
-    const auto& _iterable_36 = project->nativeCopies;
-    for (const auto& nativeCopy : *_iterable_36) {
+    const auto& _iterable_66 = project->nativeCopies;
+    for (const auto& nativeCopy : *_iterable_66) {
         collectManagedNativeCopyOutputs(outputs, indexed, nativeCopy->sourcePath, joinOutput(outputDirectory, nativeCopy->relativePath));
     }
     if (!doof::is_null(plan->precompiledHeaderTask)) {
@@ -619,19 +619,19 @@ void collectManagedOutputsIndexed(const std::shared_ptr<std::vector<std::string>
         if (plan->precompiledHeaderTask->dependencyFilePath != std::string("")) {
             appendManagedOutput(outputs, indexed, plan->precompiledHeaderTask->dependencyFilePath);
         }
-        const auto& _iterable_37 = plan->precompiledHeaderTask->auxiliaryOutputPaths;
-        for (const auto& path : *_iterable_37) {
+        const auto& _iterable_68 = plan->precompiledHeaderTask->auxiliaryOutputPaths;
+        for (const auto& path : *_iterable_68) {
             appendManagedOutput(outputs, indexed, path);
         }
     }
-    const auto& _iterable_38 = plan->compileTasks;
-    for (const auto& task : *_iterable_38) {
+    const auto& _iterable_70 = plan->compileTasks;
+    for (const auto& task : *_iterable_70) {
         appendManagedOutput(outputs, indexed, task->outputPath);
         if (task->dependencyFilePath != std::string("")) {
             appendManagedOutput(outputs, indexed, task->dependencyFilePath);
         }
-        const auto& _iterable_39 = task->auxiliaryOutputPaths;
-        for (const auto& path : *_iterable_39) {
+        const auto& _iterable_72 = task->auxiliaryOutputPaths;
+        for (const auto& path : *_iterable_72) {
             appendManagedOutput(outputs, indexed, path);
         }
     }
@@ -645,14 +645,14 @@ void collectManagedNativeCopyOutputs(const std::shared_ptr<std::vector<std::stri
         appendManagedOutput(outputs, indexed, outputPath);
         return;
     }
-    const auto& _iterable_40 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(sourcePath); if (doof::is_failure(_try_value)) doof::panic_at("src/native-build-driver", 488, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
-    for (const auto& entry : *_iterable_40) {
+    const auto& _iterable_74 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(sourcePath); if (doof::is_failure(_try_value)) doof::panic_at("src/native-build-driver", 488, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
+    for (const auto& entry : *_iterable_74) {
         collectManagedNativeCopyOutputs(outputs, indexed, joinOutput(sourcePath, entry->name), joinOutput(outputPath, entry->name));
     }
 }
 void removeStaleOutputs(const std::shared_ptr<std::vector<std::string>>& previous, const std::shared_ptr<std::vector<std::string>>& current, const std::string& outputDirectory) {
-    const auto& _iterable_41 = staleManagedOutputCandidates(previous, current, outputDirectory);
-    for (const auto& path : *_iterable_41) {
+    const auto& _iterable_76 = staleManagedOutputCandidates(previous, current, outputDirectory);
+    for (const auto& path : *_iterable_76) {
         if (::doof_fs::exists(path) && !::doof_fs::isDirectory(path)) {
             [&]() -> void { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/native-build-driver", 495, std::string("try! failed"));  }();
         }
@@ -661,13 +661,13 @@ void removeStaleOutputs(const std::shared_ptr<std::vector<std::string>>& previou
 std::shared_ptr<std::vector<std::string>> staleManagedOutputCandidates(const std::shared_ptr<std::vector<std::string>>& previous, const std::shared_ptr<std::vector<std::string>>& current, const std::string& outputDirectory) {
     const auto prefix = (doof::string_endsWith(outputDirectory, std::string("/")) ? outputDirectory : (outputDirectory + std::string("/")));
     std::shared_ptr<doof::ordered_set<std::string>> retained = std::make_shared<doof::ordered_set<std::string>>(doof::ordered_set<std::string>{});
-    const auto& _iterable_42 = current;
-    for (const auto& path : *_iterable_42) {
+    const auto& _iterable_78 = current;
+    for (const auto& path : *_iterable_78) {
         retained->insert(path);
     }
     std::shared_ptr<std::vector<std::string>> stale = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_43 = previous;
-    for (const auto& path : *_iterable_43) {
+    const auto& _iterable_80 = previous;
+    for (const auto& path : *_iterable_80) {
         if ((retained->count(path) > 0) || !doof::string_startsWith(path, prefix)) {
             continue;
         }
@@ -688,15 +688,15 @@ bool nativeManagedOutputsChanged(const std::shared_ptr<std::vector<std::string>>
 }
 std::shared_ptr<std::vector<std::string>> mutableArguments(const std::shared_ptr<std::vector<std::string>>& arguments) {
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_44 = arguments;
-    for (const auto& argument : *_iterable_44) {
+    const auto& _iterable_83 = arguments;
+    for (const auto& argument : *_iterable_83) {
         result->push_back(argument);
     }
     return result;
 }
 bool contains(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
-    const auto& _iterable_45 = values;
-    for (const auto& existing : *_iterable_45) {
+    const auto& _iterable_85 = values;
+    for (const auto& existing : *_iterable_85) {
         if (existing == value) {
             return true;
         }

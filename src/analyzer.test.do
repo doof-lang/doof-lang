@@ -13,6 +13,23 @@ function hasDiagnostic(result: AnalysisResult, message: string): bool {
   return false
 }
 
+export function testKeepsDepthFirstModuleOrderAcrossParallelParsing(): none {
+  slowSource := ("// keep the first dependency busy\n").repeat(20000) +
+    "import { leaf } from \"./leaf\"\nexport function slow(): int => leaf()"
+  result := createAnalyzer([
+    SourceFile { path: "/main.do", source: "import { slow } from \"./slow\"\nimport { fast } from \"./fast\"\nfunction main(): int => slow() + fast()" },
+    SourceFile { path: "/slow.do", source: slowSource },
+    SourceFile { path: "/leaf.do", source: "export function leaf(): int => 1" },
+    SourceFile { path: "/fast.do", source: "export function fast(): int => 2" },
+  ]).analyze("/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.modules.length, 4)
+  Assert.equal(result.modules[0].path, "/main.do")
+  Assert.equal(result.modules[1].path, "/slow.do")
+  Assert.equal(result.modules[2].path, "/leaf.do")
+  Assert.equal(result.modules[3].path, "/fast.do")
+}
+
 export function testRejectsRemovedBuiltinParseErrorAnnotations(): none {
   result := createAnalyzer([SourceFile {
     path: "/main.do", source: "function parse(): Result<int, ParseError> => Failure { error: .Overflow }",
@@ -24,6 +41,16 @@ export function testRejectsRemovedBuiltinParseErrorAnnotations(): none {
 export function testRecognizesBuiltinNeverAnnotations(): none {
   result := createAnalyzer([SourceFile { path: "/main.do", source: "function fail(): never => panic(\"failed\")" }]).analyze("/main.do")
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testRecordsClassTypeParametersOnSymbols(): none {
+  result := createAnalyzer([SourceFile { path: "/main.do", source: "class Box<T, U> { first: T\nsecond: U }" }]).analyze("/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  module := moduleAt(result, "/main.do")
+  Assert.equal(module.symbols.length, 1)
+  Assert.equal(module.symbols[0].typeParams.length, 2)
+  Assert.equal(module.symbols[0].typeParams[0], "T")
+  Assert.equal(module.symbols[0].typeParams[1], "U")
 }
 
 export function testRejectsValueSymbolsInTypePositions(): none {

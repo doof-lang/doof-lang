@@ -133,6 +133,24 @@ export function testInterpolationAndComments(): none {
   Assert.equal(tokens[3].kind, TokenType.EndOfFile)
 }
 
+export function testLexesTypedTagsWithRawTextAndLambdaAttributes(): none {
+  source := "view := <Panel title=\"Welcome\" onClick=>println(\"hello\")>\n  Hello {name}\n  <Icon name=\"star\"/>\n</Panel>"
+  lexer := Lexer { source }
+  tokens := lexer.tokenize()
+  Assert.equal(lexer.diagnostics.length, 0)
+  let textCount = 0
+  let arrowCount = 0
+  for token of tokens {
+    if token.kind == TokenType.TagText {
+      textCount = textCount + 1
+      if tokenValue(token, source).contains("Hello") { Assert.stringContains(tokenValue(token, source), "  Hello ") }
+    }
+    if token.kind == TokenType.Arrow { arrowCount = arrowCount + 1 }
+  }
+  Assert.equal(textCount, 3)
+  Assert.equal(arrowCount, 1)
+}
+
 export function testMultipleInterpolations(): none {
   tokens := Lexer { source: "\"\${first} and \${second}\"" }.tokenize()
   Assert.equal(tokens.length, 6)

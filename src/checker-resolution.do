@@ -313,11 +313,21 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
     }
     array: ArrayResolvedType -> {
       if property == "length" { return primitive("int") }
+      if array.readonly_ && (property == "push" || property == "reserve" || property == "pop" || property == "takeFirstCompleted") {
+        typeError(state, "Method \"" + property + "\" is not available on readonly array", span)
+        return unknownType()
+      }
       if property == "push" { return functionType([FunctionParamType { name: "value", type_: array.elementType, hasDefault: false }], noneType()) }
       if property == "contains" { return functionType([FunctionParamType { name: "value", type_: array.elementType, hasDefault: false }], primitive("bool")) }
       if property == "indexOf" { return functionType([FunctionParamType { name: "value", type_: array.elementType, hasDefault: false }], primitive("int")) }
       if property == "reserve" { return functionType([FunctionParamType { name: "capacity", type_: primitive("int"), hasDefault: false }], noneType()) }
       if property == "pop" { return functionType([], resultType(array.elementType, primitive("string"))) }
+      if property == "takeFirstCompleted" {
+        case array.elementType {
+          promise: PromiseType -> { return functionType([], resultType(promise.valueType, primitive("string"))) }
+          _ -> { return unknownType() }
+        }
+      }
       if property == "some" || property == "every" {
         predicate := functionType([FunctionParamType { name: "it", type_: array.elementType, hasDefault: false }], primitive("bool"))
         return functionType([FunctionParamType { name: "predicate", type_: predicate, hasDefault: false }], primitive("bool"))
@@ -345,7 +355,12 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
       if property == "size" { return primitive("int") }
       if property == "has" { return functionType([FunctionParamType { name: "key", type_: map.keyType, hasDefault: false }], primitive("bool")) }
       if property == "get" { return functionType([FunctionParamType { name: "key", type_: map.keyType, hasDefault: false }], resultType(map.valueType, primitive("string"))) }
+      if map.readonly_ && (property == "set" || property == "delete") {
+        typeError(state, "Method \"" + property + "\" is not available on readonly map", span)
+        return unknownType()
+      }
       if property == "set" { return functionType([FunctionParamType { name: "key", type_: map.keyType, hasDefault: false }, FunctionParamType { name: "value", type_: map.valueType, hasDefault: false }], noneType()) }
+      if property == "delete" { return functionType([FunctionParamType { name: "key", type_: map.keyType, hasDefault: false }], noneType()) }
       if property == "keys" { return functionType([], arrayType(map.keyType)) }
       if property == "values" { return functionType([], arrayType(map.valueType)) }
       if map.readonly_ && (property == "buildReadonly" || property == "drainToReadonly" || property == "cloneReadonly") {

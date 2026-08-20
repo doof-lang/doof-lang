@@ -191,7 +191,7 @@ function parseParameters(parser: Parser): Parameter[] {
   params: Parameter[] := []
   while !parser.check(TokenType.RightParen) && !parser.atEnd() {
     start := parser.location()
-    name := parser.text(parser.expect(TokenType.Identifier))
+    name := parser.text(parser.expect(TokenType.Identifier, "Expected named function parameter name"))
     description := parseDescription(parser)
     typeValue := parser.parseOptionalType()
     let defaultValue: Expression | none = none

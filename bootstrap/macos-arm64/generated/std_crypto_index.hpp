@@ -227,7 +227,8 @@ inline std::ostream& operator<<(std::ostream& output, EntryKind value) { return 
     NotDirectory = 4,
     InvalidPath = 5,
     Interrupted = 6,
-    Other = 7
+    Other = 7,
+    Unsupported = 8
 };
 inline const char* IoError_name(IoError value) {
   switch (value) {
@@ -239,6 +240,7 @@ inline const char* IoError_name(IoError value) {
     case IoError::InvalidPath: return "InvalidPath";
     case IoError::Interrupted: return "Interrupted";
     case IoError::Other: return "Other";
+    case IoError::Unsupported: return "Unsupported";
   }
   return "";
 }
@@ -251,6 +253,7 @@ inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "InvalidPath") return IoError::InvalidPath;
   if (value == "Interrupted") return IoError::Interrupted;
   if (value == "Other") return IoError::Other;
+  if (value == "Unsupported") return IoError::Unsupported;
   return std::nullopt;
 }
 inline std::optional<IoError> IoError_fromValue(int32_t value) {
@@ -263,6 +266,7 @@ inline std::optional<IoError> IoError_fromValue(int32_t value) {
     case IoError::InvalidPath: return IoError::InvalidPath;
     case IoError::Interrupted: return IoError::Interrupted;
     case IoError::Other: return IoError::Other;
+    case IoError::Unsupported: return IoError::Unsupported;
     default: return std::nullopt;
   }
 }
@@ -772,8 +776,9 @@ namespace std_::crypto::index {
     std::shared_ptr<std::vector<uint8_t>> sha1String(const std::string& text);
     std::shared_ptr<std::vector<uint8_t>> sha256(const std::shared_ptr<std::vector<uint8_t>>& data);
     std::shared_ptr<std::vector<uint8_t>> sha256String(const std::string& text);
-    std::shared_ptr<std::vector<uint8_t>> hmacSha256(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::string encodeBase64(const std::shared_ptr<std::vector<uint8_t>>& data);
     std::string encodeBase64Url(const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::shared_ptr<std::vector<uint8_t>> hmacSha256(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data);
     doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64Url(const std::string& text);
     bool timingSafeEqual(const std::shared_ptr<std::vector<uint8_t>>& a, const std::shared_ptr<std::vector<uint8_t>>& b);
     doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64(const std::string& text);
@@ -781,9 +786,19 @@ namespace std_::crypto::index {
     std::string sha1HexString(const std::string& text);
     std::string sha256Hex(const std::shared_ptr<std::vector<uint8_t>>& data);
     std::string sha256HexString(const std::string& text);
+    std::string sha256Base64(const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::string sha256Base64String(const std::string& text);
+    std::string sha256Base64Url(const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::string sha256Base64UrlString(const std::string& text);
     std::string hmacSha256Hex(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::string hmacSha256Base64(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data);
     std::string hmacSha256Base64Url(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data);
+    std::shared_ptr<std::vector<uint8_t>> hmacSha256String(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::string& text);
+    std::string hmacSha256HexString(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::string& text);
+    std::string hmacSha256Base64String(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::string& text);
+    std::string hmacSha256Base64UrlString(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::string& text);
     std::shared_ptr<::doof_crypto::SecretBytes> randomBytes(int32_t length);
+    std::string randomToken(int32_t byteLength);
     doof::Result<std::string, std::string> decodeBase64UrlToString(const std::string& text);
     std::shared_ptr<std::vector<uint8_t>> stringToBytes(const std::string& text);
     doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(const std::string& token);

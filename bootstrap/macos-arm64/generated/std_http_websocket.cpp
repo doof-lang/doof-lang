@@ -249,8 +249,8 @@ std::shared_ptr<::std_::http::types::HttpError> parseWebSocketError(const std::s
 }
 std::string renderHeaders(const std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>& headers) {
     auto text = std::string("");
-    const auto& _iterable_4 = headers;
-    for (const auto& header : *_iterable_4) {
+    const auto& _iterable_5 = headers;
+    for (const auto& header : *_iterable_5) {
         (text += ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(header->name); _interpolation += ": "; _interpolation += doof::to_string(header->value); _interpolation += "\r\n"; return _interpolation; }()));
     }
     return text;

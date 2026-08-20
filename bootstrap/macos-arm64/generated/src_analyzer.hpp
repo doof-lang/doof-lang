@@ -141,6 +141,7 @@ namespace app_src_resolver_ {
 namespace app_src_analyzer_ {
     struct ModuleInfo;
     struct AnalysisResult;
+    struct ModuleParseResult;
     struct ModuleAnalyzer;
     extern std::shared_ptr<std::vector<std::string>> BUILTIN_TYPES;
 }
@@ -283,6 +284,8 @@ namespace app_src_lexer_ {
     QuestionBracket,
     Underscore,
     DollarBrace,
+    TagOpen,
+    TagText,
     Ellipsis,
     EndOfFile
 };
@@ -401,6 +404,8 @@ inline const char* TokenType_name(TokenType value) {
     case TokenType::QuestionBracket: return "QuestionBracket";
     case TokenType::Underscore: return "Underscore";
     case TokenType::DollarBrace: return "DollarBrace";
+    case TokenType::TagOpen: return "TagOpen";
+    case TokenType::TagText: return "TagText";
     case TokenType::Ellipsis: return "Ellipsis";
     case TokenType::EndOfFile: return "EndOfFile";
   }
@@ -520,6 +525,8 @@ inline std::optional<TokenType> TokenType_fromName(std::string_view value) {
   if (value == "QuestionBracket") return TokenType::QuestionBracket;
   if (value == "Underscore") return TokenType::Underscore;
   if (value == "DollarBrace") return TokenType::DollarBrace;
+  if (value == "TagOpen") return TokenType::TagOpen;
+  if (value == "TagText") return TokenType::TagText;
   if (value == "Ellipsis") return TokenType::Ellipsis;
   if (value == "EndOfFile") return TokenType::EndOfFile;
   return std::nullopt;
@@ -639,6 +646,8 @@ inline std::optional<TokenType> TokenType_fromValue(int32_t value) {
     case TokenType::QuestionBracket: return TokenType::QuestionBracket;
     case TokenType::Underscore: return TokenType::Underscore;
     case TokenType::DollarBrace: return TokenType::DollarBrace;
+    case TokenType::TagOpen: return TokenType::TagOpen;
+    case TokenType::TagText: return TokenType::TagText;
     case TokenType::Ellipsis: return TokenType::Ellipsis;
     case TokenType::EndOfFile: return TokenType::EndOfFile;
     default: return std::nullopt;
@@ -684,9 +693,9 @@ namespace app_src_semantic_ {
     std::string nativeCppName = std::string("");
     std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{});
     std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    Symbol(std::string kind, std::string name, std::string module, bool exported, std::string originalName = std::string(""), bool native_ = false, std::string nativeHeader = std::string(""), std::string nativeCppName = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{}), std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : kind(kind), name(name), module(module), exported(exported), originalName(originalName), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), implementations(implementations), implementedInterfaceTypes(implementedInterfaceTypes) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Symbol>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<ResolvedType>> streamElementTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{});
+    Symbol(std::string kind, std::string name, std::string module, bool exported, std::string originalName = std::string(""), bool native_ = false, std::string nativeHeader = std::string(""), std::string nativeCppName = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{}), std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<ResolvedType>> streamElementTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{})) : kind(kind), name(name), module(module), exported(exported), originalName(originalName), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), implementations(implementations), implementedInterfaceTypes(implementedInterfaceTypes), typeParams(typeParams), streamElementTypes(streamElementTypes) {}
 };
     struct ImportBinding : public std::enable_shared_from_this<ImportBinding> {
     std::string localName;
@@ -695,8 +704,6 @@ namespace app_src_semantic_ {
     bool typeOnly;
     std::shared_ptr<Symbol> symbol = nullptr;
     ImportBinding(std::string localName, std::string sourceName, std::string sourceModule, bool typeOnly, std::shared_ptr<Symbol> symbol = nullptr) : localName(localName), sourceName(sourceName), sourceModule(sourceModule), typeOnly(typeOnly), symbol(symbol) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ImportBinding>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NamespaceBinding : public std::enable_shared_from_this<NamespaceBinding> {
     std::string localName;
@@ -732,8 +739,6 @@ namespace app_src_semantic_ {
     std::string name;
     std::shared_ptr<Symbol> symbol;
     EnumType(std::string kind, std::string name, std::shared_ptr<Symbol> symbol) : kind(kind), name(name), symbol(symbol) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<EnumType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct InterfaceType : public std::enable_shared_from_this<InterfaceType> {
     std::string kind = std::string("interface");
@@ -909,14 +914,30 @@ namespace app_src_analyzer_ {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics;
     AnalysisResult(std::shared_ptr<std::vector<std::shared_ptr<ModuleInfo>>> modules, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics) : modules(modules), diagnostics(diagnostics) {}
 };
+    struct ModuleParseResult : public std::enable_shared_from_this<ModuleParseResult> {
+    std::string path;
+    std::string source;
+    std::optional<std::string> inheritedMockRootPath = std::nullopt;
+    std::shared_ptr<::app_src_ast_::Program> program = nullptr;
+    std::string errorMessage = std::string("");
+    int32_t errorLine = 0;
+    int32_t errorColumn = 0;
+    int32_t errorOffset = 0;
+    ModuleParseResult(std::string path, std::string source, std::optional<std::string> inheritedMockRootPath = std::nullopt, std::shared_ptr<::app_src_ast_::Program> program = nullptr, std::string errorMessage = std::string(""), int32_t errorLine = 0, int32_t errorColumn = 0, int32_t errorOffset = 0) : path(path), source(source), inheritedMockRootPath(inheritedMockRootPath), program(program), errorMessage(errorMessage), errorLine(errorLine), errorColumn(errorColumn), errorOffset(errorOffset) {}
+};
     struct ModuleAnalyzer : public std::enable_shared_from_this<ModuleAnalyzer> {
     std::shared_ptr<::app_src_resolver_::ModuleResolver> resolver;
     std::shared_ptr<std::vector<std::shared_ptr<ModuleInfo>>> modules = std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{});
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics;
     std::shared_ptr<std::vector<std::string>> inProgress = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    ModuleAnalyzer(std::shared_ptr<::app_src_resolver_::ModuleResolver> resolver, std::shared_ptr<std::vector<std::shared_ptr<ModuleInfo>>> modules, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics, std::shared_ptr<std::vector<std::string>> inProgress) : resolver(resolver), modules(modules), diagnostics(diagnostics), inProgress(inProgress) {}
+    std::shared_ptr<std::vector<std::string>> resolvedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    ModuleAnalyzer(std::shared_ptr<::app_src_resolver_::ModuleResolver> resolver, std::shared_ptr<std::vector<std::shared_ptr<ModuleInfo>>> modules, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics, std::shared_ptr<std::vector<std::string>> inProgress, std::shared_ptr<std::vector<std::string>> resolvedPaths) : resolver(resolver), modules(modules), diagnostics(diagnostics), inProgress(inProgress), resolvedPaths(resolvedPaths) {}
     std::shared_ptr<AnalysisResult> analyze(const std::string& entry);
-    std::shared_ptr<ModuleInfo> analyzeModule(const std::string& path, const std::optional<std::string>& inheritedMockRootPath);
+    void queueModuleParse(const std::string& path, const std::optional<std::string>& inheritedMockRootPath, const std::shared_ptr<std::vector<std::string>>& scheduled, const std::shared_ptr<std::vector<doof::Promise<std::shared_ptr<ModuleParseResult>>>>& pending);
+    void parseReachableModules(const std::string& entryPath);
+    void orderModules(const std::string& entryPath);
+    void appendModuleOrder(const std::string& path, const std::shared_ptr<std::vector<std::shared_ptr<ModuleInfo>>>& ordered, const std::shared_ptr<std::vector<std::string>>& visited);
+    std::shared_ptr<ModuleInfo> resolveModule(const std::string& path);
     void collectSymbols(const std::shared_ptr<ModuleInfo>& info);
     void decorateDeclarationSymbol(const __type11& statement, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol);
     std::shared_ptr<::app_src_semantic_::Symbol> symbolFor(const __type11& statement, const std::string& module);
@@ -1752,11 +1773,12 @@ namespace app_src_parser_ {
     std::shared_ptr<std::vector<::app_src_lexer_::Token>> tokens;
     int32_t pos = 0;
     bool inForIterable = false;
+    bool inTagAttribute = false;
     std::string errorMessage = std::string("");
     int32_t errorLine = 0;
     int32_t errorColumn = 0;
     int32_t errorOffset = 0;
-    Parser(std::string source, std::shared_ptr<std::vector<::app_src_lexer_::Token>> tokens, int32_t pos, bool inForIterable, std::string errorMessage, int32_t errorLine, int32_t errorColumn, int32_t errorOffset) : source(source), tokens(tokens), pos(pos), inForIterable(inForIterable), errorMessage(errorMessage), errorLine(errorLine), errorColumn(errorColumn), errorOffset(errorOffset) {}
+    Parser(std::string source, std::shared_ptr<std::vector<::app_src_lexer_::Token>> tokens, int32_t pos, bool inForIterable, bool inTagAttribute, std::string errorMessage, int32_t errorLine, int32_t errorColumn, int32_t errorOffset) : source(source), tokens(tokens), pos(pos), inForIterable(inForIterable), inTagAttribute(inTagAttribute), errorMessage(errorMessage), errorLine(errorLine), errorColumn(errorColumn), errorOffset(errorOffset) {}
     std::shared_ptr<::app_src_ast_::Program> parse();
     ::app_src_lexer_::Token current();
     ::app_src_lexer_::Token peek(int32_t offset = 0);

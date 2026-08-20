@@ -141,16 +141,16 @@ std::shared_ptr<ProjectEmission> planProjectEmission(const std::shared_ptr<::app
         project->nativeBuild->sourceFiles->push_back(std::string("doof_wasm.cpp"));
         (project->wasmExportNames = graph->wasmExportNames);
     }
-    const auto& _iterable_1 = packages;
-    for (const auto& package_ : *_iterable_1) {
+    const auto& _iterable_2 = packages;
+    for (const auto& package_ : *_iterable_2) {
         planPackageSupportFiles(project, graph, package_);
         planPackageNativeBuild(project, package_);
     }
     return project;
 }
 void planPackageSupportFiles(const std::shared_ptr<ProjectEmission>& project, const std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission>& graph, const std::shared_ptr<NativePackageInput>& package_) {
-    const auto& _iterable_2 = graph->modules;
-    for (const auto& module : *_iterable_2) {
+    const auto& _iterable_4 = graph->modules;
+    for (const auto& module : *_iterable_4) {
         const auto relativeModulePath = logicalSuffix(module->modulePath, package_->logicalPrefix);
         if (doof::is_null(relativeModulePath)) {
             continue;
@@ -162,26 +162,26 @@ void planPackageSupportFiles(const std::shared_ptr<ProjectEmission>& project, co
 void planPackageNativeBuild(const std::shared_ptr<ProjectEmission>& project, const std::shared_ptr<NativePackageInput>& package_) {
     const auto native = package_->manifest->nativeBuild;
     auto copiedAny = false;
-    const auto& _iterable_3 = native->includePaths;
-    for (const auto& includePath : *_iterable_3) {
+    const auto& _iterable_6 = native->includePaths;
+    for (const auto& includePath : *_iterable_6) {
         const auto relativePath = addNativeCopy(project->nativeCopies, package_, includePath);
         appendUnique(project->nativeBuild->includePaths, relativePath);
         (copiedAny = true);
     }
-    const auto& _iterable_4 = native->sourceFiles;
-    for (const auto& sourcePath : *_iterable_4) {
+    const auto& _iterable_8 = native->sourceFiles;
+    for (const auto& sourcePath : *_iterable_8) {
         const auto relativePath = addNativeCopy(project->nativeCopies, package_, sourcePath);
         appendUnique(project->nativeBuild->sourceFiles, relativePath);
         (copiedAny = true);
     }
-    const auto& _iterable_5 = native->libraryPaths;
-    for (const auto& libraryPath : *_iterable_5) {
+    const auto& _iterable_10 = native->libraryPaths;
+    for (const auto& libraryPath : *_iterable_10) {
         const auto relativePath = addNativeCopy(project->nativeCopies, package_, libraryPath);
         appendUnique(project->nativeBuild->libraryPaths, relativePath);
         (copiedAny = true);
     }
-    const auto& _iterable_6 = native->extraCopyPaths;
-    for (const auto& extraCopyPath : *_iterable_6) {
+    const auto& _iterable_12 = native->extraCopyPaths;
+    for (const auto& extraCopyPath : *_iterable_12) {
         const auto relativePath = addNativeCopy(project->nativeCopies, package_, extraCopyPath);
         appendUnique(project->nativeBuild->includePaths, projectParentPath(relativePath));
         (copiedAny = true);
@@ -202,8 +202,8 @@ void planPackageNativeBuild(const std::shared_ptr<ProjectEmission>& project, con
 std::string addNativeCopy(const std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>>& copies, const std::shared_ptr<NativePackageInput>& package_, const std::string& sourcePath) {
     const auto relativeWithinPackage = diskSuffix(sourcePath, package_->manifest->rootDirectory);
     const auto relativePath = projectJoinPath(package_->outputRoot, relativeWithinPackage);
-    const auto& _iterable_7 = copies;
-    for (const auto& existing : *_iterable_7) {
+    const auto& _iterable_14 = copies;
+    for (const auto& existing : *_iterable_14) {
         if (existing->relativePath == relativePath) {
             if (existing->sourcePath != sourcePath) {
                 doof::panic((((((std::string("Native package copy collision for ") + relativePath) + std::string(": ")) + existing->sourcePath) + std::string(" conflicts with ")) + sourcePath));
@@ -267,8 +267,8 @@ std::string projectParentPath(const std::string& path) {
     return doof::string_substring(path, 0, separator);
 }
 void addSupportFile(const std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>>& files, const std::shared_ptr<ProjectSupportFile>& file) {
-    const auto& _iterable_8 = files;
-    for (const auto& existing : *_iterable_8) {
+    const auto& _iterable_16 = files;
+    for (const auto& existing : *_iterable_16) {
         if (existing->relativePath == file->relativePath) {
             if (existing->content != file->content) {
                 doof::panic((std::string("Generated support file collision for ") + file->relativePath));
@@ -279,14 +279,14 @@ void addSupportFile(const std::shared_ptr<std::vector<std::shared_ptr<ProjectSup
     files->push_back(file);
 }
 void appendUniqueValues(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<std::vector<std::string>>& values) {
-    const auto& _iterable_9 = values;
-    for (const auto& value : *_iterable_9) {
+    const auto& _iterable_18 = values;
+    for (const auto& value : *_iterable_18) {
         appendUnique(target, value);
     }
 }
 void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const std::string& value) {
-    const auto& _iterable_10 = target;
-    for (const auto& existing : *_iterable_10) {
+    const auto& _iterable_20 = target;
+    for (const auto& existing : *_iterable_20) {
         if (existing == value) {
             return;
         }

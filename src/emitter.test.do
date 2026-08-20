@@ -2,9 +2,10 @@ import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker, validateIsolationEffects } from "./checker"
 import { AnalysisResult } from "./analyzer"
-import { ConstructExpression, ImmutableBinding, Program } from "./ast"
+import { ClassDeclaration, ConstructExpression, ImmutableBinding, Program } from "./ast"
 import { SourceFile } from "./semantic"
 import { ModuleEmission, emitModule, emitModuleGraph, ModuleGraphPlan, planModuleGraph } from "./emitter-module"
+import { canGenerateJsonDeserialization, canGenerateJsonSerialization, JsonEligibilityCache } from "./json-semantics"
 import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
 import { hasErrorDiagnostics } from "./diagnostics"
 
@@ -30,11 +31,45 @@ function emitMonomorphized(source: string): ModuleEmission {
   return graph.modules[0]
 }
 
+export function testCachesJsonEligibilityAcrossProjectedHeaders(): none {
+  analysis := createAnalyzer([SourceFile { path: "/payload.do", source: "class Payload { value: int }" }]).analyze("/payload.do")
+  Assert.equal(analysis.diagnostics.length, 0)
+  checked := createChecker(analysis).check("/payload.do")
+  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
+  program := findProgram(analysis, "/payload.do")!
+  case program.statements[0] {
+    owner: ClassDeclaration -> {
+      cache := JsonEligibilityCache {}
+      Assert.equal(canGenerateJsonSerialization(owner, [program], cache), true)
+      Assert.equal(canGenerateJsonSerialization(owner, [program], cache), true)
+      Assert.equal(canGenerateJsonDeserialization(owner, [program], cache), true)
+      Assert.equal(canGenerateJsonDeserialization(owner, [program], cache), true)
+      Assert.equal(cache.serialization.size, 1)
+      Assert.equal(cache.deserialization.size, 1)
+    }
+    _ -> { panic("expected class declaration") }
+  }
+}
+
 export function testKeepsLetFieldLoweringRepresentationNeutral(): none {
   bare := emit("class State { value: int }\nfunction main(): int => State { value: 1 }.value")
   mutable := emit("class State { let value: int }\nfunction main(): int => State { value: 1 }.value")
   Assert.equal(mutable.header, bare.header)
   Assert.equal(mutable.source, bare.source)
+}
+
+export function testEmitsTypedTagsThroughNamedCallAndConstructorPaths(): none {
+  result := emit(
+    "class Widget { id: int\nname: string\nchildren: string[] = [] }\n" +
+    "class Custom { value: int\nstatic constructor(label: string, value: int): Custom => Custom { value } }\n" +
+    "function render(id: int, label: string): string => label + string(id)\n" +
+    "function makeWidget(): Widget => <Widget name=\"red\" id=1>hello</Widget>\n" +
+    "function main(): int { label := <render label=\"item\" id=2/>\ncustom := <Custom value=3 label=\"custom\"/>\nreturn makeWidget().id + custom.value + label.length }",
+  )
+  Assert.stringContains(result.source, "1, std::string(\"red\")")
+  Assert.stringContains(result.source, "render(2, std::string(\"item\"))")
+  Assert.stringContains(result.source, "Custom::constructor(std::string(\"custom\"), 3)")
+  Assert.stringContains(result.source, "std::string(\"hello\")")
 }
 
 export function testOmitsEmptyNamespaceBlocksFromHeaders(): none {
@@ -166,6 +201,20 @@ export function testLambdaCaptureExcludesItsOwnTypedParameters(): none {
   result := emit("function make(): (path: string): string { prefix := \"root/\"\nreturn (path: string): string => prefix + path }")
   Assert.equal(result.source.contains("[prefix](std::string path)"), true)
   Assert.equal(result.source.contains("[prefix, path]"), false)
+}
+
+export function testSynthesizesDistinctCppNamesForDiscardTargets(): none {
+  result := emit(
+    "class Guard {}\n" +
+    "function apply(callback: (value: int, label: string): int): int => callback(1, \"ok\")\n" +
+    "function main(): int { let total = 0\n" +
+    "for _, _ of [(1, 2)] { total += 1 }\n" +
+    "with _ := Guard {}, _ := Guard {} { total += apply((_, _): int => 1) }\n" +
+    "return total }",
+  )
+  Assert.stringContains(result.source, "const auto& [_discard_")
+  Assert.stringContains(result.source, "_with_discard_")
+  Assert.stringContains(result.source, "int32_t _discard_parameter_0, std::string _discard_parameter_1")
 }
 
 export function testLambdaCapturesExplicitThis(): none {
@@ -521,6 +570,11 @@ export function testEmitsAsyncValueBlocksWithDecoratedCaptures(): none {
   Assert.stringContains(result.header, "doof::Promise<std::shared_ptr<std::vector<int32_t>>> run")
   Assert.stringContains(result.source, "doof::submit_async<std::shared_ptr<std::vector<int32_t>>>([input, offset]()")
   Assert.stringContains(result.source, "return values;")
+}
+
+export function testEmitsFirstCompletedPromiseExtraction(): none {
+  result := emit("function take(promises: Promise<int>[]): Result<int, string> => promises.takeFirstCompleted()")
+  Assert.stringContains(result.source, "doof::promise_take_first_completed(promises)")
 }
 
 export function testEmitsNoneAsyncBlocksAsVoidTasks(): none {

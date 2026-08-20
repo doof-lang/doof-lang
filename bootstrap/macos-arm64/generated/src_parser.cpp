@@ -13,7 +13,7 @@ std::shared_ptr<::app_src_ast_::Program> Parser::parse() {
     (this->errorLine = 0);
     (this->errorColumn = 0);
     (this->errorOffset = 0);
-    const auto lexer = std::make_shared<::app_src_lexer_::Lexer>(source, 0, 1, 1, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), std::make_shared<std::vector<::app_src_lexer_::LexerDiagnostic>>(std::vector<::app_src_lexer_::LexerDiagnostic>{}), std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
+    const auto lexer = std::make_shared<::app_src_lexer_::Lexer>(source, 0, 1, 1, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), std::make_shared<std::vector<::app_src_lexer_::LexerDiagnostic>>(std::vector<::app_src_lexer_::LexerDiagnostic>{}), std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::string("code"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), 0);
     (this->tokens = lexer->tokenize());
     (this->pos = 0);
     auto start = location();
@@ -24,14 +24,14 @@ std::shared_ptr<::app_src_ast_::Program> Parser::parse() {
     return std::make_shared<::app_src_ast_::Program>(std::string("program"), statements, span(start));
 }
 ::app_src_lexer_::Token Parser::current() {
-    return doof::array_at(this->tokens, this->pos, "src/parser", 57);
+    return doof::array_at(this->tokens, this->pos, "src/parser", 58);
 }
 ::app_src_lexer_::Token Parser::peek(int32_t offset) {
     const auto index = (this->pos + offset);
     if (index >= static_cast<int32_t>((this->tokens)->size())) {
-        return doof::array_at(this->tokens, (static_cast<int32_t>((this->tokens)->size()) - 1), "src/parser", 61);
+        return doof::array_at(this->tokens, (static_cast<int32_t>((this->tokens)->size()) - 1), "src/parser", 62);
     }
-    return doof::array_at(this->tokens, index, "src/parser", 62);
+    return doof::array_at(this->tokens, index, "src/parser", 63);
 }
 bool Parser::atEnd() {
     return (current().kind == ::app_src_lexer_::TokenType::EndOfFile);
@@ -94,6 +94,9 @@ std::string Parser::expectedLabel(::app_src_lexer_::TokenType kind) {
     if (kind == ::app_src_lexer_::TokenType::Greater) {
         return std::string("'>'");
     }
+    if (kind == ::app_src_lexer_::TokenType::Slash) {
+        return std::string("'/'");
+    }
     return std::string("token");
 }
 std::string Parser::text(::app_src_lexer_::Token token) {
@@ -107,26 +110,26 @@ std::string Parser::currentText() {
     return ::app_src_ast_::AstLocation{token.line, token.column, token.offset};
 }
 ::app_src_ast_::SourceSpan Parser::span(::app_src_ast_::AstLocation start) {
-    auto previous = ((this->pos > 0) ? doof::array_at(this->tokens, (this->pos - 1), "src/parser", 118) : current());
+    auto previous = ((this->pos > 0) ? doof::array_at(this->tokens, (this->pos - 1), "src/parser", 120) : current());
     return ::app_src_ast_::SourceSpan{start, ::app_src_ast_::AstLocation{previous.line, (previous.column + previous.length), (previous.offset + previous.length)}};
 }
 bool Parser::sameLineAsPrevious() {
     if (this->pos == 0) {
         return false;
     }
-    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 131).line == current().line);
+    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 133).line == current().line);
 }
 bool Parser::previousIs(::app_src_lexer_::TokenType kind) {
     if (this->pos == 0) {
         return false;
     }
-    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 136).kind == kind);
+    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 138).kind == kind);
 }
 bool Parser::immediatelyAfterPrevious() {
     if (this->pos == 0) {
         return false;
     }
-    auto previous = doof::array_at(this->tokens, (this->pos - 1), "src/parser", 141);
+    auto previous = doof::array_at(this->tokens, (this->pos - 1), "src/parser", 143);
     return ((previous.offset + previous.length) == current().offset);
 }
 void Parser::consumeSemicolon() {
@@ -208,6 +211,7 @@ doof::JsonObject Parser::toJsonObject() const {
     (*_json)["tokens"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->tokens->size()); for (const auto& _element : *this->tokens) { _array->push_back(doof::json_value(_element.toJsonObject())); } return doof::json_value(_array); }();
     (*_json)["pos"] = doof::json_value(this->pos);
     (*_json)["inForIterable"] = doof::json_value(this->inForIterable);
+    (*_json)["inTagAttribute"] = doof::json_value(this->inTagAttribute);
     (*_json)["errorMessage"] = doof::json_value(this->errorMessage);
     (*_json)["errorLine"] = doof::json_value(this->errorLine);
     (*_json)["errorColumn"] = doof::json_value(this->errorColumn);
@@ -243,6 +247,13 @@ doof::Result<std::shared_ptr<Parser>, std::string> Parser::fromJsonValue(const d
     } else {
         _field_inForIterable = false;
     }
+    std::optional<bool> _field_inTagAttribute;
+    if (auto _iterator_inTagAttribute = _object->find("inTagAttribute"); _iterator_inTagAttribute != _object->end()) {
+            if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_inTagAttribute->second) : doof::json_is_boolean(_iterator_inTagAttribute->second)))) { return doof::Failure<std::string>{"Field \"inTagAttribute\" expected boolean but got " + std::string(doof::json_type_name(_iterator_inTagAttribute->second))}; }
+        _field_inTagAttribute = (_lenient ? doof::json_as_bool_lenient(_iterator_inTagAttribute->second) : doof::json_as_bool(_iterator_inTagAttribute->second));
+    } else {
+        _field_inTagAttribute = false;
+    }
     std::optional<std::string> _field_errorMessage;
     if (auto _iterator_errorMessage = _object->find("errorMessage"); _iterator_errorMessage != _object->end()) {
             if (!((_lenient ? doof::json_is_lenient_string(_iterator_errorMessage->second) : doof::json_is_string(_iterator_errorMessage->second)))) { return doof::Failure<std::string>{"Field \"errorMessage\" expected string but got " + std::string(doof::json_type_name(_iterator_errorMessage->second))}; }
@@ -271,12 +282,12 @@ doof::Result<std::shared_ptr<Parser>, std::string> Parser::fromJsonValue(const d
     } else {
         _field_errorOffset = 0;
     }
-        return doof::Success<std::shared_ptr<Parser>>{std::make_shared<Parser>(_field_source, _field_tokens.value(), _field_pos.value(), _field_inForIterable.value(), _field_errorMessage.value(), _field_errorLine.value(), _field_errorColumn.value(), _field_errorOffset.value())};
+        return doof::Success<std::shared_ptr<Parser>>{std::make_shared<Parser>(_field_source, _field_tokens.value(), _field_pos.value(), _field_inForIterable.value(), _field_inTagAttribute.value(), _field_errorMessage.value(), _field_errorLine.value(), _field_errorColumn.value(), _field_errorOffset.value())};
     } catch (const doof::JsonDecodeError& _error) {
         return doof::Failure<std::string>{_error.message()};
     }
 }
 std::shared_ptr<::app_src_ast_::Program> parse(const std::string& source) {
-    return std::make_shared<Parser>(source, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), 0, false, std::string(""), 0, 0, 0)->parse();
+    return std::make_shared<Parser>(source, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), 0, false, false, std::string(""), 0, 0, 0)->parse();
 }
 }

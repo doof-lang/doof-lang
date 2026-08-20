@@ -32,8 +32,8 @@ void validateModuleInitializerStatement(const std::shared_ptr<::app_src_checker_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-            const auto& _iterable_1 = class_->fields;
-            for (const auto& field : *_iterable_1) {
+            const auto& _iterable_2 = class_->fields;
+            for (const auto& field : *_iterable_2) {
                 if (!field->static_ || doof::is_null(field->defaultValue)) {
                     continue;
                 }
@@ -109,8 +109,8 @@ bool literalTree(const std::shared_ptr<::app_src_checker_state_::CheckerState>& 
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ArrayLiteral>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_ast_::ArrayLiteral>>(_case_subject);
-            const auto& _iterable_2 = array->elements;
-            for (const auto& element : *_iterable_2) {
+            const auto& _iterable_4 = array->elements;
+            for (const auto& element : *_iterable_4) {
                 if (!literalTree(state, element)) {
                     return false;
                 }
@@ -119,8 +119,8 @@ bool literalTree(const std::shared_ptr<::app_src_checker_state_::CheckerState>& 
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TupleLiteral>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_ast_::TupleLiteral>>(_case_subject);
-            const auto& _iterable_3 = tuple->elements;
-            for (const auto& element : *_iterable_3) {
+            const auto& _iterable_6 = tuple->elements;
+            for (const auto& element : *_iterable_6) {
                 if (!literalTree(state, element)) {
                     return false;
                 }
@@ -132,8 +132,8 @@ bool literalTree(const std::shared_ptr<::app_src_checker_state_::CheckerState>& 
             if ((!doof::is_null(object->spread)) && !literalTree(state, doof::unwrap_optional(object->spread))) {
                 return false;
             }
-            const auto& _iterable_4 = object->properties;
-            for (const auto& property : *_iterable_4) {
+            const auto& _iterable_8 = object->properties;
+            for (const auto& property : *_iterable_8) {
                 if (!literalProperty(state, property)) {
                     return false;
                 }
@@ -148,8 +148,8 @@ bool literalTree(const std::shared_ptr<::app_src_checker_state_::CheckerState>& 
             if ((doof::is_null(construct->resolvedClass) || construct->resolvedClass->native_) || (!doof::is_null(construct->resolvedConstructor))) {
                 return false;
             }
-            const auto& _iterable_5 = construct->args;
-            for (const auto& argument : *_iterable_5) {
+            const auto& _iterable_10 = construct->args;
+            for (const auto& argument : *_iterable_10) {
                 if (!literalProperty(state, argument)) {
                     return false;
                 }
@@ -161,8 +161,8 @@ bool literalTree(const std::shared_ptr<::app_src_checker_state_::CheckerState>& 
             if ((doof::is_null(call->resolvedClass) || call->resolvedClass->native_) || (!doof::is_null(call->resolvedConstructor))) {
                 return false;
             }
-            const auto& _iterable_6 = call->args;
-            for (const auto& argument : *_iterable_6) {
+            const auto& _iterable_12 = call->args;
+            for (const auto& argument : *_iterable_12) {
                 if (!literalTree(state, argument->value)) {
                     return false;
                 }
@@ -277,8 +277,8 @@ bool literalProperty(const std::shared_ptr<::app_src_checker_state_::CheckerStat
 }
 bool literalPositionalClassDefaults(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, int32_t suppliedCount) {
     auto position = 0;
-    const auto& _iterable_7 = class_->fields;
-    for (const auto& field : *_iterable_7) {
+    const auto& _iterable_14 = class_->fields;
+    for (const auto& field : *_iterable_14) {
         if (field->static_) {
             continue;
         }
@@ -288,8 +288,8 @@ bool literalPositionalClassDefaults(const std::shared_ptr<::app_src_checker_stat
             }
             continue;
         }
-        const auto& _iterable_8 = field->names;
-        for (const auto& name : *_iterable_8) {
+        const auto& _iterable_16 = field->names;
+        for (const auto& name : *_iterable_16) {
             if (((position >= suppliedCount) && (!doof::is_null(field->defaultValue))) && !literalTree(state, doof::unwrap_optional(field->defaultValue))) {
                 return false;
             }
@@ -299,13 +299,13 @@ bool literalPositionalClassDefaults(const std::shared_ptr<::app_src_checker_stat
     return true;
 }
 bool literalClassDefaults(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ObjectProperty>>>& supplied) {
-    const auto& _iterable_9 = class_->fields;
-    for (const auto& field : *_iterable_9) {
+    const auto& _iterable_18 = class_->fields;
+    for (const auto& field : *_iterable_18) {
         if (field->static_) {
             continue;
         }
-        const auto& _iterable_10 = field->names;
-        for (const auto& name : *_iterable_10) {
+        const auto& _iterable_20 = field->names;
+        for (const auto& name : *_iterable_20) {
             if (suppliedProperty(supplied, name)) {
                 continue;
             }
@@ -323,8 +323,8 @@ bool literalClassDefaults(const std::shared_ptr<::app_src_checker_state_::Checke
     return true;
 }
 bool suppliedProperty(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ObjectProperty>>>& properties, const std::string& name) {
-    const auto& _iterable_11 = properties;
-    for (const auto& property : *_iterable_11) {
+    const auto& _iterable_22 = properties;
+    for (const auto& property : *_iterable_22) {
         if (property->name == name) {
             return true;
         }
@@ -367,8 +367,8 @@ bool supportsDirectStorage(const std::variant<std::shared_ptr<::app_src_semantic
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_12 = tuple->elements;
-            for (const auto& element : *_iterable_12) {
+            const auto& _iterable_24 = tuple->elements;
+            for (const auto& element : *_iterable_24) {
                 if (!supportsDirectStorage(element)) {
                     return false;
                 }

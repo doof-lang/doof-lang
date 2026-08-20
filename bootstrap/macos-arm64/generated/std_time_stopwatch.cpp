@@ -241,15 +241,15 @@ doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<
 }
 std::shared_ptr<TimerSummary> Stopwatch::summary() {
     const std::shared_ptr<std::vector<std::shared_ptr<TimerStats>>> entries = std::make_shared<std::vector<std::shared_ptr<TimerStats>>>(std::vector<std::shared_ptr<TimerStats>>{});
-    const auto& _iterable_7 = this->timers;
-    for (const auto& [name, bucket] : *_iterable_7) {
+    const auto& _iterable_8 = this->timers;
+    for (const auto& [name, bucket] : *_iterable_8) {
         entries->push_back(std::make_shared<TimerStats>(name, bucket->count, bucket->total(), bucket->mean(), bucket->min(), bucket->max(), bucket->p95()));
     }
     return std::make_shared<TimerSummary>(doof::array_drainToReadonly(entries, "", 0));
 }
 void Stopwatch::record(const std::string& name, const std::shared_ptr<::std_::time::duration::Duration>& duration) {
-    auto bucket = [&]() -> std::shared_ptr<TimerBucket> { auto _coalesce_8 = bucketFor(name); if (doof::is_null(_coalesce_8)) return std::make_shared<TimerBucket>(0, 0LL, 0LL, 0LL, std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{})); return doof::unwrap_optional(_coalesce_8); }();
-    if (![&]() -> bool { auto _map_has_9 = this->timers; return _map_has_9->find(name) != _map_has_9->end(); }()) {
+    auto bucket = [&]() -> std::shared_ptr<TimerBucket> { auto _coalesce_9 = bucketFor(name); if (doof::is_null(_coalesce_9)) return std::make_shared<TimerBucket>(0, 0LL, 0LL, 0LL, std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{})); return doof::unwrap_optional(_coalesce_9); }();
+    if (![&]() -> bool { auto _map_has_10 = this->timers; return _map_has_10->find(name) != _map_has_10->end(); }()) {
         doof::map_set(this->timers, name, bucket, "", 0);
     }
     bucket->record(duration);
@@ -268,12 +268,12 @@ std::shared_ptr<TimerBucket> Stopwatch::bucketFor(const std::string& name) {
 }();
 }
 doof::Result<std::shared_ptr<TimerBucket>, std::shared_ptr<TimerError>> Stopwatch::requireBucket(const std::string& name) {
-    auto _binding_value_10 = bucketFor(name);
-    if (doof::is_null(_binding_value_10)) {
-        const auto& bucket = _binding_value_10;
+    auto _binding_value_11 = bucketFor(name);
+    if (doof::is_null(_binding_value_11)) {
+        const auto& bucket = _binding_value_11;
         return doof::Failure<std::shared_ptr<TimerError>>{ missingTimer(name) };
     }
-    const auto bucket = doof::unwrap_optional(_binding_value_10);
+    const auto bucket = doof::unwrap_optional(_binding_value_11);
     return doof::Success<std::shared_ptr<TimerBucket>>{ bucket };
 }
 doof::JsonObject Stopwatch::toJsonObject() const {

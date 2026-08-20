@@ -1,8 +1,13 @@
 import { Assert } from "std/assert"
 import {
+  FRONTEND_SEMANTIC_ABI,
   FrontendCacheState, FrontendFileInput, FrontendModuleOutput, FrontendSourceProbe,
   parseFrontendCacheState, renderFrontendCacheState,
 } from "./frontend-cache"
+
+export function testFrontendSemanticAbiInvalidatesPreValidationCaches(): none {
+  Assert.equal(FRONTEND_SEMANTIC_ABI, 3)
+}
 
 export function testFrontendCacheStateRoundTrips(): none {
   state := FrontendCacheState {

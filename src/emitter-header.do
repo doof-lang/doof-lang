@@ -19,6 +19,7 @@ import {
   Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 import { moduleNamespace, moduleNativeHeaderPath } from "./emitter-names"
+import { StringBuilder } from "./string-builder"
 
 export class HeaderPlan {
   functionSignatures: string[] = []
@@ -294,36 +295,37 @@ export function renderHeader(plan: HeaderPlan, guardName: string): string {
 export function renderProjectedHeader(sections: HeaderSection[]): string {
   compression := HeaderCompressionState {}
   for section of sections { compressRepeatedHeaderVariants(section.plan, compression) }
-  let result = "#pragma once\n"
+  result := StringBuilder()
+  result.append("#pragma once\n")
   // The runtime owns the generated C++ standard-library baseline. Keep it as
   // the first header so GCC can consume its adjacent .gch without reparsing
   // those headers in every generated translation unit.
-  result = result + "#include \"doof_runtime.hpp\"\n"
+  result.append("#include \"doof_runtime.hpp\"\n")
   let emittedForward = false
   for section of sections {
-    for declaration of section.plan.typeOnlyForwardDeclarations { result = result + declaration; emittedForward = true }
+    for declaration of section.plan.typeOnlyForwardDeclarations { result.append(declaration); emittedForward = true }
   }
-  if emittedForward { result = result + "\n" }
+  if emittedForward { result.append("\n") }
   // Establish every generated namespace and nominal forward declaration
   // before any worldview definition is completed.
   for section of sections {
     if section.plan.classForwardDeclarations.length == 0 &&
       section.plan.earlyModuleValueDeclarations.length == 0 &&
       headerPlanEmitsNamespaceContent(section.plan) { continue }
-    result = result + "namespace " + section.namespaceName + " {\n"
-    for declaration of section.plan.classForwardDeclarations { result = result + "    " + declaration }
+    result.append("namespace " + section.namespaceName + " {\n")
+    for declaration of section.plan.classForwardDeclarations { result.append("    " + declaration) }
     // Module bindings are source-private at the Doof level. They may still be
     // declared in generated C++ so inline class field defaults can name them.
-    for declaration of section.plan.earlyModuleValueDeclarations { result = result + "    " + declaration }
-    result = result + "}\n\n"
+    for declaration of section.plan.earlyModuleValueDeclarations { result.append("    " + declaration) }
+    result.append("}\n\n")
   }
   // Reference-only variants need nominal declarations but not complete class
   // definitions. Hoist their short structural names once per namespace.
   for section of sections {
     if section.plan.ephemeralTypeAliases.length > 0 {
-      result = result + "namespace " + section.namespaceName + " {\n"
-      for alias of section.plan.ephemeralTypeAliases { result = result + "    " + alias }
-      result = result + "}\n\n"
+      result.append("namespace " + section.namespaceName + " {\n")
+      for alias of section.plan.ephemeralTypeAliases { result.append("    " + alias) }
+      result.append("}\n\n")
     }
   }
   // Enums are complete value types and can be referenced by any later class
@@ -331,30 +333,30 @@ export function renderProjectedHeader(sections: HeaderSection[]): string {
   // regardless of analyzer discovery order.
   for section of sections {
     if section.plan.enumDefinitions.length > 0 {
-      result = result + "namespace " + section.namespaceName + " {\n"
-      for definition of section.plan.enumDefinitions { result = result + "    " + definition }
-      result = result + "}\n\n"
+      result.append("namespace " + section.namespaceName + " {\n")
+      for definition of section.plan.enumDefinitions { result.append("    " + definition) }
+      result.append("}\n\n")
     }
   }
   for section of sections {
     if section.plan.interfaceAliases.length > 0 {
-      result = result + "namespace " + section.namespaceName + " {\n"
-      for alias of section.plan.interfaceAliases { result = result + "    " + alias }
-      result = result + "}\n\n"
+      result.append("namespace " + section.namespaceName + " {\n")
+      for alias of section.plan.interfaceAliases { result.append("    " + alias) }
+      result.append("}\n\n")
     }
   }
   for section of sections {
     if section.plan.earlyTypeAliases.length > 0 {
-      result = result + "namespace " + section.namespaceName + " {\n"
-      for alias of section.plan.earlyTypeAliases { result = result + "    " + alias }
-      result = result + "}\n\n"
+      result.append("namespace " + section.namespaceName + " {\n")
+      for alias of section.plan.earlyTypeAliases { result.append("    " + alias) }
+      result.append("}\n\n")
     }
   }
   for section of sections {
     if section.plan.earlyClassDefinitions.length > 0 {
-      result = result + "namespace " + section.namespaceName + " {\n"
-      for definition of section.plan.earlyClassDefinitions { result = result + "    " + definition }
-      result = result + "}\n\n"
+      result.append("namespace " + section.namespaceName + " {\n")
+      for definition of section.plan.earlyClassDefinitions { result.append("    " + definition) }
+      result.append("}\n\n")
     }
   }
   // Materialize each dependency section in planner order. A native header is
@@ -363,41 +365,41 @@ export function renderProjectedHeader(sections: HeaderSection[]): string {
   // supplied any complete Doof types the native header requires.
   for section of sections {
     let emittedNative = false
-    for alias of section.plan.nativeAliases { result = result + alias; emittedNative = true }
+    for alias of section.plan.nativeAliases { result.append(alias); emittedNative = true }
     for include of section.plan.nativeIncludes {
-      if include.startsWith("<") { result = result + "#include " + include + "\n" }
-      else { result = result + "#include \"" + include + "\"\n" }
+      if include.startsWith("<") { result.append("#include " + include + "\n") }
+      else { result.append("#include \"" + include + "\"\n") }
       emittedNative = true
     }
-    if emittedNative { result = result + "\n" }
-    result = renderFinalSection(result, section)
+    if emittedNative { result.append("\n") }
+    renderFinalSection(result, section)
   }
   for section of sections {
     if section.plan.genericFunctionDefinitions.length == 0 { continue }
-    result = result + "namespace " + section.namespaceName + " {\n"
-    for definition of section.plan.genericFunctionDefinitions { result = result + definition }
-    result = result + "}\n"
+    result.append("namespace " + section.namespaceName + " {\n")
+    for definition of section.plan.genericFunctionDefinitions { result.append(definition) }
+    result.append("}\n")
   }
-  while result.endsWith("\n\n") { result = result.substring(0, result.length - 1) }
-  return result
+  let rendered = result.drainToString()
+  while rendered.endsWith("\n\n") { rendered = rendered.substring(0, rendered.length - 1) }
+  return rendered
 }
 
-function renderFinalSection(result_: string, section: HeaderSection): string {
-  let result = result_
+function renderFinalSection(result: StringBuilder, section: HeaderSection): none {
   plan := section.plan
   if plan.nativeAdapterSignatures.length == 0 &&
     plan.moduleValueDeclarations.length == 0 &&
     plan.classDefinitions.length == 0 &&
     plan.typeAliases.length == 0 &&
-    plan.functionSignatures.length == 0 { return result }
-  result = result + "namespace " + section.namespaceName + " {\n"
+    plan.functionSignatures.length == 0 { return }
+  result.append("namespace " + section.namespaceName + " {\n")
   // Concrete class methods may call module-owned native adapters.
-  for signature of plan.nativeAdapterSignatures { result = result + "    " + signature }
-  for declaration of plan.moduleValueDeclarations { result = result + "    " + declaration }
-  for definition of plan.classDefinitions { result = result + "    " + definition }
-  for alias of plan.typeAliases { result = result + "    " + alias }
-  for signature of plan.functionSignatures { result = result + "    " + signature }
-  return result + "}\n\n"
+  for signature of plan.nativeAdapterSignatures { result.append("    " + signature) }
+  for declaration of plan.moduleValueDeclarations { result.append("    " + declaration) }
+  for definition of plan.classDefinitions { result.append("    " + definition) }
+  for alias of plan.typeAliases { result.append("    " + alias) }
+  for signature of plan.functionSignatures { result.append("    " + signature) }
+  result.append("}\n\n")
 }
 
 function headerPlanEmitsNamespaceContent(plan: HeaderPlan): bool {

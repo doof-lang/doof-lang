@@ -33,6 +33,7 @@ export class Parser {
   let tokens: Token[] = []
   let pos: int = 0
   let inForIterable: bool = false
+  let inTagAttribute: bool = false
   let errorMessage: string = ""
   let errorLine: int = 0
   let errorColumn: int = 0
@@ -103,6 +104,7 @@ export class Parser {
     if kind == TokenType.Colon { return "':'" }
     if kind == TokenType.Equal { return "'='" }
     if kind == TokenType.Greater { return "'>'" }
+    if kind == TokenType.Slash { return "'/'" }
     return "token"
   }
 

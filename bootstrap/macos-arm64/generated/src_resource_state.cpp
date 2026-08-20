@@ -99,8 +99,8 @@ std::string renderResourceState(const std::shared_ptr<ResourceState>& state) {
     return (::doof_json::format(doof::json_value(state->toJsonObject())) + std::string("\n"));
 }
 std::shared_ptr<MaterializedResource> findMaterializedResource(const std::shared_ptr<ResourceState>& state, const std::string& sourcePath, const std::string& outputPath) {
-    const auto& _iterable_3 = state->files;
-    for (const auto& file : *_iterable_3) {
+    const auto& _iterable_4 = state->files;
+    for (const auto& file : *_iterable_4) {
         if ((file->sourcePath == sourcePath) && (file->outputPath == outputPath)) {
             return file;
         }

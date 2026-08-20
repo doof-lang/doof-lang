@@ -33,6 +33,180 @@ function checkedEntry(source: string, entryMode: string = "executable"): CheckRe
   return createChecker(analysis, "/main.do", entryMode).check("/main.do")
 }
 
+function assertRejected(source: string): none {
+  result := checked(source)
+  Assert.isTrue(result.diagnostics.length > 0)
+}
+
+export function testChecksTypedTagsAsNamedCallsAndConstruction(): none {
+  result := checked(
+    "class Widget { id: int\nname: string\nchildren: string[] = []\nonClick: (): none = => {} }\n" +
+    "class Box<T> { value: T }\n" +
+    "function render<T>(value: T, children: T[] = []): T => value\n" +
+    "class Renderers { card: (title: string, children: string[]): string }\n" +
+    "renderers := Renderers { card: (title: string, children: string[]): string => title }\n" +
+    "widget := <Widget name=\"red\" id=1 onClick=>println(\"hello\")>hello</Widget>\n" +
+    "generic := <render value=\"ok\">child</render>\n" +
+    "boxed := <Box<string> value=\"boxed\"/>\n" +
+    "member := <renderers.card title=\"Title\">Body</renderers.card>\n" +
+    "println(widget.name + generic + boxed.value + member)",
+  )
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testDiagnosesInvalidTypedTagCalls(): none {
+  missingChildren := checked("function render(title: string): string => title\nvalue := <render title=\"x\">body</render>\nprintln(value)")
+  Assert.equal(missingChildren.diagnostics.length, 1)
+  Assert.stringContains(missingChildren.diagnostics[0].message, "Unknown named argument 'children'")
+
+  wrongType := checked("class Widget { id: int }\nvalue := <Widget id=\"bad\"/>\nprintln(\"\")")
+  Assert.equal(wrongType.diagnostics.length, 1)
+  Assert.stringContains(wrongType.diagnostics[0].message, "expected int")
+
+  nonCallable := checked("value := 1\nother := <value/>\nprintln(other)")
+  Assert.equal(nonCallable.diagnostics.length, 1)
+  Assert.stringContains(nonCallable.diagnostics[0].message, "is not callable")
+}
+
+export function testRejectsInvalidDeclaredDefaultsAndExpressionBodies(): none {
+  assertRejected("function useCount(count: int = \"many\"): none {}")
+  assertRejected("class Counter { count: int = \"zero\" }")
+  assertRejected("function wrongReturnType(): int => \"not an int\"")
+}
+
+export function testRejectsInvalidOperatorOperandDomains(): none {
+  validNullableChain := checked("function choose(first: string | none, second: string | none): string => first ?? second ?? \"fallback\"")
+  Assert.equal(validNullableChain.diagnostics.length, 0)
+  validGenericComparison := checked("function larger<T>(left: T, right: T): bool => left > right")
+  Assert.equal(validGenericComparison.diagnostics.length, 0)
+  validGenericActors := checked("class Sender<T> { readonly value: T }\nclass Receiver<T> { readonly value: T }\nclass Worker { function open(): Tuple<Sender<int>, Receiver<int> > => (Sender { value: 1 }, Receiver { value: 2 }) }\nfunction main(): int { worker := Actor<Worker>()\n(sender, receiver) := worker.open()\nretired := retire worker\nreturn sender.value + receiver.value }")
+  Assert.equal(validGenericActors.diagnostics.length, 0)
+  assertRejected("function main(): none { ignored := 7 / 2 }")
+  assertRejected("function main(): none { ignored := 7.0 \\ 2.0 }")
+  assertRejected("function main(): none { ignored := 7.0 % 2.0 }")
+  assertRejected("function main(): none { ignored := 1.0 & 2.0 }")
+  assertRejected("function main(): none { ignored := ~1.0 }")
+  assertRejected("function main(): none { ignored := 1 == \"1\" }")
+  assertRejected("function main(): none { ignored := 1 < \"two\" }")
+  assertRejected("function main(): none { ignored := 1 ?? 2 }")
+  assertRejected("function main(): none { value := 1!\nprintln(value) }")
+  assertRejected("function main(): none { let value = 1\nvalue ??= 2 }")
+  assertRejected("function main(): none { let count = 1\ncount += \"two\" }")
+}
+
+export function testRejectsLoopExitsAndCallerOutsideTheirContexts(): none {
+  assertRejected("function main(): none { break }")
+  assertRejected("function main(): none { continue }")
+  assertRejected("function main(): none { ignored := @caller }")
+}
+
+export function testRejectsInvalidForOfSourcesAndDestructuringArity(): none {
+  nonIterable := checked("function main(): none { for _ of 1 {} }")
+  Assert.equal(nonIterable.diagnostics.length, 1)
+  Assert.stringContains(nonIterable.diagnostics[0].message, "For-of requires")
+
+  scalarElement := checked("function main(): none { for _, _ of [1, 2] {} }")
+  Assert.equal(scalarElement.diagnostics.length, 1)
+  Assert.stringContains(scalarElement.diagnostics[0].message, "requires a tuple with 2 elements")
+
+  wrongTupleArity := checked("function main(): none { for _, _ of [(1, 2, 3)] {} }")
+  Assert.equal(wrongTupleArity.diagnostics.length, 1)
+  Assert.stringContains(wrongTupleArity.diagnostics[0].message, "requires a tuple with 2 elements")
+}
+
+export function testChecksStructuralStreamConformance(): none {
+  missingProtocol := checked("class Broken implements Stream<int> {}")
+  Assert.equal(missingProtocol.diagnostics.length, 1)
+  Assert.stringContains(missingProtocol.diagnostics[0].message, "does not satisfy interface \"Stream<int>\"")
+
+  wrongNext := checked("class Broken implements Stream<int> { next(): int => 1\nvalue(): int => 1 }")
+  Assert.equal(wrongNext.diagnostics.length, 1)
+  Assert.stringContains(wrongNext.diagnostics[0].message, "does not satisfy interface")
+
+  structural := checked("class Counter { next(): bool => false\nvalue(): int => 1 }\nfunction consume(stream: Stream<int>): none {}\nfunction main(): none { consume(Counter()) }")
+  Assert.equal(structural.diagnostics.length, 0)
+
+  unrelated := checked("class Counter {}\nfunction consume(stream: Stream<int>): none {}\nfunction main(): none { consume(Counter()) }")
+  Assert.equal(unrelated.diagnostics.length, 1)
+  Assert.stringContains(unrelated.diagnostics[0].message, "expected Stream<int>")
+}
+
+export function testRejectsCasePatternsIncompatibleWithTheirSubject(): none {
+  assertRejected("function describe(value: int): string => case value { \"zero\" -> \"impossible\" _ -> \"number\" }")
+  assertRejected("function describe(value: int): string => case value { \"a\"..\"z\" -> \"letter\" _ -> \"number\" }")
+  assertRejected("class Cat {}\nclass Dog {}\nfunction describe(value: Cat): string => case value { dog: Dog -> \"dog\" _ -> \"cat\" }")
+}
+
+export function testRejectsInvalidNamedConstructionShapes(): none {
+  missing := checked("class Point { x: int\ny: int }\npoint := Point { x: 1 }")
+  Assert.equal(missing.diagnostics.length, 1)
+  Assert.stringContains(missing.diagnostics[0].message, "Missing required field 'y'")
+
+  unknown := checked("class Point { x: int\ny: int }\npoint := Point { x: 1, y: 2, z: 3 }")
+  Assert.equal(unknown.diagnostics.length, 1)
+  Assert.stringContains(unknown.diagnostics[0].message, "Unknown field 'z'")
+
+  duplicate := checked("class Point { x: int\ny: int }\npoint := Point { x: 1, y: 2, x: 3 }")
+  Assert.equal(duplicate.diagnostics.length, 1)
+  Assert.stringContains(duplicate.diagnostics[0].message, "Duplicate field 'x'")
+
+  valid := checked("class Point { x: int\ny: int = 2\nkind: \"point\" }\npoint := Point { x: 1 }")
+  Assert.equal(valid.diagnostics.length, 0)
+}
+
+export function testRejectsReadonlyCollectionMutators(): none {
+  readonlyCollections := checked(
+    "function mutateArray(values: readonly int[]): none { values.push(1)\nvalues.reserve(4)\nignored := values.pop() }\n" +
+    "function mutateMap(values: ReadonlyMap<string, int>): none { values.set(\"one\", 1)\nvalues.delete(\"one\") }",
+  )
+  Assert.equal(readonlyCollections.diagnostics.length, 5)
+  for diagnostic of readonlyCollections.diagnostics { Assert.stringContains(diagnostic.message, "not available on readonly") }
+
+  mutableCollections := checked(
+    "function mutateArray(values: int[]): none { values.push(1)\nvalues.reserve(4)\nignored := values.pop() }\n" +
+    "function mutateMap(values: Map<string, int>): none { values.set(\"one\", 1)\nvalues.delete(\"one\") }",
+  )
+  Assert.equal(mutableCollections.diagnostics.length, 0)
+}
+
+export function testRequiresExhaustiveCaseExpressions(): none {
+  enumCase := checked("enum Direction { North, South }\nfunction describe(value: Direction): string => case value { .North -> \"north\" }")
+  Assert.equal(enumCase.diagnostics.length, 1)
+  Assert.stringContains(enumCase.diagnostics[0].message, "must be exhaustive")
+
+  boolCase := checked("function describe(value: bool): string => case value { true -> \"yes\" }")
+  Assert.equal(boolCase.diagnostics.length, 1)
+  Assert.stringContains(boolCase.diagnostics[0].message, "must be exhaustive")
+
+  exhaustive := checked(
+    "enum Direction { North, South }\n" +
+    "function direction(value: Direction): string => case value { .North -> \"north\" .South -> \"south\" }\n" +
+    "function boolean(value: bool): string => case value { true -> \"yes\" false -> \"no\" }",
+  )
+  Assert.equal(exhaustive.diagnostics.length, 0)
+}
+
+export function testChecksPrimitiveCastInputs(): none {
+  invalid := checked("function cast(): int => int(\"42\")")
+  Assert.equal(invalid.diagnostics.length, 1)
+  Assert.stringContains(invalid.diagnostics[0].message, "expected")
+
+  valid := checked(
+    "function casts(): none { b := byte(1)\ni := int('A')\nl := long(i)\nf := float(l)\nd := double(f)\n" +
+    "s := string(d)\nok := bool(true) }",
+  )
+  Assert.equal(valid.diagnostics.length, 0)
+}
+
+export function testRejectsStaticMemberAccessThroughInstances(): none {
+  invalid := checked("class Counter { static count: int = 0 }\nfunction main(): none { counter := Counter {}\nvalue := counter.count }")
+  Assert.equal(invalid.diagnostics.length, 1)
+  Assert.stringContains(invalid.diagnostics[0].message, "cannot be accessed through an instance")
+
+  valid := checked("class Counter { static count: int = 0\nvalue: int = 1 }\nfunction main(): none { staticValue := Counter.count\ncounter := Counter {}\ninstanceValue := counter.value }")
+  Assert.equal(valid.diagnostics.length, 0)
+}
+
 export function testRejectsDuplicateLocalAndParameterBindings(): none {
   locals := checked("function run(): none { value := 1\nvalue := 2 }")
   Assert.equal(locals.diagnostics.length, 1)
@@ -45,6 +219,25 @@ export function testRejectsDuplicateLocalAndParameterBindings(): none {
   lambdaParameters := checked("function run(callback: (value: int): int): none { ignored := (value: int, value: int): int => value }")
   Assert.equal(lambdaParameters.diagnostics.length, 1)
   Assert.equal(lambdaParameters.diagnostics[0].message, "Binding 'value' is already declared in this scope")
+}
+
+export function testChecksDiscardTargetsWithoutDeclaringBindings(): none {
+  result := checked(
+    "class Guard {}\n" +
+    "function apply(callback: (value: int, label: string): int): int => callback(1, \"ok\")\n" +
+    "function main(): int { let total = 0\n" +
+    "for _, value of [(1, 2), (3, 4)] { total += value }\n" +
+    "with _ := Guard {}, _ := Guard {} { total += 1 }\n" +
+    "return total + apply((_, _): int => 1) }",
+  )
+  Assert.equal(result.diagnostics.length, 0)
+
+  rejectedResult := checked(
+    "function acquire(): Result<int, string> => Success { value: 1 }\n" +
+    "function main(): none { with _ := acquire() { } }",
+  )
+  Assert.equal(rejectedResult.diagnostics.length, 1)
+  Assert.stringContains(rejectedResult.diagnostics[0].message, "cannot discard a Result")
 }
 
 export function testRejectsRuntimeUseOfTypeOnlyAndTypeSymbols(): none {
@@ -1010,6 +1203,29 @@ export function testChecksAsyncBlocksWithImmutableCapturesAndMutableResults(): n
   Assert.equal(missingYield.diagnostics[0].message.contains("must yield a value on every path"), true)
 }
 
+export function testTakesTheFirstCompletedPromiseFromMutableArrays(): none {
+  valid := checked("function take(promises: Promise<int>[]): Result<int, string> => promises.takeFirstCompleted()")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  readonlyResult := checked("function take(promises: readonly Promise<int>[]): Result<int, string> => promises.takeFirstCompleted()")
+  Assert.equal(readonlyResult.diagnostics.length, 1)
+  Assert.equal(readonlyResult.diagnostics[0].message, "Method \"takeFirstCompleted\" is not available on readonly array")
+
+  wrongElement := checked("function take(values: int[]): none { values.takeFirstCompleted() }")
+  Assert.equal(wrongElement.diagnostics.length, 1)
+  Assert.equal(wrongElement.diagnostics[0].message, "Type \"int[]\" has no member \"takeFirstCompleted\"")
+}
+
+export function testChecksSharedAsyncResultTypeGraphsOnce(): none {
+  result := checked(
+    "class Leaf { value: int }\n" +
+    "class Branch { left: Leaf\nright: Leaf }\n" +
+    "class Tree { first: Branch\nsecond: Branch }\n" +
+    "function build(): Promise<Tree> => async { yield Tree { first: Branch { left: Leaf { value: 1 }, right: Leaf { value: 2 } }, second: Branch { left: Leaf { value: 3 }, right: Leaf { value: 4 } } } }",
+  )
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testRejectsUnsafeAsyncBlockCaptures(): none {
   mutableBinding := checked("function run(): Promise<int> { let value = 1\nreturn async { yield value } }")
   Assert.equal(mutableBinding.diagnostics.length > 0, true)
@@ -1141,6 +1357,13 @@ export function testEnforcesExplicitIsolationTransitively(): none {
   result := checked("shared := [0]\nfunction mutate(): void { shared.push(1) }\nisolated function run(): void { mutate() }")
   Assert.equal(result.diagnostics.length > 0, true)
   Assert.equal(result.diagnostics[0].message.contains("Isolated function \"run\" cannot call non-isolated function \"mutate\""), true)
+}
+
+export function testValidatesNestedAsyncIsolationOnce(): none {
+  result := checked("shared := [0]\nfunction run(): Promise<int>[] => [async { yield shared.length }]")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message.contains("Async block is not isolated"), true)
+  Assert.equal(result.diagnostics[0].message.contains("mutable module binding \"shared\""), true)
 }
 
 export function testAllowsActorMethodsToCallIsolatedNativeMethodContracts(): none {
@@ -1464,7 +1687,7 @@ export function testResolvesClassAndMethodTypeParameters(): none {
 }
 
 export function testValidatesGenericStreamMembers(): none {
-  source := "class FilteredStream<T> implements Stream<T> { source: Stream<T>\npred: (it: T): bool\nnext(): bool => source.next()\nvalue(): T => source.value() }\nclass MappedStream<T, U> implements Stream<U> { source: Stream<T>\ntransform: (it: T): U\nnext(): bool => source.next()\nvalue(): U => transform(source.value()) }\nclass Chain<T> implements Stream<T> { source: Stream<T>\nmap<U>(transform: (it: T): U): Chain<U> => Chain<U> { source: MappedStream<T, U> { source, transform } } }"
+  source := "class FilteredStream<T> implements Stream<T> { source: Stream<T>\npred: (it: T): bool\nnext(): bool => source.next()\nvalue(): T => source.value() }\nclass MappedStream<T, U> implements Stream<U> { source: Stream<T>\ntransform: (it: T): U\nnext(): bool => source.next()\nvalue(): U => transform(source.value()) }\nclass Chain<T> implements Stream<T> { source: Stream<T>\nnext(): bool => source.next()\nvalue(): T => source.value()\nmap<U>(transform: (it: T): U): Chain<U> => Chain<U> { source: MappedStream<T, U> { source, transform } } }"
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   Assert.equal(validateCheckedTypes(analysis).length, 0)

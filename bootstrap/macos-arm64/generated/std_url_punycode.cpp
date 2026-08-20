@@ -16,8 +16,8 @@ doof::Result<std::string, std::shared_ptr<::std_::url::punycode_error::PunycodeE
     if (doof::is_failure(_try_value_1)) return doof::Failure<std::shared_ptr<::std_::url::punycode_error::PunycodeError>>{doof::variant_promote<std::shared_ptr<::std_::url::punycode_error::PunycodeError>>(doof::failure_error(_try_value_1))};
     const auto input = doof::success_value(_try_value_1);
     const std::shared_ptr<std::vector<int32_t>> output = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    const auto& _iterable_2 = input;
-    for (const auto& codepoint : *_iterable_2) {
+    const auto& _iterable_3 = input;
+    for (const auto& codepoint : *_iterable_3) {
         if (codepoint < 128) {
             output->push_back(codepoint);
         }
@@ -32,8 +32,8 @@ doof::Result<std::string, std::shared_ptr<::std_::url::punycode_error::PunycodeE
     auto bias = INITIAL_BIAS;
     while (handled < static_cast<int32_t>((input)->size())) {
         auto nextCodepoint = 1114112LL;
-        const auto& _iterable_3 = input;
-        for (const auto& codepoint : *_iterable_3) {
+        const auto& _iterable_5 = input;
+        for (const auto& codepoint : *_iterable_5) {
             const auto value = static_cast<int64_t>(codepoint);
             if ((value >= n) && (nextCodepoint > value)) {
                 (nextCodepoint = value);
@@ -46,8 +46,8 @@ doof::Result<std::string, std::shared_ptr<::std_::url::punycode_error::PunycodeE
         }
         (delta += (distance * points));
         (n = nextCodepoint);
-        const auto& _iterable_4 = input;
-        for (const auto& codepoint : *_iterable_4) {
+        const auto& _iterable_7 = input;
+        for (const auto& codepoint : *_iterable_7) {
             const auto value = static_cast<int64_t>(codepoint);
             if (value < n) {
                 if (delta == MAX_INT) {

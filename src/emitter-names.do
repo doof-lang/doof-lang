@@ -12,10 +12,12 @@ export class ModuleNamespaceMapping {
 }
 
 let configuredModuleNamespaceMappings: ModuleNamespaceMapping[] = []
+let cachedModuleNamespaces: Map<string, string> = {}
 
 /** Replaces the package ownership used by the next module-graph emission. */
 export function configureModuleNamespaces(mappings: ModuleNamespaceMapping[]): none {
   configuredModuleNamespaceMappings = mappings
+  cachedModuleNamespaces = {}
 }
 
 export function moduleStem(path: string): string {
@@ -39,6 +41,11 @@ export function moduleStem(path: string): string {
 }
 
 export function moduleNamespace(path: string): string {
+  cached := cachedModuleNamespaces.get(path) else { return cacheModuleNamespace(path) }
+  return cached
+}
+
+function cacheModuleNamespace(path: string): string {
   mapping := namespaceMappingForPath(path)
   if mapping != none {
     let relativePath = path.substring(mapping!.logicalPrefix.length, path.length)
@@ -50,9 +57,12 @@ export function moduleNamespace(path: string): string {
     }
     let namespace = namespacePath(mapping!.packageName)
     if relativePath != "" { namespace = namespace + "::" + namespacePath(relativePath) }
+    cachedModuleNamespaces.set(path, namespace)
     return namespace
   }
-  return "app_" + moduleStem(path) + "_"
+  namespace := "app_" + moduleStem(path) + "_"
+  cachedModuleNamespaces.set(path, namespace)
+  return namespace
 }
 
 /** Formats source paths embedded in runtime diagnostics and @caller values. */

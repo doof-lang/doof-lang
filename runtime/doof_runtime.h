@@ -542,6 +542,44 @@ void wait_with_cpu_token_released(Future& future) {
     future.wait();
 }
 
+namespace detail {
+
+// Promise producers publish one monotonically increasing generation after
+// settling a future. Consumers can then wait for any promise in a collection
+// without polling or occupying one scheduler task per promise.
+class PromiseCompletionNotifier {
+    std::mutex mutex_;
+    std::condition_variable ready_;
+    std::uint64_t generation_ = 0;
+
+public:
+    static PromiseCompletionNotifier& shared() {
+        static auto* notifier = new PromiseCompletionNotifier();
+        return *notifier;
+    }
+
+    std::uint64_t generation() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return generation_;
+    }
+
+    void notify() {
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            ++generation_;
+        }
+        ready_.notify_all();
+    }
+
+    void wait_for_change(std::uint64_t observed) {
+        CpuTokenRelease release;
+        std::unique_lock<std::mutex> lock(mutex_);
+        ready_.wait(lock, [this, observed] { return generation_ != observed; });
+    }
+};
+
+} // namespace detail
+
 template <typename T>
 class Promise;
 
@@ -1529,6 +1567,29 @@ inline std::string to_string(const std::variant<Ts...>& val) {
     }, val);
 }
 
+// Mutable append-only storage for compiler and library code that produces
+// large strings incrementally. drainToString() transfers ownership of the completed
+// string, leaving the builder empty and reusable.
+class StringBuilder {
+public:
+    static std::shared_ptr<StringBuilder> constructor() {
+        return std::make_shared<StringBuilder>();
+    }
+
+    void append(const std::string& value) {
+        value_.append(value);
+    }
+
+    std::string drainToString() {
+        std::string result = std::move(value_);
+        value_.clear();
+        return result;
+    }
+
+private:
+    std::string value_;
+};
+
 // Variadic string concatenation for string interpolation
 inline std::string concat() { return ""; }
 
@@ -2184,6 +2245,10 @@ public:
     explicit Promise(std::future<T>&& f) : future_(f.share()) {}
     explicit Promise(std::shared_future<T> f) : future_(std::move(f)) {}
 
+    bool ready() const {
+        return future_.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+    }
+
     doof::Result<T, std::string> get() const {
         try {
             doof::wait_with_cpu_token_released(future_);
@@ -2206,6 +2271,10 @@ public:
     explicit Promise(std::future<void>&& f) : future_(f.share()) {}
     explicit Promise(std::shared_future<void> f) : future_(std::move(f)) {}
 
+    bool ready() const {
+        return future_.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+    }
+
     doof::Result<void, std::string> get() const {
         try {
             doof::wait_with_cpu_token_released(future_);
@@ -2220,6 +2289,26 @@ public:
         }
     }
 };
+
+template <typename T>
+doof::Result<T, std::string> promise_take_first_completed(
+    const std::shared_ptr<std::vector<doof::Promise<T>>>& promises) {
+    if (promises->empty()) {
+        return doof::Failure<std::string>{std::string("cannot take a completed promise from an empty array")};
+    }
+    while (true) {
+        const auto observed = doof::detail::PromiseCompletionNotifier::shared().generation();
+        for (std::size_t index = 0; index < promises->size(); ++index) {
+            if (!(*promises)[index].ready()) {
+                continue;
+            }
+            auto promise = std::move((*promises)[index]);
+            promises->erase(promises->begin() + static_cast<std::ptrdiff_t>(index));
+            return promise.get();
+        }
+        doof::detail::PromiseCompletionNotifier::shared().wait_for_change(observed);
+    }
+}
 
 // Central async-task submission boundary. CPU execution is bounded by the
 // runtime scheduler, while waits may relinquish their token so nested work
@@ -2240,6 +2329,7 @@ doof::Promise<R> submit_async(F&& f) {
         } catch (...) {
             prom->set_exception(std::current_exception());
         }
+        doof::detail::PromiseCompletionNotifier::shared().notify();
     });
     return doof::Promise<R>(std::move(fut));
 }
@@ -2270,6 +2360,7 @@ doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
         } catch (...) {
             prom->set_exception(std::current_exception());
         }
+        doof::detail::PromiseCompletionNotifier::shared().notify();
     });
     return doof::Promise<R>(std::move(fut));
 }
@@ -2383,6 +2474,7 @@ public:
                     } catch (...) {
                         prom->set_exception(std::current_exception());
                     }
+                    doof::detail::PromiseCompletionNotifier::shared().notify();
                 });
             } else {
                 mailbox_.push([this, f = std::forward<F>(f), prom]() {
@@ -2391,6 +2483,7 @@ public:
                     } catch (...) {
                         prom->set_exception(std::current_exception());
                     }
+                    doof::detail::PromiseCompletionNotifier::shared().notify();
                 });
             }
             schedule_locked();

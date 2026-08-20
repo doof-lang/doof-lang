@@ -170,8 +170,8 @@ bool validPackageAcquisitionName(const std::string& name) {
     if (((name == std::string("")) || doof::string_startsWith(name, std::string("/"))) || doof::string_contains(name, std::string("\\"))) {
         return false;
     }
-    const auto& _iterable_17 = doof::string_split(name, std::string("/"));
-    for (const auto& segment : *_iterable_17) {
+    const auto& _iterable_18 = doof::string_split(name, std::string("/"));
+    for (const auto& segment : *_iterable_18) {
         if (((segment == std::string("")) || (segment == std::string("."))) || (segment == std::string(".."))) {
             return false;
         }
@@ -182,31 +182,31 @@ bool reusableAcquiredPackage(const std::string& root, const std::shared_ptr<Exac
     if (!::doof_fs::isDirectory(root) || !acquisitionReceiptMatches(packageAcquisitionReceiptPath(root), source)) {
         return false;
     }
-    auto _binding_value_18 = validateAcquiredPackage(root, source);
-    if (doof::is_failure(_binding_value_18)) {
+    auto _binding_value_19 = validateAcquiredPackage(root, source);
+    if (doof::is_failure(_binding_value_19)) {
         return false;
     }
     return true;
 }
 bool acquisitionReceiptMatches(const std::string& path, const std::shared_ptr<ExactPackageSource>& source) {
-    auto _binding_value_19 = ::doof_fs::readText(path);
-    if (doof::is_failure(_binding_value_19)) {
-        const auto& receiptSource = _binding_value_19;
-        return false;
-    }
-    const auto receiptSource = doof::success_value(_binding_value_19);
-    auto _binding_value_20 = ::doof_json::parse(receiptSource);
+    auto _binding_value_20 = ::doof_fs::readText(path);
     if (doof::is_failure(_binding_value_20)) {
-        const auto& parsed = _binding_value_20;
+        const auto& receiptSource = _binding_value_20;
         return false;
     }
-    const auto parsed = doof::success_value(_binding_value_20);
-    auto _binding_value_21 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = parsed; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    const auto receiptSource = doof::success_value(_binding_value_20);
+    auto _binding_value_21 = ::doof_json::parse(receiptSource);
     if (doof::is_failure(_binding_value_21)) {
-        const auto& object = _binding_value_21;
+        const auto& parsed = _binding_value_21;
         return false;
     }
-    const auto object = doof::success_value(_binding_value_21);
+    const auto parsed = doof::success_value(_binding_value_21);
+    auto _binding_value_22 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = parsed; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    if (doof::is_failure(_binding_value_22)) {
+        const auto& object = _binding_value_22;
+        return false;
+    }
+    const auto object = doof::success_value(_binding_value_22);
     const auto schemaVersion = acquisitionReceiptInt(object, std::string("schemaVersion"));
     const auto name = acquisitionReceiptString(object, std::string("name"));
     const auto url = acquisitionReceiptString(object, std::string("url"));
@@ -215,33 +215,33 @@ bool acquisitionReceiptMatches(const std::string& path, const std::shared_ptr<Ex
     return (((((schemaVersion == PACKAGE_ACQUISITION_SCHEMA_VERSION) && (name == source->name)) && (url == ::app_src_std_catalog_::canonicalDependencyUrl(source->url))) && (ref == source->ref)) && (commit == doof::string_toLowerCase(source->commit)));
 }
 std::optional<std::string> acquisitionReceiptString(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
-    auto _binding_value_22 = doof::map_get(object, name, "", 0);
-    if (doof::is_failure(_binding_value_22)) {
-        const auto& value = _binding_value_22;
-        return std::nullopt;
-    }
-    const auto value = doof::success_value(_binding_value_22);
-    auto _binding_value_23 = [&]() -> doof::Result<std::string, std::string> { auto _as_value = value; if (doof::json_is_string(_as_value)) return doof::Success<std::string>{doof::json_as_string(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    auto _binding_value_23 = doof::map_get(object, name, "", 0);
     if (doof::is_failure(_binding_value_23)) {
-        const auto& text = _binding_value_23;
+        const auto& value = _binding_value_23;
         return std::nullopt;
     }
-    const auto text = doof::success_value(_binding_value_23);
+    const auto value = doof::success_value(_binding_value_23);
+    auto _binding_value_24 = [&]() -> doof::Result<std::string, std::string> { auto _as_value = value; if (doof::json_is_string(_as_value)) return doof::Success<std::string>{doof::json_as_string(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    if (doof::is_failure(_binding_value_24)) {
+        const auto& text = _binding_value_24;
+        return std::nullopt;
+    }
+    const auto text = doof::success_value(_binding_value_24);
     return text;
 }
 std::optional<int32_t> acquisitionReceiptInt(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name) {
-    auto _binding_value_24 = doof::map_get(object, name, "", 0);
-    if (doof::is_failure(_binding_value_24)) {
-        const auto& value = _binding_value_24;
-        return std::nullopt;
-    }
-    const auto value = doof::success_value(_binding_value_24);
-    auto _binding_value_25 = [&]() -> doof::Result<int32_t, std::string> { auto _as_value = value; if (doof::json_is_number(_as_value)) return doof::Success<int32_t>{doof::json_as_int(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    auto _binding_value_25 = doof::map_get(object, name, "", 0);
     if (doof::is_failure(_binding_value_25)) {
-        const auto& number = _binding_value_25;
+        const auto& value = _binding_value_25;
         return std::nullopt;
     }
-    const auto number = doof::success_value(_binding_value_25);
+    const auto value = doof::success_value(_binding_value_25);
+    auto _binding_value_26 = [&]() -> doof::Result<int32_t, std::string> { auto _as_value = value; if (doof::json_is_number(_as_value)) return doof::Success<int32_t>{doof::json_as_int(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    if (doof::is_failure(_binding_value_26)) {
+        const auto& number = _binding_value_26;
+        return std::nullopt;
+    }
+    const auto number = doof::success_value(_binding_value_26);
     return number;
 }
 std::string renderAcquisitionReceipt(const std::shared_ptr<ExactPackageSource>& source) {
@@ -255,48 +255,48 @@ std::string renderAcquisitionReceipt(const std::shared_ptr<ExactPackageSource>& 
 }
 doof::Result<void, std::string> validateAcquiredPackage(const std::string& root, const std::shared_ptr<ExactPackageSource>& source) {
     const auto manifestPath = ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{root, std::string("doof.json")}));
-    auto _binding_value_26 = ::doof_fs::readText(manifestPath);
-    if (doof::is_failure(_binding_value_26)) {
-        const auto& manifestSource = _binding_value_26;
+    auto _binding_value_27 = ::doof_fs::readText(manifestPath);
+    if (doof::is_failure(_binding_value_27)) {
+        const auto& manifestSource = _binding_value_27;
         return doof::Failure<std::string>{ ((std::string("Acquired package ") + source->name) + std::string(" is missing doof.json")) };
     }
-    const auto manifestSource = doof::success_value(_binding_value_26);
-    auto _binding_value_27 = ::doof_json::parse(manifestSource);
-    if (doof::is_failure(_binding_value_27)) {
-        const auto& parsed = _binding_value_27;
-        return doof::Failure<std::string>{ ((std::string("Acquired package ") + source->name) + std::string(" has invalid doof.json")) };
-    }
-    const auto parsed = doof::success_value(_binding_value_27);
-    auto _binding_value_28 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = parsed; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    const auto manifestSource = doof::success_value(_binding_value_27);
+    auto _binding_value_28 = ::doof_json::parse(manifestSource);
     if (doof::is_failure(_binding_value_28)) {
-        const auto& object = _binding_value_28;
+        const auto& parsed = _binding_value_28;
         return doof::Failure<std::string>{ ((std::string("Acquired package ") + source->name) + std::string(" has invalid doof.json")) };
     }
-    const auto object = doof::success_value(_binding_value_28);
-    auto _binding_value_29 = doof::map_get(object, std::string("name"), "", 0);
+    const auto parsed = doof::success_value(_binding_value_28);
+    auto _binding_value_29 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = parsed; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
     if (doof::is_failure(_binding_value_29)) {
-        const auto& nameValue = _binding_value_29;
+        const auto& object = _binding_value_29;
+        return doof::Failure<std::string>{ ((std::string("Acquired package ") + source->name) + std::string(" has invalid doof.json")) };
+    }
+    const auto object = doof::success_value(_binding_value_29);
+    auto _binding_value_30 = doof::map_get(object, std::string("name"), "", 0);
+    if (doof::is_failure(_binding_value_30)) {
+        const auto& nameValue = _binding_value_30;
         return doof::Failure<std::string>{ (std::string("Acquired package must declare name ") + source->name) };
     }
-    const auto nameValue = doof::success_value(_binding_value_29);
-    auto _binding_value_30 = [&]() -> doof::Result<std::string, std::string> { auto _as_value = nameValue; if (doof::json_is_string(_as_value)) return doof::Success<std::string>{doof::json_as_string(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
-    if (doof::is_failure(_binding_value_30)) {
-        const auto& name = _binding_value_30;
+    const auto nameValue = doof::success_value(_binding_value_30);
+    auto _binding_value_31 = [&]() -> doof::Result<std::string, std::string> { auto _as_value = nameValue; if (doof::json_is_string(_as_value)) return doof::Success<std::string>{doof::json_as_string(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
+    if (doof::is_failure(_binding_value_31)) {
+        const auto& name = _binding_value_31;
         return doof::Failure<std::string>{ std::string("Acquired package name must be a string") };
     }
-    const auto name = doof::success_value(_binding_value_30);
+    const auto name = doof::success_value(_binding_value_31);
     if ((source->expectedManifestName != std::string("")) && (name != source->expectedManifestName)) {
         return doof::Failure<std::string>{ (((std::string("Acquired package name mismatch: expected ") + source->expectedManifestName) + std::string(", got ")) + name) };
     }
     return doof::Success<void>{};
 }
 doof::Result<std::string, std::string> packageCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments) {
-    auto _binding_value_31 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, std::nullopt, nullptr));
-    if (doof::is_failure(_binding_value_31)) {
-        const auto error = doof::failure_error(_binding_value_31);
+    auto _binding_value_32 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, std::nullopt, nullptr));
+    if (doof::is_failure(_binding_value_32)) {
+        const auto error = doof::failure_error(_binding_value_32);
         return doof::Failure<std::string>{ ((command + std::string(": ")) + error) };
     }
-    const auto result = doof::success_value(_binding_value_31);
+    const auto result = doof::success_value(_binding_value_32);
     const auto output = doof::string_trim(::doof_blob::NativeBlobReader::constructor(result->stdout_, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((result->stdout_)->size()))));
     if (result->exitCode != 0) {
         return doof::Failure<std::string>{ (((command + std::string(" exited with code ")) + doof::to_string(result->exitCode)) + ((output == std::string("")) ? std::string("") : (std::string(":\n") + output))) };
@@ -309,11 +309,11 @@ doof::Result<void, std::string> ensurePackageDirectory(const std::string& path) 
     }
     const auto parent = ::std_::path::index::dirname(path);
     if (parent != path) {
-        auto _try_value_32 = ensurePackageDirectory(parent);
-        if (doof::is_failure(_try_value_32)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_32))};
+        auto _try_value_33 = ensurePackageDirectory(parent);
+        if (doof::is_failure(_try_value_33)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_33))};
     }
-    auto _binding_value_33 = ::doof_fs::mkdir(path);
-    if (doof::is_failure(_binding_value_33)) {
+    auto _binding_value_34 = ::doof_fs::mkdir(path);
+    if (doof::is_failure(_binding_value_34)) {
         return doof::Failure<std::string>{ (std::string("Could not create package acquisition directory ") + path) };
     }
     return doof::Success<void>{};
@@ -323,20 +323,20 @@ doof::Result<void, std::string> removePackageTree(const std::string& path) {
         return doof::Success<void>{};
     }
     if (::doof_fs::isDirectory(path)) {
-        auto _binding_value_34 = ::doof_fs::readDir(path);
-        if (doof::is_failure(_binding_value_34)) {
-            const auto& entries = _binding_value_34;
+        auto _binding_value_35 = ::doof_fs::readDir(path);
+        if (doof::is_failure(_binding_value_35)) {
+            const auto& entries = _binding_value_35;
             return doof::Failure<std::string>{ (std::string("Could not read ") + path) };
         }
-        const auto entries = doof::success_value(_binding_value_34);
-        const auto& _iterable_35 = entries;
-        for (const auto& entry : *_iterable_35) {
-            auto _try_value_36 = removePackageTree(::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{path, entry->name})));
-            if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_36))};
+        const auto entries = doof::success_value(_binding_value_35);
+        const auto& _iterable_37 = entries;
+        for (const auto& entry : *_iterable_37) {
+            auto _try_value_38 = removePackageTree(::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{path, entry->name})));
+            if (doof::is_failure(_try_value_38)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_38))};
         }
     }
-    auto _binding_value_37 = ::doof_fs::remove(path);
-    if (doof::is_failure(_binding_value_37)) {
+    auto _binding_value_39 = ::doof_fs::remove(path);
+    if (doof::is_failure(_binding_value_39)) {
         return doof::Failure<std::string>{ (std::string("Could not remove ") + path) };
     }
     return doof::Success<void>{};

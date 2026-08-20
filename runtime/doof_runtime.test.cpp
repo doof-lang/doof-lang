@@ -97,6 +97,32 @@ void test_nested_waits() {
     require(success(std::move(outer)) == 42, "nested async wait deadlocked or returned the wrong value");
 }
 
+void test_first_completed_promise() {
+    doof::configure_runtime_scheduler(options(2, 2));
+    std::promise<void> release_first;
+    auto first_gate = release_first.get_future().share();
+    auto promises = std::make_shared<std::vector<doof::Promise<int>>>();
+    promises->push_back(doof::submit_async<int>([first_gate] {
+        first_gate.wait();
+        return 1;
+    }));
+    promises->push_back(doof::submit_async<int>([] { return 2; }));
+
+    auto second = doof::promise_take_first_completed(promises);
+    require(doof::is_success(second), "first completed promise unexpectedly failed");
+    require(doof::success_value(second) == 2, "promise completion order was ignored");
+    require(promises->size() == 1, "completed promise was not removed from the array");
+
+    release_first.set_value();
+    auto first = doof::promise_take_first_completed(promises);
+    require(doof::is_success(first), "remaining promise unexpectedly failed");
+    require(doof::success_value(first) == 1, "remaining promise value changed");
+    require(promises->empty(), "remaining completed promise was not removed");
+
+    auto empty = doof::promise_take_first_completed(promises);
+    require(doof::is_failure(empty), "empty promise array did not return a failure");
+}
+
 struct ActorState {
     int value = 0;
     std::vector<int> order;
@@ -329,6 +355,7 @@ int main(int argc, char** argv) {
     const std::string mode = argv[1];
     if (mode == "limit") test_cpu_limit();
     else if (mode == "nested") test_nested_waits();
+    else if (mode == "first-completed") test_first_completed_promise();
     else if (mode == "actor") test_actor_serialization();
     else if (mode == "actor-waits") test_actor_waits();
     else if (mode == "failures") test_failures();

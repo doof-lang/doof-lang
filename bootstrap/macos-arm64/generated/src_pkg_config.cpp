@@ -53,8 +53,8 @@ doof::Result<void, std::string> applyPkgConfigResult(const std::shared_ptr<::app
 std::shared_ptr<std::vector<std::string>> pkgConfigTokens(const std::string& output) {
     const auto normalized = doof::string_replaceAll(doof::string_replaceAll(doof::string_replaceAll(output, std::string("\n"), std::string(" ")), std::string("\r"), std::string(" ")), std::string("\t"), std::string(" "));
     std::shared_ptr<std::vector<std::string>> tokens = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_1 = doof::string_split(normalized, std::string(" "));
-    for (const auto& token : *_iterable_1) {
+    const auto& _iterable_2 = doof::string_split(normalized, std::string(" "));
+    for (const auto& token : *_iterable_2) {
         if (token != std::string("")) {
             tokens->push_back(token);
         }
@@ -109,8 +109,8 @@ void applyPkgConfigTokens(const std::shared_ptr<::app_src_package_manifest_::Nat
     }
 }
 void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const std::string& value) {
-    const auto& _iterable_2 = target;
-    for (const auto& existing : *_iterable_2) {
+    const auto& _iterable_4 = target;
+    for (const auto& existing : *_iterable_4) {
         if (existing == value) {
             return;
         }

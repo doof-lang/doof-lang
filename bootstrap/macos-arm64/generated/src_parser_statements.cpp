@@ -255,10 +255,10 @@ std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<
 std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> parseFor(const std::shared_ptr<::app_src_parser_::Parser>& parser, const std::optional<std::string>& label) {
     auto start = parser->location();
     parser->expect(::app_src_lexer_::TokenType::For, std::string(""));
-    if (parser->check(::app_src_lexer_::TokenType::Identifier) && ((parser->peek(1).kind == ::app_src_lexer_::TokenType::Of) || (parser->peek(1).kind == ::app_src_lexer_::TokenType::Comma))) {
-        std::shared_ptr<std::vector<std::string>> bindings = std::make_shared<std::vector<std::string>>(std::vector<std::string>{parser->text(parser->advance())});
+    if (discardableBindingToken(parser->current().kind) && ((parser->peek(1).kind == ::app_src_lexer_::TokenType::Of) || (parser->peek(1).kind == ::app_src_lexer_::TokenType::Comma))) {
+        std::shared_ptr<std::vector<std::string>> bindings = std::make_shared<std::vector<std::string>>(std::vector<std::string>{parseDiscardableBindingName(parser, std::string("Expected loop binding name or '_'"))});
         while (parser->match(::app_src_lexer_::TokenType::Comma)) {
-            bindings->push_back(parser->text(parser->expect(::app_src_lexer_::TokenType::Identifier, std::string(""))));
+            bindings->push_back(parseDiscardableBindingName(parser, std::string("Expected loop binding name or '_'")));
         }
         parser->expect(::app_src_lexer_::TokenType::Of, std::string(""));
         (parser->inForIterable = true);
@@ -318,7 +318,7 @@ std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::WithBinding>>> bindings = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::WithBinding>>>(std::vector<std::shared_ptr<::app_src_ast_::WithBinding>>{});
     while (!parser->check(::app_src_lexer_::TokenType::LeftBrace) && !parser->atEnd()) {
         auto bindingStart = parser->location();
-        const auto name = parser->text(parser->expect(::app_src_lexer_::TokenType::Identifier, std::string("")));
+        const auto name = parseDiscardableBindingName(parser, std::string("Expected scoped binding name or '_'"));
         const auto typeValue = parser->parseOptionalType();
         parser->expect(::app_src_lexer_::TokenType::ColonEqual, std::string(""));
         const auto value = parser->parseExpression();
@@ -329,6 +329,16 @@ std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<
     }
     const auto body = parseBlock(parser);
     return doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>(std::make_shared<::app_src_ast_::WithStatement>(std::string("with-statement"), bindings, body, parser->span(start)));
+}
+bool discardableBindingToken(::app_src_lexer_::TokenType kind) {
+    return ((kind == ::app_src_lexer_::TokenType::Identifier) || (kind == ::app_src_lexer_::TokenType::Underscore));
+}
+std::string parseDiscardableBindingName(const std::shared_ptr<::app_src_parser_::Parser>& parser, const std::string& message) {
+    if (discardableBindingToken(parser->current().kind)) {
+        return parser->text(parser->advance());
+    }
+    parser->fail(message);
+    return std::string("<error>");
 }
 std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> parseBreak(const std::shared_ptr<::app_src_parser_::Parser>& parser) {
     auto start = parser->location();

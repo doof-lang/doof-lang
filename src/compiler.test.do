@@ -40,6 +40,22 @@ export function testReusesOnlyModulesWhoseDependencyFingerprintIsUnchanged(): no
   }
 }
 
+export function testReusesEveryModuleOnExactFingerprintHit(): none {
+  sources := [
+    SourceFile { path: "/main.do", source: "import { left } from \"./left\"\nimport { right } from \"./right\"\nfunction main(): int => left() + right()" },
+    SourceFile { path: "/left.do", source: "export function left(): int => 1" },
+    SourceFile { path: "/right.do", source: "export function right(): int => 2" },
+  ]
+  first := compileWithLoader(sources, "/main.do", noSourceLoader, [], "executable", false, [], "exact-test")
+  let keys: ModuleEmissionCacheKey[] = []
+  for module of first.emission!.modules {
+    keys.push(ModuleEmissionCacheKey { modulePath: module.modulePath, fingerprint: module.fingerprint })
+  }
+  second := compileWithLoader(sources, "/main.do", noSourceLoader, [], "executable", false, keys, "exact-test")
+  Assert.equal(second.emission!.modules.length, 3)
+  for module of second.emission!.modules { Assert.equal(module.reused, true) }
+}
+
 export function testCompilesAnImportedProject(): none {
   result := compile([
     SourceFile { path: "/main.do", source: "import { add } from \"./math\"\nfunction main(): int => add(2, 3)" },

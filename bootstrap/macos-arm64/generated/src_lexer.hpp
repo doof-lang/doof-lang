@@ -121,6 +121,8 @@ namespace app_src_lexer_ {
     QuestionBracket,
     Underscore,
     DollarBrace,
+    TagOpen,
+    TagText,
     Ellipsis,
     EndOfFile
 };
@@ -239,6 +241,8 @@ inline const char* TokenType_name(TokenType value) {
     case TokenType::QuestionBracket: return "QuestionBracket";
     case TokenType::Underscore: return "Underscore";
     case TokenType::DollarBrace: return "DollarBrace";
+    case TokenType::TagOpen: return "TagOpen";
+    case TokenType::TagText: return "TagText";
     case TokenType::Ellipsis: return "Ellipsis";
     case TokenType::EndOfFile: return "EndOfFile";
   }
@@ -358,6 +362,8 @@ inline std::optional<TokenType> TokenType_fromName(std::string_view value) {
   if (value == "QuestionBracket") return TokenType::QuestionBracket;
   if (value == "Underscore") return TokenType::Underscore;
   if (value == "DollarBrace") return TokenType::DollarBrace;
+  if (value == "TagOpen") return TokenType::TagOpen;
+  if (value == "TagText") return TokenType::TagText;
   if (value == "Ellipsis") return TokenType::Ellipsis;
   if (value == "EndOfFile") return TokenType::EndOfFile;
   return std::nullopt;
@@ -477,6 +483,8 @@ inline std::optional<TokenType> TokenType_fromValue(int32_t value) {
     case TokenType::QuestionBracket: return TokenType::QuestionBracket;
     case TokenType::Underscore: return TokenType::Underscore;
     case TokenType::DollarBrace: return TokenType::DollarBrace;
+    case TokenType::TagOpen: return TokenType::TagOpen;
+    case TokenType::TagText: return TokenType::TagText;
     case TokenType::Ellipsis: return TokenType::Ellipsis;
     case TokenType::EndOfFile: return TokenType::EndOfFile;
     default: return std::nullopt;
@@ -524,8 +532,16 @@ namespace app_src_lexer_ {
     std::shared_ptr<std::vector<int32_t>> braceDepth = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     std::shared_ptr<std::vector<int32_t>> interpolationLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     std::shared_ptr<std::vector<int32_t>> interpolationColumns = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    Lexer(std::string source, int32_t pos = 0, int32_t line = 1, int32_t column = 1, std::shared_ptr<std::vector<Token>> tokens = std::make_shared<std::vector<Token>>(std::vector<Token>{}), std::shared_ptr<std::vector<LexerDiagnostic>> diagnostics = std::make_shared<std::vector<LexerDiagnostic>>(std::vector<LexerDiagnostic>{}), std::shared_ptr<std::vector<char32_t>> templateDelimiters = std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::shared_ptr<std::vector<int32_t>> braceDepth = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> interpolationLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> interpolationColumns = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})) : source(source), pos(pos), line(line), column(column), tokens(tokens), diagnostics(diagnostics), templateDelimiters(templateDelimiters), braceDepth(braceDepth), interpolationLines(interpolationLines), interpolationColumns(interpolationColumns) {}
+    std::string tagMode = std::string("code");
+    std::shared_ptr<std::vector<std::string>> tagModeStack = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<int32_t>> tagExpressionDepths = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
+    int32_t tagGenericDepth = 0;
+    Lexer(std::string source, int32_t pos = 0, int32_t line = 1, int32_t column = 1, std::shared_ptr<std::vector<Token>> tokens = std::make_shared<std::vector<Token>>(std::vector<Token>{}), std::shared_ptr<std::vector<LexerDiagnostic>> diagnostics = std::make_shared<std::vector<LexerDiagnostic>>(std::vector<LexerDiagnostic>{}), std::shared_ptr<std::vector<char32_t>> templateDelimiters = std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::shared_ptr<std::vector<int32_t>> braceDepth = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> interpolationLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> interpolationColumns = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::string tagMode = std::string("code"), std::shared_ptr<std::vector<std::string>> tagModeStack = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<int32_t>> tagExpressionDepths = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), int32_t tagGenericDepth = 0) : source(source), pos(pos), line(line), column(column), tokens(tokens), diagnostics(diagnostics), templateDelimiters(templateDelimiters), braceDepth(braceDepth), interpolationLines(interpolationLines), interpolationColumns(interpolationColumns), tagMode(tagMode), tagModeStack(tagModeStack), tagExpressionDepths(tagExpressionDepths), tagGenericDepth(tagGenericDepth) {}
     std::shared_ptr<std::vector<Token>> tokenize();
+    void beginTag();
+    void beginTagExpression();
+    void readTagText();
+    bool canStartTag();
     char32_t peek(int32_t offset = 0);
     char32_t advance();
     void addToken(TokenType kind, int32_t tokenOffset, int32_t tokenLength, int32_t valueOffset, int32_t valueLength, bool needsDecode, int32_t tokenLine, int32_t tokenColumn);

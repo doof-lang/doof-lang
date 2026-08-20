@@ -15,6 +15,8 @@ using namespace ::app_src_emitter_worldview_;
 using namespace ::app_src_emitter_monomorphize_;
 using namespace ::app_src_emitter_names_;
 using namespace ::std_::crypto::index;
+using namespace ::app_src_json_semantics_;
+using namespace ::app_src_string_builder_;
 using namespace ::app_src_semantic_;
 
 doof::JsonObject ModulePlan::toJsonObject() const {
@@ -74,8 +76,8 @@ doof::Result<std::shared_ptr<ModuleGraphPlan>, std::string> ModuleGraphPlan::fro
 }
 std::shared_ptr<ModuleGraphPlan> planModuleGraph(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     const auto plan = std::make_shared<ModuleGraphPlan>(std::make_shared<std::vector<std::shared_ptr<ModulePlan>>>(std::vector<std::shared_ptr<ModulePlan>>{}));
-    const auto& _iterable_1 = result->modules;
-    for (const auto& info : *_iterable_1) {
+    const auto& _iterable_2 = result->modules;
+    for (const auto& info : *_iterable_2) {
         const auto module = std::make_shared<ModulePlan>(info->path, ::app_src_emitter_names_::moduleNamespace(info->path), ::app_src_emitter_names_::moduleHeaderName(info->path), ::app_src_emitter_names_::moduleSourceName(info->path));
         plan->modules->push_back(module);
     }
@@ -260,6 +262,7 @@ std::shared_ptr<ModuleEmission> CxxModuleEmitter::emit(const std::shared_ptr<::a
     (context->namespaceImports = this->namespaceImports);
     (context->imports = this->imports);
     (context->moduleSurfaces = this->moduleSurfaces);
+    (context->jsonEligibility = this->jsonEligibility);
     if (this->coverageModuleId >= 0) {
         (context->coverageEnabled = true);
         (context->coverageModuleId = this->coverageModuleId);
@@ -273,11 +276,12 @@ std::shared_ptr<ModuleEmission> CxxModuleEmitter::emit(const std::shared_ptr<::a
     if (static_cast<int32_t>((views)->size()) == 0) {
         (views = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>>(std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>{std::make_shared<::app_src_emitter_worldview_::WorldviewModule>(this->modulePath, program)}));
     }
-    const auto& _iterable_2 = views;
-    for (const auto& view : *_iterable_2) {
+    const auto& _iterable_4 = views;
+    for (const auto& view : *_iterable_4) {
         const auto sectionContext = ::app_src_emitter_context_::createEmitContextForModule(view->program, view->path, this->allPrograms);
         (sectionContext->imports = surfaceImports(this->moduleSurfaces, view->path));
         (sectionContext->moduleSurfaces = this->moduleSurfaces);
+        (sectionContext->jsonEligibility = this->jsonEligibility);
         if (!doof::is_null(this->instantiations)) {
             configureInstantiationRegistry(sectionContext, doof::unwrap_optional(this->instantiations));
         }
@@ -302,55 +306,56 @@ std::shared_ptr<ModuleEmission> CxxModuleEmitter::emitPlanned(const std::shared_
     const auto sourceName = ((this->sourceNameOverride == std::string("")) ? (this->moduleName + std::string(".cpp")) : this->sourceNameOverride);
     const auto namespaceName = ((this->namespaceNameOverride == std::string("")) ? (this->moduleName + std::string("_")) : this->namespaceNameOverride);
     const auto header = ::app_src_emitter_header_::renderProjectedHeader(sections);
-    auto source = ((std::string("#include \"") + headerName) + std::string("\"\n"));
-    (source = (source + std::string("\n")));
-    const auto& _iterable_3 = this->initializationModuleNamespaces;
-    for (const auto& namespace_ : *_iterable_3) {
-        (source = (((source + std::string("namespace ")) + namespace_) + std::string(" { void __doof_initialize_module(); }\n")));
+    const auto sourceBuilder = ::doof::StringBuilder::constructor();
+    sourceBuilder->append(((std::string("#include \"") + headerName) + std::string("\"\n\n")));
+    const auto& _iterable_6 = this->initializationModuleNamespaces;
+    for (const auto& namespace_ : *_iterable_6) {
+        sourceBuilder->append(((std::string("namespace ") + namespace_) + std::string(" { void __doof_initialize_module(); }\n")));
     }
     if (static_cast<int32_t>((this->initializationModuleNamespaces)->size()) > 0) {
-        (source = (source + std::string("\n")));
+        sourceBuilder->append(std::string("\n"));
     }
-    (source = (((source + std::string("namespace ")) + namespaceName) + std::string(" {\n")));
-    (source = (source + emitImportedNamespaces(context, this->worldviewModules)));
+    sourceBuilder->append(((std::string("namespace ") + namespaceName) + std::string(" {\n")));
+    sourceBuilder->append(emitImportedNamespaces(context, this->worldviewModules));
     if (context->scriptEntry) {
-        (source = (source + emitScriptStorage(programs, context)));
+        sourceBuilder->append(emitScriptStorage(programs, context));
     }
-    const auto& _iterable_4 = programs;
-    for (const auto& program : *_iterable_4) {
-        const auto& _iterable_5 = program->statements;
-        for (const auto& statement : *_iterable_5) {
+    const auto& _iterable_8 = programs;
+    for (const auto& program : *_iterable_8) {
+        const auto& _iterable_10 = program->statements;
+        for (const auto& statement : *_iterable_10) {
             if (!(context->scriptEntry && (!doof::is_null(scriptGlobalDeclaration(statement))))) {
-                (source = (source + emitSourceStatement(statement, context)));
+                sourceBuilder->append(emitSourceStatement(statement, context));
             }
         }
     }
-    (source = (source + emitModuleInitializer(programs, context, !context->scriptEntry)));
+    sourceBuilder->append(emitModuleInitializer(programs, context, !context->scriptEntry));
     if (context->scriptEntry) {
-        (source = (source + emitScriptRunner(programs, context)));
+        sourceBuilder->append(emitScriptRunner(programs, context));
     }
     if (!doof::is_null(this->instantiations)) {
-        (source = (source + emitConcreteFunctions(context, doof::unwrap_optional(this->instantiations))));
+        sourceBuilder->append(emitConcreteFunctions(context, doof::unwrap_optional(this->instantiations)));
     }
-    (source = (source + std::string("}\n")));
+    sourceBuilder->append(std::string("}\n"));
     const auto nativeMethods = emitNativeClassMethods(programs, context);
     if (nativeMethods != std::string("")) {
-        (source = ((((source + std::string("\nusing namespace ::")) + namespaceName) + std::string(";\n\n")) + nativeMethods));
+        sourceBuilder->append((((std::string("\nusing namespace ::") + namespaceName) + std::string(";\n\n")) + nativeMethods));
     }
     const auto initializationCall = emitGraphInitializationCall(this->initializationModuleNamespaces);
     if ((entryMode == std::string("executable")) && (plan->hasMain || context->scriptEntry)) {
-        (source = (source + emitMainWrapper(namespaceName, plan, context->scriptEntry, initializationCall)));
+        sourceBuilder->append(emitMainWrapper(namespaceName, plan, context->scriptEntry, initializationCall));
     }
     if ((entryMode == std::string("ios-app")) && (plan->hasMain || context->scriptEntry)) {
-        (source = (source + emitAppEntryWrapper(namespaceName, plan, context->scriptEntry, initializationCall)));
+        sourceBuilder->append(emitAppEntryWrapper(namespaceName, plan, context->scriptEntry, initializationCall));
     }
+    const auto source = sourceBuilder->drainToString();
     return std::make_shared<ModuleEmission>(context->modulePath, header, source, headerName, sourceName, context->coverageModuleId, sortedCoverageLines(context->coverageInstrumentedLines), false, std::string(""));
 }
 bool hasScriptStatements(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs) {
-    const auto& _iterable_6 = programs;
-    for (const auto& program : *_iterable_6) {
-        const auto& _iterable_7 = program->statements;
-        for (const auto& statement : *_iterable_7) {
+    const auto& _iterable_12 = programs;
+    for (const auto& program : *_iterable_12) {
+        const auto& _iterable_14 = program->statements;
+        for (const auto& statement : *_iterable_14) {
             if (!isModuleDeclaration(statement)) {
                 return true;
             }
@@ -522,10 +527,10 @@ bool scriptDeclarationMutable(const std::variant<std::shared_ptr<::app_src_ast_:
 }
 std::string emitScriptStorage(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     auto source = std::string("\n");
-    const auto& _iterable_8 = programs;
-    for (const auto& program : *_iterable_8) {
-        const auto& _iterable_9 = program->statements;
-        for (const auto& statement : *_iterable_9) {
+    const auto& _iterable_16 = programs;
+    for (const auto& program : *_iterable_16) {
+        const auto& _iterable_18 = program->statements;
+        for (const auto& statement : *_iterable_18) {
             const auto declaration = scriptGlobalDeclaration(statement);
             if (doof::is_null(declaration)) {
                 continue;
@@ -548,10 +553,10 @@ std::string emitScriptRunner(const std::shared_ptr<std::vector<std::shared_ptr<:
     const auto previousTryPanics = context->tryPanics;
     (context->tryPanics = true);
     auto source = std::string("\nvoid __doof_run_script(std::shared_ptr<std::vector<std::string>> arguments) {\n");
-    const auto& _iterable_10 = programs;
-    for (const auto& program : *_iterable_10) {
-        const auto& _iterable_11 = program->statements;
-        for (const auto& statement : *_iterable_11) {
+    const auto& _iterable_20 = programs;
+    for (const auto& program : *_iterable_20) {
+        const auto& _iterable_22 = program->statements;
+        for (const auto& statement : *_iterable_22) {
             const auto declaration = scriptGlobalDeclaration(statement);
             if (!doof::is_null(declaration)) {
                 (source = (source + ::app_src_emitter_stmt_::emitStatement(statement, 1, context)));
@@ -568,8 +573,8 @@ std::string emitScriptRunner(const std::shared_ptr<std::vector<std::shared_ptr<:
     return (source + std::string("}\n"));
 }
 bool containsString(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
-    const auto& _iterable_12 = values;
-    for (const auto& existing : *_iterable_12) {
+    const auto& _iterable_24 = values;
+    for (const auto& existing : *_iterable_24) {
         if (existing == value) {
             return true;
         }
@@ -578,16 +583,16 @@ bool containsString(const std::shared_ptr<std::vector<std::string>>& values, con
 }
 std::string emitImportedNamespaces(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>>& worldviewModules) {
     std::shared_ptr<std::vector<std::string>> namespaces = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_13 = context->imports;
-    for (const auto& imported : *_iterable_13) {
+    const auto& _iterable_26 = context->imports;
+    for (const auto& imported : *_iterable_26) {
         if (!worldviewContainsModule(worldviewModules, imported->sourceModule)) {
             continue;
         }
         const auto namespace_ = ::app_src_emitter_names_::moduleNamespace(imported->sourceModule);
         addNamespace(namespaces, namespace_);
     }
-    const auto& _iterable_14 = context->namespaceImports;
-    for (const auto& imported : *_iterable_14) {
+    const auto& _iterable_28 = context->namespaceImports;
+    for (const auto& imported : *_iterable_28) {
         if (!worldviewContainsModule(worldviewModules, imported->sourceModule)) {
             continue;
         }
@@ -595,15 +600,15 @@ std::string emitImportedNamespaces(const std::shared_ptr<::app_src_emitter_conte
         addNamespace(namespaces, namespace_);
     }
     auto result = std::string("");
-    const auto& _iterable_15 = namespaces;
-    for (const auto& namespace_ : *_iterable_15) {
+    const auto& _iterable_30 = namespaces;
+    for (const auto& namespace_ : *_iterable_30) {
         (result = (((result + std::string("using namespace ::")) + namespace_) + std::string(";\n")));
     }
     return result;
 }
 bool worldviewContainsModule(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>>& modules, const std::string& path) {
-    const auto& _iterable_16 = modules;
-    for (const auto& module : *_iterable_16) {
+    const auto& _iterable_32 = modules;
+    for (const auto& module : *_iterable_32) {
         if (module->path == path) {
             return true;
         }
@@ -611,8 +616,8 @@ bool worldviewContainsModule(const std::shared_ptr<std::vector<std::shared_ptr<:
     return false;
 }
 void addNamespace(const std::shared_ptr<std::vector<std::string>>& namespaces, const std::string& namespace_) {
-    const auto& _iterable_17 = namespaces;
-    for (const auto& existing : *_iterable_17) {
+    const auto& _iterable_34 = namespaces;
+    for (const auto& existing : *_iterable_34) {
         if (existing == namespace_) {
             return;
         }
@@ -621,15 +626,20 @@ void addNamespace(const std::shared_ptr<std::vector<std::string>>& namespaces, c
 }
 std::shared_ptr<ModuleGraphEmission> emitModuleGraph(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& entry, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations, const std::string& entryMode, bool coverage, const std::shared_ptr<std::vector<std::shared_ptr<ModuleEmissionCacheKey>>>& reusableModules, const std::string& configurationFingerprint) {
     const auto graph = std::make_shared<ModuleGraphEmission>(std::make_shared<std::vector<std::shared_ptr<ModuleEmission>>>(std::vector<std::shared_ptr<ModuleEmission>>{}), std::make_shared<std::vector<std::shared_ptr<CoverageModuleMetadata>>>(std::vector<std::shared_ptr<CoverageModuleMetadata>>{}), std::string(""), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
-    const auto concretePlan = [&]() -> std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan> { auto _coalesce_18 = instantiations; if (doof::is_null(_coalesce_18)) return ::app_src_emitter_monomorphize_::buildInstantiationPlan(result); return doof::unwrap_optional(_coalesce_18); }();
+    const auto concretePlan = [&]() -> std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan> { auto _coalesce_35 = instantiations; if (doof::is_null(_coalesce_35)) return ::app_src_emitter_monomorphize_::buildInstantiationPlan(result); return doof::unwrap_optional(_coalesce_35); }();
     const auto plan = planModuleGraph(result);
     const auto initializationOrder = planModuleInitializationOrder(result, entry, entryMode);
     const auto graphPrograms = allPrograms(result);
     const auto graphSurfaces = emitModuleSurfaces(result);
+    const auto moduleIndex = indexGraphModules(result);
+    const auto reusableFingerprints = indexReusableModuleFingerprints(reusableModules);
+    const auto instantiationFingerprintInput = moduleInstantiationFingerprintInput(concretePlan);
+    const auto jsonEligibility = std::make_shared<::app_src_json_semantics_::JsonEligibilityCache>(std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{}), std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{}));
+    const auto worldviewGraphIndex = ::app_src_emitter_worldview_::indexWorldviewGraph(result);
     auto nextCoverageModuleId = 0;
-    const auto& _iterable_19 = plan->modules;
-    for (const auto& module : *_iterable_19) {
-        const auto info = findGraphModule(result, module->path);
+    const auto& _iterable_37 = plan->modules;
+    for (const auto& module : *_iterable_37) {
+        const auto info = indexedGraphModule(moduleIndex, module->path);
         if (doof::is_null(info)) {
             continue;
         }
@@ -638,13 +648,13 @@ std::shared_ptr<ModuleGraphEmission> emitModuleGraph(const std::shared_ptr<::app
             (coverageModuleId = nextCoverageModuleId);
             (nextCoverageModuleId += 1);
         }
-        const auto fingerprint = moduleEmissionFingerprint(result, doof::unwrap_optional(info), concretePlan, module->path, entry, entryMode, coverage, initializationOrder, configurationFingerprint);
-        if (!coverage && reusableModuleMatches(reusableModules, module->path, fingerprint)) {
+        const auto fingerprint = moduleEmissionFingerprint(result, moduleIndex, module->path, entry, entryMode, coverage, initializationOrder, configurationFingerprint, instantiationFingerprintInput);
+        if (!coverage && reusableModuleMatches(reusableFingerprints, module->path, fingerprint)) {
             graph->modules->push_back(std::make_shared<ModuleEmission>(module->path, std::string(""), std::string(""), module->headerName, module->sourceName, -1, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), true, fingerprint));
             continue;
         }
-        const auto emitter = std::make_shared<CxxModuleEmitter>(module->namespaceName, module->headerName, module->sourceName, module->namespaceName, module->path, graphPrograms, infoNamespaceImports(result, module->path), infoImports(result, module->path), graphSurfaces, std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>>(std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), concretePlan, coverageModuleId, ((module->path == entry) ? moduleInitializationNamespaces(initializationOrder) : std::make_shared<std::vector<std::string>>(std::vector<std::string>{})));
-        const auto worldview = ::app_src_emitter_worldview_::planWorldview(result, module->path, concretePlan);
+        const auto emitter = std::make_shared<CxxModuleEmitter>(module->namespaceName, module->headerName, module->sourceName, module->namespaceName, module->path, graphPrograms, infoNamespaceImports(result, module->path), infoImports(result, module->path), graphSurfaces, std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>>(std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), concretePlan, coverageModuleId, ((module->path == entry) ? moduleInitializationNamespaces(initializationOrder) : std::make_shared<std::vector<std::string>>(std::vector<std::string>{})), jsonEligibility);
+        const auto worldview = ::app_src_emitter_worldview_::planWorldview(result, module->path, concretePlan, worldviewGraphIndex);
         (emitter->worldviewModules = worldview->modules);
         (emitter->worldviewInterfaceKeys = worldview->interfaceKeys);
         const auto emitted = emitter->emit(info->program, ((module->path == entry) ? entryMode : std::string("none")));
@@ -656,77 +666,109 @@ std::shared_ptr<ModuleGraphEmission> emitModuleGraph(const std::shared_ptr<::app
     }
     return graph;
 }
-bool reusableModuleMatches(const std::shared_ptr<std::vector<std::shared_ptr<ModuleEmissionCacheKey>>>& keys, const std::string& path, const std::string& fingerprint) {
-    const auto& _iterable_20 = keys;
-    for (const auto& key : *_iterable_20) {
-        if ((key->modulePath == path) && (key->fingerprint == fingerprint)) {
-            return true;
-        }
+std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_analyzer_::ModuleInfo>>> indexGraphModules(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
+    std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_analyzer_::ModuleInfo>>> indexed = std::make_shared<doof::ordered_map<std::string, std::shared_ptr<::app_src_analyzer_::ModuleInfo>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<::app_src_analyzer_::ModuleInfo>>>{});
+    const auto& _iterable_39 = result->modules;
+    for (const auto& module : *_iterable_39) {
+        doof::map_set(indexed, module->path, module, "", 0);
     }
-    return false;
+    return indexed;
 }
-std::string moduleEmissionFingerprint(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& module, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations, const std::string& path, const std::string& entry, const std::string& entryMode, bool coverage, const std::shared_ptr<std::vector<std::string>>& initializationOrder, const std::string& configurationFingerprint) {
-    auto value = (((((((std::string("doof-module-emission-2\n") + configurationFingerprint) + std::string("\n")) + path) + std::string("\n")) + entryMode) + std::string("\n")) + doof::to_string(coverage));
-    std::shared_ptr<std::vector<std::string>> reachable = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    collectModuleDependencyClosure(result, path, reachable);
-    const auto& _iterable_21 = result->modules;
-    for (const auto& candidate : *_iterable_21) {
-        if (containsString(reachable, candidate->path)) {
-            (value = ((((value + std::string("\nsource:")) + candidate->path) + std::string(":")) + candidate->sourceHash));
+std::shared_ptr<::app_src_analyzer_::ModuleInfo> indexedGraphModule(const std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_analyzer_::ModuleInfo>>>& indexed, const std::string& path) {
+    auto _binding_value_40 = doof::map_get(indexed, path, "", 0);
+    if (doof::is_failure(_binding_value_40)) {
+        const auto& module = _binding_value_40;
+        return nullptr;
+    }
+    const auto module = doof::success_value(_binding_value_40);
+    return module;
+}
+std::shared_ptr<doof::ordered_map<std::string, std::string>> indexReusableModuleFingerprints(const std::shared_ptr<std::vector<std::shared_ptr<ModuleEmissionCacheKey>>>& keys) {
+    std::shared_ptr<doof::ordered_map<std::string, std::string>> indexed = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
+    const auto& _iterable_42 = keys;
+    for (const auto& key : *_iterable_42) {
+        if (![&]() -> bool { auto _map_has_43 = indexed; return _map_has_43->find(key->modulePath) != _map_has_43->end(); }()) {
+            doof::map_set(indexed, key->modulePath, key->fingerprint, "", 0);
         }
     }
-    const auto& _iterable_22 = instantiations->functions;
-    for (const auto& item : *_iterable_22) {
+    return indexed;
+}
+bool reusableModuleMatches(const std::shared_ptr<doof::ordered_map<std::string, std::string>>& indexed, const std::string& path, const std::string& fingerprint) {
+    auto _binding_value_44 = doof::map_get(indexed, path, "", 0);
+    if (doof::is_failure(_binding_value_44)) {
+        const auto& cached = _binding_value_44;
+        return false;
+    }
+    const auto cached = doof::success_value(_binding_value_44);
+    return (cached == fingerprint);
+}
+std::string moduleInstantiationFingerprintInput(const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations) {
+    auto value = std::string("");
+    const auto& _iterable_46 = instantiations->functions;
+    for (const auto& item : *_iterable_46) {
         (value = ((value + std::string("\nfunction:")) + item->key));
     }
-    const auto& _iterable_23 = instantiations->classes;
-    for (const auto& item : *_iterable_23) {
+    const auto& _iterable_48 = instantiations->classes;
+    for (const auto& item : *_iterable_48) {
         (value = ((value + std::string("\nclass:")) + item->key));
     }
-    const auto& _iterable_24 = instantiations->methods;
-    for (const auto& item : *_iterable_24) {
+    const auto& _iterable_50 = instantiations->methods;
+    for (const auto& item : *_iterable_50) {
         (value = ((value + std::string("\nmethod:")) + item->key));
     }
-    const auto& _iterable_25 = instantiations->interfaces;
-    for (const auto& item : *_iterable_25) {
+    const auto& _iterable_52 = instantiations->interfaces;
+    for (const auto& item : *_iterable_52) {
         (value = ((value + std::string("\ninterface:")) + item->key));
-        const auto& _iterable_26 = item->implementations;
-        for (const auto& implementation : *_iterable_26) {
+        const auto& _iterable_54 = item->implementations;
+        for (const auto& implementation : *_iterable_54) {
             (value = ((((value + std::string(":")) + implementation->modulePath) + std::string(":")) + implementation->typeName));
         }
     }
-    const auto& _iterable_27 = instantiations->nativeTemplateClassKeys;
-    for (const auto& key : *_iterable_27) {
+    const auto& _iterable_56 = instantiations->nativeTemplateClassKeys;
+    for (const auto& key : *_iterable_56) {
         (value = ((value + std::string("\nnative:")) + key));
     }
+    return value;
+}
+std::string moduleEmissionFingerprint(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_analyzer_::ModuleInfo>>>& moduleIndex, const std::string& path, const std::string& entry, const std::string& entryMode, bool coverage, const std::shared_ptr<std::vector<std::string>>& initializationOrder, const std::string& configurationFingerprint, const std::string& instantiationFingerprintInput) {
+    auto value = (((((((std::string("doof-module-emission-2\n") + configurationFingerprint) + std::string("\n")) + path) + std::string("\n")) + entryMode) + std::string("\n")) + doof::to_string(coverage));
+    std::shared_ptr<doof::ordered_set<std::string>> reachable = std::make_shared<doof::ordered_set<std::string>>(doof::ordered_set<std::string>{});
+    collectModuleDependencyClosure(moduleIndex, path, reachable);
+    const auto& _iterable_58 = result->modules;
+    for (const auto& candidate : *_iterable_58) {
+        if (reachable->count(candidate->path) > 0) {
+            (value = ((((value + std::string("\nsource:")) + candidate->path) + std::string(":")) + candidate->sourceHash));
+        }
+    }
+    (value = (value + instantiationFingerprintInput));
     if (path == entry) {
-        const auto& _iterable_28 = initializationOrder;
-        for (const auto& initialized : *_iterable_28) {
+        const auto& _iterable_60 = initializationOrder;
+        for (const auto& initialized : *_iterable_60) {
             (value = ((value + std::string("\ninitialize:")) + initialized));
         }
     }
     return ::std_::crypto::index::sha256HexString(value);
 }
-void collectModuleDependencyClosure(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path, const std::shared_ptr<std::vector<std::string>>& reachable) {
-    if (containsString(reachable, path)) {
+void collectModuleDependencyClosure(const std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_analyzer_::ModuleInfo>>>& moduleIndex, const std::string& path, const std::shared_ptr<doof::ordered_set<std::string>>& reachable) {
+    if (reachable->count(path) > 0) {
         return;
     }
-    reachable->push_back(path);
-    const auto module = findGraphModule(result, path);
+    reachable->insert(path);
+    const auto module = indexedGraphModule(moduleIndex, path);
     if (doof::is_null(module)) {
         return;
     }
-    const auto& _iterable_29 = module->imports;
-    for (const auto& imported : *_iterable_29) {
-        collectModuleDependencyClosure(result, imported->sourceModule, reachable);
+    const auto& _iterable_62 = module->imports;
+    for (const auto& imported : *_iterable_62) {
+        collectModuleDependencyClosure(moduleIndex, imported->sourceModule, reachable);
     }
-    const auto& _iterable_30 = module->namespaceImports;
-    for (const auto& imported : *_iterable_30) {
-        collectModuleDependencyClosure(result, imported->sourceModule, reachable);
+    const auto& _iterable_64 = module->namespaceImports;
+    for (const auto& imported : *_iterable_64) {
+        collectModuleDependencyClosure(moduleIndex, imported->sourceModule, reachable);
     }
-    const auto& _iterable_31 = module->reExports;
-    for (const auto& reExport : *_iterable_31) {
-        collectModuleDependencyClosure(result, reExport, reachable);
+    const auto& _iterable_66 = module->reExports;
+    for (const auto& reExport : *_iterable_66) {
+        collectModuleDependencyClosure(moduleIndex, reExport, reachable);
     }
 }
 bool isCoverageEligible(const std::string& modulePath) {
@@ -737,8 +779,8 @@ std::shared_ptr<std::vector<int32_t>> sortedCoverageLines(const std::shared_ptr<
     auto last = -1;
     for (int32_t count = 0; count < static_cast<int32_t>((lines)->size()); ++count) {
         std::optional<int32_t> candidate = std::nullopt;
-        const auto& _iterable_32 = lines;
-        for (const auto& line : *_iterable_32) {
+        const auto& _iterable_69 = lines;
+        for (const auto& line : *_iterable_69) {
             if ((line > last) && (doof::is_null(candidate) || (line < candidate.value()))) {
                 (candidate = line);
             }
@@ -751,34 +793,34 @@ std::shared_ptr<std::vector<int32_t>> sortedCoverageLines(const std::shared_ptr<
     return result;
 }
 void configureInstantiationRegistry(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& plan) {
-    const auto& _iterable_33 = plan->nativeTemplateClassKeys;
-    for (const auto& key : *_iterable_33) {
+    const auto& _iterable_71 = plan->nativeTemplateClassKeys;
+    for (const auto& key : *_iterable_71) {
         context->nativeTemplateClassKeys->push_back(key);
     }
-    const auto& _iterable_34 = plan->functions;
-    for (const auto& instantiation : *_iterable_34) {
+    const auto& _iterable_73 = plan->functions;
+    for (const auto& instantiation : *_iterable_73) {
         context->concreteFunctionKeys->push_back(instantiation->key);
         context->concreteFunctionNames->push_back(instantiation->emittedName);
     }
-    const auto& _iterable_35 = plan->classes;
-    for (const auto& instantiation : *_iterable_35) {
+    const auto& _iterable_75 = plan->classes;
+    for (const auto& instantiation : *_iterable_75) {
         context->concreteClassKeys->push_back(instantiation->key);
         context->concreteClassNames->push_back(instantiation->emittedName);
     }
-    const auto& _iterable_36 = plan->methods;
-    for (const auto& instantiation : *_iterable_36) {
+    const auto& _iterable_77 = plan->methods;
+    for (const auto& instantiation : *_iterable_77) {
         context->concreteMethodKeys->push_back(instantiation->key);
         context->concreteMethodNames->push_back(instantiation->emittedName);
     }
-    const auto& _iterable_37 = plan->interfaces;
-    for (const auto& instantiation : *_iterable_37) {
+    const auto& _iterable_79 = plan->interfaces;
+    for (const auto& instantiation : *_iterable_79) {
         context->concreteInterfaceKeys->push_back(instantiation->key);
         context->concreteInterfaceNames->push_back(instantiation->emittedName);
     }
 }
 void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_header_::HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations, const std::shared_ptr<::app_src_ast_::Program>& program, const std::shared_ptr<std::vector<std::string>>& interfaceKeys) {
-    const auto& _iterable_38 = instantiations->interfaces;
-    for (const auto& interface_ : *_iterable_38) {
+    const auto& _iterable_81 = instantiations->interfaces;
+    for (const auto& interface_ : *_iterable_81) {
         if (!containsString(interfaceKeys, interface_->key)) {
             continue;
         }
@@ -789,8 +831,8 @@ void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_heade
             continue;
         }
         auto alternatives = std::string("");
-        const auto& _iterable_39 = interface_->implementations;
-        for (const auto& implementation : *_iterable_39) {
+        const auto& _iterable_83 = interface_->implementations;
+        for (const auto& implementation : *_iterable_83) {
             if (alternatives != std::string("")) {
                 (alternatives = (alternatives + std::string(", ")));
             }
@@ -807,23 +849,23 @@ void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_heade
         }
         plan->interfaceAliases->push_back(((((std::string("using ") + interface_->emittedName) + std::string(" = std::variant<")) + alternatives) + std::string(">;\n")));
     }
-    const auto& _iterable_40 = instantiations->classes;
-    for (const auto& instantiation : *_iterable_40) {
+    const auto& _iterable_85 = instantiations->classes;
+    for (const auto& instantiation : *_iterable_85) {
         if (instantiation->modulePath != context->modulePath) {
             continue;
         }
         if (!programDeclares(program, instantiation->declaration->name)) {
             continue;
         }
-        const auto& _iterable_41 = instantiation->substitution->arguments;
-        for (const auto& argument : *_iterable_41) {
+        const auto& _iterable_87 = instantiation->substitution->arguments;
+        for (const auto& argument : *_iterable_87) {
             addConcreteTypeForwardDeclarations(plan, context, argument);
         }
         plan->classForwardDeclarations->push_back(((std::string("struct ") + instantiation->emittedName) + std::string(";\n")));
         (context->substitution = instantiation->substitution);
         std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>> methods = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>>(std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>{});
-        const auto& _iterable_42 = instantiations->methods;
-        for (const auto& method : *_iterable_42) {
+        const auto& _iterable_89 = instantiations->methods;
+        for (const auto& method : *_iterable_89) {
             if (method->ownerKey == instantiation->key) {
                 methods->push_back(method);
             }
@@ -831,16 +873,16 @@ void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_heade
         plan->classDefinitions->push_back(::app_src_emitter_decl_::emitClassDeclaration(instantiation->declaration, context, instantiation->emittedName, methods));
         clearInstantiation(context);
     }
-    const auto& _iterable_43 = instantiations->functions;
-    for (const auto& instantiation : *_iterable_43) {
+    const auto& _iterable_91 = instantiations->functions;
+    for (const auto& instantiation : *_iterable_91) {
         if (instantiation->modulePath != context->modulePath) {
             continue;
         }
         if (!programDeclares(program, instantiation->declaration->name)) {
             continue;
         }
-        const auto& _iterable_44 = instantiation->substitution->arguments;
-        for (const auto& argument : *_iterable_44) {
+        const auto& _iterable_93 = instantiation->substitution->arguments;
+        for (const auto& argument : *_iterable_93) {
             addConcreteTypeForwardDeclarations(plan, context, argument);
         }
         (context->substitution = instantiation->substitution);
@@ -854,8 +896,8 @@ void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_heade
     }
 }
 bool programDeclares(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& name) {
-    const auto& _iterable_45 = program->statements;
-    for (const auto& statement : *_iterable_45) {
+    const auto& _iterable_95 = program->statements;
+    for (const auto& statement : *_iterable_95) {
         if (headerDeclarationName(statement) == name) {
             return true;
         }
@@ -899,15 +941,15 @@ void addConcreteTypeForwardDeclarations(const std::shared_ptr<::app_src_emitter_
                     plan->typeOnlyForwardDeclarations->push_back(declaration);
                 }
             }
-            const auto& _iterable_46 = class_->typeArgs;
-            for (const auto& argument : *_iterable_46) {
+            const auto& _iterable_97 = class_->typeArgs;
+            for (const auto& argument : *_iterable_97) {
                 addConcreteTypeForwardDeclarations(plan, context, argument);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject)) {
             const auto& interface_ = std::get<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject);
-            const auto& _iterable_47 = interface_->typeArgs;
-            for (const auto& argument : *_iterable_47) {
+            const auto& _iterable_99 = interface_->typeArgs;
+            for (const auto& argument : *_iterable_99) {
                 addConcreteTypeForwardDeclarations(plan, context, argument);
             }
     }
@@ -935,15 +977,15 @@ void addConcreteTypeForwardDeclarations(const std::shared_ptr<::app_src_emitter_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_48 = tuple->elements;
-            for (const auto& element : *_iterable_48) {
+            const auto& _iterable_101 = tuple->elements;
+            for (const auto& element : *_iterable_101) {
                 addConcreteTypeForwardDeclarations(plan, context, element);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_49 = union_->types;
-            for (const auto& member : *_iterable_49) {
+            const auto& _iterable_103 = union_->types;
+            for (const auto& member : *_iterable_103) {
                 addConcreteTypeForwardDeclarations(plan, context, member);
             }
     }
@@ -953,8 +995,8 @@ void addConcreteTypeForwardDeclarations(const std::shared_ptr<::app_src_emitter_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_50 = function_->params;
-            for (const auto& parameter : *_iterable_50) {
+            const auto& _iterable_105 = function_->params;
+            for (const auto& parameter : *_iterable_105) {
                 addConcreteTypeForwardDeclarations(plan, context, parameter->type_);
             }
             addConcreteTypeForwardDeclarations(plan, context, function_->returnType);
@@ -965,8 +1007,8 @@ void addConcreteTypeForwardDeclarations(const std::shared_ptr<::app_src_emitter_
 }
 std::string emitConcreteFunctions(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations) {
     auto result = std::string("");
-    const auto& _iterable_51 = instantiations->functions;
-    for (const auto& instantiation : *_iterable_51) {
+    const auto& _iterable_107 = instantiations->functions;
+    for (const auto& instantiation : *_iterable_107) {
         if (instantiation->modulePath != context->modulePath) {
             continue;
         }
@@ -988,12 +1030,12 @@ void clearInstantiation(const std::shared_ptr<::app_src_emitter_context_::EmitCo
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>> emitModuleSurfaces(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>> surfaces = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>>(std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>{});
-    const auto& _iterable_52 = result->modules;
-    for (const auto& module : *_iterable_52) {
+    const auto& _iterable_109 = result->modules;
+    for (const auto& module : *_iterable_109) {
         std::shared_ptr<std::vector<std::string>> genericTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
         std::shared_ptr<std::vector<std::string>> genericFunctions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-        const auto& _iterable_53 = module->program->statements;
-        for (const auto& statement : *_iterable_53) {
+        const auto& _iterable_111 = module->program->statements;
+        for (const auto& statement : *_iterable_111) {
             collectGenericSurfaceSymbols(statement, genericTypes, genericFunctions);
         }
         surfaces->push_back(std::make_shared<::app_src_emitter_context_::EmitModuleSurface>(module->path, module->exports, module->imports, genericTypes, genericFunctions));
@@ -1037,15 +1079,15 @@ void collectGenericSurfaceSymbols(const std::variant<std::shared_ptr<::app_src_a
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{});
-    const auto& _iterable_54 = result->modules;
-    for (const auto& module : *_iterable_54) {
+    const auto& _iterable_113 = result->modules;
+    for (const auto& module : *_iterable_113) {
         programs->push_back(module->program);
     }
     return programs;
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> surfaceImports(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>>& surfaces, const std::string& path) {
-    const auto& _iterable_55 = surfaces;
-    for (const auto& surface : *_iterable_55) {
+    const auto& _iterable_115 = surfaces;
+    for (const auto& surface : *_iterable_115) {
         if (surface->path == path) {
             return surface->imports;
         }
@@ -1053,8 +1095,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>
     return std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{});
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> infoNamespaceImports(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path) {
-    const auto& _iterable_56 = result->modules;
-    for (const auto& module : *_iterable_56) {
+    const auto& _iterable_117 = result->modules;
+    for (const auto& module : *_iterable_117) {
         if (module->path == path) {
             return module->namespaceImports;
         }
@@ -1062,8 +1104,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBindin
     return std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{});
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> infoImports(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path) {
-    const auto& _iterable_57 = result->modules;
-    for (const auto& module : *_iterable_57) {
+    const auto& _iterable_119 = result->modules;
+    for (const auto& module : *_iterable_119) {
         if (module->path == path) {
             return module->imports;
         }
@@ -1071,8 +1113,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>
     return std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{});
 }
 std::shared_ptr<::app_src_analyzer_::ModuleInfo> findGraphModule(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path) {
-    const auto& _iterable_58 = result->modules;
-    for (const auto& module : *_iterable_58) {
+    const auto& _iterable_121 = result->modules;
+    for (const auto& module : *_iterable_121) {
         if (module->path == path) {
             return module;
         }
@@ -1095,23 +1137,23 @@ void visitInitializationModule(const std::shared_ptr<::app_src_analyzer_::Analys
         return;
     }
     visiting->push_back(path);
-    const auto& _iterable_59 = info->imports;
-    for (const auto& imported : *_iterable_59) {
+    const auto& _iterable_123 = info->imports;
+    for (const auto& imported : *_iterable_123) {
         if (!imported->typeOnly) {
             visitInitializationModule(result, imported->sourceModule, entry, entryMode, visiting, visited, order);
         }
     }
-    const auto& _iterable_60 = info->namespaceImports;
-    for (const auto& imported : *_iterable_60) {
+    const auto& _iterable_125 = info->namespaceImports;
+    for (const auto& imported : *_iterable_125) {
         if (!imported->typeOnly) {
             visitInitializationModule(result, imported->sourceModule, entry, entryMode, visiting, visited, order);
         }
     }
-    const auto& _iterable_61 = info->reExports;
-    for (const auto& reExport : *_iterable_61) {
+    const auto& _iterable_127 = info->reExports;
+    for (const auto& reExport : *_iterable_127) {
         visitInitializationModule(result, reExport, entry, entryMode, visiting, visited, order);
     }
-    auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(visiting); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-module", 675, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(visiting); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-module", 714, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     visited->push_back(path);
     const auto scriptEntry = (((path == entry) && ((entryMode == std::string("executable")) || (entryMode == std::string("ios-app")))) && hasScriptStatements(std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{info->program})));
     if (!scriptEntry && moduleHasDeferredInitialization(info->program)) {
@@ -1120,14 +1162,14 @@ void visitInitializationModule(const std::shared_ptr<::app_src_analyzer_::Analys
 }
 std::shared_ptr<std::vector<std::string>> moduleInitializationNamespaces(const std::shared_ptr<std::vector<std::string>>& paths) {
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_62 = paths;
-    for (const auto& path : *_iterable_62) {
+    const auto& _iterable_129 = paths;
+    for (const auto& path : *_iterable_129) {
         result->push_back(::app_src_emitter_names_::moduleNamespace(path));
     }
     return result;
 }
 std::shared_ptr<ModuleEmission> emitModule(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& moduleName) {
-    return std::make_shared<CxxModuleEmitter>(moduleName, std::string(""), std::string(""), std::string(""), std::string(""), std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>>(std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>>(std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), nullptr, -1, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}))->emit(program, std::string("executable"));
+    return std::make_shared<CxxModuleEmitter>(moduleName, std::string(""), std::string(""), std::string(""), std::string(""), std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>>(std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>>(std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), nullptr, -1, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<::app_src_json_semantics_::JsonEligibilityCache>(std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{}), std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{})))->emit(program, std::string("executable"));
 }
 std::string emitSourceStatement(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>& statement, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     {
@@ -1146,8 +1188,8 @@ std::string emitSourceStatement(const std::variant<std::shared_ptr<::app_src_ast
             }
             auto result = (std::string("\n") + ::app_src_emitter_decl_::emitStaticClassFieldDefinitions(class_, context));
             if (static_cast<int32_t>((class_->typeParams)->size()) == 0) {
-                const auto& _iterable_63 = class_->methods;
-                for (const auto& method : *_iterable_63) {
+                const auto& _iterable_131 = class_->methods;
+                for (const auto& method : *_iterable_131) {
                     (result = (result + ::app_src_emitter_decl_::emitClassMethodDefinition(class_, method, context)));
                 }
             }
@@ -1246,8 +1288,8 @@ bool isCxxConstantInitializer(const std::variant<std::shared_ptr<::app_src_ast_:
     return false;
 }
 bool moduleHasDeferredInitialization(const std::shared_ptr<::app_src_ast_::Program>& program) {
-    const auto& _iterable_64 = program->statements;
-    for (const auto& statement : *_iterable_64) {
+    const auto& _iterable_133 = program->statements;
+    for (const auto& statement : *_iterable_133) {
         if (statementHasDeferredInitialization(statement)) {
             return true;
         }
@@ -1278,8 +1320,8 @@ bool statementHasDeferredInitialization(const std::variant<std::shared_ptr<::app
             if (class_->native_ || (static_cast<int32_t>((class_->typeParams)->size()) > 0)) {
                 return false;
             }
-            const auto& _iterable_65 = class_->fields;
-            for (const auto& field : *_iterable_65) {
+            const auto& _iterable_135 = class_->fields;
+            for (const auto& field : *_iterable_135) {
                 if (field->static_ && (!doof::is_null(field->defaultValue))) {
                     return true;
                 }
@@ -1300,10 +1342,10 @@ bool statementHasDeferredInitialization(const std::variant<std::shared_ptr<::app
 std::string emitModuleInitializer(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, bool includeValues) {
     auto assignments = std::string("");
     if (includeValues) {
-        const auto& _iterable_66 = programs;
-        for (const auto& program : *_iterable_66) {
-            const auto& _iterable_67 = program->statements;
-            for (const auto& statement : *_iterable_67) {
+        const auto& _iterable_137 = programs;
+        for (const auto& program : *_iterable_137) {
+            const auto& _iterable_139 = program->statements;
+            for (const auto& statement : *_iterable_139) {
                 (assignments = (assignments + emitModuleInitializerStatement(statement, context)));
             }
         }
@@ -1338,13 +1380,13 @@ std::string emitModuleInitializerStatement(const std::variant<std::shared_ptr<::
             if (class_->native_ || (static_cast<int32_t>((class_->typeParams)->size()) > 0)) {
                 return result;
             }
-            const auto& _iterable_68 = class_->fields;
-            for (const auto& field : *_iterable_68) {
+            const auto& _iterable_141 = class_->fields;
+            for (const auto& field : *_iterable_141) {
                 if (!field->static_ || doof::is_null(field->defaultValue)) {
                     continue;
                 }
-                const auto& _iterable_69 = field->names;
-                for (const auto& name : *_iterable_69) {
+                const auto& _iterable_143 = field->names;
+                for (const auto& name : *_iterable_143) {
                     (result = (((((((result + std::string("        ")) + class_->name) + std::string("::")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(field->defaultValue), context, field->resolvedType)) + std::string(";\n")));
                 }
             }
@@ -1373,18 +1415,18 @@ std::string emitModuleValueAssignment(const std::variant<std::shared_ptr<::app_s
 }
 std::string emitGraphInitializationCall(const std::shared_ptr<std::vector<std::string>>& namespaces) {
     auto result = std::string("");
-    const auto& _iterable_70 = namespaces;
-    for (const auto& namespace_ : *_iterable_70) {
+    const auto& _iterable_145 = namespaces;
+    for (const auto& namespace_ : *_iterable_145) {
         (result = (((result + std::string("::")) + namespace_) + std::string("::__doof_initialize_module(); ")));
     }
     return result;
 }
 std::string emitNativeClassMethods(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     auto result = std::string("");
-    const auto& _iterable_71 = programs;
-    for (const auto& program : *_iterable_71) {
-        const auto& _iterable_72 = program->statements;
-        for (const auto& statement : *_iterable_72) {
+    const auto& _iterable_147 = programs;
+    for (const auto& program : *_iterable_147) {
+        const auto& _iterable_149 = program->statements;
+        for (const auto& statement : *_iterable_149) {
             (result = (result + emitNativeClassMethodsForStatement(statement, context)));
         }
     }
@@ -1399,8 +1441,8 @@ std::string emitNativeClassMethodsForStatement(const std::variant<std::shared_pt
                 return std::string("");
             }
             auto result = std::string("");
-            const auto& _iterable_73 = class_->methods;
-            for (const auto& method : *_iterable_73) {
+            const auto& _iterable_151 = class_->methods;
+            for (const auto& method : *_iterable_151) {
                 if (!method->bodyless) {
                     (result = (result + ::app_src_emitter_decl_::emitClassMethodDefinition(class_, method, context)));
                 }

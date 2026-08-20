@@ -473,8 +473,25 @@ export function builtinCallable(name: string): ResolvedType {
       FunctionParamType { name: "f", type_: callbackType, hasDefault: false },
     ], resultType(successType, primitive("string")), ["T"])
   }
+  if name == "string" {
+    return functionType([FunctionParamType {
+      name: "value",
+      type_: unionType([
+        primitive("byte"), primitive("int"), primitive("long"), primitive("float"),
+        primitive("double"), primitive("string"), primitive("char"), primitive("bool"),
+      ]),
+      hasDefault: false,
+    }], primitive("string"))
+  }
+  if name == "bool" {
+    return functionType([FunctionParamType { name: "value", type_: primitive("bool"), hasDefault: false }], primitive("bool"))
+  }
   result := primitive(name)
-  return functionType([FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false }], result)
+  let castInputs: ResolvedType[] = [
+    primitive("byte"), primitive("int"), primitive("long"), primitive("float"), primitive("double"),
+  ]
+  if name == "int" { castInputs.push(primitive("char")) }
+  return functionType([FunctionParamType { name: "value", type_: unionType(castInputs), hasDefault: false }], result)
 }
 
 export function isBuiltinPrintlnCall(callee: Expression): bool {

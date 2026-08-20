@@ -153,8 +153,8 @@ doof::Result<std::shared_ptr<SetCookie>, std::string> SetCookie::fromJsonValue(c
 
 std::optional<std::string> HttpRequest::header(const std::string& name) {
     const auto lowerName = doof::string_toLowerCase(name);
-    const auto& _iterable_1 = this->headers;
-    for (const auto& entry : *_iterable_1) {
+    const auto& _iterable_2 = this->headers;
+    for (const auto& entry : *_iterable_2) {
         if (doof::string_toLowerCase(entry->name) == lowerName) {
             return entry->value;
         }
@@ -222,8 +222,8 @@ bool HttpResponse::ok() {
 }
 std::optional<std::string> HttpResponse::header(const std::string& name) {
     const auto lowerName = doof::string_toLowerCase(name);
-    const auto& _iterable_2 = this->headers;
-    for (const auto& entry : *_iterable_2) {
+    const auto& _iterable_4 = this->headers;
+    for (const auto& entry : *_iterable_4) {
         if (doof::string_toLowerCase(entry->name) == lowerName) {
             return entry->value;
         }
@@ -295,8 +295,8 @@ doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types:
 std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> parseCookieHeader(const std::string& header) {
     const std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> cookies = std::make_shared<std::vector<std::shared_ptr<Cookie>>>(std::vector<std::shared_ptr<Cookie>>{});
     const auto parts = doof::string_split(header, std::string(";"));
-    const auto& _iterable_3 = parts;
-    for (const auto& part : *_iterable_3) {
+    const auto& _iterable_6 = parts;
+    for (const auto& part : *_iterable_6) {
         const auto separator = doof::string_indexOf(part, std::string("="));
         if (separator <= 0) {
             continue;
@@ -312,8 +312,8 @@ std::shared_ptr<std::vector<std::shared_ptr<Cookie>>> parseCookieHeader(const st
 std::string renderCookieHeader(const std::shared_ptr<std::vector<std::shared_ptr<Cookie>>>& cookies) {
     auto text = std::string("");
     auto first = true;
-    const auto& _iterable_4 = cookies;
-    for (const auto& cookie : *_iterable_4) {
+    const auto& _iterable_8 = cookies;
+    for (const auto& cookie : *_iterable_8) {
         if (cookie->name == std::string("")) {
             continue;
         }
@@ -411,8 +411,8 @@ std::string renderSetCookieHeader(const std::shared_ptr<SetCookie>& cookie) {
     return text;
 }
 std::optional<std::string> cookieValue(const std::shared_ptr<std::vector<std::shared_ptr<Cookie>>>& cookies, const std::string& name) {
-    const auto& _iterable_5 = cookies;
-    for (const auto& cookie : *_iterable_5) {
+    const auto& _iterable_10 = cookies;
+    for (const auto& cookie : *_iterable_10) {
         if (cookie->name == name) {
             return cookie->value;
         }
@@ -420,12 +420,12 @@ std::optional<std::string> cookieValue(const std::shared_ptr<std::vector<std::sh
     return std::nullopt;
 }
 doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> send(const std::shared_ptr<HttpClient>& client, const std::shared_ptr<HttpRequest>& request) {
-    auto _binding_value_6 = ::std_::http::transport_url::prepareTransportUrl(request->url);
-    if (doof::is_failure(_binding_value_6)) {
-        const auto error = doof::failure_error(_binding_value_6);
+    auto _binding_value_11 = ::std_::http::transport_url::prepareTransportUrl(request->url);
+    if (doof::is_failure(_binding_value_11)) {
+        const auto error = doof::failure_error(_binding_value_11);
         return doof::Failure<std::shared_ptr<::std_::http::types::HttpError>>{ error };
     }
-    const auto transportUrl = doof::success_value(_binding_value_6);
+    const auto transportUrl = doof::success_value(_binding_value_11);
     const auto nativeResult = client->native->perform(request->method, transportUrl, renderHeaders(request->headers), request->body, request->timeoutMs, request->followRedirects);
     return [&]() -> doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> {
     auto _case_subject = nativeResult;
@@ -442,8 +442,8 @@ doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types:
 }
 std::string renderHeaders(const std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>& headers) {
     auto text = std::string("");
-    const auto& _iterable_7 = headers;
-    for (const auto& header : *_iterable_7) {
+    const auto& _iterable_13 = headers;
+    for (const auto& header : *_iterable_13) {
         (text += ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(header->name); _interpolation += ": "; _interpolation += doof::to_string(header->value); _interpolation += "\r\n"; return _interpolation; }()));
     }
     return text;
@@ -451,8 +451,8 @@ std::string renderHeaders(const std::shared_ptr<std::vector<std::shared_ptr<::st
 std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> parseHeaders(const std::string& headerText) {
     const std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers = std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{});
     const auto lines = doof::string_split(headerText, std::string("\r\n"));
-    const auto& _iterable_8 = lines;
-    for (const auto& line : *_iterable_8) {
+    const auto& _iterable_15 = lines;
+    for (const auto& line : *_iterable_15) {
         if (line == std::string("")) {
             continue;
         }

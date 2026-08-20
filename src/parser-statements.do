@@ -232,9 +232,9 @@ function parseWhile(parser: Parser, label: string | none): Statement {
 function parseFor(parser: Parser, label: string | none): Statement {
   start := parser.location()
   parser.expect(TokenType.For)
-  if parser.check(TokenType.Identifier) && (parser.peek(1).kind == TokenType.Of || parser.peek(1).kind == TokenType.Comma) {
-    let bindings: string[] = [parser.text(parser.advance())]
-    while parser.match(TokenType.Comma) { bindings.push(parser.text(parser.expect(TokenType.Identifier))) }
+  if discardableBindingToken(parser.current().kind) && (parser.peek(1).kind == TokenType.Of || parser.peek(1).kind == TokenType.Comma) {
+    let bindings: string[] = [parseDiscardableBindingName(parser, "Expected loop binding name or '_'")]
+    while parser.match(TokenType.Comma) { bindings.push(parseDiscardableBindingName(parser, "Expected loop binding name or '_'")) }
     parser.expect(TokenType.Of)
     parser.inForIterable = true
     iterable := parser.parseExpression()
@@ -285,7 +285,7 @@ function parseWith(parser: Parser): Statement {
   let bindings: WithBinding[] = []
   while !parser.check(TokenType.LeftBrace) && !parser.atEnd() {
     bindingStart := parser.location()
-    name := parser.text(parser.expect(TokenType.Identifier))
+    name := parseDiscardableBindingName(parser, "Expected scoped binding name or '_'")
     typeValue := parser.parseOptionalType()
     parser.expect(TokenType.ColonEqual)
     value := parser.parseExpression()
@@ -294,6 +294,16 @@ function parseWith(parser: Parser): Statement {
   }
   body := parseBlock(parser)
   return WithStatement { kind: "with-statement", bindings, body, span: parser.span(start) }
+}
+
+function discardableBindingToken(kind: TokenType): bool {
+  return kind == TokenType.Identifier || kind == TokenType.Underscore
+}
+
+function parseDiscardableBindingName(parser: Parser, message: string): string {
+  if discardableBindingToken(parser.current().kind) { return parser.text(parser.advance()) }
+  parser.fail(message)
+  return "<error>"
 }
 
 function parseBreak(parser: Parser): Statement {

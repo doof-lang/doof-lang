@@ -241,6 +241,19 @@ let b = Channel { handler: onString }
 let c = Channel.constructor{ handler: onString }
 ```
 
+Classes and structs may also use typed tag-call syntax. Attributes are named
+constructor arguments, so dedicated `constructor` methods, defaults, generic
+inference, fallible return types, and visibility checks behave exactly as they
+do for the other construction spellings:
+
+```doof
+let d = <Channel handler={onString}/>
+let panel = <Panel title="Status">Ready</Panel>
+```
+
+Paired content supplies a `children` field or constructor parameter as
+described in [Typed tag calls](04-functions-and-lambdas.md#typed-tag-calls).
+
 Inside the class's own `constructor` method, `Counter { ... }` and `Counter(...)`
 still use the field constructor so factory implementations can build the
 instance without recursively calling themselves.

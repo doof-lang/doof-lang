@@ -278,6 +278,8 @@ namespace app_src_lexer_ {
     QuestionBracket,
     Underscore,
     DollarBrace,
+    TagOpen,
+    TagText,
     Ellipsis,
     EndOfFile
 };
@@ -396,6 +398,8 @@ inline const char* TokenType_name(TokenType value) {
     case TokenType::QuestionBracket: return "QuestionBracket";
     case TokenType::Underscore: return "Underscore";
     case TokenType::DollarBrace: return "DollarBrace";
+    case TokenType::TagOpen: return "TagOpen";
+    case TokenType::TagText: return "TagText";
     case TokenType::Ellipsis: return "Ellipsis";
     case TokenType::EndOfFile: return "EndOfFile";
   }
@@ -515,6 +519,8 @@ inline std::optional<TokenType> TokenType_fromName(std::string_view value) {
   if (value == "QuestionBracket") return TokenType::QuestionBracket;
   if (value == "Underscore") return TokenType::Underscore;
   if (value == "DollarBrace") return TokenType::DollarBrace;
+  if (value == "TagOpen") return TokenType::TagOpen;
+  if (value == "TagText") return TokenType::TagText;
   if (value == "Ellipsis") return TokenType::Ellipsis;
   if (value == "EndOfFile") return TokenType::EndOfFile;
   return std::nullopt;
@@ -634,6 +640,8 @@ inline std::optional<TokenType> TokenType_fromValue(int32_t value) {
     case TokenType::QuestionBracket: return TokenType::QuestionBracket;
     case TokenType::Underscore: return TokenType::Underscore;
     case TokenType::DollarBrace: return TokenType::DollarBrace;
+    case TokenType::TagOpen: return TokenType::TagOpen;
+    case TokenType::TagText: return TokenType::TagText;
     case TokenType::Ellipsis: return TokenType::Ellipsis;
     case TokenType::EndOfFile: return TokenType::EndOfFile;
     default: return std::nullopt;
@@ -688,9 +696,9 @@ namespace app_src_semantic_ {
     std::string nativeCppName = std::string("");
     std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{});
     std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    Symbol(std::string kind, std::string name, std::string module, bool exported, std::string originalName = std::string(""), bool native_ = false, std::string nativeHeader = std::string(""), std::string nativeCppName = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{}), std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : kind(kind), name(name), module(module), exported(exported), originalName(originalName), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), implementations(implementations), implementedInterfaceTypes(implementedInterfaceTypes) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Symbol>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<ResolvedType>> streamElementTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{});
+    Symbol(std::string kind, std::string name, std::string module, bool exported, std::string originalName = std::string(""), bool native_ = false, std::string nativeHeader = std::string(""), std::string nativeCppName = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{}), std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<ResolvedType>> streamElementTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{})) : kind(kind), name(name), module(module), exported(exported), originalName(originalName), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), implementations(implementations), implementedInterfaceTypes(implementedInterfaceTypes), typeParams(typeParams), streamElementTypes(streamElementTypes) {}
 };
     struct PrimitiveType : public std::enable_shared_from_this<PrimitiveType> {
     std::string kind = std::string("primitive");
@@ -711,8 +719,6 @@ namespace app_src_semantic_ {
     std::string name;
     std::shared_ptr<Symbol> symbol;
     EnumType(std::string kind, std::string name, std::shared_ptr<Symbol> symbol) : kind(kind), name(name), symbol(symbol) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<EnumType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct InterfaceType : public std::enable_shared_from_this<InterfaceType> {
     std::string kind = std::string("interface");
@@ -880,8 +886,16 @@ namespace app_src_lexer_ {
     std::shared_ptr<std::vector<int32_t>> braceDepth = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     std::shared_ptr<std::vector<int32_t>> interpolationLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     std::shared_ptr<std::vector<int32_t>> interpolationColumns = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    Lexer(std::string source, int32_t pos = 0, int32_t line = 1, int32_t column = 1, std::shared_ptr<std::vector<Token>> tokens = std::make_shared<std::vector<Token>>(std::vector<Token>{}), std::shared_ptr<std::vector<LexerDiagnostic>> diagnostics = std::make_shared<std::vector<LexerDiagnostic>>(std::vector<LexerDiagnostic>{}), std::shared_ptr<std::vector<char32_t>> templateDelimiters = std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::shared_ptr<std::vector<int32_t>> braceDepth = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> interpolationLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> interpolationColumns = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})) : source(source), pos(pos), line(line), column(column), tokens(tokens), diagnostics(diagnostics), templateDelimiters(templateDelimiters), braceDepth(braceDepth), interpolationLines(interpolationLines), interpolationColumns(interpolationColumns) {}
+    std::string tagMode = std::string("code");
+    std::shared_ptr<std::vector<std::string>> tagModeStack = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<int32_t>> tagExpressionDepths = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
+    int32_t tagGenericDepth = 0;
+    Lexer(std::string source, int32_t pos = 0, int32_t line = 1, int32_t column = 1, std::shared_ptr<std::vector<Token>> tokens = std::make_shared<std::vector<Token>>(std::vector<Token>{}), std::shared_ptr<std::vector<LexerDiagnostic>> diagnostics = std::make_shared<std::vector<LexerDiagnostic>>(std::vector<LexerDiagnostic>{}), std::shared_ptr<std::vector<char32_t>> templateDelimiters = std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::shared_ptr<std::vector<int32_t>> braceDepth = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> interpolationLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> interpolationColumns = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::string tagMode = std::string("code"), std::shared_ptr<std::vector<std::string>> tagModeStack = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<int32_t>> tagExpressionDepths = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), int32_t tagGenericDepth = 0) : source(source), pos(pos), line(line), column(column), tokens(tokens), diagnostics(diagnostics), templateDelimiters(templateDelimiters), braceDepth(braceDepth), interpolationLines(interpolationLines), interpolationColumns(interpolationColumns), tagMode(tagMode), tagModeStack(tagModeStack), tagExpressionDepths(tagExpressionDepths), tagGenericDepth(tagGenericDepth) {}
     std::shared_ptr<std::vector<Token>> tokenize();
+    void beginTag();
+    void beginTagExpression();
+    void readTagText();
+    bool canStartTag();
     char32_t peek(int32_t offset = 0);
     char32_t advance();
     void addToken(TokenType kind, int32_t tokenOffset, int32_t tokenLength, int32_t valueOffset, int32_t valueLength, bool needsDecode, int32_t tokenLine, int32_t tokenColumn);
@@ -1730,11 +1744,12 @@ namespace app_src_parser_ {
     std::shared_ptr<std::vector<::app_src_lexer_::Token>> tokens;
     int32_t pos = 0;
     bool inForIterable = false;
+    bool inTagAttribute = false;
     std::string errorMessage = std::string("");
     int32_t errorLine = 0;
     int32_t errorColumn = 0;
     int32_t errorOffset = 0;
-    Parser(std::string source, std::shared_ptr<std::vector<::app_src_lexer_::Token>> tokens, int32_t pos, bool inForIterable, std::string errorMessage, int32_t errorLine, int32_t errorColumn, int32_t errorOffset) : source(source), tokens(tokens), pos(pos), inForIterable(inForIterable), errorMessage(errorMessage), errorLine(errorLine), errorColumn(errorColumn), errorOffset(errorOffset) {}
+    Parser(std::string source, std::shared_ptr<std::vector<::app_src_lexer_::Token>> tokens, int32_t pos, bool inForIterable, bool inTagAttribute, std::string errorMessage, int32_t errorLine, int32_t errorColumn, int32_t errorOffset) : source(source), tokens(tokens), pos(pos), inForIterable(inForIterable), inTagAttribute(inTagAttribute), errorMessage(errorMessage), errorLine(errorLine), errorColumn(errorColumn), errorOffset(errorOffset) {}
     std::shared_ptr<::app_src_ast_::Program> parse();
     ::app_src_lexer_::Token current();
     ::app_src_lexer_::Token peek(int32_t offset = 0);

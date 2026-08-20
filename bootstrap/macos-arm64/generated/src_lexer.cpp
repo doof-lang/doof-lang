@@ -133,11 +133,11 @@ std::string tokenValue(Token token, const std::string& source) {
     auto value = std::string("");
     auto index = 0;
     while (index < static_cast<int32_t>(raw.size())) {
-        if ((doof::string_at(raw, index, "src/lexer", 171) == U'\\') && ((index + 1) < static_cast<int32_t>(raw.size()))) {
+        if ((doof::string_at(raw, index, "src/lexer", 173) == U'\\') && ((index + 1) < static_cast<int32_t>(raw.size()))) {
             (index = (index + 1));
-            (value = (value + decodeEscapeCharacter(doof::string_at(raw, index, "src/lexer", 173))));
+            (value = (value + decodeEscapeCharacter(doof::string_at(raw, index, "src/lexer", 175))));
         } else {
-            (value = (value + doof::to_string(doof::string_at(raw, index, "src/lexer", 175))));
+            (value = (value + doof::to_string(doof::string_at(raw, index, "src/lexer", 177))));
         }
         (index = (index + 1));
     }
@@ -285,23 +285,89 @@ TokenType keywordType(const std::string& word) {
 
 std::shared_ptr<std::vector<Token>> Lexer::tokenize() {
     this->tokens->reserve(((static_cast<int32_t>(this->source.size()) / 2) + 16));
-    if (((static_cast<int32_t>(this->source.size()) >= 2) && (doof::string_at(this->source, 0, "src/lexer", 257) == U'\u0023')) && (doof::string_at(this->source, 1, "src/lexer", 257) == U'\u0021')) {
+    if (((static_cast<int32_t>(this->source.size()) >= 2) && (doof::string_at(this->source, 0, "src/lexer", 263) == U'\u0023')) && (doof::string_at(this->source, 1, "src/lexer", 263) == U'\u0021')) {
         while ((this->pos < static_cast<int32_t>(this->source.size())) && (peek(0) != U'\n')) {
             advance();
         }
     }
     while (this->pos < static_cast<int32_t>(this->source.size())) {
+        if (this->tagMode == std::string("children")) {
+            if ((peek(0) == U'\u003C') && (peek(1) == U'\u002F')) {
+                emit(TokenType::Less, this->line, this->column, this->pos, 1);
+                emit(TokenType::Slash, this->line, this->column, this->pos, 1);
+                (this->tagMode = std::string("closing-tag"));
+                continue;
+            }
+            if ((peek(0) == U'\u003C') && isIdentStart(peek(1))) {
+                beginTag();
+                continue;
+            }
+            if (peek(0) == U'\u007B') {
+                beginTagExpression();
+                continue;
+            }
+            readTagText();
+            continue;
+        }
+        if ((this->tagMode == std::string("opening-tag")) || (this->tagMode == std::string("closing-tag"))) {
+            skipWhitespaceAndComments();
+            if (this->pos >= static_cast<int32_t>(this->source.size())) {
+                break;
+            }
+            if ((this->tagMode == std::string("opening-tag")) && (peek(0) == U'\u007B')) {
+                beginTagExpression();
+                continue;
+            }
+            if ((this->tagMode == std::string("opening-tag")) && (peek(0) == U'\u003C')) {
+                (this->tagGenericDepth = (this->tagGenericDepth + 1));
+                emit(TokenType::Less, this->line, this->column, this->pos, 1);
+                continue;
+            }
+            if ((peek(0) == U'\u003E') && (this->tagGenericDepth > 0)) {
+                (this->tagGenericDepth = (this->tagGenericDepth - 1));
+                emit(TokenType::Greater, this->line, this->column, this->pos, 1);
+                continue;
+            }
+            if (peek(0) == U'\u003E') {
+                emit(TokenType::Greater, this->line, this->column, this->pos, 1);
+                if (this->tagMode == std::string("closing-tag")) {
+                    (this->tagMode = [&]() -> std::string { auto _try_value = doof::array_pop(this->tagModeStack); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 306, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }());
+                } else if ((static_cast<int32_t>((this->tokens)->size()) >= 2) && (doof::array_at(this->tokens, (static_cast<int32_t>((this->tokens)->size()) - 2), "src/lexer", 307).kind == TokenType::Slash)) {
+                    (this->tagMode = [&]() -> std::string { auto _try_value = doof::array_pop(this->tagModeStack); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 308, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }());
+                } else {
+                    (this->tagMode = std::string("children"));
+                }
+                continue;
+            }
+        }
         skipWhitespaceAndComments();
         if (this->pos >= static_cast<int32_t>(this->source.size())) {
             break;
         }
-        if (((static_cast<int32_t>((this->templateDelimiters)->size()) > 0) && (peek(0) == U'\u007D')) && (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 264) == 0)) {
+        if (((((this->tagMode == std::string("code")) || (this->tagMode == std::string("tag-expression"))) && (peek(0) == U'\u003C')) && isIdentStart(peek(1))) && canStartTag()) {
+            beginTag();
+            continue;
+        }
+        if (((static_cast<int32_t>((this->templateDelimiters)->size()) > 0) && (peek(0) == U'\u007D')) && (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 324) == 0)) {
             advance();
-            const auto ignoredBrace = [&]() -> int32_t { auto _try_value = doof::array_pop(this->braceDepth); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 266, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
-            const auto ignoredLine = [&]() -> int32_t { auto _try_value = doof::array_pop(this->interpolationLines); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 267, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
-            const auto ignoredColumn = [&]() -> int32_t { auto _try_value = doof::array_pop(this->interpolationColumns); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 268, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+            const auto ignoredBrace = [&]() -> int32_t { auto _try_value = doof::array_pop(this->braceDepth); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 326, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+            const auto ignoredLine = [&]() -> int32_t { auto _try_value = doof::array_pop(this->interpolationLines); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 327, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+            const auto ignoredColumn = [&]() -> int32_t { auto _try_value = doof::array_pop(this->interpolationColumns); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 328, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
             readTemplateContinuation();
             continue;
+        }
+        if ((this->tagMode == std::string("tag-expression")) && (peek(0) == U'\u007D')) {
+            const auto index = (static_cast<int32_t>((this->tagExpressionDepths)->size()) - 1);
+            if (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 335) == 0) {
+                emit(TokenType::RightBrace, this->line, this->column, this->pos, 1);
+                const auto ignoredDepth = [&]() -> int32_t { auto _try_value = doof::array_pop(this->tagExpressionDepths); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 337, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+                (this->tagMode = [&]() -> std::string { auto _try_value = doof::array_pop(this->tagModeStack); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 338, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }());
+                continue;
+            }
+            (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 341) = (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 341) - 1));
+        } else if ((this->tagMode == std::string("tag-expression")) && (peek(0) == U'\u007B')) {
+            const auto index = (static_cast<int32_t>((this->tagExpressionDepths)->size()) - 1);
+            (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 344) = (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 344) + 1));
         }
         const auto ch = peek(0);
         if ((ch == U'\u0022') || (ch == U'\u0060')) {
@@ -317,19 +383,52 @@ std::shared_ptr<std::vector<Token>> Lexer::tokenize() {
         }
     }
     if (static_cast<int32_t>((this->braceDepth)->size()) > 0) {
-        diagnostic(std::string("Unterminated string interpolation"), doof::array_at(this->interpolationLines, (static_cast<int32_t>((this->interpolationLines)->size()) - 1), "src/lexer", 288), doof::array_at(this->interpolationColumns, (static_cast<int32_t>((this->interpolationColumns)->size()) - 1), "src/lexer", 288));
+        diagnostic(std::string("Unterminated string interpolation"), doof::array_at(this->interpolationLines, (static_cast<int32_t>((this->interpolationLines)->size()) - 1), "src/lexer", 362), doof::array_at(this->interpolationColumns, (static_cast<int32_t>((this->interpolationColumns)->size()) - 1), "src/lexer", 362));
     }
     addToken(TokenType::EndOfFile, this->pos, 0, this->pos, 0, false, this->line, this->column);
     return this->tokens;
+}
+void Lexer::beginTag() {
+    this->tagModeStack->push_back(this->tagMode);
+    emit(TokenType::TagOpen, this->line, this->column, this->pos, 1);
+    (this->tagMode = std::string("opening-tag"));
+    (this->tagGenericDepth = 0);
+}
+void Lexer::beginTagExpression() {
+    this->tagModeStack->push_back(this->tagMode);
+    this->tagExpressionDepths->push_back(0);
+    emit(TokenType::LeftBrace, this->line, this->column, this->pos, 1);
+    (this->tagMode = std::string("tag-expression"));
+}
+void Lexer::readTagText() {
+    const auto start = this->pos;
+    const auto tokenLine = this->line;
+    const auto tokenColumn = this->column;
+    while (((this->pos < static_cast<int32_t>(this->source.size())) && (peek(0) != U'\u003C')) && (peek(0) != U'\u007B')) {
+        advance();
+    }
+    if (this->pos > start) {
+        addToken(TokenType::TagText, start, (this->pos - start), start, (this->pos - start), false, tokenLine, tokenColumn);
+    }
+}
+bool Lexer::canStartTag() {
+    if (static_cast<int32_t>((this->tokens)->size()) == 0) {
+        return true;
+    }
+    if (this->line > doof::array_at(this->tokens, (static_cast<int32_t>((this->tokens)->size()) - 1), "src/lexer", 393).line) {
+        return true;
+    }
+    const auto previous = doof::array_at(this->tokens, (static_cast<int32_t>((this->tokens)->size()) - 1), "src/lexer", 394).kind;
+    return (((((((((((((((((((((((((((((((((previous == TokenType::Equal) || (previous == TokenType::ColonEqual)) || (previous == TokenType::LeftParen)) || (previous == TokenType::LeftBracket)) || (previous == TokenType::LeftBrace)) || (previous == TokenType::Comma)) || (previous == TokenType::Colon)) || (previous == TokenType::Semicolon)) || (previous == TokenType::Return)) || (previous == TokenType::Yield)) || (previous == TokenType::Then)) || (previous == TokenType::Else)) || (previous == TokenType::Arrow)) || (previous == TokenType::RightArrow)) || (previous == TokenType::Plus)) || (previous == TokenType::Minus)) || (previous == TokenType::Star)) || (previous == TokenType::Slash)) || (previous == TokenType::Backslash)) || (previous == TokenType::Percent)) || (previous == TokenType::Ampersand)) || (previous == TokenType::Pipe)) || (previous == TokenType::Caret)) || (previous == TokenType::Bang)) || (previous == TokenType::EqualEqual)) || (previous == TokenType::BangEqual)) || (previous == TokenType::Less)) || (previous == TokenType::LessEqual)) || (previous == TokenType::Greater)) || (previous == TokenType::GreaterEqual)) || (previous == TokenType::QuestionQuestion)) || (previous == TokenType::AmpersandAmpersand)) || (previous == TokenType::PipePipe));
 }
 char32_t Lexer::peek(int32_t offset) {
     if ((this->pos + offset) >= static_cast<int32_t>(this->source.size())) {
         return U'\0';
     }
-    return doof::string_at(this->source, (this->pos + offset), "src/lexer", 297);
+    return doof::string_at(this->source, (this->pos + offset), "src/lexer", 410);
 }
 char32_t Lexer::advance() {
-    const auto ch = doof::string_at(this->source, this->pos, "src/lexer", 301);
+    const auto ch = doof::string_at(this->source, this->pos, "src/lexer", 414);
     (this->pos = (this->pos + 1));
     if (ch == U'\n') {
         (this->line = (this->line + 1));
@@ -527,7 +626,7 @@ void Lexer::readTemplateContinuation() {
     const auto start = this->pos;
     const auto tokenLine = this->line;
     const auto tokenColumn = this->column;
-    const auto delimiter = doof::array_at(this->templateDelimiters, (static_cast<int32_t>((this->templateDelimiters)->size()) - 1), "src/lexer", 512);
+    const auto delimiter = doof::array_at(this->templateDelimiters, (static_cast<int32_t>((this->templateDelimiters)->size()) - 1), "src/lexer", 625);
     const auto contentStart = this->pos;
     auto needsDecode = false;
     auto closed = false;
@@ -559,7 +658,7 @@ void Lexer::readTemplateContinuation() {
     if (closed) {
         (valueEnd = (this->pos - 1));
     }
-    const auto ignoredDelimiter = [&]() -> char32_t { auto _try_value = doof::array_pop(this->templateDelimiters); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 543, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    const auto ignoredDelimiter = [&]() -> char32_t { auto _try_value = doof::array_pop(this->templateDelimiters); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 656, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     addToken(TokenType::TemplateLiteralEnd, start, (this->pos - start), contentStart, (valueEnd - contentStart), needsDecode, tokenLine, tokenColumn);
 }
 void Lexer::readChar() {
@@ -622,7 +721,7 @@ void Lexer::readOperatorOrPunctuation() {
     if (ch == U'\u007B') {
         advance();
         if (static_cast<int32_t>((this->braceDepth)->size()) > 0) {
-            (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 589) = (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 589) + 1));
+            (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 702) = (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 702) + 1));
         }
         addToken(TokenType::LeftBrace, start, 1, start, 1, false, tokenLine, tokenColumn);
         return;
@@ -630,7 +729,7 @@ void Lexer::readOperatorOrPunctuation() {
     if (ch == U'\u007D') {
         advance();
         if (static_cast<int32_t>((this->braceDepth)->size()) > 0) {
-            (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 595) = (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 595) - 1));
+            (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 708) = (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 708) - 1));
         }
         addToken(TokenType::RightBrace, start, 1, start, 1, false, tokenLine, tokenColumn);
         return;
@@ -842,6 +941,10 @@ doof::JsonObject Lexer::toJsonObject() const {
     (*_json)["braceDepth"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->braceDepth->size()); for (const auto& _element : *this->braceDepth) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
     (*_json)["interpolationLines"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->interpolationLines->size()); for (const auto& _element : *this->interpolationLines) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
     (*_json)["interpolationColumns"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->interpolationColumns->size()); for (const auto& _element : *this->interpolationColumns) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
+    (*_json)["tagMode"] = doof::json_value(this->tagMode);
+    (*_json)["tagModeStack"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->tagModeStack->size()); for (const auto& _element : *this->tagModeStack) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
+    (*_json)["tagExpressionDepths"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->tagExpressionDepths->size()); for (const auto& _element : *this->tagExpressionDepths) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
+    (*_json)["tagGenericDepth"] = doof::json_value(this->tagGenericDepth);
     return _json;
 }
 doof::Result<std::shared_ptr<Lexer>, std::string> Lexer::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
@@ -915,7 +1018,35 @@ doof::Result<std::shared_ptr<Lexer>, std::string> Lexer::fromJsonValue(const doo
     } else {
         _field_interpolationColumns = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
     }
-        return doof::Success<std::shared_ptr<Lexer>>{std::make_shared<Lexer>(_field_source, _field_pos.value(), _field_line.value(), _field_column.value(), _field_tokens.value(), _field_diagnostics.value(), _field_templateDelimiters.value(), _field_braceDepth.value(), _field_interpolationLines.value(), _field_interpolationColumns.value())};
+    std::optional<std::string> _field_tagMode;
+    if (auto _iterator_tagMode = _object->find("tagMode"); _iterator_tagMode != _object->end()) {
+            if (!((_lenient ? doof::json_is_lenient_string(_iterator_tagMode->second) : doof::json_is_string(_iterator_tagMode->second)))) { return doof::Failure<std::string>{"Field \"tagMode\" expected string but got " + std::string(doof::json_type_name(_iterator_tagMode->second))}; }
+        _field_tagMode = (_lenient ? doof::json_as_string_lenient(_iterator_tagMode->second) : doof::json_as_string(_iterator_tagMode->second));
+    } else {
+        _field_tagMode = std::string("code");
+    }
+    std::optional<std::shared_ptr<std::vector<std::string>>> _field_tagModeStack;
+    if (auto _iterator_tagModeStack = _object->find("tagModeStack"); _iterator_tagModeStack != _object->end()) {
+            if (!(doof::json_is_array(_iterator_tagModeStack->second))) { return doof::Failure<std::string>{"Field \"tagModeStack\" expected array but got " + std::string(doof::json_type_name(_iterator_tagModeStack->second))}; }
+        _field_tagModeStack = [&]() { const auto* _array = doof::json_as_array(_iterator_tagModeStack->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
+    } else {
+        _field_tagModeStack = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    }
+    std::optional<std::shared_ptr<std::vector<int32_t>>> _field_tagExpressionDepths;
+    if (auto _iterator_tagExpressionDepths = _object->find("tagExpressionDepths"); _iterator_tagExpressionDepths != _object->end()) {
+            if (!(doof::json_is_array(_iterator_tagExpressionDepths->second))) { return doof::Failure<std::string>{"Field \"tagExpressionDepths\" expected array but got " + std::string(doof::json_type_name(_iterator_tagExpressionDepths->second))}; }
+        _field_tagExpressionDepths = [&]() { const auto* _array = doof::json_as_array(_iterator_tagExpressionDepths->second); auto _values = std::make_shared<std::vector<int32_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
+    } else {
+        _field_tagExpressionDepths = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
+    }
+    std::optional<int32_t> _field_tagGenericDepth;
+    if (auto _iterator_tagGenericDepth = _object->find("tagGenericDepth"); _iterator_tagGenericDepth != _object->end()) {
+            if (!((_lenient ? doof::json_is_lenient_number(_iterator_tagGenericDepth->second) : doof::json_is_number(_iterator_tagGenericDepth->second)))) { return doof::Failure<std::string>{"Field \"tagGenericDepth\" expected number but got " + std::string(doof::json_type_name(_iterator_tagGenericDepth->second))}; }
+        _field_tagGenericDepth = (_lenient ? doof::json_as_int_lenient(_iterator_tagGenericDepth->second) : doof::json_as_int(_iterator_tagGenericDepth->second));
+    } else {
+        _field_tagGenericDepth = 0;
+    }
+        return doof::Success<std::shared_ptr<Lexer>>{std::make_shared<Lexer>(_field_source, _field_pos.value(), _field_line.value(), _field_column.value(), _field_tokens.value(), _field_diagnostics.value(), _field_templateDelimiters.value(), _field_braceDepth.value(), _field_interpolationLines.value(), _field_interpolationColumns.value(), _field_tagMode.value(), _field_tagModeStack.value(), _field_tagExpressionDepths.value(), _field_tagGenericDepth.value())};
     } catch (const doof::JsonDecodeError& _error) {
         return doof::Failure<std::string>{_error.message()};
     }

@@ -169,14 +169,18 @@ function collectExpressionTree(expression: Expression, result: Expression[]): no
   for child of nested { collectExpressionTree(child, result) }
 }
 
-function functionExpressions(fn: FunctionDeclaration): Expression[] {
+function functionExpressionRoots(fn: FunctionDeclaration): Expression[] {
   let roots: Expression[] = []
   for parameter of fn.params { if parameter.defaultValue != none { roots.push(parameter.defaultValue!) } }
   case fn.body {
     block: Block -> { collectBlockExpressions(block, roots) }
     expression: Expression -> { roots.push(expression) }
   }
-  return allExpressions(roots)
+  return roots
+}
+
+function functionExpressions(fn: FunctionDeclaration): Expression[] {
+  return allExpressions(functionExpressionRoots(fn))
 }
 
 function nodeForDeclaration(graph: IsolationGraph, declaration: FunctionDeclaration): IsolationNode | none {
@@ -376,12 +380,12 @@ function moduleExpressions(module: ModuleInfo): Expression[] {
     statement := unwrapExport(raw)
     case statement {
       fn: FunctionDeclaration -> {
-        for expression of functionExpressions(fn) { roots.push(expression) }
+        for expression of functionExpressionRoots(fn) { roots.push(expression) }
       }
       class_: ClassDeclaration -> {
         for field of class_.fields { if field.defaultValue != none { roots.push(field.defaultValue!) } }
         for method of class_.methods {
-          for expression of functionExpressions(method) { roots.push(expression) }
+          for expression of functionExpressionRoots(method) { roots.push(expression) }
         }
       }
       _ -> { collectStatementExpressions(statement, roots) }

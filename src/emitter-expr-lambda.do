@@ -33,7 +33,8 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
     if i > 0 { params = params + ", " }
     parameter := expression.params[i]
     if parameter.resolvedType == none { panic("Lambda parameter was not resolved before emission") }
-    params = params + emitType(parameter.resolvedType!, context.modulePath) + " " + cppIdentifier(parameter.name)
+    parameterName := if parameter.name == "_" then "_discard_parameter_" + string(i) else cppIdentifier(parameter.name)
+    params = params + emitType(parameter.resolvedType!, context.modulePath) + " " + parameterName
   }
 
   captureNames := lambdaCaptureNames(expression)

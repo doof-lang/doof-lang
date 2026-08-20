@@ -17,7 +17,7 @@ export function emitInterfaceJsonDeclaration(owner: InterfaceDeclaration): strin
 
 export function emitInterfaceJsonDefinition(owner: InterfaceDeclaration, context: EmitContext): string {
   if !owner.needsJson { return "" }
-  discriminator := interfaceJsonDiscriminator(owner, context.allPrograms)
+  discriminator := interfaceJsonDiscriminator(owner, context.allPrograms, context.jsonEligibility)
   if discriminator == none { return "" }
   failureType := "doof::Failure<std::string>"
   successType := "doof::Success<" + owner.name + ">"
@@ -42,9 +42,9 @@ export function emitInterfaceJsonDefinition(owner: InterfaceDeclaration, context
 
 /** Emits automatic JSON declarations owned by a concrete class or struct. */
 export function emitGeneratedJsonDeclarations(owner: ClassDeclaration, context: EmitContext): string {
-  if (!canGenerateJsonSerialization(owner, context.allPrograms)) { return "" }
+  if (!canGenerateJsonSerialization(owner, context.allPrograms, context.jsonEligibility)) { return "" }
   let result = "    doof::JsonObject toJsonObject() const;\n"
-  if canGenerateJsonDeserialization(owner, context.allPrograms) {
+  if canGenerateJsonDeserialization(owner, context.allPrograms, context.jsonEligibility) {
     valueType := jsonResultValueType(owner)
     result = result + "    static doof::Result<" + valueType + ", std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);\n"
   }
@@ -53,9 +53,9 @@ export function emitGeneratedJsonDeclarations(owner: ClassDeclaration, context: 
 
 /** Emits automatic JSON definitions after the owning class declaration. */
 export function emitGeneratedJsonMethods(owner: ClassDeclaration, context: EmitContext): string {
-  if !canGenerateJsonSerialization(owner, context.allPrograms) { return "" }
+  if !canGenerateJsonSerialization(owner, context.allPrograms, context.jsonEligibility) { return "" }
   let result = emitToJsonObject(owner, context)
-  if canGenerateJsonDeserialization(owner, context.allPrograms) { result = result + emitFromJsonValue(owner, context) }
+  if canGenerateJsonDeserialization(owner, context.allPrograms, context.jsonEligibility) { result = result + emitFromJsonValue(owner, context) }
   return result
 }
 

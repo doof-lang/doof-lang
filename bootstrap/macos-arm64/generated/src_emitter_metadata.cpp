@@ -18,8 +18,8 @@ std::string emitMetadataDefinition(const std::shared_ptr<::app_src_ast_::ClassDe
         return std::string("");
     }
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>> methods = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>>(std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>{});
-    const auto& _iterable_1 = owner->methods;
-    for (const auto& method : *_iterable_1) {
+    const auto& _iterable_2 = owner->methods;
+    for (const auto& method : *_iterable_2) {
         if (!method->private_ && !method->static_) {
             methods->push_back(method);
         }
@@ -53,8 +53,8 @@ std::string emitMethodReflection(const std::shared_ptr<::app_src_ast_::ClassDecl
     (result = (result + std::string("                const bool _lenient = false;\n")));
     (result = (result + std::string("                const auto* _p = doof::json_as_object(_params);\n")));
     (result = (((result + std::string("                if (_p == nullptr) { return ")) + metadataFailure(400, std::string("std::string(\"Invalid JSON params: expected object\")"))) + std::string("; }\n")));
-    const auto& _iterable_2 = method->params;
-    for (const auto& parameter : *_iterable_2) {
+    const auto& _iterable_5 = method->params;
+    for (const auto& parameter : *_iterable_5) {
         const auto type_ = doof::unwrap_optional(parameter->resolvedType);
         const auto safeName = ::app_src_emitter_expr_::cppIdentifier(parameter->name);
         const auto iterator = (std::string("_it_") + safeName);
@@ -72,8 +72,8 @@ std::string emitMethodReflection(const std::shared_ptr<::app_src_ast_::ClassDecl
         }
     }
     auto arguments = std::string("");
-    const auto& _iterable_3 = method->params;
-    for (const auto& parameter : *_iterable_3) {
+    const auto& _iterable_7 = method->params;
+    for (const auto& parameter : *_iterable_7) {
         if (arguments != std::string("")) {
             (arguments = (arguments + std::string(", ")));
         }
@@ -151,8 +151,8 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
 std::string emitMethodInputSchema(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& method, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     std::shared_ptr<std::vector<std::string>> properties = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> required = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_4 = method->params;
-    for (const auto& parameter : *_iterable_4) {
+    const auto& _iterable_9 = method->params;
+    for (const auto& parameter : *_iterable_9) {
         const auto schema = emitTypeSchemaWithDescription(doof::unwrap_optional(parameter->resolvedType), parameter->description, context);
         properties->push_back(jsonEntry(parameter->name, schema));
         if (doof::is_null(parameter->defaultValue)) {
@@ -214,8 +214,8 @@ std::shared_ptr<std::vector<std::string>> emitTypeSchemaEntries(const std::varia
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
             std::shared_ptr<std::vector<std::string>> items = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-            const auto& _iterable_5 = tuple->elements;
-            for (const auto& element : *_iterable_5) {
+            const auto& _iterable_11 = tuple->elements;
+            for (const auto& element : *_iterable_11) {
                 items->push_back(emitTypeSchema(element, context));
             }
             return std::make_shared<std::vector<std::string>>(std::vector<std::string>{jsonEntry(std::string("type"), jsonString(std::string("array"))), jsonEntry(std::string("prefixItems"), jsonArray(items)), jsonEntry(std::string("minItems"), jsonInt(static_cast<int32_t>((tuple->elements)->size()))), jsonEntry(std::string("maxItems"), jsonInt(static_cast<int32_t>((tuple->elements)->size())))});
@@ -225,8 +225,8 @@ std::shared_ptr<std::vector<std::string>> emitTypeSchemaEntries(const std::varia
             std::shared_ptr<std::vector<std::string>> values = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
             const auto declaration = findEnum(context, enum_->symbol->module, enum_->name);
             if (!doof::is_null(declaration)) {
-                const auto& _iterable_6 = declaration->variants;
-                for (const auto& variant : *_iterable_6) {
+                const auto& _iterable_13 = declaration->variants;
+                for (const auto& variant : *_iterable_13) {
                     values->push_back(jsonString(variant->name));
                 }
             }
@@ -235,8 +235,8 @@ std::shared_ptr<std::vector<std::string>> emitTypeSchemaEntries(const std::varia
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
             std::shared_ptr<std::vector<std::string>> members = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-            const auto& _iterable_7 = union_->types;
-            for (const auto& member : *_iterable_7) {
+            const auto& _iterable_15 = union_->types;
+            for (const auto& member : *_iterable_15) {
                 members->push_back(emitTypeSchema(member, context));
             }
             return std::make_shared<std::vector<std::string>>(std::vector<std::string>{jsonEntry(std::string("anyOf"), jsonArray(members))});
@@ -250,10 +250,10 @@ std::shared_ptr<std::vector<std::string>> emitTypeSchemaEntries(const std::varia
 }
 std::string emitDefinitions(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>>& methods, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>> classes = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>>(std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>{});
-    const auto& _iterable_8 = methods;
-    for (const auto& method : *_iterable_8) {
-        const auto& _iterable_9 = method->params;
-        for (const auto& parameter : *_iterable_9) {
+    const auto& _iterable_17 = methods;
+    for (const auto& method : *_iterable_17) {
+        const auto& _iterable_19 = method->params;
+        for (const auto& parameter : *_iterable_19) {
             collectSchemaClasses(doof::unwrap_optional(parameter->resolvedType), context, classes);
         }
         collectSchemaClasses(methodSuccessType(method), context, classes);
@@ -262,8 +262,8 @@ std::string emitDefinitions(const std::shared_ptr<std::vector<std::shared_ptr<::
         return std::string("");
     }
     std::shared_ptr<std::vector<std::string>> entries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_10 = classes;
-    for (const auto& class_ : *_iterable_10) {
+    const auto& _iterable_21 = classes;
+    for (const auto& class_ : *_iterable_21) {
         entries->push_back(jsonEntry(class_->name, emitClassSchema(class_, context)));
     }
     return jsonObject(entries);
@@ -278,8 +278,8 @@ void collectSchemaClasses(const std::variant<std::shared_ptr<::app_src_semantic_
                 return;
             }
             classes->push_back(doof::unwrap_optional(declaration));
-            const auto& _iterable_11 = declaration->fields;
-            for (const auto& field : *_iterable_11) {
+            const auto& _iterable_23 = declaration->fields;
+            for (const auto& field : *_iterable_23) {
                 if (!field->static_) {
                     collectSchemaClasses(doof::unwrap_optional(field->resolvedType), context, classes);
                 }
@@ -291,15 +291,15 @@ void collectSchemaClasses(const std::variant<std::shared_ptr<::app_src_semantic_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_12 = tuple->elements;
-            for (const auto& element : *_iterable_12) {
+            const auto& _iterable_25 = tuple->elements;
+            for (const auto& element : *_iterable_25) {
                 collectSchemaClasses(element, context, classes);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_13 = union_->types;
-            for (const auto& member : *_iterable_13) {
+            const auto& _iterable_27 = union_->types;
+            for (const auto& member : *_iterable_27) {
                 collectSchemaClasses(member, context, classes);
             }
     }
@@ -310,8 +310,8 @@ void collectSchemaClasses(const std::variant<std::shared_ptr<::app_src_semantic_
 std::string emitClassSchema(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     std::shared_ptr<std::vector<std::string>> properties = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> required = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_14 = owner->fields;
-    for (const auto& field : *_iterable_14) {
+    const auto& _iterable_29 = owner->fields;
+    for (const auto& field : *_iterable_29) {
         if (field->static_ || field->private_) {
             continue;
         }
@@ -333,10 +333,10 @@ std::string emitClassSchema(const std::shared_ptr<::app_src_ast_::ClassDeclarati
     return jsonObject(entries);
 }
 std::shared_ptr<::app_src_ast_::ClassDeclaration> findClass(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& modulePath, const std::string& name) {
-    const auto& _iterable_15 = context->allPrograms;
-    for (const auto& program : *_iterable_15) {
-        const auto& _iterable_16 = program->statements;
-        for (const auto& statement : *_iterable_16) {
+    const auto& _iterable_32 = context->allPrograms;
+    for (const auto& program : *_iterable_32) {
+        const auto& _iterable_34 = program->statements;
+        for (const auto& statement : *_iterable_34) {
             const auto declaration = statementClass(statement);
             if ((((!doof::is_null(declaration)) && (declaration->name == name)) && (!doof::is_null(declaration->resolvedSymbol))) && (declaration->resolvedSymbol->module == modulePath)) {
                 return declaration;
@@ -346,10 +346,10 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> findClass(const std::shared_pt
     return nullptr;
 }
 std::shared_ptr<::app_src_ast_::EnumDeclaration> findEnum(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& modulePath, const std::string& name) {
-    const auto& _iterable_17 = context->allPrograms;
-    for (const auto& program : *_iterable_17) {
-        const auto& _iterable_18 = program->statements;
-        for (const auto& statement : *_iterable_18) {
+    const auto& _iterable_36 = context->allPrograms;
+    for (const auto& program : *_iterable_36) {
+        const auto& _iterable_38 = program->statements;
+        for (const auto& statement : *_iterable_38) {
             {
                 auto _case_subject = statement;
                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::EnumDeclaration>>(_case_subject)) {
@@ -398,8 +398,8 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> statementClass(const std::vari
     return nullptr;
 }
 bool containsClass(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>>& classes, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& candidate) {
-    const auto& _iterable_19 = classes;
-    for (const auto& class_ : *_iterable_19) {
+    const auto& _iterable_40 = classes;
+    for (const auto& class_ : *_iterable_40) {
         if ((class_->resolvedSymbol->module == candidate->resolvedSymbol->module) && (class_->name == candidate->name)) {
             return true;
         }
@@ -423,8 +423,8 @@ std::string jsonObject(const std::shared_ptr<std::vector<std::string>>& entries)
 }
 std::string joinStrings(const std::shared_ptr<std::vector<std::string>>& values) {
     auto result = std::string("");
-    const auto& _iterable_20 = values;
-    for (const auto& value : *_iterable_20) {
+    const auto& _iterable_42 = values;
+    for (const auto& value : *_iterable_42) {
         if (result != std::string("")) {
             (result = (result + std::string(", ")));
         }

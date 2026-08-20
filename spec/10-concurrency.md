@@ -243,6 +243,18 @@ class Promise<T> {
 wait relinquishes its CPU token; application and other non-worker threads are
 unaffected. Runtime failures are reported as `Failure<string>`.
 
+A mutable array of promises can consume whichever operation completes first:
+
+```doof
+result: Result<T, string> := pending.takeFirstCompleted()
+```
+
+`takeFirstCompleted()` blocks until one promise settles, removes that promise
+from `pending`, and returns the same result that its `get()` method would
+produce. Calling it on an empty array returns `Failure<string>`. Completion
+waiting does not poll and relinquishes a runtime-worker CPU token in the same
+way as `get()`.
+
 ---
 
 ## Actor-Affine Callbacks

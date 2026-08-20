@@ -15,14 +15,44 @@ std::string sha256Hex(const std::shared_ptr<std::vector<uint8_t>>& data) {
 std::string sha256HexString(const std::string& text) {
     return ::doof_crypto::encode_hex(::doof_crypto::sha256_utf8(text));
 }
+std::string sha256Base64(const std::shared_ptr<std::vector<uint8_t>>& data) {
+    return ::doof_crypto::encode_base64(::doof_crypto::sha256_bytes(data));
+}
+std::string sha256Base64String(const std::string& text) {
+    return ::doof_crypto::encode_base64(::doof_crypto::sha256_utf8(text));
+}
+std::string sha256Base64Url(const std::shared_ptr<std::vector<uint8_t>>& data) {
+    return ::doof_crypto::encode_base64_url(::doof_crypto::sha256_bytes(data));
+}
+std::string sha256Base64UrlString(const std::string& text) {
+    return ::doof_crypto::encode_base64_url(::doof_crypto::sha256_utf8(text));
+}
 std::string hmacSha256Hex(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data) {
     return ::doof_crypto::encode_hex(::doof_crypto::hmac_sha256(key, data));
+}
+std::string hmacSha256Base64(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data) {
+    return ::doof_crypto::encode_base64(::doof_crypto::hmac_sha256(key, data));
 }
 std::string hmacSha256Base64Url(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data) {
     return ::doof_crypto::encode_base64_url(::doof_crypto::hmac_sha256(key, data));
 }
+std::shared_ptr<std::vector<uint8_t>> hmacSha256String(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::string& text) {
+    return ::doof_crypto::hmac_sha256(key, stringToBytes(text));
+}
+std::string hmacSha256HexString(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::string& text) {
+    return ::doof_crypto::encode_hex(hmacSha256String(key, text));
+}
+std::string hmacSha256Base64String(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::string& text) {
+    return ::doof_crypto::encode_base64(hmacSha256String(key, text));
+}
+std::string hmacSha256Base64UrlString(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::string& text) {
+    return ::doof_crypto::encode_base64_url(hmacSha256String(key, text));
+}
 std::shared_ptr<::doof_crypto::SecretBytes> randomBytes(int32_t length) {
     return ::doof_crypto::SecretBytes::random(length);
+}
+std::string randomToken(int32_t byteLength) {
+    return ::doof_crypto::encode_base64_url(randomBytes(byteLength)->bytes());
 }
 
 doof::JsonObject Jwt::toJsonObject() const {
@@ -78,13 +108,13 @@ doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(const std::string& token) 
     if (static_cast<int32_t>((parts)->size()) != 3) {
         return doof::Failure<JwtError>{ JwtError::MalformedToken };
     }
-    auto _binding_value_2 = decodeBase64UrlToString(doof::array_at(parts, 0, "index", 73));
+    auto _binding_value_2 = decodeBase64UrlToString(doof::array_at(parts, 0, "index", 89));
     if (doof::is_failure(_binding_value_2)) {
         const auto& headerJson = _binding_value_2;
         return doof::Failure<JwtError>{ JwtError::InvalidHeader };
     }
     const auto headerJson = doof::success_value(_binding_value_2);
-    auto _binding_value_3 = decodeBase64UrlToString(doof::array_at(parts, 1, "index", 77));
+    auto _binding_value_3 = decodeBase64UrlToString(doof::array_at(parts, 1, "index", 93));
     if (doof::is_failure(_binding_value_3)) {
         const auto& claimsJson = _binding_value_3;
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
@@ -102,7 +132,7 @@ doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(const std::string& token) 
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
     }
     const auto claimsJsonValue = doof::success_value(_binding_value_5);
-    auto _binding_value_6 = ::doof_crypto::decode_base64_url(doof::array_at(parts, 2, "index", 88));
+    auto _binding_value_6 = ::doof_crypto::decode_base64_url(doof::array_at(parts, 2, "index", 104));
     if (doof::is_failure(_binding_value_6)) {
         const auto& signature = _binding_value_6;
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
@@ -120,7 +150,7 @@ doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(const std::string& token) 
         return doof::Failure<JwtError>{ JwtError::InvalidPayload };
     }
     const auto claims = doof::success_value(_binding_value_8);
-    return doof::Success<std::shared_ptr<Jwt>>{ std::make_shared<Jwt>(header, claims, ((doof::array_at(parts, 0, "index", 104) + std::string(".")) + doof::array_at(parts, 1, "index", 104)), signature) };
+    return doof::Success<std::shared_ptr<Jwt>>{ std::make_shared<Jwt>(header, claims, ((doof::array_at(parts, 0, "index", 120) + std::string(".")) + doof::array_at(parts, 1, "index", 120)), signature) };
 }
 doof::Result<std::shared_ptr<Jwt>, JwtError> verifyJwtHs256(const std::string& token, const std::shared_ptr<::doof_crypto::SecretBytes>& key) {
     auto _binding_value_9 = parseJwt(token);
@@ -159,11 +189,14 @@ std::shared_ptr<std::vector<uint8_t>> sha256(const std::shared_ptr<std::vector<u
 std::shared_ptr<std::vector<uint8_t>> sha256String(const std::string& text) {
     return ::doof_crypto::sha256_utf8(text);
 }
-std::shared_ptr<std::vector<uint8_t>> hmacSha256(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data) {
-    return ::doof_crypto::hmac_sha256(key, data);
+std::string encodeBase64(const std::shared_ptr<std::vector<uint8_t>>& data) {
+    return ::doof_crypto::encode_base64(data);
 }
 std::string encodeBase64Url(const std::shared_ptr<std::vector<uint8_t>>& data) {
     return ::doof_crypto::encode_base64_url(data);
+}
+std::shared_ptr<std::vector<uint8_t>> hmacSha256(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data) {
+    return ::doof_crypto::hmac_sha256(key, data);
 }
 doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64Url(const std::string& text) {
     return ::doof_crypto::decode_base64_url(text);

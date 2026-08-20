@@ -6,7 +6,7 @@ import {
   IfStatement, ExpressionStatement, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding, LetDeclaration, TryStatement,
   StringLiteral, LambdaExpression, AsyncExpression, RetireExpression, AsExpression,
   ActorCreationExpression, CaseExpression, EnumDeclaration, InterfaceDeclaration, NamedType, NoneLiteral, ObjectLiteral, RangePattern, TypeAliasDeclaration, UnionType, ValuePattern, YieldStatement,
-  MockImportDirective, WeakType, CatchExpression, YieldBlockExpression, YieldBlockAssignmentStatement, DestructuringStatement, DotShorthand,
+  MockImportDirective, WeakType, CatchExpression, YieldBlockExpression, YieldBlockAssignmentStatement, DestructuringStatement, DotShorthand, ForOfStatement, WithStatement,
 } from "./ast"
 import type { Statement, Expression } from "./ast"
 
@@ -471,6 +471,93 @@ export function testParsesExplicitGenericCalls(): none {
   }
 }
 
+export function testParsesTypedTagCallsAndNormalizesChildren(): none {
+  program := parse("view := <Panel title=\"Welcome\" onClick=>println(\"hello\")>\n  Hello {name}\n  <Icon name=\"star\"/>\n</Panel>\nother := <ui.Card<string> value={name}/>\nbutton := <Button onClick=>{ println(\"hello\") }/>")
+  case program.statements[0] {
+    binding: ImmutableBinding -> { case binding.value {
+      call: CallExpression -> {
+        Assert.equal(call.args.length, 3)
+        Assert.equal(call.args[0].name, "title")
+        Assert.equal(call.args[1].name, "onClick")
+        case call.args[1].value { _: LambdaExpression -> { } _ -> { panic("expected lambda tag attribute") } }
+        Assert.equal(call.args[2].name, "children")
+        case call.args[2].value {
+          children: ArrayLiteral -> {
+            Assert.equal(children.elements.length, 3)
+            case children.elements[0] { text: StringLiteral -> { Assert.equal(text.value, "Hello ") } _ -> { panic("expected text child") } }
+            case children.elements[2] { _: CallExpression -> { } _ -> { panic("expected nested tag call") } }
+          }
+          _ -> { panic("expected tag children array") }
+        }
+      }
+      _ -> { panic("expected tag call") }
+    } }
+    _ -> { panic("expected tag binding") }
+  }
+  case program.statements[1] {
+    binding: ImmutableBinding -> { case binding.value {
+      call: CallExpression -> {
+        Assert.equal(call.typeArgs.length, 1)
+        case call.callee { _: MemberExpression -> { } _ -> { panic("expected member tag callee") } }
+      }
+      _ -> { panic("expected member tag call") }
+    } }
+    _ -> { panic("expected member tag binding") }
+  }
+  case program.statements[2] {
+    binding: ImmutableBinding -> { case binding.value {
+      call: CallExpression -> { case call.args[0].value {
+        lambda: LambdaExpression -> { case lambda.body { _: Block -> { } _ -> { panic("expected block lambda body") } } }
+        _ -> { panic("expected block lambda tag attribute") }
+      } }
+      _ -> { panic("expected button tag call") }
+    } }
+    _ -> { panic("expected button tag binding") }
+  }
+}
+
+export function testDiagnosesMalformedTypedTags(): none {
+  mismatch := Parser { source: "value := <Foo></Bar>" }
+  mismatchResult := catchPanic(=> mismatch.parse())
+  case mismatchResult { _: Failure<string> -> { } _ -> { panic("expected mismatched tag failure") } }
+  Assert.stringContains(mismatch.errorMessage, "does not match")
+
+  duplicate := Parser { source: "value := <Foo id=1 id=2/>" }
+  duplicateResult := catchPanic(=> duplicate.parse())
+  case duplicateResult { _: Failure<string> -> { } _ -> { panic("expected duplicate attribute failure") } }
+  Assert.equal(duplicate.errorMessage, "Duplicate tag attribute 'id'")
+
+  children := Parser { source: "value := <Foo children={items}>text</Foo>" }
+  childrenResult := catchPanic(=> children.parse())
+  case childrenResult { _: Failure<string> -> { } _ -> { panic("expected children conflict failure") } }
+  Assert.stringContains(children.errorMessage, "both a 'children' attribute")
+
+  bareExpression := Parser { source: "value := <Foo id=value/>" }
+  bareResult := catchPanic(=> bareExpression.parse())
+  case bareResult { _: Failure<string> -> { } _ -> { panic("expected bare expression failure") } }
+  Assert.stringContains(bareExpression.errorMessage, "requires a scalar literal")
+}
+
+export function testParsesConsecutiveTypedTagStatements(): none {
+  program := parse("<First/>\n<Second/>")
+  Assert.equal(program.statements.length, 2)
+  for statement of program.statements { case statement { expression: ExpressionStatement -> { case expression.expression { _: CallExpression -> { } _ -> { panic("expected tag call") } } } _ -> { panic("expected expression statement") } } }
+}
+
+export function testParsesTemplateInterpolationInsideTagExpression(): none {
+  program := parse("value := <Text content={`hello \${name}`}/>")
+  case program.statements[0] {
+    binding: ImmutableBinding -> { case binding.value {
+      call: CallExpression -> { case call.args[0].value {
+        string_: StringLiteral -> { Assert.equal(string_.interpolations.length, 1) }
+        _ -> { panic("expected interpolated tag attribute") }
+      } }
+      _ -> { panic("expected tag call") }
+    } }
+    _ -> { panic("expected tag binding") }
+  }
+}
+
 export function testParsesActorConcurrencyExpressions(): none {
   program := parse("worker := Actor<Worker>(42)\npromise := async worker.run()\nstate := retire worker\n")
   case program.statements[0] {
@@ -866,6 +953,57 @@ export function testParsesTypedLambdaParametersAndReturnTypes(): none {
     }
     _ -> { panic("expected lambda binding") }
   }
+}
+
+export function testParsesDiscardTargetsInLocalBindingContexts(): none {
+  program := parse("function main(): none { for _, value of [(1, 2)] { println(value) }\nwith _ := [1, 2], _ := [3] { }\ncallback := (_: int, _: string): int => 1 }")
+  case program.statements[0] {
+    fn: FunctionDeclaration -> { case fn.body {
+      block: Block -> {
+        case block.statements[0] {
+          loop: ForOfStatement -> {
+            Assert.equal(loop.bindings.length, 2)
+            Assert.equal(loop.bindings[0], "_")
+            Assert.equal(loop.bindings[1], "value")
+          }
+          _ -> { panic("expected for-of statement") }
+        }
+        case block.statements[1] {
+          with_: WithStatement -> {
+            Assert.equal(with_.bindings.length, 2)
+            Assert.equal(with_.bindings[0].name, "_")
+            Assert.equal(with_.bindings[1].name, "_")
+          }
+          _ -> { panic("expected with statement") }
+        }
+        case block.statements[2] {
+          binding: ImmutableBinding -> { case binding.value {
+            lambda: LambdaExpression -> {
+              Assert.equal(lambda.params.length, 2)
+              Assert.equal(lambda.params[0].name, "_")
+              Assert.equal(lambda.params[1].name, "_")
+            }
+            _ -> { panic("expected lambda") }
+          } }
+          _ -> { panic("expected lambda binding") }
+        }
+      }
+      _ -> { panic("expected function block") }
+    } }
+    _ -> { panic("expected function") }
+  }
+}
+
+export function testKeepsDiscardTargetsOutOfNamedParametersAndOrdinaryDeclarations(): none {
+  parameterParser := Parser { source: "function consume(_: int): none {}" }
+  parameterResult := catchPanic(=> parameterParser.parse())
+  case parameterResult { _: Failure<string> -> { } _ -> { panic("expected named parameter parse failure") } }
+  Assert.equal(parameterParser.errorMessage, "Expected named function parameter name")
+
+  declarationParser := Parser { source: "function main(): none { _ := compute() }" }
+  declarationResult := catchPanic(=> declarationParser.parse())
+  case declarationResult { _: Failure<string> -> { } _ -> { panic("expected ordinary discard declaration parse failure") } }
+  Assert.equal(declarationParser.errorMessage, "Discard binding '_' requires an else block")
 }
 
 export function testRetainsStructuredParseFailureLocation(): none {

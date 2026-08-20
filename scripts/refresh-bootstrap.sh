@@ -5,6 +5,7 @@ repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 stdlib_root=${DOOF_STDLIB_ROOT:-"$repo_root/../doof-stdlib"}
 refresh_root="$repo_root/build/bootstrap-refresh"
 max_generations=${DOOF_REFRESH_MAX_GENERATIONS:-6}
+seed_compiler=${DOOF_REFRESH_SEED_COMPILER:-}
 
 usage() {
   echo "usage: $0 [--help]"
@@ -15,6 +16,7 @@ usage() {
   echo "environment:"
   echo "  DOOF_STDLIB_ROOT              standard-library package root"
   echo "  DOOF_REFRESH_MAX_GENERATIONS  convergence limit (default: 6)"
+  echo "  DOOF_REFRESH_SEED_COMPILER    explicit compiler for self-hosting surface transitions"
 }
 
 case "${1:-}" in
@@ -74,10 +76,19 @@ finish() {
 }
 trap finish EXIT HUP INT TERM
 
-echo "[1/5] Compile the checked-in bootstrap snapshot"
-"$repo_root/scripts/bootstrap-compiler.sh"
-stage_compiler="$repo_root/build/bootstrap-stage0/doof"
-test -x "$stage_compiler"
+if [ -n "$seed_compiler" ]; then
+  if [ ! -x "$seed_compiler" ]; then
+    echo "DOOF_REFRESH_SEED_COMPILER is not executable: $seed_compiler" >&2
+    exit 1
+  fi
+  echo "[1/5] Use the explicit self-hosting transition seed"
+  stage_compiler="$seed_compiler"
+else
+  echo "[1/5] Compile the checked-in bootstrap snapshot"
+  "$repo_root/scripts/bootstrap-compiler.sh"
+  stage_compiler="$repo_root/build/bootstrap-stage0/doof"
+  test -x "$stage_compiler"
+fi
 
 rm -rf "$refresh_root"
 mkdir -p "$refresh_root"

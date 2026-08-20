@@ -19,6 +19,7 @@ namespace app_src_emitter_names_ {
     void configureModuleNamespaces(const std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>>& mappings);
     std::string moduleStem(const std::string& path);
     std::string moduleNamespace(const std::string& path);
+    std::string cacheModuleNamespace(const std::string& path);
     std::string moduleDiagnosticPath(const std::string& path, bool stripExtension);
     std::string moduleNativeHeaderPath(const std::string& modulePath, const std::string& headerPath);
     std::shared_ptr<ModuleNamespaceMapping> namespaceMappingForPath(const std::string& path);

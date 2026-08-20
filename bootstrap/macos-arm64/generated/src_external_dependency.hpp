@@ -127,11 +127,6 @@ namespace std_::fs::index { struct BlockReadStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
-namespace std_::os::index { enum class ProcessGroupMode; }
-namespace std_::os::index { struct ExecOptions; }
-namespace std_::os::index { struct Exec; }
-namespace std_::os::index { struct ExecResult; }
-namespace std_::time::duration { struct Duration; }
 namespace std_::fs::index { struct BlockReadStream; }
 namespace std_::http::index { struct BodyChunkStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
@@ -175,10 +170,6 @@ namespace std_::fs::types {
     struct FileInfo;
 }
 
-namespace std_::fs::index {
-    struct BlockReadStream;
-}
-
 namespace std_::time::duration {
     struct Duration;
 }
@@ -217,7 +208,6 @@ namespace std_::http::websocket {
 }
 
 namespace std_::http::index {
-    struct BodyChunkStream;
     struct Cookie;
     struct SetCookie;
     struct HttpRequest;
@@ -227,9 +217,6 @@ namespace std_::http::index {
 
 namespace std_::os::index {
     struct ExecOptions;
-    struct ExecStdoutStream;
-    struct ExecStderrStream;
-    struct Exec;
     struct ExecResult;
 }
 
@@ -379,7 +366,8 @@ inline std::ostream& operator<<(std::ostream& output, EntryKind value) { return 
     NotDirectory = 4,
     InvalidPath = 5,
     Interrupted = 6,
-    Other = 7
+    Other = 7,
+    Unsupported = 8
 };
 inline const char* IoError_name(IoError value) {
   switch (value) {
@@ -391,6 +379,7 @@ inline const char* IoError_name(IoError value) {
     case IoError::InvalidPath: return "InvalidPath";
     case IoError::Interrupted: return "Interrupted";
     case IoError::Other: return "Other";
+    case IoError::Unsupported: return "Unsupported";
   }
   return "";
 }
@@ -403,6 +392,7 @@ inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "InvalidPath") return IoError::InvalidPath;
   if (value == "Interrupted") return IoError::Interrupted;
   if (value == "Other") return IoError::Other;
+  if (value == "Unsupported") return IoError::Unsupported;
   return std::nullopt;
 }
 inline std::optional<IoError> IoError_fromValue(int32_t value) {
@@ -415,6 +405,7 @@ inline std::optional<IoError> IoError_fromValue(int32_t value) {
     case IoError::InvalidPath: return IoError::InvalidPath;
     case IoError::Interrupted: return IoError::Interrupted;
     case IoError::Other: return IoError::Other;
+    case IoError::Unsupported: return IoError::Unsupported;
     default: return std::nullopt;
   }
 }
@@ -1151,15 +1142,6 @@ namespace std_::http::websocket {
 }
 
 namespace std_::http::index {
-    struct BodyChunkStream : public std::enable_shared_from_this<BodyChunkStream> {
-    std::shared_ptr<std::vector<uint8_t>> chunk = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    bool consumed = false;
-    BodyChunkStream(std::shared_ptr<std::vector<uint8_t>> chunk = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), bool consumed = false) : chunk(chunk), consumed(consumed) {}
-    bool next();
-    std::shared_ptr<std::vector<uint8_t>> value();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<BodyChunkStream>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
-};
     struct Cookie : public std::enable_shared_from_this<Cookie> {
     std::string name;
     std::string value;
@@ -1312,13 +1294,6 @@ namespace std_::fs::index {
     doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& data);
     doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(const std::string& path);
     bool isFile(const std::string& path);
-    struct BlockReadStream : public std::enable_shared_from_this<BlockReadStream> {
-    std::shared_ptr<::NativeBlobReadStream> native;
-    std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    BlockReadStream(std::shared_ptr<::NativeBlobReadStream> native, std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{})) : native(native), currentValue(currentValue) {}
-    bool next();
-    std::shared_ptr<std::vector<uint8_t>> value();
-};
 }
 
 namespace doof_event { using Backpressure = ::std_::event::index::Backpressure; }
@@ -1453,23 +1428,7 @@ namespace std_::http::index {
     doof::Result<std::shared_ptr<HttpResponse>, std::shared_ptr<::std_::http::types::HttpError>> get(const std::shared_ptr<HttpClient>& client, const std::string& url);
 }
 
-namespace doof_os { using ProcessGroupMode = ::std_::os::index::ProcessGroupMode; }
-namespace doof_os { using ExecOptions = ::std_::os::index::ExecOptions; }
-namespace doof_os { using Exec = ::std_::os::index::Exec; }
-namespace doof_os { using ExecResult = ::std_::os::index::ExecResult; }
-namespace doof_os { using Duration = ::std_::time::duration::Duration; }
-using ProcessGroupMode = ::std_::os::index::ProcessGroupMode;
-using ExecOptions = ::std_::os::index::ExecOptions;
-using Exec = ::std_::os::index::Exec;
-using ExecResult = ::std_::os::index::ExecResult;
-using Duration = ::std_::time::duration::Duration;
-#include "native_os.hpp"
-
 namespace std_::os::index {
-    doof::Result<std::string, std::string> _env(const std::string& name);
-    int32_t _pid();
-    std::string _platform();
-    std::string _architecture();
     struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
     std::optional<std::string> cwd = std::nullopt;
     std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
@@ -1483,36 +1442,6 @@ namespace std_::os::index {
     ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ExecOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
-};
-    struct ExecStdoutStream : public std::enable_shared_from_this<ExecStdoutStream> {
-    std::shared_ptr<::NativeExecProcess> process;
-    std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    ExecStdoutStream(std::shared_ptr<::NativeExecProcess> process, std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{})) : process(process), currentValue(currentValue) {}
-    bool next();
-    std::shared_ptr<std::vector<uint8_t>> value();
-};
-    struct ExecStderrStream : public std::enable_shared_from_this<ExecStderrStream> {
-    std::shared_ptr<::NativeExecProcess> process;
-    std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    ExecStderrStream(std::shared_ptr<::NativeExecProcess> process, std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{})) : process(process), currentValue(currentValue) {}
-    bool next();
-    std::shared_ptr<std::vector<uint8_t>> value();
-};
-    struct Exec : public std::enable_shared_from_this<Exec> {
-    std::shared_ptr<::NativeExecProcess> native;
-    Exec(std::shared_ptr<::NativeExecProcess> native) : native(native) {}
-    static doof::Result<std::shared_ptr<Exec>, std::string> spawn(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ProcessGroupMode::Isolated, std::nullopt, nullptr));
-    Stream__readonly_array_byte stdoutStream();
-    Stream__readonly_array_byte stderrStream();
-    std::shared_ptr<std::vector<uint8_t>> nextStdoutChunk();
-    std::shared_ptr<std::vector<uint8_t>> nextStderrChunk();
-    doof::Result<void, std::string> writeStdinText(const std::string& value);
-    doof::Result<void, std::string> closeStdin();
-    bool isRunning();
-    doof::Result<int32_t, std::string> wait();
-    doof::Result<void, std::string> terminate(int32_t signal = 15);
-    bool stdoutOpen();
-    bool stderrOpen();
 };
     std::string platform();
     doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ProcessGroupMode::Isolated, std::nullopt, nullptr));

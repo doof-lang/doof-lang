@@ -74,8 +74,8 @@ bool acquisitionMatches(const std::string& prefix, const std::string& logicalPat
 }
 std::shared_ptr<ModuleAcquisition> selectedAcquisition(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions) {
     std::shared_ptr<ModuleAcquisition> selected = nullptr;
-    const auto& _iterable_1 = acquisitions;
-    for (const auto& acquisition : *_iterable_1) {
+    const auto& _iterable_2 = acquisitions;
+    for (const auto& acquisition : *_iterable_2) {
         if (acquisitionMatches(acquisition->logicalPrefix, logicalPath)) {
             if (doof::is_null(selected) || (static_cast<int32_t>(acquisition->logicalPrefix.size()) > static_cast<int32_t>(selected->logicalPrefix.size()))) {
                 (selected = acquisition);

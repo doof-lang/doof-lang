@@ -19,6 +19,7 @@ import {
   NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
   ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
   ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
+  TypeParameterConstraint,
   UnaryExpression, UnionType, WhileStatement, WithBinding, WithStatement, BreakStatement,
   YieldStatement, CaseArm, CaseExpression, CasePattern, CaseStatement, TypePattern, ValuePattern, WildcardPattern,
   TryStatement,
@@ -107,13 +108,19 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         for typeParam of resolvedFunction.typeParams {
           let inferredType: ResolvedType | none = none
           for i of 0..<expression.args.length {
-            if i >= resolvedFunction.params.length { continue }
+            parameterIndex := if expression.args[i].name == none then i else functionParameterIndex(resolvedFunction.params, expression.args[i].name!)
+            if parameterIndex < 0 || parameterIndex >= resolvedFunction.params.length { continue }
             // Unresolved type parameters still carry useful callback input
             // types, which are required to type shorthand lambda bindings.
-            actual := checkExpression(state, expression.args[i].value, scope, resolvedFunction.params[i].type_)
-            candidate := inferTypeArgument(resolvedFunction.params[i].type_, actual, typeParam)
+            actual := checkExpression(state, expression.args[i].value, scope, resolvedFunction.params[parameterIndex].type_)
+            candidate := inferTypeArgument(resolvedFunction.params[parameterIndex].type_, actual, typeParam)
             if candidate != none {
-              if inferredType == none { inferredType = candidate }
+              let candidateIsSelf = false
+              case candidate! { parameter: TypeParameterType -> { candidateIsSelf = parameter.name == typeParam } _ -> { } }
+              let inferredIsSelf = false
+              if inferredType != none { case inferredType! { parameter: TypeParameterType -> { inferredIsSelf = parameter.name == typeParam } _ -> { } } }
+              if candidateIsSelf && inferredType != none { continue }
+              if inferredType == none || (inferredIsSelf && !candidateIsSelf) { inferredType = candidate }
               else if sameType(inferredType!, candidate!) { }
               else if isAssignable(candidate!, inferredType!) { }
               else if isAssignable(inferredType!, candidate!) { inferredType = candidate }
@@ -182,7 +189,20 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
     class_: ClassType -> {
       let effectiveClass = class_
       declaration := declarationFor(state.result, class_.symbol)
-      if declaration != none && class_.typeArgs.length == 0 {
+      if expression.typeArgs.length > 0 {
+        let declaredTypeParams: string[] = []
+        let constraints: TypeParameterConstraint[] = if expression.resolvedClass == none then [] else expression.resolvedClass!.typeParamConstraints
+        if declaration != none { case declaration! { classDeclaration: ClassDeclaration -> { declaredTypeParams = classDeclaration.typeParams; constraints = classDeclaration.typeParamConstraints } _ -> { } } }
+        if expression.typeArgs.length != declaredTypeParams.length {
+          typeError(state, "Generic construction requires " + string(declaredTypeParams.length) + " type argument" + (if declaredTypeParams.length == 1 then "" else "s") + "; received " + string(expression.typeArgs.length), expression.span)
+        } else {
+          let resolvedTypeArgs: ResolvedType[] = []
+          for argument of expression.typeArgs { resolvedTypeArgs.push(resolveType(state, argument, state.info!, scope)) }
+          expression.resolvedGenericTypeArgs = resolvedTypeArgs
+          effectiveClass = classType(class_.name, class_.symbol, resolvedTypeArgs)
+          validateTypeArgumentConstraints(state, declaredTypeParams, constraints, resolvedTypeArgs, expression.span, classModuleFor(state.result, class_.symbol), scope)
+        }
+      } else if declaration != none && class_.typeArgs.length == 0 {
         case declaration! {
           classDeclaration: ClassDeclaration -> {
             inferred := inferClassTypeArguments(state, expression, scope, class_, classDeclaration)
@@ -207,7 +227,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         }
         case constructorType {
           function_: FunctionType -> {
-            validatePositionalConstructorArguments(state, expression, function_.params, scope, effectiveClass)
+            validateConstructorCallArguments(state, expression, function_.params, scope, effectiveClass)
             return finish(state, expression, function_.returnType)
           }
           _ -> { }
@@ -232,7 +252,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           _ -> { }
         }
       }
-      validatePositionalConstructorArguments(state, expression, constructorParams, scope, effectiveClass)
+      validateConstructorCallArguments(state, expression, constructorParams, scope, effectiveClass)
       return finish(state, expression, effectiveClass)
     }
     _: UnknownType -> {
@@ -309,6 +329,37 @@ export function validatePositionalConstructorArguments(state: CheckerState, expr
   }
 }
 
+function validateConstructorCallArguments(state: CheckerState, expression: CallExpression, params: FunctionParamType[], scope: Scope, class_: ClassType): none {
+  let named = false
+  for argument of expression.args { if argument.name != none { named = true } }
+  if !named { validatePositionalConstructorArguments(state, expression, params, scope, class_); return }
+
+  let used: string[] = []
+  for argument of expression.args {
+    if argument.name == none {
+      typeError(state, "Named construction cannot contain positional arguments", argument.span)
+      checkExpression(state, argument.value, scope, none)
+      continue
+    }
+    index := functionParameterIndex(params, argument.name!)
+    if index < 0 {
+      typeError(state, "Unknown named argument '" + argument.name! + "'", argument.span)
+      checkExpression(state, argument.value, scope, none)
+      continue
+    }
+    if containsString(used, argument.name!) { typeError(state, "Duplicate named argument '" + argument.name! + "'", argument.span) }
+    used.push(argument.name!)
+    expected := params[index].type_
+    actual := checkExpression(state, argument.value, scope, optionalResolvedType(expected))
+    if !isAssignable(actual, expected) { typeError(state, "Argument '" + argument.name! + "' has type " + typeName(actual) + "; expected " + typeName(expected), argument.span) }
+  }
+  for parameter of params {
+    if !parameter.hasDefault && !containsString(used, parameter.name) {
+      typeError(state, "Missing required argument '" + parameter.name + "'", expression.span)
+    }
+  }
+}
+
 // Actor calls validate the effective method signature after generic
 // substitution; ordinary calls on the same class remain local calls.
 export function validateActorMethodBoundary(state: CheckerState, expression: CallExpression, method: FunctionType): none {
@@ -372,7 +423,7 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
     parameterType := if parameter.type_ == none then if expectedFunction != none && i < expectedFunction!.params.length then expectedFunction!.params[i].type_ else unknownType() else resolveType(state, parameter.type_!, state.info!, lambdaScope)
     parameter.resolvedType = optionalResolvedType(parameterType)
     params.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
-    if !declare(lambdaScope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
+    if parameter.name != "_" && !declare(lambdaScope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
       typeError(state, "Binding '" + parameter.name + "' is already declared in this scope", parameter.span)
     }
   }
@@ -431,6 +482,16 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
   }
   let resolvedTypeArgs: ResolvedType[] = []
   for argument of expression.typeArgs { resolvedTypeArgs.push(resolveType(state, argument, state.info!, scope)) }
+  if resolvedTypeArgs.length == 0 && expected != none {
+    case expected! {
+      expectedClass: ClassType -> {
+        if expectedClass.symbol.module == symbol!.module && expectedClass.symbol.name == symbol!.name {
+          for argument of expectedClass.typeArgs { resolvedTypeArgs.push(argument) }
+        }
+      }
+      _ -> { }
+    }
+  }
   if expression.resolvedClass != none {
     validateTypeArgumentConstraints(state, expression.resolvedClass!.typeParams, expression.resolvedClass!.typeParamConstraints, resolvedTypeArgs, expression.span, classModuleFor(state.result, symbol!), scope)
   }
@@ -442,7 +503,10 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
     constructorType := constructorMethod!.resolvedType ?? methodSignature(constructorMethod!, classModuleFor(state.result, symbol!), state.result)
     case constructorType {
       function_: FunctionType -> {
+        let used: string[] = []
         for property of expression.args {
+          if containsString(used, property.name) { typeError(state, "Duplicate named argument '" + property.name + "'", property.span) }
+          used.push(property.name)
           parameterIndex := functionParameterIndex(function_.params, property.name)
           if parameterIndex < 0 {
             typeError(state, "Unknown named argument '" + property.name + "'", property.span)
@@ -471,26 +535,51 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
       _ -> { }
     }
   }
+  if expression.resolvedClass != none { checkConstructionFields(state, expression, scope, constructed, expression.resolvedClass!) }
+  return finish(state, expression, constructed)
+}
+
+function checkConstructionFields(state: CheckerState, expression: ConstructExpression, scope: Scope, constructed: ClassType, declaration: ClassDeclaration): none {
+  let used: string[] = []
   for property of expression.args {
+    if containsString(used, property.name) { typeError(state, "Duplicate field '" + property.name + "' in " + declaration.name + " construction", property.span) }
+    used.push(property.name)
+    field := constructionField(declaration, property.name)
+    if field == none || field!.static_ || field!.const_ {
+      typeError(state, "Unknown field '" + property.name + "' for " + declaration.name, property.span)
+      if property.value != none { property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, none)) }
+      else {
+        binding := lookup(scope, property.name)
+        if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
+        else { property.resolvedType = optionalResolvedType(binding!.type_) }
+      }
+      continue
+    }
     expected := memberType(state, constructed, property.name, property.span)
     if property.value != none {
-        property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, optionalResolvedType(expected)))
-      if !isAssignable(property.resolvedType!, expected) {
-        typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(expected), property.span)
-      }
+      property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, optionalResolvedType(expected)))
     } else {
       binding := lookup(scope, property.name)
-      if binding == none {
-        typeError(state, "Unknown shorthand property '" + property.name + "'", property.span)
-      } else {
-        property.resolvedType = optionalResolvedType(binding!.type_)
-        if !isAssignable(property.resolvedType!, expected) {
-          typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(expected), property.span)
-        }
-      }
+      if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
+      else { property.resolvedType = optionalResolvedType(binding!.type_) }
+    }
+    if !isAssignable(property.resolvedType!, expected) {
+      typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(expected), property.span)
     }
   }
-  return finish(state, expression, constructed)
+  for field of declaration.fields {
+    if field.static_ || field.const_ || field.defaultValue != none { continue }
+    for name of field.names {
+      if !containsString(used, name) { typeError(state, "Missing required field '" + name + "'", expression.span) }
+    }
+  }
+}
+
+function constructionField(declaration: ClassDeclaration, name: string): ClassField | none {
+  for field of declaration.fields {
+    for fieldName of field.names { if fieldName == name { return field } }
+  }
+  return none
 }
 
 export function callableField(state: CheckerState, objectType: ResolvedType, property: string): bool {

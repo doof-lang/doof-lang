@@ -17,7 +17,7 @@ std::string emitInterfaceJsonDefinition(const std::shared_ptr<::app_src_ast_::In
     if (!owner->needsJson) {
         return std::string("");
     }
-    const auto discriminator = ::app_src_json_semantics_::interfaceJsonDiscriminator(owner, context->allPrograms);
+    const auto discriminator = ::app_src_json_semantics_::interfaceJsonDiscriminator(owner, context->allPrograms, context->jsonEligibility);
     if (doof::is_null(discriminator)) {
         return std::string("");
     }
@@ -42,22 +42,22 @@ std::string emitInterfaceJsonDefinition(const std::shared_ptr<::app_src_ast_::In
     return (((((result + std::string("    return ")) + failureType) + std::string("{\"Unknown ")) + discriminator->fieldName) + std::string(": \\\"\" + _discriminator + \"\\\"\"};\n}\n"));
 }
 std::string emitGeneratedJsonDeclarations(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    if (!::app_src_json_semantics_::canGenerateJsonSerialization(owner, context->allPrograms)) {
+    if (!::app_src_json_semantics_::canGenerateJsonSerialization(owner, context->allPrograms, context->jsonEligibility)) {
         return std::string("");
     }
     auto result = std::string("    doof::JsonObject toJsonObject() const;\n");
-    if (::app_src_json_semantics_::canGenerateJsonDeserialization(owner, context->allPrograms)) {
+    if (::app_src_json_semantics_::canGenerateJsonDeserialization(owner, context->allPrograms, context->jsonEligibility)) {
         const auto valueType = jsonResultValueType(owner);
         (result = (((result + std::string("    static doof::Result<")) + valueType) + std::string(", std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);\n")));
     }
     return result;
 }
 std::string emitGeneratedJsonMethods(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    if (!::app_src_json_semantics_::canGenerateJsonSerialization(owner, context->allPrograms)) {
+    if (!::app_src_json_semantics_::canGenerateJsonSerialization(owner, context->allPrograms, context->jsonEligibility)) {
         return std::string("");
     }
     auto result = emitToJsonObject(owner, context);
-    if (::app_src_json_semantics_::canGenerateJsonDeserialization(owner, context->allPrograms)) {
+    if (::app_src_json_semantics_::canGenerateJsonDeserialization(owner, context->allPrograms, context->jsonEligibility)) {
         (result = (result + emitFromJsonValue(owner, context)));
     }
     return result;
@@ -65,13 +65,13 @@ std::string emitGeneratedJsonMethods(const std::shared_ptr<::app_src_ast_::Class
 std::string emitToJsonObject(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     auto result = ((std::string("doof::JsonObject ") + owner->name) + std::string("::toJsonObject() const {\n"));
     (result = (result + std::string("    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();\n")));
-    const auto& _iterable_1 = owner->fields;
-    for (const auto& field : *_iterable_1) {
+    const auto& _iterable_3 = owner->fields;
+    for (const auto& field : *_iterable_3) {
         if (field->static_) {
             continue;
         }
-        const auto& _iterable_2 = field->names;
-        for (const auto& name : *_iterable_2) {
+        const auto& _iterable_5 = field->names;
+        for (const auto& name : *_iterable_5) {
             (result = (((((result + std::string("    (*_json)[\"")) + name) + std::string("\"] = ")) + emitJsonField((std::string("this->") + ::app_src_emitter_expr_::cppIdentifier(name)), doof::unwrap_optional(field->resolvedType), context)) + std::string(";\n")));
         }
     }
@@ -84,13 +84,13 @@ std::string emitFromJsonValue(const std::shared_ptr<::app_src_ast_::ClassDeclara
     (result = (result + std::string("    try {\n")));
     (result = (result + std::string("        const auto* _object = doof::json_as_object(_json);\n")));
     (result = (((result + std::string("        if (_object == nullptr) { return ")) + failureType) + std::string("{\"Expected JSON object\"}; }\n")));
-    const auto& _iterable_3 = owner->fields;
-    for (const auto& field : *_iterable_3) {
+    const auto& _iterable_7 = owner->fields;
+    for (const auto& field : *_iterable_7) {
         if (field->static_) {
             continue;
         }
-        const auto& _iterable_4 = field->names;
-        for (const auto& name : *_iterable_4) {
+        const auto& _iterable_9 = field->names;
+        for (const auto& name : *_iterable_9) {
             if (field->const_) {
                 (result = (result + emitJsonConstFieldValidation(field, name, failureType)));
             } else {
@@ -99,13 +99,13 @@ std::string emitFromJsonValue(const std::shared_ptr<::app_src_ast_::ClassDeclara
         }
     }
     auto arguments = std::string("");
-    const auto& _iterable_5 = owner->fields;
-    for (const auto& field : *_iterable_5) {
+    const auto& _iterable_11 = owner->fields;
+    for (const auto& field : *_iterable_11) {
         if (field->static_ || field->const_) {
             continue;
         }
-        const auto& _iterable_6 = field->names;
-        for (const auto& name : *_iterable_6) {
+        const auto& _iterable_13 = field->names;
+        for (const auto& name : *_iterable_13) {
             if (arguments != std::string("")) {
                 (arguments = (arguments + std::string(", ")));
             }

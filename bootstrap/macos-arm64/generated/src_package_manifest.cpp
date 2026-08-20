@@ -680,34 +680,34 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>>, s
     if (doof::is_failure(_try_value_18)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_18))};
     const auto values = doof::success_value(_try_value_18);
     std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> result = std::make_shared<std::vector<std::shared_ptr<PackageDependency>>>(std::vector<std::shared_ptr<PackageDependency>>{});
-    const auto& _iterable_19 = values;
-    for (const auto& [name, value] : *_iterable_19) {
+    const auto& _iterable_20 = values;
+    for (const auto& [name, value] : *_iterable_20) {
         const auto fieldPath = (std::string("dependencies.") + name);
         if (name == std::string("")) {
             return doof::Failure<std::string>{ ((std::string("Invalid doof.json at ") + manifestPath) + std::string(": dependency names must not be empty")) };
         }
-        auto _try_value_20 = manifestObject(value, manifestPath, fieldPath);
-        if (doof::is_failure(_try_value_20)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_20))};
-        const auto object = doof::success_value(_try_value_20);
+        auto _try_value_21 = manifestObject(value, manifestPath, fieldPath);
+        if (doof::is_failure(_try_value_21)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_21))};
+        const auto object = doof::success_value(_try_value_21);
         if (manifestJsonHas(object, std::string("path"))) {
             if ((manifestJsonHas(object, std::string("url")) || manifestJsonHas(object, std::string("ref"))) || manifestJsonHas(object, std::string("commit"))) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(" must declare either path or url/ref/commit")) };
             }
-            auto _try_value_21 = requiredManifestString(object, std::string("path"), manifestPath, fieldPath);
-            if (doof::is_failure(_try_value_21)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_21))};
-            const auto path = doof::success_value(_try_value_21);
+            auto _try_value_22 = requiredManifestString(object, std::string("path"), manifestPath, fieldPath);
+            if (doof::is_failure(_try_value_22)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_22))};
+            const auto path = doof::success_value(_try_value_22);
             result->push_back(std::make_shared<PackageDependency>(name, manifestJoinPath(rootDirectory, path), std::string(""), std::string(""), std::string("")));
             continue;
         }
-        auto _try_value_22 = requiredManifestString(object, std::string("url"), manifestPath, fieldPath);
-        if (doof::is_failure(_try_value_22)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_22))};
-        const auto url = doof::success_value(_try_value_22);
-        auto _try_value_23 = requiredManifestString(object, std::string("ref"), manifestPath, fieldPath);
+        auto _try_value_23 = requiredManifestString(object, std::string("url"), manifestPath, fieldPath);
         if (doof::is_failure(_try_value_23)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_23))};
-        const auto ref = doof::success_value(_try_value_23);
-        auto _try_value_24 = requiredManifestString(object, std::string("commit"), manifestPath, fieldPath);
+        const auto url = doof::success_value(_try_value_23);
+        auto _try_value_24 = requiredManifestString(object, std::string("ref"), manifestPath, fieldPath);
         if (doof::is_failure(_try_value_24)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_24))};
-        const auto commit = doof::success_value(_try_value_24);
+        const auto ref = doof::success_value(_try_value_24);
+        auto _try_value_25 = requiredManifestString(object, std::string("commit"), manifestPath, fieldPath);
+        if (doof::is_failure(_try_value_25)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_25))};
+        const auto commit = doof::success_value(_try_value_25);
         if (!isHexString(commit, 40)) {
             return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".commit must be a 40-character hex string")) };
         }
@@ -719,43 +719,43 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>
     if (!manifestJsonHas(root, std::string("resolutions"))) {
         return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>>{ std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{}) };
     }
-    auto _try_value_25 = manifestObject(manifestJsonField(root, std::string("resolutions")), manifestPath, std::string("resolutions"));
-    if (doof::is_failure(_try_value_25)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_25))};
-    const auto resolutions = doof::success_value(_try_value_25);
+    auto _try_value_26 = manifestObject(manifestJsonField(root, std::string("resolutions")), manifestPath, std::string("resolutions"));
+    if (doof::is_failure(_try_value_26)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_26))};
+    const auto resolutions = doof::success_value(_try_value_26);
     if (!manifestJsonHas(resolutions, section)) {
         return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>>{ std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{}) };
     }
     const auto fieldRoot = (std::string("resolutions.") + section);
-    auto _try_value_26 = manifestObject(manifestJsonField(resolutions, section), manifestPath, fieldRoot);
-    if (doof::is_failure(_try_value_26)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_26))};
-    const auto values = doof::success_value(_try_value_26);
+    auto _try_value_27 = manifestObject(manifestJsonField(resolutions, section), manifestPath, fieldRoot);
+    if (doof::is_failure(_try_value_27)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_27))};
+    const auto values = doof::success_value(_try_value_27);
     std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> result = std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{});
-    const auto& _iterable_27 = values;
-    for (const auto& [name, value] : *_iterable_27) {
+    const auto& _iterable_29 = values;
+    for (const auto& [name, value] : *_iterable_29) {
         const auto fieldPath = ((fieldRoot + std::string(".")) + name);
-        auto _try_value_28 = manifestObject(value, manifestPath, fieldPath);
-        if (doof::is_failure(_try_value_28)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_28))};
-        const auto object = doof::success_value(_try_value_28);
+        auto _try_value_30 = manifestObject(value, manifestPath, fieldPath);
+        if (doof::is_failure(_try_value_30)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_30))};
+        const auto object = doof::success_value(_try_value_30);
         auto kind = std::string("git");
         if (manifestJsonHas(object, std::string("kind"))) {
-            auto _try_value_29 = manifestString(manifestJsonField(object, std::string("kind")), manifestPath, (fieldPath + std::string(".kind")));
-            if (doof::is_failure(_try_value_29)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_29))};
-            const auto parsedKind = doof::success_value(_try_value_29);
+            auto _try_value_31 = manifestString(manifestJsonField(object, std::string("kind")), manifestPath, (fieldPath + std::string(".kind")));
+            if (doof::is_failure(_try_value_31)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_31))};
+            const auto parsedKind = doof::success_value(_try_value_31);
             (kind = parsedKind);
         }
         if ((section == std::string("packages")) && (kind != std::string("git"))) {
             return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".kind must be \"git\"")) };
         }
-        auto _try_value_30 = requiredManifestString(object, std::string("url"), manifestPath, fieldPath);
-        if (doof::is_failure(_try_value_30)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_30))};
-        const auto url = doof::success_value(_try_value_30);
+        auto _try_value_32 = requiredManifestString(object, std::string("url"), manifestPath, fieldPath);
+        if (doof::is_failure(_try_value_32)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_32))};
+        const auto url = doof::success_value(_try_value_32);
         if (kind == std::string("git")) {
-            auto _try_value_31 = requiredManifestString(object, std::string("ref"), manifestPath, fieldPath);
-            if (doof::is_failure(_try_value_31)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_31))};
-            const auto ref = doof::success_value(_try_value_31);
-            auto _try_value_32 = requiredManifestString(object, std::string("commit"), manifestPath, fieldPath);
-            if (doof::is_failure(_try_value_32)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_32))};
-            const auto commit = doof::success_value(_try_value_32);
+            auto _try_value_33 = requiredManifestString(object, std::string("ref"), manifestPath, fieldPath);
+            if (doof::is_failure(_try_value_33)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_33))};
+            const auto ref = doof::success_value(_try_value_33);
+            auto _try_value_34 = requiredManifestString(object, std::string("commit"), manifestPath, fieldPath);
+            if (doof::is_failure(_try_value_34)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_34))};
+            const auto commit = doof::success_value(_try_value_34);
             if (!isHexString(commit, 40)) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".commit must be a 40-character hex string")) };
             }
@@ -763,9 +763,9 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>
             continue;
         }
         if (kind == std::string("archive")) {
-            auto _try_value_33 = requiredManifestString(object, std::string("sha256"), manifestPath, fieldPath);
-            if (doof::is_failure(_try_value_33)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_33))};
-            const auto sha256 = doof::success_value(_try_value_33);
+            auto _try_value_35 = requiredManifestString(object, std::string("sha256"), manifestPath, fieldPath);
+            if (doof::is_failure(_try_value_35)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_35))};
+            const auto sha256 = doof::success_value(_try_value_35);
             if (!isHexString(sha256, 64)) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".sha256 must be a 64-character hex string")) };
             }
@@ -781,49 +781,49 @@ doof::Result<std::shared_ptr<DependencyPolicy>, std::string> parseDependencyPoli
     if (!manifestJsonHas(root, std::string("policy"))) {
         return doof::Success<std::shared_ptr<DependencyPolicy>>{ result };
     }
-    auto _try_value_34 = manifestObject(manifestJsonField(root, std::string("policy")), manifestPath, std::string("policy"));
-    if (doof::is_failure(_try_value_34)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_34))};
-    const auto policy = doof::success_value(_try_value_34);
+    auto _try_value_36 = manifestObject(manifestJsonField(root, std::string("policy")), manifestPath, std::string("policy"));
+    if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_36))};
+    const auto policy = doof::success_value(_try_value_36);
     if (manifestJsonHas(policy, std::string("allowedPackageSources"))) {
         (result->hasPackageSourceAllowlist = true);
-        auto _try_value_35 = appendPolicyStrings(result->allowedPackageSources, policy, std::string("allowedPackageSources"), manifestPath, std::string("policy"));
-        if (doof::is_failure(_try_value_35)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_35))};
+        auto _try_value_37 = appendPolicyStrings(result->allowedPackageSources, policy, std::string("allowedPackageSources"), manifestPath, std::string("policy"));
+        if (doof::is_failure(_try_value_37)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_37))};
     }
     if (manifestJsonHas(policy, std::string("allowedExternalSources"))) {
         (result->hasExternalSourceAllowlist = true);
-        auto _try_value_36 = appendPolicyStrings(result->allowedExternalSources, policy, std::string("allowedExternalSources"), manifestPath, std::string("policy"));
-        if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_36))};
+        auto _try_value_38 = appendPolicyStrings(result->allowedExternalSources, policy, std::string("allowedExternalSources"), manifestPath, std::string("policy"));
+        if (doof::is_failure(_try_value_38)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_38))};
     }
     if (manifestJsonHas(policy, std::string("native"))) {
-        auto _try_value_37 = manifestObject(manifestJsonField(policy, std::string("native")), manifestPath, std::string("policy.native"));
-        if (doof::is_failure(_try_value_37)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_37))};
-        const auto native = doof::success_value(_try_value_37);
+        auto _try_value_39 = manifestObject(manifestJsonField(policy, std::string("native")), manifestPath, std::string("policy.native"));
+        if (doof::is_failure(_try_value_39)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_39))};
+        const auto native = doof::success_value(_try_value_39);
         if (manifestJsonHas(native, std::string("allowedLinkLibraries"))) {
             (result->hasLinkLibraryAllowlist = true);
-            auto _try_value_38 = appendPolicyStrings(result->allowedLinkLibraries, native, std::string("allowedLinkLibraries"), manifestPath, std::string("policy.native"));
-            if (doof::is_failure(_try_value_38)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_38))};
+            auto _try_value_40 = appendPolicyStrings(result->allowedLinkLibraries, native, std::string("allowedLinkLibraries"), manifestPath, std::string("policy.native"));
+            if (doof::is_failure(_try_value_40)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_40))};
         }
         if (manifestJsonHas(native, std::string("allowedFrameworks"))) {
             (result->hasFrameworkAllowlist = true);
-            auto _try_value_39 = appendPolicyStrings(result->allowedFrameworks, native, std::string("allowedFrameworks"), manifestPath, std::string("policy.native"));
-            if (doof::is_failure(_try_value_39)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_39))};
+            auto _try_value_41 = appendPolicyStrings(result->allowedFrameworks, native, std::string("allowedFrameworks"), manifestPath, std::string("policy.native"));
+            if (doof::is_failure(_try_value_41)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_41))};
         }
         if (manifestJsonHas(native, std::string("allowedPkgConfigPackages"))) {
             (result->hasPkgConfigAllowlist = true);
-            auto _try_value_40 = appendPolicyStrings(result->allowedPkgConfigPackages, native, std::string("allowedPkgConfigPackages"), manifestPath, std::string("policy.native"));
-            if (doof::is_failure(_try_value_40)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_40))};
+            auto _try_value_42 = appendPolicyStrings(result->allowedPkgConfigPackages, native, std::string("allowedPkgConfigPackages"), manifestPath, std::string("policy.native"));
+            if (doof::is_failure(_try_value_42)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_42))};
         }
     }
     return doof::Success<std::shared_ptr<DependencyPolicy>>{ result };
 }
 doof::Result<void, std::string> appendPolicyStrings(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name, const std::string& manifestPath, const std::string& fieldPath) {
-    auto _try_value_41 = manifestArray(manifestJsonField(object, name), manifestPath, ((fieldPath + std::string(".")) + name));
-    if (doof::is_failure(_try_value_41)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_41))};
-    const auto values = doof::success_value(_try_value_41);
+    auto _try_value_43 = manifestArray(manifestJsonField(object, name), manifestPath, ((fieldPath + std::string(".")) + name));
+    if (doof::is_failure(_try_value_43)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_43))};
+    const auto values = doof::success_value(_try_value_43);
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
-        auto _try_value_42 = manifestString(doof::array_at(values, index, "src/package-manifest", 275), manifestPath, (((((fieldPath + std::string(".")) + name) + std::string("[")) + doof::to_string(index)) + std::string("]")));
-        if (doof::is_failure(_try_value_42)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_42))};
-        const auto value = doof::success_value(_try_value_42);
+        auto _try_value_45 = manifestString(doof::array_at(values, index, "src/package-manifest", 275), manifestPath, (((((fieldPath + std::string(".")) + name) + std::string("[")) + doof::to_string(index)) + std::string("]")));
+        if (doof::is_failure(_try_value_45)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_45))};
+        const auto value = doof::success_value(_try_value_45);
         if (value == std::string("")) {
             return doof::Failure<std::string>{ ((((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".")) + name) + std::string(" entries must not be empty")) };
         }
@@ -835,39 +835,39 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>, 
     if (!manifestJsonHas(root, std::string("externalDependencies"))) {
         return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>>{ std::make_shared<std::vector<std::shared_ptr<ExternalDependency>>>(std::vector<std::shared_ptr<ExternalDependency>>{}) };
     }
-    auto _try_value_43 = manifestObject(manifestJsonField(root, std::string("externalDependencies")), manifestPath, std::string("externalDependencies"));
-    if (doof::is_failure(_try_value_43)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_43))};
-    const auto values = doof::success_value(_try_value_43);
+    auto _try_value_46 = manifestObject(manifestJsonField(root, std::string("externalDependencies")), manifestPath, std::string("externalDependencies"));
+    if (doof::is_failure(_try_value_46)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_46))};
+    const auto values = doof::success_value(_try_value_46);
     std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> result = std::make_shared<std::vector<std::shared_ptr<ExternalDependency>>>(std::vector<std::shared_ptr<ExternalDependency>>{});
-    const auto& _iterable_44 = values;
-    for (const auto& [name, value] : *_iterable_44) {
+    const auto& _iterable_48 = values;
+    for (const auto& [name, value] : *_iterable_48) {
         const auto fieldPath = (std::string("externalDependencies.") + name);
         if (((name == std::string("")) || doof::string_contains(name, std::string("/"))) || doof::string_contains(name, std::string("\\"))) {
             return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": invalid external dependency name \"")) + name) + std::string("\"")) };
         }
-        auto _try_value_45 = manifestObject(value, manifestPath, fieldPath);
-        if (doof::is_failure(_try_value_45)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_45))};
-        const auto object = doof::success_value(_try_value_45);
-        auto _try_value_46 = requiredManifestString(object, std::string("kind"), manifestPath, fieldPath);
-        if (doof::is_failure(_try_value_46)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_46))};
-        const auto kind = doof::success_value(_try_value_46);
-        auto _try_value_47 = requiredManifestString(object, std::string("url"), manifestPath, fieldPath);
-        if (doof::is_failure(_try_value_47)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_47))};
-        const auto url = doof::success_value(_try_value_47);
-        auto _try_value_48 = requiredManifestString(object, std::string("destination"), manifestPath, fieldPath);
-        if (doof::is_failure(_try_value_48)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_48))};
-        const auto destination = doof::success_value(_try_value_48);
+        auto _try_value_49 = manifestObject(value, manifestPath, fieldPath);
+        if (doof::is_failure(_try_value_49)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_49))};
+        const auto object = doof::success_value(_try_value_49);
+        auto _try_value_50 = requiredManifestString(object, std::string("kind"), manifestPath, fieldPath);
+        if (doof::is_failure(_try_value_50)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_50))};
+        const auto kind = doof::success_value(_try_value_50);
+        auto _try_value_51 = requiredManifestString(object, std::string("url"), manifestPath, fieldPath);
+        if (doof::is_failure(_try_value_51)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_51))};
+        const auto url = doof::success_value(_try_value_51);
+        auto _try_value_52 = requiredManifestString(object, std::string("destination"), manifestPath, fieldPath);
+        if (doof::is_failure(_try_value_52)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_52))};
+        const auto destination = doof::success_value(_try_value_52);
         const auto destinationPath = manifestJoinPath(rootDirectory, destination);
         if (!manifestPathWithinRoot(destinationPath, rootDirectory)) {
             return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".destination must stay within the package root")) };
         }
-        auto _try_value_49 = parseExternalDependencyCommands(object, manifestPath, fieldPath);
-        if (doof::is_failure(_try_value_49)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_49))};
-        const auto commands = doof::success_value(_try_value_49);
+        auto _try_value_53 = parseExternalDependencyCommands(object, manifestPath, fieldPath);
+        if (doof::is_failure(_try_value_53)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_53))};
+        const auto commands = doof::success_value(_try_value_53);
         if (kind == std::string("archive")) {
-            auto _try_value_50 = requiredManifestString(object, std::string("sha256"), manifestPath, fieldPath);
-            if (doof::is_failure(_try_value_50)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_50))};
-            const auto sha256 = doof::success_value(_try_value_50);
+            auto _try_value_54 = requiredManifestString(object, std::string("sha256"), manifestPath, fieldPath);
+            if (doof::is_failure(_try_value_54)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_54))};
+            const auto sha256 = doof::success_value(_try_value_54);
             if (!isSupportedExternalArchiveUrl(url)) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".url must end with .zip, .tar.gz, .tgz, .tar.bz2, .tbz2, or .tar.xz")) };
             }
@@ -897,19 +897,19 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>, 
                 }
                 }
             }
-            auto _try_value_51 = parseExternalDependencyCopyFiles(object, manifestPath, fieldPath);
-            if (doof::is_failure(_try_value_51)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_51))};
-            const auto copyFiles = doof::success_value(_try_value_51);
+            auto _try_value_55 = parseExternalDependencyCopyFiles(object, manifestPath, fieldPath);
+            if (doof::is_failure(_try_value_55)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_55))};
+            const auto copyFiles = doof::success_value(_try_value_55);
             result->push_back(std::make_shared<ExternalDependency>(name, kind, url, destination, doof::string_toLowerCase(sha256), stripComponents, copyFiles, std::string(""), std::string(""), commands));
             continue;
         }
         if (kind == std::string("git")) {
-            auto _try_value_52 = requiredManifestString(object, std::string("ref"), manifestPath, fieldPath);
-            if (doof::is_failure(_try_value_52)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_52))};
-            const auto ref = doof::success_value(_try_value_52);
-            auto _try_value_53 = requiredManifestString(object, std::string("commit"), manifestPath, fieldPath);
-            if (doof::is_failure(_try_value_53)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_53))};
-            const auto commit = doof::success_value(_try_value_53);
+            auto _try_value_56 = requiredManifestString(object, std::string("ref"), manifestPath, fieldPath);
+            if (doof::is_failure(_try_value_56)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_56))};
+            const auto ref = doof::success_value(_try_value_56);
+            auto _try_value_57 = requiredManifestString(object, std::string("commit"), manifestPath, fieldPath);
+            if (doof::is_failure(_try_value_57)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_57))};
+            const auto commit = doof::success_value(_try_value_57);
             if (!isHexString(commit, 40)) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".commit must be a 40-character hex string")) };
             }
@@ -924,9 +924,9 @@ doof::Result<std::string, std::string> requiredManifestString(const std::shared_
     if (!manifestJsonHas(object, name)) {
         return doof::Failure<std::string>{ ((((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".")) + name) + std::string(" is required")) };
     }
-    auto _try_value_54 = manifestString(manifestJsonField(object, name), manifestPath, ((fieldPath + std::string(".")) + name));
-    if (doof::is_failure(_try_value_54)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_54))};
-    const auto value = doof::success_value(_try_value_54);
+    auto _try_value_58 = manifestString(manifestJsonField(object, name), manifestPath, ((fieldPath + std::string(".")) + name));
+    if (doof::is_failure(_try_value_58)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_58))};
+    const auto value = doof::success_value(_try_value_58);
     if (value == std::string("")) {
         return doof::Failure<std::string>{ ((((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(".")) + name) + std::string(" must not be empty")) };
     }
@@ -936,21 +936,21 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyF
     if (!manifestJsonHas(object, std::string("copyFiles"))) {
         return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>>{ std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{}) };
     }
-    auto _try_value_55 = manifestArray(manifestJsonField(object, std::string("copyFiles")), manifestPath, (fieldPath + std::string(".copyFiles")));
-    if (doof::is_failure(_try_value_55)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_55))};
-    const auto values = doof::success_value(_try_value_55);
+    auto _try_value_59 = manifestArray(manifestJsonField(object, std::string("copyFiles")), manifestPath, (fieldPath + std::string(".copyFiles")));
+    if (doof::is_failure(_try_value_59)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_59))};
+    const auto values = doof::success_value(_try_value_59);
     std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> result = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{});
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
         const auto entryPath = (((fieldPath + std::string(".copyFiles[")) + doof::to_string(index)) + std::string("]"));
-        auto _try_value_56 = manifestObject(doof::array_at(values, index, "src/package-manifest", 380), manifestPath, entryPath);
-        if (doof::is_failure(_try_value_56)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_56))};
-        const auto entry = doof::success_value(_try_value_56);
-        auto _try_value_57 = requiredManifestString(entry, std::string("from"), manifestPath, entryPath);
-        if (doof::is_failure(_try_value_57)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_57))};
-        const auto source = doof::success_value(_try_value_57);
-        auto _try_value_58 = requiredManifestString(entry, std::string("to"), manifestPath, entryPath);
-        if (doof::is_failure(_try_value_58)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_58))};
-        const auto destination = doof::success_value(_try_value_58);
+        auto _try_value_61 = manifestObject(doof::array_at(values, index, "src/package-manifest", 380), manifestPath, entryPath);
+        if (doof::is_failure(_try_value_61)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_61))};
+        const auto entry = doof::success_value(_try_value_61);
+        auto _try_value_62 = requiredManifestString(entry, std::string("from"), manifestPath, entryPath);
+        if (doof::is_failure(_try_value_62)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_62))};
+        const auto source = doof::success_value(_try_value_62);
+        auto _try_value_63 = requiredManifestString(entry, std::string("to"), manifestPath, entryPath);
+        if (doof::is_failure(_try_value_63)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_63))};
+        const auto destination = doof::success_value(_try_value_63);
         result->push_back(std::make_shared<ExternalDependencyCopyFile>(source, destination));
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>>{ result };
@@ -959,51 +959,51 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyComma
     if (!manifestJsonHas(object, std::string("commands"))) {
         return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>>>{ std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{}) };
     }
-    auto _try_value_59 = manifestArray(manifestJsonField(object, std::string("commands")), manifestPath, (fieldPath + std::string(".commands")));
-    if (doof::is_failure(_try_value_59)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_59))};
-    const auto values = doof::success_value(_try_value_59);
+    auto _try_value_64 = manifestArray(manifestJsonField(object, std::string("commands")), manifestPath, (fieldPath + std::string(".commands")));
+    if (doof::is_failure(_try_value_64)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_64))};
+    const auto values = doof::success_value(_try_value_64);
     std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> result = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{});
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
         const auto entryPath = (((fieldPath + std::string(".commands[")) + doof::to_string(index)) + std::string("]"));
-        auto _try_value_60 = manifestObject(doof::array_at(values, index, "src/package-manifest", 398), manifestPath, entryPath);
-        if (doof::is_failure(_try_value_60)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_60))};
-        const auto entry = doof::success_value(_try_value_60);
-        auto _try_value_61 = requiredManifestString(entry, std::string("program"), manifestPath, entryPath);
-        if (doof::is_failure(_try_value_61)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_61))};
-        const auto program = doof::success_value(_try_value_61);
+        auto _try_value_66 = manifestObject(doof::array_at(values, index, "src/package-manifest", 398), manifestPath, entryPath);
+        if (doof::is_failure(_try_value_66)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_66))};
+        const auto entry = doof::success_value(_try_value_66);
+        auto _try_value_67 = requiredManifestString(entry, std::string("program"), manifestPath, entryPath);
+        if (doof::is_failure(_try_value_67)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_67))};
+        const auto program = doof::success_value(_try_value_67);
         std::shared_ptr<std::vector<std::string>> args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
         if (manifestJsonHas(entry, std::string("args"))) {
-            auto _try_value_62 = manifestArray(manifestJsonField(entry, std::string("args")), manifestPath, (entryPath + std::string(".args")));
-            if (doof::is_failure(_try_value_62)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_62))};
-            const auto entries = doof::success_value(_try_value_62);
+            auto _try_value_68 = manifestArray(manifestJsonField(entry, std::string("args")), manifestPath, (entryPath + std::string(".args")));
+            if (doof::is_failure(_try_value_68)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_68))};
+            const auto entries = doof::success_value(_try_value_68);
             for (int32_t argumentIndex = 0; argumentIndex < static_cast<int32_t>((entries)->size()); ++argumentIndex) {
-                auto _try_value_63 = manifestString(doof::array_at(entries, argumentIndex, "src/package-manifest", 404), manifestPath, (((entryPath + std::string(".args[")) + doof::to_string(argumentIndex)) + std::string("]")));
-                if (doof::is_failure(_try_value_63)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_63))};
-                const auto argument = doof::success_value(_try_value_63);
+                auto _try_value_70 = manifestString(doof::array_at(entries, argumentIndex, "src/package-manifest", 404), manifestPath, (((entryPath + std::string(".args[")) + doof::to_string(argumentIndex)) + std::string("]")));
+                if (doof::is_failure(_try_value_70)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_70))};
+                const auto argument = doof::success_value(_try_value_70);
                 args->push_back(argument);
             }
         }
         std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
         if (manifestJsonHas(entry, std::string("env"))) {
-            auto _try_value_64 = manifestObject(manifestJsonField(entry, std::string("env")), manifestPath, (entryPath + std::string(".env")));
-            if (doof::is_failure(_try_value_64)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_64))};
-            const auto entries = doof::success_value(_try_value_64);
-            const auto& _iterable_65 = entries;
-            for (const auto& [key, value] : *_iterable_65) {
+            auto _try_value_71 = manifestObject(manifestJsonField(entry, std::string("env")), manifestPath, (entryPath + std::string(".env")));
+            if (doof::is_failure(_try_value_71)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_71))};
+            const auto entries = doof::success_value(_try_value_71);
+            const auto& _iterable_73 = entries;
+            for (const auto& [key, value] : *_iterable_73) {
                 if (key == std::string("")) {
                     return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + entryPath) + std::string(".env keys must not be empty")) };
                 }
-                auto _try_value_66 = manifestString(value, manifestPath, ((entryPath + std::string(".env.")) + key));
-                if (doof::is_failure(_try_value_66)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_66))};
-                const auto text = doof::success_value(_try_value_66);
+                auto _try_value_74 = manifestString(value, manifestPath, ((entryPath + std::string(".env.")) + key));
+                if (doof::is_failure(_try_value_74)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_74))};
+                const auto text = doof::success_value(_try_value_74);
                 doof::map_set(env, key, text, "", 0);
             }
         }
         auto workingDirectory = std::string("");
         if (manifestJsonHas(entry, std::string("workingDirectory"))) {
-            auto _try_value_67 = manifestString(manifestJsonField(entry, std::string("workingDirectory")), manifestPath, (entryPath + std::string(".workingDirectory")));
-            if (doof::is_failure(_try_value_67)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_67))};
-            const auto parsed = doof::success_value(_try_value_67);
+            auto _try_value_75 = manifestString(manifestJsonField(entry, std::string("workingDirectory")), manifestPath, (entryPath + std::string(".workingDirectory")));
+            if (doof::is_failure(_try_value_75)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_75))};
+            const auto parsed = doof::success_value(_try_value_75);
             if (parsed == std::string("")) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + entryPath) + std::string(".workingDirectory must not be empty")) };
             }
@@ -1031,8 +1031,8 @@ bool isHexString(const std::string& value, int32_t length) {
 }
 std::shared_ptr<NativeBuildPlan> mergeNativeBuildPlans(const std::shared_ptr<std::vector<std::shared_ptr<NativeBuildPlan>>>& plans) {
     const auto merged = std::make_shared<NativeBuildPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
-    const auto& _iterable_68 = plans;
-    for (const auto& plan : *_iterable_68) {
+    const auto& _iterable_78 = plans;
+    for (const auto& plan : *_iterable_78) {
         appendNativeBuild(merged, plan);
     }
     return merged;
@@ -1042,24 +1042,24 @@ doof::Result<std::shared_ptr<NativeBuildPlan>, std::string> parseManifestNativeB
     if (!manifestJsonHas(root, std::string("build"))) {
         return doof::Success<std::shared_ptr<NativeBuildPlan>>{ result };
     }
-    auto _try_value_69 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
-    if (doof::is_failure(_try_value_69)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_69))};
-    const auto build = doof::success_value(_try_value_69);
+    auto _try_value_79 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
+    if (doof::is_failure(_try_value_79)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_79))};
+    const auto build = doof::success_value(_try_value_79);
     if (!manifestJsonHas(build, std::string("native"))) {
         return doof::Success<std::shared_ptr<NativeBuildPlan>>{ result };
     }
-    auto _try_value_70 = manifestObject(manifestJsonField(build, std::string("native")), manifestPath, std::string("build.native"));
-    if (doof::is_failure(_try_value_70)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_70))};
-    const auto native = doof::success_value(_try_value_70);
-    auto _try_value_71 = appendNativeFragment(result, native, manifestPath, rootDirectory, std::string("build.native"));
-    if (doof::is_failure(_try_value_71)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_71))};
+    auto _try_value_80 = manifestObject(manifestJsonField(build, std::string("native")), manifestPath, std::string("build.native"));
+    if (doof::is_failure(_try_value_80)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_80))};
+    const auto native = doof::success_value(_try_value_80);
+    auto _try_value_81 = appendNativeFragment(result, native, manifestPath, rootDirectory, std::string("build.native"));
+    if (doof::is_failure(_try_value_81)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_81))};
     const auto platformKey = ((target == std::string("wasm")) ? std::string("wasm") : ((platform == std::string("ios-simulator")) ? std::string("iosSimulator") : ((platform == std::string("ios-device")) ? std::string("iosDevice") : platform)));
     if ((platformKey != std::string("")) && manifestJsonHas(native, platformKey)) {
-        auto _try_value_72 = manifestObject(manifestJsonField(native, platformKey), manifestPath, (std::string("build.native.") + platformKey));
-        if (doof::is_failure(_try_value_72)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_72))};
-        const auto platformValue = doof::success_value(_try_value_72);
-        auto _try_value_73 = appendNativeFragment(result, platformValue, manifestPath, rootDirectory, (std::string("build.native.") + platformKey));
-        if (doof::is_failure(_try_value_73)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_73))};
+        auto _try_value_82 = manifestObject(manifestJsonField(native, platformKey), manifestPath, (std::string("build.native.") + platformKey));
+        if (doof::is_failure(_try_value_82)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_82))};
+        const auto platformValue = doof::success_value(_try_value_82);
+        auto _try_value_83 = appendNativeFragment(result, platformValue, manifestPath, rootDirectory, (std::string("build.native.") + platformKey));
+        if (doof::is_failure(_try_value_83)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_83))};
     }
     return doof::Success<std::shared_ptr<NativeBuildPlan>>{ result };
 }
@@ -1068,9 +1068,9 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std
         return parseResourceArray(manifestJsonField(root, std::string("resources")), manifestPath, rootDirectory, std::string("resources"));
     }
     if (manifestJsonHas(root, std::string("build"))) {
-        auto _try_value_74 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
-        if (doof::is_failure(_try_value_74)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_74))};
-        const auto build = doof::success_value(_try_value_74);
+        auto _try_value_84 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
+        if (doof::is_failure(_try_value_84)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_84))};
+        const auto build = doof::success_value(_try_value_84);
         if (manifestJsonHas(build, std::string("resources"))) {
             return parseResourceArray(manifestJsonField(build, std::string("resources")), manifestPath, rootDirectory, std::string("build.resources"));
         }
@@ -1082,9 +1082,9 @@ doof::Result<std::string, std::string> parseManifestTarget(const std::shared_ptr
         return manifestString(manifestJsonField(root, std::string("target")), manifestPath, std::string("target"));
     }
     if (manifestJsonHas(root, std::string("build"))) {
-        auto _try_value_75 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
-        if (doof::is_failure(_try_value_75)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_75))};
-        const auto build = doof::success_value(_try_value_75);
+        auto _try_value_85 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
+        if (doof::is_failure(_try_value_85)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_85))};
+        const auto build = doof::success_value(_try_value_85);
         if (manifestJsonHas(build, std::string("target"))) {
             return manifestString(manifestJsonField(build, std::string("target")), manifestPath, std::string("build.target"));
         }
@@ -1097,55 +1097,55 @@ doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>, std::string>
     }
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> build = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     if (manifestJsonHas(root, std::string("build"))) {
-        auto _try_value_76 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
-        if (doof::is_failure(_try_value_76)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_76))};
-        const auto parsedBuild = doof::success_value(_try_value_76);
+        auto _try_value_86 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
+        if (doof::is_failure(_try_value_86)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_86))};
+        const auto parsedBuild = doof::success_value(_try_value_86);
         (build = parsedBuild);
     }
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> nested = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     if (manifestJsonHas(build, std::string("macosApp"))) {
-        auto _try_value_77 = manifestObject(manifestJsonField(build, std::string("macosApp")), manifestPath, std::string("build.macosApp"));
-        if (doof::is_failure(_try_value_77)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_77))};
-        const auto parsedNested = doof::success_value(_try_value_77);
+        auto _try_value_87 = manifestObject(manifestJsonField(build, std::string("macosApp")), manifestPath, std::string("build.macosApp"));
+        if (doof::is_failure(_try_value_87)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_87))};
+        const auto parsedNested = doof::success_value(_try_value_87);
         (nested = parsedNested);
     }
-    auto _try_value_78 = firstManifestString(root, std::string("executable"), build, std::string("executable"), build, std::string("targetExecutableName"), packageName, manifestPath, std::string("executable"));
-    if (doof::is_failure(_try_value_78)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_78))};
-    const auto executableName = doof::success_value(_try_value_78);
+    auto _try_value_88 = firstManifestString(root, std::string("executable"), build, std::string("executable"), build, std::string("targetExecutableName"), packageName, manifestPath, std::string("executable"));
+    if (doof::is_failure(_try_value_88)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_88))};
+    const auto executableName = doof::success_value(_try_value_88);
     if (((executableName == std::string("")) || doof::string_contains(executableName, std::string("/"))) || doof::string_contains(executableName, std::string("\\"))) {
         return doof::Failure<std::string>{ ((std::string("Invalid doof.json at ") + manifestPath) + std::string(": executable must be a file name without path separators")) };
     }
     const auto defaultBundleId = (std::string("dev.doof.") + sanitizeBundleName(((packageName == std::string("")) ? executableName : packageName)));
-    auto _try_value_79 = firstManifestString(root, std::string("id"), nested, std::string("bundleId"), build, std::string("id"), defaultBundleId, manifestPath, std::string("build.macosApp.bundleId"));
-    if (doof::is_failure(_try_value_79)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_79))};
-    const auto bundleId = doof::success_value(_try_value_79);
-    auto _try_value_80 = firstManifestString(root, std::string("title"), nested, std::string("displayName"), build, std::string("title"), ((packageName == std::string("")) ? executableName : packageName), manifestPath, std::string("build.macosApp.displayName"));
-    if (doof::is_failure(_try_value_80)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_80))};
-    const auto displayName = doof::success_value(_try_value_80);
-    auto _try_value_81 = optionalManifestString(nested, std::string("version"), packageVersion, manifestPath, std::string("build.macosApp.version"));
-    if (doof::is_failure(_try_value_81)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_81))};
-    const auto version = doof::success_value(_try_value_81);
-    auto _try_value_82 = optionalManifestString(nested, std::string("category"), std::string("public.app-category.developer-tools"), manifestPath, std::string("build.macosApp.category"));
-    if (doof::is_failure(_try_value_82)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_82))};
-    const auto category = doof::success_value(_try_value_82);
-    auto _try_value_83 = optionalManifestString(nested, std::string("minimumSystemVersion"), std::string("11.0"), manifestPath, std::string("build.macosApp.minimumSystemVersion"));
-    if (doof::is_failure(_try_value_83)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_83))};
-    const auto minimumSystemVersion = doof::success_value(_try_value_83);
+    auto _try_value_89 = firstManifestString(root, std::string("id"), nested, std::string("bundleId"), build, std::string("id"), defaultBundleId, manifestPath, std::string("build.macosApp.bundleId"));
+    if (doof::is_failure(_try_value_89)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_89))};
+    const auto bundleId = doof::success_value(_try_value_89);
+    auto _try_value_90 = firstManifestString(root, std::string("title"), nested, std::string("displayName"), build, std::string("title"), ((packageName == std::string("")) ? executableName : packageName), manifestPath, std::string("build.macosApp.displayName"));
+    if (doof::is_failure(_try_value_90)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_90))};
+    const auto displayName = doof::success_value(_try_value_90);
+    auto _try_value_91 = optionalManifestString(nested, std::string("version"), packageVersion, manifestPath, std::string("build.macosApp.version"));
+    if (doof::is_failure(_try_value_91)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_91))};
+    const auto version = doof::success_value(_try_value_91);
+    auto _try_value_92 = optionalManifestString(nested, std::string("category"), std::string("public.app-category.developer-tools"), manifestPath, std::string("build.macosApp.category"));
+    if (doof::is_failure(_try_value_92)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_92))};
+    const auto category = doof::success_value(_try_value_92);
+    auto _try_value_93 = optionalManifestString(nested, std::string("minimumSystemVersion"), std::string("11.0"), manifestPath, std::string("build.macosApp.minimumSystemVersion"));
+    if (doof::is_failure(_try_value_93)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_93))};
+    const auto minimumSystemVersion = doof::success_value(_try_value_93);
     auto icon = std::string("");
     if (manifestJsonHas(root, std::string("icon"))) {
-        auto _try_value_84 = manifestString(manifestJsonField(root, std::string("icon")), manifestPath, std::string("icon"));
-        if (doof::is_failure(_try_value_84)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_84))};
-        const auto parsed = doof::success_value(_try_value_84);
+        auto _try_value_94 = manifestString(manifestJsonField(root, std::string("icon")), manifestPath, std::string("icon"));
+        if (doof::is_failure(_try_value_94)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_94))};
+        const auto parsed = doof::success_value(_try_value_94);
         (icon = parsed);
     } else if (manifestJsonHas(nested, std::string("icon"))) {
-        auto _try_value_85 = manifestString(manifestJsonField(nested, std::string("icon")), manifestPath, std::string("build.macosApp.icon"));
-        if (doof::is_failure(_try_value_85)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_85))};
-        const auto parsed = doof::success_value(_try_value_85);
+        auto _try_value_95 = manifestString(manifestJsonField(nested, std::string("icon")), manifestPath, std::string("build.macosApp.icon"));
+        if (doof::is_failure(_try_value_95)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_95))};
+        const auto parsed = doof::success_value(_try_value_95);
         (icon = parsed);
     } else if (manifestJsonHas(build, std::string("icon"))) {
-        auto _try_value_86 = manifestString(manifestJsonField(build, std::string("icon")), manifestPath, std::string("build.icon"));
-        if (doof::is_failure(_try_value_86)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_86))};
-        const auto parsed = doof::success_value(_try_value_86);
+        auto _try_value_96 = manifestString(manifestJsonField(build, std::string("icon")), manifestPath, std::string("build.icon"));
+        if (doof::is_failure(_try_value_96)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_96))};
+        const auto parsed = doof::success_value(_try_value_96);
         (icon = parsed);
     }
     auto iconPath = std::string("");
@@ -1160,11 +1160,11 @@ doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>, std::string>
     }
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr;
     if (manifestJsonHas(nested, std::string("infoPlist"))) {
-        auto _try_value_87 = manifestObject(manifestJsonField(nested, std::string("infoPlist")), manifestPath, std::string("build.macosApp.infoPlist"));
-        if (doof::is_failure(_try_value_87)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_87))};
-        const auto parsedInfo = doof::success_value(_try_value_87);
-        const auto& _iterable_88 = parsedInfo;
-        for (const auto& [key, ignored] : *_iterable_88) {
+        auto _try_value_97 = manifestObject(manifestJsonField(nested, std::string("infoPlist")), manifestPath, std::string("build.macosApp.infoPlist"));
+        if (doof::is_failure(_try_value_97)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_97))};
+        const auto parsedInfo = doof::success_value(_try_value_97);
+        const auto& _iterable_99 = parsedInfo;
+        for (const auto& [key, ignored] : *_iterable_99) {
             if (isManagedMacOSPlistKey(key)) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": build.macosApp.infoPlist.")) + key) + std::string(" conflicts with a Doof-managed Info.plist key")) };
             }
@@ -1184,40 +1184,40 @@ doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>, std::string>
     }
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_macos_app_::MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<::app_src_macos_app_::MacOSAppResource>>>(std::vector<std::shared_ptr<::app_src_macos_app_::MacOSAppResource>>{});
     if (!doof::is_null(resourceValue)) {
-        auto _try_value_89 = parseResourceArray(std::get<doof::JsonValue>(resourceValue), manifestPath, rootDirectory, resourceField);
-        if (doof::is_failure(_try_value_89)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_89))};
-        const auto parsedResources = doof::success_value(_try_value_89);
-        const auto& _iterable_90 = parsedResources;
-        for (const auto& resource : *_iterable_90) {
+        auto _try_value_100 = parseResourceArray(std::get<doof::JsonValue>(resourceValue), manifestPath, rootDirectory, resourceField);
+        if (doof::is_failure(_try_value_100)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_100))};
+        const auto parsedResources = doof::success_value(_try_value_100);
+        const auto& _iterable_102 = parsedResources;
+        for (const auto& resource : *_iterable_102) {
             resources->push_back(std::make_shared<::app_src_macos_app_::MacOSAppResource>(resource->sourcePath, resource->destination));
         }
     }
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_macos_app_::MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<::app_src_macos_app_::MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<::app_src_macos_app_::MacOSEmbeddedLibrary>>{});
     if (manifestJsonHas(nested, std::string("embeddedLibraries"))) {
-        auto _try_value_91 = manifestArray(manifestJsonField(nested, std::string("embeddedLibraries")), manifestPath, std::string("build.macosApp.embeddedLibraries"));
-        if (doof::is_failure(_try_value_91)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_91))};
-        const auto entries = doof::success_value(_try_value_91);
+        auto _try_value_103 = manifestArray(manifestJsonField(nested, std::string("embeddedLibraries")), manifestPath, std::string("build.macosApp.embeddedLibraries"));
+        if (doof::is_failure(_try_value_103)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_103))};
+        const auto entries = doof::success_value(_try_value_103);
         for (int32_t index = 0; index < static_cast<int32_t>((entries)->size()); ++index) {
-            auto _try_value_92 = manifestObject(doof::array_at(entries, index, "src/package-manifest", 601), manifestPath, ((std::string("build.macosApp.embeddedLibraries[") + doof::to_string(index)) + std::string("]")));
-            if (doof::is_failure(_try_value_92)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_92))};
-            const auto entry = doof::success_value(_try_value_92);
+            auto _try_value_105 = manifestObject(doof::array_at(entries, index, "src/package-manifest", 601), manifestPath, ((std::string("build.macosApp.embeddedLibraries[") + doof::to_string(index)) + std::string("]")));
+            if (doof::is_failure(_try_value_105)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_105))};
+            const auto entry = doof::success_value(_try_value_105);
             const auto hasLibrary = manifestJsonHas(entry, std::string("library"));
             const auto hasPath = manifestJsonHas(entry, std::string("path"));
             if (hasLibrary == hasPath) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": build.macosApp.embeddedLibraries[")) + doof::to_string(index)) + std::string("] requires exactly one of library or path")) };
             }
             if (hasLibrary) {
-                auto _try_value_93 = manifestString(manifestJsonField(entry, std::string("library")), manifestPath, ((std::string("build.macosApp.embeddedLibraries[") + doof::to_string(index)) + std::string("].library")));
-                if (doof::is_failure(_try_value_93)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_93))};
-                const auto library = doof::success_value(_try_value_93);
+                auto _try_value_106 = manifestString(manifestJsonField(entry, std::string("library")), manifestPath, ((std::string("build.macosApp.embeddedLibraries[") + doof::to_string(index)) + std::string("].library")));
+                if (doof::is_failure(_try_value_106)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_106))};
+                const auto library = doof::success_value(_try_value_106);
                 if (((library == std::string("")) || doof::string_contains(library, std::string("/"))) || doof::string_contains(library, std::string("\\"))) {
                     return doof::Failure<std::string>{ ((std::string("Invalid doof.json at ") + manifestPath) + std::string(": embedded linked library names must not contain path separators")) };
                 }
                 embeddedLibraries->push_back(std::make_shared<::app_src_macos_app_::MacOSEmbeddedLibrary>(library, std::string("")));
             } else {
-                auto _try_value_94 = manifestString(manifestJsonField(entry, std::string("path")), manifestPath, ((std::string("build.macosApp.embeddedLibraries[") + doof::to_string(index)) + std::string("].path")));
-                if (doof::is_failure(_try_value_94)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_94))};
-                const auto path = doof::success_value(_try_value_94);
+                auto _try_value_107 = manifestString(manifestJsonField(entry, std::string("path")), manifestPath, ((std::string("build.macosApp.embeddedLibraries[") + doof::to_string(index)) + std::string("].path")));
+                if (doof::is_failure(_try_value_107)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_107))};
+                const auto path = doof::success_value(_try_value_107);
                 const auto resolvedPath = manifestJoinPath(rootDirectory, path);
                 if (!manifestPathWithinRoot(resolvedPath, rootDirectory)) {
                     return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": build.macosApp.embeddedLibraries[")) + doof::to_string(index)) + std::string("].path must stay within the package root")) };
@@ -1237,52 +1237,52 @@ doof::Result<std::shared_ptr<::app_src_ios_app_::IOSAppConfig>, std::string> par
     }
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> build = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     if (manifestJsonHas(root, std::string("build"))) {
-        auto _try_value_95 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
-        if (doof::is_failure(_try_value_95)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_95))};
-        const auto parsedBuild = doof::success_value(_try_value_95);
+        auto _try_value_108 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
+        if (doof::is_failure(_try_value_108)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_108))};
+        const auto parsedBuild = doof::success_value(_try_value_108);
         (build = parsedBuild);
     }
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> nested = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
     if (manifestJsonHas(build, std::string("iosApp"))) {
-        auto _try_value_96 = manifestObject(manifestJsonField(build, std::string("iosApp")), manifestPath, std::string("build.iosApp"));
-        if (doof::is_failure(_try_value_96)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_96))};
-        const auto parsedNested = doof::success_value(_try_value_96);
+        auto _try_value_109 = manifestObject(manifestJsonField(build, std::string("iosApp")), manifestPath, std::string("build.iosApp"));
+        if (doof::is_failure(_try_value_109)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_109))};
+        const auto parsedNested = doof::success_value(_try_value_109);
         (nested = parsedNested);
     }
-    auto _try_value_97 = firstManifestString(root, std::string("executable"), build, std::string("executable"), build, std::string("targetExecutableName"), packageName, manifestPath, std::string("executable"));
-    if (doof::is_failure(_try_value_97)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_97))};
-    const auto executableName = doof::success_value(_try_value_97);
+    auto _try_value_110 = firstManifestString(root, std::string("executable"), build, std::string("executable"), build, std::string("targetExecutableName"), packageName, manifestPath, std::string("executable"));
+    if (doof::is_failure(_try_value_110)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_110))};
+    const auto executableName = doof::success_value(_try_value_110);
     if (((executableName == std::string("")) || doof::string_contains(executableName, std::string("/"))) || doof::string_contains(executableName, std::string("\\"))) {
         return doof::Failure<std::string>{ ((std::string("Invalid doof.json at ") + manifestPath) + std::string(": executable must be a file name without path separators")) };
     }
     const auto defaultBundleId = (std::string("dev.doof.") + sanitizeBundleName(((packageName == std::string("")) ? executableName : packageName)));
-    auto _try_value_98 = firstManifestString(root, std::string("id"), nested, std::string("bundleId"), build, std::string("id"), defaultBundleId, manifestPath, std::string("build.iosApp.bundleId"));
-    if (doof::is_failure(_try_value_98)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_98))};
-    const auto bundleId = doof::success_value(_try_value_98);
-    auto _try_value_99 = firstManifestString(root, std::string("title"), nested, std::string("displayName"), build, std::string("title"), ((packageName == std::string("")) ? executableName : packageName), manifestPath, std::string("build.iosApp.displayName"));
-    if (doof::is_failure(_try_value_99)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_99))};
-    const auto displayName = doof::success_value(_try_value_99);
-    auto _try_value_100 = optionalManifestString(nested, std::string("version"), packageVersion, manifestPath, std::string("build.iosApp.version"));
-    if (doof::is_failure(_try_value_100)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_100))};
-    const auto version = doof::success_value(_try_value_100);
-    auto _try_value_101 = optionalManifestString(nested, std::string("minimumDeploymentTarget"), std::string("16.0"), manifestPath, std::string("build.iosApp.minimumDeploymentTarget"));
-    if (doof::is_failure(_try_value_101)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_101))};
-    const auto minimumDeploymentTarget = doof::success_value(_try_value_101);
+    auto _try_value_111 = firstManifestString(root, std::string("id"), nested, std::string("bundleId"), build, std::string("id"), defaultBundleId, manifestPath, std::string("build.iosApp.bundleId"));
+    if (doof::is_failure(_try_value_111)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_111))};
+    const auto bundleId = doof::success_value(_try_value_111);
+    auto _try_value_112 = firstManifestString(root, std::string("title"), nested, std::string("displayName"), build, std::string("title"), ((packageName == std::string("")) ? executableName : packageName), manifestPath, std::string("build.iosApp.displayName"));
+    if (doof::is_failure(_try_value_112)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_112))};
+    const auto displayName = doof::success_value(_try_value_112);
+    auto _try_value_113 = optionalManifestString(nested, std::string("version"), packageVersion, manifestPath, std::string("build.iosApp.version"));
+    if (doof::is_failure(_try_value_113)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_113))};
+    const auto version = doof::success_value(_try_value_113);
+    auto _try_value_114 = optionalManifestString(nested, std::string("minimumDeploymentTarget"), std::string("16.0"), manifestPath, std::string("build.iosApp.minimumDeploymentTarget"));
+    if (doof::is_failure(_try_value_114)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_114))};
+    const auto minimumDeploymentTarget = doof::success_value(_try_value_114);
     auto icon = std::string("");
     if (manifestJsonHas(root, std::string("icon"))) {
-        auto _try_value_102 = manifestString(manifestJsonField(root, std::string("icon")), manifestPath, std::string("icon"));
-        if (doof::is_failure(_try_value_102)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_102))};
-        const auto parsed = doof::success_value(_try_value_102);
+        auto _try_value_115 = manifestString(manifestJsonField(root, std::string("icon")), manifestPath, std::string("icon"));
+        if (doof::is_failure(_try_value_115)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_115))};
+        const auto parsed = doof::success_value(_try_value_115);
         (icon = parsed);
     } else if (manifestJsonHas(nested, std::string("icon"))) {
-        auto _try_value_103 = manifestString(manifestJsonField(nested, std::string("icon")), manifestPath, std::string("build.iosApp.icon"));
-        if (doof::is_failure(_try_value_103)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_103))};
-        const auto parsed = doof::success_value(_try_value_103);
+        auto _try_value_116 = manifestString(manifestJsonField(nested, std::string("icon")), manifestPath, std::string("build.iosApp.icon"));
+        if (doof::is_failure(_try_value_116)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_116))};
+        const auto parsed = doof::success_value(_try_value_116);
         (icon = parsed);
     } else if (manifestJsonHas(build, std::string("icon"))) {
-        auto _try_value_104 = manifestString(manifestJsonField(build, std::string("icon")), manifestPath, std::string("build.icon"));
-        if (doof::is_failure(_try_value_104)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_104))};
-        const auto parsed = doof::success_value(_try_value_104);
+        auto _try_value_117 = manifestString(manifestJsonField(build, std::string("icon")), manifestPath, std::string("build.icon"));
+        if (doof::is_failure(_try_value_117)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_117))};
+        const auto parsed = doof::success_value(_try_value_117);
         (icon = parsed);
     }
     auto iconPath = std::string("");
@@ -1297,11 +1297,11 @@ doof::Result<std::shared_ptr<::app_src_ios_app_::IOSAppConfig>, std::string> par
     }
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr;
     if (manifestJsonHas(nested, std::string("infoPlist"))) {
-        auto _try_value_105 = manifestObject(manifestJsonField(nested, std::string("infoPlist")), manifestPath, std::string("build.iosApp.infoPlist"));
-        if (doof::is_failure(_try_value_105)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_105))};
-        const auto parsedInfo = doof::success_value(_try_value_105);
-        const auto& _iterable_106 = parsedInfo;
-        for (const auto& [key, ignored] : *_iterable_106) {
+        auto _try_value_118 = manifestObject(manifestJsonField(nested, std::string("infoPlist")), manifestPath, std::string("build.iosApp.infoPlist"));
+        if (doof::is_failure(_try_value_118)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_118))};
+        const auto parsedInfo = doof::success_value(_try_value_118);
+        const auto& _iterable_120 = parsedInfo;
+        for (const auto& [key, ignored] : *_iterable_120) {
             if (isManagedIOSPlistKey(key)) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": build.iosApp.infoPlist.")) + key) + std::string(" conflicts with a Doof-managed Info.plist key")) };
             }
@@ -1321,41 +1321,41 @@ doof::Result<std::shared_ptr<::app_src_ios_app_::IOSAppConfig>, std::string> par
     }
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ios_app_::IOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<::app_src_ios_app_::IOSAppResource>>>(std::vector<std::shared_ptr<::app_src_ios_app_::IOSAppResource>>{});
     if (!doof::is_null(resourceValue)) {
-        auto _try_value_107 = parseResourceArray(std::get<doof::JsonValue>(resourceValue), manifestPath, rootDirectory, resourceField);
-        if (doof::is_failure(_try_value_107)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_107))};
-        const auto parsedResources = doof::success_value(_try_value_107);
-        const auto& _iterable_108 = parsedResources;
-        for (const auto& resource : *_iterable_108) {
+        auto _try_value_121 = parseResourceArray(std::get<doof::JsonValue>(resourceValue), manifestPath, rootDirectory, resourceField);
+        if (doof::is_failure(_try_value_121)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_121))};
+        const auto parsedResources = doof::success_value(_try_value_121);
+        const auto& _iterable_123 = parsedResources;
+        for (const auto& resource : *_iterable_123) {
             resources->push_back(std::make_shared<::app_src_ios_app_::IOSAppResource>(resource->sourcePath, resource->destination));
         }
     }
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ios_app_::IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<::app_src_ios_app_::IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<::app_src_ios_app_::IOSEmbeddedLibrary>>{});
     if (manifestJsonHas(nested, std::string("embeddedLibraries"))) {
-        auto _try_value_109 = manifestArray(manifestJsonField(nested, std::string("embeddedLibraries")), manifestPath, std::string("build.iosApp.embeddedLibraries"));
-        if (doof::is_failure(_try_value_109)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_109))};
-        const auto entries = doof::success_value(_try_value_109);
+        auto _try_value_124 = manifestArray(manifestJsonField(nested, std::string("embeddedLibraries")), manifestPath, std::string("build.iosApp.embeddedLibraries"));
+        if (doof::is_failure(_try_value_124)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_124))};
+        const auto entries = doof::success_value(_try_value_124);
         for (int32_t index = 0; index < static_cast<int32_t>((entries)->size()); ++index) {
             const auto field = ((std::string("build.iosApp.embeddedLibraries[") + doof::to_string(index)) + std::string("]"));
-            auto _try_value_110 = manifestObject(doof::array_at(entries, index, "src/package-manifest", 723), manifestPath, field);
-            if (doof::is_failure(_try_value_110)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_110))};
-            const auto entry = doof::success_value(_try_value_110);
+            auto _try_value_126 = manifestObject(doof::array_at(entries, index, "src/package-manifest", 723), manifestPath, field);
+            if (doof::is_failure(_try_value_126)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_126))};
+            const auto entry = doof::success_value(_try_value_126);
             const auto hasLibrary = manifestJsonHas(entry, std::string("library"));
             const auto hasPath = manifestJsonHas(entry, std::string("path"));
             if (hasLibrary == hasPath) {
                 return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + field) + std::string(" requires exactly one of library or path")) };
             }
             if (hasLibrary) {
-                auto _try_value_111 = manifestString(manifestJsonField(entry, std::string("library")), manifestPath, (field + std::string(".library")));
-                if (doof::is_failure(_try_value_111)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_111))};
-                const auto library = doof::success_value(_try_value_111);
+                auto _try_value_127 = manifestString(manifestJsonField(entry, std::string("library")), manifestPath, (field + std::string(".library")));
+                if (doof::is_failure(_try_value_127)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_127))};
+                const auto library = doof::success_value(_try_value_127);
                 if (((library == std::string("")) || doof::string_contains(library, std::string("/"))) || doof::string_contains(library, std::string("\\"))) {
                     return doof::Failure<std::string>{ ((std::string("Invalid doof.json at ") + manifestPath) + std::string(": embedded linked library names must not contain path separators")) };
                 }
                 embeddedLibraries->push_back(std::make_shared<::app_src_ios_app_::IOSEmbeddedLibrary>(library, std::string("")));
             } else {
-                auto _try_value_112 = manifestString(manifestJsonField(entry, std::string("path")), manifestPath, (field + std::string(".path")));
-                if (doof::is_failure(_try_value_112)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_112))};
-                const auto path = doof::success_value(_try_value_112);
+                auto _try_value_128 = manifestString(manifestJsonField(entry, std::string("path")), manifestPath, (field + std::string(".path")));
+                if (doof::is_failure(_try_value_128)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_128))};
+                const auto path = doof::success_value(_try_value_128);
                 const auto resolvedPath = manifestJoinPath(rootDirectory, path);
                 if (!manifestPathWithinRoot(resolvedPath, rootDirectory)) {
                     return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + field) + std::string(".path must stay within the package root")) };
@@ -1378,41 +1378,41 @@ doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig>, std::str
     if (!manifestJsonHas(root, std::string("build"))) {
         return doof::Success<std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig>>{ std::make_shared<::app_src_macos_app_::MacOSPackageConfig>(distDirectory, signing, identity, sandbox, entitlementsPath) };
     }
-    auto _try_value_113 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
-    if (doof::is_failure(_try_value_113)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_113))};
-    const auto build = doof::success_value(_try_value_113);
+    auto _try_value_129 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
+    if (doof::is_failure(_try_value_129)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_129))};
+    const auto build = doof::success_value(_try_value_129);
     if (!manifestJsonHas(build, std::string("package"))) {
         return doof::Success<std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig>>{ std::make_shared<::app_src_macos_app_::MacOSPackageConfig>(distDirectory, signing, identity, sandbox, entitlementsPath) };
     }
-    auto _try_value_114 = manifestObject(manifestJsonField(build, std::string("package")), manifestPath, std::string("build.package"));
-    if (doof::is_failure(_try_value_114)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_114))};
-    const auto package = doof::success_value(_try_value_114);
+    auto _try_value_130 = manifestObject(manifestJsonField(build, std::string("package")), manifestPath, std::string("build.package"));
+    if (doof::is_failure(_try_value_130)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_130))};
+    const auto package = doof::success_value(_try_value_130);
     if (manifestJsonHas(package, std::string("distDir"))) {
-        auto _try_value_115 = manifestString(manifestJsonField(package, std::string("distDir")), manifestPath, std::string("build.package.distDir"));
-        if (doof::is_failure(_try_value_115)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_115))};
-        const auto value = doof::success_value(_try_value_115);
+        auto _try_value_131 = manifestString(manifestJsonField(package, std::string("distDir")), manifestPath, std::string("build.package.distDir"));
+        if (doof::is_failure(_try_value_131)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_131))};
+        const auto value = doof::success_value(_try_value_131);
         (distDirectory = manifestJoinPath(rootDirectory, value));
         if (!manifestPathWithinRoot(distDirectory, rootDirectory)) {
             return doof::Failure<std::string>{ ((std::string("Invalid doof.json at ") + manifestPath) + std::string(": build.package.distDir must stay within the package root")) };
         }
     }
     if (manifestJsonHas(package, std::string("macos"))) {
-        auto _try_value_116 = manifestObject(manifestJsonField(package, std::string("macos")), manifestPath, std::string("build.package.macos"));
-        if (doof::is_failure(_try_value_116)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_116))};
-        const auto macos = doof::success_value(_try_value_116);
+        auto _try_value_132 = manifestObject(manifestJsonField(package, std::string("macos")), manifestPath, std::string("build.package.macos"));
+        if (doof::is_failure(_try_value_132)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_132))};
+        const auto macos = doof::success_value(_try_value_132);
         if (manifestJsonHas(macos, std::string("signing"))) {
-            auto _try_value_117 = manifestString(manifestJsonField(macos, std::string("signing")), manifestPath, std::string("build.package.macos.signing"));
-            if (doof::is_failure(_try_value_117)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_117))};
-            const auto value = doof::success_value(_try_value_117);
+            auto _try_value_133 = manifestString(manifestJsonField(macos, std::string("signing")), manifestPath, std::string("build.package.macos.signing"));
+            if (doof::is_failure(_try_value_133)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_133))};
+            const auto value = doof::success_value(_try_value_133);
             if ((value != std::string("developer-id")) && (value != std::string("ad-hoc"))) {
                 return doof::Failure<std::string>{ ((std::string("Invalid doof.json at ") + manifestPath) + std::string(": build.package.macos.signing must be one of \"developer-id\", \"ad-hoc\"")) };
             }
             (signing = value);
         }
         if (manifestJsonHas(macos, std::string("identity"))) {
-            auto _try_value_118 = manifestString(manifestJsonField(macos, std::string("identity")), manifestPath, std::string("build.package.macos.identity"));
-            if (doof::is_failure(_try_value_118)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_118))};
-            const auto value = doof::success_value(_try_value_118);
+            auto _try_value_134 = manifestString(manifestJsonField(macos, std::string("identity")), manifestPath, std::string("build.package.macos.identity"));
+            if (doof::is_failure(_try_value_134)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_134))};
+            const auto value = doof::success_value(_try_value_134);
             (identity = value);
         }
         if (manifestJsonHas(macos, std::string("sandbox"))) {
@@ -1428,9 +1428,9 @@ doof::Result<std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig>, std::str
             }
         }
         if (manifestJsonHas(macos, std::string("entitlements"))) {
-            auto _try_value_119 = manifestString(manifestJsonField(macos, std::string("entitlements")), manifestPath, std::string("build.package.macos.entitlements"));
-            if (doof::is_failure(_try_value_119)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_119))};
-            const auto value = doof::success_value(_try_value_119);
+            auto _try_value_135 = manifestString(manifestJsonField(macos, std::string("entitlements")), manifestPath, std::string("build.package.macos.entitlements"));
+            if (doof::is_failure(_try_value_135)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_135))};
+            const auto value = doof::success_value(_try_value_135);
             (entitlementsPath = manifestJoinPath(rootDirectory, value));
             if (!manifestPathWithinRoot(entitlementsPath, rootDirectory)) {
                 return doof::Failure<std::string>{ ((std::string("Invalid doof.json at ") + manifestPath) + std::string(": build.package.macos.entitlements must stay within the package root")) };
@@ -1445,31 +1445,31 @@ doof::Result<std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>, std::string>
     if (!manifestJsonHas(root, std::string("build"))) {
         return doof::Success<std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>>{ std::make_shared<::app_src_ios_app_::IOSPackageConfig>(std::string(""), std::string("")) };
     }
-    auto _try_value_120 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
-    if (doof::is_failure(_try_value_120)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_120))};
-    const auto build = doof::success_value(_try_value_120);
+    auto _try_value_136 = manifestObject(manifestJsonField(root, std::string("build")), manifestPath, std::string("build"));
+    if (doof::is_failure(_try_value_136)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_136))};
+    const auto build = doof::success_value(_try_value_136);
     if (!manifestJsonHas(build, std::string("package"))) {
         return doof::Success<std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>>{ std::make_shared<::app_src_ios_app_::IOSPackageConfig>(std::string(""), std::string("")) };
     }
-    auto _try_value_121 = manifestObject(manifestJsonField(build, std::string("package")), manifestPath, std::string("build.package"));
-    if (doof::is_failure(_try_value_121)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_121))};
-    const auto package = doof::success_value(_try_value_121);
+    auto _try_value_137 = manifestObject(manifestJsonField(build, std::string("package")), manifestPath, std::string("build.package"));
+    if (doof::is_failure(_try_value_137)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_137))};
+    const auto package = doof::success_value(_try_value_137);
     if (!manifestJsonHas(package, std::string("ios"))) {
         return doof::Success<std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>>{ std::make_shared<::app_src_ios_app_::IOSPackageConfig>(std::string(""), std::string("")) };
     }
-    auto _try_value_122 = manifestObject(manifestJsonField(package, std::string("ios")), manifestPath, std::string("build.package.ios"));
-    if (doof::is_failure(_try_value_122)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_122))};
-    const auto ios = doof::success_value(_try_value_122);
+    auto _try_value_138 = manifestObject(manifestJsonField(package, std::string("ios")), manifestPath, std::string("build.package.ios"));
+    if (doof::is_failure(_try_value_138)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_138))};
+    const auto ios = doof::success_value(_try_value_138);
     if (manifestJsonHas(ios, std::string("identity"))) {
-        auto _try_value_123 = manifestString(manifestJsonField(ios, std::string("identity")), manifestPath, std::string("build.package.ios.identity"));
-        if (doof::is_failure(_try_value_123)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_123))};
-        const auto value = doof::success_value(_try_value_123);
+        auto _try_value_139 = manifestString(manifestJsonField(ios, std::string("identity")), manifestPath, std::string("build.package.ios.identity"));
+        if (doof::is_failure(_try_value_139)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_139))};
+        const auto value = doof::success_value(_try_value_139);
         (identity = value);
     }
     if (manifestJsonHas(ios, std::string("provisioningProfile"))) {
-        auto _try_value_124 = manifestString(manifestJsonField(ios, std::string("provisioningProfile")), manifestPath, std::string("build.package.ios.provisioningProfile"));
-        if (doof::is_failure(_try_value_124)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_124))};
-        const auto value = doof::success_value(_try_value_124);
+        auto _try_value_140 = manifestString(manifestJsonField(ios, std::string("provisioningProfile")), manifestPath, std::string("build.package.ios.provisioningProfile"));
+        if (doof::is_failure(_try_value_140)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_140))};
+        const auto value = doof::success_value(_try_value_140);
         (provisioningProfilePath = manifestJoinPath(rootDirectory, value));
         if (!manifestPathWithinRoot(provisioningProfilePath, rootDirectory)) {
             return doof::Failure<std::string>{ ((std::string("Invalid doof.json at ") + manifestPath) + std::string(": build.package.ios.provisioningProfile must stay within the package root")) };
@@ -1524,9 +1524,9 @@ bool isManagedIOSPlistKey(const std::string& key) {
     return doof::array_contains(keys, key, "", 0);
 }
 doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std::string> parseResourceArray(const doof::JsonValue& value, const std::string& manifestPath, const std::string& rootDirectory, const std::string& fieldPath) {
-    auto _try_value_125 = manifestArray(value, manifestPath, fieldPath);
-    if (doof::is_failure(_try_value_125)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_125))};
-    const auto entries = doof::success_value(_try_value_125);
+    auto _try_value_142 = manifestArray(value, manifestPath, fieldPath);
+    if (doof::is_failure(_try_value_142)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_142))};
+    const auto entries = doof::success_value(_try_value_142);
     std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources = std::make_shared<std::vector<std::shared_ptr<PackageResource>>>(std::vector<std::shared_ptr<PackageResource>>{});
     for (int32_t index = 0; index < static_cast<int32_t>((entries)->size()); ++index) {
         auto source = std::string("");
@@ -1546,12 +1546,12 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std
                 if (!manifestJsonHas(object, std::string("from")) || !manifestJsonHas(object, std::string("to"))) {
                     return doof::Failure<std::string>{ ((((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string("[")) + doof::to_string(index)) + std::string("] requires string fields from and to")) };
                 }
-                auto _try_value_126 = manifestString(manifestJsonField(object, std::string("from")), manifestPath, (((fieldPath + std::string("[")) + doof::to_string(index)) + std::string("].from")));
-                if (doof::is_failure(_try_value_126)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_126))};
-                const auto parsedSource = doof::success_value(_try_value_126);
-                auto _try_value_127 = manifestString(manifestJsonField(object, std::string("to")), manifestPath, (((fieldPath + std::string("[")) + doof::to_string(index)) + std::string("].to")));
-                if (doof::is_failure(_try_value_127)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_127))};
-                const auto parsedDestination = doof::success_value(_try_value_127);
+                auto _try_value_144 = manifestString(manifestJsonField(object, std::string("from")), manifestPath, (((fieldPath + std::string("[")) + doof::to_string(index)) + std::string("].from")));
+                if (doof::is_failure(_try_value_144)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_144))};
+                const auto parsedSource = doof::success_value(_try_value_144);
+                auto _try_value_145 = manifestString(manifestJsonField(object, std::string("to")), manifestPath, (((fieldPath + std::string("[")) + doof::to_string(index)) + std::string("].to")));
+                if (doof::is_failure(_try_value_145)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_145))};
+                const auto parsedDestination = doof::success_value(_try_value_145);
                 (source = parsedSource);
                 (destination = parsedDestination);
         }
@@ -1564,9 +1564,9 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std
         if ((sourcePath != rootDirectory) && !doof::string_startsWith(sourcePath, rootBoundary)) {
             return doof::Failure<std::string>{ ((((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string("[")) + doof::to_string(index)) + std::string("].from must stay within the package root")) };
         }
-        auto _try_value_128 = normalizeResourceDestination(destination, manifestPath, (((fieldPath + std::string("[")) + doof::to_string(index)) + std::string("].to")));
-        if (doof::is_failure(_try_value_128)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_128))};
-        const auto normalizedDestination = doof::success_value(_try_value_128);
+        auto _try_value_146 = normalizeResourceDestination(destination, manifestPath, (((fieldPath + std::string("[")) + doof::to_string(index)) + std::string("].to")));
+        if (doof::is_failure(_try_value_146)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_146))};
+        const auto normalizedDestination = doof::success_value(_try_value_146);
         resources->push_back(std::make_shared<PackageResource>(sourcePath, normalizedDestination));
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>>{ resources };
@@ -1577,8 +1577,8 @@ doof::Result<std::string, std::string> normalizeResourceDestination(const std::s
         return doof::Failure<std::string>{ ((((std::string("Invalid doof.json at ") + manifestPath) + std::string(": ")) + fieldPath) + std::string(" must be relative")) };
     }
     std::shared_ptr<std::vector<std::string>> segments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_129 = doof::string_split(portable, std::string("/"));
-    for (const auto& segment : *_iterable_129) {
+    const auto& _iterable_148 = doof::string_split(portable, std::string("/"));
+    for (const auto& segment : *_iterable_148) {
         if ((segment == std::string("")) || (segment == std::string("."))) {
             continue;
         }
@@ -1592,8 +1592,8 @@ doof::Result<std::string, std::string> normalizeResourceDestination(const std::s
         segments->push_back(segment);
     }
     auto normalized = std::string("");
-    const auto& _iterable_130 = segments;
-    for (const auto& segment : *_iterable_130) {
+    const auto& _iterable_150 = segments;
+    for (const auto& segment : *_iterable_150) {
         if (normalized != std::string("")) {
             (normalized = (normalized + std::string("/")));
         }
@@ -1602,39 +1602,39 @@ doof::Result<std::string, std::string> normalizeResourceDestination(const std::s
     return doof::Success<std::string>{ normalized };
 }
 doof::Result<void, std::string> appendNativeFragment(const std::shared_ptr<NativeBuildPlan>& target, const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& fragment, const std::string& manifestPath, const std::string& rootDirectory, const std::string& fieldPath) {
-    auto _try_value_131 = appendStringArrayField(target->includePaths, fragment, std::string("includePaths"), manifestPath, fieldPath, rootDirectory);
-    if (doof::is_failure(_try_value_131)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_131))};
-    auto _try_value_132 = appendStringArrayField(target->sourceFiles, fragment, std::string("sourceFiles"), manifestPath, fieldPath, rootDirectory);
-    if (doof::is_failure(_try_value_132)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_132))};
-    auto _try_value_133 = appendStringArrayField(target->libraryPaths, fragment, std::string("libraryPaths"), manifestPath, fieldPath, rootDirectory);
-    if (doof::is_failure(_try_value_133)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_133))};
-    auto _try_value_134 = appendStringArrayField(target->extraCopyPaths, fragment, std::string("extraCopyPaths"), manifestPath, fieldPath, rootDirectory);
-    if (doof::is_failure(_try_value_134)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_134))};
-    auto _try_value_135 = appendStringArrayField(target->linkLibraries, fragment, std::string("linkLibraries"), manifestPath, fieldPath, std::string(""));
-    if (doof::is_failure(_try_value_135)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_135))};
-    auto _try_value_136 = appendStringArrayField(target->frameworks, fragment, std::string("frameworks"), manifestPath, fieldPath, std::string(""));
-    if (doof::is_failure(_try_value_136)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_136))};
-    auto _try_value_137 = appendStringArrayField(target->pkgConfigPackages, fragment, std::string("pkgConfigPackages"), manifestPath, fieldPath, std::string(""));
-    if (doof::is_failure(_try_value_137)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_137))};
-    auto _try_value_138 = appendStringArrayField(target->defines, fragment, std::string("defines"), manifestPath, fieldPath, std::string(""));
-    if (doof::is_failure(_try_value_138)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_138))};
-    auto _try_value_139 = appendStringArrayField(target->compilerFlags, fragment, std::string("compilerFlags"), manifestPath, fieldPath, std::string(""));
-    if (doof::is_failure(_try_value_139)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_139))};
-    auto _try_value_140 = appendStringArrayField(target->linkerFlags, fragment, std::string("linkerFlags"), manifestPath, fieldPath, std::string(""));
-    if (doof::is_failure(_try_value_140)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_140))};
+    auto _try_value_151 = appendStringArrayField(target->includePaths, fragment, std::string("includePaths"), manifestPath, fieldPath, rootDirectory);
+    if (doof::is_failure(_try_value_151)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_151))};
+    auto _try_value_152 = appendStringArrayField(target->sourceFiles, fragment, std::string("sourceFiles"), manifestPath, fieldPath, rootDirectory);
+    if (doof::is_failure(_try_value_152)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_152))};
+    auto _try_value_153 = appendStringArrayField(target->libraryPaths, fragment, std::string("libraryPaths"), manifestPath, fieldPath, rootDirectory);
+    if (doof::is_failure(_try_value_153)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_153))};
+    auto _try_value_154 = appendStringArrayField(target->extraCopyPaths, fragment, std::string("extraCopyPaths"), manifestPath, fieldPath, rootDirectory);
+    if (doof::is_failure(_try_value_154)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_154))};
+    auto _try_value_155 = appendStringArrayField(target->linkLibraries, fragment, std::string("linkLibraries"), manifestPath, fieldPath, std::string(""));
+    if (doof::is_failure(_try_value_155)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_155))};
+    auto _try_value_156 = appendStringArrayField(target->frameworks, fragment, std::string("frameworks"), manifestPath, fieldPath, std::string(""));
+    if (doof::is_failure(_try_value_156)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_156))};
+    auto _try_value_157 = appendStringArrayField(target->pkgConfigPackages, fragment, std::string("pkgConfigPackages"), manifestPath, fieldPath, std::string(""));
+    if (doof::is_failure(_try_value_157)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_157))};
+    auto _try_value_158 = appendStringArrayField(target->defines, fragment, std::string("defines"), manifestPath, fieldPath, std::string(""));
+    if (doof::is_failure(_try_value_158)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_158))};
+    auto _try_value_159 = appendStringArrayField(target->compilerFlags, fragment, std::string("compilerFlags"), manifestPath, fieldPath, std::string(""));
+    if (doof::is_failure(_try_value_159)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_159))};
+    auto _try_value_160 = appendStringArrayField(target->linkerFlags, fragment, std::string("linkerFlags"), manifestPath, fieldPath, std::string(""));
+    if (doof::is_failure(_try_value_160)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_160))};
     return doof::Success<void>{};
 }
 doof::Result<void, std::string> appendStringArrayField(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name, const std::string& manifestPath, const std::string& fieldPath, const std::string& pathRoot) {
     if (!manifestJsonHas(object, name)) {
         return doof::Success<void>{};
     }
-    auto _try_value_141 = manifestArray(manifestJsonField(object, name), manifestPath, ((fieldPath + std::string(".")) + name));
-    if (doof::is_failure(_try_value_141)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_141))};
-    const auto values = doof::success_value(_try_value_141);
+    auto _try_value_161 = manifestArray(manifestJsonField(object, name), manifestPath, ((fieldPath + std::string(".")) + name));
+    if (doof::is_failure(_try_value_161)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_161))};
+    const auto values = doof::success_value(_try_value_161);
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
-        auto _try_value_142 = manifestString(doof::array_at(values, index, "src/package-manifest", 1000), manifestPath, (((((fieldPath + std::string(".")) + name) + std::string("[")) + doof::to_string(index)) + std::string("]")));
-        if (doof::is_failure(_try_value_142)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_142))};
-        const auto value = doof::success_value(_try_value_142);
+        auto _try_value_163 = manifestString(doof::array_at(values, index, "src/package-manifest", 1000), manifestPath, (((((fieldPath + std::string(".")) + name) + std::string("[")) + doof::to_string(index)) + std::string("]")));
+        if (doof::is_failure(_try_value_163)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_163))};
+        const auto value = doof::success_value(_try_value_163);
         const auto normalized = ((pathRoot == std::string("")) ? value : manifestJoinPath(pathRoot, value));
         appendUnique(target, normalized);
     }
@@ -1653,14 +1653,14 @@ void appendNativeBuild(const std::shared_ptr<NativeBuildPlan>& target, const std
     appendUniqueValues(target->linkerFlags, source->linkerFlags);
 }
 void appendUniqueValues(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<std::vector<std::string>>& values) {
-    const auto& _iterable_143 = values;
-    for (const auto& value : *_iterable_143) {
+    const auto& _iterable_165 = values;
+    for (const auto& value : *_iterable_165) {
         appendUnique(target, value);
     }
 }
 void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const std::string& value) {
-    const auto& _iterable_144 = target;
-    for (const auto& existing : *_iterable_144) {
+    const auto& _iterable_167 = target;
+    for (const auto& existing : *_iterable_167) {
         if (existing == value) {
             return;
         }

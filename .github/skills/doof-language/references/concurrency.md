@@ -156,6 +156,22 @@ async blocks. `get()` blocks until the queued work completes, relinquishing a
 runtime worker's CPU token during the wait, and reports thrown runtime failures
 as `Result<T, string>`.
 
+A mutable promise array can drive completion-order work:
+
+```doof
+while pending.length > 0 {
+    value := pending.takeFirstCompleted() else error {
+        panic(error)
+    }
+    consume(value)
+}
+```
+
+`takeFirstCompleted()` blocks until any contained promise settles, removes that
+promise, and returns the same `Result<T, string>` as its `get()` method. An
+empty array returns `Failure<string>`. The wait is notification-driven rather
+than polled and relinquishes a runtime-worker CPU token like `get()`.
+
 ## Actor Boundary Summary
 
 | Type | To actor method |

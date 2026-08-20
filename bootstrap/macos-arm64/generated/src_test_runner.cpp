@@ -201,8 +201,8 @@ doof::Result<std::shared_ptr<TestDiscovery>, std::string> TestDiscovery::fromJso
 std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& modulePath, const std::string& rootDirectory) {
     const auto result = std::make_shared<TestDiscovery>(std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     auto usesMocks = false;
-    const auto& _iterable_1 = program->statements;
-    for (const auto& statement : *_iterable_1) {
+    const auto& _iterable_2 = program->statements;
+    for (const auto& statement : *_iterable_2) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject)) {
@@ -212,8 +212,8 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
         }
         }
     }
-    const auto& _iterable_2 = program->statements;
-    for (const auto& statement : *_iterable_2) {
+    const auto& _iterable_4 = program->statements;
+    for (const auto& statement : *_iterable_4) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
@@ -227,8 +227,8 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
                 if (!doof::is_null(list->source)) {
                     continue;
                 }
-                const auto& _iterable_3 = list->specifiers;
-                for (const auto& specifier : *_iterable_3) {
+                const auto& _iterable_6 = list->specifiers;
+                for (const auto& specifier : *_iterable_6) {
                     const auto exportedName = (doof::is_null(specifier->alias) ? specifier->name : doof::unwrap_optional(specifier->alias));
                     if (!doof::string_startsWith(exportedName, std::string("test"))) {
                         continue;
@@ -248,15 +248,15 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
 std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsForCompilation(const std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>>& tests) {
     const auto shared = std::make_shared<TestCompilationGroup>(std::string("shared"), std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{}));
     std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> mocked = std::make_shared<std::vector<std::shared_ptr<TestCompilationGroup>>>(std::vector<std::shared_ptr<TestCompilationGroup>>{});
-    const auto& _iterable_4 = tests;
-    for (const auto& test : *_iterable_4) {
+    const auto& _iterable_8 = tests;
+    for (const auto& test : *_iterable_8) {
         if (!test->usesMocks) {
             shared->tests->push_back(test);
             continue;
         }
         std::shared_ptr<TestCompilationGroup> group = nullptr;
-        const auto& _iterable_5 = mocked;
-        for (const auto& existing : *_iterable_5) {
+        const auto& _iterable_10 = mocked;
+        for (const auto& existing : *_iterable_10) {
             if ((static_cast<int32_t>((existing->tests)->size()) > 0) && (doof::array_at(existing->tests, 0, "src/test-runner", 97)->modulePath == test->modulePath)) {
                 (group = existing);
                 break;
@@ -272,8 +272,8 @@ std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsFo
     if (static_cast<int32_t>((shared->tests)->size()) > 0) {
         result->push_back(shared);
     }
-    const auto& _iterable_6 = mocked;
-    for (const auto& group : *_iterable_6) {
+    const auto& _iterable_12 = mocked;
+    for (const auto& group : *_iterable_12) {
         result->push_back(group);
     }
     return result;
@@ -284,8 +284,8 @@ std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> filterDiscoveredTe
     }
     const auto needle = doof::string_toLowerCase(filter);
     std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> selected = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{});
-    const auto& _iterable_7 = tests;
-    for (const auto& test : *_iterable_7) {
+    const auto& _iterable_14 = tests;
+    for (const auto& test : *_iterable_14) {
         if (doof::string_contains(doof::string_toLowerCase(test->id), needle)) {
             selected->push_back(test);
         }
@@ -339,8 +339,8 @@ std::string formatParseFailure(const std::string& modulePath, const std::string&
     return (((((header + std::string("\n")) + doof::array_at(lines, (line - 1), "src/test-runner", 174)) + std::string("\n")) + doof::string_repeat(std::string(" "), (caretColumn - 1))) + std::string("^"));
 }
 void mergeCoverageOutput(const std::string& output, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>>& modules, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>>& hitsByModule) {
-    const auto& _iterable_8 = doof::string_split(output, std::string("\n"));
-    for (const auto& line : *_iterable_8) {
+    const auto& _iterable_18 = doof::string_split(output, std::string("\n"));
+    for (const auto& line : *_iterable_18) {
         const auto trimmed = doof::string_trim(line);
         if (!doof::string_startsWith(trimmed, std::string("__COV__ "))) {
             continue;
@@ -366,8 +366,8 @@ void mergeCoverageOutput(const std::string& output, const std::shared_ptr<std::v
 }
 std::string stripCoverageLines(const std::string& output) {
     auto result = std::string("");
-    const auto& _iterable_9 = doof::string_split(output, std::string("\n"));
-    for (const auto& line : *_iterable_9) {
+    const auto& _iterable_21 = doof::string_split(output, std::string("\n"));
+    for (const auto& line : *_iterable_21) {
         if (doof::string_startsWith(doof::string_trim(line), std::string("__COV__ "))) {
             continue;
         }
@@ -390,8 +390,8 @@ std::shared_ptr<CoverageReport> buildCoverageReport(const std::shared_ptr<std::v
             (hits = doof::array_at(hitsByModule, index, "src/test-runner", 222));
         }
         const auto file = std::make_shared<CoverageFileReport>(testDisplayPath(rootDirectory, module->modulePath), 0, static_cast<int32_t>((module->instrumentedLines)->size()), 0, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
-        const auto& _iterable_10 = module->instrumentedLines;
-        for (const auto& line : *_iterable_10) {
+        const auto& _iterable_24 = module->instrumentedLines;
+        for (const auto& line : *_iterable_24) {
             if (containsLine(hits, line)) {
                 file->hitLines->push_back(line);
                 (file->covered += 1);
@@ -425,8 +425,8 @@ std::string renderCoverageJson(const std::shared_ptr<CoverageReport>& report) {
 }
 std::string renderCoverageHtml(const std::shared_ptr<CoverageReport>& report, const std::string& fileDirectoryName) {
     auto rows = std::string("");
-    const auto& _iterable_11 = report->files;
-    for (const auto& file : *_iterable_11) {
+    const auto& _iterable_27 = report->files;
+    for (const auto& file : *_iterable_27) {
         const auto href = escapeHtml(((fileDirectoryName + std::string("/")) + coverageFileRelativePath(file->path)));
         (rows = (((((rows + std::string("<tr><td><a href=\"")) + href) + std::string("\">")) + escapeHtml(file->path)) + std::string("</a></td>")));
         (rows = (((((rows + std::string("<td>")) + doof::to_string(file->covered)) + std::string("/")) + doof::to_string(file->total)) + std::string("</td>")));
@@ -490,8 +490,8 @@ void appendUniqueLine(const std::shared_ptr<std::vector<int32_t>>& lines, int32_
     }
 }
 bool containsLine(const std::shared_ptr<std::vector<int32_t>>& lines, int32_t line) {
-    const auto& _iterable_12 = lines;
-    for (const auto& existing : *_iterable_12) {
+    const auto& _iterable_31 = lines;
+    for (const auto& existing : *_iterable_31) {
         if (existing == line) {
             return true;
         }
@@ -566,8 +566,8 @@ bool returnsNone(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& dec
     doof::unreachable();
 }
 std::shared_ptr<::app_src_ast_::FunctionDeclaration> findFunction(const std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>>& statements, const std::string& name) {
-    const auto& _iterable_13 = statements;
-    for (const auto& statement : *_iterable_13) {
+    const auto& _iterable_34 = statements;
+    for (const auto& statement : *_iterable_34) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
@@ -584,8 +584,8 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> findFunction(const std::sha
 }
 std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> copyTests(const std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>>& tests) {
     std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> result = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{});
-    const auto& _iterable_14 = tests;
-    for (const auto& test : *_iterable_14) {
+    const auto& _iterable_36 = tests;
+    for (const auto& test : *_iterable_36) {
         result->push_back(test);
     }
     return result;

@@ -57,7 +57,14 @@ Prefer `readonly` for deeply immutable values and `:=` for immutable bindings wi
 with connection := openDatabase() {
     query(connection, "SELECT 1")
 }
+
+with _ := acquireGuard() {
+    updateProtectedState()
+}
 ```
+
+A `with _ :=` scoped discard retains an ordinary value for the block lifetime,
+but cannot discard a `Result`.
 
 ### Destructuring
 
@@ -125,6 +132,19 @@ clamp{ value, min: 0, max: 100 }
 
 Named calls match parameters by name. Any omitted parameter must have a default. The `{` must immediately follow the callee.
 
+Typed tags are another named-call spelling for classes, structs, functions,
+callbacks, and callable members:
+
+```doof
+button := <Button id=1 label="Save" onClick=>println("clicked")/>
+panel := <Panel title="Welcome">Hello {user.name}</Panel>
+```
+
+Scalar attributes may be bare; other values use `{expression}`. Paired content
+is normalized into a contextually typed array argument named `children`.
+Whitespace-only content is omitted. Tags have no DOM intrinsics, fragments,
+spread attributes, implicit booleans, entity decoding, or child flattening.
+
 `SourceLocation` is a builtin class for source attribution. Use `@caller` only in parameter or field defaults when you want the call or construction site:
 
 ```doof
@@ -155,7 +175,11 @@ transform: Transform := (x) => x * 2
 numbers.map(=> it * 2)
 numbers.filter(=> it > 10)
 numbers.reduce(0, => acc + it)
+events.reduce(0, (count, _, _): int => count + 1)
 ```
+
+`_` may discard explicit lambda parameters. It introduces no binding and may
+be repeated. Named function and method parameters still require names.
 
 Lambdas capture immutable outer bindings by value. Captured mutable `let`
 bindings remain shared across escaping closures; uncaptured mutable locals keep
@@ -238,6 +262,8 @@ Rules:
 grade := if score >= 90 then "A" else if score >= 80 then "B" else "C"
 
 for item of items { println(item) }
+for _ of items { count += 1 }
+for _, value of entries { println(value) }
 for i of 0..<10 { println(i) }
 for i of 1..5 { println(i) }
 window: Range := 1..<5

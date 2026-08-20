@@ -48,8 +48,8 @@ doof::Result<std::shared_ptr<std::vector<int32_t>>, std::shared_ptr<::std_::url:
 }
 doof::Result<std::string, std::shared_ptr<::std_::url::punycode_error::PunycodeError>> encodePunycodeUtf8(const std::shared_ptr<std::vector<int32_t>>& codepoints) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
-    const auto& _iterable_1 = codepoints;
-    for (const auto& codepoint : *_iterable_1) {
+    const auto& _iterable_2 = codepoints;
+    for (const auto& codepoint : *_iterable_2) {
         if (((codepoint < 0) || (codepoint > 1114111)) || ((codepoint >= 55296) && (codepoint <= 57343))) {
             return ::std_::url::punycode_error::punycodeFailure__string(std::string("invalid-punycode"), 0, std::string("Invalid Unicode code point"));
         }

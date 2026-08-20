@@ -49,7 +49,9 @@ import { checkerSemanticSpan } from "./checker-validation"
 export function checkCaseExpression(state: CheckerState, expression: CaseExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   subjectType := checkExpression(state, expression.subject, scope, none)
   let inferredType: ResolvedType = unknownType()
+  let armPatterns: CasePattern[][] = []
   for arm of expression.arms {
+    armPatterns.push(arm.patterns)
     armScope := Scope { parent: scope }
     checkCasePatterns(state, arm.patterns, subjectType, armScope)
     let armExpected = expected
@@ -73,8 +75,195 @@ export function checkCaseExpression(state: CheckerState, expression: CaseExpress
     }
     if inferredType.kind == "unknown" { inferredType = armType } else { inferredType = joinTypes(inferredType, armType) }
   }
+  if subjectType.kind != "unknown" && subjectType.kind != "never" && !casePatternsExhaustive(state, subjectType, armPatterns) {
+    typeError(state, "Case expression must be exhaustive", expression.span)
+  }
   expression.resolvedType = optionalResolvedType(inferredType)
   return inferredType
+}
+
+export function casePatternsExhaustive(state: CheckerState, subjectType: ResolvedType, arms: CasePattern[][]): bool {
+  for patterns of arms {
+    for pattern of patterns {
+      case pattern {
+        _: WildcardPattern -> { return true }
+        type_: TypePattern -> { if type_.resolvedType != none && sameType(subjectType, type_.resolvedType!) { return true } }
+        _ -> { }
+      }
+    }
+  }
+  case subjectType {
+    primitive_: PrimitiveType -> {
+      if primitive_.name == "int" { return integerPatternsExhaustive(arms) }
+      if primitive_.name != "bool" { return false }
+      let hasTrue = false
+      let hasFalse = false
+      for patterns of arms {
+        for pattern of patterns {
+          case pattern {
+            value: ValuePattern -> {
+              case value.value {
+                boolean: BoolLiteral -> { if boolean.value { hasTrue = true } else { hasFalse = true } }
+                _ -> { }
+              }
+            }
+            _ -> { }
+          }
+        }
+      }
+      return hasTrue && hasFalse
+    }
+    _: ResultResolvedType -> {
+      let hasSuccess = false
+      let hasFailure = false
+      for patterns of arms {
+        for pattern of patterns {
+          case pattern {
+            type_: TypePattern -> {
+              case type_.type_ {
+                named: NamedType -> {
+                  if named.name == "Success" { hasSuccess = true }
+                  if named.name == "Failure" { hasFailure = true }
+                }
+                _ -> { }
+              }
+            }
+            _ -> { }
+          }
+        }
+      }
+      return hasSuccess && hasFailure
+    }
+    enum_: EnumType -> { return enumPatternsExhaustive(state, enum_, arms) }
+    union_: UnionResolvedType -> { return unionPatternsExhaustive(union_, arms) }
+    _ -> { }
+  }
+  return false
+}
+
+function integerPatternsExhaustive(arms: CasePattern[][]): bool {
+  let hasLower: bool[] = []
+  let lowers: int[] = []
+  let hasUpper: bool[] = []
+  let uppers: int[] = []
+  for patterns of arms {
+    for pattern of patterns {
+      case pattern {
+        range: RangePattern -> {
+          let lower = 0
+          let lowerPresent = range.start != none
+          if lowerPresent {
+            resolvedLower := integerPatternValue(range.start!)
+            if resolvedLower == none { continue }
+            lower = resolvedLower!
+          }
+          let upper = 0
+          let upperPresent = range.end != none
+          if upperPresent {
+            resolvedUpper := integerPatternValue(range.end!)
+            if resolvedUpper == none { continue }
+            upper = resolvedUpper!
+            if !range.inclusive {
+              if upper == (-2147483647 - 1) { continue }
+              upper = upper - 1
+            }
+          }
+          hasLower.push(lowerPresent); lowers.push(lower)
+          hasUpper.push(upperPresent); uppers.push(upper)
+        }
+        value: ValuePattern -> {
+          resolved := integerPatternValue(value.value)
+          if resolved != none {
+            hasLower.push(true); lowers.push(resolved!)
+            hasUpper.push(true); uppers.push(resolved!)
+          }
+        }
+        _ -> { }
+      }
+    }
+  }
+  let started = false
+  let currentUpper = 0
+  for index of 0..<hasLower.length {
+    if hasLower[index] { continue }
+    if !hasUpper[index] { return true }
+    if !started || uppers[index] > currentUpper { currentUpper = uppers[index]; started = true }
+  }
+  if !started { return false }
+  for pass of 0..<hasLower.length {
+    let extended = false
+    for index of 0..<hasLower.length {
+      if !hasLower[index] { continue }
+      connects := lowers[index] <= currentUpper || (currentUpper < 2147483647 && lowers[index] == currentUpper + 1)
+      if !connects { continue }
+      if !hasUpper[index] { return true }
+      if uppers[index] > currentUpper { currentUpper = uppers[index]; extended = true }
+    }
+    if currentUpper == 2147483647 { return true }
+    if !extended { return false }
+  }
+  return currentUpper == 2147483647
+}
+
+function integerPatternValue(expression: Expression): int | none {
+  case expression {
+    literal: IntLiteral -> { return literal.value }
+    unary: UnaryExpression -> {
+      if unary.operator == "-" {
+        value := integerPatternValue(unary.operand)
+        if value != none { return -value! }
+      }
+    }
+    _ -> { }
+  }
+  return none
+}
+
+function enumPatternsExhaustive(state: CheckerState, enum_: EnumType, arms: CasePattern[][]): bool {
+  declaration := declarationFor(state.result, enum_.symbol)
+  if declaration == none { return false }
+  case declaration! {
+    enumDeclaration: EnumDeclaration -> {
+      for variant of enumDeclaration.variants {
+        let found = false
+        for patterns of arms {
+          for pattern of patterns {
+            case pattern {
+              value: ValuePattern -> {
+                case value.value {
+                  dot: DotShorthand -> { if dot.name == variant.name { found = true } }
+                  member: MemberExpression -> { if member.property == variant.name { found = true } }
+                  _ -> { }
+                }
+              }
+              _ -> { }
+            }
+          }
+        }
+        if !found { return false }
+      }
+      return true
+    }
+    _ -> { }
+  }
+  return false
+}
+
+function unionPatternsExhaustive(union_: UnionResolvedType, arms: CasePattern[][]): bool {
+  for member of union_.types {
+    let found = false
+    for patterns of arms {
+      for pattern of patterns {
+        case pattern {
+          type_: TypePattern -> { if type_.resolvedType != none && sameType(member, type_.resolvedType!) { found = true } }
+          value: ValuePattern -> { case value.value { _: NoneLiteral -> { if member.kind == "none" { found = true } } _ -> { } } }
+          _ -> { }
+        }
+      }
+    }
+    if !found { return false }
+  }
+  return true
 }
 
 export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], subjectType: ResolvedType, scope: Scope): none {
@@ -105,6 +294,9 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
           _ -> { }
         }
         type_.resolvedType = optionalResolvedType(resolved)
+        if !typesOverlap(subjectType, resolved) {
+          typeError(state, "Case type pattern \"" + typeName(resolved) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", type_.span)
+        }
         if type_.name != "_" {
           declare(scope, Binding {
             name: type_.name,
@@ -117,10 +309,15 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
           })
         }
       }
-      value: ValuePattern -> { checkExpression(state, value.value, scope, optionalResolvedType(subjectType)) }
+      value: ValuePattern -> {
+        valueType := checkExpression(state, value.value, scope, optionalResolvedType(subjectType))
+        if !typesOverlap(subjectType, valueType) {
+          typeError(state, "Case value pattern of type \"" + typeName(valueType) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", value.span)
+        }
+      }
       range: RangePattern -> {
-        if range.start != none { checkExpression(state, range.start!, scope, optionalResolvedType(subjectType)) }
-        if range.end != none { checkExpression(state, range.end!, scope, optionalResolvedType(subjectType)) }
+        validateCaseRangeBound(state, range.start, subjectType, scope, range.span)
+        validateCaseRangeBound(state, range.end, subjectType, scope, range.span)
       }
       _: WildcardPattern -> { }
     }
@@ -211,7 +408,10 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       if noneLiteral.sourceSpelling != "none" && noneLiteral.resolvedType == none { deprecatedNoneAlias(state, noneLiteral.sourceSpelling, noneLiteral.span) }
       return finish(state, expression, noneType())
     }
-    _: CallerExpression -> { return finish(state, expression, builtinSourceLocationType()) }
+    _: CallerExpression -> {
+      if !state.allowsCaller { typeError(state, "@caller is only valid as a parameter or class-field default value", expression.span) }
+      return finish(state, expression, builtinSourceLocationType())
+    }
     dot: DotShorthand -> { return checkDotShorthand(state, dot, expected) }
     identifier: Identifier -> { return checkIdentifier(state, identifier, scope) }
     binary: BinaryExpression -> { return checkBinary(state, binary, scope) }
@@ -269,6 +469,9 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         typeError(state, "Type \"" + typeName(objectType) + "\" has no member \"" + member.property + "\"", member.span)
       }
       member.resolvedStaticOwner = staticMemberOwner(objectType, member.property, state.result)
+      if member.resolvedStaticOwner != none && !isNamedStaticReceiver(member.object) {
+        typeError(state, "Static member '" + member.property + "' cannot be accessed through an instance with '.'; use '::'", member.span)
+      }
       member.resolvedCallableField = callableField(state, objectType, member.property)
       return finish(state, expression, memberValue)
     }
@@ -284,8 +487,15 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     tuple: TupleLiteral -> {
       let elements: ResolvedType[] = []
       let diverges = false
-      for item of tuple.elements {
-        itemType := checkExpression(state, item, scope, none)
+      let expectedTuple: TupleResolvedType | none = none
+      if expected != none {
+        case expected! { tupleExpected: TupleResolvedType -> { expectedTuple = tupleExpected } _ -> { } }
+      }
+      for index of 0..<tuple.elements.length {
+        item := tuple.elements[index]
+        let itemExpected: ResolvedType | none = none
+        if expectedTuple != none && index < expectedTuple!.elements.length { itemExpected = optionalResolvedType(expectedTuple!.elements[index]) }
+        itemType := checkExpression(state, item, scope, itemExpected)
         elements.push(itemType)
         if itemType.kind == "never" { diverges = true }
       }
@@ -427,6 +637,22 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     _ -> { return finish(state, expression, unknownType()) }
   }
   return unknownType()
+}
+
+function isNamedStaticReceiver(expression: Expression): bool {
+  case expression {
+    identifier: Identifier -> {
+      if identifier.resolvedBinding == none { return false }
+      binding := identifier.resolvedBinding!
+      if binding.kind == "class" || binding.kind == "struct" || binding.kind == "interface" { return true }
+      if binding.kind == "import" && binding.symbol != none {
+        kind := binding.symbol!.kind
+        return kind == "class" || kind == "struct" || kind == "interface"
+      }
+    }
+    _ -> { }
+  }
+  return false
 }
 
 export function checkDotShorthand(state: CheckerState, expression: DotShorthand, expected: ResolvedType | none): ResolvedType {
@@ -595,6 +821,11 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
     return finish(state, expression, primitive("bool"))
   }
   if operator == "??" {
+    if !isFallibleType(left) { typeError(state, "Operator '??' requires a nullable or Result left operand, got " + typeName(left), expression.left.span) }
+    expectedFallback := fallibleValueType(left)
+    if expectedFallback != none && !isAssignable(right, expectedFallback!) && !isAssignable(right, left) {
+      typeError(state, "Cannot use " + typeName(right) + " as fallback for " + typeName(left), expression.right.span)
+    }
     return finish(state, expression, coalescedType(state, left, right))
   }
   if right.kind == "never" { return finish(state, expression, neverType()) }
@@ -605,14 +836,26 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   }
   if operator == "==" || operator == "!=" {
     validateNoneComparison(state, operator, left, right, expression.span)
+    if left.kind != "none" && right.kind != "none" && !typesOverlap(left, right) {
+      typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span)
+    }
     return finish(state, expression, primitive("bool"))
   }
   if operator == "<" || operator == "<=" || operator == ">" || operator == ">=" {
+    if !orderedTypes(left, right) { typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span) }
     return finish(state, expression, primitive("bool"))
   }
   if operator == "+" && typeName(left) == "string" && (typeName(right) == "string" || typeName(right) == "char" || typeName(right) == "unknown") { return finish(state, expression, primitive("string")) }
   if operator == "+" && typeName(right) == "string" && (typeName(left) == "char" || typeName(left) == "unknown") { return finish(state, expression, primitive("string")) }
-  if isNumeric(left) && isNumeric(right) { return finish(state, expression, numericResult(left, right)) }
+  if isNumeric(left) && isNumeric(right) {
+    if (operator == "\\" || operator == "%" || bitwiseOperator(operator)) && (!isInteger(left) || !isInteger(right)) {
+      typeError(state, "Operator '" + operator + "' requires integer operands, got " + typeName(left) + " and " + typeName(right), expression.span)
+    }
+    if operator == "/" && isInteger(left) && isInteger(right) {
+      typeError(state, "Operator '/' requires at least one floating-point operand", expression.span)
+    }
+    return finish(state, expression, numericResult(left, right))
+  }
   typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span)
   return finish(state, expression, unknownType())
 }
@@ -697,11 +940,16 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
       result: ResultResolvedType -> { return finish(state, expression, result.valueType) }
       _ -> { }
     }
+    if !isNullableType(value) {
+      typeError(state, "Postfix '!' requires a nullable or Result operand, got " + typeName(value), expression.span)
+      return finish(state, expression, unknownType())
+    }
     return finish(state, expression, nonNoneType(state, value))
   }
   if expression.operator == "!" { requireBool(state, value, expression.span); return finish(state, expression, primitive("bool")) }
   if expression.operator == "+" || expression.operator == "-" || expression.operator == "~" {
     if !isNumeric(value) { typeError(state, "Unary '" + expression.operator + "' requires a numeric operand", expression.span) }
+    else if expression.operator == "~" && !isInteger(value) { typeError(state, "Unary '~' requires an integer operand", expression.span) }
     return finish(state, expression, value)
   }
   return finish(state, expression, value)
@@ -797,6 +1045,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
     _ -> { }
   }
   value := checkExpression(state, expression.value, scope, optionalResolvedType(targetType))
+  validateAssignmentOperator(state, expression.operator, targetType, value, expression.span)
   case expression.target {
     identifier: Identifier -> {
       target := lookup(scope, identifier.name)
@@ -834,4 +1083,117 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
   }
   if targetType.kind == "never" || value.kind == "never" { return finish(state, expression, neverType()) }
   return finish(state, expression, value)
+}
+
+function validateAssignmentOperator(state: CheckerState, operator: string, target: ResolvedType, value: ResolvedType, span: SourceSpan): none {
+  if operator == "=" { return }
+  if operator == "??=" {
+    if !isFallibleType(target) { typeError(state, "Operator '??=' requires a nullable or Result assignment target, got " + typeName(target), span); return }
+    case target {
+      result: ResultResolvedType -> {
+        if !isAssignable(value, target) && !isAssignable(value, result.valueType) {
+          typeError(state, "Cannot assign " + typeName(value) + " through ??= to " + typeName(target), span)
+        }
+      }
+      _ -> { if !isAssignable(value, target) { typeError(state, "Cannot assign " + typeName(value) + " through ??= to " + typeName(target), span) } }
+    }
+    return
+  }
+  base := operator.substring(0, operator.length - 1)
+  result := binaryOperatorType(state, base, target, value, span)
+  if !isAssignable(result, target) { typeError(state, "Operator '" + operator + "' produces " + typeName(result) + ", which cannot be assigned to " + typeName(target), span) }
+}
+
+function binaryOperatorType(state: CheckerState, operator: string, left: ResolvedType, right: ResolvedType, span: SourceSpan): ResolvedType {
+  if operator == "+" && typeName(left) == "string" && (typeName(right) == "string" || typeName(right) == "char") { return primitive("string") }
+  if isNumeric(left) && isNumeric(right) {
+    if (operator == "\\" || operator == "%" || bitwiseOperator(operator)) && (!isInteger(left) || !isInteger(right)) {
+      typeError(state, "Operator '" + operator + "' requires integer operands, got " + typeName(left) + " and " + typeName(right), span)
+    }
+    if operator == "/" && isInteger(left) && isInteger(right) { typeError(state, "Operator '/' requires at least one floating-point operand", span) }
+    return numericResult(left, right)
+  }
+  typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), span)
+  return unknownType()
+}
+
+function isInteger(type_: ResolvedType): bool {
+  case type_ {
+    primitive_: PrimitiveType -> { return primitive_.name == "byte" || primitive_.name == "int" || primitive_.name == "long" }
+    _ -> { }
+  }
+  return false
+}
+
+function bitwiseOperator(operator: string): bool {
+  return operator == "&" || operator == "|" || operator == "^" || operator == "<<" || operator == ">>" || operator == ">>>"
+}
+
+function isNullableType(type_: ResolvedType): bool {
+  case type_ {
+    _: NoneType -> { return true }
+    union_: UnionResolvedType -> { for member of union_.types { if member.kind == "none" { return true } } }
+    _ -> { }
+  }
+  return false
+}
+
+function isFallibleType(type_: ResolvedType): bool {
+  case type_ { _: ResultResolvedType -> { return true } _ -> { return isNullableType(type_) } }
+}
+
+function fallibleValueType(type_: ResolvedType): ResolvedType | none {
+  case type_ {
+    result: ResultResolvedType -> { return result.valueType }
+    union_: UnionResolvedType -> {
+      let members: ResolvedType[] = []
+      for member of union_.types { if member.kind != "none" { members.push(member) } }
+      if members.length == 1 { return members[0] }
+      if members.length > 1 { return unionType(members) }
+    }
+    _: NoneType -> { return unknownType() }
+    _ -> { }
+  }
+  return none
+}
+
+function orderedTypes(left: ResolvedType, right: ResolvedType): bool {
+  if left.kind == "unknown" || right.kind == "unknown" { return true }
+  if isNumeric(left) && isNumeric(right) { return true }
+  if sameType(left, right) {
+    case left {
+      primitive_: PrimitiveType -> { return primitive_.name == "string" || primitive_.name == "char" }
+      _: EnumType -> { return true }
+      _: TypeParameterType -> { return true }
+      _ -> { }
+    }
+  }
+  return false
+}
+
+function typesOverlap(left: ResolvedType, right: ResolvedType): bool {
+  if left.kind == "unknown" || right.kind == "unknown" { return true }
+  case left {
+    union_: UnionResolvedType -> {
+      for member of union_.types { if typesOverlap(member, right) { return true } }
+      return false
+    }
+    _ -> { }
+  }
+  case right {
+    union_: UnionResolvedType -> {
+      for member of union_.types { if typesOverlap(left, member) { return true } }
+      return false
+    }
+    _ -> { }
+  }
+  return isAssignable(left, right) || isAssignable(right, left) || (isNumeric(left) && isNumeric(right))
+}
+
+function validateCaseRangeBound(state: CheckerState, bound: Expression | none, subjectType: ResolvedType, scope: Scope, span: SourceSpan): none {
+  if bound == none { return }
+  boundType := checkExpression(state, bound!, scope, optionalResolvedType(subjectType))
+  if !isInteger(subjectType) || !isInteger(boundType) || !typesOverlap(subjectType, boundType) {
+    typeError(state, "Case range bound of type \"" + typeName(boundType) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", span)
+  }
 }

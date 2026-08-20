@@ -26,15 +26,15 @@ std::string emitNoneLiteral(const std::variant<std::monostate, std::shared_ptr<:
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
             auto nonNone = 0;
-            const auto& _iterable_1 = union_->types;
-            for (const auto& member : *_iterable_1) {
+            const auto& _iterable_2 = union_->types;
+            for (const auto& member : *_iterable_2) {
                 if (std::visit([](auto&& _obj) { return _obj->kind; }, member) != std::string("none")) {
                     (nonNone = (nonNone + 1));
                 }
             }
             if (nonNone == 1) {
-                const auto& _iterable_2 = union_->types;
-                for (const auto& member : *_iterable_2) {
+                const auto& _iterable_4 = union_->types;
+                for (const auto& member : *_iterable_4) {
                     {
                         auto _case_subject = member;
                         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
@@ -194,8 +194,8 @@ std::string emitObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>& exp
     }
     auto values = std::string("");
     auto first = true;
-    const auto& _iterable_3 = expression->properties;
-    for (const auto& property : *_iterable_3) {
+    const auto& _iterable_9 = expression->properties;
+    for (const auto& property : *_iterable_9) {
         if (!first) {
             (values = (values + std::string(", ")));
         }
@@ -227,13 +227,13 @@ std::string emitClassObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>
     }
     auto values = std::string("");
     auto first = true;
-    const auto& _iterable_4 = class_->fields;
-    for (const auto& field : *_iterable_4) {
+    const auto& _iterable_11 = class_->fields;
+    for (const auto& field : *_iterable_11) {
         if (field->static_) {
             continue;
         }
-        const auto& _iterable_5 = field->names;
-        for (const auto& name : *_iterable_5) {
+        const auto& _iterable_13 = field->names;
+        for (const auto& name : *_iterable_13) {
             if (!first) {
                 (values = (values + std::string(", ")));
             }

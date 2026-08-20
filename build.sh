@@ -56,11 +56,12 @@ run_step "Build B6 with B5" build_b6
 run_step "Verify the B5/B6 fixed point" \
   "$repo_root/scripts/compare-generated.sh" "$b5_root" "$b6_root"
 
-publish() {
-  cp "$b6_root/doof" "$repo_root/dist/doof"
-  cp "$repo_root/runtime/doof_runtime.h" "$repo_root/dist/doof_runtime.h"
-  cp "$repo_root/resources/std-catalog.json" "$repo_root/dist/std-catalog.json"
+publish_optimized() {
+  release_root="$repo_root/build/compiler-release"
+  DOOF_STDLIB_ROOT="$stdlib_root" "$b6_root/doof" package "$repo_root" \
+    -o "$release_root" --distdir "$repo_root/dist"
+  test -x "$repo_root/dist/doof"
 }
-run_step "Publish the verified compiler to dist/" publish
+run_step "Build and publish the optimized compiler to dist/" publish_optimized
 
 echo "Verified compiler: $repo_root/dist/doof"

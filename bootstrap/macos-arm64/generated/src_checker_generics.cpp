@@ -267,8 +267,8 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> functionDeclarationForCalle
                                 auto _case_subject = doof::unwrap_optional(declaration);
                                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
                                     const auto& interfaceDeclaration = std::get<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject);
-                                    const auto& _iterable_1 = interfaceDeclaration->methods;
-                                    for (const auto& method : *_iterable_1) {
+                                    const auto& _iterable_6 = interfaceDeclaration->methods;
+                                    for (const auto& method : *_iterable_6) {
                                         if (method->name == member->property) {
                                             return method;
                                         }
@@ -298,8 +298,8 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> constructorForClass(const s
         auto _case_subject = doof::unwrap_optional(declaration);
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
             const auto& classDeclaration = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-            const auto& _iterable_2 = classDeclaration->methods;
-            for (const auto& method : *_iterable_2) {
+            const auto& _iterable_8 = classDeclaration->methods;
+            for (const auto& method : *_iterable_8) {
                 if (method->name == std::string("constructor")) {
                     return method;
                 }
@@ -350,19 +350,19 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> staticMemberOwner(const std::v
                         if ((property == std::string("metadata")) && classDeclaration->needsMetadata) {
                             return classDeclaration;
                         }
-                        if ((property == std::string("fromJsonValue")) && ::app_src_json_semantics_::canGenerateJsonDeserialization(classDeclaration, jsonPrograms(result))) {
+                        if ((property == std::string("fromJsonValue")) && ::app_src_json_semantics_::canGenerateJsonDeserialization(classDeclaration, jsonPrograms(result), nullptr)) {
                             return classDeclaration;
                         }
-                        const auto& _iterable_3 = classDeclaration->methods;
-                        for (const auto& method : *_iterable_3) {
+                        const auto& _iterable_10 = classDeclaration->methods;
+                        for (const auto& method : *_iterable_10) {
                             if ((method->name == property) && method->static_) {
                                 return classDeclaration;
                             }
                         }
-                        const auto& _iterable_4 = classDeclaration->fields;
-                        for (const auto& field : *_iterable_4) {
-                            const auto& _iterable_5 = field->names;
-                            for (const auto& name : *_iterable_5) {
+                        const auto& _iterable_12 = classDeclaration->fields;
+                        for (const auto& field : *_iterable_12) {
+                            const auto& _iterable_14 = field->names;
+                            for (const auto& name : *_iterable_14) {
                                 if ((name == property) && field->static_) {
                                     return classDeclaration;
                                 }
@@ -381,8 +381,8 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> staticMemberOwner(const std::v
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> jsonPrograms(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{});
-    const auto& _iterable_6 = result->modules;
-    for (const auto& module : *_iterable_6) {
+    const auto& _iterable_16 = result->modules;
+    for (const auto& module : *_iterable_16) {
         programs->push_back(module->program);
     }
     return programs;

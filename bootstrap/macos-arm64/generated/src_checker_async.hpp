@@ -198,9 +198,9 @@ namespace app_src_semantic_ {
     std::string nativeCppName = std::string("");
     std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{});
     std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    Symbol(std::string kind, std::string name, std::string module, bool exported, std::string originalName = std::string(""), bool native_ = false, std::string nativeHeader = std::string(""), std::string nativeCppName = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{}), std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : kind(kind), name(name), module(module), exported(exported), originalName(originalName), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), implementations(implementations), implementedInterfaceTypes(implementedInterfaceTypes) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Symbol>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<ResolvedType>> streamElementTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{});
+    Symbol(std::string kind, std::string name, std::string module, bool exported, std::string originalName = std::string(""), bool native_ = false, std::string nativeHeader = std::string(""), std::string nativeCppName = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{}), std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<ResolvedType>> streamElementTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{})) : kind(kind), name(name), module(module), exported(exported), originalName(originalName), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), implementations(implementations), implementedInterfaceTypes(implementedInterfaceTypes), typeParams(typeParams), streamElementTypes(streamElementTypes) {}
 };
     struct ImportBinding : public std::enable_shared_from_this<ImportBinding> {
     std::string localName;
@@ -209,8 +209,6 @@ namespace app_src_semantic_ {
     bool typeOnly;
     std::shared_ptr<Symbol> symbol = nullptr;
     ImportBinding(std::string localName, std::string sourceName, std::string sourceModule, bool typeOnly, std::shared_ptr<Symbol> symbol = nullptr) : localName(localName), sourceName(sourceName), sourceModule(sourceModule), typeOnly(typeOnly), symbol(symbol) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ImportBinding>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NamespaceBinding : public std::enable_shared_from_this<NamespaceBinding> {
     std::string localName;
@@ -239,8 +237,6 @@ namespace app_src_semantic_ {
     std::string name;
     std::shared_ptr<Symbol> symbol;
     EnumType(std::string kind, std::string name, std::shared_ptr<Symbol> symbol) : kind(kind), name(name), symbol(symbol) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<EnumType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct InterfaceType : public std::enable_shared_from_this<InterfaceType> {
     std::string kind = std::string("interface");
@@ -1240,11 +1236,11 @@ namespace app_src_checker_async_ {
     void validateIdentifierCapture(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_ast_::AsyncExpression>& async_, const std::shared_ptr<::app_src_ast_::Block>& block, const std::shared_ptr<::app_src_ast_::Identifier>& identifier, const std::string& module, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
     bool inside(::app_src_ast_::SourceSpan outer, ::app_src_semantic_::SemanticSpan inner);
     void addCapture(const std::shared_ptr<std::vector<std::string>>& names, const std::string& name);
-    std::shared_ptr<AsyncBoundaryViolation> findAsyncAffineViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const __type12& type_, const std::shared_ptr<std::vector<std::string>>& seen);
+    std::shared_ptr<AsyncBoundaryViolation> findAsyncAffineViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const __type12& type_, const std::shared_ptr<std::vector<std::string>>& seen, const std::shared_ptr<std::vector<std::string>>& safe);
     std::optional<std::string> asyncResultViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const __type12& type_);
-    std::optional<std::string> findAsyncResultViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const __type12& type_, const std::shared_ptr<std::vector<std::string>>& seen);
-    std::shared_ptr<AsyncBoundaryViolation> findClassAsyncViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::ClassType>& type_, const std::shared_ptr<std::vector<std::string>>& seen, bool resultMode);
-    std::shared_ptr<AsyncBoundaryViolation> findInterfaceAsyncViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::InterfaceType>& type_, const std::shared_ptr<std::vector<std::string>>& seen, bool resultMode);
+    std::optional<std::string> findAsyncResultViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const __type12& type_, const std::shared_ptr<std::vector<std::string>>& seen, const std::shared_ptr<std::vector<std::string>>& safe);
+    std::shared_ptr<AsyncBoundaryViolation> findClassAsyncViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::ClassType>& type_, const std::shared_ptr<std::vector<std::string>>& seen, bool resultMode, const std::shared_ptr<std::vector<std::string>>& safe);
+    std::shared_ptr<AsyncBoundaryViolation> findInterfaceAsyncViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::InterfaceType>& type_, const std::shared_ptr<std::vector<std::string>>& seen, bool resultMode, const std::shared_ptr<std::vector<std::string>>& safe);
     bool contains(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
     std::shared_ptr<std::vector<std::string>> appended(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
     ::app_src_semantic_::SemanticSpan semanticSpan(::app_src_ast_::SourceSpan span);

@@ -118,6 +118,40 @@ The `{` must immediately follow the callee token with no whitespace: `clamp{ ...
 
 The same named-call form applies to methods and imported functions.
 
+### Typed tag calls
+
+Typed tags are an alternate named-call spelling for classes, structs,
+functions, callbacks, and callable members:
+
+```doof
+button := <Button id=1 label="Save"/>
+
+page := <Panel title="Welcome">
+    Hello {user.name}
+    <Icon name="star"/>
+</Panel>
+```
+
+Tag attributes accept scalar literals directly. General Doof expressions use
+braces, for example `items={loadItems()}`. A parameterless lambda may use its
+ordinary syntax directly after the attribute name:
+
+```doof
+<Button onClick=>println("clicked")/>
+<Button onClick=>{ recordClick(); refresh() }/>
+```
+
+Content in a paired tag is passed as a contextually typed array to the ordinary
+parameter or field named `children`. Nested tags and `{expression}` each add one
+element; multiline text is normalized using JSX whitespace rules and adds a
+string element. Whitespace-only content is omitted. Supplying both a `children`
+attribute and nested content is an error.
+
+Tag names may be identifiers or dotted members and may carry explicit generic
+arguments. They must resolve to a Doof callable; lowercase names have no DOM or
+intrinsic meaning. Typed tags do not provide fragments, spread attributes,
+implicit boolean attributes, HTML entity decoding, or array flattening.
+
 ### `SourceLocation` and `@caller`
 
 Doof provides a built-in `SourceLocation` class and a special `@caller` default-expression intrinsic for call-site attribution.
@@ -351,6 +385,18 @@ let users = getUsers()
 users.filter((user) => user.age >= 18)
      .map((user) => user.name)
 ```
+
+Explicit lambda parameter lists may use `_` to discard parameters that the
+callback must accept but does not use:
+
+```doof
+events.reduce(0, (count, _, _): int => count + 1)
+```
+
+Each `_` is an independent discard target and introduces no binding, so
+repeated `_` parameters are allowed. Named function and method declarations
+still require ordinary parameter names because those names are also their
+named-call labels.
 
 ### Trailing Lambdas
 

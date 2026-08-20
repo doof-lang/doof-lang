@@ -93,7 +93,12 @@ function emitWith(statement: WithStatement, level: int, context: EmitContext): s
       }
       _ -> { }
     }
-    output = output + innerInd + "const " + declarationType + " " + cppIdentifier(binding.name) + " = " + value + ";\n"
+    let bindingName = cppIdentifier(binding.name)
+    if binding.name == "_" {
+      context.tryCounter = context.tryCounter + 1
+      bindingName = "_with_discard_" + string(context.tryCounter)
+    }
+    output = output + innerInd + "const " + declarationType + " " + bindingName + " = " + value + ";\n"
   }
   output = output + emitBlock(statement.body, level + 1, context)
   return output + ind + "}\n"
@@ -480,7 +485,9 @@ function emitWhile(statement: WhileStatement, level: int, context: EmitContext):
 
 function emitForOf(statement: ForOfStatement, level: int, context: EmitContext): string {
   ind := indent(level)
-  name := if statement.bindings.length == 0 then "_item" else cppIdentifier(statement.bindings[0])
+  context.tryCounter = context.tryCounter + 1
+  loopId := context.tryCounter
+  name := if statement.bindings.length == 0 then "_item" else discardableCppName(statement.bindings[0], loopId, 0)
   case statement.iterable {
     range: BinaryExpression -> {
       if range.operator == "..<" || range.operator == ".." {
@@ -513,13 +520,18 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
     let names = ""
     for i of 0..<statement.bindings.length {
       if i > 0 { names = names + ", " }
-      names = names + cppIdentifier(statement.bindings[i])
+      names = names + discardableCppName(statement.bindings[i], loopId, i)
     }
     return iterableBinding + ind + "for (const auto& [" + names + "] : *" + iterableName + ") {\n" +
       emitBlock(statement.body, level + 1, context) + ind + "}\n"
   }
   return iterableBinding + ind + "for (const auto& " + name + " : *" + iterableName + ") {\n" +
     emitBlock(statement.body, level + 1, context) + ind + "}\n"
+}
+
+function discardableCppName(name: string, scopeId: int, position: int): string {
+  if name == "_" { return "_discard_" + string(scopeId) + "_" + string(position) }
+  return cppIdentifier(name)
 }
 
 function emitFor(statement: ForStatement, level: int, context: EmitContext): string {

@@ -99,8 +99,8 @@ bool isNullableVariantType(const std::variant<std::monostate, std::shared_ptr<::
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
             auto hasNone = false;
             auto nonNoneCount = 0;
-            const auto& _iterable_1 = union_->types;
-            for (const auto& member : *_iterable_1) {
+            const auto& _iterable_2 = union_->types;
+            for (const auto& member : *_iterable_2) {
                 if (std::visit([](auto&& _obj) { return _obj->kind; }, member) == std::string("none")) {
                     (hasNone = true);
                 } else {
@@ -133,8 +133,8 @@ bool hasNoneMember(const std::variant<std::monostate, std::shared_ptr<::app_src_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_2 = union_->types;
-            for (const auto& member : *_iterable_2) {
+            const auto& _iterable_4 = union_->types;
+            for (const auto& member : *_iterable_4) {
                 if (std::visit([](auto&& _obj) { return _obj->kind; }, member) == std::string("none")) {
                     return true;
                 }
@@ -159,8 +159,8 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
 }
 bool hasSinglePrimitiveMember(const std::shared_ptr<::app_src_semantic_::UnionResolvedType>& union_) {
     auto count = 0;
-    const auto& _iterable_3 = union_->types;
-    for (const auto& member : *_iterable_3) {
+    const auto& _iterable_6 = union_->types;
+    for (const auto& member : *_iterable_6) {
         if (std::visit([](auto&& _obj) { return _obj->kind; }, member) == std::string("none")) {
             continue;
         }
@@ -172,8 +172,8 @@ bool hasSinglePrimitiveMember(const std::shared_ptr<::app_src_semantic_::UnionRe
     return (count == 1);
 }
 std::shared_ptr<::app_src_ast_::ObjectProperty> findProperty(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ObjectProperty>>>& properties, const std::string& name) {
-    const auto& _iterable_4 = properties;
-    for (const auto& property : *_iterable_4) {
+    const auto& _iterable_8 = properties;
+    for (const auto& property : *_iterable_8) {
         if (property->name == name) {
             return property;
         }

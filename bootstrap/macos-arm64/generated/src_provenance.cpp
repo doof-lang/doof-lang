@@ -14,14 +14,14 @@ std::string renderBuildProvenance(const std::shared_ptr<std::vector<std::shared_
     provenanceSet(compiler, std::string("stdCatalogDigest"), doof::json_value(catalog->digest));
     provenanceSet(root, std::string("compiler"), doof::json_value(compiler));
     std::shared_ptr<std::vector<doof::JsonValue>> packageValues = std::make_shared<std::vector<doof::JsonValue>>(std::vector<doof::JsonValue>{});
-    const auto& _iterable_1 = sortedProvenancePackages(packages);
-    for (const auto& package : *_iterable_1) {
+    const auto& _iterable_2 = sortedProvenancePackages(packages);
+    for (const auto& package : *_iterable_2) {
         packageValues->push_back(doof::json_value(provenancePackage(package)));
     }
     provenanceSet(root, std::string("packages"), doof::json_value(packageValues));
     std::shared_ptr<std::vector<doof::JsonValue>> externalValues = std::make_shared<std::vector<doof::JsonValue>>(std::vector<doof::JsonValue>{});
-    const auto& _iterable_2 = sortedProvenanceExternals(externals);
-    for (const auto& input : *_iterable_2) {
+    const auto& _iterable_4 = sortedProvenanceExternals(externals);
+    for (const auto& input : *_iterable_4) {
         externalValues->push_back(doof::json_value(provenanceExternal(input)));
     }
     provenanceSet(root, std::string("externalDependencies"), doof::json_value(externalValues));
@@ -93,16 +93,16 @@ std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> provenanceNativ
 }
 std::shared_ptr<std::vector<doof::JsonValue>> provenanceStrings(const std::shared_ptr<std::vector<std::string>>& values) {
     std::shared_ptr<std::vector<doof::JsonValue>> result = std::make_shared<std::vector<doof::JsonValue>>(std::vector<doof::JsonValue>{});
-    const auto& _iterable_3 = values;
-    for (const auto& value : *_iterable_3) {
+    const auto& _iterable_6 = values;
+    for (const auto& value : *_iterable_6) {
         result->push_back(doof::json_value(value));
     }
     return result;
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>> sortedProvenancePackages(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>>& values) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>> result = std::make_shared<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>>(std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>{});
-    const auto& _iterable_4 = values;
-    for (const auto& value : *_iterable_4) {
+    const auto& _iterable_8 = values;
+    for (const auto& value : *_iterable_8) {
         result->push_back(value);
         auto index = (static_cast<int32_t>((result)->size()) - 1);
         while ((index > 0) && (doof::array_at(result, index, "src/provenance", 105)->logicalPrefix < doof::array_at(result, (index - 1), "src/provenance", 105)->logicalPrefix)) {
@@ -116,8 +116,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::Reache
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>> sortedProvenanceExternals(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>>& values) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>> result = std::make_shared<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>>(std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>{});
-    const auto& _iterable_5 = values;
-    for (const auto& value : *_iterable_5) {
+    const auto& _iterable_10 = values;
+    for (const auto& value : *_iterable_10) {
         result->push_back(value);
         auto index = (static_cast<int32_t>((result)->size()) - 1);
         while (index > 0) {

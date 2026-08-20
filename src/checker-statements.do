@@ -36,7 +36,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 
 
 import { CheckerState } from "./checker-state"
-import { checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
+import { casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
 import { typeError, requireBool, validateAssignmentBinding } from "./checker-common"
@@ -44,12 +44,12 @@ import { decorateAnnotationWithResolved, blockContainsLoopExit, optionalResolved
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
-export function checkStatement(state: CheckerState, statement: Statement, scope: Scope): bool {
+export function checkStatement(state: CheckerState, statement: Statement, scope: Scope, inLoop: bool = false): bool {
   case statement {
-    const_: ConstDeclaration -> { return checkValueDeclaration(state, const_, scope, "const", false) }
-    readonly_: ReadonlyDeclaration -> { return checkValueDeclaration(state, readonly_, scope, "readonly", false) }
-    binding: ImmutableBinding -> { return checkValueDeclaration(state, binding, scope, "immutable-binding", false) }
-    let_: LetDeclaration -> { return checkValueDeclaration(state, let_, scope, "let", true) }
+    const_: ConstDeclaration -> { return checkValueDeclaration(state, const_, scope, "const", false, inLoop) }
+    readonly_: ReadonlyDeclaration -> { return checkValueDeclaration(state, readonly_, scope, "readonly", false, inLoop) }
+    binding: ImmutableBinding -> { return checkValueDeclaration(state, binding, scope, "immutable-binding", false, inLoop) }
+    let_: LetDeclaration -> { return checkValueDeclaration(state, let_, scope, "let", true, inLoop) }
     fn: FunctionDeclaration -> { checkFunction(state, fn, scope, none); return true }
     class_: ClassDeclaration -> { checkClass(state, class_, scope); return true }
     interface_: InterfaceDeclaration -> { checkInterface(state, interface_, scope); return true }
@@ -66,25 +66,25 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     if_: IfStatement -> {
       conditionType := checkExpression(state, if_.condition, scope, none)
       requireBool(state, conditionType, if_.condition.span)
-      thenCompletes := checkBlock(state, if_.body, scope)
+      thenCompletes := checkBlock(state, if_.body, scope, inLoop)
       let allComplete = thenCompletes
       for branch of if_.elseIfs {
         branchConditionType := checkExpression(state, branch.condition, scope, none)
         requireBool(state, branchConditionType, branch.condition.span)
-        let branchCompletes = checkBlock(state, branch.body, scope)
+        let branchCompletes = checkBlock(state, branch.body, scope, inLoop)
         if branchConditionType.kind == "never" { branchCompletes = false }
         allComplete = allComplete || branchCompletes
       }
       if conditionType.kind == "never" { return false }
       if if_.else_ == none { return true }
-      elseCompletes := checkBlock(state, if_.else_!, scope)
+      elseCompletes := checkBlock(state, if_.else_!, scope, inLoop)
       return allComplete || elseCompletes
     }
-    case_: CaseStatement -> { return checkCase(state, case_, scope) }
+    case_: CaseStatement -> { return checkCase(state, case_, scope, inLoop) }
     while_: WhileStatement -> {
       conditionType := checkExpression(state, while_.condition, scope, none)
       requireBool(state, conditionType, while_.condition.span)
-      checkBlock(state, while_.body, scope)
+      checkBlock(state, while_.body, scope, true)
       if while_.then_ != none { checkBlock(state, while_.then_!, scope) }
       if conditionType.kind == "never" { return false }
       case while_.condition {
@@ -102,13 +102,26 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         requireBool(state, checkExpression(state, condition, scope, none), condition.span)
       }
       for update of for_.update { checkExpression(state, update, scope, none) }
-      checkBlock(state, for_.body, scope)
+      checkBlock(state, for_.body, scope, true)
       if for_.then_ != none { checkBlock(state, for_.then_!, scope) }
       return true
     }
     forOf: ForOfStatement -> {
       iterable := checkExpression(state, forOf.iterable, scope, none)
       element := iterableElement(iterable)
+      if iterable.kind != "unknown" && iterable.kind != "never" && element.kind == "unknown" {
+        typeError(state, "For-of requires an array, map, set, Range, or Stream value; got " + typeName(iterable), forOf.iterable.span)
+      }
+      if forOf.bindings.length > 1 {
+        let validArity = false
+        case element {
+          tuple: TupleResolvedType -> { validArity = tuple.elements.length == forOf.bindings.length }
+          _ -> { }
+        }
+        if !validArity {
+          typeError(state, "For-of destructuring requires a tuple with " + string(forOf.bindings.length) + " elements; got " + typeName(element), forOf.span)
+        }
+      }
       bodyScope := Scope { parent: scope }
       case element {
         tuple: TupleResolvedType -> {
@@ -125,7 +138,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
           for name of forOf.bindings { if name != "_" { declareUserBinding(state, bodyScope, Binding { name, kind: "for-binding", type_: element, mutable: false, span: checkerSemanticSpan(forOf.span), module: state.info!.path }, forOf.span) } }
         }
       }
-      checkBlock(state, forOf.body, bodyScope)
+      checkBlock(state, forOf.body, bodyScope, true)
       if forOf.then_ != none { checkBlock(state, forOf.then_!, scope) }
       return true
     }
@@ -138,9 +151,17 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         declaredType := if binding.type_ == none then valueType else resolveType(state, binding.type_!, state.info!, scope)
         binding.resolvedType = optionalResolvedType(declaredType)
         if !isAssignable(valueType, declaredType) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(declaredType), binding.span) }
-        declareUserBinding(state, bodyScope, Binding { name: binding.name, kind: "with", type_: declaredType, mutable: false, span: checkerSemanticSpan(binding.span), module: state.info!.path }, binding.span)
+        if binding.name == "_" {
+          case valueType {
+            _: ResultResolvedType -> { typeError(state, "Scoped discard '_' cannot discard a Result; handle the Result before entering the with scope", binding.span) }
+            _ -> { }
+          }
+        }
+        if binding.name != "_" {
+          declareUserBinding(state, bodyScope, Binding { name: binding.name, kind: "with", type_: declaredType, mutable: false, span: checkerSemanticSpan(binding.span), module: state.info!.path }, binding.span)
+        }
       }
-      checkBlock(state, with_.body, bodyScope)
+      checkBlock(state, with_.body, bodyScope, inLoop)
       return bindingsComplete
     }
     return_: ReturnStatement -> { return checkReturn(state, return_, scope) }
@@ -199,15 +220,21 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       return true
     }
     try_: TryStatement -> { return checkTry(state, try_, scope) }
-    _: ContinueStatement -> { return false }
-    _: BreakStatement -> { return false }
-    block: Block -> { return checkBlock(state, block, scope) }
+    continue_: ContinueStatement -> {
+      if !inLoop { typeError(state, "Continue is only valid inside a loop", continue_.span) }
+      return false
+    }
+    break_: BreakStatement -> {
+      if !inLoop { typeError(state, "Break is only valid inside a loop", break_.span) }
+      return false
+    }
+    block: Block -> { return checkBlock(state, block, scope, inLoop) }
     _ -> { return true }
   }
   return true
 }
 
-export function checkValueDeclaration(state: CheckerState, declaration: Statement, scope: Scope, kind: string, mutable: bool): bool {
+export function checkValueDeclaration(state: CheckerState, declaration: Statement, scope: Scope, kind: string, mutable: bool, inLoop: bool = false): bool {
   let name = ""
   let annotation: TypeAnnotation | none = none
   let value: Expression = NoneLiteral { kind: "none-literal", span: declaration.span }
@@ -275,7 +302,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
     } else if name != "_" {
       declare(elseScope, Binding { name, kind: "else-subject", type_: valueType, mutable: false, span: checkerSemanticSpan(span), module: state.info!.path })
     }
-    handlerCompletes := checkBlock(state, elseBlock!, elseScope)
+    handlerCompletes := checkBlock(state, elseBlock!, elseScope, inLoop)
     if name != "_" && handlerCompletes {
       typeError(state, "Declaration-else block must exit scope", elseBlock!.span)
     }
@@ -319,7 +346,15 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
   for parameter of fn.params {
     parameterType := if parameter.type_ == none then unknownType() else resolveType(state, parameter.type_!, state.info!, scope)
     parameter.resolvedType = optionalResolvedType(parameterType)
-    if parameter.defaultValue != none { checkExpression(state, parameter.defaultValue!, scope, optionalResolvedType(parameterType)) }
+    if parameter.defaultValue != none {
+      previousAllowsCaller := state.allowsCaller
+      state.allowsCaller = true
+      defaultType := checkExpression(state, parameter.defaultValue!, scope, optionalResolvedType(parameterType))
+      state.allowsCaller = previousAllowsCaller
+      if !isAssignable(defaultType, parameterType) {
+        typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for parameter '" + parameter.name + "' of type " + typeName(parameterType), parameter.defaultValue!.span)
+      }
+    }
     if !declareShadowing(scope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
       typeError(state, "Binding '" + parameter.name + "' is already declared in this scope", parameter.span)
     }
@@ -330,7 +365,7 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
   case fn.body {
     expression: Expression -> {
       actualReturn = checkExpression(state, expression, scope, optionalResolvedType(returnType))
-      if fn.returnType == none && !isAssignable(actualReturn, returnType) {
+      if returnType.kind != "never" && !isAssignable(actualReturn, returnType) {
         typeError(state, "Cannot return " + typeName(actualReturn) + " from function returning " + typeName(returnType), expression.span)
       }
       if returnType.kind == "never" && actualReturn.kind != "never" {
@@ -379,7 +414,10 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
     if field.type_ != none {
       fieldType = resolveType(state, field.type_!, state.info!, classScope)
     } else if field.defaultValue != none {
+      previousAllowsCaller := state.allowsCaller
+      state.allowsCaller = true
       fieldType = checkExpression(state, field.defaultValue!, classScope, none)
+      state.allowsCaller = previousAllowsCaller
     }
     if field.readonly_ || field.const_ { fieldType = applyDeepReadonly(fieldType) }
     field.resolvedType = optionalResolvedType(fieldType)
@@ -387,12 +425,22 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
       name := if field.names.length == 0 then "<field>" else field.names[0]
       typeError(state, "Struct field \"" + name + "\" cannot be weak", field.span)
     }
-    if field.defaultValue != none && field.type_ != none { checkExpression(state, field.defaultValue!, classScope, optionalResolvedType(fieldType)) }
+    if field.defaultValue != none && field.type_ != none {
+      previousAllowsCaller := state.allowsCaller
+      state.allowsCaller = true
+      defaultType := checkExpression(state, field.defaultValue!, classScope, optionalResolvedType(fieldType))
+      state.allowsCaller = previousAllowsCaller
+      if !isAssignable(defaultType, fieldType) {
+        typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for field of type " + typeName(fieldType), field.defaultValue!.span)
+      }
+    }
   }
   for method of class_.methods {
     if generatedMemberName(method.name) { typeError(state, "Method name \"" + method.name + "\" is reserved for compiler-generated reflection and JSON support", method.span) }
     checkFunction(state, method, classScope, owner)
   }
+  streamElement := classStreamElementType(class_)
+  if streamElement != none { symbol!.streamElementTypes.push(streamElement!) }
   if class_.destructor_ != none {
     if class_.struct_ {
       typeError(state, "Struct \"" + class_.name + "\" cannot declare a destructor", class_.destructor_!.span)
@@ -419,14 +467,33 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
           addImplementedInterfaceType(symbol!, typeName(target))
         }
       }
-      _: StreamResolvedType -> {
-        if !isAssignable(owner, target) {
+      stream: StreamResolvedType -> {
+        if streamElement == none || !sameType(streamElement!, stream.elementType) {
           typeError(state, "Class \"" + class_.name + "\" does not satisfy interface \"" + typeName(target) + "\"", interfaceRef.span)
         }
       }
       _ -> { typeError(state, "\"" + interfaceRef.name + "\" is not an interface", interfaceRef.span) }
     }
   }
+}
+
+function classStreamElementType(class_: ClassDeclaration): ResolvedType | none {
+  let nextType: FunctionType | none = none
+  let valueType: FunctionType | none = none
+  for method of class_.methods {
+    if method.static_ || method.resolvedType == none { continue }
+    case method.resolvedType! {
+      function_: FunctionType -> {
+        if method.name == "next" { nextType = function_ }
+        if method.name == "value" { valueType = function_ }
+      }
+      _ -> { }
+    }
+  }
+  if nextType == none || valueType == none { return none }
+  if nextType!.params.length != 0 || !sameType(nextType!.returnType, primitive("bool")) { return none }
+  if valueType!.params.length != 0 { return none }
+  return valueType!.returnType
 }
 
 function generatedMemberName(name: string): bool {
@@ -553,19 +620,19 @@ export function checkReturn(state: CheckerState, statement: ReturnStatement, sco
   return false
 }
 
-export function checkBlock(state: CheckerState, block: Block, parent: Scope): bool {
+export function checkBlock(state: CheckerState, block: Block, parent: Scope, inLoop: bool = false): bool {
   scope := Scope { parent }
   let completes = true
   let retiredActors: Binding[] = []
   for statement of block.statements {
     if completes {
-      completes = checkStatement(state, statement, scope)
+      completes = checkStatement(state, statement, scope, inLoop)
     } else {
       // Unreachable statements still need full semantic decoration. The
       // emitter consumes the entire AST, so skipping them would create a
       // hidden unchecked region even though control-flow analysis already
       // knows the block cannot complete normally.
-      let ignored = checkStatement(state, statement, scope)
+      let ignored = checkStatement(state, statement, scope, inLoop)
     }
     reportRetiredActorUses(statement, retiredActors, state.info!.path, state.diagnostics)
     collectRetiredActorBindings(statement, retiredActors)
@@ -723,98 +790,24 @@ function lookupYieldBinding(scope: Scope, name: string): Binding | none {
   return none
 }
 
-export function checkCase(state: CheckerState, statement: CaseStatement, scope: Scope): bool {
+export function checkCase(state: CheckerState, statement: CaseStatement, scope: Scope, inLoop: bool = false): bool {
   subjectType := checkExpression(state, statement.subject, scope, none)
-  let exhaustive = false
-  let hasSuccessArm = false
-  let hasFailureArm = false
+  let armPatterns: CasePattern[][] = []
   let allArmsReturn = statement.arms.length > 0
   for arm of statement.arms {
+    armPatterns.push(arm.patterns)
     armScope := Scope { parent: scope }
     checkCasePatterns(state, arm.patterns, subjectType, armScope)
-    for pattern of arm.patterns {
-      case pattern {
-        _: WildcardPattern -> { exhaustive = true }
-        type_: TypePattern -> {
-          case type_.type_ {
-            named: NamedType -> {
-              if named.name == "Success" { hasSuccessArm = true }
-              if named.name == "Failure" { hasFailureArm = true }
-            }
-            _ -> { }
-          }
-        }
-        _ -> { }
-      }
-    }
     let armCompletes = true
     case arm.body {
-      block: Block -> { armCompletes = checkBlock(state, block, armScope) }
+      block: Block -> { armCompletes = checkBlock(state, block, armScope, inLoop) }
       expression: Expression -> { armCompletes = checkExpression(state, expression, armScope, none).kind != "never" }
     }
     if armCompletes { allArmsReturn = false }
   }
-  case subjectType {
-    _: ResultResolvedType -> { if hasSuccessArm && hasFailureArm { exhaustive = true } }
-    enum_: EnumType -> { if enumCaseExhaustive(state, enum_, statement.arms) { exhaustive = true } }
-    union_: UnionResolvedType -> { if unionCaseExhaustive(union_, statement.arms) { exhaustive = true } }
-    _ -> { }
-  }
+  exhaustive := casePatternsExhaustive(state, subjectType, armPatterns)
   statement.resolvedCompletes = if subjectType.kind == "never" then false else !(exhaustive && allArmsReturn)
   return statement.resolvedCompletes!
-}
-
-function enumCaseExhaustive(state: CheckerState, enum_: EnumType, arms: CaseArm[]): bool {
-  declaration := declarationFor(state.result, enum_.symbol)
-  if declaration == none { return false }
-  case declaration! {
-    enumDeclaration: EnumDeclaration -> {
-      for variant of enumDeclaration.variants {
-        let found = false
-        for arm of arms {
-          for pattern of arm.patterns {
-            case pattern {
-              value: ValuePattern -> {
-                case value.value {
-                  dot: DotShorthand -> { if dot.name == variant.name { found = true } }
-                  _ -> { }
-                }
-              }
-              _ -> { }
-            }
-          }
-        }
-        if !found { return false }
-      }
-      return true
-    }
-    _ -> { }
-  }
-  return false
-}
-
-function unionCaseExhaustive(union_: UnionResolvedType, arms: CaseArm[]): bool {
-  for member of union_.types {
-    let found = false
-    for arm of arms {
-      for pattern of arm.patterns {
-        case pattern {
-          type_: TypePattern -> {
-            if type_.resolvedType != none && sameType(member, type_.resolvedType!) { found = true }
-          }
-          value: ValuePattern -> {
-            case value.value {
-              _: NoneLiteral -> { if member.kind == "none" { found = true } }
-              _ -> { }
-            }
-          }
-          _ -> { }
-        }
-      }
-    }
-    if !found { return false }
-  }
-  return true
 }
 
 export function inferredReturn(state: CheckerState, block: Block): ResolvedType {

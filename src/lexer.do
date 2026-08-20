@@ -119,6 +119,8 @@ export enum TokenType {
   QuestionBracket,
   Underscore,
   DollarBrace,
+  TagOpen,
+  TagText,
   Ellipsis,
   EndOfFile,
 }
@@ -248,6 +250,10 @@ export class Lexer {
   braceDepth: int[] = []
   interpolationLines: int[] = []
   interpolationColumns: int[] = []
+  let tagMode = "code"
+  tagModeStack: string[] = []
+  tagExpressionDepths: int[] = []
+  let tagGenericDepth = 0
 
   function tokenize(): Token[] {
     // Reserve a conservative token estimate before the scan. Doof arrays map
@@ -258,8 +264,62 @@ export class Lexer {
       while pos < source.length && peek() != '\n' { advance() }
     }
     while pos < source.length {
+      if tagMode == "children" {
+        if peek() == '<' && peek(1) == '/' {
+          emit(TokenType.Less, line, column, pos, 1)
+          emit(TokenType.Slash, line, column, pos, 1)
+          tagMode = "closing-tag"
+          continue
+        }
+        if peek() == '<' && isIdentStart(peek(1)) {
+          beginTag()
+          continue
+        }
+        if peek() == '{' {
+          beginTagExpression()
+          continue
+        }
+        readTagText()
+        continue
+      }
+
+      if tagMode == "opening-tag" || tagMode == "closing-tag" {
+        skipWhitespaceAndComments()
+        if pos >= source.length { break }
+        if tagMode == "opening-tag" && peek() == '{' {
+          beginTagExpression()
+          continue
+        }
+        if tagMode == "opening-tag" && peek() == '<' {
+          tagGenericDepth = tagGenericDepth + 1
+          emit(TokenType.Less, line, column, pos, 1)
+          continue
+        }
+        if peek() == '>' && tagGenericDepth > 0 {
+          tagGenericDepth = tagGenericDepth - 1
+          emit(TokenType.Greater, line, column, pos, 1)
+          continue
+        }
+        if peek() == '>' {
+          emit(TokenType.Greater, line, column, pos, 1)
+          if tagMode == "closing-tag" {
+            tagMode = try! tagModeStack.pop()
+          } else if tokens.length >= 2 && tokens[tokens.length - 2].kind == TokenType.Slash {
+            tagMode = try! tagModeStack.pop()
+          } else {
+            tagMode = "children"
+          }
+          continue
+        }
+      }
+
       skipWhitespaceAndComments()
       if pos >= source.length { break }
+
+      if (tagMode == "code" || tagMode == "tag-expression") && peek() == '<' && isIdentStart(peek(1)) && canStartTag() {
+        beginTag()
+        continue
+      }
 
       if templateDelimiters.length > 0 && peek() == '}' && braceDepth[braceDepth.length - 1] == 0 {
         advance()
@@ -268,6 +328,20 @@ export class Lexer {
         ignoredColumn := try! interpolationColumns.pop()
         readTemplateContinuation()
         continue
+      }
+
+      if tagMode == "tag-expression" && peek() == '}' {
+        index := tagExpressionDepths.length - 1
+        if tagExpressionDepths[index] == 0 {
+          emit(TokenType.RightBrace, line, column, pos, 1)
+          ignoredDepth := try! tagExpressionDepths.pop()
+          tagMode = try! tagModeStack.pop()
+          continue
+        }
+        tagExpressionDepths[index] = tagExpressionDepths[index] - 1
+      } else if tagMode == "tag-expression" && peek() == '{' {
+        index := tagExpressionDepths.length - 1
+        tagExpressionDepths[index] = tagExpressionDepths[index] + 1
       }
 
       ch := peek()
@@ -290,6 +364,45 @@ export class Lexer {
 
     addToken(TokenType.EndOfFile, pos, 0, pos, 0, false, line, column)
     return tokens
+  }
+
+  private function beginTag(): none {
+    tagModeStack.push(tagMode)
+    emit(TokenType.TagOpen, line, column, pos, 1)
+    tagMode = "opening-tag"
+    tagGenericDepth = 0
+  }
+
+  private function beginTagExpression(): none {
+    tagModeStack.push(tagMode)
+    tagExpressionDepths.push(0)
+    emit(TokenType.LeftBrace, line, column, pos, 1)
+    tagMode = "tag-expression"
+  }
+
+  private function readTagText(): none {
+    start := pos
+    tokenLine := line
+    tokenColumn := column
+    while pos < source.length && peek() != '<' && peek() != '{' { advance() }
+    if pos > start { addToken(TokenType.TagText, start, pos - start, start, pos - start, false, tokenLine, tokenColumn) }
+  }
+
+  private function canStartTag(): bool {
+    if tokens.length == 0 { return true }
+    if line > tokens[tokens.length - 1].line { return true }
+    previous := tokens[tokens.length - 1].kind
+    return previous == TokenType.Equal || previous == TokenType.ColonEqual
+      || previous == TokenType.LeftParen || previous == TokenType.LeftBracket || previous == TokenType.LeftBrace
+      || previous == TokenType.Comma || previous == TokenType.Colon || previous == TokenType.Semicolon
+      || previous == TokenType.Return || previous == TokenType.Yield || previous == TokenType.Then || previous == TokenType.Else
+      || previous == TokenType.Arrow || previous == TokenType.RightArrow
+      || previous == TokenType.Plus || previous == TokenType.Minus || previous == TokenType.Star || previous == TokenType.Slash
+      || previous == TokenType.Backslash || previous == TokenType.Percent || previous == TokenType.Ampersand
+      || previous == TokenType.Pipe || previous == TokenType.Caret || previous == TokenType.Bang
+      || previous == TokenType.EqualEqual || previous == TokenType.BangEqual || previous == TokenType.Less
+      || previous == TokenType.LessEqual || previous == TokenType.Greater || previous == TokenType.GreaterEqual
+      || previous == TokenType.QuestionQuestion || previous == TokenType.AmpersandAmpersand || previous == TokenType.PipePipe
   }
 
   private function peek(offset: int = 0): char {

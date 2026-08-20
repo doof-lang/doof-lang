@@ -5,6 +5,7 @@
 // module dependency state belongs to the module/header planner.
 
 import { Program, SourceSpan } from "./ast"
+import { JsonEligibilityCache } from "./json-semantics"
 import {
   ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, ImportBinding,
   InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NamespaceBinding, NoneType,
@@ -30,7 +31,10 @@ export class EmitContext {
   allPrograms: Program[] = []
   let namespaceImports: NamespaceBinding[] = []
   let imports: ImportBinding[] = []
+  let importedDefinitionNeedles: string[] = []
+  let importedDefinitionNeedlesReady: bool = false
   let moduleSurfaces: EmitModuleSurface[] = []
+  let jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}
   let currentClass: string = ""
   let currentClassNative: bool = false
   let currentFunctionStatic: bool = false

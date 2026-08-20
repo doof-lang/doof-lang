@@ -190,6 +190,15 @@ for name of names {
 }
 ```
 
+Use `_` to iterate for side effects or to discard positions from a destructured
+element. Discards introduce no loop binding and may be repeated:
+
+```doof
+for _ of lines { count += 1 }
+for _, value of entries { println(value) }
+for _, _ of pairs { tick() }
+```
+
 Current iterable forms are arrays, maps, sets, finite `Range` values, and
 `Stream<T>` values. A stream yields one element at a time by calling `next()`
 until it returns `false`, then reading the current element with `value()`.
