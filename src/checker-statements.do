@@ -39,7 +39,7 @@ import { CheckerState } from "./checker-state"
 import { casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
-import { typeError, requireBool, validateAssignmentBinding } from "./checker-common"
+import { deprecatedClassMethodFunction, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { decorateAnnotationWithResolved, blockContainsLoopExit, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -436,6 +436,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
     }
   }
   for method of class_.methods {
+    deprecatedClassMethodFunction(state, method)
     if generatedMemberName(method.name) { typeError(state, "Method name \"" + method.name + "\" is reserved for compiler-generated reflection and JSON support", method.span) }
     checkFunction(state, method, classScope, owner)
   }

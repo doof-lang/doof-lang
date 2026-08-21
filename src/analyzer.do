@@ -61,7 +61,7 @@ export class ModuleAnalyzer {
   let inProgress: string[] = []
   let resolvedPaths: string[] = []
 
-  function analyze(entry: string): AnalysisResult {
+  analyze(entry: string): AnalysisResult {
     modules = []
     diagnostics = []
     inProgress = []
@@ -77,7 +77,7 @@ export class ModuleAnalyzer {
     return AnalysisResult { modules, diagnostics }
   }
 
-  private function queueModuleParse(
+  private queueModuleParse(
     path: string,
     inheritedMockRootPath: string | none,
     scheduled: string[],
@@ -116,7 +116,7 @@ export class ModuleAnalyzer {
     })
   }
 
-  private function parseReachableModules(entryPath: string): none {
+  private parseReachableModules(entryPath: string): none {
     let scheduled: string[] = []
     let pending: Promise<ModuleParseResult>[] = []
     queueModuleParse(entryPath, none, scheduled, pending)
@@ -166,14 +166,14 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function orderModules(entryPath: string): none {
+  private orderModules(entryPath: string): none {
     let ordered: ModuleInfo[] = []
     let visited: string[] = []
     appendModuleOrder(entryPath, ordered, visited)
     modules = ordered
   }
 
-  private function appendModuleOrder(path: string, ordered: ModuleInfo[], visited: string[]): none {
+  private appendModuleOrder(path: string, ordered: ModuleInfo[], visited: string[]): none {
     if contains(visited, path) { return }
     visited.push(path)
     info := findModule(path)
@@ -188,7 +188,7 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function resolveModule(path: string): ModuleInfo | none {
+  private resolveModule(path: string): ModuleInfo | none {
     existing := findModule(path)
     if existing == none { return none }
     if contains(resolvedPaths, path) { return existing }
@@ -204,7 +204,7 @@ export class ModuleAnalyzer {
     return info
   }
 
-  private function collectSymbols(info: ModuleInfo): none {
+  private collectSymbols(info: ModuleInfo): none {
     for statement of info.program.statements {
       symbol := symbolFor(statement, info.path)
       if symbol == none { continue }
@@ -218,7 +218,7 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function decorateDeclarationSymbol(statement: Statement, symbol: Symbol): none {
+  private decorateDeclarationSymbol(statement: Statement, symbol: Symbol): none {
     case statement {
       class_: ClassDeclaration -> { class_.resolvedSymbol = symbol }
       interface_: InterfaceDeclaration -> { interface_.resolvedSymbol = symbol }
@@ -226,7 +226,7 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function symbolFor(statement: Statement, module: string): Symbol | none {
+  private symbolFor(statement: Statement, module: string): Symbol | none {
     case statement {
       value: ClassDeclaration -> {
         return Symbol {
@@ -265,7 +265,7 @@ export class ModuleAnalyzer {
   }
 
   /** Retains declaration identity when an export list introduces a public name. */
-  private function exportedSymbol(symbol: Symbol, exportedName: string): Symbol {
+  private exportedSymbol(symbol: Symbol, exportedName: string): Symbol {
     return Symbol {
       kind: symbol.kind,
       name: exportedName,
@@ -282,7 +282,7 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function resolveImports(info: ModuleInfo): none {
+  private resolveImports(info: ModuleInfo): none {
     for statement of info.program.statements {
       case statement {
         import_: ImportDeclaration -> {
@@ -338,7 +338,7 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function resolveExportLists(info: ModuleInfo): none {
+  private resolveExportLists(info: ModuleInfo): none {
     for statement of info.program.statements {
       case statement {
         list: ExportList -> {
@@ -377,11 +377,11 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function resolveNamedTypes(info: ModuleInfo): none {
+  private resolveNamedTypes(info: ModuleInfo): none {
     for statement of info.program.statements { visitStatementTypes(statement, info) }
   }
 
-  private function visitStatementTypes(statement: Statement, info: ModuleInfo): none {
+  private visitStatementTypes(statement: Statement, info: ModuleInfo): none {
     case statement {
       fn: FunctionDeclaration -> { visitFunctionTypes(fn, info) }
       class_: ClassDeclaration -> {
@@ -404,7 +404,7 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function visitFunctionTypes(fn: FunctionDeclaration, info: ModuleInfo, ownerTypeParams: string[] = []): none {
+  private visitFunctionTypes(fn: FunctionDeclaration, info: ModuleInfo, ownerTypeParams: string[] = []): none {
     let typeParams: string[] = []
     for parameter of ownerTypeParams { typeParams.push(parameter) }
     for parameter of fn.typeParams { typeParams.push(parameter) }
@@ -413,11 +413,11 @@ export class ModuleAnalyzer {
     if fn.returnType != none { visitType(fn.returnType!, info, typeParams) }
   }
 
-  private function visitTypeParameterConstraints(constraints: TypeParameterConstraint[], info: ModuleInfo, typeParams: string[]): none {
+  private visitTypeParameterConstraints(constraints: TypeParameterConstraint[], info: ModuleInfo, typeParams: string[]): none {
     for constraint of constraints { if constraint.type_ != none { visitType(constraint.type_!, info, typeParams) } }
   }
 
-  private function visitType(annotation: TypeAnnotation, info: ModuleInfo, typeParams: string[] = []): none {
+  private visitType(annotation: TypeAnnotation, info: ModuleInfo, typeParams: string[] = []): none {
     case annotation {
       named: NamedType -> {
         if !isBuiltin(named.name) && !containsTypeParam(typeParams, named.name) {
@@ -448,19 +448,19 @@ export class ModuleAnalyzer {
     }
   }
 
-  private function containsTypeParam(typeParams: string[], name: string): bool {
+  private containsTypeParam(typeParams: string[], name: string): bool {
     for typeParam of typeParams { if typeParam == name { return true } }
     return false
   }
 
-  private function findModule(path: string): ModuleInfo | none {
+  private findModule(path: string): ModuleInfo | none {
     for module of modules { if module.path == path { return module } }
     return none
   }
 
   // Keep the complete Statement union visible in this module's generated
   // header.  These forms are dispatched by shared Statement-typed helpers.
-  private function keepStatementTypes(
+  private keepStatementTypes(
     block: Block | none = none,
     export_: ExportDeclaration | none = none,
     import_: ImportDeclaration | none = none,
@@ -480,7 +480,7 @@ export class ModuleAnalyzer {
   ): none { }
 
   /** Applies the root test's mock environment before ordinary path resolution. */
-  private function resolveImportPath(info: ModuleInfo, specifier: string): string {
+  private resolveImportPath(info: ModuleInfo, specifier: string): string {
     if info.mockRootPath == none { return resolver.resolve(info.path, specifier) }
     root := findModule(info.mockRootPath!)
     if root == none || root!.mockImportDirectives.length == 0 { return resolver.resolve(info.path, specifier) }
@@ -490,7 +490,7 @@ export class ModuleAnalyzer {
     return resolver.resolve(info.mockRootPath!, replacement!)
   }
 
-  private function validateMockImportDirectives(info: ModuleInfo, inheritedMockRootPath: string | none): none {
+  private validateMockImportDirectives(info: ModuleInfo, inheritedMockRootPath: string | none): none {
     if info.mockImportDirectives.length == 0 { return }
     if !info.path.endsWith(".test.do") {
       for directive of info.mockImportDirectives {

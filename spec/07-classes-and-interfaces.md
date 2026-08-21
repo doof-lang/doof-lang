@@ -101,6 +101,16 @@ class Counter {
 }
 ```
 
+Methods omit the `function` keyword. The canonical modifier order is
+`[private] [isolated] [static] name(...)`. `isolated` is an enforced promise
+that the method does not access mutable module/static state and calls only
+isolated code; it is valid on both instance and static methods.
+
+The older `function name(...)` and `static function name(...)` class-method
+spellings remain accepted temporarily with a deprecation warning. Remove only
+the `function` keyword. Module-level and imported free functions continue to
+use `function`.
+
 ### Stream Implementations
 
 Classes can explicitly implement `Stream<T>`. A class satisfies `Stream<T>` when it exposes zero-argument `next(): bool` and `value(): T` methods. `value()` is only valid after a successful `next()` call.

@@ -112,10 +112,11 @@ function parseInitializer(parser: Parser): Expression {
   return Identifier { kind: "identifier", name: "<error>", span: parser.locationSpan() }
 }
 
-export function parseFunction(parser: Parser, exported: bool, static_: bool, isolated_: bool, private_: bool): FunctionDeclaration {
+export function parseFunction(parser: Parser, exported: bool, static_: bool, isolated_: bool, private_: bool, legacyMethod: bool = false): FunctionDeclaration {
   start := parser.location()
   parser.expect(TokenType.Function)
   name := parser.text(parser.expect(TokenType.Identifier))
+  legacyMethodFunctionSpan := if legacyMethod then parser.span(start) else none
   description := parseDescription(parser)
   parsedTypeParams := parseTypeParameters(parser)
   typeParams := parsedTypeParams.names
@@ -125,13 +126,17 @@ export function parseFunction(parser: Parser, exported: bool, static_: bool, iso
   returnType := parser.parseOptionalType()
   if parser.check(TokenType.Arrow) {
     body := parseExpressionBody(parser)
-    return makeFunctionExpression(parser, name, description, typeParams, parsedTypeParams.constraints, params, returnType, body, exported, static_, isolated_, private_, start)
+    result := makeFunctionExpression(parser, name, description, typeParams, parsedTypeParams.constraints, params, returnType, body, exported, static_, isolated_, private_, start)
+    result.legacyMethodFunctionSpan = legacyMethodFunctionSpan
+    return result
   }
   body := parser.parseBlock()
-  return makeFunctionBlock(parser, name, description, typeParams, parsedTypeParams.constraints, params, returnType, body, exported, static_, isolated_, private_, start)
+  result := makeFunctionBlock(parser, name, description, typeParams, parsedTypeParams.constraints, params, returnType, body, exported, static_, isolated_, private_, start)
+  result.legacyMethodFunctionSpan = legacyMethodFunctionSpan
+  return result
 }
 
-function parseMethod(parser: Parser, static_: bool, private_: bool): FunctionDeclaration {
+function parseMethod(parser: Parser, static_: bool, isolated_: bool, private_: bool): FunctionDeclaration {
   start := parser.location()
   name := parser.text(parser.expect(TokenType.Identifier))
   description := parseDescription(parser)
@@ -143,10 +148,10 @@ function parseMethod(parser: Parser, static_: bool, private_: bool): FunctionDec
   returnType := parser.parseOptionalType()
   if parser.check(TokenType.Arrow) {
     body := parseExpressionBody(parser)
-    return makeFunctionExpression(parser, name, description, typeParams, parsedTypeParams.constraints, params, returnType, body, false, static_, false, private_, start)
+    return makeFunctionExpression(parser, name, description, typeParams, parsedTypeParams.constraints, params, returnType, body, false, static_, isolated_, private_, start)
   }
   body := parser.parseBlock()
-  return makeFunctionBlock(parser, name, description, typeParams, parsedTypeParams.constraints, params, returnType, body, false, static_, false, private_, start)
+  return makeFunctionBlock(parser, name, description, typeParams, parsedTypeParams.constraints, params, returnType, body, false, static_, isolated_, private_, start)
 }
 
 function makeFunctionExpression(parser: Parser, name: string, description: string, typeParams: string[], typeParamConstraints: TypeParameterConstraint[], params: Parameter[], returnType: TypeAnnotation | none, body: Expression, exported: bool, static_: bool, isolated_: bool, private_: bool, start: AstLocation): FunctionDeclaration {
@@ -222,23 +227,40 @@ export function parseClass(parser: Parser, exported: bool, private_: bool): Stat
   let destructor_: Block | none = none
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
     if parser.check(TokenType.Function) {
-      methods.push(parseFunction(parser, false, false, false, false))
+      methods.push(parseFunction(parser, false, false, false, false, true))
     } else if parser.check(TokenType.Static) && parser.peek(1).kind == TokenType.Function {
       parser.advance()
-      methods.push(parseFunction(parser, false, true, false, false))
+      methods.push(parseFunction(parser, false, true, false, false, true))
     } else if parser.check(TokenType.Private) && parser.peek(1).kind == TokenType.Function {
       parser.advance()
-      methods.push(parseFunction(parser, false, false, false, true))
+      methods.push(parseFunction(parser, false, false, false, true, true))
+    } else if parser.check(TokenType.Isolated) {
+      parser.advance()
+      static_ := parser.match(TokenType.Static)
+      if parser.check(TokenType.Function) {
+        methods.push(parseFunction(parser, false, static_, true, false, true))
+      } else {
+        if !checkAheadMethod(parser, 0) { parser.fail("Expected class method after 'isolated'") }
+        methods.push(parseMethod(parser, static_, true, false))
+      }
     } else if parser.check(TokenType.Private) {
       parser.advance()
       if parser.check(TokenType.Function) {
-        methods.push(parseFunction(parser, false, false, false, true))
+        methods.push(parseFunction(parser, false, false, false, true, true))
+      } else if parser.match(TokenType.Isolated) {
+        static_ := parser.match(TokenType.Static)
+        if parser.check(TokenType.Function) {
+          methods.push(parseFunction(parser, false, static_, true, true, true))
+        } else {
+          if !checkAheadMethod(parser, 0) { parser.fail("Expected class method after 'private isolated'") }
+          methods.push(parseMethod(parser, static_, true, true))
+        }
       } else if checkAheadMethod(parser, 0) {
-        methods.push(parseMethod(parser, false, true))
+        methods.push(parseMethod(parser, false, false, true))
       } else if parser.check(TokenType.Static) {
         parser.advance()
         if checkAheadMethod(parser, 0) {
-          methods.push(parseMethod(parser, true, true))
+          methods.push(parseMethod(parser, true, false, true))
         } else {
           fields.push(parseClassField(parser, true, true))
         }
@@ -252,13 +274,13 @@ export function parseClass(parser: Parser, exported: bool, private_: bool): Stat
     } else if parser.check(TokenType.Static) {
       if checkAheadMethod(parser, 1) {
         parser.advance()
-        methods.push(parseMethod(parser, true, false))
+        methods.push(parseMethod(parser, true, false, false))
       } else {
         parser.advance()
         fields.push(parseClassField(parser, true, false))
       }
     } else if checkAheadMethod(parser, 0) {
-      methods.push(parseMethod(parser, false, false))
+      methods.push(parseMethod(parser, false, false, false))
     } else {
       fields.push(parseClassField(parser, false, false))
     }

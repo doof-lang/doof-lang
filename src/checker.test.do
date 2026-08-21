@@ -24,7 +24,9 @@ function checked(source: string): CheckResult {
   result := checkedIncludingDeprecations(source)
   let diagnostics: Diagnostic[] = []
   for diagnostic of result.diagnostics {
-    if diagnostic.replacement != "none" { diagnostics.push(diagnostic) }
+    if diagnostic.replacement != "none" && !diagnostic.message.contains("'function' on class methods is deprecated") {
+      diagnostics.push(diagnostic)
+    }
   }
   return CheckResult { diagnostics }
 }
@@ -1386,6 +1388,22 @@ export function testEnforcesExplicitIsolationTransitively(): none {
   Assert.equal(result.diagnostics[0].message.contains("Isolated function \"run\" cannot call non-isolated function \"mutate\""), true)
 }
 
+export function testWarnsForFunctionKeywordOnClassMethods(): none {
+  result := checkedIncludingDeprecations("class Worker { function run(): int => 1\nstatic function create(): Worker => Worker {} }")
+  Assert.equal(result.diagnostics.length, 2)
+  Assert.equal(result.diagnostics[0].severity, "warning")
+  Assert.stringContains(result.diagnostics[0].message, "'function' on class methods is deprecated")
+  Assert.equal(result.diagnostics[0].replacement, "run")
+  Assert.equal(result.diagnostics[1].replacement, "create")
+}
+
+export function testEnforcesExplicitIsolationOnClassMethods(): none {
+  result := checked("shared := [0]\nclass Worker { isolated run(): none { shared.push(1) }\nisolated static create(): Worker => Worker {} }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Isolated method \"Worker.run\"")
+  Assert.stringContains(result.diagnostics[0].message, "mutable module binding \"shared\"")
+}
+
 export function testValidatesNestedAsyncIsolationOnce(): none {
   result := checked("shared := [0]\nfunction run(): Promise<int>[] => [async { yield shared.length }]")
   Assert.equal(result.diagnostics.length, 1)
@@ -1726,7 +1744,7 @@ export function testInfersNullableImplicitMethodResults(): none {
 }
 
 export function testDecoratesNestedNullableAssignmentTargets(): none {
-  source := "class Left { value: int }\nclass Right { value: int }\ntype Expression = Left | Right\nclass ParserLike { function parse(): none { let value: Expression | none = none\nif true { value = Left { value: 1 } } else { value = Right { value: 2 } } } }"
+  source := "class Left { value: int }\nclass Right { value: int }\ntype Expression = Left | Right\nclass ParserLike { parse(): none { let value: Expression | none = none\nif true { value = Left { value: 1 } } else { value = Right { value: 2 } } } }"
   sources := [SourceFile { path: "/main.do", source }]
   analysis := createAnalyzer(sources).analyze("/main.do")
   semantic := createChecker(analysis).check("/main.do")

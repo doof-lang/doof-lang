@@ -60,6 +60,16 @@ export function deprecatedBuildReadonly(state: CheckerState, span: SourceSpan): 
     replacement: "drainToReadonly",
   })
 }
+export function deprecatedClassMethodFunction(state: CheckerState, fn: FunctionDeclaration): none {
+  if fn.legacyMethodFunctionSpan == none { return }
+  state.diagnostics.push(Diagnostic {
+    severity: "warning",
+    message: "'function' on class methods is deprecated; declare '" + fn.name + "(...)' without the keyword",
+    span: checkerSemanticSpan(fn.legacyMethodFunctionSpan!),
+    module: state.info!.path,
+    replacement: fn.name,
+  })
+}
 export function validateAssignmentBinding(state: CheckerState, binding: Binding, span: SourceSpan): none {
   if binding.kind != "field" {
     if !binding.mutable { typeError(state, "Cannot assign to immutable binding '" + binding.name + "'", span) }

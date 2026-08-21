@@ -321,6 +321,10 @@ functions must explicitly declare `isolated` to provide that contract. Native
 free functions use `import isolated function name(...): Type from "header"`;
 native class methods place `isolated` before `static` or the method name.
 
+Source class methods use the same modifier order without a `function` keyword:
+`isolated run(): none` and `isolated static create(): Worker`. The modifier is
+valid on both instance and static methods.
+
 An ordinary class method may be non-isolated for local use. Calling a method
 through `Actor<T>` requires its inferred effect to be isolated and is rejected
 otherwise. This prevents actor code from reaching root-domain mutable globals

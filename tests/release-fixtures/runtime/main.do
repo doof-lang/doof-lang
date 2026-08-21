@@ -3,7 +3,7 @@ import { producePromise } from "./promise-producer"
 class Accumulator {
   let value: int
 
-  function add(amount: int): int {
+  add(amount: int): int {
     this.value = this.value + amount
     return this.value
   }
@@ -16,7 +16,7 @@ interface Drawable {
 
 class Point implements Drawable {
   readonly value: int
-  function render(): int => value * 2
+  render(): int => value * 2
 }
 
 class Config {
@@ -27,12 +27,12 @@ class Config {
 }
 
 class Calculator "A calculator." {
-  function add "Adds two values."(left "Left value.": int, right "Right value.": int): int => left + right
+  add "Adds two values."(left "Left value.": int, right "Right value.": int): int => left + right
 }
 
 struct Multiplier "A multiplier." {
   factor: int
-  function apply(value: int): int => value * factor
+  apply(value: int): int => value * factor
 }
 
 function actorResult(): int {

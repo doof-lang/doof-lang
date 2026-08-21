@@ -432,6 +432,7 @@ export class FunctionDeclaration {
   native_: bool = false
   nativeHeader: string = ""
   nativeCppName: string = ""
+  let legacyMethodFunctionSpan: SourceSpan | none = none
   let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }

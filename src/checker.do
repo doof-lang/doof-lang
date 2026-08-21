@@ -25,7 +25,7 @@ import { validateModuleInitializerStatement } from "./checker-module-initializat
 export class ModuleChecker {
   state: CheckerState
 
-  function check(entry: string): CheckResult {
+  check(entry: string): CheckResult {
     return checkModule(state, entry)
   }
 }

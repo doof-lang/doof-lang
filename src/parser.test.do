@@ -1124,6 +1124,34 @@ export function testParsesExportedIsolatedFunction(): none {
   }
 }
 
+export function testParsesIsolatedClassMethodsWithoutFunctionKeyword(): none {
+  program := parse("class Worker { isolated run(): int => 1\nisolated static create(): Worker => Worker {}\nprivate isolated helper(): int => 2 }")
+  case program.statements[0] {
+    class_: ClassDeclaration -> {
+      Assert.equal(class_.methods.length, 3)
+      Assert.equal(class_.methods[0].isolated_, true)
+      Assert.equal(class_.methods[0].static_, false)
+      Assert.equal(class_.methods[1].isolated_, true)
+      Assert.equal(class_.methods[1].static_, true)
+      Assert.equal(class_.methods[2].isolated_, true)
+      Assert.equal(class_.methods[2].private_, true)
+    }
+    _ -> { panic("expected class declaration") }
+  }
+}
+
+export function testPreservesDeprecatedFunctionClassMethodSpelling(): none {
+  program := parse("class Worker { function run(): int => 1\nstatic function create(): Worker => Worker {} }")
+  case program.statements[0] {
+    class_: ClassDeclaration -> {
+      Assert.equal(class_.methods[0].legacyMethodFunctionSpan != none, true)
+      Assert.equal(class_.methods[1].legacyMethodFunctionSpan != none, true)
+      Assert.equal(class_.methods[1].static_, true)
+    }
+    _ -> { panic("expected class declaration") }
+  }
+}
+
 export function testParsesGenericNativeFunction(): none {
   program := parse("import function send<T>(value: T): void from \"native.hpp\" as native::send")
   case program.statements[0] {

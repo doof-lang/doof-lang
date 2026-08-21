@@ -105,6 +105,10 @@ class Counter {
 - Instance methods get implicit `this` access.
 - Use `this.` only for disambiguation.
 - Fluent APIs commonly return `this`.
+- Methods omit the `function` keyword. The older `function name(...)` class
+  spelling is deprecated and warns; free functions still use `function`.
+- Canonical method modifiers are `[private] [isolated] [static] name(...)`.
+  `isolated` is valid on both instance and static methods.
 
 ## Static Members
 

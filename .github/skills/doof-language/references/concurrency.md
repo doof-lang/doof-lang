@@ -112,6 +112,9 @@ Bodyless native code needs an explicit trusted contract because the compiler
 cannot inspect its implementation. Use `import isolated function` for native
 free functions and `isolated` on native class methods.
 
+Source class methods omit `function`: use `isolated run(): none` for an
+instance method and `isolated static create(): Worker` for a static method.
+
 ## Retirement
 
 `retire actor` enqueues a retirement request after already accepted work:

@@ -55,31 +55,31 @@ export class Parser {
 
   // Shared parser state operations are public to the focused parser modules;
   // callers should continue to use parse() or the top-level parse() function.
-  function current(): Token { return tokens[pos] }
+  current(): Token { return tokens[pos] }
 
-  function peek(offset: int = 0): Token {
+  peek(offset: int = 0): Token {
     index := pos + offset
     if index >= tokens.length { return tokens[tokens.length - 1] }
     return tokens[index]
   }
 
-  function atEnd(): bool { return current().kind == TokenType.EndOfFile }
+  atEnd(): bool { return current().kind == TokenType.EndOfFile }
 
-  function advance(): Token {
+  advance(): Token {
     token := current()
     if !atEnd() { pos = pos + 1 }
     return token
   }
 
-  function check(kind: TokenType): bool { return current().kind == kind }
+  check(kind: TokenType): bool { return current().kind == kind }
 
-  function match(kind: TokenType): bool {
+  match(kind: TokenType): bool {
     if !check(kind) { return false }
     advance()
     return true
   }
 
-  function expect(kind: TokenType, message: string = ""): Token {
+  expect(kind: TokenType, message: string = ""): Token {
     if check(kind) { return advance() }
     let expectedMessage = message
     if expectedMessage == "" { expectedMessage = "Expected " + expectedLabel(kind) + " before '" + currentText() + "'" }
@@ -87,7 +87,7 @@ export class Parser {
     return current()
   }
 
-  function fail(message: string): none {
+  fail(message: string): none {
     token := current()
     errorMessage = message
     errorLine = token.line
@@ -96,7 +96,7 @@ export class Parser {
     panic("Parse error at " + string(token.line) + ":" + string(token.column) + ": " + message)
   }
 
-  private function expectedLabel(kind: TokenType): string {
+  private expectedLabel(kind: TokenType): string {
     if kind == TokenType.Identifier { return "identifier" }
     if kind == TokenType.RightParen { return "')'" }
     if kind == TokenType.RightBrace { return "'}'" }
@@ -108,15 +108,15 @@ export class Parser {
     return "token"
   }
 
-  function text(token: Token): string { return tokenValue(token, source) }
-  private function currentText(): string { return text(current()) }
+  text(token: Token): string { return tokenValue(token, source) }
+  private currentText(): string { return text(current()) }
 
-  function location(): AstLocation {
+  location(): AstLocation {
     token := current()
     return AstLocation { line: token.line, column: token.column, offset: token.offset }
   }
 
-  function span(start: AstLocation): SourceSpan {
+  span(start: AstLocation): SourceSpan {
     previous := if pos > 0 then tokens[pos - 1] else current()
     return SourceSpan {
       start,
@@ -128,59 +128,59 @@ export class Parser {
     }
   }
 
-  function sameLineAsPrevious(): bool {
+  sameLineAsPrevious(): bool {
     if pos == 0 { return false }
     return tokens[pos - 1].line == current().line
   }
 
-  function previousIs(kind: TokenType): bool {
+  previousIs(kind: TokenType): bool {
     if pos == 0 { return false }
     return tokens[pos - 1].kind == kind
   }
 
-  function immediatelyAfterPrevious(): bool {
+  immediatelyAfterPrevious(): bool {
     if pos == 0 { return false }
     previous := tokens[pos - 1]
     return previous.offset + previous.length == current().offset
   }
 
-  function consumeSemicolon(): none { match(TokenType.Semicolon) }
+  consumeSemicolon(): none { match(TokenType.Semicolon) }
 
-  function locationSpan(): SourceSpan { start := location(); return SourceSpan { start, end: start } }
+  locationSpan(): SourceSpan { start := location(); return SourceSpan { start, end: start } }
 
   // --------------------------------------------------------------------------
   // Focused parser-module entry points
   // --------------------------------------------------------------------------
 
-  function parseStatement(): Statement { return parseStatementImpl(this) }
-  function parseExport(): Statement { return parseExportImpl(this) }
-  function parseConst(exported: bool): Statement { return parseConstImpl(this, exported) }
-  function parseReadonly(exported: bool): Statement { return parseReadonlyImpl(this, exported) }
-  function parseLet(): Statement { return parseLetImpl(this) }
-  function parseFunction(exported: bool, static_: bool, isolated_: bool, private_: bool): FunctionDeclaration {
-    return parseFunctionImpl(this, exported, static_, isolated_, private_)
+  parseStatement(): Statement { return parseStatementImpl(this) }
+  parseExport(): Statement { return parseExportImpl(this) }
+  parseConst(exported: bool): Statement { return parseConstImpl(this, exported) }
+  parseReadonly(exported: bool): Statement { return parseReadonlyImpl(this, exported) }
+  parseLet(): Statement { return parseLetImpl(this) }
+  parseFunction(exported: bool, static_: bool, isolated_: bool, private_: bool, legacyMethod: bool = false): FunctionDeclaration {
+    return parseFunctionImpl(this, exported, static_, isolated_, private_, legacyMethod)
   }
-  function parseClass(exported: bool, private_: bool): Statement { return parseClassImpl(this, exported, private_) }
-  function parseInterface(exported: bool): Statement { return parseInterfaceImpl(this, exported) }
-  function parseEnum(exported: bool): Statement { return parseEnumImpl(this, exported) }
-  function parseTypeAlias(exported: bool): Statement { return parseTypeAliasImpl(this, exported) }
-  function parseImport(): Statement { return parseImportImpl(this) }
-  function parseMockImport(): Statement { return parseMockImportImpl(this) }
+  parseClass(exported: bool, private_: bool): Statement { return parseClassImpl(this, exported, private_) }
+  parseInterface(exported: bool): Statement { return parseInterfaceImpl(this, exported) }
+  parseEnum(exported: bool): Statement { return parseEnumImpl(this, exported) }
+  parseTypeAlias(exported: bool): Statement { return parseTypeAliasImpl(this, exported) }
+  parseImport(): Statement { return parseImportImpl(this) }
+  parseMockImport(): Statement { return parseMockImportImpl(this) }
 
-  function parseBlock(): Block { return parseBlockImpl(this) }
-  function parseCaseExpression(): Expression { return parseCaseExpressionImpl(this) }
-  function looksLikePattern(separator: TokenType): bool { return looksLikePatternImpl(this, separator) }
-  function parseDestructuring(shape: string, bindingKind: string, separator: TokenType): Statement {
+  parseBlock(): Block { return parseBlockImpl(this) }
+  parseCaseExpression(): Expression { return parseCaseExpressionImpl(this) }
+  looksLikePattern(separator: TokenType): bool { return looksLikePatternImpl(this, separator) }
+  parseDestructuring(shape: string, bindingKind: string, separator: TokenType): Statement {
     return parseDestructuringImpl(this, shape, bindingKind, separator)
   }
-  function parseTryStatement(): Statement { return parseTryStatementImpl(this) }
+  parseTryStatement(): Statement { return parseTryStatementImpl(this) }
 
-  function parseOptionalType(): TypeAnnotation | none { return parseOptionalTypeImpl(this) }
-  function parseTypeAnnotation(): TypeAnnotation { return parseTypeAnnotationImpl(this) }
+  parseOptionalType(): TypeAnnotation | none { return parseOptionalTypeImpl(this) }
+  parseTypeAnnotation(): TypeAnnotation { return parseTypeAnnotationImpl(this) }
 
-  function parseExpression(): Expression { return parseExpressionImpl(this) }
-  function parseAdditive(): Expression { return parseAdditiveImpl(this) }
-  function parseUnary(): Expression { return parseUnaryImpl(this) }
+  parseExpression(): Expression { return parseExpressionImpl(this) }
+  parseAdditive(): Expression { return parseAdditiveImpl(this) }
+  parseUnary(): Expression { return parseUnaryImpl(this) }
 }
 
 export function parse(source: string): Program { return Parser { source }.parse() }

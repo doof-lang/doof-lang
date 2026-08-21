@@ -19,7 +19,7 @@ export class ModuleResolver {
   let failedPaths: string[] = []
   let diagnostics: Diagnostic[] = []
 
-  function find(path: string): SourceFile | none {
+  find(path: string): SourceFile | none {
     for source of sources { if source.path == path { return source } }
     for loaded of loadedPaths { if loaded == path { return none } }
     loadedPaths.push(path)
@@ -35,12 +35,12 @@ export class ModuleResolver {
     return none
   }
 
-  function failed(path: string): bool {
+  failed(path: string): bool {
     for failed of failedPaths { if failed == path { return true } }
     return false
   }
 
-  function resolve(importer: string, specifier: string): string {
+  resolve(importer: string, specifier: string): string {
     base := if specifier.startsWith(".")
       then relativeBase(importer, specifier)
       else "/" + specifier

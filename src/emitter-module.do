@@ -104,7 +104,7 @@ export class CxxModuleEmitter {
   initializationModuleNamespaces: string[] = []
   jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}
 
-  function emit(program: Program, entryMode: string = "executable"): ModuleEmission {
+  emit(program: Program, entryMode: string = "executable"): ModuleEmission {
     context := if modulePath == "" then createEmitContext(program) else createEmitContextForModule(program, modulePath, allPrograms)
     context.namespaceImports = namespaceImports
     context.imports = imports
@@ -140,7 +140,7 @@ export class CxxModuleEmitter {
     return emitPlanned([program], context, plan!, sections, entryMode)
   }
 
-  private function emitPlanned(programs: Program[], context: EmitContext, plan: HeaderPlan, sections: HeaderSection[], entryMode: string): ModuleEmission {
+  private emitPlanned(programs: Program[], context: EmitContext, plan: HeaderPlan, sections: HeaderSection[], entryMode: string): ModuleEmission {
     headerName := if headerNameOverride == "" then moduleName + ".hpp" else headerNameOverride
     sourceName := if sourceNameOverride == "" then moduleName + ".cpp" else sourceNameOverride
     namespaceName := if namespaceNameOverride == "" then moduleName + "_" else namespaceNameOverride

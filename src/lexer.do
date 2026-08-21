@@ -272,7 +272,7 @@ export class Lexer {
   tagExpressionDepths: int[] = []
   let tagGenericDepth = 0
 
-  function tokenize(): Token[] {
+  tokenize(): Token[] {
     // Reserve a conservative token estimate before the scan. Doof arrays map
     // to shared vector storage, so this avoids repeated vector growth/moves on
     // large source files while preserving the normal dynamic semantics.
@@ -383,21 +383,21 @@ export class Lexer {
     return tokens
   }
 
-  private function beginTag(): none {
+  private beginTag(): none {
     tagModeStack.push(tagMode)
     emit(TokenType.TagOpen, line, column, pos, 1)
     tagMode = "opening-tag"
     tagGenericDepth = 0
   }
 
-  private function beginTagExpression(): none {
+  private beginTagExpression(): none {
     tagModeStack.push(tagMode)
     tagExpressionDepths.push(0)
     emit(TokenType.LeftBrace, line, column, pos, 1)
     tagMode = "tag-expression"
   }
 
-  private function readTagText(): none {
+  private readTagText(): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -405,7 +405,7 @@ export class Lexer {
     if pos > start { addToken(TokenType.TagText, start, pos - start, start, pos - start, false, tokenLine, tokenColumn) }
   }
 
-  private function canStartTag(): bool {
+  private canStartTag(): bool {
     if tokens.length == 0 { return true }
     if line > tokens[tokens.length - 1].line { return true }
     previous := tokens[tokens.length - 1].kind
@@ -422,12 +422,12 @@ export class Lexer {
       || previous == TokenType.QuestionQuestion || previous == TokenType.AmpersandAmpersand || previous == TokenType.PipePipe
   }
 
-  private function peek(offset: int = 0): char {
+  private peek(offset: int = 0): char {
     if pos + offset >= source.length { return '\0' }
     return source[pos + offset]
   }
 
-  private function advance(): char {
+  private advance(): char {
     ch := source[pos]
     pos = pos + 1
     if ch == '\n' {
@@ -439,11 +439,11 @@ export class Lexer {
     return ch
   }
 
-  private function addToken(kind: TokenType, tokenOffset: int, tokenLength: int, valueOffset: int, valueLength: int, needsDecode: bool, tokenLine: int, tokenColumn: int): none {
+  private addToken(kind: TokenType, tokenOffset: int, tokenLength: int, valueOffset: int, valueLength: int, needsDecode: bool, tokenLine: int, tokenColumn: int): none {
     tokens.push(Token { kind, length: tokenLength, valueOffset, valueLength, needsDecode, line: tokenLine, column: tokenColumn, offset: tokenOffset })
   }
 
-  private function diagnostic(message: string, diagnosticLine: int, diagnosticColumn: int): none {
+  private diagnostic(message: string, diagnosticLine: int, diagnosticColumn: int): none {
     diagnostics.push(LexerDiagnostic {
       severity: "error",
       message,
@@ -452,7 +452,7 @@ export class Lexer {
     })
   }
 
-  private function skipWhitespaceAndComments(): none {
+  private skipWhitespaceAndComments(): none {
     while pos < source.length {
       ch := peek()
       if ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' {
@@ -483,29 +483,29 @@ export class Lexer {
     }
   }
 
-  private function isDigit(ch: char): bool {
+  private isDigit(ch: char): bool {
     return ch >= '0' && ch <= '9'
   }
 
-  private function isHexDigit(ch: char): bool {
+  private isHexDigit(ch: char): bool {
     return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')
   }
 
-  private function isBaseDigit(ch: char, base: int): bool {
+  private isBaseDigit(ch: char, base: int): bool {
     if base == 10 { return isDigit(ch) }
     if base == 16 { return isHexDigit(ch) }
     return ch == '0' || ch == '1'
   }
 
-  private function isIdentStart(ch: char): bool {
+  private isIdentStart(ch: char): bool {
     return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_'
   }
 
-  private function isIdentPart(ch: char): bool {
+  private isIdentPart(ch: char): bool {
     return isIdentStart(ch) || isDigit(ch)
   }
 
-  private function readDigits(base: int): none {
+  private readDigits(base: int): none {
     let sawDigit = false
 
     while pos < source.length {
@@ -529,7 +529,7 @@ export class Lexer {
 
   }
 
-  private function readNumber(): none {
+  private readNumber(): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -564,7 +564,7 @@ export class Lexer {
     readNumericSuffix(start, pos, tokenLine, tokenColumn)
   }
 
-  private function readNumericSuffix(valueStart: int, valueEnd: int, tokenLine: int, tokenColumn: int): none {
+  private readNumericSuffix(valueStart: int, valueEnd: int, tokenLine: int, tokenColumn: int): none {
     if peek() == 'L' || peek() == 'l' {
       advance()
       addToken(TokenType.LongLiteral, valueStart, pos - valueStart, valueStart, valueEnd - valueStart, false, tokenLine, tokenColumn)
@@ -576,7 +576,7 @@ export class Lexer {
     }
   }
 
-  private function readIdentifier(): none {
+  private readIdentifier(): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -596,7 +596,7 @@ export class Lexer {
     }
   }
 
-  private function readQuoted(delimiter: char): none {
+  private readQuoted(delimiter: char): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -635,7 +635,7 @@ export class Lexer {
     addToken(TokenType.StringLiteral, start, pos - start, contentStart, valueEnd - contentStart, needsDecode, tokenLine, tokenColumn)
   }
 
-  private function readTemplateContinuation(): none {
+  private readTemplateContinuation(): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -674,7 +674,7 @@ export class Lexer {
     addToken(TokenType.TemplateLiteralEnd, start, pos - start, contentStart, valueEnd - contentStart, needsDecode, tokenLine, tokenColumn)
   }
 
-  private function readChar(): none {
+  private readChar(): none {
     start := pos
     tokenLine := line
     tokenColumn := column
@@ -698,7 +698,7 @@ export class Lexer {
     addToken(TokenType.CharLiteral, start, pos - start, valueStart, valueEnd - valueStart, needsDecode, tokenLine, tokenColumn)
   }
 
-  private function emit(kind: TokenType, tokenLine: int, tokenColumn: int, start: int, count: int): none {
+  private emit(kind: TokenType, tokenLine: int, tokenColumn: int, start: int, count: int): none {
     // Operators are on the hot path. Unroll the tiny fixed-width consume so
     // no range/iterator object is created for each punctuation token.
     if count > 0 { advance() }
@@ -711,7 +711,7 @@ export class Lexer {
     addToken(kind, start, count, start, count, false, tokenLine, tokenColumn)
   }
 
-  private function readOperatorOrPunctuation(): none {
+  private readOperatorOrPunctuation(): none {
     start := pos
     tokenLine := line
     tokenColumn := column
