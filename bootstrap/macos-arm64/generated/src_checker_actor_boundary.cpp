@@ -6,24 +6,6 @@ using namespace ::app_src_semantic_;
 using namespace ::app_src_ast_;
 using namespace ::app_src_checker_types_;
 
-doof::JsonObject ActorBoundaryViolation::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["reason"] = doof::json_value(this->reason);
-    return _json;
-}
-doof::Result<std::shared_ptr<ActorBoundaryViolation>, std::string> ActorBoundaryViolation::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_reason = _object->find("reason");
-    if (_iterator_reason == _object->end()) { return doof::Failure<std::string>{"Missing required field \"reason\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_reason->second) : doof::json_is_string(_iterator_reason->second)))) { return doof::Failure<std::string>{"Field \"reason\" expected string but got " + std::string(doof::json_type_name(_iterator_reason->second))}; }
-    auto _field_reason = (_lenient ? doof::json_as_string_lenient(_iterator_reason->second) : doof::json_as_string(_iterator_reason->second));
-        return doof::Success<std::shared_ptr<ActorBoundaryViolation>>{std::make_shared<ActorBoundaryViolation>(_field_reason)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 std::shared_ptr<ActorBoundaryViolation> findActorBoundaryViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
     return findViolation(result, type_, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
 }

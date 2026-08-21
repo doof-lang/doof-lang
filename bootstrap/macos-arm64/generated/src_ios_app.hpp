@@ -12,15 +12,11 @@ namespace app_src_ios_app_ {
     std::string sourcePath;
     std::string destination;
     IOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSAppResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct IOSEmbeddedLibrary : public std::enable_shared_from_this<IOSEmbeddedLibrary> {
     std::string library = std::string("");
     std::string path = std::string("");
     IOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSEmbeddedLibrary>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct IOSAppConfig : public std::enable_shared_from_this<IOSAppConfig> {
     std::string executableName;
@@ -33,15 +29,11 @@ namespace app_src_ios_app_ {
     std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{});
     std::string minimumDeploymentTarget = std::string("16.0");
     IOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(std::vector<std::shared_ptr<IOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{}), std::string minimumDeploymentTarget = std::string("16.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), minimumDeploymentTarget(minimumDeploymentTarget) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSAppConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct IOSPackageConfig : public std::enable_shared_from_this<IOSPackageConfig> {
     std::string identity = std::string("");
     std::string provisioningProfilePath = std::string("");
     IOSPackageConfig(std::string identity = std::string(""), std::string provisioningProfilePath = std::string("")) : identity(identity), provisioningProfilePath(provisioningProfilePath) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSPackageConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

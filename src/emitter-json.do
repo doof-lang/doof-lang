@@ -8,7 +8,7 @@ import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResol
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitClassInnerType, emitContextType, usesVariantRepresentation } from "./emitter-types"
-import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, nullableJsonMember } from "./json-semantics"
+import { interfaceJsonDiscriminator, jsonOwnerKey, nullableJsonMember } from "./json-semantics"
 
 export function emitInterfaceJsonDeclaration(owner: InterfaceDeclaration): string {
   if !owner.needsJson { return "" }
@@ -42,9 +42,12 @@ export function emitInterfaceJsonDefinition(owner: InterfaceDeclaration, context
 
 /** Emits automatic JSON declarations owned by a concrete class or struct. */
 export function emitGeneratedJsonDeclarations(owner: ClassDeclaration, context: EmitContext): string {
-  if (!canGenerateJsonSerialization(owner, context.allPrograms, context.jsonEligibility)) { return "" }
-  let result = "    doof::JsonObject toJsonObject() const;\n"
-  if canGenerateJsonDeserialization(owner, context.allPrograms, context.jsonEligibility) {
+  key := jsonOwnerKey(owner)
+  let result = ""
+  if containsJsonDemand(context.jsonSerializationKeys, key) {
+    result = result + "    doof::JsonObject toJsonObject() const;\n"
+  }
+  if containsJsonDemand(context.jsonDeserializationKeys, key) {
     valueType := jsonResultValueType(owner)
     result = result + "    static doof::Result<" + valueType + ", std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);\n"
   }
@@ -53,10 +56,16 @@ export function emitGeneratedJsonDeclarations(owner: ClassDeclaration, context: 
 
 /** Emits automatic JSON definitions after the owning class declaration. */
 export function emitGeneratedJsonMethods(owner: ClassDeclaration, context: EmitContext): string {
-  if !canGenerateJsonSerialization(owner, context.allPrograms, context.jsonEligibility) { return "" }
-  let result = emitToJsonObject(owner, context)
-  if canGenerateJsonDeserialization(owner, context.allPrograms, context.jsonEligibility) { result = result + emitFromJsonValue(owner, context) }
+  key := jsonOwnerKey(owner)
+  let result = ""
+  if containsJsonDemand(context.jsonSerializationKeys, key) { result = result + emitToJsonObject(owner, context) }
+  if containsJsonDemand(context.jsonDeserializationKeys, key) { result = result + emitFromJsonValue(owner, context) }
   return result
+}
+
+function containsJsonDemand(keys: string[], key: string): bool {
+  for existing of keys { if existing == key { return true } }
+  return false
 }
 
 function emitToJsonObject(owner: ClassDeclaration, context: EmitContext): string {

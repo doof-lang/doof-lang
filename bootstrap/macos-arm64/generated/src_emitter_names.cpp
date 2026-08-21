@@ -2,37 +2,6 @@
 
 namespace app_src_emitter_names_ {
 
-doof::JsonObject ModuleNamespaceMapping::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["logicalPrefix"] = doof::json_value(this->logicalPrefix);
-    (*_json)["packageName"] = doof::json_value(this->packageName);
-    (*_json)["outputRoot"] = doof::json_value(this->outputRoot);
-    return _json;
-}
-doof::Result<std::shared_ptr<ModuleNamespaceMapping>, std::string> ModuleNamespaceMapping::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_logicalPrefix = _object->find("logicalPrefix");
-    if (_iterator_logicalPrefix == _object->end()) { return doof::Failure<std::string>{"Missing required field \"logicalPrefix\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_logicalPrefix->second) : doof::json_is_string(_iterator_logicalPrefix->second)))) { return doof::Failure<std::string>{"Field \"logicalPrefix\" expected string but got " + std::string(doof::json_type_name(_iterator_logicalPrefix->second))}; }
-    auto _field_logicalPrefix = (_lenient ? doof::json_as_string_lenient(_iterator_logicalPrefix->second) : doof::json_as_string(_iterator_logicalPrefix->second));
-    auto _iterator_packageName = _object->find("packageName");
-    if (_iterator_packageName == _object->end()) { return doof::Failure<std::string>{"Missing required field \"packageName\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_packageName->second) : doof::json_is_string(_iterator_packageName->second)))) { return doof::Failure<std::string>{"Field \"packageName\" expected string but got " + std::string(doof::json_type_name(_iterator_packageName->second))}; }
-    auto _field_packageName = (_lenient ? doof::json_as_string_lenient(_iterator_packageName->second) : doof::json_as_string(_iterator_packageName->second));
-    std::optional<std::string> _field_outputRoot;
-    if (auto _iterator_outputRoot = _object->find("outputRoot"); _iterator_outputRoot != _object->end()) {
-            if (!((_lenient ? doof::json_is_lenient_string(_iterator_outputRoot->second) : doof::json_is_string(_iterator_outputRoot->second)))) { return doof::Failure<std::string>{"Field \"outputRoot\" expected string but got " + std::string(doof::json_type_name(_iterator_outputRoot->second))}; }
-        _field_outputRoot = (_lenient ? doof::json_as_string_lenient(_iterator_outputRoot->second) : doof::json_as_string(_iterator_outputRoot->second));
-    } else {
-        _field_outputRoot = std::string("");
-    }
-        return doof::Success<std::shared_ptr<ModuleNamespaceMapping>>{std::make_shared<ModuleNamespaceMapping>(_field_logicalPrefix, _field_packageName, _field_outputRoot.value())};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>> configuredModuleNamespaceMappings;
 std::shared_ptr<doof::ordered_map<std::string, std::string>> cachedModuleNamespaces;
 void configureModuleNamespaces(const std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>>& mappings) {

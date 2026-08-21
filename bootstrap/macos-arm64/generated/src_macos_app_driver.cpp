@@ -8,40 +8,6 @@ using namespace ::std_::os::index;
 using namespace ::std_::path::index;
 int64_t MAX_MACOS_COMMAND_OUTPUT_BYTES = 262144LL;
 
-doof::JsonObject MacOSCommandResult::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["exitCode"] = doof::json_value(this->exitCode);
-    (*_json)["output"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->output->size()); for (const auto& _element : *this->output) { _array->push_back(doof::json_value(static_cast<int32_t>(_element))); } return doof::json_value(_array); }();
-    (*_json)["error"] = doof::json_value(this->error);
-    return _json;
-}
-doof::Result<std::shared_ptr<MacOSCommandResult>, std::string> MacOSCommandResult::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_exitCode = _object->find("exitCode");
-    if (_iterator_exitCode == _object->end()) { return doof::Failure<std::string>{"Missing required field \"exitCode\""}; }
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_exitCode->second) : doof::json_is_number(_iterator_exitCode->second)))) { return doof::Failure<std::string>{"Field \"exitCode\" expected number but got " + std::string(doof::json_type_name(_iterator_exitCode->second))}; }
-    auto _field_exitCode = (_lenient ? doof::json_as_int_lenient(_iterator_exitCode->second) : doof::json_as_int(_iterator_exitCode->second));
-    std::optional<std::shared_ptr<std::vector<uint8_t>>> _field_output;
-    if (auto _iterator_output = _object->find("output"); _iterator_output != _object->end()) {
-            if (!(doof::json_is_array(_iterator_output->second))) { return doof::Failure<std::string>{"Field \"output\" expected array but got " + std::string(doof::json_type_name(_iterator_output->second))}; }
-        _field_output = [&]() { const auto* _array = doof::json_as_array(_iterator_output->second); auto _values = std::make_shared<std::vector<uint8_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(static_cast<uint8_t>(_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
-    } else {
-        _field_output = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    }
-    std::optional<std::string> _field_error;
-    if (auto _iterator_error = _object->find("error"); _iterator_error != _object->end()) {
-            if (!((_lenient ? doof::json_is_lenient_string(_iterator_error->second) : doof::json_is_string(_iterator_error->second)))) { return doof::Failure<std::string>{"Field \"error\" expected string but got " + std::string(doof::json_type_name(_iterator_error->second))}; }
-        _field_error = (_lenient ? doof::json_as_string_lenient(_iterator_error->second) : doof::json_as_string(_iterator_error->second));
-    } else {
-        _field_error = std::string("");
-    }
-        return doof::Success<std::shared_ptr<MacOSCommandResult>>{std::make_shared<MacOSCommandResult>(_field_exitCode, _field_output.value(), _field_error.value())};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 std::string hostPlatform() {
     const auto value = ::std_::os::index::platform();
     return ((value == std::string("darwin")) ? std::string("macos") : value);
@@ -208,47 +174,6 @@ doof::Result<void, std::string> generateMacOSIcon(const std::string& iconPath, c
     return result;
 }
 
-doof::JsonObject EmbeddedCode::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["sourcePath"] = doof::json_value(this->sourcePath);
-    (*_json)["bundledRoot"] = doof::json_value(this->bundledRoot);
-    (*_json)["bundledPath"] = doof::json_value(this->bundledPath);
-    (*_json)["bundleReference"] = doof::json_value(this->bundleReference);
-    (*_json)["installId"] = doof::json_value(this->installId);
-    return _json;
-}
-doof::Result<std::shared_ptr<EmbeddedCode>, std::string> EmbeddedCode::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_sourcePath = _object->find("sourcePath");
-    if (_iterator_sourcePath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"sourcePath\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourcePath->second) : doof::json_is_string(_iterator_sourcePath->second)))) { return doof::Failure<std::string>{"Field \"sourcePath\" expected string but got " + std::string(doof::json_type_name(_iterator_sourcePath->second))}; }
-    auto _field_sourcePath = (_lenient ? doof::json_as_string_lenient(_iterator_sourcePath->second) : doof::json_as_string(_iterator_sourcePath->second));
-    auto _iterator_bundledRoot = _object->find("bundledRoot");
-    if (_iterator_bundledRoot == _object->end()) { return doof::Failure<std::string>{"Missing required field \"bundledRoot\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundledRoot->second) : doof::json_is_string(_iterator_bundledRoot->second)))) { return doof::Failure<std::string>{"Field \"bundledRoot\" expected string but got " + std::string(doof::json_type_name(_iterator_bundledRoot->second))}; }
-    auto _field_bundledRoot = (_lenient ? doof::json_as_string_lenient(_iterator_bundledRoot->second) : doof::json_as_string(_iterator_bundledRoot->second));
-    auto _iterator_bundledPath = _object->find("bundledPath");
-    if (_iterator_bundledPath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"bundledPath\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundledPath->second) : doof::json_is_string(_iterator_bundledPath->second)))) { return doof::Failure<std::string>{"Field \"bundledPath\" expected string but got " + std::string(doof::json_type_name(_iterator_bundledPath->second))}; }
-    auto _field_bundledPath = (_lenient ? doof::json_as_string_lenient(_iterator_bundledPath->second) : doof::json_as_string(_iterator_bundledPath->second));
-    auto _iterator_bundleReference = _object->find("bundleReference");
-    if (_iterator_bundleReference == _object->end()) { return doof::Failure<std::string>{"Missing required field \"bundleReference\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_bundleReference->second) : doof::json_is_string(_iterator_bundleReference->second)))) { return doof::Failure<std::string>{"Field \"bundleReference\" expected string but got " + std::string(doof::json_type_name(_iterator_bundleReference->second))}; }
-    auto _field_bundleReference = (_lenient ? doof::json_as_string_lenient(_iterator_bundleReference->second) : doof::json_as_string(_iterator_bundleReference->second));
-    std::optional<std::string> _field_installId;
-    if (auto _iterator_installId = _object->find("installId"); _iterator_installId != _object->end()) {
-            if (!((_lenient ? doof::json_is_lenient_string(_iterator_installId->second) : doof::json_is_string(_iterator_installId->second)))) { return doof::Failure<std::string>{"Field \"installId\" expected string but got " + std::string(doof::json_type_name(_iterator_installId->second))}; }
-        _field_installId = (_lenient ? doof::json_as_string_lenient(_iterator_installId->second) : doof::json_as_string(_iterator_installId->second));
-    } else {
-        _field_installId = std::string("");
-    }
-        return doof::Success<std::shared_ptr<EmbeddedCode>>{std::make_shared<EmbeddedCode>(_field_sourcePath, _field_bundledRoot, _field_bundledPath, _field_bundleReference, _field_installId.value())};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 doof::Result<std::string, std::string> commandText(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& description) {
     const auto result = runMacOSCommand(command, arguments);
     if (result->exitCode != 0) {

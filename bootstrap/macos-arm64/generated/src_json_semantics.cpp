@@ -6,35 +6,6 @@ using namespace ::app_src_semantic_;
 
 
 
-doof::JsonObject JsonEligibilityCache::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["serialization"] = [&]() { auto _object_value = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(); for (const auto& _entry : *this->serialization) { (*_object_value)[_entry.first] = doof::json_value(_entry.second); } return doof::json_value(_object_value); }();
-    (*_json)["deserialization"] = [&]() { auto _object_value = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(); for (const auto& _entry : *this->deserialization) { (*_object_value)[_entry.first] = doof::json_value(_entry.second); } return doof::json_value(_object_value); }();
-    return _json;
-}
-doof::Result<std::shared_ptr<JsonEligibilityCache>, std::string> JsonEligibilityCache::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    std::optional<std::shared_ptr<doof::ordered_map<std::string, bool>>> _field_serialization;
-    if (auto _iterator_serialization = _object->find("serialization"); _iterator_serialization != _object->end()) {
-            if (!(doof::json_is_object(_iterator_serialization->second))) { return doof::Failure<std::string>{"Field \"serialization\" expected object but got " + std::string(doof::json_type_name(_iterator_serialization->second))}; }
-        _field_serialization = [&]() { const auto* _object_value = doof::json_as_object(_iterator_serialization->second); auto _values = std::make_shared<doof::ordered_map<std::string, bool>>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = (_lenient ? doof::json_as_bool_lenient(_entry.second) : doof::json_as_bool(_entry.second)); } return _values; }();
-    } else {
-        _field_serialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{});
-    }
-    std::optional<std::shared_ptr<doof::ordered_map<std::string, bool>>> _field_deserialization;
-    if (auto _iterator_deserialization = _object->find("deserialization"); _iterator_deserialization != _object->end()) {
-            if (!(doof::json_is_object(_iterator_deserialization->second))) { return doof::Failure<std::string>{"Field \"deserialization\" expected object but got " + std::string(doof::json_type_name(_iterator_deserialization->second))}; }
-        _field_deserialization = [&]() { const auto* _object_value = doof::json_as_object(_iterator_deserialization->second); auto _values = std::make_shared<doof::ordered_map<std::string, bool>>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = (_lenient ? doof::json_as_bool_lenient(_entry.second) : doof::json_as_bool(_entry.second)); } return _values; }();
-    } else {
-        _field_deserialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{});
-    }
-        return doof::Success<std::shared_ptr<JsonEligibilityCache>>{std::make_shared<JsonEligibilityCache>(_field_serialization.value(), _field_deserialization.value())};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<JsonEligibilityCache>& cache) {
     if (doof::is_null(owner->resolvedSymbol) || (static_cast<int32_t>((owner->resolvedSymbol->implementations)->size()) == 0)) {
         return nullptr;

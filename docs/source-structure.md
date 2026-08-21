@@ -79,7 +79,7 @@ emitter or individual expression branch.
 | --- | --- |
 | `emitter-context.do` | Graph-wide nominal/method context and per-module emission state |
 | `emitter-names.do` | Stable C++ namespaces, filenames, and diagnostic paths from logical module identity |
-| `emitter-monomorphize.do` | Fixed-point discovery of concrete generic instantiations |
+| `emitter-monomorphize.do` | Fixed-point discovery of concrete generic instantiations and direction-specific generated-JSON demand |
 | `emitter-worldview.do` | Consumer-projected declaration closure from checked symbol/type uses |
 | `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, and header/source pairing |
 | `emitter-header.do` | Multi-namespace worldview declaration ordering and rendering |
@@ -96,7 +96,7 @@ emitter or individual expression branch.
 | `emitter-expr-utils.do` | Decorated-type requirements and contextual/variant promotion helpers |
 | `emitter-case-pattern.do` | Type-pattern lowering shared by statement and expression cases |
 | `emitter-types.do` | C++ representation choices for resolved Doof types |
-| `emitter-json.do` | Generated JSON reads, writes, and interface dispatch |
+| `emitter-json.do` | Demand-gated generated JSON reads, writes, and interface dispatch |
 | `emitter-metadata.do` | Reflection metadata, JSON Schema, and JSON invocation |
 | `emitter-wasm.do` | JSON-over-C-ABI WebAssembly wrapper generation |
 | `emitter-project.do` | Generated project shape and reached-package native input collation |

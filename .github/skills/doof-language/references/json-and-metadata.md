@@ -2,7 +2,7 @@
 
 ## JSON Serialization
 
-Classes and structs with all-serializable fields and no dedicated `constructor` method automatically get `.toJsonObject()` and `.fromJsonValue(json, lenient = false)`. Code is generated **on-demand** — only when these methods are actually called in code. Generation is transitive (nested serializable nominal objects are included).
+Classes and structs with all-serializable fields and no dedicated `constructor` method automatically get `.toJsonObject()` and `.fromJsonValue(json, lenient = false)`. Code is generated **on-demand** — only when each method is actually required. Generation is transitive and direction-specific: encoding generates nested encoders, while decoding generates nested decoders, without generating the unused opposite direction.
 
 ### `.toJsonObject()` — Instance Method
 

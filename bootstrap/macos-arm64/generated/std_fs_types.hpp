@@ -185,8 +185,6 @@ struct Duration : public std::enable_shared_from_this<Duration> {
     bool isGreaterThan(const std::shared_ptr<Duration>& other);
     bool equals(const std::shared_ptr<Duration>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Duration>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -217,8 +215,6 @@ struct Instant : public std::enable_shared_from_this<Instant> {
     std::string toISOString();
     static doof::Result<std::shared_ptr<Instant>, std::string> parseHttpDate(const std::string& s);
     std::string toHttpDate();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Instant>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A calendar date (year, month, day) with no time-of-day or timezone.
 struct Date : public std::enable_shared_from_this<Date> {
@@ -248,8 +244,6 @@ struct Date : public std::enable_shared_from_this<Date> {
     bool isAfter(const std::shared_ptr<Date>& other);
     bool equals(const std::shared_ptr<Date>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Date>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A time-of-day with nanosecond precision. No date or timezone.
 struct Time : public std::enable_shared_from_this<Time> {
@@ -271,8 +265,6 @@ struct Time : public std::enable_shared_from_this<Time> {
     bool isAfter(const std::shared_ptr<Time>& other);
     bool equals(const std::shared_ptr<Time>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Time>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A combined calendar date and time-of-day. No timezone.
 struct DateTime : public std::enable_shared_from_this<DateTime> {
@@ -298,8 +290,6 @@ struct DateTime : public std::enable_shared_from_this<DateTime> {
     bool isAfter(const std::shared_ptr<DateTime>& other);
     bool equals(const std::shared_ptr<DateTime>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<DateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // An IANA timezone identifier (e.g. "America/New_York", "UTC").
 struct TimeZone : public std::enable_shared_from_this<TimeZone> {
@@ -310,8 +300,6 @@ struct TimeZone : public std::enable_shared_from_this<TimeZone> {
     static std::shared_ptr<TimeZone> local();
     int32_t offsetSecondsAt(const std::shared_ptr<Instant>& instant);
     bool isDSTAt(const std::shared_ptr<Instant>& instant);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<TimeZone>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A DateTime with an explicit TimeZone.
 struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
@@ -332,8 +320,6 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
     bool isBefore(const std::shared_ptr<ZonedDateTime>& other);
     bool isAfter(const std::shared_ptr<ZonedDateTime>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ZonedDateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -344,7 +330,5 @@ namespace std_::fs::types {
     int64_t size;
     std::shared_ptr<::std_::time::temporal::Instant> modifiedAt;
     FileInfo(std::string name, EntryKind kind, int64_t size, std::shared_ptr<::std_::time::temporal::Instant> modifiedAt) : name(name), kind(kind), size(size), modifiedAt(modifiedAt) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FileInfo>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }

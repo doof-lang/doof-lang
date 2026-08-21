@@ -30,8 +30,6 @@ namespace app_src_emitter_module_ {
     bool reused = false;
     std::string fingerprint = std::string("");
     ModuleEmission(std::string modulePath, std::string header, std::string source, std::string headerName, std::string sourceName, int32_t coverageModuleId = -1, std::shared_ptr<std::vector<int32_t>> instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), bool reused = false, std::string fingerprint = std::string("")) : modulePath(modulePath), header(header), source(source), headerName(headerName), sourceName(sourceName), coverageModuleId(coverageModuleId), instrumentedLines(instrumentedLines), reused(reused), fingerprint(fingerprint) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ModuleEmission>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -48,8 +46,6 @@ namespace app_src_package_manifest_ {
     std::shared_ptr<std::vector<std::string>> compilerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> linkerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     NativeBuildPlan(std::shared_ptr<std::vector<std::string>> includePaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> sourceFiles = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> libraryPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> extraCopyPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> linkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> frameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> pkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> defines = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> compilerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> linkerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : includePaths(includePaths), sourceFiles(sourceFiles), libraryPaths(libraryPaths), extraCopyPaths(extraCopyPaths), linkLibraries(linkLibraries), frameworks(frameworks), pkgConfigPackages(pkgConfigPackages), defines(defines), compilerFlags(compilerFlags), linkerFlags(linkerFlags) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeBuildPlan>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -64,15 +60,11 @@ namespace app_src_native_build_ {
     bool usesPrecompiledHeader = false;
     std::shared_ptr<std::vector<std::string>> arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     NativeCompileTask(std::string id, std::string compiler, std::string sourcePath, std::string outputPath, std::string dependencyFilePath = std::string(""), std::shared_ptr<std::vector<std::string>> auxiliaryOutputPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool usesPrecompiledHeader = false, std::shared_ptr<std::vector<std::string>> arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : id(id), compiler(compiler), sourcePath(sourcePath), outputPath(outputPath), dependencyFilePath(dependencyFilePath), auxiliaryOutputPaths(auxiliaryOutputPaths), usesPrecompiledHeader(usesPrecompiledHeader), arguments(arguments) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeCompileTask>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NativeBuildSupportFile : public std::enable_shared_from_this<NativeBuildSupportFile> {
     std::string outputPath;
     std::string content;
     NativeBuildSupportFile(std::string outputPath, std::string content) : outputPath(outputPath), content(content) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeBuildSupportFile>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NativeCompilePlan : public std::enable_shared_from_this<NativeCompilePlan> {
     std::string compiler;
@@ -83,8 +75,6 @@ namespace app_src_native_build_ {
     std::shared_ptr<std::vector<std::string>> linkArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::string outputPath;
     NativeCompilePlan(std::string compiler, std::string linker, std::shared_ptr<std::vector<std::shared_ptr<NativeBuildSupportFile>>> supportFiles, std::shared_ptr<NativeCompileTask> precompiledHeaderTask, std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>> compileTasks, std::shared_ptr<std::vector<std::string>> linkArguments, std::string outputPath) : compiler(compiler), linker(linker), supportFiles(supportFiles), precompiledHeaderTask(precompiledHeaderTask), compileTasks(compileTasks), linkArguments(linkArguments), outputPath(outputPath) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeCompilePlan>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

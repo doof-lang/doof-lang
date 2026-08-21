@@ -171,15 +171,11 @@ struct Duration : public std::enable_shared_from_this<Duration> {
     bool isGreaterThan(const std::shared_ptr<Duration>& other);
     bool equals(const std::shared_ptr<Duration>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Duration>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // Utilities for the current operating-system thread.
 struct Thread : public std::enable_shared_from_this<Thread> {
     Thread() {}
     static void sleep(const std::shared_ptr<Duration>& duration);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Thread>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -210,8 +206,6 @@ struct Instant : public std::enable_shared_from_this<Instant> {
     std::string toISOString();
     static doof::Result<std::shared_ptr<Instant>, std::string> parseHttpDate(const std::string& s);
     std::string toHttpDate();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Instant>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A calendar date (year, month, day) with no time-of-day or timezone.
 struct Date : public std::enable_shared_from_this<Date> {
@@ -241,8 +235,6 @@ struct Date : public std::enable_shared_from_this<Date> {
     bool isAfter(const std::shared_ptr<Date>& other);
     bool equals(const std::shared_ptr<Date>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Date>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A time-of-day with nanosecond precision. No date or timezone.
 struct Time : public std::enable_shared_from_this<Time> {
@@ -264,8 +256,6 @@ struct Time : public std::enable_shared_from_this<Time> {
     bool isAfter(const std::shared_ptr<Time>& other);
     bool equals(const std::shared_ptr<Time>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Time>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A combined calendar date and time-of-day. No timezone.
 struct DateTime : public std::enable_shared_from_this<DateTime> {
@@ -291,8 +281,6 @@ struct DateTime : public std::enable_shared_from_this<DateTime> {
     bool isAfter(const std::shared_ptr<DateTime>& other);
     bool equals(const std::shared_ptr<DateTime>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<DateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // An IANA timezone identifier (e.g. "America/New_York", "UTC").
 struct TimeZone : public std::enable_shared_from_this<TimeZone> {
@@ -303,8 +291,6 @@ struct TimeZone : public std::enable_shared_from_this<TimeZone> {
     static std::shared_ptr<TimeZone> local();
     int32_t offsetSecondsAt(const std::shared_ptr<Instant>& instant);
     bool isDSTAt(const std::shared_ptr<Instant>& instant);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<TimeZone>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A DateTime with an explicit TimeZone.
 struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
@@ -325,8 +311,6 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
     bool isBefore(const std::shared_ptr<ZonedDateTime>& other);
     bool isAfter(const std::shared_ptr<ZonedDateTime>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ZonedDateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -336,8 +320,6 @@ namespace std_::time::stopwatch {
     std::string name;
     std::string message;
     TimerError(std::string kind, std::string name, std::string message) : kind(kind), name(name), message(message) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<TimerError>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TimerStats : public std::enable_shared_from_this<TimerStats> {
     std::string name;
@@ -348,14 +330,10 @@ namespace std_::time::stopwatch {
     std::shared_ptr<::std_::time::duration::Duration> max;
     std::shared_ptr<::std_::time::duration::Duration> p95;
     TimerStats(std::string name, int32_t count, std::shared_ptr<::std_::time::duration::Duration> total, std::shared_ptr<::std_::time::duration::Duration> mean, std::shared_ptr<::std_::time::duration::Duration> min, std::shared_ptr<::std_::time::duration::Duration> max, std::shared_ptr<::std_::time::duration::Duration> p95) : name(name), count(count), total(total), mean(mean), min(min), max(max), p95(p95) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<TimerStats>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TimerSummary : public std::enable_shared_from_this<TimerSummary> {
     std::shared_ptr<std::vector<std::shared_ptr<TimerStats>>> entries;
     TimerSummary(std::shared_ptr<std::vector<std::shared_ptr<TimerStats>>> entries) : entries(entries) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<TimerSummary>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TimerBucket : public std::enable_shared_from_this<TimerBucket> {
     int32_t count = 0;
@@ -371,8 +349,6 @@ namespace std_::time::stopwatch {
     std::shared_ptr<::std_::time::duration::Duration> max();
     std::shared_ptr<::std_::time::duration::Duration> p95();
     void insertSorted(int64_t nanos);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<TimerBucket>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Stopwatch : public std::enable_shared_from_this<Stopwatch> {
     std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>> timers = std::make_shared<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<TimerBucket>>>{});
@@ -388,8 +364,6 @@ namespace std_::time::stopwatch {
     void record(const std::string& name, const std::shared_ptr<::std_::time::duration::Duration>& duration);
     std::shared_ptr<TimerBucket> bucketFor(const std::string& name);
     doof::Result<std::shared_ptr<TimerBucket>, std::shared_ptr<TimerError>> requireBucket(const std::string& name);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Stopwatch>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct StopwatchSpan : public std::enable_shared_from_this<StopwatchSpan> {
     std::shared_ptr<Stopwatch> stopwatch;
@@ -402,7 +376,5 @@ namespace std_::time::stopwatch {
     ~StopwatchSpan() {
         this->finish();
     }
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<StopwatchSpan>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }

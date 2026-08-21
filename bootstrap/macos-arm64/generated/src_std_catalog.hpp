@@ -13,8 +13,6 @@ namespace app_src_std_catalog_ {
     std::string version;
     std::string commit;
     StdCatalogPackage(std::string name, std::string url, std::string ref, std::string version, std::string commit) : name(name), url(url), ref(ref), version(version), commit(commit) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<StdCatalogPackage>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct StdCatalog : public std::enable_shared_from_this<StdCatalog> {
     int32_t schemaVersion;
@@ -22,8 +20,6 @@ namespace app_src_std_catalog_ {
     std::string digest;
     std::shared_ptr<std::vector<std::shared_ptr<StdCatalogPackage>>> packages;
     StdCatalog(int32_t schemaVersion, std::string compilerVersion, std::string digest, std::shared_ptr<std::vector<std::shared_ptr<StdCatalogPackage>>> packages) : schemaVersion(schemaVersion), compilerVersion(compilerVersion), digest(digest), packages(packages) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<StdCatalog>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

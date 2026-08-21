@@ -305,8 +305,6 @@ struct Duration : public std::enable_shared_from_this<Duration> {
     bool isGreaterThan(const std::shared_ptr<Duration>& other);
     bool equals(const std::shared_ptr<Duration>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Duration>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -315,16 +313,12 @@ namespace std_::http::types {
     std::string name;
     std::string value;
     HttpHeader(std::string name, std::string value) : name(name), value(value) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpHeader>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct HttpError : public std::enable_shared_from_this<HttpError> {
     std::string kind;
     std::string code;
     std::string message;
     HttpError(std::string kind, std::string code, std::string message) : kind(kind), code(code), message(message) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpError>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -335,8 +329,6 @@ namespace std_::http::websocket {
     std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers;
     int32_t timeoutMs = 30000;
     WebSocketOptions(int32_t eventCapacity, int32_t commandCapacity, std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers, int32_t timeoutMs) : eventCapacity(eventCapacity), commandCapacity(commandCapacity), headers(headers), timeoutMs(timeoutMs) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketOpen : public std::enable_shared_from_this<WebSocketOpen> {
     std::shared_ptr<WebSocketConnection> connection;
@@ -372,27 +364,19 @@ namespace std_::http::websocket {
     std::string text;
     std::optional<std::string> coalesceKey = std::nullopt;
     WebSocketSendText(std::string text, std::optional<std::string> coalesceKey = std::nullopt) : text(text), coalesceKey(coalesceKey) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketSendText>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketSendBinary : public std::enable_shared_from_this<WebSocketSendBinary> {
     std::shared_ptr<std::vector<uint8_t>> bytes;
     std::optional<std::string> coalesceKey = std::nullopt;
     WebSocketSendBinary(std::shared_ptr<std::vector<uint8_t>> bytes, std::optional<std::string> coalesceKey = std::nullopt) : bytes(bytes), coalesceKey(coalesceKey) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketSendBinary>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketPing : public std::enable_shared_from_this<WebSocketPing> {
     WebSocketPing() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketPing>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketCloseCommand : public std::enable_shared_from_this<WebSocketCloseCommand> {
     int32_t code = 1000;
     std::string reason = std::string("");
     WebSocketCloseCommand(int32_t code = 1000, std::string reason = std::string("")) : code(code), reason(reason) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketCloseCommand>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

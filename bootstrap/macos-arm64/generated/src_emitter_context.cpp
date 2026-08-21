@@ -6,24 +6,6 @@ using namespace ::app_src_json_semantics_;
 using namespace ::app_src_semantic_;
 
 
-doof::JsonObject SourceLocationSpanOverride::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["span"] = doof::json_value(this->span.toJsonObject());
-    return _json;
-}
-doof::Result<std::shared_ptr<SourceLocationSpanOverride>, std::string> SourceLocationSpanOverride::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_span = _object->find("span");
-    if (_iterator_span == _object->end()) { return doof::Failure<std::string>{"Missing required field \"span\""}; }
-        if (!(doof::json_is_object(_iterator_span->second))) { return doof::Failure<std::string>{"Field \"span\" expected object but got " + std::string(doof::json_type_name(_iterator_span->second))}; }
-    auto _field_span = doof::json_decode_value(::app_src_ast_::SourceSpan::fromJsonValue(_iterator_span->second, _lenient));
-        return doof::Success<std::shared_ptr<SourceLocationSpanOverride>>{std::make_shared<SourceLocationSpanOverride>(_field_span)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 
 void recordCoverageLine(const std::shared_ptr<EmitContext>& context, int32_t line) {
     const auto& _iterable_2 = context->coverageInstrumentedLines;
@@ -47,7 +29,7 @@ std::shared_ptr<EmitContext> createEmitContext(const std::shared_ptr<::app_src_a
     return createEmitContextForPrograms(std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{program}));
 }
 std::shared_ptr<EmitContext> createEmitContextForPrograms(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs) {
-    return std::make_shared<EmitContext>(std::string(""), programs, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::shared_ptr<EmitModuleSurface>>>(std::vector<std::shared_ptr<EmitModuleSurface>>{}), std::make_shared<::app_src_json_semantics_::JsonEligibilityCache>(std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{}), std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{})), std::string(""), false, false, std::string(""), std::string(""), false, false, std::string(""), std::monostate{}, nullptr, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), nullptr, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), 0, false, false, false, -1, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
+    return std::make_shared<EmitContext>(std::string(""), programs, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::shared_ptr<EmitModuleSurface>>>(std::vector<std::shared_ptr<EmitModuleSurface>>{}), std::make_shared<::app_src_json_semantics_::JsonEligibilityCache>(std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{}), std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{})), std::string(""), false, false, std::string(""), std::string(""), false, false, std::string(""), std::monostate{}, nullptr, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), nullptr, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), 0, false, false, false, -1, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
 }
 std::shared_ptr<EmitContext> createEmitContextForModule(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& modulePath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& allPrograms) {
     auto programs = allPrograms;

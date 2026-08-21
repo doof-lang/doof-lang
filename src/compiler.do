@@ -7,7 +7,7 @@
 import { AnalysisResult, ModuleInfo, createAnalyzerWithLoader } from "./analyzer"
 import { emitModuleGraph, ModuleEmissionCacheKey, ModuleGraphEmission } from "./emitter-module"
 import { buildInstantiationPlan } from "./emitter-monomorphize"
-import { emitWasmSupport } from "./emitter-wasm"
+import { emitWasmSupport, WasmEmission } from "./emitter-wasm"
 import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
 import { createChecker, ModuleChecker, validateCheckedTypes, validateDeepReadonlyFields, validateIsolationEffects } from "./checker"
 import { hasErrorDiagnostics } from "./diagnostics"
@@ -100,18 +100,22 @@ function compileInternal(
     })
     return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
   }
-  emission := emitModuleGraph(
-    analysis, entry, instantiations, entryMode, coverage,
-    reusableModules, emissionConfigurationFingerprint,
-  )
+  let wasmEmission: WasmEmission | none = none
   if entryMode == "wasm" {
-    wasm := emitWasmSupport(analysis, entry) else message {
+    wasm := emitWasmSupport(analysis, entry, instantiations) else message {
       zero := SemanticLocation { line: 0, column: 0, offset: 0 }
       diagnostics.push(Diagnostic { severity: "error", message, span: SemanticSpan { start: zero, end: zero }, module: entry })
       return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
     }
-    emission.wasmSupportSource = wasm.source
-    emission.wasmExportNames = wasm.exportNames
+    wasmEmission = wasm
+  }
+  emission := emitModuleGraph(
+    analysis, entry, instantiations, entryMode, coverage,
+    reusableModules, emissionConfigurationFingerprint,
+  )
+  if wasmEmission != none {
+    emission.wasmSupportSource = wasmEmission!.source
+    emission.wasmExportNames = wasmEmission!.exportNames
   }
   return Compilation { emission, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
 }

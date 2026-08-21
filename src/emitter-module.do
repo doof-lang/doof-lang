@@ -103,6 +103,8 @@ export class CxxModuleEmitter {
   coverageModuleId: int = -1
   initializationModuleNamespaces: string[] = []
   jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}
+  jsonSerializationKeys: string[] = []
+  jsonDeserializationKeys: string[] = []
 
   emit(program: Program, entryMode: string = "executable"): ModuleEmission {
     context := if modulePath == "" then createEmitContext(program) else createEmitContextForModule(program, modulePath, allPrograms)
@@ -110,6 +112,7 @@ export class CxxModuleEmitter {
     context.imports = imports
     context.moduleSurfaces = moduleSurfaces
     context.jsonEligibility = jsonEligibility
+    configureJsonDemandRegistry(context, jsonSerializationKeys, jsonDeserializationKeys)
     if coverageModuleId >= 0 {
       context.coverageEnabled = true
       context.coverageModuleId = coverageModuleId
@@ -124,6 +127,7 @@ export class CxxModuleEmitter {
       sectionContext.imports = surfaceImports(moduleSurfaces, view.path)
       sectionContext.moduleSurfaces = moduleSurfaces
       sectionContext.jsonEligibility = jsonEligibility
+      configureJsonDemandRegistry(sectionContext, jsonSerializationKeys, jsonDeserializationKeys)
       if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
       sectionPlan := planHeader(view.program, sectionContext)
       if instantiations != none {
@@ -439,6 +443,8 @@ function moduleInstantiationFingerprintInput(instantiations: InstantiationPlan):
     }
   }
   for key of instantiations.nativeTemplateClassKeys { value = value + "\nnative:" + key }
+  for key of instantiations.jsonSerializationKeys { value = value + "\njson-serialize:" + key }
+  for key of instantiations.jsonDeserializationKeys { value = value + "\njson-deserialize:" + key }
   return value
 }
 
@@ -519,6 +525,13 @@ function configureInstantiationRegistry(context: EmitContext, plan: Instantiatio
     context.concreteInterfaceKeys.push(instantiation.key)
     context.concreteInterfaceNames.push(instantiation.emittedName)
   }
+  for key of plan.jsonSerializationKeys { context.jsonSerializationKeys.push(key) }
+  for key of plan.jsonDeserializationKeys { context.jsonDeserializationKeys.push(key) }
+}
+
+function configureJsonDemandRegistry(context: EmitContext, serializationKeys: string[], deserializationKeys: string[]): none {
+  for key of serializationKeys { context.jsonSerializationKeys.push(key) }
+  for key of deserializationKeys { context.jsonDeserializationKeys.push(key) }
 }
 
 function addConcreteHeaderDeclarations(
@@ -724,8 +737,13 @@ function moduleInitializationNamespaces(paths: string[]): string[] {
   return result
 }
 
-export function emitModule(program: Program, moduleName: string = "main"): ModuleEmission {
-  return CxxModuleEmitter { moduleName }.emit(program, "executable")
+export function emitModule(program: Program, moduleName: string = "main", instantiations: InstantiationPlan | none = none): ModuleEmission {
+  if instantiations == none { return CxxModuleEmitter { moduleName }.emit(program, "executable") }
+  return CxxModuleEmitter {
+    moduleName,
+    jsonSerializationKeys: instantiations!.jsonSerializationKeys,
+    jsonDeserializationKeys: instantiations!.jsonDeserializationKeys,
+  }.emit(program, "executable")
 }
 
 function emitSourceStatement(statement: Statement, context: EmitContext): string {

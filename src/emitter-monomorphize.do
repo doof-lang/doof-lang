@@ -74,6 +74,9 @@ export class InstantiationPlan {
   overflowTrace: string[] = []
   let currentTrace: string[] = []
   nativeTemplateClassKeys: string[] = []
+  jsonSerializationKeys: string[] = []
+  jsonDeserializationKeys: string[] = []
+  let visitedTemplateMethodKeys: string[] = []
 }
 
 export function buildInstantiationPlan(result: AnalysisResult): InstantiationPlan {
@@ -245,7 +248,10 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     binary: BinaryExpression -> { collectExpression(binary.left, modulePath, analysis, plan, names, arguments); collectExpression(binary.right, modulePath, analysis, plan, names, arguments) }
     unary: UnaryExpression -> { collectExpression(unary.operand, modulePath, analysis, plan, names, arguments) }
     assignment: AssignmentExpression -> { collectExpression(assignment.target, modulePath, analysis, plan, names, arguments); collectExpression(assignment.value, modulePath, analysis, plan, names, arguments) }
-    member: MemberExpression -> { collectExpression(member.object, modulePath, analysis, plan, names, arguments) }
+    member: MemberExpression -> {
+      collectExpression(member.object, modulePath, analysis, plan, names, arguments)
+      collectJsonMemberDemand(member, analysis, plan, names, arguments)
+    }
     index: IndexExpression -> { collectExpression(index.object, modulePath, analysis, plan, names, arguments); collectExpression(index.index, modulePath, analysis, plan, names, arguments) }
     call: CallExpression -> {
       collectExpression(call.callee, modulePath, analysis, plan, names, arguments)
@@ -262,7 +268,11 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
                   ownerType: ClassType -> {
                     owner := classDeclaration(analysis, ownerType.symbol.module, ownerType.symbol.name)
                     if owner != none && call.resolvedFunction!.typeParams.length > 0 {
-                      addMethod(plan, ownerType, owner!, call.resolvedFunction!, concreteArgs)
+                      if owner!.typeParams.length == 0 {
+                        collectTemplateMethodBody(plan, ownerType, call.resolvedFunction!, concreteArgs, analysis)
+                      } else {
+                        addMethod(plan, ownerType, owner!, call.resolvedFunction!, concreteArgs)
+                      }
                       recordedMethod = true
                     }
                   }
@@ -317,6 +327,95 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     yieldBlock: YieldBlockExpression -> { collectBlock(yieldBlock.body, modulePath, analysis, plan, names, arguments) }
     catch_: CatchExpression -> { collectBlock(catch_.body, modulePath, analysis, plan, names, arguments) }
     _ -> { }
+  }
+}
+
+function collectTemplateMethodBody(plan: InstantiationPlan, owner: ClassType, method: FunctionDeclaration, typeArgs: ResolvedType[], analysis: AnalysisResult): none {
+  ownerKey := owner.symbol.module + "::class::" + owner.symbol.name
+  key := methodInstantiationKey(ownerKey, method.name, typeArgs)
+  if containsString(plan.visitedTemplateMethodKeys, key) { return }
+  plan.visitedTemplateMethodKeys.push(key)
+  collectFunctionBody(method, owner.symbol.module, analysis, plan, method.typeParams, typeArgs)
+}
+
+function collectJsonMemberDemand(member: MemberExpression, analysis: AnalysisResult, plan: InstantiationPlan, names: string[], arguments: ResolvedType[]): none {
+  if member.object.resolvedType == none { return }
+  receiver := specialize(member.object.resolvedType!, names, arguments)
+  if member.property == "toJsonObject" {
+    addJsonSerializationDemand(plan, receiver, analysis)
+    return
+  }
+  if member.property == "fromJsonValue" {
+    case receiver {
+      interface_: InterfaceType -> { addInterfaceJsonDeserializationDemand(plan, interface_, analysis) }
+      _ -> { addJsonDeserializationDemand(plan, receiver, analysis) }
+    }
+    return
+  }
+  if member.property != "metadata" { return }
+  case receiver {
+    class_: ClassType -> {
+      owner := classDeclaration(analysis, class_.symbol.module, class_.symbol.name)
+      if owner == none { return }
+      for method of owner!.methods {
+        if method.private_ || method.static_ { continue }
+        for parameter of method.params {
+          if parameter.resolvedType != none {
+            addJsonDeserializationDemand(plan, specialize(parameter.resolvedType!, names, arguments), analysis)
+          }
+        }
+        if method.resolvedType == none { continue }
+        case specialize(method.resolvedType!, names, arguments) {
+          function_: FunctionType -> {
+            case function_.returnType {
+              result: ResultResolvedType -> { addJsonSerializationDemand(plan, result.valueType, analysis) }
+              returnType: ResolvedType -> { addJsonSerializationDemand(plan, returnType, analysis) }
+            }
+          }
+          _ -> { }
+        }
+      }
+    }
+    _ -> { }
+  }
+}
+
+export function addJsonSerializationDemand(plan: InstantiationPlan, type_: ResolvedType, analysis: AnalysisResult): none {
+  addJsonDemand(plan, type_, analysis, true)
+}
+
+export function addJsonDeserializationDemand(plan: InstantiationPlan, type_: ResolvedType, analysis: AnalysisResult): none {
+  addJsonDemand(plan, type_, analysis, false)
+}
+
+function addJsonDemand(plan: InstantiationPlan, type_: ResolvedType, analysis: AnalysisResult, serialization: bool): none {
+  case type_ {
+    class_: ClassType -> {
+      if class_.typeArgs.length > 0 || class_.symbol.native_ { return }
+      owner := classDeclaration(analysis, class_.symbol.module, class_.symbol.name)
+      if owner == none { return }
+      key := class_.symbol.module + "::" + class_.symbol.name
+      keys := if serialization then plan.jsonSerializationKeys else plan.jsonDeserializationKeys
+      if containsString(keys, key) { return }
+      keys.push(key)
+      for field of owner!.fields {
+        if field.static_ || field.resolvedType == none { continue }
+        addJsonDemand(plan, field.resolvedType!, analysis, serialization)
+      }
+    }
+    array: ArrayResolvedType -> { addJsonDemand(plan, array.elementType, analysis, serialization) }
+    map: MapResolvedType -> { addJsonDemand(plan, map.valueType, analysis, serialization) }
+    tuple: TupleResolvedType -> { for element of tuple.elements { addJsonDemand(plan, element, analysis, serialization) } }
+    union_: UnionResolvedType -> { for member of union_.types { addJsonDemand(plan, member, analysis, serialization) } }
+    _ -> { }
+  }
+}
+
+function addInterfaceJsonDeserializationDemand(plan: InstantiationPlan, type_: InterfaceType, analysis: AnalysisResult): none {
+  declaration := interfaceDeclaration(analysis, type_.symbol.module, type_.symbol.name)
+  if declaration == none || declaration!.resolvedSymbol == none { return }
+  for implementation of declaration!.resolvedSymbol!.implementations {
+    addJsonDeserializationDemand(plan, ClassType { name: implementation.name, symbol: implementation }, analysis)
   }
 }
 

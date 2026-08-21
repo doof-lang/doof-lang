@@ -123,24 +123,6 @@ std::string Instant::toHttpDate() {
     const auto dateTime = this->toDateTime();
     return ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(httpWeekdayName(dateTime->date->dayOfWeek())); _interpolation += ", "; _interpolation += doof::to_string(doof::string_padStart(doof::to_string(dateTime->date->day), 2, U'\u0030')); _interpolation += " "; _interpolation += doof::to_string(httpMonthName(dateTime->date->month)); _interpolation += " "; _interpolation += doof::to_string(doof::string_padStart(doof::to_string(dateTime->date->year), 4, U'\u0030')); _interpolation += " "; _interpolation += doof::to_string(doof::string_padStart(doof::to_string(dateTime->time->hour), 2, U'\u0030')); _interpolation += ":"; _interpolation += doof::to_string(doof::string_padStart(doof::to_string(dateTime->time->minute), 2, U'\u0030')); _interpolation += ":"; _interpolation += doof::to_string(doof::string_padStart(doof::to_string(dateTime->time->second), 2, U'\u0030')); _interpolation += " GMT"; return _interpolation; }());
 }
-doof::JsonObject Instant::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["epochNanos"] = doof::json_value(this->epochNanos);
-    return _json;
-}
-doof::Result<std::shared_ptr<Instant>, std::string> Instant::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_epochNanos = _object->find("epochNanos");
-    if (_iterator_epochNanos == _object->end()) { return doof::Failure<std::string>{"Missing required field \"epochNanos\""}; }
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_epochNanos->second) : doof::json_is_number(_iterator_epochNanos->second)))) { return doof::Failure<std::string>{"Field \"epochNanos\" expected number but got " + std::string(doof::json_type_name(_iterator_epochNanos->second))}; }
-    auto _field_epochNanos = (_lenient ? doof::json_as_long_lenient(_iterator_epochNanos->second) : doof::json_as_long(_iterator_epochNanos->second));
-        return doof::Success<std::shared_ptr<Instant>>{std::make_shared<Instant>(_field_epochNanos)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 
 std::shared_ptr<Date> Date::MIN;
 std::shared_ptr<Date> Date::MAX;
@@ -213,34 +195,6 @@ bool Date::equals(const std::shared_ptr<Date>& other) {
 std::string Date::toISOString() {
     return ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(doof::string_padStart(doof::to_string(this->year), 4, U'\u0030')); _interpolation += "-"; _interpolation += doof::to_string(doof::string_padStart(doof::to_string(this->month), 2, U'\u0030')); _interpolation += "-"; _interpolation += doof::to_string(doof::string_padStart(doof::to_string(this->day), 2, U'\u0030')); _interpolation += ""; return _interpolation; }());
 }
-doof::JsonObject Date::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["year"] = doof::json_value(this->year);
-    (*_json)["month"] = doof::json_value(this->month);
-    (*_json)["day"] = doof::json_value(this->day);
-    return _json;
-}
-doof::Result<std::shared_ptr<Date>, std::string> Date::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_year = _object->find("year");
-    if (_iterator_year == _object->end()) { return doof::Failure<std::string>{"Missing required field \"year\""}; }
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_year->second) : doof::json_is_number(_iterator_year->second)))) { return doof::Failure<std::string>{"Field \"year\" expected number but got " + std::string(doof::json_type_name(_iterator_year->second))}; }
-    auto _field_year = (_lenient ? doof::json_as_int_lenient(_iterator_year->second) : doof::json_as_int(_iterator_year->second));
-    auto _iterator_month = _object->find("month");
-    if (_iterator_month == _object->end()) { return doof::Failure<std::string>{"Missing required field \"month\""}; }
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_month->second) : doof::json_is_number(_iterator_month->second)))) { return doof::Failure<std::string>{"Field \"month\" expected number but got " + std::string(doof::json_type_name(_iterator_month->second))}; }
-    auto _field_month = (_lenient ? doof::json_as_int_lenient(_iterator_month->second) : doof::json_as_int(_iterator_month->second));
-    auto _iterator_day = _object->find("day");
-    if (_iterator_day == _object->end()) { return doof::Failure<std::string>{"Missing required field \"day\""}; }
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_day->second) : doof::json_is_number(_iterator_day->second)))) { return doof::Failure<std::string>{"Field \"day\" expected number but got " + std::string(doof::json_type_name(_iterator_day->second))}; }
-    auto _field_day = (_lenient ? doof::json_as_int_lenient(_iterator_day->second) : doof::json_as_int(_iterator_day->second));
-        return doof::Success<std::shared_ptr<Date>>{std::make_shared<Date>(_field_year, _field_month, _field_day)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 
 std::shared_ptr<Time> Time::MIDNIGHT;
 std::shared_ptr<Time> Time::NOON;
@@ -292,39 +246,6 @@ std::string Time::toISOString() {
         return base;
     }
     return ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(base); _interpolation += "."; _interpolation += doof::to_string(doof::string_trimEnd(doof::string_padStart(doof::to_string(this->nanosecond), 9, U'\u0030'), U'\u0030')); _interpolation += ""; return _interpolation; }());
-}
-doof::JsonObject Time::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["hour"] = doof::json_value(this->hour);
-    (*_json)["minute"] = doof::json_value(this->minute);
-    (*_json)["second"] = doof::json_value(this->second);
-    (*_json)["nanosecond"] = doof::json_value(this->nanosecond);
-    return _json;
-}
-doof::Result<std::shared_ptr<Time>, std::string> Time::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_hour = _object->find("hour");
-    if (_iterator_hour == _object->end()) { return doof::Failure<std::string>{"Missing required field \"hour\""}; }
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_hour->second) : doof::json_is_number(_iterator_hour->second)))) { return doof::Failure<std::string>{"Field \"hour\" expected number but got " + std::string(doof::json_type_name(_iterator_hour->second))}; }
-    auto _field_hour = (_lenient ? doof::json_as_int_lenient(_iterator_hour->second) : doof::json_as_int(_iterator_hour->second));
-    auto _iterator_minute = _object->find("minute");
-    if (_iterator_minute == _object->end()) { return doof::Failure<std::string>{"Missing required field \"minute\""}; }
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_minute->second) : doof::json_is_number(_iterator_minute->second)))) { return doof::Failure<std::string>{"Field \"minute\" expected number but got " + std::string(doof::json_type_name(_iterator_minute->second))}; }
-    auto _field_minute = (_lenient ? doof::json_as_int_lenient(_iterator_minute->second) : doof::json_as_int(_iterator_minute->second));
-    auto _iterator_second = _object->find("second");
-    if (_iterator_second == _object->end()) { return doof::Failure<std::string>{"Missing required field \"second\""}; }
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_second->second) : doof::json_is_number(_iterator_second->second)))) { return doof::Failure<std::string>{"Field \"second\" expected number but got " + std::string(doof::json_type_name(_iterator_second->second))}; }
-    auto _field_second = (_lenient ? doof::json_as_int_lenient(_iterator_second->second) : doof::json_as_int(_iterator_second->second));
-    auto _iterator_nanosecond = _object->find("nanosecond");
-    if (_iterator_nanosecond == _object->end()) { return doof::Failure<std::string>{"Missing required field \"nanosecond\""}; }
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_nanosecond->second) : doof::json_is_number(_iterator_nanosecond->second)))) { return doof::Failure<std::string>{"Field \"nanosecond\" expected number but got " + std::string(doof::json_type_name(_iterator_nanosecond->second))}; }
-    auto _field_nanosecond = (_lenient ? doof::json_as_int_lenient(_iterator_nanosecond->second) : doof::json_as_int(_iterator_nanosecond->second));
-        return doof::Success<std::shared_ptr<Time>>{std::make_shared<Time>(_field_hour, _field_minute, _field_second, _field_nanosecond)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
 }
 
 std::shared_ptr<DateTime> DateTime::create(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time) {
@@ -394,29 +315,6 @@ bool DateTime::equals(const std::shared_ptr<DateTime>& other) {
 std::string DateTime::toISOString() {
     return ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(this->date->toISOString()); _interpolation += "T"; _interpolation += doof::to_string(this->time->toISOString()); _interpolation += ""; return _interpolation; }());
 }
-doof::JsonObject DateTime::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["date"] = doof::json_value(this->date->toJsonObject());
-    (*_json)["time"] = doof::json_value(this->time->toJsonObject());
-    return _json;
-}
-doof::Result<std::shared_ptr<DateTime>, std::string> DateTime::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_date = _object->find("date");
-    if (_iterator_date == _object->end()) { return doof::Failure<std::string>{"Missing required field \"date\""}; }
-        if (!(doof::json_is_object(_iterator_date->second))) { return doof::Failure<std::string>{"Field \"date\" expected object but got " + std::string(doof::json_type_name(_iterator_date->second))}; }
-    auto _field_date = doof::json_decode_value(Date::fromJsonValue(_iterator_date->second, _lenient));
-    auto _iterator_time = _object->find("time");
-    if (_iterator_time == _object->end()) { return doof::Failure<std::string>{"Missing required field \"time\""}; }
-        if (!(doof::json_is_object(_iterator_time->second))) { return doof::Failure<std::string>{"Field \"time\" expected object but got " + std::string(doof::json_type_name(_iterator_time->second))}; }
-    auto _field_time = doof::json_decode_value(Time::fromJsonValue(_iterator_time->second, _lenient));
-        return doof::Success<std::shared_ptr<DateTime>>{std::make_shared<DateTime>(_field_date, _field_time)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 
 std::shared_ptr<TimeZone> TimeZone::UTC;
 doof::Result<std::shared_ptr<TimeZone>, std::string> TimeZone::lookup(const std::string& id) {
@@ -430,24 +328,6 @@ int32_t TimeZone::offsetSecondsAt(const std::shared_ptr<Instant>& instant) {
 }
 bool TimeZone::isDSTAt(const std::shared_ptr<Instant>& instant) {
     return ::doof_time::zone_dst_at(this->id, instant->toEpochSeconds());
-}
-doof::JsonObject TimeZone::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["id"] = doof::json_value(this->id);
-    return _json;
-}
-doof::Result<std::shared_ptr<TimeZone>, std::string> TimeZone::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_id = _object->find("id");
-    if (_iterator_id == _object->end()) { return doof::Failure<std::string>{"Missing required field \"id\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_id->second) : doof::json_is_string(_iterator_id->second)))) { return doof::Failure<std::string>{"Field \"id\" expected string but got " + std::string(doof::json_type_name(_iterator_id->second))}; }
-    auto _field_id = (_lenient ? doof::json_as_string_lenient(_iterator_id->second) : doof::json_as_string(_iterator_id->second));
-        return doof::Success<std::shared_ptr<TimeZone>>{std::make_shared<TimeZone>(_field_id)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
 }
 
 std::shared_ptr<ZonedDateTime> ZonedDateTime::now(const std::shared_ptr<TimeZone>& zone) {
@@ -500,29 +380,6 @@ std::string ZonedDateTime::toISOString() {
     auto m = ((abs % 3600) / 60);
     auto suffix = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(sign); _interpolation += ""; _interpolation += doof::to_string(doof::string_padStart(doof::to_string(h), 2, U'\u0030')); _interpolation += ":"; _interpolation += doof::to_string(doof::string_padStart(doof::to_string(m), 2, U'\u0030')); _interpolation += ""; return _interpolation; }());
     return ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(this->dateTime->toISOString()); _interpolation += ""; _interpolation += doof::to_string(suffix); _interpolation += ""; return _interpolation; }());
-}
-doof::JsonObject ZonedDateTime::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["dateTime"] = doof::json_value(this->dateTime->toJsonObject());
-    (*_json)["zone"] = doof::json_value(this->zone->toJsonObject());
-    return _json;
-}
-doof::Result<std::shared_ptr<ZonedDateTime>, std::string> ZonedDateTime::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_dateTime = _object->find("dateTime");
-    if (_iterator_dateTime == _object->end()) { return doof::Failure<std::string>{"Missing required field \"dateTime\""}; }
-        if (!(doof::json_is_object(_iterator_dateTime->second))) { return doof::Failure<std::string>{"Field \"dateTime\" expected object but got " + std::string(doof::json_type_name(_iterator_dateTime->second))}; }
-    auto _field_dateTime = doof::json_decode_value(DateTime::fromJsonValue(_iterator_dateTime->second, _lenient));
-    auto _iterator_zone = _object->find("zone");
-    if (_iterator_zone == _object->end()) { return doof::Failure<std::string>{"Missing required field \"zone\""}; }
-        if (!(doof::json_is_object(_iterator_zone->second))) { return doof::Failure<std::string>{"Field \"zone\" expected object but got " + std::string(doof::json_type_name(_iterator_zone->second))}; }
-    auto _field_zone = doof::json_decode_value(TimeZone::fromJsonValue(_iterator_zone->second, _lenient));
-        return doof::Success<std::shared_ptr<ZonedDateTime>>{std::make_shared<ZonedDateTime>(_field_dateTime, _field_zone)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
 }
 std::string httpWeekdayName(DayOfWeek day) {
     return [&]() -> std::string {

@@ -42,15 +42,11 @@ struct Duration : public std::enable_shared_from_this<Duration> {
     bool isGreaterThan(const std::shared_ptr<Duration>& other);
     bool equals(const std::shared_ptr<Duration>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Duration>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // Utilities for the current operating-system thread.
 struct Thread : public std::enable_shared_from_this<Thread> {
     Thread() {}
     static void sleep(const std::shared_ptr<Duration>& duration);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Thread>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

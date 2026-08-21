@@ -124,8 +124,6 @@ namespace std_::url::punycode_error {
     int32_t index;
     std::string message;
     PunycodeError(std::string kind, int32_t index, std::string message) : kind(kind), index(index), message(message) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<PunycodeError>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -135,8 +133,6 @@ namespace std_::url::index {
     int32_t index;
     std::string message;
     UrlError(std::string kind, int32_t index, std::string message) : kind(kind), index(index), message(message) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<UrlError>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Path : public std::enable_shared_from_this<Path> {
     bool absolute;
@@ -145,8 +141,6 @@ namespace std_::url::index {
     bool isEmpty();
     int32_t segmentCount();
     std::string segment(int32_t index);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Path>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Authority : public std::enable_shared_from_this<Authority> {
     std::optional<std::string> userinfo;
@@ -155,16 +149,12 @@ namespace std_::url::index {
     Authority(std::optional<std::string> userinfo, std::string host, std::optional<std::string> port) : userinfo(userinfo), host(host), port(port) {}
     bool hasUserinfo();
     bool hasPort();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Authority>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct QueryParam : public std::enable_shared_from_this<QueryParam> {
     std::string name;
     std::optional<std::string> value;
     QueryParam(std::string name, std::optional<std::string> value) : name(name), value(value) {}
     bool hasValue();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<QueryParam>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct QueryParams : public std::enable_shared_from_this<QueryParams> {
     std::shared_ptr<std::vector<std::shared_ptr<QueryParam>>> entries;
@@ -174,8 +164,6 @@ namespace std_::url::index {
     bool has(const std::string& name);
     std::shared_ptr<QueryParam> first(const std::string& name);
     std::shared_ptr<std::vector<std::shared_ptr<QueryParam>>> all(const std::string& name);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<QueryParams>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

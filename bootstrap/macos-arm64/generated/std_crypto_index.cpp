@@ -55,39 +55,6 @@ std::string randomToken(int32_t byteLength) {
     return ::doof_crypto::encode_base64_url(randomBytes(byteLength)->bytes());
 }
 
-doof::JsonObject Jwt::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["header"] = doof::json_value(this->header);
-    (*_json)["claims"] = doof::json_value(this->claims);
-    (*_json)["signedContent"] = doof::json_value(this->signedContent);
-    (*_json)["signature"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->signature->size()); for (const auto& _element : *this->signature) { _array->push_back(doof::json_value(static_cast<int32_t>(_element))); } return doof::json_value(_array); }();
-    return _json;
-}
-doof::Result<std::shared_ptr<Jwt>, std::string> Jwt::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_header = _object->find("header");
-    if (_iterator_header == _object->end()) { return doof::Failure<std::string>{"Missing required field \"header\""}; }
-        if (!(doof::json_is_object(_iterator_header->second))) { return doof::Failure<std::string>{"Field \"header\" expected object but got " + std::string(doof::json_type_name(_iterator_header->second))}; }
-    auto _field_header = [&]() { const auto* _object_value = doof::json_as_object(_iterator_header->second); auto _values = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = _entry.second; } return _values; }();
-    auto _iterator_claims = _object->find("claims");
-    if (_iterator_claims == _object->end()) { return doof::Failure<std::string>{"Missing required field \"claims\""}; }
-        if (!(doof::json_is_object(_iterator_claims->second))) { return doof::Failure<std::string>{"Field \"claims\" expected object but got " + std::string(doof::json_type_name(_iterator_claims->second))}; }
-    auto _field_claims = [&]() { const auto* _object_value = doof::json_as_object(_iterator_claims->second); auto _values = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = _entry.second; } return _values; }();
-    auto _iterator_signedContent = _object->find("signedContent");
-    if (_iterator_signedContent == _object->end()) { return doof::Failure<std::string>{"Missing required field \"signedContent\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_signedContent->second) : doof::json_is_string(_iterator_signedContent->second)))) { return doof::Failure<std::string>{"Field \"signedContent\" expected string but got " + std::string(doof::json_type_name(_iterator_signedContent->second))}; }
-    auto _field_signedContent = (_lenient ? doof::json_as_string_lenient(_iterator_signedContent->second) : doof::json_as_string(_iterator_signedContent->second));
-    auto _iterator_signature = _object->find("signature");
-    if (_iterator_signature == _object->end()) { return doof::Failure<std::string>{"Missing required field \"signature\""}; }
-        if (!(doof::json_is_array(_iterator_signature->second))) { return doof::Failure<std::string>{"Field \"signature\" expected array but got " + std::string(doof::json_type_name(_iterator_signature->second))}; }
-    auto _field_signature = [&]() { const auto* _array = doof::json_as_array(_iterator_signature->second); auto _values = std::make_shared<std::vector<uint8_t>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(static_cast<uint8_t>(_lenient ? doof::json_as_int_lenient(_element) : doof::json_as_int(_element))); } return _values; }();
-        return doof::Success<std::shared_ptr<Jwt>>{std::make_shared<Jwt>(_field_header, _field_claims, _field_signedContent, _field_signature)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 doof::Result<std::string, std::string> decodeBase64UrlToString(const std::string& text) {
     auto _binding_value_1 = ::doof_crypto::decode_base64_url(text);
     if (doof::is_failure(_binding_value_1)) {

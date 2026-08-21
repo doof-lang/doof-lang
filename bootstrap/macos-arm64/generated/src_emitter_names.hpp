@@ -10,8 +10,6 @@ namespace app_src_emitter_names_ {
     std::string packageName;
     std::string outputRoot = std::string("");
     ModuleNamespaceMapping(std::string logicalPrefix, std::string packageName, std::string outputRoot = std::string("")) : logicalPrefix(logicalPrefix), packageName(packageName), outputRoot(outputRoot) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ModuleNamespaceMapping>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

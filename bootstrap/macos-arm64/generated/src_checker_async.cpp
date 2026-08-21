@@ -9,24 +9,6 @@ using namespace ::app_src_checker_actor_lifecycle_;
 using namespace ::app_src_checker_symbols_;
 using namespace ::app_src_checker_types_;
 
-doof::JsonObject AsyncBoundaryViolation::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["reason"] = doof::json_value(this->reason);
-    return _json;
-}
-doof::Result<std::shared_ptr<AsyncBoundaryViolation>, std::string> AsyncBoundaryViolation::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_reason = _object->find("reason");
-    if (_iterator_reason == _object->end()) { return doof::Failure<std::string>{"Missing required field \"reason\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_reason->second) : doof::json_is_string(_iterator_reason->second)))) { return doof::Failure<std::string>{"Field \"reason\" expected string but got " + std::string(doof::json_type_name(_iterator_reason->second))}; }
-    auto _field_reason = (_lenient ? doof::json_as_string_lenient(_iterator_reason->second) : doof::json_as_string(_iterator_reason->second));
-        return doof::Success<std::shared_ptr<AsyncBoundaryViolation>>{std::make_shared<AsyncBoundaryViolation>(_field_reason)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 void validateAsyncBlock(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_ast_::AsyncExpression>& expression, const std::string& module, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics) {
     {
         auto _case_subject = expression->expression;

@@ -3,34 +3,6 @@
 namespace std_::url::index {
 using namespace ::std_::blob::index;
 
-doof::JsonObject UrlError::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["kind"] = doof::json_value(this->kind);
-    (*_json)["index"] = doof::json_value(this->index);
-    (*_json)["message"] = doof::json_value(this->message);
-    return _json;
-}
-doof::Result<std::shared_ptr<UrlError>, std::string> UrlError::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_kind = _object->find("kind");
-    if (_iterator_kind == _object->end()) { return doof::Failure<std::string>{"Missing required field \"kind\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
-    auto _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
-    auto _iterator_index = _object->find("index");
-    if (_iterator_index == _object->end()) { return doof::Failure<std::string>{"Missing required field \"index\""}; }
-        if (!((_lenient ? doof::json_is_lenient_number(_iterator_index->second) : doof::json_is_number(_iterator_index->second)))) { return doof::Failure<std::string>{"Field \"index\" expected number but got " + std::string(doof::json_type_name(_iterator_index->second))}; }
-    auto _field_index = (_lenient ? doof::json_as_int_lenient(_iterator_index->second) : doof::json_as_int(_iterator_index->second));
-    auto _iterator_message = _object->find("message");
-    if (_iterator_message == _object->end()) { return doof::Failure<std::string>{"Missing required field \"message\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_message->second) : doof::json_is_string(_iterator_message->second)))) { return doof::Failure<std::string>{"Field \"message\" expected string but got " + std::string(doof::json_type_name(_iterator_message->second))}; }
-    auto _field_message = (_lenient ? doof::json_as_string_lenient(_iterator_message->second) : doof::json_as_string(_iterator_message->second));
-        return doof::Success<std::shared_ptr<UrlError>>{std::make_shared<UrlError>(_field_kind, _field_index, _field_message)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 
 bool Path::isEmpty() {
     return (static_cast<int32_t>((this->segments)->size()) == 0);
@@ -41,29 +13,6 @@ int32_t Path::segmentCount() {
 std::string Path::segment(int32_t index) {
     return doof::array_at(this->segments, index, "index", 29);
 }
-doof::JsonObject Path::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["absolute"] = doof::json_value(this->absolute);
-    (*_json)["segments"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->segments->size()); for (const auto& _element : *this->segments) { _array->push_back(doof::json_value(_element)); } return doof::json_value(_array); }();
-    return _json;
-}
-doof::Result<std::shared_ptr<Path>, std::string> Path::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_absolute = _object->find("absolute");
-    if (_iterator_absolute == _object->end()) { return doof::Failure<std::string>{"Missing required field \"absolute\""}; }
-        if (!((_lenient ? doof::json_is_lenient_boolean(_iterator_absolute->second) : doof::json_is_boolean(_iterator_absolute->second)))) { return doof::Failure<std::string>{"Field \"absolute\" expected boolean but got " + std::string(doof::json_type_name(_iterator_absolute->second))}; }
-    auto _field_absolute = (_lenient ? doof::json_as_bool_lenient(_iterator_absolute->second) : doof::json_as_bool(_iterator_absolute->second));
-    auto _iterator_segments = _object->find("segments");
-    if (_iterator_segments == _object->end()) { return doof::Failure<std::string>{"Missing required field \"segments\""}; }
-        if (!(doof::json_is_array(_iterator_segments->second))) { return doof::Failure<std::string>{"Field \"segments\" expected array but got " + std::string(doof::json_type_name(_iterator_segments->second))}; }
-    auto _field_segments = [&]() { const auto* _array = doof::json_as_array(_iterator_segments->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back((_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element))); } return _values; }();
-        return doof::Success<std::shared_ptr<Path>>{std::make_shared<Path>(_field_absolute, _field_segments)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 
 bool Authority::hasUserinfo() {
     return (!doof::is_null(this->userinfo));
@@ -71,60 +20,9 @@ bool Authority::hasUserinfo() {
 bool Authority::hasPort() {
     return (!doof::is_null(this->port));
 }
-doof::JsonObject Authority::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["userinfo"] = (this->userinfo.has_value() ? doof::json_value(this->userinfo.value()) : doof::json_value(nullptr));
-    (*_json)["host"] = doof::json_value(this->host);
-    (*_json)["port"] = (this->port.has_value() ? doof::json_value(this->port.value()) : doof::json_value(nullptr));
-    return _json;
-}
-doof::Result<std::shared_ptr<Authority>, std::string> Authority::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_userinfo = _object->find("userinfo");
-    if (_iterator_userinfo == _object->end()) { return doof::Failure<std::string>{"Missing required field \"userinfo\""}; }
-        if (!(doof::json_is_null(_iterator_userinfo->second) || (_lenient ? doof::json_is_lenient_string(_iterator_userinfo->second) : doof::json_is_string(_iterator_userinfo->second)))) { return doof::Failure<std::string>{"Field \"userinfo\" expected string or null but got " + std::string(doof::json_type_name(_iterator_userinfo->second))}; }
-    auto _field_userinfo = (doof::json_is_null(_iterator_userinfo->second) ? std::optional<std::string>{std::nullopt} : std::optional<std::string>{(_lenient ? doof::json_as_string_lenient(_iterator_userinfo->second) : doof::json_as_string(_iterator_userinfo->second))});
-    auto _iterator_host = _object->find("host");
-    if (_iterator_host == _object->end()) { return doof::Failure<std::string>{"Missing required field \"host\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_host->second) : doof::json_is_string(_iterator_host->second)))) { return doof::Failure<std::string>{"Field \"host\" expected string but got " + std::string(doof::json_type_name(_iterator_host->second))}; }
-    auto _field_host = (_lenient ? doof::json_as_string_lenient(_iterator_host->second) : doof::json_as_string(_iterator_host->second));
-    auto _iterator_port = _object->find("port");
-    if (_iterator_port == _object->end()) { return doof::Failure<std::string>{"Missing required field \"port\""}; }
-        if (!(doof::json_is_null(_iterator_port->second) || (_lenient ? doof::json_is_lenient_string(_iterator_port->second) : doof::json_is_string(_iterator_port->second)))) { return doof::Failure<std::string>{"Field \"port\" expected string or null but got " + std::string(doof::json_type_name(_iterator_port->second))}; }
-    auto _field_port = (doof::json_is_null(_iterator_port->second) ? std::optional<std::string>{std::nullopt} : std::optional<std::string>{(_lenient ? doof::json_as_string_lenient(_iterator_port->second) : doof::json_as_string(_iterator_port->second))});
-        return doof::Success<std::shared_ptr<Authority>>{std::make_shared<Authority>(_field_userinfo, _field_host, _field_port)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 
 bool QueryParam::hasValue() {
     return (!doof::is_null(this->value));
-}
-doof::JsonObject QueryParam::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["name"] = doof::json_value(this->name);
-    (*_json)["value"] = (this->value.has_value() ? doof::json_value(this->value.value()) : doof::json_value(nullptr));
-    return _json;
-}
-doof::Result<std::shared_ptr<QueryParam>, std::string> QueryParam::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_name = _object->find("name");
-    if (_iterator_name == _object->end()) { return doof::Failure<std::string>{"Missing required field \"name\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
-    auto _field_name = (_lenient ? doof::json_as_string_lenient(_iterator_name->second) : doof::json_as_string(_iterator_name->second));
-    auto _iterator_value = _object->find("value");
-    if (_iterator_value == _object->end()) { return doof::Failure<std::string>{"Missing required field \"value\""}; }
-        if (!(doof::json_is_null(_iterator_value->second) || (_lenient ? doof::json_is_lenient_string(_iterator_value->second) : doof::json_is_string(_iterator_value->second)))) { return doof::Failure<std::string>{"Field \"value\" expected string or null but got " + std::string(doof::json_type_name(_iterator_value->second))}; }
-    auto _field_value = (doof::json_is_null(_iterator_value->second) ? std::optional<std::string>{std::nullopt} : std::optional<std::string>{(_lenient ? doof::json_as_string_lenient(_iterator_value->second) : doof::json_as_string(_iterator_value->second))});
-        return doof::Success<std::shared_ptr<QueryParam>>{std::make_shared<QueryParam>(_field_name, _field_value)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
 }
 
 bool QueryParams::isEmpty() {
@@ -160,24 +58,6 @@ std::shared_ptr<std::vector<std::shared_ptr<QueryParam>>> QueryParams::all(const
         }
     }
     return doof::array_drainToReadonly(matches, "", 0);
-}
-doof::JsonObject QueryParams::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["entries"] = [&]() { auto _array = std::make_shared<std::vector<doof::JsonValue>>(); _array->reserve(this->entries->size()); for (const auto& _element : *this->entries) { _array->push_back(doof::json_value(_element->toJsonObject())); } return doof::json_value(_array); }();
-    return _json;
-}
-doof::Result<std::shared_ptr<QueryParams>, std::string> QueryParams::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_entries = _object->find("entries");
-    if (_iterator_entries == _object->end()) { return doof::Failure<std::string>{"Missing required field \"entries\""}; }
-        if (!(doof::json_is_array(_iterator_entries->second))) { return doof::Failure<std::string>{"Field \"entries\" expected array but got " + std::string(doof::json_type_name(_iterator_entries->second))}; }
-    auto _field_entries = [&]() { const auto* _array = doof::json_as_array(_iterator_entries->second); auto _values = std::make_shared<std::vector<std::shared_ptr<QueryParam>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(QueryParam::fromJsonValue(_element, _lenient))); } return _values; }();
-        return doof::Success<std::shared_ptr<QueryParams>>{std::make_shared<QueryParams>(_field_entries)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
 }
 doof::Result<std::shared_ptr<Path>, std::shared_ptr<UrlError>> parsePath(const std::string& text) {
     if (static_cast<int32_t>(text.size()) == 0) {

@@ -31,7 +31,7 @@ parsed := parseJsonValue(text)         // Result<JsonValue, string>
 
 JSON methods are only generated for classes, structs, and supported interfaces where user code actually accesses `.toJsonObject()` or `.fromJsonValue()`. If a program never calls these methods, no nominal-object JSON code is generated.
 
-Generation is transitive: if nominal object `A` has a field of type `B` and you call `A.toJsonObject()`, the compiler automatically generates JSON methods for `B` as well.
+Generation is transitive and direction-specific: if nominal object `A` has a field of type `B`, calling `A.toJsonObject()` generates `toJsonObject()` for `B`, while calling `A.fromJsonValue()` generates `fromJsonValue()` for `B`. Neither operation generates the unused opposite direction.
 
 ```doof
 class Inner { value: int }

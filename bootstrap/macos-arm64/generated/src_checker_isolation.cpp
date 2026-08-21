@@ -9,34 +9,6 @@ using namespace ::app_src_checker_async_;
 using namespace ::app_src_checker_actor_lifecycle_;
 using namespace ::app_src_checker_symbols_;
 
-doof::JsonObject IsolationReason::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["kind"] = doof::json_value(this->kind);
-    (*_json)["name"] = doof::json_value(this->name);
-    (*_json)["span"] = doof::json_value(this->span.toJsonObject());
-    return _json;
-}
-doof::Result<std::shared_ptr<IsolationReason>, std::string> IsolationReason::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_kind = _object->find("kind");
-    if (_iterator_kind == _object->end()) { return doof::Failure<std::string>{"Missing required field \"kind\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_kind->second) : doof::json_is_string(_iterator_kind->second)))) { return doof::Failure<std::string>{"Field \"kind\" expected string but got " + std::string(doof::json_type_name(_iterator_kind->second))}; }
-    auto _field_kind = (_lenient ? doof::json_as_string_lenient(_iterator_kind->second) : doof::json_as_string(_iterator_kind->second));
-    auto _iterator_name = _object->find("name");
-    if (_iterator_name == _object->end()) { return doof::Failure<std::string>{"Missing required field \"name\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_name->second) : doof::json_is_string(_iterator_name->second)))) { return doof::Failure<std::string>{"Field \"name\" expected string but got " + std::string(doof::json_type_name(_iterator_name->second))}; }
-    auto _field_name = (_lenient ? doof::json_as_string_lenient(_iterator_name->second) : doof::json_as_string(_iterator_name->second));
-    auto _iterator_span = _object->find("span");
-    if (_iterator_span == _object->end()) { return doof::Failure<std::string>{"Missing required field \"span\""}; }
-        if (!(doof::json_is_object(_iterator_span->second))) { return doof::Failure<std::string>{"Field \"span\" expected object but got " + std::string(doof::json_type_name(_iterator_span->second))}; }
-    auto _field_span = doof::json_decode_value(::app_src_ast_::SourceSpan::fromJsonValue(_iterator_span->second, _lenient));
-        return doof::Success<std::shared_ptr<IsolationReason>>{std::make_shared<IsolationReason>(_field_kind, _field_name, _field_span)};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 
 
 

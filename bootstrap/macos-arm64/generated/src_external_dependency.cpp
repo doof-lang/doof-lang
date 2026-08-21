@@ -12,56 +12,6 @@ using namespace ::std_::path::index;
 std::string EXTERNAL_SOURCE_MARKER;
 int64_t MAX_EXTERNAL_COMMAND_OUTPUT_BYTES = 1048576LL;
 
-doof::JsonObject ExternalDependencyTarget::toJsonObject() const {
-    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
-    (*_json)["nativeTarget"] = doof::json_value(this->nativeTarget);
-    (*_json)["sdkPath"] = doof::json_value(this->sdkPath);
-    (*_json)["targetTriple"] = doof::json_value(this->targetTriple);
-    (*_json)["configureHost"] = doof::json_value(this->configureHost);
-    (*_json)["jobs"] = doof::json_value(this->jobs);
-    return _json;
-}
-doof::Result<std::shared_ptr<ExternalDependencyTarget>, std::string> ExternalDependencyTarget::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {
-    try {
-        const auto* _object = doof::json_as_object(_json);
-        if (_object == nullptr) { return doof::Failure<std::string>{"Expected JSON object"}; }
-    auto _iterator_nativeTarget = _object->find("nativeTarget");
-    if (_iterator_nativeTarget == _object->end()) { return doof::Failure<std::string>{"Missing required field \"nativeTarget\""}; }
-        if (!((_lenient ? doof::json_is_lenient_string(_iterator_nativeTarget->second) : doof::json_is_string(_iterator_nativeTarget->second)))) { return doof::Failure<std::string>{"Field \"nativeTarget\" expected string but got " + std::string(doof::json_type_name(_iterator_nativeTarget->second))}; }
-    auto _field_nativeTarget = (_lenient ? doof::json_as_string_lenient(_iterator_nativeTarget->second) : doof::json_as_string(_iterator_nativeTarget->second));
-    std::optional<std::string> _field_sdkPath;
-    if (auto _iterator_sdkPath = _object->find("sdkPath"); _iterator_sdkPath != _object->end()) {
-            if (!((_lenient ? doof::json_is_lenient_string(_iterator_sdkPath->second) : doof::json_is_string(_iterator_sdkPath->second)))) { return doof::Failure<std::string>{"Field \"sdkPath\" expected string but got " + std::string(doof::json_type_name(_iterator_sdkPath->second))}; }
-        _field_sdkPath = (_lenient ? doof::json_as_string_lenient(_iterator_sdkPath->second) : doof::json_as_string(_iterator_sdkPath->second));
-    } else {
-        _field_sdkPath = std::string("");
-    }
-    std::optional<std::string> _field_targetTriple;
-    if (auto _iterator_targetTriple = _object->find("targetTriple"); _iterator_targetTriple != _object->end()) {
-            if (!((_lenient ? doof::json_is_lenient_string(_iterator_targetTriple->second) : doof::json_is_string(_iterator_targetTriple->second)))) { return doof::Failure<std::string>{"Field \"targetTriple\" expected string but got " + std::string(doof::json_type_name(_iterator_targetTriple->second))}; }
-        _field_targetTriple = (_lenient ? doof::json_as_string_lenient(_iterator_targetTriple->second) : doof::json_as_string(_iterator_targetTriple->second));
-    } else {
-        _field_targetTriple = std::string("");
-    }
-    std::optional<std::string> _field_configureHost;
-    if (auto _iterator_configureHost = _object->find("configureHost"); _iterator_configureHost != _object->end()) {
-            if (!((_lenient ? doof::json_is_lenient_string(_iterator_configureHost->second) : doof::json_is_string(_iterator_configureHost->second)))) { return doof::Failure<std::string>{"Field \"configureHost\" expected string but got " + std::string(doof::json_type_name(_iterator_configureHost->second))}; }
-        _field_configureHost = (_lenient ? doof::json_as_string_lenient(_iterator_configureHost->second) : doof::json_as_string(_iterator_configureHost->second));
-    } else {
-        _field_configureHost = std::string("");
-    }
-    std::optional<int32_t> _field_jobs;
-    if (auto _iterator_jobs = _object->find("jobs"); _iterator_jobs != _object->end()) {
-            if (!((_lenient ? doof::json_is_lenient_number(_iterator_jobs->second) : doof::json_is_number(_iterator_jobs->second)))) { return doof::Failure<std::string>{"Field \"jobs\" expected number but got " + std::string(doof::json_type_name(_iterator_jobs->second))}; }
-        _field_jobs = (_lenient ? doof::json_as_int_lenient(_iterator_jobs->second) : doof::json_as_int(_iterator_jobs->second));
-    } else {
-        _field_jobs = 1;
-    }
-        return doof::Success<std::shared_ptr<ExternalDependencyTarget>>{std::make_shared<ExternalDependencyTarget>(_field_nativeTarget, _field_sdkPath.value(), _field_targetTriple.value(), _field_configureHost.value(), _field_jobs.value())};
-    } catch (const doof::JsonDecodeError& _error) {
-        return doof::Failure<std::string>{_error.message()};
-    }
-}
 std::string externalPath(const std::string& directory, const std::string& name) {
     return ::std_::path::index::join(std::make_shared<std::vector<std::string>>(std::vector<std::string>{directory, name}));
 }

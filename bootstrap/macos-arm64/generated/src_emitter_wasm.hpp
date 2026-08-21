@@ -141,6 +141,15 @@ namespace app_src_emitter_context_ {
     struct EmitContext;
 }
 
+namespace app_src_emitter_monomorphize_ {
+    struct FunctionInstantiation;
+    struct ClassInstantiation;
+    struct InterfaceInstantiation;
+    struct ImplementationRef;
+    struct MethodInstantiation;
+    struct InstantiationPlan;
+}
+
 namespace app_src_emitter_wasm_ {
     struct WasmEmission;
 }
@@ -163,8 +172,12 @@ namespace app_src_emitter_context_ {
     using __type9 = std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
 }
 
-namespace app_src_emitter_json_ {
+namespace app_src_emitter_monomorphize_ {
     using __type10 = std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
+}
+
+namespace app_src_emitter_json_ {
+    using __type11 = std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
 }
 
 namespace app_src_semantic_ {
@@ -186,8 +199,6 @@ namespace app_src_semantic_ {
     int32_t offset;
     SemanticLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     SemanticLocation() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<SemanticLocation, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Symbol : public std::enable_shared_from_this<Symbol> {
     std::string kind;
@@ -217,15 +228,11 @@ namespace app_src_semantic_ {
     std::string sourceModule;
     bool typeOnly;
     NamespaceBinding(std::string localName, std::string sourceModule, bool typeOnly) : localName(localName), sourceModule(sourceModule), typeOnly(typeOnly) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NamespaceBinding>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct PrimitiveType : public std::enable_shared_from_this<PrimitiveType> {
     std::string kind = std::string("primitive");
     std::string name;
     PrimitiveType(std::string kind, std::string name) : kind(kind), name(name) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<PrimitiveType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ClassType : public std::enable_shared_from_this<ClassType> {
     std::string kind = std::string("class");
@@ -297,14 +304,10 @@ namespace app_src_semantic_ {
     struct RangeResolvedType : public std::enable_shared_from_this<RangeResolvedType> {
     std::string kind = std::string("range");
     RangeResolvedType(std::string kind = std::string("range")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<RangeResolvedType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct JsonValueResolvedType : public std::enable_shared_from_this<JsonValueResolvedType> {
     std::string kind = std::string("json-value");
     JsonValueResolvedType(std::string kind = std::string("json-value")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<JsonValueResolvedType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ResultResolvedType : public std::enable_shared_from_this<ResultResolvedType> {
     std::string kind = std::string("result");
@@ -330,20 +333,14 @@ namespace app_src_semantic_ {
     struct NoneType : public std::enable_shared_from_this<NoneType> {
     std::string kind = std::string("none");
     NoneType(std::string kind = std::string("none")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NoneType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NeverType : public std::enable_shared_from_this<NeverType> {
     std::string kind = std::string("never");
     NeverType(std::string kind = std::string("never")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NeverType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct UnknownType : public std::enable_shared_from_this<UnknownType> {
     std::string kind = std::string("unknown");
     UnknownType(std::string kind = std::string("unknown")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<UnknownType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TypeParameterType : public std::enable_shared_from_this<TypeParameterType> {
     std::string kind = std::string("type-parameter");
@@ -376,8 +373,6 @@ namespace app_src_ast_ {
     int32_t offset;
     AstLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     AstLocation() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<AstLocation, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TypeParameterConstraint : public std::enable_shared_from_this<TypeParameterConstraint> {
     __type2 type_ = std::monostate{};
@@ -412,8 +407,6 @@ namespace app_src_json_semantics_ {
     std::shared_ptr<doof::ordered_map<std::string, bool>> serialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{});
     std::shared_ptr<doof::ordered_map<std::string, bool>> deserialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{});
     JsonEligibilityCache(std::shared_ptr<doof::ordered_map<std::string, bool>> serialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{}), std::shared_ptr<doof::ordered_map<std::string, bool>> deserialization = std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{})) : serialization(serialization), deserialization(deserialization) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<JsonEligibilityCache>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -456,6 +449,8 @@ namespace app_src_emitter_context_ {
     std::shared_ptr<std::vector<std::string>> concreteMethodKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> concreteInterfaceNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> concreteInterfaceKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> jsonSerializationKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> jsonDeserializationKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> capturedMutables = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     int32_t tryCounter = 0;
     bool scriptEntry = false;
@@ -463,7 +458,67 @@ namespace app_src_emitter_context_ {
     bool coverageEnabled = false;
     int32_t coverageModuleId = -1;
     std::shared_ptr<std::vector<int32_t>> coverageInstrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    EmitContext(std::string modulePath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> namespaceImports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> imports, std::shared_ptr<std::vector<std::string>> importedDefinitionNeedles, bool importedDefinitionNeedlesReady, std::shared_ptr<std::vector<std::shared_ptr<EmitModuleSurface>>> moduleSurfaces, std::shared_ptr<::app_src_json_semantics_::JsonEligibilityCache> jsonEligibility, std::string currentClass, bool currentClassNative, bool currentFunctionStatic, std::string currentReturnErrorType, std::string currentFunctionName, bool inValueYieldBlock, bool valueYieldReturnsVoid, std::string catchVarName, __type9 catchResultType, std::shared_ptr<SourceLocationSpanOverride> sourceLocationSpanOverride, std::shared_ptr<std::vector<std::string>> genericTypeParams, std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution, std::shared_ptr<std::vector<std::string>> concreteFunctionNames, std::shared_ptr<std::vector<std::string>> concreteFunctionKeys, std::shared_ptr<std::vector<std::string>> concreteClassNames, std::shared_ptr<std::vector<std::string>> concreteClassKeys, std::shared_ptr<std::vector<std::string>> nativeTemplateClassKeys, std::shared_ptr<std::vector<std::string>> concreteMethodNames, std::shared_ptr<std::vector<std::string>> concreteMethodKeys, std::shared_ptr<std::vector<std::string>> concreteInterfaceNames, std::shared_ptr<std::vector<std::string>> concreteInterfaceKeys, std::shared_ptr<std::vector<std::string>> capturedMutables, int32_t tryCounter, bool scriptEntry, bool tryPanics, bool coverageEnabled, int32_t coverageModuleId, std::shared_ptr<std::vector<int32_t>> coverageInstrumentedLines) : modulePath(modulePath), allPrograms(allPrograms), namespaceImports(namespaceImports), imports(imports), importedDefinitionNeedles(importedDefinitionNeedles), importedDefinitionNeedlesReady(importedDefinitionNeedlesReady), moduleSurfaces(moduleSurfaces), jsonEligibility(jsonEligibility), currentClass(currentClass), currentClassNative(currentClassNative), currentFunctionStatic(currentFunctionStatic), currentReturnErrorType(currentReturnErrorType), currentFunctionName(currentFunctionName), inValueYieldBlock(inValueYieldBlock), valueYieldReturnsVoid(valueYieldReturnsVoid), catchVarName(catchVarName), catchResultType(catchResultType), sourceLocationSpanOverride(sourceLocationSpanOverride), genericTypeParams(genericTypeParams), substitution(substitution), concreteFunctionNames(concreteFunctionNames), concreteFunctionKeys(concreteFunctionKeys), concreteClassNames(concreteClassNames), concreteClassKeys(concreteClassKeys), nativeTemplateClassKeys(nativeTemplateClassKeys), concreteMethodNames(concreteMethodNames), concreteMethodKeys(concreteMethodKeys), concreteInterfaceNames(concreteInterfaceNames), concreteInterfaceKeys(concreteInterfaceKeys), capturedMutables(capturedMutables), tryCounter(tryCounter), scriptEntry(scriptEntry), tryPanics(tryPanics), coverageEnabled(coverageEnabled), coverageModuleId(coverageModuleId), coverageInstrumentedLines(coverageInstrumentedLines) {}
+    EmitContext(std::string modulePath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> namespaceImports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> imports, std::shared_ptr<std::vector<std::string>> importedDefinitionNeedles, bool importedDefinitionNeedlesReady, std::shared_ptr<std::vector<std::shared_ptr<EmitModuleSurface>>> moduleSurfaces, std::shared_ptr<::app_src_json_semantics_::JsonEligibilityCache> jsonEligibility, std::string currentClass, bool currentClassNative, bool currentFunctionStatic, std::string currentReturnErrorType, std::string currentFunctionName, bool inValueYieldBlock, bool valueYieldReturnsVoid, std::string catchVarName, __type9 catchResultType, std::shared_ptr<SourceLocationSpanOverride> sourceLocationSpanOverride, std::shared_ptr<std::vector<std::string>> genericTypeParams, std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution, std::shared_ptr<std::vector<std::string>> concreteFunctionNames, std::shared_ptr<std::vector<std::string>> concreteFunctionKeys, std::shared_ptr<std::vector<std::string>> concreteClassNames, std::shared_ptr<std::vector<std::string>> concreteClassKeys, std::shared_ptr<std::vector<std::string>> nativeTemplateClassKeys, std::shared_ptr<std::vector<std::string>> concreteMethodNames, std::shared_ptr<std::vector<std::string>> concreteMethodKeys, std::shared_ptr<std::vector<std::string>> concreteInterfaceNames, std::shared_ptr<std::vector<std::string>> concreteInterfaceKeys, std::shared_ptr<std::vector<std::string>> jsonSerializationKeys, std::shared_ptr<std::vector<std::string>> jsonDeserializationKeys, std::shared_ptr<std::vector<std::string>> capturedMutables, int32_t tryCounter, bool scriptEntry, bool tryPanics, bool coverageEnabled, int32_t coverageModuleId, std::shared_ptr<std::vector<int32_t>> coverageInstrumentedLines) : modulePath(modulePath), allPrograms(allPrograms), namespaceImports(namespaceImports), imports(imports), importedDefinitionNeedles(importedDefinitionNeedles), importedDefinitionNeedlesReady(importedDefinitionNeedlesReady), moduleSurfaces(moduleSurfaces), jsonEligibility(jsonEligibility), currentClass(currentClass), currentClassNative(currentClassNative), currentFunctionStatic(currentFunctionStatic), currentReturnErrorType(currentReturnErrorType), currentFunctionName(currentFunctionName), inValueYieldBlock(inValueYieldBlock), valueYieldReturnsVoid(valueYieldReturnsVoid), catchVarName(catchVarName), catchResultType(catchResultType), sourceLocationSpanOverride(sourceLocationSpanOverride), genericTypeParams(genericTypeParams), substitution(substitution), concreteFunctionNames(concreteFunctionNames), concreteFunctionKeys(concreteFunctionKeys), concreteClassNames(concreteClassNames), concreteClassKeys(concreteClassKeys), nativeTemplateClassKeys(nativeTemplateClassKeys), concreteMethodNames(concreteMethodNames), concreteMethodKeys(concreteMethodKeys), concreteInterfaceNames(concreteInterfaceNames), concreteInterfaceKeys(concreteInterfaceKeys), jsonSerializationKeys(jsonSerializationKeys), jsonDeserializationKeys(jsonDeserializationKeys), capturedMutables(capturedMutables), tryCounter(tryCounter), scriptEntry(scriptEntry), tryPanics(tryPanics), coverageEnabled(coverageEnabled), coverageModuleId(coverageModuleId), coverageInstrumentedLines(coverageInstrumentedLines) {}
+};
+}
+
+namespace app_src_emitter_monomorphize_ {
+    struct FunctionInstantiation : public std::enable_shared_from_this<FunctionInstantiation> {
+    std::string key;
+    std::string modulePath;
+    std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration;
+    std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution;
+    std::string emittedName;
+    std::shared_ptr<std::vector<std::string>> trace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    FunctionInstantiation(std::string key, std::string modulePath, std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration, std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution, std::string emittedName, std::shared_ptr<std::vector<std::string>> trace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : key(key), modulePath(modulePath), declaration(declaration), substitution(substitution), emittedName(emittedName), trace(trace) {}
+};
+    struct ClassInstantiation : public std::enable_shared_from_this<ClassInstantiation> {
+    std::string key;
+    std::string modulePath;
+    std::shared_ptr<::app_src_ast_::ClassDeclaration> declaration;
+    std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution;
+    std::string emittedName;
+    std::shared_ptr<std::vector<std::string>> trace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    ClassInstantiation(std::string key, std::string modulePath, std::shared_ptr<::app_src_ast_::ClassDeclaration> declaration, std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution, std::string emittedName, std::shared_ptr<std::vector<std::string>> trace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : key(key), modulePath(modulePath), declaration(declaration), substitution(substitution), emittedName(emittedName), trace(trace) {}
+};
+    struct InterfaceInstantiation : public std::enable_shared_from_this<InterfaceInstantiation> {
+    std::string key;
+    std::string modulePath;
+    std::string name;
+    std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution;
+    std::string emittedName;
+    std::shared_ptr<std::vector<std::shared_ptr<ImplementationRef>>> implementations = std::make_shared<std::vector<std::shared_ptr<ImplementationRef>>>(std::vector<std::shared_ptr<ImplementationRef>>{});
+    InterfaceInstantiation(std::string key, std::string modulePath, std::string name, std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution, std::string emittedName, std::shared_ptr<std::vector<std::shared_ptr<ImplementationRef>>> implementations = std::make_shared<std::vector<std::shared_ptr<ImplementationRef>>>(std::vector<std::shared_ptr<ImplementationRef>>{})) : key(key), modulePath(modulePath), name(name), substitution(substitution), emittedName(emittedName), implementations(implementations) {}
+};
+    struct ImplementationRef : public std::enable_shared_from_this<ImplementationRef> {
+    std::string modulePath;
+    std::string typeName;
+    ImplementationRef(std::string modulePath, std::string typeName) : modulePath(modulePath), typeName(typeName) {}
+};
+    struct MethodInstantiation : public std::enable_shared_from_this<MethodInstantiation> {
+    std::string key;
+    std::string modulePath;
+    std::string ownerKey;
+    std::shared_ptr<::app_src_ast_::ClassDeclaration> owner;
+    std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration;
+    std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution;
+    std::string emittedName;
+    std::shared_ptr<std::vector<std::string>> trace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    MethodInstantiation(std::string key, std::string modulePath, std::string ownerKey, std::shared_ptr<::app_src_ast_::ClassDeclaration> owner, std::shared_ptr<::app_src_ast_::FunctionDeclaration> declaration, std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution, std::string emittedName, std::shared_ptr<std::vector<std::string>> trace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : key(key), modulePath(modulePath), ownerKey(ownerKey), owner(owner), declaration(declaration), substitution(substitution), emittedName(emittedName), trace(trace) {}
+};
+    struct InstantiationPlan : public std::enable_shared_from_this<InstantiationPlan> {
+    std::shared_ptr<std::vector<std::shared_ptr<FunctionInstantiation>>> functions = std::make_shared<std::vector<std::shared_ptr<FunctionInstantiation>>>(std::vector<std::shared_ptr<FunctionInstantiation>>{});
+    std::shared_ptr<std::vector<std::shared_ptr<ClassInstantiation>>> classes = std::make_shared<std::vector<std::shared_ptr<ClassInstantiation>>>(std::vector<std::shared_ptr<ClassInstantiation>>{});
+    std::shared_ptr<std::vector<std::shared_ptr<InterfaceInstantiation>>> interfaces = std::make_shared<std::vector<std::shared_ptr<InterfaceInstantiation>>>(std::vector<std::shared_ptr<InterfaceInstantiation>>{});
+    std::shared_ptr<std::vector<std::shared_ptr<MethodInstantiation>>> methods = std::make_shared<std::vector<std::shared_ptr<MethodInstantiation>>>(std::vector<std::shared_ptr<MethodInstantiation>>{});
+    bool overflow = false;
+    std::shared_ptr<std::vector<std::string>> overflowTrace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> currentTrace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> nativeTemplateClassKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> jsonSerializationKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> jsonDeserializationKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> visitedTemplateMethodKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    InstantiationPlan(std::shared_ptr<std::vector<std::shared_ptr<FunctionInstantiation>>> functions = std::make_shared<std::vector<std::shared_ptr<FunctionInstantiation>>>(std::vector<std::shared_ptr<FunctionInstantiation>>{}), std::shared_ptr<std::vector<std::shared_ptr<ClassInstantiation>>> classes = std::make_shared<std::vector<std::shared_ptr<ClassInstantiation>>>(std::vector<std::shared_ptr<ClassInstantiation>>{}), std::shared_ptr<std::vector<std::shared_ptr<InterfaceInstantiation>>> interfaces = std::make_shared<std::vector<std::shared_ptr<InterfaceInstantiation>>>(std::vector<std::shared_ptr<InterfaceInstantiation>>{}), std::shared_ptr<std::vector<std::shared_ptr<MethodInstantiation>>> methods = std::make_shared<std::vector<std::shared_ptr<MethodInstantiation>>>(std::vector<std::shared_ptr<MethodInstantiation>>{}), bool overflow = false, std::shared_ptr<std::vector<std::string>> overflowTrace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> currentTrace = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> nativeTemplateClassKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> jsonSerializationKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> jsonDeserializationKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> visitedTemplateMethodKeys = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : functions(functions), classes(classes), interfaces(interfaces), methods(methods), overflow(overflow), overflowTrace(overflowTrace), currentTrace(currentTrace), nativeTemplateClassKeys(nativeTemplateClassKeys), jsonSerializationKeys(jsonSerializationKeys), jsonDeserializationKeys(jsonDeserializationKeys), visitedTemplateMethodKeys(visitedTemplateMethodKeys) {}
 };
 }
 
@@ -472,8 +527,6 @@ namespace app_src_emitter_wasm_ {
     std::string source;
     std::shared_ptr<std::vector<std::string>> exportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     WasmEmission(std::string source, std::shared_ptr<std::vector<std::string>> exportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : source(source), exportNames(exportNames) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WasmEmission>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -483,8 +536,6 @@ namespace app_src_semantic_ {
     SemanticLocation end;
     SemanticSpan(SemanticLocation start, SemanticLocation end) : start(start), end(end) {}
     SemanticSpan() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<SemanticSpan, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Diagnostic : public std::enable_shared_from_this<Diagnostic> {
     std::string severity;
@@ -493,8 +544,6 @@ namespace app_src_semantic_ {
     std::string module;
     std::string replacement = std::string("");
     Diagnostic(std::string severity, std::string message, SemanticSpan span, std::string module, std::string replacement = std::string("")) : severity(severity), message(message), span(span), module(module), replacement(replacement) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Diagnostic>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Binding : public std::enable_shared_from_this<Binding> {
     std::string name;
@@ -517,8 +566,6 @@ namespace app_src_ast_ {
     AstLocation end;
     SourceSpan(AstLocation start, AstLocation end) : start(start), end(end) {}
     SourceSpan() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<SourceSpan, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NamedType : public std::enable_shared_from_this<NamedType> {
     std::string kind;
@@ -916,9 +963,10 @@ namespace app_src_ast_ {
     bool native_ = false;
     std::string nativeHeader = std::string("");
     std::string nativeCppName = std::string("");
+    std::optional<SourceSpan> legacyMethodFunctionSpan = std::nullopt;
     __type3 resolvedType = std::monostate{};
     SourceSpan span;
-    FunctionDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, __type2 returnType, __type6 body, bool exported, bool static_, bool isolated_, bool resolvedIsolated, bool private_, bool bodyless, bool native_, std::string nativeHeader, std::string nativeCppName, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), params(params), returnType(returnType), body(body), exported(exported), static_(static_), isolated_(isolated_), resolvedIsolated(resolvedIsolated), private_(private_), bodyless(bodyless), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), resolvedType(resolvedType), span(span) {}
+    FunctionDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, __type2 returnType, __type6 body, bool exported, bool static_, bool isolated_, bool resolvedIsolated, bool private_, bool bodyless, bool native_, std::string nativeHeader, std::string nativeCppName, std::optional<SourceSpan> legacyMethodFunctionSpan, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), params(params), returnType(returnType), body(body), exported(exported), static_(static_), isolated_(isolated_), resolvedIsolated(resolvedIsolated), private_(private_), bodyless(bodyless), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), legacyMethodFunctionSpan(legacyMethodFunctionSpan), resolvedType(resolvedType), span(span) {}
 };
     struct ReturnStatement : public std::enable_shared_from_this<ReturnStatement> {
     std::string kind;
@@ -992,8 +1040,6 @@ namespace app_src_ast_ {
     std::string kind;
     SourceSpan span;
     WildcardPattern(std::string kind, SourceSpan span) : kind(kind), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WildcardPattern>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ValuePattern : public std::enable_shared_from_this<ValuePattern> {
     std::string kind;
@@ -1065,16 +1111,12 @@ namespace app_src_ast_ {
     std::optional<std::string> label;
     SourceSpan span;
     BreakStatement(std::string kind, std::optional<std::string> label, SourceSpan span) : kind(kind), label(label), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<BreakStatement>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ContinueStatement : public std::enable_shared_from_this<ContinueStatement> {
     std::string kind;
     std::optional<std::string> label;
     SourceSpan span;
     ContinueStatement(std::string kind, std::optional<std::string> label, SourceSpan span) : kind(kind), label(label), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ContinueStatement>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExpressionStatement : public std::enable_shared_from_this<ExpressionStatement> {
     std::string kind;
@@ -1096,8 +1138,6 @@ namespace app_src_ast_ {
     std::optional<std::string> alias = std::nullopt;
     SourceSpan span;
     DestructureBinding(std::string name, std::optional<std::string> alias, SourceSpan span) : name(name), alias(alias), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<DestructureBinding>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TryStatement : public std::enable_shared_from_this<TryStatement> {
     std::string kind;
@@ -1203,16 +1243,12 @@ namespace app_src_ast_ {
     std::optional<std::string> alias;
     SourceSpan span;
     NamedImport(std::string kind, std::string name, std::optional<std::string> alias, SourceSpan span) : kind(kind), name(name), alias(alias), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NamedImport>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NamespaceImport : public std::enable_shared_from_this<NamespaceImport> {
     std::string kind;
     std::string alias;
     SourceSpan span;
     NamespaceImport(std::string kind, std::string alias, SourceSpan span) : kind(kind), alias(alias), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NamespaceImport>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ImportDeclaration : public std::enable_shared_from_this<ImportDeclaration> {
     std::string kind;
@@ -1227,8 +1263,6 @@ namespace app_src_ast_ {
     std::string replacement;
     SourceSpan span;
     MockImportMapping(std::string dependency, std::string replacement, SourceSpan span) : dependency(dependency), replacement(replacement), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MockImportMapping>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct MockImportDirective : public std::enable_shared_from_this<MockImportDirective> {
     std::string kind;
@@ -1236,8 +1270,6 @@ namespace app_src_ast_ {
     std::shared_ptr<std::vector<std::shared_ptr<MockImportMapping>>> mappings;
     SourceSpan span;
     MockImportDirective(std::string kind, std::string sourcePattern, std::shared_ptr<std::vector<std::shared_ptr<MockImportMapping>>> mappings, SourceSpan span) : kind(kind), sourcePattern(sourcePattern), mappings(mappings), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MockImportDirective>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExportDeclaration : public std::enable_shared_from_this<ExportDeclaration> {
     std::string kind;
@@ -1250,8 +1282,6 @@ namespace app_src_ast_ {
     std::optional<std::string> alias;
     SourceSpan span;
     ExportSpecifier(std::string name, std::optional<std::string> alias, SourceSpan span) : name(name), alias(alias), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExportSpecifier>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExportList : public std::enable_shared_from_this<ExportList> {
     std::string kind;
@@ -1259,8 +1289,6 @@ namespace app_src_ast_ {
     std::optional<std::string> source;
     SourceSpan span;
     ExportList(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<ExportSpecifier>>> specifiers, std::optional<std::string> source, SourceSpan span) : kind(kind), specifiers(specifiers), source(source), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExportList>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Program : public std::enable_shared_from_this<Program> {
     std::string kind;
@@ -1280,8 +1308,6 @@ namespace app_src_emitter_context_ {
     struct SourceLocationSpanOverride : public std::enable_shared_from_this<SourceLocationSpanOverride> {
     ::app_src_ast_::SourceSpan span;
     SourceLocationSpanOverride(::app_src_ast_::SourceSpan span) : span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<SourceLocationSpanOverride>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     std::shared_ptr<EmitContext> createEmitContextForModule(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& modulePath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& allPrograms = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}));
 }
@@ -1289,6 +1315,12 @@ namespace app_src_emitter_context_ {
 namespace app_src_emitter_names_ {
     std::string moduleNamespace(const std::string& path);
     std::string moduleHeaderName(const std::string& path);
+}
+
+namespace app_src_emitter_monomorphize_ {
+    std::shared_ptr<InstantiationPlan> buildInstantiationPlan(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result);
+    void addJsonSerializationDemand(const std::shared_ptr<InstantiationPlan>& plan, const __type10& type_, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& analysis);
+    void addJsonDeserializationDemand(const std::shared_ptr<InstantiationPlan>& plan, const __type10& type_, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& analysis);
 }
 
 namespace app_src_emitter_types_ {
@@ -1301,10 +1333,10 @@ namespace app_src_emitter_expr_ {
 }
 
 namespace app_src_emitter_json_ {
-    std::string emitJsonTypeCheck(const std::string& json, const __type10& type_);
-    std::string emitJsonRead(const std::string& json, const __type10& type_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
-    std::string jsonTypeName(const __type10& type_);
-    std::string emitJsonField(const std::string& value, const __type10& resolvedType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    std::string emitJsonTypeCheck(const std::string& json, const __type11& type_);
+    std::string emitJsonRead(const std::string& json, const __type11& type_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    std::string jsonTypeName(const __type11& type_);
+    std::string emitJsonField(const std::string& value, const __type11& resolvedType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
 }
 
 namespace app_src_emitter_module_ {
@@ -1312,7 +1344,8 @@ namespace app_src_emitter_module_ {
 }
 
 namespace app_src_emitter_wasm_ {
-    doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& entry);
+    doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& entry, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations = nullptr);
+    void addWasmJsonDemands(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& analysis, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& plan);
     void collectExportedFunctions(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>>& result);
     bool moduleExportsFunction(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& name);
     doof::Result<void, std::string> validateWasmFunction(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& analysis);

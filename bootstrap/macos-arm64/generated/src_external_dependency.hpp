@@ -681,15 +681,11 @@ namespace app_src_macos_app_ {
     std::string sourcePath;
     std::string destination;
     MacOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MacOSAppResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct MacOSEmbeddedLibrary : public std::enable_shared_from_this<MacOSEmbeddedLibrary> {
     std::string library = std::string("");
     std::string path = std::string("");
     MacOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MacOSEmbeddedLibrary>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct MacOSAppConfig : public std::enable_shared_from_this<MacOSAppConfig> {
     std::string executableName;
@@ -703,8 +699,6 @@ namespace app_src_macos_app_ {
     std::string category = std::string("public.app-category.developer-tools");
     std::string minimumSystemVersion = std::string("11.0");
     MacOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{}), std::string category = std::string("public.app-category.developer-tools"), std::string minimumSystemVersion = std::string("11.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), category(category), minimumSystemVersion(minimumSystemVersion) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MacOSAppConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct MacOSPackageConfig : public std::enable_shared_from_this<MacOSPackageConfig> {
     std::string distDirectory = std::string("");
@@ -713,8 +707,6 @@ namespace app_src_macos_app_ {
     bool sandbox = false;
     std::string entitlementsPath = std::string("");
     MacOSPackageConfig(std::string distDirectory = std::string(""), std::string signing = std::string("developer-id"), std::string identity = std::string(""), bool sandbox = false, std::string entitlementsPath = std::string("")) : distDirectory(distDirectory), signing(signing), identity(identity), sandbox(sandbox), entitlementsPath(entitlementsPath) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MacOSPackageConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -723,15 +715,11 @@ namespace app_src_ios_app_ {
     std::string sourcePath;
     std::string destination;
     IOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSAppResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct IOSEmbeddedLibrary : public std::enable_shared_from_this<IOSEmbeddedLibrary> {
     std::string library = std::string("");
     std::string path = std::string("");
     IOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSEmbeddedLibrary>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct IOSAppConfig : public std::enable_shared_from_this<IOSAppConfig> {
     std::string executableName;
@@ -744,15 +732,11 @@ namespace app_src_ios_app_ {
     std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{});
     std::string minimumDeploymentTarget = std::string("16.0");
     IOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(std::vector<std::shared_ptr<IOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{}), std::string minimumDeploymentTarget = std::string("16.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), minimumDeploymentTarget(minimumDeploymentTarget) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSAppConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct IOSPackageConfig : public std::enable_shared_from_this<IOSPackageConfig> {
     std::string identity = std::string("");
     std::string provisioningProfilePath = std::string("");
     IOSPackageConfig(std::string identity = std::string(""), std::string provisioningProfilePath = std::string("")) : identity(identity), provisioningProfilePath(provisioningProfilePath) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSPackageConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -769,22 +753,16 @@ namespace app_src_package_manifest_ {
     std::shared_ptr<std::vector<std::string>> compilerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> linkerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     NativeBuildPlan(std::shared_ptr<std::vector<std::string>> includePaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> sourceFiles = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> libraryPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> extraCopyPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> linkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> frameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> pkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> defines = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> compilerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> linkerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : includePaths(includePaths), sourceFiles(sourceFiles), libraryPaths(libraryPaths), extraCopyPaths(extraCopyPaths), linkLibraries(linkLibraries), frameworks(frameworks), pkgConfigPackages(pkgConfigPackages), defines(defines), compilerFlags(compilerFlags), linkerFlags(linkerFlags) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeBuildPlan>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct PackageResource : public std::enable_shared_from_this<PackageResource> {
     std::string sourcePath;
     std::string destination;
     PackageResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<PackageResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExternalDependencyCopyFile : public std::enable_shared_from_this<ExternalDependencyCopyFile> {
     std::string source;
     std::string destination;
     ExternalDependencyCopyFile(std::string source, std::string destination) : source(source), destination(destination) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExternalDependencyCopyFile>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExternalDependencyCommand : public std::enable_shared_from_this<ExternalDependencyCommand> {
     std::string program;
@@ -792,8 +770,6 @@ namespace app_src_package_manifest_ {
     std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
     std::string workingDirectory = std::string("");
     ExternalDependencyCommand(std::string program, std::shared_ptr<std::vector<std::string>> args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), std::string workingDirectory = std::string("")) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExternalDependencyCommand>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExternalDependency : public std::enable_shared_from_this<ExternalDependency> {
     std::string name;
@@ -807,8 +783,6 @@ namespace app_src_package_manifest_ {
     std::string commit = std::string("");
     std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{});
     ExternalDependency(std::string name, std::string kind, std::string url, std::string destination, std::string sha256 = std::string(""), int32_t stripComponents = 1, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{}), std::string ref = std::string(""), std::string commit = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{})) : name(name), kind(kind), url(url), destination(destination), sha256(sha256), stripComponents(stripComponents), copyFiles(copyFiles), ref(ref), commit(commit), commands(commands) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExternalDependency>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct PackageDependency : public std::enable_shared_from_this<PackageDependency> {
     std::string name;
@@ -817,8 +791,6 @@ namespace app_src_package_manifest_ {
     std::string ref = std::string("");
     std::string commit = std::string("");
     PackageDependency(std::string name, std::string path = std::string(""), std::string url = std::string(""), std::string ref = std::string(""), std::string commit = std::string("")) : name(name), path(path), url(url), ref(ref), commit(commit) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<PackageDependency>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct DependencyResolution : public std::enable_shared_from_this<DependencyResolution> {
     std::string name;
@@ -828,8 +800,6 @@ namespace app_src_package_manifest_ {
     std::string commit = std::string("");
     std::string sha256 = std::string("");
     DependencyResolution(std::string name, std::string kind, std::string url, std::string ref = std::string(""), std::string commit = std::string(""), std::string sha256 = std::string("")) : name(name), kind(kind), url(url), ref(ref), commit(commit), sha256(sha256) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<DependencyResolution>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct DependencyPolicy : public std::enable_shared_from_this<DependencyPolicy> {
     bool hasPackageSourceAllowlist = false;
@@ -843,8 +813,6 @@ namespace app_src_package_manifest_ {
     bool hasPkgConfigAllowlist = false;
     std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     DependencyPolicy(bool hasPackageSourceAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedPackageSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasExternalSourceAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedExternalSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasLinkLibraryAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedLinkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasFrameworkAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedFrameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasPkgConfigAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : hasPackageSourceAllowlist(hasPackageSourceAllowlist), allowedPackageSources(allowedPackageSources), hasExternalSourceAllowlist(hasExternalSourceAllowlist), allowedExternalSources(allowedExternalSources), hasLinkLibraryAllowlist(hasLinkLibraryAllowlist), allowedLinkLibraries(allowedLinkLibraries), hasFrameworkAllowlist(hasFrameworkAllowlist), allowedFrameworks(allowedFrameworks), hasPkgConfigAllowlist(hasPkgConfigAllowlist), allowedPkgConfigPackages(allowedPkgConfigPackages) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<DependencyPolicy>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct PackageManifest : public std::enable_shared_from_this<PackageManifest> {
     std::string name;
@@ -864,8 +832,6 @@ namespace app_src_package_manifest_ {
     std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr;
     std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr;
     PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions, std::shared_ptr<DependencyPolicy> policy, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target = std::string(""), std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp = nullptr, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp = nullptr, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), externalDependencies(externalDependencies), packageResolutions(packageResolutions), externalResolutions(externalResolutions), policy(policy), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<PackageManifest>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -903,8 +869,6 @@ struct Duration : public std::enable_shared_from_this<Duration> {
     bool isGreaterThan(const std::shared_ptr<Duration>& other);
     bool equals(const std::shared_ptr<Duration>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Duration>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -935,8 +899,6 @@ struct Instant : public std::enable_shared_from_this<Instant> {
     std::string toISOString();
     static doof::Result<std::shared_ptr<Instant>, std::string> parseHttpDate(const std::string& s);
     std::string toHttpDate();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Instant>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A calendar date (year, month, day) with no time-of-day or timezone.
 struct Date : public std::enable_shared_from_this<Date> {
@@ -966,8 +928,6 @@ struct Date : public std::enable_shared_from_this<Date> {
     bool isAfter(const std::shared_ptr<Date>& other);
     bool equals(const std::shared_ptr<Date>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Date>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A time-of-day with nanosecond precision. No date or timezone.
 struct Time : public std::enable_shared_from_this<Time> {
@@ -989,8 +949,6 @@ struct Time : public std::enable_shared_from_this<Time> {
     bool isAfter(const std::shared_ptr<Time>& other);
     bool equals(const std::shared_ptr<Time>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Time>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A combined calendar date and time-of-day. No timezone.
 struct DateTime : public std::enable_shared_from_this<DateTime> {
@@ -1016,8 +974,6 @@ struct DateTime : public std::enable_shared_from_this<DateTime> {
     bool isAfter(const std::shared_ptr<DateTime>& other);
     bool equals(const std::shared_ptr<DateTime>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<DateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // An IANA timezone identifier (e.g. "America/New_York", "UTC").
 struct TimeZone : public std::enable_shared_from_this<TimeZone> {
@@ -1028,8 +984,6 @@ struct TimeZone : public std::enable_shared_from_this<TimeZone> {
     static std::shared_ptr<TimeZone> local();
     int32_t offsetSecondsAt(const std::shared_ptr<Instant>& instant);
     bool isDSTAt(const std::shared_ptr<Instant>& instant);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<TimeZone>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A DateTime with an explicit TimeZone.
 struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
@@ -1050,8 +1004,6 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
     bool isBefore(const std::shared_ptr<ZonedDateTime>& other);
     bool isAfter(const std::shared_ptr<ZonedDateTime>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ZonedDateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -1060,16 +1012,12 @@ namespace std_::http::types {
     std::string name;
     std::string value;
     HttpHeader(std::string name, std::string value) : name(name), value(value) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpHeader>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct HttpError : public std::enable_shared_from_this<HttpError> {
     std::string kind;
     std::string code;
     std::string message;
     HttpError(std::string kind, std::string code, std::string message) : kind(kind), code(code), message(message) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpError>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -1080,8 +1028,6 @@ namespace std_::http::websocket {
     std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers;
     int32_t timeoutMs = 30000;
     WebSocketOptions(int32_t eventCapacity, int32_t commandCapacity, std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers, int32_t timeoutMs) : eventCapacity(eventCapacity), commandCapacity(commandCapacity), headers(headers), timeoutMs(timeoutMs) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketOpen : public std::enable_shared_from_this<WebSocketOpen> {
     std::shared_ptr<WebSocketConnection> connection;
@@ -1117,27 +1063,19 @@ namespace std_::http::websocket {
     std::string text;
     std::optional<std::string> coalesceKey = std::nullopt;
     WebSocketSendText(std::string text, std::optional<std::string> coalesceKey = std::nullopt) : text(text), coalesceKey(coalesceKey) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketSendText>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketSendBinary : public std::enable_shared_from_this<WebSocketSendBinary> {
     std::shared_ptr<std::vector<uint8_t>> bytes;
     std::optional<std::string> coalesceKey = std::nullopt;
     WebSocketSendBinary(std::shared_ptr<std::vector<uint8_t>> bytes, std::optional<std::string> coalesceKey = std::nullopt) : bytes(bytes), coalesceKey(coalesceKey) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketSendBinary>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketPing : public std::enable_shared_from_this<WebSocketPing> {
     WebSocketPing() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketPing>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketCloseCommand : public std::enable_shared_from_this<WebSocketCloseCommand> {
     int32_t code = 1000;
     std::string reason = std::string("");
     WebSocketCloseCommand(int32_t code = 1000, std::string reason = std::string("")) : code(code), reason(reason) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketCloseCommand>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -1146,8 +1084,6 @@ namespace std_::http::index {
     std::string name;
     std::string value;
     Cookie(std::string name, std::string value) : name(name), value(value) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Cookie>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct SetCookie : public std::enable_shared_from_this<SetCookie> {
     std::string name;
@@ -1160,8 +1096,6 @@ namespace std_::http::index {
     bool httpOnly = false;
     std::optional<std::string> sameSite = std::nullopt;
     SetCookie(std::string name, std::string value, std::optional<std::string> domain = std::nullopt, std::optional<std::string> path = std::nullopt, std::optional<std::string> expires = std::nullopt, std::optional<std::string> maxAge = std::nullopt, bool secure = false, bool httpOnly = false, std::optional<std::string> sameSite = std::nullopt) : name(name), value(value), domain(domain), path(path), expires(expires), maxAge(maxAge), secure(secure), httpOnly(httpOnly), sameSite(sameSite) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<SetCookie>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct HttpRequest : public std::enable_shared_from_this<HttpRequest> {
     std::string method;
@@ -1172,8 +1106,6 @@ namespace std_::http::index {
     bool followRedirects = true;
     HttpRequest(std::string method, std::string url, std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers, std::shared_ptr<std::vector<uint8_t>> body, int32_t timeoutMs, bool followRedirects) : method(method), url(url), headers(headers), body(body), timeoutMs(timeoutMs), followRedirects(followRedirects) {}
     std::optional<std::string> header(const std::string& name);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpRequest>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct HttpResponse : public std::enable_shared_from_this<HttpResponse> {
     int32_t status;
@@ -1187,8 +1119,6 @@ namespace std_::http::index {
     std::string getText();
     Stream__string getLineStream();
     doof::Result<doof::JsonValue, std::string> getJsonValue();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpResponse>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -1200,8 +1130,6 @@ namespace std_::os::index {
     bool stdoutTruncated = false;
     bool stderrTruncated = false;
     ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExecResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -1213,8 +1141,6 @@ namespace app_src_external_dependency_ {
     std::string configureHost = std::string("");
     int32_t jobs = 1;
     ExternalDependencyTarget(std::string nativeTarget, std::string sdkPath = std::string(""), std::string targetTriple = std::string(""), std::string configureHost = std::string(""), int32_t jobs = 1) : nativeTarget(nativeTarget), sdkPath(sdkPath), targetTriple(targetTriple), configureHost(configureHost), jobs(jobs) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExternalDependencyTarget>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -1268,8 +1194,6 @@ namespace std_::fs::types {
     int64_t size;
     std::shared_ptr<::std_::time::temporal::Instant> modifiedAt;
     FileInfo(std::string name, EntryKind kind, int64_t size, std::shared_ptr<::std_::time::temporal::Instant> modifiedAt) : name(name), kind(kind), size(size), modifiedAt(modifiedAt) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FileInfo>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -1440,8 +1364,6 @@ namespace std_::os::index {
     std::optional<int64_t> maxOutputBytes = std::nullopt;
     std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
     ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExecOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     std::string platform();
     doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ProcessGroupMode::Isolated, std::nullopt, nullptr));

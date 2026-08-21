@@ -21,6 +21,12 @@ void deprecatedNoneAlias(const std::shared_ptr<::app_src_checker_state_::Checker
 void deprecatedBuildReadonly(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, ::app_src_ast_::SourceSpan span) {
     state->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("warning"), std::string("'buildReadonly' is deprecated; replace it with 'drainToReadonly'"), ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, std::string("drainToReadonly")));
 }
+void deprecatedClassMethodFunction(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn) {
+    if (doof::is_null(fn->legacyMethodFunctionSpan)) {
+        return;
+    }
+    state->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("warning"), ((std::string("'function' on class methods is deprecated; declare '") + fn->name) + std::string("(...)' without the keyword")), ::app_src_checker_validation_::checkerSemanticSpan(doof::unwrap_optional(fn->legacyMethodFunctionSpan)), state->info->path, fn->name));
+}
 void validateAssignmentBinding(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_semantic_::Binding>& binding, ::app_src_ast_::SourceSpan span) {
     if (binding->kind != std::string("field")) {
         if (!binding->mutable_) {

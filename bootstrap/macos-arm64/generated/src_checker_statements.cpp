@@ -619,6 +619,7 @@ void checkClass(const std::shared_ptr<::app_src_checker_state_::CheckerState>& s
     }
     const auto& _iterable_25 = class_->methods;
     for (const auto& method : *_iterable_25) {
+        ::app_src_checker_common_::deprecatedClassMethodFunction(state, method);
         if (generatedMemberName(method->name)) {
             ::app_src_checker_common_::typeError(state, ((std::string("Method name \"") + method->name) + std::string("\" is reserved for compiler-generated reflection and JSON support")), method->span);
         }
@@ -779,30 +780,30 @@ void populateTypeParameters(const std::shared_ptr<::app_src_checker_state_::Chec
         scope->typeParamConstraints->push_back(std::make_shared<::app_src_semantic_::ResolvedTypeConstraint>(std::monostate{}));
     }
     for (int32_t index = 0; index < static_cast<int32_t>((names)->size()); ++index) {
-        if ((index >= static_cast<int32_t>((constraints)->size())) || doof::is_null(doof::array_at(constraints, index, "src/checker-statements", 540)->type_)) {
+        if ((index >= static_cast<int32_t>((constraints)->size())) || doof::is_null(doof::array_at(constraints, index, "src/checker-statements", 541)->type_)) {
             continue;
         }
-        const auto annotation = doof::unwrap_optional(doof::array_at(constraints, index, "src/checker-statements", 541)->type_);
+        const auto annotation = doof::unwrap_optional(doof::array_at(constraints, index, "src/checker-statements", 542)->type_);
         {
             auto _case_subject = annotation;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                 const auto& named = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
                 if ((static_cast<int32_t>((named->typeArgs)->size()) == 0) && ((named->name == std::string("JsonSerializable")) || (named->name == std::string("Reflectable")))) {
-                    (doof::array_at(scope->typeParamConstraintNames, index, "src/checker-statements", 545) = named->name);
+                    (doof::array_at(scope->typeParamConstraintNames, index, "src/checker-statements", 546) = named->name);
                     continue;
                 }
         }
         else {
         }
         }
-        (doof::array_at(scope->typeParamConstraints, index, "src/checker-statements", 551)->type_ = doof::optional_value(::app_src_checker_resolution_::resolveType(state, annotation, doof::unwrap_optional(state->info), scope)));
+        (doof::array_at(scope->typeParamConstraints, index, "src/checker-statements", 552)->type_ = doof::optional_value(::app_src_checker_resolution_::resolveType(state, annotation, doof::unwrap_optional(state->info), scope)));
     }
 }
 void validateUniqueTypeParameters(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<std::vector<std::string>>& names, ::app_src_ast_::SourceSpan span) {
     for (int32_t index = 0; index < static_cast<int32_t>((names)->size()); ++index) {
         for (int32_t previous = 0; previous < index; ++previous) {
-            if (doof::array_at(names, previous, "src/checker-statements", 558) == doof::array_at(names, index, "src/checker-statements", 558)) {
-                ::app_src_checker_common_::typeError(state, ((std::string("Type parameter \"") + doof::array_at(names, index, "src/checker-statements", 559)) + std::string("\" is already declared in this declaration")), span);
+            if (doof::array_at(names, previous, "src/checker-statements", 559) == doof::array_at(names, index, "src/checker-statements", 559)) {
+                ::app_src_checker_common_::typeError(state, ((std::string("Type parameter \"") + doof::array_at(names, index, "src/checker-statements", 560)) + std::string("\" is already declared in this declaration")), span);
                 break;
             }
         }
@@ -1024,11 +1025,11 @@ void checkDestructuring(const std::shared_ptr<::app_src_checker_state_::CheckerS
         return;
     }
     for (int32_t i = 0; i < static_cast<int32_t>((statement->bindings)->size()); ++i) {
-        const auto name = doof::array_at(statement->bindings, i, "src/checker-statements", 727);
+        const auto name = doof::array_at(statement->bindings, i, "src/checker-statements", 728);
         if (name == std::string("_")) {
             continue;
         }
-        const auto bindingType = ((i < static_cast<int32_t>((bindingTypes)->size())) ? doof::array_at(bindingTypes, i, "src/checker-statements", 729) : ::app_src_checker_types_::unknownType());
+        const auto bindingType = ((i < static_cast<int32_t>((bindingTypes)->size())) ? doof::array_at(bindingTypes, i, "src/checker-statements", 730) : ::app_src_checker_types_::unknownType());
         if (doof::string_endsWith(statement->kind, std::string("-assignment"))) {
             validateDestructuringTarget(state, scope, name, bindingType, statement->span);
         } else {

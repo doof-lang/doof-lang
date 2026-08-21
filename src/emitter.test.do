@@ -6,6 +6,7 @@ import { AnalysisResult } from "./analyzer"
 import { ClassDeclaration, ConstructExpression, ImmutableBinding, Program } from "./ast"
 import { SourceFile } from "./semantic"
 import { ModuleEmission, emitModule, emitModuleGraph, ModuleGraphPlan, planModuleGraph } from "./emitter-module"
+import { buildInstantiationPlan } from "./emitter-monomorphize"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, JsonEligibilityCache } from "./json-semantics"
 import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
 import { hasErrorDiagnostics } from "./diagnostics"
@@ -20,7 +21,7 @@ function emitSources(sources: SourceFile[], entry: string): ModuleEmission {
   checked := createChecker(analysis, entry).check(entry)
   Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
   program := findProgram(analysis, entry)
-  return emitModule(program!, "main")
+  return emitModule(program!, "main", buildInstantiationPlan(analysis))
 }
 
 function emitMonomorphized(source: string): ModuleEmission {
@@ -1112,7 +1113,7 @@ export function testEmitsStructJsonDeserializationByValue(): none {
 export function testEmitsJsonCollectionSerializationAndDeserialization(): none {
   result := emit("class Payload { items: JsonValue[]\nvalues: Map<string, JsonValue> }\nfunction serialize(value: Payload): JsonObject => value.toJsonObject()")
   Assert.equal(result.header.contains("doof::JsonObject toJsonObject() const;"), true)
-  Assert.equal(result.header.contains("fromJsonValue"), true)
+  Assert.equal(result.header.contains("fromJsonValue"), false)
   Assert.equal(result.source.contains("doof::json_value(this->items)"), true)
   Assert.equal(result.source.contains("doof::json_value(this->values)"), true)
 }
@@ -1120,7 +1121,41 @@ export function testEmitsJsonCollectionSerializationAndDeserialization(): none {
 export function testEmitsNullableJsonObjectSerialization(): none {
   result := emit("class Config { values: JsonObject | null = null }\nfunction write(value: Config): JsonObject => value.toJsonObject()")
   Assert.equal(result.source.contains("this->values ? doof::json_value(this->values) : doof::json_value(nullptr)"), true)
-  Assert.equal(result.header.contains("fromJsonValue"), true)
+  Assert.equal(result.header.contains("fromJsonValue"), false)
+}
+
+export function testDoesNotEmitAutomaticJsonForUnusedEligibleType(): none {
+  result := emit("class Point { x: int\ny: int }\nfunction main(): int => Point { x: 1, y: 2 }.x")
+  Assert.stringNotContains(result.header, "toJsonObject")
+  Assert.stringNotContains(result.header, "fromJsonValue")
+  Assert.stringNotContains(result.source, "Point::toJsonObject")
+  Assert.stringNotContains(result.source, "Point::fromJsonValue")
+}
+
+export function testKeepsAutomaticJsonDemandDirectionSpecificAndTransitive(): none {
+  encoded := emit("class Inner { value: int }\nclass Outer { inner: Inner }\nfunction encode(value: Outer): JsonObject => value.toJsonObject()")
+  Assert.stringContains(encoded.source, "Outer::toJsonObject")
+  Assert.stringContains(encoded.source, "Inner::toJsonObject")
+  Assert.stringNotContains(encoded.source, "Outer::fromJsonValue")
+  Assert.stringNotContains(encoded.source, "Inner::fromJsonValue")
+
+  decoded := emit("class Inner { value: int }\nclass Outer { inner: Inner }\nfunction decode(value: JsonValue): Result<Outer, string> => Outer.fromJsonValue(value)")
+  Assert.stringContains(decoded.source, "Outer::fromJsonValue")
+  Assert.stringContains(decoded.source, "Inner::fromJsonValue")
+  Assert.stringNotContains(decoded.source, "Outer::toJsonObject")
+  Assert.stringNotContains(decoded.source, "Inner::toJsonObject")
+}
+
+export function testDiscoversJsonDemandThroughGenericSpecialization(): none {
+  result := emitMonomorphized("class Config { name: string }\nfunction decode<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value)\nfunction main(): int { config := decode<Config>({ name: \"ok\" }) else { return 0 }\nreturn config.name.length }")
+  Assert.stringContains(result.source, "Config::fromJsonValue")
+  Assert.stringNotContains(result.source, "Config::toJsonObject")
+}
+
+export function testDiscoversJsonDemandThroughGenericMethodTemplate(): none {
+  result := emitMonomorphized("class Config { name: string }\nclass Decoder { function decode<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value) }\nfunction main(): int { config := Decoder {}.decode<Config>({ name: \"ok\" }) else { return 0 }\nreturn config.name.length }")
+  Assert.stringContains(result.source, "Config::fromJsonValue")
+  Assert.stringNotContains(result.source, "Config::toJsonObject")
 }
 
 export function testEngagesOuterPresenceForNullableJsonDefaults(): none {
@@ -1197,6 +1232,16 @@ export function testEmitsDescriptionsMetadataSchemasAndInvoke(): none {
   Assert.equal(result.source.contains("doof::Success<doof::JsonValue>"), true)
   Assert.equal(result.source.contains("Tool::_metadata"), true)
   Assert.equal(result.source.contains("metadata.invoke"), true)
+}
+
+export function testEmitsDirectionalJsonDependenciesForMetadataInvoke(): none {
+  result := emit("class Input { value: int }\nclass Output { label: string }\nclass Tool { function convert(input: Input): Output => Output { label: string(input.value) } }\nfunction metadata(): string => Tool.metadata.name")
+  Assert.stringContains(result.source, "Input::fromJsonValue")
+  Assert.stringNotContains(result.source, "Input::toJsonObject")
+  Assert.stringContains(result.source, "Output::toJsonObject")
+  Assert.stringNotContains(result.source, "Output::fromJsonValue")
+  Assert.stringNotContains(result.source, "Tool::toJsonObject")
+  Assert.stringNotContains(result.source, "Tool::fromJsonValue")
 }
 
 export function testDoesNotEmitMetadataWhenUnused(): none {
@@ -1627,7 +1672,7 @@ export function testEmitsNonGenericNativeFunctionNameAcrossModules(): none {
 export function testEmitsContextualResultAndClassObjectLiterals(): none {
   result := emit("class Payload { count: int }\nfunction load(): Result<Payload, string> => { value: { count: 4 } }")
   Assert.equal(result.source.contains("doof::Success<std::shared_ptr<Payload>>"), true)
-  Assert.equal(result.source.contains("std::make_shared<Payload>"), true)
+  Assert.stringContains(result.source, "std::make_shared<::app_main_::Payload>(4)")
 }
 
 export function testEmitsContextualSumObjectLiteralsAndPromotions(): none {

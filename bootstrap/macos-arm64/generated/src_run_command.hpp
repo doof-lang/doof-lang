@@ -10,8 +10,6 @@ namespace app_src_run_command_ {
     std::shared_ptr<std::vector<std::string>> arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::string directory;
     RunInvocation(std::string command, std::shared_ptr<std::vector<std::string>> arguments, std::string directory) : command(command), arguments(arguments), directory(directory) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<RunInvocation>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

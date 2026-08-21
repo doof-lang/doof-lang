@@ -266,7 +266,7 @@ The `Result<JsonValue, JsonValue>` returned by `.invoke` supports:
 
 ### On-demand Generation
 
-Metadata code is only generated when user code accesses `TypeName.metadata`. Classes and structs referenced in method signatures automatically get JSON serialization support (`toJsonObject`/`fromJsonValue`) generated as well.
+Metadata code is only generated when user code accesses `TypeName.metadata`. Nominal method parameter types get the `fromJsonValue` support required by invocation, while nominal success return types get the `toJsonObject` support required for the JSON result. The unused opposite direction is not generated.
 
 ## Future Use
 

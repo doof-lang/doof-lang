@@ -9,8 +9,6 @@ namespace app_src_module_acquisition_ {
     std::string logicalPrefix;
     std::string diskRoot;
     ModuleAcquisition(std::string logicalPrefix, std::string diskRoot) : logicalPrefix(logicalPrefix), diskRoot(diskRoot) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ModuleAcquisition>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

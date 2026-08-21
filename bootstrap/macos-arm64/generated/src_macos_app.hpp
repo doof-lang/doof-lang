@@ -12,15 +12,11 @@ namespace app_src_macos_app_ {
     std::string sourcePath;
     std::string destination;
     MacOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MacOSAppResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct MacOSEmbeddedLibrary : public std::enable_shared_from_this<MacOSEmbeddedLibrary> {
     std::string library = std::string("");
     std::string path = std::string("");
     MacOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MacOSEmbeddedLibrary>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct MacOSAppConfig : public std::enable_shared_from_this<MacOSAppConfig> {
     std::string executableName;
@@ -34,8 +30,6 @@ namespace app_src_macos_app_ {
     std::string category = std::string("public.app-category.developer-tools");
     std::string minimumSystemVersion = std::string("11.0");
     MacOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{}), std::string category = std::string("public.app-category.developer-tools"), std::string minimumSystemVersion = std::string("11.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), category(category), minimumSystemVersion(minimumSystemVersion) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MacOSAppConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct MacOSPackageConfig : public std::enable_shared_from_this<MacOSPackageConfig> {
     std::string distDirectory = std::string("");
@@ -44,8 +38,6 @@ namespace app_src_macos_app_ {
     bool sandbox = false;
     std::string entitlementsPath = std::string("");
     MacOSPackageConfig(std::string distDirectory = std::string(""), std::string signing = std::string("developer-id"), std::string identity = std::string(""), bool sandbox = false, std::string entitlementsPath = std::string("")) : distDirectory(distDirectory), signing(signing), identity(identity), sandbox(sandbox), entitlementsPath(entitlementsPath) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MacOSPackageConfig>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

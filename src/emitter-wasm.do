@@ -9,6 +9,7 @@ import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { createEmitContextForModule, EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitJsonField, emitJsonRead, emitJsonTypeCheck, jsonTypeName } from "./emitter-json"
+import { addJsonDeserializationDemand, addJsonSerializationDemand, buildInstantiationPlan, InstantiationPlan } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace } from "./emitter-names"
 import { planModuleInitializationOrder } from "./emitter-module"
 import { emitContextType } from "./emitter-types"
@@ -23,9 +24,10 @@ export class WasmEmission {
   exportNames: string[] = []
 }
 
-export function emitWasmSupport(result: AnalysisResult, entry: string): Result<WasmEmission, string> {
+export function emitWasmSupport(result: AnalysisResult, entry: string, instantiations: InstantiationPlan | none = none): Result<WasmEmission, string> {
   info := findModule(result, entry)
   if info == none { return Failure("Module not found: " + entry) }
+  jsonPlan := instantiations ?? buildInstantiationPlan(result)
   let exports: FunctionDeclaration[] = []
   collectExportedFunctions(info!, exports)
   let names: string[] = ["doof_initialize"]
@@ -33,6 +35,7 @@ export function emitWasmSupport(result: AnalysisResult, entry: string): Result<W
   for fn of exports {
     if fn.name == "main" { continue }
     try validateWasmFunction(fn, result)
+    addWasmJsonDemands(fn, result, jsonPlan)
     name := "doof_export_" + cppIdentifier(fn.name)
     for existing of functionNames {
       if existing == name {
@@ -55,6 +58,25 @@ export function emitWasmSupport(result: AnalysisResult, entry: string): Result<W
   }
   for name of functionNames { names.push(name) }
   return Success(WasmEmission { source, exportNames: names })
+}
+
+function addWasmJsonDemands(fn: FunctionDeclaration, analysis: AnalysisResult, plan: InstantiationPlan): none {
+  for parameter of fn.params {
+    if parameter.resolvedType != none { addJsonDeserializationDemand(plan, parameter.resolvedType!, analysis) }
+  }
+  if fn.resolvedType == none { return }
+  case fn.resolvedType! {
+    function_: FunctionType -> {
+      case function_.returnType {
+        result: ResultResolvedType -> {
+          addJsonSerializationDemand(plan, result.valueType, analysis)
+          addJsonSerializationDemand(plan, result.errorType, analysis)
+        }
+        _ -> { addJsonSerializationDemand(plan, function_.returnType, analysis) }
+      }
+    }
+    _ -> { }
+  }
 }
 
 function collectExportedFunctions(info: ModuleInfo, result: FunctionDeclaration[]): none {

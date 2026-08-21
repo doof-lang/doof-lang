@@ -88,8 +88,6 @@ namespace app_src_semantic_ {
     std::string kind = std::string("primitive");
     std::string name;
     PrimitiveType(std::string kind, std::string name) : kind(kind), name(name) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<PrimitiveType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ClassType : public std::enable_shared_from_this<ClassType> {
     std::string kind = std::string("class");
@@ -161,14 +159,10 @@ namespace app_src_semantic_ {
     struct RangeResolvedType : public std::enable_shared_from_this<RangeResolvedType> {
     std::string kind = std::string("range");
     RangeResolvedType(std::string kind = std::string("range")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<RangeResolvedType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct JsonValueResolvedType : public std::enable_shared_from_this<JsonValueResolvedType> {
     std::string kind = std::string("json-value");
     JsonValueResolvedType(std::string kind = std::string("json-value")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<JsonValueResolvedType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ResultResolvedType : public std::enable_shared_from_this<ResultResolvedType> {
     std::string kind = std::string("result");
@@ -194,20 +188,14 @@ namespace app_src_semantic_ {
     struct NoneType : public std::enable_shared_from_this<NoneType> {
     std::string kind = std::string("none");
     NoneType(std::string kind = std::string("none")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NoneType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NeverType : public std::enable_shared_from_this<NeverType> {
     std::string kind = std::string("never");
     NeverType(std::string kind = std::string("never")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NeverType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct UnknownType : public std::enable_shared_from_this<UnknownType> {
     std::string kind = std::string("unknown");
     UnknownType(std::string kind = std::string("unknown")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<UnknownType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TypeParameterType : public std::enable_shared_from_this<TypeParameterType> {
     std::string kind = std::string("type-parameter");
@@ -235,8 +223,6 @@ namespace app_src_ast_ {
     int32_t offset;
     AstLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     AstLocation() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<AstLocation, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -245,8 +231,6 @@ namespace app_src_emitter_case_pattern_ {
     std::string condition;
     std::string binding;
     CaseTypePatternEmission(std::string condition, std::string binding) : condition(condition), binding(binding) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<CaseTypePatternEmission>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -256,8 +240,6 @@ namespace app_src_ast_ {
     AstLocation end;
     SourceSpan(AstLocation start, AstLocation end) : start(start), end(end) {}
     SourceSpan() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<SourceSpan, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NamedType : public std::enable_shared_from_this<NamedType> {
     std::string kind;

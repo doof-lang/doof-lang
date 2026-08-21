@@ -25,6 +25,23 @@ export function testEmitsJsonAbiWrappersForExportedFunctions(): none {
   Assert.equal(result.emission!.modules[0].source.contains("int main("), false)
 }
 
+export function testEmitsDirectionalNominalJsonSupportForWasmAbi(): none {
+  result := compileWithLoader([
+    SourceFile {
+      path: "/main.do",
+      source: "class Input { value: int }\nclass Output { label: string }\nexport function convert(input: Input): Output => Output { label: string(input.value) }",
+    },
+  ], "/main.do", noSourceLoader, [], "wasm")
+
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "Input::fromJsonValue")
+  Assert.stringNotContains(source, "Input::toJsonObject")
+  Assert.stringContains(source, "Output::toJsonObject")
+  Assert.stringNotContains(source, "Output::fromJsonValue")
+}
+
 export function testRejectsGenericWasmExports(): none {
   result := compileWithLoader([
     SourceFile { path: "/main.do", source: "export function identity<T>(value: T): T => value" },

@@ -59,6 +59,8 @@ export class EmitContext {
   concreteMethodKeys: string[] = []
   concreteInterfaceNames: string[] = []
   concreteInterfaceKeys: string[] = []
+  jsonSerializationKeys: string[] = []
+  jsonDeserializationKeys: string[] = []
   // Mutable locals captured by any lambda in the current callable. Their
   // declarations are heap-boxed and every identifier use dereferences the box.
   let capturedMutables: string[] = []

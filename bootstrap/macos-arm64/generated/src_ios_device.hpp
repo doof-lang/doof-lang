@@ -518,8 +518,6 @@ namespace std_::crypto::index {
     std::string signedContent;
     std::shared_ptr<std::vector<uint8_t>> signature;
     Jwt(std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> header, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> claims, std::string signedContent, std::shared_ptr<std::vector<uint8_t>> signature) : header(header), claims(claims), signedContent(signedContent), signature(signature) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Jwt>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -557,8 +555,6 @@ struct Duration : public std::enable_shared_from_this<Duration> {
     bool isGreaterThan(const std::shared_ptr<Duration>& other);
     bool equals(const std::shared_ptr<Duration>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Duration>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -589,8 +585,6 @@ struct Instant : public std::enable_shared_from_this<Instant> {
     std::string toISOString();
     static doof::Result<std::shared_ptr<Instant>, std::string> parseHttpDate(const std::string& s);
     std::string toHttpDate();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Instant>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A calendar date (year, month, day) with no time-of-day or timezone.
 struct Date : public std::enable_shared_from_this<Date> {
@@ -620,8 +614,6 @@ struct Date : public std::enable_shared_from_this<Date> {
     bool isAfter(const std::shared_ptr<Date>& other);
     bool equals(const std::shared_ptr<Date>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Date>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A time-of-day with nanosecond precision. No date or timezone.
 struct Time : public std::enable_shared_from_this<Time> {
@@ -643,8 +635,6 @@ struct Time : public std::enable_shared_from_this<Time> {
     bool isAfter(const std::shared_ptr<Time>& other);
     bool equals(const std::shared_ptr<Time>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Time>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A combined calendar date and time-of-day. No timezone.
 struct DateTime : public std::enable_shared_from_this<DateTime> {
@@ -670,8 +660,6 @@ struct DateTime : public std::enable_shared_from_this<DateTime> {
     bool isAfter(const std::shared_ptr<DateTime>& other);
     bool equals(const std::shared_ptr<DateTime>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<DateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // An IANA timezone identifier (e.g. "America/New_York", "UTC").
 struct TimeZone : public std::enable_shared_from_this<TimeZone> {
@@ -682,8 +670,6 @@ struct TimeZone : public std::enable_shared_from_this<TimeZone> {
     static std::shared_ptr<TimeZone> local();
     int32_t offsetSecondsAt(const std::shared_ptr<Instant>& instant);
     bool isDSTAt(const std::shared_ptr<Instant>& instant);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<TimeZone>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A DateTime with an explicit TimeZone.
 struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
@@ -704,8 +690,6 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
     bool isBefore(const std::shared_ptr<ZonedDateTime>& other);
     bool isAfter(const std::shared_ptr<ZonedDateTime>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ZonedDateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -716,8 +700,6 @@ namespace std_::http::index {
     BodyChunkStream(std::shared_ptr<std::vector<uint8_t>> chunk = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), bool consumed = false) : chunk(chunk), consumed(consumed) {}
     bool next();
     std::shared_ptr<std::vector<uint8_t>> value();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<BodyChunkStream>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -729,8 +711,6 @@ namespace std_::os::index {
     bool stdoutTruncated = false;
     bool stderrTruncated = false;
     ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExecResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -739,15 +719,11 @@ namespace app_src_ios_device_ {
     std::string identifier;
     std::string name;
     IOSDevice(std::string identifier, std::string name) : identifier(identifier), name(name) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSDevice>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct IOSCodesignIdentity : public std::enable_shared_from_this<IOSCodesignIdentity> {
     std::string fingerprint;
     std::string name;
     IOSCodesignIdentity(std::string fingerprint, std::string name) : fingerprint(fingerprint), name(name) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSCodesignIdentity>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct IOSProvisioningProfile : public std::enable_shared_from_this<IOSProvisioningProfile> {
     std::string profilePath;
@@ -758,23 +734,17 @@ namespace app_src_ios_device_ {
     bool provisionsAllDevices = false;
     bool getTaskAllow = false;
     IOSProvisioningProfile(std::string profilePath, std::string applicationIdentifier, std::shared_ptr<std::vector<std::string>> certFingerprints, int64_t expirationEpochMs, int32_t provisionedDeviceCount = 0, bool provisionsAllDevices = false, bool getTaskAllow = false) : profilePath(profilePath), applicationIdentifier(applicationIdentifier), certFingerprints(certFingerprints), expirationEpochMs(expirationEpochMs), provisionedDeviceCount(provisionedDeviceCount), provisionsAllDevices(provisionsAllDevices), getTaskAllow(getTaskAllow) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct IOSDeviceSigningOptions : public std::enable_shared_from_this<IOSDeviceSigningOptions> {
     std::string signIdentity;
     std::string provisioningProfilePath;
     IOSDeviceSigningOptions(std::string signIdentity, std::string provisioningProfilePath) : signIdentity(signIdentity), provisioningProfilePath(provisioningProfilePath) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSDeviceSigningOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct IOSDeviceCommandResult : public std::enable_shared_from_this<IOSDeviceCommandResult> {
     int32_t exitCode;
     std::string output = std::string("");
     std::string error = std::string("");
     IOSDeviceCommandResult(int32_t exitCode, std::string output = std::string(""), std::string error = std::string("")) : exitCode(exitCode), output(output), error(error) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<IOSDeviceCommandResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -827,8 +797,6 @@ namespace std_::fs::types {
     int64_t size;
     std::shared_ptr<::std_::time::temporal::Instant> modifiedAt;
     FileInfo(std::string name, EntryKind kind, int64_t size, std::shared_ptr<::std_::time::temporal::Instant> modifiedAt) : name(name), kind(kind), size(size), modifiedAt(modifiedAt) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FileInfo>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -897,8 +865,6 @@ namespace std_::os::index {
     std::optional<int64_t> maxOutputBytes = std::nullopt;
     std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
     ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExecOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExecStdoutStream : public std::enable_shared_from_this<ExecStdoutStream> {
     std::shared_ptr<::NativeExecProcess> process;

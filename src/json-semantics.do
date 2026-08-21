@@ -376,7 +376,7 @@ function markJsonOwnerVisited(owner: ClassDeclaration, visited: string[]): bool 
   return false
 }
 
-function jsonOwnerKey(owner: ClassDeclaration): string {
+export function jsonOwnerKey(owner: ClassDeclaration): string {
   module := if owner.resolvedSymbol == none then "" else owner.resolvedSymbol!.module
   return module + "::" + owner.name
 }

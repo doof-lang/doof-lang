@@ -649,8 +649,6 @@ struct Duration : public std::enable_shared_from_this<Duration> {
     bool isGreaterThan(const std::shared_ptr<Duration>& other);
     bool equals(const std::shared_ptr<Duration>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Duration>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -681,8 +679,6 @@ struct Instant : public std::enable_shared_from_this<Instant> {
     std::string toISOString();
     static doof::Result<std::shared_ptr<Instant>, std::string> parseHttpDate(const std::string& s);
     std::string toHttpDate();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Instant>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A calendar date (year, month, day) with no time-of-day or timezone.
 struct Date : public std::enable_shared_from_this<Date> {
@@ -712,8 +708,6 @@ struct Date : public std::enable_shared_from_this<Date> {
     bool isAfter(const std::shared_ptr<Date>& other);
     bool equals(const std::shared_ptr<Date>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Date>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A time-of-day with nanosecond precision. No date or timezone.
 struct Time : public std::enable_shared_from_this<Time> {
@@ -735,8 +729,6 @@ struct Time : public std::enable_shared_from_this<Time> {
     bool isAfter(const std::shared_ptr<Time>& other);
     bool equals(const std::shared_ptr<Time>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Time>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A combined calendar date and time-of-day. No timezone.
 struct DateTime : public std::enable_shared_from_this<DateTime> {
@@ -762,8 +754,6 @@ struct DateTime : public std::enable_shared_from_this<DateTime> {
     bool isAfter(const std::shared_ptr<DateTime>& other);
     bool equals(const std::shared_ptr<DateTime>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<DateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // An IANA timezone identifier (e.g. "America/New_York", "UTC").
 struct TimeZone : public std::enable_shared_from_this<TimeZone> {
@@ -774,8 +764,6 @@ struct TimeZone : public std::enable_shared_from_this<TimeZone> {
     static std::shared_ptr<TimeZone> local();
     int32_t offsetSecondsAt(const std::shared_ptr<Instant>& instant);
     bool isDSTAt(const std::shared_ptr<Instant>& instant);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<TimeZone>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     // A DateTime with an explicit TimeZone.
 struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
@@ -796,8 +784,6 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
     bool isBefore(const std::shared_ptr<ZonedDateTime>& other);
     bool isAfter(const std::shared_ptr<ZonedDateTime>& other);
     std::string toISOString();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ZonedDateTime>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -806,16 +792,12 @@ namespace std_::http::types {
     std::string name;
     std::string value;
     HttpHeader(std::string name, std::string value) : name(name), value(value) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpHeader>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct HttpError : public std::enable_shared_from_this<HttpError> {
     std::string kind;
     std::string code;
     std::string message;
     HttpError(std::string kind, std::string code, std::string message) : kind(kind), code(code), message(message) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpError>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -826,8 +808,6 @@ namespace std_::http::websocket {
     std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers;
     int32_t timeoutMs = 30000;
     WebSocketOptions(int32_t eventCapacity, int32_t commandCapacity, std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers, int32_t timeoutMs) : eventCapacity(eventCapacity), commandCapacity(commandCapacity), headers(headers), timeoutMs(timeoutMs) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketOpen : public std::enable_shared_from_this<WebSocketOpen> {
     std::shared_ptr<WebSocketConnection> connection;
@@ -863,27 +843,19 @@ namespace std_::http::websocket {
     std::string text;
     std::optional<std::string> coalesceKey = std::nullopt;
     WebSocketSendText(std::string text, std::optional<std::string> coalesceKey = std::nullopt) : text(text), coalesceKey(coalesceKey) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketSendText>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketSendBinary : public std::enable_shared_from_this<WebSocketSendBinary> {
     std::shared_ptr<std::vector<uint8_t>> bytes;
     std::optional<std::string> coalesceKey = std::nullopt;
     WebSocketSendBinary(std::shared_ptr<std::vector<uint8_t>> bytes, std::optional<std::string> coalesceKey = std::nullopt) : bytes(bytes), coalesceKey(coalesceKey) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketSendBinary>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketPing : public std::enable_shared_from_this<WebSocketPing> {
     WebSocketPing() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketPing>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct WebSocketCloseCommand : public std::enable_shared_from_this<WebSocketCloseCommand> {
     int32_t code = 1000;
     std::string reason = std::string("");
     WebSocketCloseCommand(int32_t code = 1000, std::string reason = std::string("")) : code(code), reason(reason) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WebSocketCloseCommand>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -895,8 +867,6 @@ namespace std_::os::index {
     bool stdoutTruncated = false;
     bool stderrTruncated = false;
     ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExecResult>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -907,15 +877,11 @@ namespace std_::http::index {
     BodyChunkStream(std::shared_ptr<std::vector<uint8_t>> chunk = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), bool consumed = false) : chunk(chunk), consumed(consumed) {}
     bool next();
     std::shared_ptr<std::vector<uint8_t>> value();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<BodyChunkStream>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Cookie : public std::enable_shared_from_this<Cookie> {
     std::string name;
     std::string value;
     Cookie(std::string name, std::string value) : name(name), value(value) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Cookie>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct SetCookie : public std::enable_shared_from_this<SetCookie> {
     std::string name;
@@ -928,8 +894,6 @@ namespace std_::http::index {
     bool httpOnly = false;
     std::optional<std::string> sameSite = std::nullopt;
     SetCookie(std::string name, std::string value, std::optional<std::string> domain = std::nullopt, std::optional<std::string> path = std::nullopt, std::optional<std::string> expires = std::nullopt, std::optional<std::string> maxAge = std::nullopt, bool secure = false, bool httpOnly = false, std::optional<std::string> sameSite = std::nullopt) : name(name), value(value), domain(domain), path(path), expires(expires), maxAge(maxAge), secure(secure), httpOnly(httpOnly), sameSite(sameSite) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<SetCookie>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct HttpRequest : public std::enable_shared_from_this<HttpRequest> {
     std::string method;
@@ -940,8 +904,6 @@ namespace std_::http::index {
     bool followRedirects = true;
     HttpRequest(std::string method, std::string url, std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers, std::shared_ptr<std::vector<uint8_t>> body, int32_t timeoutMs, bool followRedirects) : method(method), url(url), headers(headers), body(body), timeoutMs(timeoutMs), followRedirects(followRedirects) {}
     std::optional<std::string> header(const std::string& name);
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpRequest>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct HttpResponse : public std::enable_shared_from_this<HttpResponse> {
     int32_t status;
@@ -955,8 +917,6 @@ namespace std_::http::index {
     std::string getText();
     Stream__string getLineStream();
     doof::Result<doof::JsonValue, std::string> getJsonValue();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpResponse>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -1001,8 +961,6 @@ namespace std_::fs::types {
     int64_t size;
     std::shared_ptr<::std_::time::temporal::Instant> modifiedAt;
     FileInfo(std::string name, EntryKind kind, int64_t size, std::shared_ptr<::std_::time::temporal::Instant> modifiedAt) : name(name), kind(kind), size(size), modifiedAt(modifiedAt) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FileInfo>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -1168,8 +1126,6 @@ namespace std_::os::index {
     std::optional<int64_t> maxOutputBytes = std::nullopt;
     std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
     ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExecOptions>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExecStdoutStream : public std::enable_shared_from_this<ExecStdoutStream> {
     std::shared_ptr<::NativeExecProcess> process;

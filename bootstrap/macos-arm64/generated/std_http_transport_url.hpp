@@ -14,8 +14,6 @@ namespace std_::http::types {
     std::string code;
     std::string message;
     HttpError(std::string kind, std::string code, std::string message) : kind(kind), code(code), message(message) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<HttpError>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -25,8 +23,6 @@ namespace std_::url::punycode_error {
     int32_t index;
     std::string message;
     PunycodeError(std::string kind, int32_t index, std::string message) : kind(kind), index(index), message(message) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<PunycodeError>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 

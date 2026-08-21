@@ -56,6 +56,24 @@ export function testReusesEveryModuleOnExactFingerprintHit(): none {
   for module of second.emission!.modules { Assert.equal(module.reused, true) }
 }
 
+export function testInvalidatesProviderWhenDownstreamAddsJsonDemand(): none {
+  sources := [
+    SourceFile { path: "/main.do", source: "import { Payload } from \"./lib\"\nfunction main(): int => Payload { value: 1 }.value" },
+    SourceFile { path: "/lib.do", source: "export class Payload { value: int }" },
+  ]
+  first := compileWithLoader(sources, "/main.do", noSourceLoader, [], "executable", false, [], "json-demand-test")
+  let keys: ModuleEmissionCacheKey[] = []
+  for module of first.emission!.modules {
+    keys.push(ModuleEmissionCacheKey { modulePath: module.modulePath, fingerprint: module.fingerprint })
+  }
+
+  sources[0] = SourceFile { path: "/main.do", source: "import { Payload } from \"./lib\"\nfunction main(): int => Payload { value: 1 }.toJsonObject().size" }
+  second := compileWithLoader(sources, "/main.do", noSourceLoader, [], "executable", false, keys, "json-demand-test")
+  for module of second.emission!.modules {
+    if module.modulePath == "/lib.do" { Assert.equal(module.reused, false) }
+  }
+}
+
 export function testCompilesAnImportedProject(): none {
   result := compile([
     SourceFile { path: "/main.do", source: "import { add } from \"./math\"\nfunction main(): int => add(2, 3)" },

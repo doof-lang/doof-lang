@@ -506,8 +506,6 @@ namespace app_src_lexer_ {
     int32_t column;
     LexerDiagnostic(std::string severity, std::string message, int32_t line, int32_t column) : severity(severity), message(message), line(line), column(column) {}
     LexerDiagnostic() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<LexerDiagnostic, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -530,8 +528,6 @@ namespace app_src_lexer_ {
     int32_t offset;
     Token(TokenType kind, int32_t length, int32_t valueOffset, int32_t valueLength, bool needsDecode, int32_t line, int32_t column, int32_t offset) : kind(kind), length(length), valueOffset(valueOffset), valueLength(valueLength), needsDecode(needsDecode), line(line), column(column), offset(offset) {}
     Token() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<Token, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Lexer : public std::enable_shared_from_this<Lexer> {
     std::string source;
@@ -573,8 +569,6 @@ namespace app_src_lexer_ {
     void readChar();
     void emit(TokenType kind, int32_t tokenLine, int32_t tokenColumn, int32_t start, int32_t count);
     void readOperatorOrPunctuation();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Lexer>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     std::string decodeEscapeCharacter(char32_t escaped);
     std::string tokenValue(Token token, const std::string& source);

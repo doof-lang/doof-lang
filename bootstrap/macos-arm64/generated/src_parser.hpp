@@ -670,8 +670,6 @@ namespace app_src_lexer_ {
     int32_t column;
     LexerDiagnostic(std::string severity, std::string message, int32_t line, int32_t column) : severity(severity), message(message), line(line), column(column) {}
     LexerDiagnostic() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<LexerDiagnostic, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
 }
 
@@ -682,8 +680,6 @@ namespace app_src_semantic_ {
     int32_t offset;
     SemanticLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     SemanticLocation() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<SemanticLocation, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Symbol : public std::enable_shared_from_this<Symbol> {
     std::string kind;
@@ -704,8 +700,6 @@ namespace app_src_semantic_ {
     std::string kind = std::string("primitive");
     std::string name;
     PrimitiveType(std::string kind, std::string name) : kind(kind), name(name) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<PrimitiveType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ClassType : public std::enable_shared_from_this<ClassType> {
     std::string kind = std::string("class");
@@ -777,14 +771,10 @@ namespace app_src_semantic_ {
     struct RangeResolvedType : public std::enable_shared_from_this<RangeResolvedType> {
     std::string kind = std::string("range");
     RangeResolvedType(std::string kind = std::string("range")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<RangeResolvedType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct JsonValueResolvedType : public std::enable_shared_from_this<JsonValueResolvedType> {
     std::string kind = std::string("json-value");
     JsonValueResolvedType(std::string kind = std::string("json-value")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<JsonValueResolvedType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ResultResolvedType : public std::enable_shared_from_this<ResultResolvedType> {
     std::string kind = std::string("result");
@@ -810,20 +800,14 @@ namespace app_src_semantic_ {
     struct NoneType : public std::enable_shared_from_this<NoneType> {
     std::string kind = std::string("none");
     NoneType(std::string kind = std::string("none")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NoneType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NeverType : public std::enable_shared_from_this<NeverType> {
     std::string kind = std::string("never");
     NeverType(std::string kind = std::string("never")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NeverType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct UnknownType : public std::enable_shared_from_this<UnknownType> {
     std::string kind = std::string("unknown");
     UnknownType(std::string kind = std::string("unknown")) : kind(kind) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<UnknownType>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TypeParameterType : public std::enable_shared_from_this<TypeParameterType> {
     std::string kind = std::string("type-parameter");
@@ -851,8 +835,6 @@ namespace app_src_ast_ {
     int32_t offset;
     AstLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     AstLocation() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<AstLocation, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TypeParameterConstraint : public std::enable_shared_from_this<TypeParameterConstraint> {
     __type2 type_ = std::monostate{};
@@ -872,8 +854,6 @@ namespace app_src_lexer_ {
     int32_t offset;
     Token(TokenType kind, int32_t length, int32_t valueOffset, int32_t valueLength, bool needsDecode, int32_t line, int32_t column, int32_t offset) : kind(kind), length(length), valueOffset(valueOffset), valueLength(valueLength), needsDecode(needsDecode), line(line), column(column), offset(offset) {}
     Token() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<Token, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Lexer : public std::enable_shared_from_this<Lexer> {
     std::string source;
@@ -915,8 +895,6 @@ namespace app_src_lexer_ {
     void readChar();
     void emit(TokenType kind, int32_t tokenLine, int32_t tokenColumn, int32_t start, int32_t count);
     void readOperatorOrPunctuation();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Lexer>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     std::string tokenValue(Token token, const std::string& source);
 }
@@ -927,8 +905,6 @@ namespace app_src_semantic_ {
     SemanticLocation end;
     SemanticSpan(SemanticLocation start, SemanticLocation end) : start(start), end(end) {}
     SemanticSpan() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<SemanticSpan, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Binding : public std::enable_shared_from_this<Binding> {
     std::string name;
@@ -951,8 +927,6 @@ namespace app_src_ast_ {
     AstLocation end;
     SourceSpan(AstLocation start, AstLocation end) : start(start), end(end) {}
     SourceSpan() {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<SourceSpan, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NamedType : public std::enable_shared_from_this<NamedType> {
     std::string kind;
@@ -1350,9 +1324,10 @@ namespace app_src_ast_ {
     bool native_ = false;
     std::string nativeHeader = std::string("");
     std::string nativeCppName = std::string("");
+    std::optional<SourceSpan> legacyMethodFunctionSpan = std::nullopt;
     __type3 resolvedType = std::monostate{};
     SourceSpan span;
-    FunctionDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, __type2 returnType, __type6 body, bool exported, bool static_, bool isolated_, bool resolvedIsolated, bool private_, bool bodyless, bool native_, std::string nativeHeader, std::string nativeCppName, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), params(params), returnType(returnType), body(body), exported(exported), static_(static_), isolated_(isolated_), resolvedIsolated(resolvedIsolated), private_(private_), bodyless(bodyless), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), resolvedType(resolvedType), span(span) {}
+    FunctionDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, __type2 returnType, __type6 body, bool exported, bool static_, bool isolated_, bool resolvedIsolated, bool private_, bool bodyless, bool native_, std::string nativeHeader, std::string nativeCppName, std::optional<SourceSpan> legacyMethodFunctionSpan, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), params(params), returnType(returnType), body(body), exported(exported), static_(static_), isolated_(isolated_), resolvedIsolated(resolvedIsolated), private_(private_), bodyless(bodyless), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), legacyMethodFunctionSpan(legacyMethodFunctionSpan), resolvedType(resolvedType), span(span) {}
 };
     struct ReturnStatement : public std::enable_shared_from_this<ReturnStatement> {
     std::string kind;
@@ -1426,8 +1401,6 @@ namespace app_src_ast_ {
     std::string kind;
     SourceSpan span;
     WildcardPattern(std::string kind, SourceSpan span) : kind(kind), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<WildcardPattern>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ValuePattern : public std::enable_shared_from_this<ValuePattern> {
     std::string kind;
@@ -1499,16 +1472,12 @@ namespace app_src_ast_ {
     std::optional<std::string> label;
     SourceSpan span;
     BreakStatement(std::string kind, std::optional<std::string> label, SourceSpan span) : kind(kind), label(label), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<BreakStatement>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ContinueStatement : public std::enable_shared_from_this<ContinueStatement> {
     std::string kind;
     std::optional<std::string> label;
     SourceSpan span;
     ContinueStatement(std::string kind, std::optional<std::string> label, SourceSpan span) : kind(kind), label(label), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ContinueStatement>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExpressionStatement : public std::enable_shared_from_this<ExpressionStatement> {
     std::string kind;
@@ -1530,8 +1499,6 @@ namespace app_src_ast_ {
     std::optional<std::string> alias = std::nullopt;
     SourceSpan span;
     DestructureBinding(std::string name, std::optional<std::string> alias, SourceSpan span) : name(name), alias(alias), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<DestructureBinding>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct TryStatement : public std::enable_shared_from_this<TryStatement> {
     std::string kind;
@@ -1637,16 +1604,12 @@ namespace app_src_ast_ {
     std::optional<std::string> alias;
     SourceSpan span;
     NamedImport(std::string kind, std::string name, std::optional<std::string> alias, SourceSpan span) : kind(kind), name(name), alias(alias), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NamedImport>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct NamespaceImport : public std::enable_shared_from_this<NamespaceImport> {
     std::string kind;
     std::string alias;
     SourceSpan span;
     NamespaceImport(std::string kind, std::string alias, SourceSpan span) : kind(kind), alias(alias), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NamespaceImport>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ImportDeclaration : public std::enable_shared_from_this<ImportDeclaration> {
     std::string kind;
@@ -1661,8 +1624,6 @@ namespace app_src_ast_ {
     std::string replacement;
     SourceSpan span;
     MockImportMapping(std::string dependency, std::string replacement, SourceSpan span) : dependency(dependency), replacement(replacement), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MockImportMapping>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct MockImportDirective : public std::enable_shared_from_this<MockImportDirective> {
     std::string kind;
@@ -1670,8 +1631,6 @@ namespace app_src_ast_ {
     std::shared_ptr<std::vector<std::shared_ptr<MockImportMapping>>> mappings;
     SourceSpan span;
     MockImportDirective(std::string kind, std::string sourcePattern, std::shared_ptr<std::vector<std::shared_ptr<MockImportMapping>>> mappings, SourceSpan span) : kind(kind), sourcePattern(sourcePattern), mappings(mappings), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MockImportDirective>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExportDeclaration : public std::enable_shared_from_this<ExportDeclaration> {
     std::string kind;
@@ -1684,8 +1643,6 @@ namespace app_src_ast_ {
     std::optional<std::string> alias;
     SourceSpan span;
     ExportSpecifier(std::string name, std::optional<std::string> alias, SourceSpan span) : name(name), alias(alias), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExportSpecifier>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct ExportList : public std::enable_shared_from_this<ExportList> {
     std::string kind;
@@ -1693,8 +1650,6 @@ namespace app_src_ast_ {
     std::optional<std::string> source;
     SourceSpan span;
     ExportList(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<ExportSpecifier>>> specifiers, std::optional<std::string> source, SourceSpan span) : kind(kind), specifiers(specifiers), source(source), span(span) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ExportList>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     struct Program : public std::enable_shared_from_this<Program> {
     std::string kind;
@@ -1709,7 +1664,7 @@ namespace app_src_parser_declarations_ {
     __type9 parseConst(const std::shared_ptr<::app_src_parser_::Parser>& parser, bool exported);
     __type9 parseReadonly(const std::shared_ptr<::app_src_parser_::Parser>& parser, bool exported);
     __type9 parseLet(const std::shared_ptr<::app_src_parser_::Parser>& parser);
-    std::shared_ptr<::app_src_ast_::FunctionDeclaration> parseFunction(const std::shared_ptr<::app_src_parser_::Parser>& parser, bool exported, bool static_, bool isolated_, bool private_);
+    std::shared_ptr<::app_src_ast_::FunctionDeclaration> parseFunction(const std::shared_ptr<::app_src_parser_::Parser>& parser, bool exported, bool static_, bool isolated_, bool private_, bool legacyMethod = false);
     __type9 parseClass(const std::shared_ptr<::app_src_parser_::Parser>& parser, bool exported, bool private_);
     __type9 parseInterface(const std::shared_ptr<::app_src_parser_::Parser>& parser, bool exported);
     __type9 parseEnum(const std::shared_ptr<::app_src_parser_::Parser>& parser, bool exported);
@@ -1774,7 +1729,7 @@ namespace app_src_parser_ {
     __type12 parseConst(bool exported);
     __type12 parseReadonly(bool exported);
     __type12 parseLet();
-    std::shared_ptr<::app_src_ast_::FunctionDeclaration> parseFunction(bool exported, bool static_, bool isolated_, bool private_);
+    std::shared_ptr<::app_src_ast_::FunctionDeclaration> parseFunction(bool exported, bool static_, bool isolated_, bool private_, bool legacyMethod = false);
     __type12 parseClass(bool exported, bool private_);
     __type12 parseInterface(bool exported);
     __type12 parseEnum(bool exported);
@@ -1791,8 +1746,6 @@ namespace app_src_parser_ {
     __type13 parseExpression();
     __type13 parseAdditive();
     __type13 parseUnary();
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<Parser>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
 };
     std::shared_ptr<::app_src_ast_::Program> parse(const std::string& source);
 }
