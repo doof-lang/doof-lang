@@ -91,9 +91,13 @@ Rules:
   functions, callbacks, and callable members are invoked normally. Scalar
   attributes may be bare; general expressions use `{expression}`. Paired
   content becomes a contextually typed array argument named `children`.
-- Tag callbacks may use the ordinary parameterless-lambda syntax directly,
-  such as `<Button onClick=>println("clicked")/>` or
-  `<Button onClick=>{ refresh() }/>`.
+- Tag callbacks may use contextual `=>` lambda syntax directly. The lambda
+  inherits the expected callback's parameter names and types, so a callback
+  typed `(event: Event): none` makes `event` available in
+  `<Button onClick=>println(event.name)/>`. Zero-parameter callbacks remain
+  available as `<Button onClick=>{ refresh() }/>`. This also works when the
+  expected type is a union with one unique callback member, such as
+  `((event: Event): none) | none`.
 - A bare object literal expected as a class/struct union constructs the unique
   member matching its field shape. Value types do not resolve shape ties;
   ambiguous, unmatched, and spread-based literals require explicit nominal

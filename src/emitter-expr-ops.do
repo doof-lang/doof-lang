@@ -356,15 +356,17 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
     left := emitExpression(expression.left, context)
     leftType := requireExpressionType(expression.left, "coalescing source")
     resultType := requireExpressionType(expression, "coalescing expression")
+    rightType := requireExpressionType(expression.right, "coalescing fallback")
     right := emitExpression(expression.right, context, resultType)
+    fallback := if rightType.kind == "never" then "{ " + right + "; }" else "return " + right + ";"
     context.tryCounter = context.tryCounter + 1
     temporary := "_coalesce_" + string(context.tryCounter)
     case leftType {
       _: ResultResolvedType -> {
-        return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + temporary + " = " + left + "; if (doof::is_failure(" + temporary + ")) return " + right + "; return std::move(doof::success_value(" + temporary + ")); }()"
+        return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + temporary + " = " + left + "; if (doof::is_failure(" + temporary + ")) " + fallback + " return std::move(doof::success_value(" + temporary + ")); }()"
       }
       _ -> {
-        return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + temporary + " = " + left + "; if (doof::is_null(" + temporary + ")) return " + right + "; return doof::unwrap_optional(" + temporary + "); }()"
+        return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + temporary + " = " + left + "; if (doof::is_null(" + temporary + ")) " + fallback + " return doof::unwrap_optional(" + temporary + "); }()"
       }
     }
   }

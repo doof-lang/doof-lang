@@ -1484,6 +1484,13 @@ export function testEmitsNeverFunctionsAndBottomCoercions(): none {
   Assert.stringContains(result.source, "flag ? 42 : fail(std::string(\"missing\"))")
 }
 
+export function testEmitsNeverFallbackForNullableCoalescing(): none {
+  result := emit("enum Status { Ready = 1 }\nfunction statusFrom(value: int): Status { return Status.fromValue(value) ?? panic(\"unknown status\") }")
+  Assert.stringContains(result.source, "if (doof::is_null(_coalesce_")
+  Assert.stringContains(result.source, ") { doof::panic(std::string(\"unknown status\")); }")
+  Assert.equal(result.source.contains("return doof::panic"), false)
+}
+
 export function testEmitsUnreachableAfterDivergentExhaustiveCaseStatements(): none {
   exhaustive := emit("function load(): Result<int, string> => Success { value: 1 }\nfunction answer(): int { case load() { value: Success -> { return value.value }, error: Failure -> { return 0 } } }")
   Assert.stringContains(exhaustive.source, "doof::unreachable();")

@@ -395,13 +395,7 @@ export function validateActorMethodBoundary(state: CheckerState, expression: Cal
 }
 
 export function checkLambda(state: CheckerState, expression: LambdaExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
-  let expectedFunction: FunctionType | none = none
-  if expected != none {
-    case expected! {
-      resolvedFunction: FunctionType -> { expectedFunction = resolvedFunction }
-      _ -> { }
-    }
-  }
+  expectedFunction := contextualFunctionType(expected)
   // `=> body` inherits the complete callback signature. Materializing those
   // parameters on the decorated AST keeps checking, generic inference,
   // capture analysis, and C++ emission aligned on the same representation.
@@ -441,6 +435,30 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
     expressionBody: Expression -> { returnType = checkExpression(state, expressionBody, lambdaScope, optionalResolvedType(returnType)) }
   }
   return finish(state, expression, functionType(params, returnType))
+}
+
+// A lambda can use the single callable member of an optional or wider union as
+// its contextual signature. More than one callable member is ambiguous, so in
+// that case ordinary lambda checking reports the missing parameter context.
+function contextualFunctionType(expected: ResolvedType | none): FunctionType | none {
+  if expected == none { return none }
+  case expected! {
+    function_: FunctionType -> return function_,
+    union_: UnionResolvedType -> {
+      let found: FunctionType | none = none
+      for member of union_.types {
+        case member {
+          function_: FunctionType -> {
+            if found != none { return none }
+            found = function_
+          }
+          _ -> { }
+        }
+      }
+      return found
+    }
+    _ -> return none,
+  }
 }
 
 export function checkConstruct(state: CheckerState, expression: ConstructExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {

@@ -133,11 +133,13 @@ page := <Panel title="Welcome">
 ```
 
 Tag attributes accept scalar literals directly. General Doof expressions use
-braces, for example `items={loadItems()}`. A parameterless lambda may use its
-ordinary syntax directly after the attribute name:
+braces, for example `items={loadItems()}`. A contextual `=>` lambda may use its
+ordinary syntax directly after the attribute name and inherits the expected
+callback's parameter names and types:
 
 ```doof
 <Button onClick=>println("clicked")/>
+<Button onClick=>println(event.name)/>
 <Button onClick=>{ recordClick(); refresh() }/>
 ```
 
@@ -292,6 +294,10 @@ let transform: Transform = => x * 2  // x from signature
 type BinaryOp = (a: int, b: int): int
 let add: BinaryOp = => a + b  // a and b from signature
 ```
+
+The same inference applies when the contextual type is a union containing one
+unique function member, such as `Handler | none`. A union containing multiple
+function members is ambiguous and does not supply an inferred signature.
 
 ### Closure Capture Lifetime
 

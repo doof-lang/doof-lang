@@ -57,6 +57,26 @@ export function testChecksTypedTagsAsNamedCallsAndConstruction(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testContextualLambdaUsesUniqueCallableUnionMember(): none {
+  result := checked(
+    "type Handler = (event: string): none\n" +
+    "function install(handler: Handler | none = none): none {}\n" +
+    "function button(onClick: Handler | none = none, children: string[] = []): none {}\n" +
+    "install(=> println(event))\n" +
+    "<button onClick=>println(event)>Save</button>",
+  )
+  Assert.equal(result.diagnostics.length, 0)
+
+  ambiguous := checked(
+    "type First = (left: int): none\n" +
+    "type Second = (right: string): none\n" +
+    "function install(handler: First | Second): none {}\n" +
+    "install(=> println(left))",
+  )
+  Assert.isTrue(ambiguous.diagnostics.length > 0)
+  Assert.stringContains(ambiguous.diagnostics[0].message, "Unknown identifier 'left'")
+}
+
 export function testDiagnosesInvalidTypedTagCalls(): none {
   missingChildren := checked("function render(title: string): string => title\nvalue := <render title=\"x\">body</render>\nprintln(value)")
   Assert.equal(missingChildren.diagnostics.length, 1)
