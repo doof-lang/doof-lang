@@ -116,6 +116,11 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext): 
     }
     interface_: InterfaceDeclaration -> {
       if interface_.typeParams.length == 0 {
+        if interface_.resolvedSymbol != none {
+          for implementation of interface_.resolvedSymbol!.implementations {
+            if implementation.native_ { addNativeClassForwardDeclaration(implementation, plan) }
+          }
+        }
         plan.interfaceAliases.push(emitInterfaceAlias(interface_, context))
         declaration := emitInterfaceJsonDeclaration(interface_)
         if declaration != "" { plan.functionSignatures.push(declaration) }
@@ -587,6 +592,17 @@ function emitModuleValueDeclaration(name: string, type_: ResolvedType, context: 
 function addUnique(values: string[], value: string): none {
   for existing of values { if existing == value { return } }
   values.push(value)
+}
+
+// Structural interface aliases are emitted before selected native headers so
+// those headers can consume generated Doof aliases. A native implementation
+// arm therefore needs its own nominal declaration at the earlier alias layer.
+function addNativeClassForwardDeclaration(symbol: Symbol, plan: HeaderPlan): none {
+  cppName := if symbol.nativeCppName == "" then symbol.name else symbol.nativeCppName
+  namespace := nativeNamespace(cppName)
+  name := if namespace == "" then cppName else cppName.substring(namespace.length + 2, cppName.length)
+  declaration := if namespace == "" then "class " + name + ";\n" else "namespace " + namespace + " { class " + name + "; }\n"
+  addUnique(plan.typeOnlyForwardDeclarations, declaration)
 }
 
 function nativeNamespace(cppName: string): string {

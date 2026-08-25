@@ -336,3 +336,27 @@ export function testReportsLoaderFailureWithoutModuleNotFoundDiagnostic(): none 
   Assert.equal(result.diagnostics.length, 1)
   Assert.equal(result.diagnostics[0].message, "Could not read source file: permission denied")
 }
+
+export function testReportsLoaderFailuresBeforeCascadingMissingModules(): none {
+  zero := SemanticLocation { line: 0, column: 0, offset: 0 }
+  loader := (path: string): Result<SourceFile | none, Diagnostic> => {
+    if path.endsWith("/index.do") {
+      return Failure(Diagnostic {
+        severity: "error",
+        message: "Invalid dependency manifest: " + path,
+        span: SemanticSpan { start: zero, end: zero },
+        module: path,
+      })
+    }
+    return Success(none)
+  }
+  result := createAnalyzerWithLoader([
+    SourceFile { path: "/main.do", source: "import {} from \"std/game\"\nimport {} from \"std/random\"" },
+  ], loader).analyze("/main.do")
+
+  Assert.equal(result.diagnostics.length, 4)
+  Assert.equal(result.diagnostics[0].message, "Invalid dependency manifest: /std/game/index.do")
+  Assert.equal(result.diagnostics[1].message, "Invalid dependency manifest: /std/random/index.do")
+  Assert.equal(result.diagnostics[2].message, "Module not found: /std/game.do")
+  Assert.equal(result.diagnostics[3].message, "Module not found: /std/random.do")
+}

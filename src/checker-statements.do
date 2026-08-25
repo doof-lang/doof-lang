@@ -319,7 +319,8 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
   if name != "_" {
     let declarationSymbol: Symbol | none = none
     if scope.parent == none { declarationSymbol = symbolFor(state.info!, name) }
-    declareUserBinding(state, scope, Binding { name, kind, type_: declaredType, mutable, span: checkerSemanticSpan(span), module: state.info!.path, symbol: declarationSymbol }, span)
+    bindingKind := if scope.parent == none && kind == "let" then "module-let" else kind
+    declareUserBinding(state, scope, Binding { name, kind: bindingKind, type_: declaredType, mutable, span: checkerSemanticSpan(span), module: state.info!.path, symbol: declarationSymbol }, span)
   }
   return valueType.kind != "never"
 }

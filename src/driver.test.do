@@ -1,7 +1,8 @@
 import { Assert } from "std/assert"
 import {
   driverRootLogicalPath, driverRootLogicalPrefix, frontendEmissionCacheSupported, materializeGeneratedText,
-  nativeBuildOutputModeForCommand, nativeBuildOutputName, synchronizeExecutableResources,
+  nativeBuildOutputModeForCommand, nativeBuildOutputName, parseDependencyManifestForTarget,
+  synchronizeExecutableResources,
 } from "./driver"
 import { NativeBuildOutputMode } from "./native-build-driver"
 import { PackageResource } from "./package-manifest"
@@ -76,6 +77,35 @@ export function testFrontendEmissionCacheSupportsMacOSApps(): none {
   Assert.equal(frontendEmissionCacheSupported(""), true)
   Assert.equal(frontendEmissionCacheSupported("wasm"), false)
   Assert.equal(frontendEmissionCacheSupported("ios-app"), false)
+}
+
+export function testSelectsDependencyNativeInputsForRootWasmTarget(): none {
+  manifest := try! parseDependencyManifestForTarget(
+    "{\"name\":\"std/http\",\"build\":{\"native\":{\"macos\":{\"sourceFiles\":[\"native_http_client_apple.mm\"],\"frameworks\":[\"Foundation\"]},\"wasm\":{\"sourceFiles\":[\"native_http_client_wasm.cpp\"]}}}}",
+    "/stdlib/http/doof.json",
+    "/stdlib/http",
+    "macos",
+    "wasm",
+  )
+
+  Assert.equal(manifest.nativeBuild.sourceFiles.length, 1)
+  Assert.equal(manifest.nativeBuild.sourceFiles[0], "/stdlib/http/native_http_client_wasm.cpp")
+  Assert.equal(manifest.nativeBuild.frameworks.length, 0)
+}
+
+export function testDoesNotParseDependencyAsRootMacOSApp(): none {
+  manifest := try! parseDependencyManifestForTarget(
+    "{\"name\":\"std/game\",\"build\":{\"native\":{\"macos\":{\"frameworks\":[\"Metal\"]}}}}",
+    "/stdlib/game/doof.json",
+    "/stdlib/game",
+    "macos",
+    "macos-app",
+  )
+
+  Assert.equal(manifest.target, "")
+  Assert.equal(manifest.macosApp == none, true)
+  Assert.equal(manifest.nativeBuild.frameworks.length, 1)
+  Assert.equal(manifest.nativeBuild.frameworks[0], "Metal")
 }
 
 export function testPreservesGeneratedHeaderTimestampWhenProjectedContentIsUnchanged(): none {

@@ -6,7 +6,7 @@ import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { decoratedExpressionType, emittedSymbolName, emitExpectedExpression, emitNullableVariantPromotion, exprModuleNamespaceFor, findProperty, needsNullableVariantPromotion, needsVariantPromotion, optionalExpectedType, variantVisitValue } from "./emitter-expr-utils"
-import { emitContextType, emitResultPayloadType, emitType, usesVariantRepresentation } from "./emitter-types"
+import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, usesVariantRepresentation } from "./emitter-types"
 import { specializeEmitType } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
@@ -467,13 +467,14 @@ function emitVariantMemberCall(member: MemberExpression, call: CallExpression, c
   object := emitExpression(member.object, context)
   objectType := decoratedExpressionType(member.object)
   if objectType == none { panic("Variant member call has no resolved object type") }
+  if call.resolvedType == none { panic("Variant member call has no resolved return type") }
   let args = ""
   for i of 0..<call.args.length {
     if i > 0 { args = args + ", " }
     args = args + emitExpression(call.args[i].value, context)
   }
   invocation := if member.resolvedCallableField then ".call(" else "("
-  return "std::visit([&](auto&& _obj) { return _obj->" + cppIdentifier(member.property) + invocation + args + "); }, " + variantVisitValue(object, objectType!) + ")"
+  return "std::visit([&](auto&& _obj) -> " + emitContextReturnType(call.resolvedType!, context) + " { return _obj->" + cppIdentifier(member.property) + invocation + args + "); }, " + variantVisitValue(object, objectType!) + ")"
 }
 
 function emitInterfaceJsonCall(member: MemberExpression, call: CallExpression, context: EmitContext): string {

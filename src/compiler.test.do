@@ -444,7 +444,7 @@ export function testMonomorphizesGenericStructuralInterfaces(): none {
   module := result.emission!.modules[0]
   Assert.equal(module.header.contains("using Reader__int = std::variant<std::shared_ptr<IntReader>>"), true)
   Assert.equal(module.header.contains("struct Reader"), false)
-  Assert.equal(module.source.contains("std::visit([&](auto&& _obj) { return _obj->read(); }, reader)"), true)
+  Assert.equal(module.source.contains("std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, reader)"), true)
 }
 
 export function testCompilesWithTransitiveSourceLoading(): none {

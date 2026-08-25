@@ -73,8 +73,13 @@ export class ModuleAnalyzer {
     parseReachableModules(entryPath)
     orderModules(entryPath)
     ignored := resolveModule(entryPath)
-    for diagnostic of resolver.diagnostics { diagnostics.push(diagnostic) }
-    return AnalysisResult { modules, diagnostics }
+    // Loader failures explain why later resolution and type checking cascaded.
+    // Keep them ahead of derived "module not found" and binding diagnostics so
+    // a bounded CLI diagnostic display still includes the actionable cause.
+    let orderedDiagnostics: Diagnostic[] = []
+    for diagnostic of resolver.diagnostics { orderedDiagnostics.push(diagnostic) }
+    for diagnostic of diagnostics { orderedDiagnostics.push(diagnostic) }
+    return AnalysisResult { modules, diagnostics: orderedDiagnostics }
   }
 
   private queueModuleParse(

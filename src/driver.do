@@ -59,7 +59,7 @@ import { EntryKind, exists, isDirectory, metadata, mkdir, readBlob, readDir, rea
 import { ExecOptions, ProcessGroupMode, architecture, run, platform } from "std/os"
 import { absolute } from "std/path"
 
-readonly MAX_PRINTED_DIAGNOSTICS = 8
+readonly MAX_PRINTED_DIAGNOSTICS = 20
 readonly MAX_NATIVE_COMPILER_OUTPUT_BYTES = 262144L
 readonly MAX_COVERAGE_OUTPUT_BYTES = 16777216L
 
@@ -267,6 +267,21 @@ function acquiredPackageForLoadedSource(logicalPath: string, state: DriverSource
   return acquiredPackageForModule(logicalPath, state.acquisitions)
 }
 
+/** Parses dependency native inputs for the root build target, not the host default. */
+export function parseDependencyManifestForTarget(
+  source: string,
+  manifestPath: string,
+  rootDirectory: string,
+  nativePlatform: string,
+  rootTarget: string,
+): Result<PackageManifest, string> {
+  // Only wasm changes dependency native-fragment selection independently of
+  // the native platform. App targets belong to the root package and must not
+  // make ordinary dependencies parse as application bundles.
+  dependencyTarget := if rootTarget == "wasm" then "wasm" else ""
+  return parsePackageManifest(source, manifestPath, rootDirectory, nativePlatform, dependencyTarget)
+}
+
 function registerReachedPackage(acquisition: ModuleAcquisition): Result<none, Diagnostic> {
   for reached of configuredDriverSourceState.reachedPackages {
     if reached.acquisition.logicalPrefix == acquisition.logicalPrefix && reached.acquisition.diskRoot == acquisition.diskRoot {
@@ -281,7 +296,13 @@ function registerReachedPackage(acquisition: ModuleAcquisition): Result<none, Di
       "Could not read doof.json for acquired package ${acquisition.logicalPrefix} at ${manifestPath}",
     ))
   }
-  manifest := parsePackageManifest(manifestSource, manifestPath, acquisition.diskRoot, configuredDriverSourceState.nativePlatform) else error {
+  manifest := parseDependencyManifestForTarget(
+    manifestSource,
+    manifestPath,
+    acquisition.diskRoot,
+    configuredDriverSourceState.nativePlatform,
+    configuredDriverSourceState.rootManifest.target,
+  ) else error {
     return Failure(driverDiagnostic(manifestPath, error))
   }
   if manifest.packageResolutions.length > 0 || manifest.externalResolutions.length > 0 {
@@ -478,7 +499,13 @@ function configureDeclaredDependencies(
     dependencySource := readText(dependencyManifestPath) else {
       return Failure("Could not read dependency manifest " + dependencyManifestPath)
     }
-    try dependencyManifest := parsePackageManifest(dependencySource, dependencyManifestPath, diskRoot, nativePlatform)
+    try dependencyManifest := parseDependencyManifestForTarget(
+      dependencySource,
+      dependencyManifestPath,
+      diskRoot,
+      nativePlatform,
+      rootManifest.target,
+    )
     if dependencyManifest.name == "" { return Failure("Dependency package must declare a name: " + dependencyManifestPath) }
     if dependencyManifest.packageResolutions.length > 0 || dependencyManifest.externalResolutions.length > 0 {
       return Failure("resolutions are only allowed in the root doof.json: " + dependencyManifestPath)

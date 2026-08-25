@@ -383,7 +383,10 @@ function collectIdentifierCapture(identifier: Identifier, bodyStart: int, bodyEn
     if !mutableOnly { addUnique(result, "this") }
     return
   }
-  if binding.kind == "script-global" || binding.kind == "script-arguments" { return }
+  // Namespace-scope storage remains live without a C++ lambda capture. In
+  // particular, module `let` bindings have no analyzer Symbol because they
+  // are private, but they must not be boxed like automatic mutable locals.
+  if binding.kind == "module-let" || binding.kind == "script-global" || binding.kind == "script-arguments" { return }
   if binding.symbol != none || binding.kind == "builtin" || binding.kind == "import" { return }
   bindingStart := binding.span.start.offset
   if bindingStart >= bodyStart && bindingStart <= bodyEnd { return }

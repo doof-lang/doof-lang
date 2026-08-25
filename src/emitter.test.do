@@ -843,9 +843,9 @@ export function testDoesNotHoistSingleOrValueBearingHeaderVariants(): none {
 export function testEmitsArbitrarySharedUnionMembersFromResolvedTypes(): none {
   result := emit("class Left { value: int\nread(): int => value }\nclass Right { value: int\nread(): int => value }\ntype Either = Left | Right\ntype MaybeEither = Left | Right | none\nfunction total(item: Either): int => item.value + item.read()\nfunction maybeTotal(item: MaybeEither): int => item.value + item.read()")
   Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, item)")
-  Assert.stringContains(result.source, "std::visit([&](auto&& _obj) { return _obj->read(); }, item)")
+  Assert.stringContains(result.source, "std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, item)")
   Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, doof::unwrap_optional(item))")
-  Assert.stringContains(result.source, "std::visit([&](auto&& _obj) { return _obj->read(); }, doof::unwrap_optional(item))")
+  Assert.stringContains(result.source, "std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, doof::unwrap_optional(item))")
 }
 
 export function testEmitsMapSizeAsContainerCall(): none {
@@ -1638,8 +1638,34 @@ export function testEmitsInterfaceVariantsAndDispatch(): none {
   result := emit("interface Drawable { value: int\nrender(): int }\nclass Point implements Drawable { readonly value: int\nfunction render(): int => value }\nfunction read(shape: Drawable): int => shape.render()\nfunction main(): int { point := Point { value: 5 }\nshape: Drawable := point\nreturn read(shape) + shape.value }")
   Assert.equal(result.header.contains("using Drawable = std::variant<std::shared_ptr<Point>>;"), true)
   Assert.equal(result.source.contains("const Drawable shape = point;"), true)
-  Assert.equal(result.source.contains("std::visit([&](auto&& _obj) { return _obj->render(); }, shape)"), true)
+  Assert.equal(result.source.contains("std::visit([&](auto&& _obj) -> int32_t { return _obj->render(); }, shape)"), true)
   Assert.equal(result.source.contains("std::visit([](auto&& _obj) { return _obj->value; }, shape)"), true)
+}
+
+export function testForwardDeclaresNativeStructuralInterfaceImplementations(): none {
+  sources := [
+    SourceFile {
+      path: "/main.do",
+      source: "import { Canvas, canvas } from \"./dom\"\ninterface SurfaceDimensions { width(): int\nheight(): int }\nfunction pixelCount(surface: SurfaceDimensions): int => surface.width() * surface.height()\nfunction main(): int => pixelCount(canvas(16, 9))",
+    },
+    SourceFile {
+      path: "/dom.do",
+      source: "import class NativeImage from \"native_dom.hpp\" as doof_dom::NativeImage { width(): int\nheight(): int }\nexport class Canvas { width_: int\nheight_: int\nwidth(): int => width_\nheight(): int => height_ }\nexport function canvas(width: int, height: int): Canvas => Canvas { width_: width, height_: height }",
+    },
+  ]
+  analysis := createAnalyzer(sources).analyze("/main.do")
+  Assert.equal(analysis.diagnostics.length, 0)
+  checker := createChecker(analysis)
+  Assert.equal(hasErrorDiagnostics(checker.check("/dom.do").diagnostics), false)
+  Assert.equal(hasErrorDiagnostics(checker.check("/main.do").diagnostics), false)
+  header := emitModuleGraph(analysis, "/main.do").modules[0].header
+
+  nativeForward := header.indexOf("namespace doof_dom { class NativeImage; }")
+  interfaceAlias := header.indexOf("using SurfaceDimensions = std::variant<")
+  Assert.equal(nativeForward >= 0 && nativeForward < interfaceAlias, true)
+  Assert.stringContains(header, "std::shared_ptr<::doof_dom::NativeImage>")
+  Assert.stringContains(header, "std::shared_ptr<::app_dom_::Canvas>")
+  Assert.stringContains(header, "#include \"native_dom.hpp\"")
 }
 
 export function testEmitsIntrinsicJsonValueLiterals(): none {
