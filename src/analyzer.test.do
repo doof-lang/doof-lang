@@ -93,6 +93,28 @@ export function testRewritesMockImportsFromGeneratedHarnessRoot(): none {
   Assert.equal(result.modules.length, 5)
 }
 
+export function testCanonicalizesMockImportSourceModulePaths(): none {
+  explicitIndex := createAnalyzer([
+    SourceFile { path: "/tests/explicit.test.do", source: "mock import for \"../package/index\" { \"./dep\" => \"./dep.mock\" }\nimport { read } from \"../package\"\nexport function testValue(): none { ignored := read() }" },
+    SourceFile { path: "/package/index.do", source: "import { value } from \"./dep\"\nexport function read(): int => value" },
+    SourceFile { path: "/package/dep.do", source: "export readonly value = 1" },
+    SourceFile { path: "/tests/dep.mock.do", source: "export readonly value = 2" },
+  ]).analyze("/tests/explicit.test.do")
+
+  Assert.equal(explicitIndex.diagnostics.length, 0)
+  Assert.equal(moduleAt(explicitIndex, "/package/index.do").imports[0].sourceModule, "/tests/dep.mock.do")
+
+  barrel := createAnalyzer([
+    SourceFile { path: "/tests/barrel.test.do", source: "mock import for \"../package\" { \"./dep\" => \"./dep.mock\" }\nimport { read } from \"../package/index\"\nexport function testValue(): none { ignored := read() }" },
+    SourceFile { path: "/package/index.do", source: "import { value } from \"./dep\"\nexport function read(): int => value" },
+    SourceFile { path: "/package/dep.do", source: "export readonly value = 1" },
+    SourceFile { path: "/tests/dep.mock.do", source: "export readonly value = 2" },
+  ]).analyze("/tests/barrel.test.do")
+
+  Assert.equal(barrel.diagnostics.length, 0)
+  Assert.equal(moduleAt(barrel, "/package/index.do").imports[0].sourceModule, "/tests/dep.mock.do")
+}
+
 export function testAppliesOnlyExactMockImportSourceMatches(): none {
   result := createAnalyzer([
     SourceFile { path: "/tests/main.test.do", source: "mock import for \"./feature/exact\" { \"./dep\" => \"./exact.mock\" }\nmock import for \"./feature/single\" { \"./dep\" => \"./single.mock\" }\nmock import for \"./feature/nested/deep\" { \"./dep\" => \"./deep.mock\" }\nimport { exact } from \"./feature/exact\"\nimport { single } from \"./feature/single\"\nimport { deep } from \"./feature/nested/deep\"\nimport { other } from \"./other\"" },

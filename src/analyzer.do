@@ -493,10 +493,24 @@ export class ModuleAnalyzer {
     if info.mockRootPath == none { return resolver.resolve(info.path, specifier) }
     root := findModule(info.mockRootPath!)
     if root == none || root!.mockImportDirectives.length == 0 { return resolver.resolve(info.path, specifier) }
-    sourceSpecifier := relativeModuleSpecifier(info.mockRootPath!, info.path)
-    replacement := findMockReplacement(root!.mockImportDirectives, sourceSpecifier, specifier)
+    replacement := findMockReplacement(root!, info.path, specifier)
     if replacement == none { return resolver.resolve(info.path, specifier) }
     return resolver.resolve(info.mockRootPath!, replacement!)
+  }
+
+  /** Matches source modules by canonical identity while keeping dependency keys exact. */
+  private findMockReplacement(
+    root: ModuleInfo,
+    sourcePath: string,
+    dependencySpecifier: string,
+  ): string | none {
+    for directive of root.mockImportDirectives {
+      if resolver.resolve(root.path, directive.sourcePattern) != sourcePath { continue }
+      for mapping of directive.mappings {
+        if mapping.dependency == dependencySpecifier { return mapping.replacement }
+      }
+    }
+    return none
   }
 
   private validateMockImportDirectives(info: ModuleInfo, inheritedMockRootPath: string | none): none {
@@ -543,46 +557,6 @@ function collectMockImportDirectives(program: Program): MockImportDirective[] {
     }
   }
   return directives
-}
-
-function relativeModuleSpecifier(fromModule: string, toModule: string): string {
-  fromComponents := parentPathComponents(fromModule.replaceAll("\\", "/"))
-  toComponents := moduleSpecifierPath(toModule.replaceAll("\\", "/")).split("/")
-  let common = 0
-  while common < fromComponents.length && common < toComponents.length && fromComponents[common] == toComponents[common] { common = common + 1 }
-  let result = ""
-  for ignored of common..<fromComponents.length { result = result + "../" }
-  for index of common..<toComponents.length {
-    if result != "" && !result.endsWith("/") { result = result + "/" }
-    result = result + toComponents[index]
-  }
-  return if result.startsWith(".") then result else "./" + result
-}
-
-function parentPathComponents(path: string): string[] {
-  components := path.split("/").cloneMutable()
-  if components.length > 0 { ignored := try! components.pop() }
-  return components
-}
-
-function moduleSpecifierPath(path: string): string {
-  if path.endsWith("/index.do") { return path.substring(0, path.length - 9) }
-  if path.endsWith(".do") { return path.substring(0, path.length - 3) }
-  return path
-}
-
-function findMockReplacement(
-  directives: MockImportDirective[],
-  sourceSpecifier: string,
-  dependencySpecifier: string,
-): string | none {
-  for directive of directives {
-    if directive.sourcePattern != sourceSpecifier { continue }
-    for mapping of directive.mappings {
-      if mapping.dependency == dependencySpecifier { return mapping.replacement }
-    }
-  }
-  return none
 }
 
 export function createAnalyzer(sources: SourceFile[]): ModuleAnalyzer {

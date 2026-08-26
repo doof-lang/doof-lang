@@ -809,302 +809,240 @@ std::string ModuleAnalyzer::resolveImportPath(const std::shared_ptr<ModuleInfo>&
         return this->resolver->resolve(info->path, specifier);
     }
 #line 496 "/src/analyzer.do"
-    const auto sourceSpecifier = relativeModuleSpecifier(doof::unwrap_optional(info->mockRootPath), info->path);
+    const auto replacement = findMockReplacement(doof::unwrap_optional(root), info->path, specifier);
 #line 497 "/src/analyzer.do"
-    const auto replacement = findMockReplacement(root->mockImportDirectives, sourceSpecifier, specifier);
-#line 498 "/src/analyzer.do"
     if (doof::is_null(replacement)) {
-#line 498 "/src/analyzer.do"
+#line 497 "/src/analyzer.do"
         return this->resolver->resolve(info->path, specifier);
     }
-#line 499 "/src/analyzer.do"
+#line 498 "/src/analyzer.do"
     return this->resolver->resolve(doof::unwrap_optional(info->mockRootPath), replacement.value());
 }
 #line 502 "/src/analyzer.do"
+std::optional<std::string> ModuleAnalyzer::findMockReplacement(const std::shared_ptr<ModuleInfo>& root, const std::string& sourcePath, const std::string& dependencySpecifier) {
+#line 507 "/src/analyzer.do"
+    const auto& _iterable_58 = root->mockImportDirectives;
+    for (const auto& directive : *_iterable_58) {
+#line 508 "/src/analyzer.do"
+        if (this->resolver->resolve(root->path, directive->sourcePattern) != sourcePath) {
+#line 508 "/src/analyzer.do"
+            continue;
+        }
+#line 509 "/src/analyzer.do"
+        const auto& _iterable_60 = directive->mappings;
+        for (const auto& mapping : *_iterable_60) {
+#line 510 "/src/analyzer.do"
+            if (mapping->dependency == dependencySpecifier) {
+#line 510 "/src/analyzer.do"
+                return mapping->replacement;
+            }
+        }
+    }
+#line 513 "/src/analyzer.do"
+    return std::nullopt;
+}
+#line 516 "/src/analyzer.do"
 void ModuleAnalyzer::validateMockImportDirectives(const std::shared_ptr<ModuleInfo>& info, const std::optional<std::string>& inheritedMockRootPath) {
-#line 503 "/src/analyzer.do"
+#line 517 "/src/analyzer.do"
     if (static_cast<int32_t>((info->mockImportDirectives)->size()) == 0) {
-#line 503 "/src/analyzer.do"
+#line 517 "/src/analyzer.do"
         return;
     }
-#line 504 "/src/analyzer.do"
+#line 518 "/src/analyzer.do"
     if (!doof::string_endsWith(info->path, std::string(".test.do"))) {
-#line 505 "/src/analyzer.do"
-        const auto& _iterable_58 = info->mockImportDirectives;
-        for (const auto& directive : *_iterable_58) {
-#line 506 "/src/analyzer.do"
+#line 519 "/src/analyzer.do"
+        const auto& _iterable_62 = info->mockImportDirectives;
+        for (const auto& directive : *_iterable_62) {
+#line 520 "/src/analyzer.do"
             addError(info, std::string("mock import directives are only valid in .test.do files"), directive->span);
         }
     }
-#line 509 "/src/analyzer.do"
+#line 523 "/src/analyzer.do"
     if ((!doof::is_null(inheritedMockRootPath)) && (inheritedMockRootPath != info->path)) {
-#line 510 "/src/analyzer.do"
-        const auto& _iterable_60 = info->mockImportDirectives;
-        for (const auto& directive : *_iterable_60) {
-#line 511 "/src/analyzer.do"
+#line 524 "/src/analyzer.do"
+        const auto& _iterable_64 = info->mockImportDirectives;
+        for (const auto& directive : *_iterable_64) {
+#line 525 "/src/analyzer.do"
             addError(info, std::string("mock import directives are only valid in the root test file"), directive->span);
         }
     }
-#line 515 "/src/analyzer.do"
+#line 529 "/src/analyzer.do"
     auto sawOrdinaryStatement = false;
-#line 516 "/src/analyzer.do"
-    const auto& _iterable_62 = info->program->statements;
-    for (const auto& statement : *_iterable_62) {
-#line 517 "/src/analyzer.do"
+#line 530 "/src/analyzer.do"
+    const auto& _iterable_66 = info->program->statements;
+    for (const auto& statement : *_iterable_66) {
+#line 531 "/src/analyzer.do"
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject)) {
                 const auto& directive = std::get<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject);
-#line 519 "/src/analyzer.do"
+#line 533 "/src/analyzer.do"
                 if (sawOrdinaryStatement) {
-#line 520 "/src/analyzer.do"
+#line 534 "/src/analyzer.do"
                     addError(info, std::string("mock import directives must appear at the top of the file before other statements"), directive->span);
                 }
         }
         else {
-#line 523 "/src/analyzer.do"
+#line 537 "/src/analyzer.do"
                 (sawOrdinaryStatement = true);
         }
         }
     }
-#line 527 "/src/analyzer.do"
-    const auto& _iterable_64 = info->mockImportDirectives;
-    for (const auto& directive : *_iterable_64) {
-#line 528 "/src/analyzer.do"
-        const auto& _iterable_66 = directive->mappings;
-        for (const auto& mapping : *_iterable_66) {
-#line 529 "/src/analyzer.do"
+#line 541 "/src/analyzer.do"
+    const auto& _iterable_68 = info->mockImportDirectives;
+    for (const auto& directive : *_iterable_68) {
+#line 542 "/src/analyzer.do"
+        const auto& _iterable_70 = directive->mappings;
+        for (const auto& mapping : *_iterable_70) {
+#line 543 "/src/analyzer.do"
             if (mapping->dependency == mapping->replacement) {
-#line 530 "/src/analyzer.do"
+#line 544 "/src/analyzer.do"
                 addError(info, ((std::string("mock import cannot substitute \"") + mapping->dependency) + std::string("\" with itself")), mapping->span);
             }
         }
     }
 }
-#line 537 "/src/analyzer.do"
+#line 551 "/src/analyzer.do"
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> collectMockImportDirectives(const std::shared_ptr<::app_src_ast_::Program>& program) {
-#line 538 "/src/analyzer.do"
+#line 552 "/src/analyzer.do"
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> directives = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>>(std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>{});
-#line 539 "/src/analyzer.do"
-    const auto& _iterable_68 = program->statements;
-    for (const auto& statement : *_iterable_68) {
-#line 540 "/src/analyzer.do"
+#line 553 "/src/analyzer.do"
+    const auto& _iterable_72 = program->statements;
+    for (const auto& statement : *_iterable_72) {
+#line 554 "/src/analyzer.do"
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject)) {
                 const auto& directive = std::get<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject);
-#line 541 "/src/analyzer.do"
+#line 555 "/src/analyzer.do"
                 directives->push_back(directive);
         }
         else {
         }
         }
     }
-#line 545 "/src/analyzer.do"
+#line 559 "/src/analyzer.do"
     return directives;
 }
-#line 548 "/src/analyzer.do"
-std::string relativeModuleSpecifier(const std::string& fromModule, const std::string& toModule) {
-#line 549 "/src/analyzer.do"
-    const auto fromComponents = parentPathComponents(doof::string_replaceAll(fromModule, std::string("\\"), std::string("/")));
-#line 550 "/src/analyzer.do"
-    const auto toComponents = doof::string_split(moduleSpecifierPath(doof::string_replaceAll(toModule, std::string("\\"), std::string("/"))), std::string("/"));
-#line 551 "/src/analyzer.do"
-    auto common = 0;
-#line 552 "/src/analyzer.do"
-    while (((common < static_cast<int32_t>((fromComponents)->size())) && (common < static_cast<int32_t>((toComponents)->size()))) && (doof::array_at(fromComponents, common, "src/analyzer", 552) == doof::array_at(toComponents, common, "src/analyzer", 552))) {
-#line 552 "/src/analyzer.do"
-        (common = (common + 1));
-    }
-#line 553 "/src/analyzer.do"
-    auto result = std::string("");
-#line 554 "/src/analyzer.do"
-    for (int32_t ignored = common; ignored < static_cast<int32_t>((fromComponents)->size()); ++ignored) {
-#line 554 "/src/analyzer.do"
-        (result = (result + std::string("../")));
-    }
-#line 555 "/src/analyzer.do"
-    for (int32_t index = common; index < static_cast<int32_t>((toComponents)->size()); ++index) {
-#line 556 "/src/analyzer.do"
-        if ((result != std::string("")) && !doof::string_endsWith(result, std::string("/"))) {
-#line 556 "/src/analyzer.do"
-            (result = (result + std::string("/")));
-        }
-#line 557 "/src/analyzer.do"
-        (result = (result + doof::array_at(toComponents, index, "src/analyzer", 557)));
-    }
-#line 559 "/src/analyzer.do"
-    return (doof::string_startsWith(result, std::string(".")) ? result : (std::string("./") + result));
-}
 #line 562 "/src/analyzer.do"
-std::shared_ptr<std::vector<std::string>> parentPathComponents(const std::string& path) {
-#line 563 "/src/analyzer.do"
-    const auto components = doof::array_cloneMutable(doof::string_split(path, std::string("/")), "", 0);
-#line 564 "/src/analyzer.do"
-    if (static_cast<int32_t>((components)->size()) > 0) {
-#line 564 "/src/analyzer.do"
-        const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 564, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
-    }
-#line 565 "/src/analyzer.do"
-    return components;
-}
-#line 568 "/src/analyzer.do"
-std::string moduleSpecifierPath(const std::string& path) {
-#line 569 "/src/analyzer.do"
-    if (doof::string_endsWith(path, std::string("/index.do"))) {
-#line 569 "/src/analyzer.do"
-        return doof::string_substring(path, 0, (static_cast<int32_t>(path.size()) - 9));
-    }
-#line 570 "/src/analyzer.do"
-    if (doof::string_endsWith(path, std::string(".do"))) {
-#line 570 "/src/analyzer.do"
-        return doof::string_substring(path, 0, (static_cast<int32_t>(path.size()) - 3));
-    }
-#line 571 "/src/analyzer.do"
-    return path;
-}
-#line 574 "/src/analyzer.do"
-std::optional<std::string> findMockReplacement(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>>& directives, const std::string& sourceSpecifier, const std::string& dependencySpecifier) {
-#line 579 "/src/analyzer.do"
-    const auto& _iterable_72 = directives;
-    for (const auto& directive : *_iterable_72) {
-#line 580 "/src/analyzer.do"
-        if (directive->sourcePattern != sourceSpecifier) {
-#line 580 "/src/analyzer.do"
-            continue;
-        }
-#line 581 "/src/analyzer.do"
-        const auto& _iterable_74 = directive->mappings;
-        for (const auto& mapping : *_iterable_74) {
-#line 582 "/src/analyzer.do"
-            if (mapping->dependency == dependencySpecifier) {
-#line 582 "/src/analyzer.do"
-                return mapping->replacement;
-            }
-        }
-    }
-#line 585 "/src/analyzer.do"
-    return std::nullopt;
-}
-#line 588 "/src/analyzer.do"
 std::shared_ptr<ModuleAnalyzer> createAnalyzer(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources) {
-#line 589 "/src/analyzer.do"
+#line 563 "/src/analyzer.do"
     return std::make_shared<ModuleAnalyzer>(std::make_shared<::app_src_resolver_::ModuleResolver>(sources, ::app_src_resolver_::noSourceLoader, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{})), std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
 }
-#line 592 "/src/analyzer.do"
+#line 566 "/src/analyzer.do"
 std::shared_ptr<ModuleAnalyzer> createAnalyzerWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader) {
-#line 593 "/src/analyzer.do"
+#line 567 "/src/analyzer.do"
     return std::make_shared<ModuleAnalyzer>(std::make_shared<::app_src_resolver_::ModuleResolver>(sources, loader, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{})), std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
 }
-#line 596 "/src/analyzer.do"
+#line 570 "/src/analyzer.do"
 std::shared_ptr<::app_src_semantic_::Symbol> findSymbol(const std::shared_ptr<ModuleInfo>& info, const std::string& name) {
-#line 597 "/src/analyzer.do"
-    const auto& _iterable_76 = info->symbols;
-    for (const auto& symbol : *_iterable_76) {
-#line 597 "/src/analyzer.do"
+#line 571 "/src/analyzer.do"
+    const auto& _iterable_74 = info->symbols;
+    for (const auto& symbol : *_iterable_74) {
+#line 571 "/src/analyzer.do"
         if (symbol->name == name) {
-#line 597 "/src/analyzer.do"
+#line 571 "/src/analyzer.do"
             return symbol;
         }
     }
-#line 598 "/src/analyzer.do"
+#line 572 "/src/analyzer.do"
     return nullptr;
 }
-#line 601 "/src/analyzer.do"
+#line 575 "/src/analyzer.do"
 std::shared_ptr<::app_src_semantic_::Symbol> findExport(const std::shared_ptr<ModuleInfo>& info, const std::string& name) {
-#line 602 "/src/analyzer.do"
-    const auto& _iterable_78 = info->exports;
-    for (const auto& symbol : *_iterable_78) {
-#line 602 "/src/analyzer.do"
+#line 576 "/src/analyzer.do"
+    const auto& _iterable_76 = info->exports;
+    for (const auto& symbol : *_iterable_76) {
+#line 576 "/src/analyzer.do"
         if (symbol->name == name) {
-#line 602 "/src/analyzer.do"
+#line 576 "/src/analyzer.do"
             return symbol;
         }
     }
-#line 603 "/src/analyzer.do"
+#line 577 "/src/analyzer.do"
     return nullptr;
 }
-#line 606 "/src/analyzer.do"
+#line 580 "/src/analyzer.do"
 bool hasModuleBinding(const std::shared_ptr<ModuleInfo>& info, const std::string& name) {
-#line 607 "/src/analyzer.do"
+#line 581 "/src/analyzer.do"
     if (!doof::is_null(findSymbol(info, name))) {
-#line 607 "/src/analyzer.do"
+#line 581 "/src/analyzer.do"
         return true;
     }
-#line 608 "/src/analyzer.do"
-    const auto& _iterable_80 = info->imports;
+#line 582 "/src/analyzer.do"
+    const auto& _iterable_78 = info->imports;
+    for (const auto& imported : *_iterable_78) {
+#line 582 "/src/analyzer.do"
+        if (imported->localName == name) {
+#line 582 "/src/analyzer.do"
+            return true;
+        }
+    }
+#line 583 "/src/analyzer.do"
+    const auto& _iterable_80 = info->namespaceImports;
     for (const auto& imported : *_iterable_80) {
-#line 608 "/src/analyzer.do"
+#line 583 "/src/analyzer.do"
         if (imported->localName == name) {
-#line 608 "/src/analyzer.do"
+#line 583 "/src/analyzer.do"
             return true;
         }
     }
-#line 609 "/src/analyzer.do"
-    const auto& _iterable_82 = info->namespaceImports;
-    for (const auto& imported : *_iterable_82) {
-#line 609 "/src/analyzer.do"
-        if (imported->localName == name) {
-#line 609 "/src/analyzer.do"
-            return true;
-        }
-    }
-#line 610 "/src/analyzer.do"
+#line 584 "/src/analyzer.do"
     return false;
 }
-#line 613 "/src/analyzer.do"
+#line 587 "/src/analyzer.do"
 bool isTypeSymbol(const std::shared_ptr<::app_src_semantic_::Symbol>& symbol) {
-#line 614 "/src/analyzer.do"
+#line 588 "/src/analyzer.do"
     return (((((symbol->kind == std::string("class")) || (symbol->kind == std::string("struct"))) || (symbol->kind == std::string("interface"))) || (symbol->kind == std::string("enum"))) || (symbol->kind == std::string("type-alias")));
 }
-#line 618 "/src/analyzer.do"
+#line 592 "/src/analyzer.do"
 bool isBuiltin(const std::string& name) {
-#line 619 "/src/analyzer.do"
+#line 593 "/src/analyzer.do"
     if ((name == std::string("JsonSerializable")) || (name == std::string("Reflectable"))) {
-#line 619 "/src/analyzer.do"
+#line 593 "/src/analyzer.do"
         return true;
     }
-#line 620 "/src/analyzer.do"
-    const auto& _iterable_84 = BUILTIN_TYPES;
-    for (const auto& builtin : *_iterable_84) {
-#line 620 "/src/analyzer.do"
+#line 594 "/src/analyzer.do"
+    const auto& _iterable_82 = BUILTIN_TYPES;
+    for (const auto& builtin : *_iterable_82) {
+#line 594 "/src/analyzer.do"
         if (builtin == name) {
-#line 620 "/src/analyzer.do"
+#line 594 "/src/analyzer.do"
             return true;
         }
     }
-#line 621 "/src/analyzer.do"
+#line 595 "/src/analyzer.do"
     return false;
 }
-#line 624 "/src/analyzer.do"
+#line 598 "/src/analyzer.do"
 bool contains(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
-#line 625 "/src/analyzer.do"
-    const auto& _iterable_86 = values;
-    for (const auto& item : *_iterable_86) {
-#line 625 "/src/analyzer.do"
+#line 599 "/src/analyzer.do"
+    const auto& _iterable_84 = values;
+    for (const auto& item : *_iterable_84) {
+#line 599 "/src/analyzer.do"
         if (item == value) {
-#line 625 "/src/analyzer.do"
+#line 599 "/src/analyzer.do"
             return true;
         }
     }
-#line 626 "/src/analyzer.do"
+#line 600 "/src/analyzer.do"
     return false;
 }
-#line 629 "/src/analyzer.do"
+#line 603 "/src/analyzer.do"
 void addError(const std::shared_ptr<ModuleInfo>& info, const std::string& message, ::app_src_ast_::SourceSpan span) {
-#line 630 "/src/analyzer.do"
+#line 604 "/src/analyzer.do"
     info->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, semanticSpan(span), info->path, std::string("")));
 }
-#line 633 "/src/analyzer.do"
+#line 607 "/src/analyzer.do"
 ::app_src_semantic_::SemanticSpan semanticSpan(::app_src_ast_::SourceSpan span) {
-#line 634 "/src/analyzer.do"
+#line 608 "/src/analyzer.do"
     return ::app_src_semantic_::SemanticSpan{::app_src_semantic_::SemanticLocation{span.start.line, span.start.column, span.start.offset}, ::app_src_semantic_::SemanticLocation{span.end.line, span.end.column, span.end.offset}};
 }
-#line 640 "/src/analyzer.do"
+#line 614 "/src/analyzer.do"
 ::app_src_semantic_::SemanticSpan emptySemanticSpan() {
-#line 641 "/src/analyzer.do"
+#line 615 "/src/analyzer.do"
     auto zero = ::app_src_semantic_::SemanticLocation{0, 0, 0};
-#line 642 "/src/analyzer.do"
+#line 616 "/src/analyzer.do"
     return ::app_src_semantic_::SemanticSpan{zero, zero};
 }
 #line 1 "<doof-generated>"

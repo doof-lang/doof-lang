@@ -936,6 +936,7 @@ namespace app_src_analyzer_ {
     std::shared_ptr<ModuleInfo> findModule(const std::string& path);
     void keepStatementTypes(const std::shared_ptr<::app_src_ast_::Block>& block = nullptr, const std::shared_ptr<::app_src_ast_::ExportDeclaration>& export_ = nullptr, const std::shared_ptr<::app_src_ast_::ImportDeclaration>& import_ = nullptr, const std::shared_ptr<::app_src_ast_::MockImportDirective>& mockImport = nullptr, const std::shared_ptr<::app_src_ast_::IfStatement>& if_ = nullptr, const std::shared_ptr<::app_src_ast_::CaseStatement>& case_ = nullptr, const std::shared_ptr<::app_src_ast_::WhileStatement>& while_ = nullptr, const std::shared_ptr<::app_src_ast_::ForStatement>& for_ = nullptr, const std::shared_ptr<::app_src_ast_::ForOfStatement>& forOf = nullptr, const std::shared_ptr<::app_src_ast_::WithStatement>& with_ = nullptr, const std::shared_ptr<::app_src_ast_::ReturnStatement>& return_ = nullptr, const std::shared_ptr<::app_src_ast_::YieldStatement>& yield_ = nullptr, const std::shared_ptr<::app_src_ast_::BreakStatement>& break_ = nullptr, const std::shared_ptr<::app_src_ast_::ContinueStatement>& continue_ = nullptr, const std::shared_ptr<::app_src_ast_::ExpressionStatement>& expression = nullptr, const std::shared_ptr<::app_src_ast_::DestructuringStatement>& destructuring = nullptr);
     std::string resolveImportPath(const std::shared_ptr<ModuleInfo>& info, const std::string& specifier);
+    std::optional<std::string> findMockReplacement(const std::shared_ptr<ModuleInfo>& root, const std::string& sourcePath, const std::string& dependencySpecifier);
     void validateMockImportDirectives(const std::shared_ptr<ModuleInfo>& info, const std::optional<std::string>& inheritedMockRootPath);
 };
 }
@@ -1790,10 +1791,6 @@ namespace std_::crypto::index {
 
 namespace app_src_analyzer_ {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> collectMockImportDirectives(const std::shared_ptr<::app_src_ast_::Program>& program);
-    std::string relativeModuleSpecifier(const std::string& fromModule, const std::string& toModule);
-    std::shared_ptr<std::vector<std::string>> parentPathComponents(const std::string& path);
-    std::string moduleSpecifierPath(const std::string& path);
-    std::optional<std::string> findMockReplacement(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>>& directives, const std::string& sourceSpecifier, const std::string& dependencySpecifier);
     std::shared_ptr<ModuleAnalyzer> createAnalyzer(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources);
     std::shared_ptr<ModuleAnalyzer> createAnalyzerWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader);
     std::shared_ptr<::app_src_semantic_::Symbol> findSymbol(const std::shared_ptr<ModuleInfo>& info, const std::string& name);

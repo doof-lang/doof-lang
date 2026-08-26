@@ -251,10 +251,13 @@ mock import for "./checkout" {
 }
 ```
 
-The `for` value is the source module's extensionless specifier relative to the
-root test file. Dependency keys are the quoted specifiers as written by that
-source module. Both values match exactly; wildcard or glob matching is not
-defined. Replacement specifiers resolve relative to the root test file.
+The `for` value is a source module specifier relative to the root test file. It
+is resolved to the module's canonical path before matching, so equivalent
+explicit-index and barrel spellings such as `../package/index` and
+`../package` identify the same `index.do` module. Dependency keys are the
+quoted specifiers as written by that source module and match exactly; wildcard
+or glob matching is not defined. Replacement specifiers resolve relative to
+the root test file.
 
 Directives must appear before ordinary statements in the root `.test.do` file,
 apply only to that test module's graph, and cannot substitute a dependency with
