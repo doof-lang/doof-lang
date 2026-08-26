@@ -197,6 +197,18 @@ export function classType(name: string, symbol: Symbol, typeArgs: ResolvedType[]
   return ClassType { name, symbol, typeArgs }
 }
 
+export function weakReferenceErrorType(): ClassType {
+  return classType("WeakReferenceError", Symbol {
+    kind: "struct",
+    name: "WeakReferenceError",
+    module: "<builtin>",
+    exported: true,
+    native_: true,
+    nativeHeader: "doof_runtime.hpp",
+    nativeCppName: "doof::WeakReferenceError",
+  })
+}
+
 export function enumType(name: string, symbol: Symbol): EnumType {
   return EnumType { name, symbol }
 }
@@ -453,7 +465,9 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
       case target {
         targetArray: ArrayResolvedType -> {
           if targetArray.readonly_ != valueArray.readonly_ { return false }
-          return isAssignable(valueArray.elementType, targetArray.elementType)
+          // Arrays share mutable backing storage, and the C++ representation
+          // does not convert collection element types at call boundaries.
+          return sameType(valueArray.elementType, targetArray.elementType)
         }
         _ -> { }
       }
@@ -462,7 +476,7 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
       case target {
         targetMap: MapResolvedType -> {
           if targetMap.readonly_ != valueMap.readonly_ { return false }
-          return sameType(valueMap.keyType, targetMap.keyType) && isAssignable(valueMap.valueType, targetMap.valueType)
+          return sameType(valueMap.keyType, targetMap.keyType) && sameType(valueMap.valueType, targetMap.valueType)
         }
         _ -> { }
       }
@@ -478,13 +492,13 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
     }
     valueStream: StreamResolvedType -> {
       case target {
-        targetStream: StreamResolvedType -> { return isAssignable(valueStream.elementType, targetStream.elementType) }
+        targetStream: StreamResolvedType -> { return sameType(valueStream.elementType, targetStream.elementType) }
         _ -> { }
       }
     }
     valueWeak: WeakResolvedType -> {
       case target {
-        targetWeak: WeakResolvedType -> { return isAssignable(valueWeak.inner, targetWeak.inner) }
+        targetWeak: WeakResolvedType -> { return sameType(valueWeak.inner, targetWeak.inner) }
         _ -> { }
       }
     }
@@ -496,7 +510,7 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
     }
     valuePromise: PromiseType -> {
       case target {
-        targetPromise: PromiseType -> { return isAssignable(valuePromise.valueType, targetPromise.valueType) }
+        targetPromise: PromiseType -> { return sameType(valuePromise.valueType, targetPromise.valueType) }
         _ -> { }
       }
     }
@@ -519,6 +533,10 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
   }
   if sameType(value, target) { return true }
   case target {
+    weakTarget: WeakResolvedType -> { return isAssignable(value, weakTarget.inner) }
+    _ -> { }
+  }
+  case target {
     _: JsonValueResolvedType -> { return isJsonValueAssignable(value) }
     _ -> { }
   }
@@ -529,8 +547,13 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
           for implementedType of class_.symbol.implementedInterfaceTypes {
             if implementedType == typeName(interface_) { return true }
           }
-          for implementation of interface_.symbol.implementations {
-            if implementation.module == class_.symbol.module && implementation.name == class_.symbol.name { return true }
+          // The symbol-wide implementation set is valid only for
+          // non-generic interfaces. Concrete generic conformance is recorded
+          // above by its fully substituted type name.
+          if interface_.typeArgs.length == 0 {
+            for implementation of interface_.symbol.implementations {
+              if implementation.module == class_.symbol.module && implementation.name == class_.symbol.name { return true }
+            }
           }
           return false
         }
@@ -547,7 +570,7 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
     _ -> { }
   }
   case target {
-    _: TypeParameterType -> { return true }
+    _: TypeParameterType -> { return false }
     _: UnknownType -> { return true }
     union: UnionResolvedType -> {
       for member of union.types { if isAssignable(value, member) { return true } }
@@ -581,6 +604,33 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
       }
     }
     _ -> { }
+  }
+  return false
+}
+
+export function isWeakReferenceTarget(type_: ResolvedType): bool {
+  case type_ {
+    class_: ClassType -> { return class_.symbol.kind == "class" }
+    _: ArrayResolvedType -> { return true }
+    _: MapResolvedType -> { return true }
+    _: SetResolvedType -> { return true }
+    union_: UnionResolvedType -> {
+      let hasReference = false
+      for member of union_.types {
+        case member {
+          _: NoneType -> { }
+          _ -> {
+            if !isWeakReferenceTarget(member) { return false }
+            hasReference = true
+          }
+        }
+      }
+      return hasReference
+    }
+    parameter: TypeParameterType -> {
+      return parameter.constraint != none && isWeakReferenceTarget(parameter.constraint!)
+    }
+    _ -> { return false }
   }
   return false
 }

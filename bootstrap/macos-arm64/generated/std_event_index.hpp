@@ -20,6 +20,10 @@ namespace std_::time::duration {
 }
 
 namespace std_::event::index {
+    template <typename T>
+    struct ChannelSender;
+    template <typename T>
+    struct ChannelReceiver;
     struct Timer;
 }
 

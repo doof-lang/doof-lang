@@ -109,6 +109,7 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext): 
         collectNativeClassAliases(class_, namespace, plan, context)
       } else if class_.typeParams.length == 0 || isNativeTemplateClass(context, class_.name) {
         if class_.typeParams.length == 0 { plan.classForwardDeclarations.push("struct " + class_.name + ";\n") }
+        else { plan.classForwardDeclarations.push(emitTemplateClassForwardDeclaration(class_)) }
         definition := emitClassDeclaration(class_, context)
         if classCanEmitBeforeModuleIncludes(class_) { plan.earlyClassDefinitions.push(definition) }
         else { plan.classDefinitions.push(definition) }
@@ -240,6 +241,15 @@ function isNativeTemplateClass(context: EmitContext, name: string): bool {
   return false
 }
 
+function emitTemplateClassForwardDeclaration(class_: ClassDeclaration): string {
+  let result = "template <"
+  for index of 0..<class_.typeParams.length {
+    if index > 0 { result = result + ", " }
+    result = result + "typename " + class_.typeParams[index]
+  }
+  return result + ">\n    struct " + class_.name + ";\n"
+}
+
 function collectNativeClassAliases(class_: ClassDeclaration, namespace: string, plan: HeaderPlan, context: EmitContext): none {
   for field of class_.fields { if field.resolvedType != none { collectNativeTypeAliases(field.resolvedType!, namespace, plan, context) } }
   for method of class_.methods { if method.resolvedType != none { collectNativeTypeAliases(method.resolvedType!, namespace, plan, context) } }
@@ -284,7 +294,7 @@ function surfaceSymbolIsGeneric(context: EmitContext, symbol: Symbol): bool {
 
 function addNativeSymbolAlias(symbol: Symbol, namespace: string, plan: HeaderPlan): none {
   if symbol.native_ || symbol.module == "" { return }
-  if symbol.kind == "class" || symbol.kind == "struct" || symbol.kind == "interface" {
+  if symbol.kind == "class" || symbol.kind == "struct" {
     addUnique(plan.typeOnlyForwardDeclarations, "namespace " + moduleNamespace(symbol.module) + " { struct " + symbol.name + "; }\n")
   } else if symbol.kind == "enum" {
     addUnique(plan.typeOnlyForwardDeclarations, "namespace " + moduleNamespace(symbol.module) + " { enum class " + symbol.name + "; }\n")

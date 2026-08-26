@@ -1,7 +1,7 @@
 // Call, native-constructor, and class-construction lowering.
 
 import { CallArgument, CallExpression, ClassDeclaration, ConstructExpression, Expression, FunctionDeclaration, Identifier, MemberExpression, ObjectProperty, SourceSpan, ThisExpression } from "./ast"
-import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, Symbol, UnionResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, Symbol, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -12,6 +12,19 @@ import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey
 import { emitSyncActorCall } from "./emitter-expr-actor"
 
 export function emitCall(expression: CallExpression, context: EmitContext, expected: ResolvedType | none = none): string {
+  case expression.callee {
+    member: MemberExpression -> {
+      if member.object.resolvedType != none {
+        case member.object.resolvedType! {
+          _: WeakResolvedType -> {
+            if member.optional || member.force { return emitWeakMemberCall(expression, member, context) }
+          }
+          _ -> { }
+        }
+      }
+    }
+    _ -> { }
+  }
   case expression.callee {
     identifier: Identifier -> {
       if isBuiltinIdentifier(identifier, "catchPanic") && expression.args.length == 1 {
@@ -413,6 +426,112 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     }
   }
   return result + ")"
+}
+
+function emitWeakMemberCall(expression: CallExpression, member: MemberExpression, context: EmitContext): string {
+  context.tryCounter = context.tryCounter + 1
+  storage := "_weak_storage_" + string(context.tryCounter)
+  temporary := "_weak_value_" + string(context.tryCounter)
+  object := emitExpression(member.object, context)
+  let nullable = false
+  case member.object.resolvedType! {
+    weak_: WeakResolvedType -> { nullable = weakCallTargetAllowsNone(weak_.inner) }
+    _ -> { }
+  }
+  weakValue := if nullable then storage + ".value()" else storage
+  let originalReturn: ResolvedType | none = none
+  if member.resolvedType != none {
+    case member.resolvedType! { function_: FunctionType -> { originalReturn = function_.returnType } _ -> { } }
+  }
+  arguments := emitWeakCallArguments(expression, context)
+  let call = temporary + "->" + cppIdentifier(member.property) + "(" + arguments + ")"
+  case member.object.resolvedType! {
+    weak_: WeakResolvedType -> {
+      if weakCallTargetUsesVariant(weak_.inner) {
+        if originalReturn == none { panic("Weak union method call has no resolved return type") }
+        call = "std::visit([&](auto&& _weak_item) -> " + emitContextReturnType(originalReturn!, context) + " { return _weak_item->" + cppIdentifier(member.property) + "(" + arguments + "); }, " + temporary + ")"
+      }
+    }
+    _ -> { }
+  }
+  if member.force {
+    resultType := expression.resolvedType!
+    noneCheck := if nullable then "if (!" + storage + ".has_value()) doof::panic(\"Weak reference is none\"); " else ""
+    case resultType {
+      _: NoneType -> { return "[&]() -> void { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); " + call + "; }()" }
+      _ -> { return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); return " + call + "; }()" }
+    }
+  }
+  case expression.resolvedType! {
+    result: ResultResolvedType -> {
+      resultCpp := emitType(result, context.modulePath)
+      payloadCpp := emitResultPayloadType(result.valueType, context.modulePath)
+      errorCpp := emitResultPayloadType(result.errorType, context.modulePath)
+      failure := if result.errorType.kind == "union" then errorCpp + "{::doof::WeakReferenceError{}}" else "::doof::WeakReferenceError{}"
+      noneReturn := if nullable then "if (!" + storage + ".has_value()) return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{}}; " else ""
+      prefix := "[&]() -> " + resultCpp + " { auto " + storage + " = " + object + "; " + noneReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return doof::Failure<" + errorCpp + ">{" + failure + "}; auto " + temporary + " = std::move(_weak_locked.value()); "
+      if originalReturn != none {
+        case originalReturn! {
+          nested: ResultResolvedType -> {
+            nestedErrorCpp := emitResultPayloadType(nested.errorType, context.modulePath)
+            promotedError := if result.errorType.kind == "union" then errorCpp + "{doof::failure_error(_weak_result)}" else "doof::failure_error(_weak_result)"
+            if nested.valueType.kind == "none" {
+              return prefix + "auto _weak_result = " + call + "; if (doof::is_failure(_weak_result)) return doof::Failure<" + errorCpp + ">{" + promotedError + "}; return doof::Success<void>{}; }()"
+            }
+            return prefix + "auto _weak_result = " + call + "; if (doof::is_failure(_weak_result)) return doof::Failure<" + errorCpp + ">{" + promotedError + "}; return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{doof::success_value(_weak_result)}}; }()"
+          }
+          _: NoneType -> { return prefix + call + "; return doof::Success<void>{}; }()" }
+          _ -> { }
+        }
+      }
+      return prefix + "return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{" + call + "}}; }()"
+    }
+    _ -> { panic("Optional weak method call must resolve to Result") }
+  }
+  return ""
+}
+
+function weakCallTargetAllowsNone(type_: ResolvedType): bool {
+  case type_ {
+    union_: UnionResolvedType -> { for member of union_.types { if member.kind == "none" { return true } } }
+    _ -> { }
+  }
+  return false
+}
+
+function weakCallTargetUsesVariant(type_: ResolvedType): bool {
+  case type_ {
+    union_: UnionResolvedType -> {
+      let present = 0
+      for member of union_.types { if member.kind != "none" { present = present + 1 } }
+      return present > 1
+    }
+    _ -> { }
+  }
+  return false
+}
+
+function emitWeakCallArguments(expression: CallExpression, context: EmitContext): string {
+  let result = ""
+  let named = false
+  for argument of expression.args { if argument.name != none { named = true } }
+  if expression.resolvedFunction != none {
+    for i of 0..<expression.resolvedFunction!.params.length {
+      parameter := expression.resolvedFunction!.params[i]
+      argument := if named then callArgumentNamed(expression, parameter.name) else if i < expression.args.length then expression.args[i] else none
+      if argument != none || parameter.defaultValue != none {
+        if result != "" { result = result + ", " }
+        if argument != none { result = result + emitExpectedExpression(argument!.value, context, parameter.resolvedType) }
+        else { result = result + emitDefaultExpression(parameter.defaultValue!, context, parameter.resolvedType, expression.span) }
+      }
+    }
+    return result
+  }
+  for i of 0..<expression.args.length {
+    if i > 0 { result = result + ", " }
+    result = result + emitExpression(expression.args[i].value, context)
+  }
+  return result
 }
 
 function isBuiltinConversionIdentifier(identifier: Identifier): bool {

@@ -325,6 +325,7 @@ export class ActorCreationExpression {
   kind: string
   className: string
   args: Expression[]
+  let resolvedConstructor: FunctionDeclaration | none = none
   resolvedType: ResolvedType | none = none
   span: SourceSpan
 }

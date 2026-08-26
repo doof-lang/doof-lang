@@ -28,7 +28,7 @@ import {
   actorType, applyDeepReadonly, arrayType, classMetadataType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
   neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
-  methodReflectionType, substituteTypeParams, typeParameter, unknownType, weakType,
+  isWeakReferenceTarget, methodReflectionType, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, isGeneratedJsonType } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -64,6 +64,10 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
       if named.name == "SourceLocation" {
         if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
         return decorateType(state, annotation, builtinSourceLocationType())
+      }
+      if named.name == "WeakReferenceError" {
+        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
+        return decorateType(state, annotation, weakReferenceErrorType())
       }
       if named.name == "Range" {
         if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
@@ -205,7 +209,11 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
       for parameter of function_.params { params.push(FunctionParamType { name: parameter.name, type_: resolveType(state, parameter.type_, module, scope), hasDefault: false }) }
       return decorateType(state, annotation, functionType(params, resolveType(state, function_.returnType, module, scope)))
     }
-    weak_: WeakType -> { return decorateType(state, annotation, weakType(resolveType(state, weak_.type_, module, scope))) }
+    weak_: WeakType -> {
+      inner := resolveType(state, weak_.type_, module, scope)
+      if !isWeakReferenceTarget(inner) { typeError(state, "Type \"" + typeName(inner) + "\" is not a valid weak reference target", weak_.span) }
+      return decorateType(state, annotation, weakType(inner))
+    }
   }
   return decorateType(state, annotation, unknownType())
 }
@@ -273,7 +281,11 @@ export function decorateType(state: CheckerState, annotation: TypeAnnotation, re
   return resolvedType
 }
 
-export function memberType(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan): ResolvedType {
+// Some checker phases need a member's type without performing a source-level
+// access (for example, when synthesizing constructor parameters). Keep that
+// lookup distinct from an explicit access so declaration spans cannot be
+// reported against the module currently being checked.
+export function memberType(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan, validateVisibility: bool = true): ResolvedType {
   if typeName(object) == "string" {
     if property == "length" { return primitive("int") }
     if property == "startsWith" || property == "endsWith" || property == "contains" { return functionType([FunctionParamType { name: "value", type_: primitive("string"), hasDefault: false }], primitive("bool")) }
@@ -304,7 +316,7 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
       let resolved: ResolvedType | none = none
       for member of union.types {
         if member.kind == "none" { continue }
-        memberValue := memberType(state, member, property, span)
+        memberValue := memberType(state, member, property, span, validateVisibility)
         if memberValue.kind == "unknown" { return unknownType() }
         resolved = if resolved == none then memberValue else joinTypes(resolved!, memberValue)
       }
@@ -554,6 +566,9 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
             for name of field.names {
               if name == property {
                 fieldType := if field.resolvedType != none then field.resolvedType! else if field.type_ != none then resolveType(state, field.type_!, state.info!, state.moduleScope!) else unknownType()
+                if validateVisibility && field.private_ && class_.symbol.module != state.info!.path {
+                  typeError(state, "Field '" + property + "' is private to module '" + class_.symbol.module + "'", span)
+                }
                 return substituteTypeParams(fieldType, classDeclaration.typeParams, class_.typeArgs)
               }
             }
@@ -561,6 +576,9 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
           for method of classDeclaration.methods {
             if method.name == property {
               methodType := method.resolvedType ?? methodSignature(method, classModuleFor(state.result, class_.symbol), state.result)
+              if validateVisibility && method.private_ && class_.symbol.module != state.info!.path {
+                typeError(state, "Method '" + property + "' is private to module '" + class_.symbol.module + "'", span)
+              }
               return substituteTypeParams(methodType, classDeclaration.typeParams, class_.typeArgs)
             }
           }

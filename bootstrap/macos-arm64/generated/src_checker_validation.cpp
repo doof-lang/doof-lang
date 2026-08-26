@@ -545,6 +545,9 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject)) {
             const auto& actor = std::get<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject);
+            if (!doof::is_null(actor->resolvedConstructor)) {
+                validateResolved(actor->resolvedConstructor->resolvedType, actor->span, module, std::string("actor constructor"), diagnostics);
+            }
             const auto& _iterable_58 = actor->args;
             for (const auto& argument : *_iterable_58) {
                 validateExpression(argument, module, diagnostics);

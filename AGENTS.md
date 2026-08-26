@@ -32,3 +32,20 @@ root, not a second implementation.
 Run `./scripts/test.sh` for normal changes and `./scripts/release.sh` before a
 release or bootstrap refresh. `./build.sh` must succeed from a clean checkout
 on the documented host without Node.js or the retired compiler.
+
+### Test execution
+
+- Use `dist/doof test src --filter <exact-test-name>` for focused regression
+  work, then run `./scripts/test.sh` once the focused tests pass.
+- Run test commands serially. Test invocations share
+  `build/.doof-tests/shared`; parallel runs can overwrite the same generated
+  sources and objects, cause linker failures, and leave orphaned compiler
+  processes.
+- Prefer one broader filter or sequential focused invocations over launching
+  multiple filtered tests concurrently. A warm shared build makes subsequent
+  sequential filters inexpensive.
+- If a test run must be stopped, terminate the `dist/doof test` process and
+  confirm that compiler children targeting `build/.doof-tests/shared` have
+  also exited before starting another run.
+- Do not interpret a failure from a contended shared build as a compiler
+  regression. Rerun it once in isolation before investigating the result.

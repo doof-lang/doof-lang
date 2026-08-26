@@ -757,9 +757,10 @@ namespace app_src_ast_ {
     std::string kind;
     std::string className;
     std::shared_ptr<std::vector<Expression>> args;
+    std::shared_ptr<FunctionDeclaration> resolvedConstructor = nullptr;
     __type3 resolvedType = std::monostate{};
     SourceSpan span;
-    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedType(resolvedType), span(span) {}
+    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, std::shared_ptr<FunctionDeclaration> resolvedConstructor, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedConstructor(resolvedConstructor), resolvedType(resolvedType), span(span) {}
 };
     struct YieldBlockExpression : public std::enable_shared_from_this<YieldBlockExpression> {
     std::string kind = std::string("yield-block-expression");
@@ -1213,7 +1214,7 @@ namespace app_src_emitter_expr_utils_ {
 }
 
 namespace app_src_emitter_expr_literals_ {
-    std::string emitNoneLiteral(const __type11& expected);
+    std::string emitNoneLiteral(const __type11& expected, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string emitChar(char32_t value);
     std::string emitArray(const std::shared_ptr<::app_src_ast_::ArrayLiteral>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const __type11& expected);
     std::string emitObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const __type11& expected);

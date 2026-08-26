@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { FunctionParamType, Symbol } from "./semantic"
-import { arrayType, classType, functionType, isAssignable, primitive, sameType, streamType, typeParameter, unionType } from "./checker-types"
+import { arrayType, classType, functionType, isAssignable, mapType, primitive, promiseType, sameType, streamType, typeParameter, unionType, weakType } from "./checker-types"
 
 function symbol(name: string, module: string): Symbol {
   return Symbol { kind: "class", name, module, exported: false }
@@ -19,6 +19,24 @@ export function testAllowsLosslessIntToDoubleWidening(): none {
 
 export function testAllowsByteToIntWidening(): none {
   Assert.isTrue(isAssignable(primitive("byte"), primitive("int")))
+}
+
+export function testRequiresInvariantCollectionElementTypes(): none {
+  Assert.isFalse(isAssignable(arrayType(primitive("int")), arrayType(primitive("long"))))
+  Assert.isFalse(isAssignable(mapType(primitive("string"), primitive("int")), mapType(primitive("string"), primitive("long"))))
+}
+
+export function testRequiresInvariantPromiseAndStreamValueTypes(): none {
+  Assert.isFalse(isAssignable(promiseType(primitive("int")), promiseType(primitive("long"))))
+  Assert.isFalse(isAssignable(streamType(primitive("int")), streamType(primitive("long"))))
+}
+
+export function testRequiresInvariantWeakReferenceTargets(): none {
+  Assert.isFalse(isAssignable(weakType(primitive("int")), weakType(primitive("long"))))
+}
+
+export function testDoesNotAssignConcreteValuesToUnconstrainedTypeParameters(): none {
+  Assert.isFalse(isAssignable(primitive("int"), typeParameter("T")))
 }
 
 export function testRejectsNonLiteralIntToByteNarrowing(): none {

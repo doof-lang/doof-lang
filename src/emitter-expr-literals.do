@@ -1,13 +1,13 @@
 // Literal, array, object, tuple, and string expression lowering.
 
 import { ArrayLiteral, ObjectLiteral, StringLiteral, TupleLiteral } from "./ast"
-import { ArrayResolvedType, ClassType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, UnionResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emittedSymbolName, emitNullableVariantPromotion, exprModuleNamespaceFor, findProperty, needsNullableVariantPromotion } from "./emitter-expr-utils"
 import { emitResultPayloadType, emitType } from "./emitter-types"
 
-export function emitNoneLiteral(expected: ResolvedType | none): string {
+export function emitNoneLiteral(expected: ResolvedType | none, context: EmitContext): string {
   if expected == none { return "nullptr" }
   case expected! {
     class_: ClassType -> {
@@ -15,6 +15,7 @@ export function emitNoneLiteral(expected: ResolvedType | none): string {
     }
     _: JsonValueResolvedType -> { return "doof::json_value(nullptr)" }
     _: NoneType -> { return "std::monostate{}" }
+    _: WeakResolvedType -> { return emitType(expected!, context.modulePath) + "{}" }
     union_: UnionResolvedType -> {
       let nonNone = 0
       for member of union_.types { if member.kind != "none" { nonNone = nonNone + 1 } }

@@ -4,7 +4,7 @@ import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
   JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType,
+  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
@@ -29,7 +29,7 @@ import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   neverType, noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType,
+  substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -85,6 +85,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
   case calleeType {
     resolvedFunction: FunctionType -> {
       let effectiveFunction: FunctionType = resolvedFunction
+      let genericInferenceFailed = false
       if expression.typeArgs.length > 0 {
         if expression.typeArgs.length != resolvedFunction.typeParams.length {
           typeError(state, 
@@ -110,10 +111,17 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           for i of 0..<expression.args.length {
             parameterIndex := if expression.args[i].name == none then i else functionParameterIndex(resolvedFunction.params, expression.args[i].name!)
             if parameterIndex < 0 || parameterIndex >= resolvedFunction.params.length { continue }
+            parameterType := resolvedFunction.params[parameterIndex].type_
             // Unresolved type parameters still carry useful callback input
             // types, which are required to type shorthand lambda bindings.
-            actual := checkExpression(state, expression.args[i].value, scope, resolvedFunction.params[parameterIndex].type_)
-            candidate := inferTypeArgument(resolvedFunction.params[parameterIndex].type_, actual, typeParam)
+            let inferenceExpected = genericInferenceExpected(parameterType, resolvedFunction.typeParams)
+            case expression.args[i].value {
+              _: LambdaExpression -> { inferenceExpected = parameterType }
+              _: DotShorthand -> { if inferenceExpected == none { continue } }
+              _ -> { }
+            }
+            actual := checkExpression(state, expression.args[i].value, scope, inferenceExpected)
+            candidate := inferTypeArgument(parameterType, actual, typeParam)
             if candidate != none {
               let candidateIsSelf = false
               case candidate! { parameter: TypeParameterType -> { candidateIsSelf = parameter.name == typeParam } _ -> { } }
@@ -138,6 +146,9 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
             function_: FunctionType -> { effectiveFunction = function_ }
             _ -> { }
           }
+        } else {
+          genericInferenceFailed = true
+          typeError(state, "Cannot infer consistent type arguments for generic call; provide explicit type arguments", expression.span)
         }
       }
       let named = false
@@ -159,8 +170,8 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           if containsString(used, argument.name!) { typeError(state, "Duplicate named argument '" + argument.name! + "'", argument.span) }
           used.push(argument.name!)
           expected := effectiveFunction.params[index].type_
-          actual := checkExpression(state, argument.value, scope, optionalResolvedType(expected))
-          if !isAssignable(actual, expected) { typeError(state, "Argument '" + argument.name! + "' has type " + typeName(actual) + "; expected " + typeName(expected), argument.span) }
+          actual := checkExpression(state, argument.value, scope, if genericInferenceFailed then none else optionalResolvedType(expected))
+          if !genericInferenceFailed && !isAssignable(actual, expected) { typeError(state, "Argument '" + argument.name! + "' has type " + typeName(actual) + "; expected " + typeName(expected), argument.span) }
         }
         for parameter of effectiveFunction.params {
           if !parameter.hasDefault && !containsString(used, parameter.name) {
@@ -176,15 +187,15 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         }
         for i of 0..<expression.args.length {
           expected := if i < effectiveFunction.params.length then effectiveFunction.params[i].type_ else unknownType()
-          let argumentExpected: ResolvedType | none = expected
+          let argumentExpected: ResolvedType | none = if genericInferenceFailed then none else expected
           if isBuiltinPrintlnCall(expression.callee) { argumentExpected = none }
           actual := checkExpression(state, expression.args[i].value, scope, argumentExpected)
-          if !isAssignable(actual, expected) { typeError(state, "Argument " + string(i + 1) + " has type " + typeName(actual) + "; expected " + typeName(expected), expression.args[i].span) }
+          if !genericInferenceFailed && !isAssignable(actual, expected) { typeError(state, "Argument " + string(i + 1) + " has type " + typeName(actual) + "; expected " + typeName(expected), expression.args[i].span) }
         }
       }
       validateActorMethodBoundary(state, expression, effectiveFunction)
       if callArgumentsDiverge(expression) { return finish(state, expression, neverType()) }
-      return finish(state, expression, effectiveFunction.returnType)
+      return finish(state, expression, checkedMemberCallReturnType(expression, effectiveFunction.returnType))
     }
     class_: ClassType -> {
       let effectiveClass = class_
@@ -218,6 +229,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
       if !insideConstructorFactory(scope, effectiveClass) { expression.resolvedConstructor = constructorForClass(effectiveClass, state.result) }
       constructorMethod := expression.resolvedConstructor
       if constructorMethod != none {
+        validateConstructorVisibility(state, effectiveClass, constructorMethod!, expression.span)
         let constructorType = constructorMethod!.resolvedType ?? methodSignature(constructorMethod!, classModuleFor(state.result, class_.symbol), state.result)
         if declaration != none {
           case declaration! {
@@ -243,7 +255,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
               for name of field.names {
                 constructorParams.push(FunctionParamType {
                   name,
-                  type_: memberType(state, effectiveClass, name, field.span),
+                  type_: memberType(state, effectiveClass, name, field.span, false),
                   hasDefault: field.defaultValue != none,
                 })
               }
@@ -252,6 +264,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           _ -> { }
         }
       }
+      validateFieldConstructorVisibility(state, expression, effectiveClass, declaration)
       validateConstructorCallArguments(state, expression, constructorParams, scope, effectiveClass)
       return finish(state, expression, effectiveClass)
     }
@@ -262,6 +275,42 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
     _ -> { typeError(state, "Expression of type " + typeName(calleeType) + " is not callable", expression.span); return finish(state, expression, unknownType()) }
   }
   return finish(state, expression, unknownType())
+}
+
+// Concrete parts of a generic signature remain valid contextual types during
+// inference. Expressions that depend on a type parameter are checked after
+// substitution; a direct dot-shorthand can therefore learn that type from a
+// sibling argument without producing an early no-context diagnostic.
+function genericInferenceExpected(pattern: ResolvedType, typeParams: string[]): ResolvedType | none {
+  let unknownArguments: ResolvedType[] = []
+  for _ of typeParams { unknownArguments.push(unknownType()) }
+  substituted := substituteTypeParams(pattern, typeParams, unknownArguments)
+  if sameType(pattern, substituted) { return pattern }
+  return none
+}
+
+function checkedMemberCallReturnType(expression: CallExpression, returnType: ResolvedType): ResolvedType {
+  case expression.callee {
+    member: MemberExpression -> {
+      if member.object.resolvedType != none {
+        case member.object.resolvedType! {
+          _: WeakResolvedType -> {
+            if member.optional {
+              case returnType {
+                result: ResultResolvedType -> {
+                  return resultType(unionType([result.valueType, noneType()]), unionType([result.errorType, weakReferenceErrorType()]))
+                }
+                _ -> { return resultType(unionType([returnType, noneType()]), weakReferenceErrorType()) }
+              }
+            }
+          }
+          _ -> { }
+        }
+      }
+    }
+    _ -> { }
+  }
+  return returnType
 }
 
 function callArgumentsDiverge(expression: CallExpression): bool {
@@ -284,7 +333,7 @@ function inferClassTypeArguments(state: CheckerState, expression: CallExpression
     for field of declaration.fields {
       if field.static_ { continue }
       for name of field.names {
-        patterns.push(FunctionParamType { name, type_: memberType(state, class_, name, field.span), hasDefault: field.defaultValue != none })
+        patterns.push(FunctionParamType { name, type_: memberType(state, class_, name, field.span, false), hasDefault: field.defaultValue != none })
       }
     }
   }
@@ -357,6 +406,36 @@ function validateConstructorCallArguments(state: CheckerState, expression: CallE
     if !parameter.hasDefault && !containsString(used, parameter.name) {
       typeError(state, "Missing required argument '" + parameter.name + "'", expression.span)
     }
+  }
+}
+
+function validateFieldConstructorVisibility(state: CheckerState, expression: CallExpression, class_: ClassType, declaration: Statement | none): none {
+  if declaration == none || class_.symbol.module == state.info!.path { return }
+  case declaration! {
+    owner: ClassDeclaration -> {
+      for index of 0..<expression.args.length {
+        argument := expression.args[index]
+        let field: ClassField | none = none
+        let fieldName = argument.name ?? ""
+        if argument.name != none {
+          field = constructionField(owner, argument.name!)
+        } else {
+          let parameterIndex = 0
+          for candidate of owner.fields {
+            if candidate.static_ || candidate.const_ { continue }
+            for name of candidate.names {
+              if parameterIndex == index { field = candidate; fieldName = name; break }
+              parameterIndex += 1
+            }
+            if field != none { break }
+          }
+        }
+        if field != none && field!.private_ {
+          typeError(state, "Field '" + fieldName + "' is private to module '" + class_.symbol.module + "'", argument.span)
+        }
+      }
+    }
+    _ -> { }
   }
 }
 
@@ -518,6 +597,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
   constructorMethod := constructorForClass(constructed, state.result)
   if constructorMethod != none && !insideConstructorFactory(scope, constructed) {
     expression.resolvedConstructor = constructorMethod
+    validateConstructorVisibility(state, constructed, constructorMethod!, expression.span)
     constructorType := constructorMethod!.resolvedType ?? methodSignature(constructorMethod!, classModuleFor(state.result, symbol!), state.result)
     case constructorType {
       function_: FunctionType -> {
@@ -555,6 +635,12 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
   }
   if expression.resolvedClass != none { checkConstructionFields(state, expression, scope, constructed, expression.resolvedClass!) }
   return finish(state, expression, constructed)
+}
+
+function validateConstructorVisibility(state: CheckerState, owner: ClassType, constructor: FunctionDeclaration, span: SourceSpan): none {
+  if constructor.private_ && owner.symbol.module != state.info!.path {
+    typeError(state, "Constructor for \"" + owner.name + "\" is private", span)
+  }
 }
 
 function checkConstructionFields(state: CheckerState, expression: ConstructExpression, scope: Scope, constructed: ClassType, declaration: ClassDeclaration): none {

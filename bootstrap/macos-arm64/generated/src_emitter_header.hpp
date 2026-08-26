@@ -818,9 +818,10 @@ namespace app_src_ast_ {
     std::string kind;
     std::string className;
     std::shared_ptr<std::vector<Expression>> args;
+    std::shared_ptr<FunctionDeclaration> resolvedConstructor = nullptr;
     __type3 resolvedType = std::monostate{};
     SourceSpan span;
-    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedType(resolvedType), span(span) {}
+    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, std::shared_ptr<FunctionDeclaration> resolvedConstructor, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedConstructor(resolvedConstructor), resolvedType(resolvedType), span(span) {}
 };
     struct YieldBlockExpression : public std::enable_shared_from_this<YieldBlockExpression> {
     std::string kind = std::string("yield-block-expression");
@@ -1295,6 +1296,7 @@ namespace app_src_emitter_header_ {
     bool classCanEmitBeforeModuleIncludes(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_);
     bool typeNeedsCompleteNominalDefinition(const __type11& type_);
     bool isNativeTemplateClass(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& name);
+    std::string emitTemplateClassForwardDeclaration(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_);
     void collectNativeClassAliases(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::string& namespace_, const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     void collectNativeTypeAliases(const __type11& type_, const std::string& namespace_, const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     bool surfaceSymbolIsGeneric(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol);
@@ -1314,6 +1316,7 @@ namespace app_src_emitter_header_ {
     bool moduleValueDeclarationNeedsIncludes(const __type11& type_);
     std::string emitModuleValueDeclaration(const std::string& name, const __type11& type_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     void addUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
+    void addNativeClassForwardDeclaration(const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::shared_ptr<HeaderPlan>& plan);
     std::string nativeNamespace(const std::string& cppName);
     std::string emitEnumDeclaration(const std::shared_ptr<::app_src_ast_::EnumDeclaration>& declaration, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string emitTypeAlias(const std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>& alias, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);

@@ -1,12 +1,12 @@
 // Assignment, identifier, operator, member, and index lowering.
 
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
-import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
 import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
-import { emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, sameType } from "./checker-types"
 
@@ -234,21 +234,29 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
 }
 
 export function cppIdentifier(name: string): string {
-  if name == "operator" { return "operator_" }
-  if name == "mutable" { return "mutable_" }
-  if name == "class" { return "class_" }
-  if name == "struct" { return "struct_" }
-  if name == "namespace" { return "namespace_" }
-  if name == "template" { return "template_" }
-  if name == "typename" { return "typename_" }
-  if name == "union" { return "union_" }
-  if name == "char" { return "char_" }
-  if name == "short" { return "short_" }
-  if name == "delete" { return "delete_" }
+  if isCppKeyword(name) { return name + "_" }
   if name == "stdin" { return "stdin_" }
   if name == "stdout" { return "stdout_" }
   if name == "stderr" { return "stderr_" }
   return name
+}
+
+function isCppKeyword(name: string): bool {
+  return name == "alignas" || name == "alignof" || name == "and" || name == "and_eq" || name == "asm" || name == "auto" ||
+    name == "bitand" || name == "bitor" || name == "bool" || name == "break" || name == "case" || name == "catch" ||
+    name == "char" || name == "char8_t" || name == "char16_t" || name == "char32_t" || name == "class" || name == "compl" ||
+    name == "concept" || name == "const" || name == "consteval" || name == "constexpr" || name == "constinit" || name == "const_cast" ||
+    name == "continue" || name == "co_await" || name == "co_return" || name == "co_yield" || name == "decltype" || name == "default" ||
+    name == "delete" || name == "do" || name == "double" || name == "dynamic_cast" || name == "else" || name == "enum" ||
+    name == "explicit" || name == "export" || name == "extern" || name == "false" || name == "float" || name == "for" ||
+    name == "friend" || name == "goto" || name == "if" || name == "inline" || name == "int" || name == "long" ||
+    name == "mutable" || name == "namespace" || name == "new" || name == "noexcept" || name == "not" || name == "not_eq" ||
+    name == "nullptr" || name == "operator" || name == "or" || name == "or_eq" || name == "private" || name == "protected" ||
+    name == "public" || name == "register" || name == "reinterpret_cast" || name == "requires" || name == "return" || name == "short" ||
+    name == "signed" || name == "sizeof" || name == "static" || name == "static_assert" || name == "struct" || name == "switch" ||
+    name == "template" || name == "this" || name == "thread_local" || name == "throw" || name == "true" || name == "try" ||
+    name == "typedef" || name == "typeid" || name == "typename" || name == "union" || name == "unsigned" || name == "using" ||
+    name == "virtual" || name == "void" || name == "volatile" || name == "wchar_t" || name == "while" || name == "xor" || name == "xor_eq"
 }
 
 export function emitUnary(expression: UnaryExpression, context: EmitContext): string {
@@ -402,6 +410,15 @@ function appendConstantStringParts(expression: Expression, parts: string[]): boo
 
 export function emitMember(expression: MemberExpression, context: EmitContext): string {
   object := emitExpression(expression.object, context)
+  let objectType = decoratedExpressionType(expression.object)
+  if objectType != none {
+    case objectType! {
+      _: WeakResolvedType -> {
+        if expression.optional || expression.force { return emitWeakFieldAccess(expression, object, context) }
+      }
+      _ -> { }
+    }
+  }
   case expression.object {
     this_: ThisExpression -> {
       let nativeOwner = false
@@ -486,7 +503,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   }
   if expression.property == "push" { return object + "->push_back" }
   if expression.property == "value" && object.contains("::") { return "static_cast<int32_t>(" + object + ")" }
-  objectType := decoratedExpressionType(expression.object)
+  objectType = decoratedExpressionType(expression.object)
   if objectType != none {
     case objectType! {
       function_: FunctionType -> { return object + "." + cppIdentifier(expression.property) }
@@ -519,6 +536,72 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     }
   }
   return object + "->" + cppIdentifier(expression.property)
+}
+
+function emitWeakFieldAccess(expression: MemberExpression, object: string, context: EmitContext): string {
+  context.tryCounter = context.tryCounter + 1
+  storage := "_weak_storage_" + string(context.tryCounter)
+  temporary := "_weak_value_" + string(context.tryCounter)
+  let nullable = false
+  case decoratedExpressionType(expression.object)! {
+    weak_: WeakResolvedType -> { nullable = weakTargetAllowsNone(weak_.inner) }
+    _ -> { }
+  }
+  weakValue := if nullable then storage + ".value()" else storage
+  let access = temporary + "->" + cppIdentifier(expression.property)
+  case decoratedExpressionType(expression.object)! {
+    weak_: WeakResolvedType -> {
+      if weakTargetUsesVariant(weak_.inner) {
+        access = "std::visit([](auto&& _weak_item) { return _weak_item->" + cppIdentifier(expression.property) + "; }, " + temporary + ")"
+      }
+    }
+    _ -> { }
+  }
+  if expression.force {
+    resultType := emitType(expression.resolvedType!, context.modulePath)
+    noneCheck := if nullable then "if (!" + storage + ".has_value()) doof::panic(\"Weak reference is none\"); " else ""
+    return "[&]() -> " + resultType + " { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); return " + access + "; }()"
+  }
+  case expression.resolvedType! {
+    result: ResultResolvedType -> {
+      resultCpp := emitType(result, context.modulePath)
+      payloadCpp := emitResultPayloadType(result.valueType, context.modulePath)
+      errorCpp := emitResultPayloadType(result.errorType, context.modulePath)
+      failure := weakFailureValue(result.errorType, errorCpp, context)
+      noneReturn := if nullable then "if (!" + storage + ".has_value()) return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{}}; " else ""
+      return "[&]() -> " + resultCpp + " { auto " + storage + " = " + object + "; " + noneReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return doof::Failure<" + errorCpp + ">{" + failure + "}; auto " + temporary + " = std::move(_weak_locked.value()); return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{" + access + "}}; }()"
+    }
+    _ -> { panic("Optional weak field access must resolve to Result") }
+  }
+  return ""
+}
+
+function weakTargetAllowsNone(type_: ResolvedType): bool {
+  case type_ {
+    union_: UnionResolvedType -> { for member of union_.types { if member.kind == "none" { return true } } }
+    _ -> { }
+  }
+  return false
+}
+
+function weakTargetUsesVariant(type_: ResolvedType): bool {
+  case type_ {
+    union_: UnionResolvedType -> {
+      let present = 0
+      for member of union_.types { if member.kind != "none" { present = present + 1 } }
+      return present > 1
+    }
+    _ -> { }
+  }
+  return false
+}
+
+function weakFailureValue(errorType: ResolvedType, errorCpp: string, context: EmitContext): string {
+  case errorType {
+    _: UnionResolvedType -> { return errorCpp + "{::doof::WeakReferenceError{}}" }
+    _ -> { }
+  }
+  return "::doof::WeakReferenceError{}"
 }
 
 export function emitIndex(expression: IndexExpression, context: EmitContext): string {

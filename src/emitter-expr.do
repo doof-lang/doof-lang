@@ -27,7 +27,7 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     string_: StringLiteral -> { value = emitString(string_, context) }
     char_: CharLiteral -> { value = emitChar(char_.value) }
     bool_: BoolLiteral -> { value = if bool_.value then "true" else "false" }
-    none_: NoneLiteral -> { value = emitNoneLiteral(expected) }
+    none_: NoneLiteral -> { value = emitNoneLiteral(expected, context) }
     caller: CallerExpression -> {
       functionName := if context.currentFunctionName == "" then "<module>" else context.currentFunctionName
       span := if context.sourceLocationSpanOverride == none then caller.span else context.sourceLocationSpanOverride!.span

@@ -188,10 +188,31 @@ export function testEmitsDependencyFirstInitializationCallsInsideActorScope(): n
 }
 
 export function testEmitsWeakFieldsAsWeakPointers(): none {
-  result := emit("class Node { weak parent: Node\nancestor: weak Node }")
+  result := emit("class Node { weak parent: Node\nancestor: weak Node }\nclass Registry { weak nodes: Node[]\nweak optional: Node | none = none }")
   Assert.equal(result.header.contains("std::weak_ptr<Node> parent"), true)
   Assert.equal(result.header.contains("std::weak_ptr<Node> ancestor"), true)
   Assert.equal(result.header.contains("Node(std::weak_ptr<Node> parent, std::weak_ptr<Node> ancestor)"), true)
+  Assert.stringContains(result.header, "std::weak_ptr<std::vector<std::shared_ptr<Node>>> nodes")
+  Assert.stringNotContains(result.header, "std::weak_ptr<std::shared_ptr<std::vector<std::shared_ptr<Node>>>> nodes")
+  Assert.stringContains(result.header, "std::optional<std::weak_ptr<Node>> optional = std::optional<std::weak_ptr<Node>>{}")
+}
+
+export function testEmitsCheckedWeakReferenceAccess(): none {
+  result := emit("class Node { value: int\nread(): int => value\nfallible(): Result<int, string> => Success { value } }\nfunction optionalField(node: weak Node): Result<int | none, WeakReferenceError> => node?.value\nfunction optionalCall(node: weak Node): Result<int | none, WeakReferenceError> => node?.read()\nfunction optionalFallibleCall(node: weak Node): Result<int | none, string | WeakReferenceError> => node?.fallible()\nfunction forcedField(node: weak Node): int => node!.value\nfunction forcedCall(node: weak Node): int => node!.read()")
+  Assert.stringContains(result.source, "doof::lock_weak(")
+  Assert.stringContains(result.source, "doof::WeakReferenceError{}")
+  Assert.stringContains(result.source, "Weak reference has expired")
+  Assert.stringContains(result.source, "doof::failure_error(_weak_result)")
+  Assert.stringNotContains(result.source, "node->value")
+  Assert.stringNotContains(result.source, "node->read()")
+}
+
+export function testEmitsCheckedWeakUnionAccess(): none {
+  result := emit("class Cat { name: string\nspeak(): string => name }\nclass Dog { name: string\nspeak(): string => name }\nclass Holder { weak pet: Cat | Dog }\nfunction name(holder: Holder): Result<string | none, WeakReferenceError> => holder.pet?.name\nfunction speak(holder: Holder): string => holder.pet!.speak()")
+  Assert.stringContains(result.header, "std::variant<std::weak_ptr<Cat>, std::weak_ptr<Dog>> pet")
+  Assert.stringContains(result.source, "doof::lock_weak(")
+  Assert.stringContains(result.source, "std::visit([](auto&& _weak_item)")
+  Assert.stringContains(result.source, "std::visit([&](auto&& _weak_item)")
 }
 
 export function testEmitsReflectableTypeParameterMetadataAccess(): none {
@@ -410,6 +431,13 @@ export function testEscapesDeleteCppKeywordForMethods(): none {
   Assert.equal(result.source.contains("router->delete_(std::string(\"/old\"))"), true)
 }
 
+export function testEscapesAdditionalCppKeywords(): none {
+  result := emit("function value(explicit: int, noexcept: int): int { wchar_t := explicit + noexcept\nreturn wchar_t }")
+  Assert.stringContains(result.header, "int32_t explicit_")
+  Assert.stringContains(result.header, "int32_t noexcept_")
+  Assert.stringContains(result.source, "const auto wchar_t_")
+}
+
 export function testEscapesPlatformStdioIdentifiersEverywhere(): none {
   result := emit("class Streams { stdin: string\nstdout: string\nstderr: string }\nfunction combine(stdin: string, stdout: string, stderr: string): string => Streams { stdin, stdout, stderr }.stdin + stdout + stderr")
   Assert.stringContains(result.header, "std::string stdin_;")
@@ -564,6 +592,12 @@ export function testEmitsActorCreationCallsPromiseAndRetirement(): none {
   Assert.equal(result.source.contains("->template call_async<int32_t>"), true)
   Assert.equal(result.source.contains("promise.get()"), true)
   Assert.equal(result.source.contains("worker->retire()"), true)
+}
+
+export function testEmitsActorCreationThroughStaticConstructor(): none {
+  result := emit("class Worker { value: int\nstatic constructor(value: int = 4): Worker => Worker { value } }\nfunction explicit(): Actor<Worker> => Actor<Worker>(7)\nfunction defaulted(): Actor<Worker> => Actor<Worker>()")
+  Assert.stringContains(result.source, "Worker::constructor(7)")
+  Assert.stringContains(result.source, "Worker::constructor(4)")
 }
 
 export function testEmitsAsyncValueBlocksWithDecoratedCaptures(): none {
@@ -1070,8 +1104,8 @@ export function testEmitsClassesMethodsAndConstruction(): none {
   result := emit("class Point { x: int\nfunction double(): int => x * 2 }\nfunction main(): int { point := Point { x: 4 }\nreturn point.double() }")
   Assert.equal(result.header.contains("struct Point"), true)
   Assert.equal(result.header.contains("int32_t x;"), true)
-  Assert.equal(result.header.contains("int32_t double();"), true)
-  Assert.equal(result.source.contains("int32_t Point::double()"), true)
+  Assert.equal(result.header.contains("int32_t double_();"), true)
+  Assert.equal(result.source.contains("int32_t Point::double_()"), true)
   Assert.equal(result.source.contains("this->x"), true)
   Assert.equal(result.source.contains("std::make_shared<Point>(4)"), true)
 }
@@ -1420,12 +1454,12 @@ export function testEmitsUniformNoneComparisons(): none {
 export function testEmitsPositionAwareNoneRepresentations(): none {
   result := emit("function fallthrough(): none { }\nfunction explicit(): none { return none }\nfunction invoke(callback: (): none): none { callback() }\nfunction save(): Result<none, string> => Success()\nfunction fail(): Result<int, none> => Failure()\nfunction settle(value: Promise<none>): Promise<none> => value")
   Assert.stringContains(result.header, "void fallthrough()")
-  Assert.stringContains(result.header, "void explicit()")
+  Assert.stringContains(result.header, "void explicit_()")
   Assert.stringContains(result.header, "const doof::callback<void()>& callback")
   Assert.stringContains(result.header, "doof::Result<void, std::string> save()")
   Assert.stringContains(result.header, "doof::Result<int32_t, void> fail()")
   Assert.stringContains(result.header, "doof::Promise<void> settle(const doof::Promise<void>& value)")
-  Assert.stringContains(result.source, "void explicit() {\n    return;")
+  Assert.stringContains(result.source, "void explicit_() {\n    return;")
 }
 
 export function testEmitsNullableMapsWithTheirPointerCarrier(): none {
@@ -1589,6 +1623,25 @@ export function testEmitsImportedTypeAliasesForNativeNamespaces(): none {
   let header = ""
   for module of graph.modules { if module.modulePath == "/main.do" { header = module.header } }
   Assert.equal(header.contains("namespace doof_blob { using EncodingError = ::app_types_::EncodingError; }"), true)
+}
+
+export function testDoesNotNominallyForwardDeclareNativeVisibleInterfaceAliases(): none {
+  sources := [
+    SourceFile { path: "/main.do", source: "import { ConsoleLogger, Logger } from \"./log\"\nfunction use(logger: Logger): none { logger.log() }\nfunction main(): none { use(ConsoleLogger()) }" },
+    SourceFile { path: "/log.do", source: "export interface Logger { log(): none }\nexport import class ConsoleLogger from \"native_log.hpp\" as native_log::ConsoleLogger { static constructor(): ConsoleLogger\nlog(): none }" },
+  ]
+  analysis := createAnalyzer(sources).analyze("/main.do")
+  checker := createChecker(analysis)
+  Assert.equal(hasErrorDiagnostics(checker.check("/log.do").diagnostics), false)
+  Assert.equal(hasErrorDiagnostics(checker.check("/main.do").diagnostics), false)
+  graph := emitModuleGraph(analysis, "/main.do")
+  let header = ""
+  for module of graph.modules { if module.modulePath == "/main.do" { header = module.header } }
+
+  Assert.stringNotContains(header, "namespace app_log_ { struct Logger; }")
+  interfaceAlias := header.indexOf("using Logger = std::variant<std::shared_ptr<::native_log::ConsoleLogger>>;")
+  nativeAlias := header.indexOf("namespace native_log { using Logger = ::app_log_::Logger; }")
+  Assert.equal(interfaceAlias >= 0 && nativeAlias > interfaceAlias, true)
 }
 
 export function testEmitsVisibleNativeAliasesAndCompleteRecursiveTypes(): none {

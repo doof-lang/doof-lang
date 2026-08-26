@@ -133,7 +133,7 @@ export function classSatisfiesConcreteInterface(result: AnalysisResult, class_: 
     interface_: InterfaceDeclaration -> {
       for required of interface_.fields {
         actualField := findClassField(class_.fields, required.name)
-        if actualField == none || actualField!.type_ == none { return false }
+        if actualField == none || actualField!.private_ || actualField!.type_ == none { return false }
         if required.readonly_ && !actualField!.readonly_ { return false }
         if required.let_ && !actualField!.let_ { return false }
         actualBase := if actualField!.resolvedType == none then resolveAnnotation(actualField!.type_!, classModuleFor(result, classType_.symbol), result, class_.typeParams) else actualField!.resolvedType!
@@ -144,7 +144,7 @@ export function classSatisfiesConcreteInterface(result: AnalysisResult, class_: 
       }
       for requiredMethod of interface_.methods {
         actualMethod := findClassMethod(class_.methods, requiredMethod.name, requiredMethod.static_)
-        if actualMethod == none { return false }
+        if actualMethod == none || actualMethod!.private_ { return false }
         actualBase := if actualMethod!.resolvedType == none then methodSignature(actualMethod!, classModuleFor(result, classType_.symbol), result) else actualMethod!.resolvedType!
         requiredBase := if requiredMethod.resolvedType == none then methodSignature(requiredMethod, classModuleFor(result, interfaceType_.symbol), result) else requiredMethod.resolvedType!
         actual := substituteTypeParams(actualBase, class_.typeParams, classType_.typeArgs)
@@ -168,7 +168,7 @@ export function classSatisfiesInterface(result: AnalysisResult, classSymbol: Sym
         interface_: InterfaceDeclaration -> {
           for required of interface_.fields {
             classField := findClassField(class_.fields, required.name)
-            if classField == none { return false }
+            if classField == none || classField!.private_ { return false }
             if required.readonly_ && !classField!.readonly_ { return false }
             if required.let_ && !classField!.let_ { return false }
             actual := if classField!.resolvedType == none then resolveAnnotation(classField!.type_!, classModuleFor(result, classSymbol), result) else classField!.resolvedType!
@@ -177,7 +177,7 @@ export function classSatisfiesInterface(result: AnalysisResult, classSymbol: Sym
           }
           for requiredMethod of interface_.methods {
             classMethod := findClassMethod(class_.methods, requiredMethod.name, requiredMethod.static_)
-            if classMethod == none || classMethod!.params.length != requiredMethod.params.length { return false }
+            if classMethod == none || classMethod!.private_ || classMethod!.params.length != requiredMethod.params.length { return false }
             if !sameFunctionSignature(classMethod!, requiredMethod, result, classSymbol, interfaceSymbol) { return false }
           }
           return true

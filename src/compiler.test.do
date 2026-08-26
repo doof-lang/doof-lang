@@ -373,6 +373,32 @@ export function testMonomorphizesDoofFunctionsAndClasses(): none {
   Assert.equal(module.source.contains("map__int(4)"), true)
 }
 
+export function testForwardDeclaresNativeBoundaryTemplatesBeforeConsumerClasses(): none {
+  result := compile([
+    SourceFile {
+      path: "/channel.do",
+      source: "import function deliver<T>(channel: Channel<T>, value: T): none from \"native_channel.hpp\" as native_channel::deliver\nexport class Channel<T> { value: T send(value: T): none { deliver(this, value) } }",
+    },
+    SourceFile {
+      path: "/main.do",
+      source: "import { Channel } from \"./channel\"\nclass Connection { channel: Channel<int> }\nfunction main(): none {}",
+    },
+  ], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.emission != none, true)
+  let mainHeader = ""
+  for module of result.emission!.modules {
+    if module.modulePath == "/main.do" { mainHeader = module.header }
+  }
+  templateForward := mainHeader.indexOf("template <typename T>\n    struct Channel;")
+  consumerDefinition := mainHeader.indexOf("struct Connection :")
+  templateDefinition := mainHeader.indexOf("struct Channel :")
+  Assert.equal(templateForward >= 0, true)
+  Assert.equal(consumerDefinition > templateForward, true)
+  Assert.equal(templateDefinition > consumerDefinition, true)
+}
+
 export function testDiagnosesExpandingGenericInstantiations(): none {
   result := compile([SourceFile {
     path: "/main.do",

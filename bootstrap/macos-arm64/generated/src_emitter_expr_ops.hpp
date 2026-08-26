@@ -759,9 +759,10 @@ namespace app_src_ast_ {
     std::string kind;
     std::string className;
     std::shared_ptr<std::vector<Expression>> args;
+    std::shared_ptr<FunctionDeclaration> resolvedConstructor = nullptr;
     __type3 resolvedType = std::monostate{};
     SourceSpan span;
-    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedType(resolvedType), span(span) {}
+    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, std::shared_ptr<FunctionDeclaration> resolvedConstructor, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedConstructor(resolvedConstructor), resolvedType(resolvedType), span(span) {}
 };
     struct YieldBlockExpression : public std::enable_shared_from_this<YieldBlockExpression> {
     std::string kind = std::string("yield-block-expression");
@@ -1211,6 +1212,7 @@ namespace app_src_checker_types_ {
 
 namespace app_src_emitter_types_ {
     __type11 specializeEmitType(const __type11& resolvedType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    std::string emitResultPayloadType(const __type11& resolvedType, const std::string& currentModulePath = std::string(""));
     std::string emitType(const __type11& resolvedType, const std::string& currentModulePath = std::string(""));
     bool usesVariantRepresentation(const __type11& type_);
     std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> naturalNullableUnionMember(const __type11& type_);
@@ -1246,10 +1248,15 @@ namespace app_src_emitter_expr_ops_ {
     bool isVariantCarrier(const __type15& resolvedType);
     std::string emitIdentifier(const std::shared_ptr<::app_src_ast_::Identifier>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string cppIdentifier(const std::string& name);
+    bool isCppKeyword(const std::string& name);
     std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string binaryOperator(const std::string& operator_);
     std::string emitBinary(const std::shared_ptr<::app_src_ast_::BinaryExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     bool appendConstantStringParts(const __type16& expression, const std::shared_ptr<std::vector<std::string>>& parts);
     std::string emitMember(const std::shared_ptr<::app_src_ast_::MemberExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    std::string emitWeakFieldAccess(const std::shared_ptr<::app_src_ast_::MemberExpression>& expression, const std::string& object, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    bool weakTargetAllowsNone(const __type15& type_);
+    bool weakTargetUsesVariant(const __type15& type_);
+    std::string weakFailureValue(const __type15& errorType, const std::string& errorCpp, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string emitIndex(const std::shared_ptr<::app_src_ast_::IndexExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
 }

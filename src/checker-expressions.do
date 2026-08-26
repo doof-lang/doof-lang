@@ -4,7 +4,7 @@ import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
   JsonValueResolvedType, MapResolvedType, NeverType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType,
+  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
@@ -28,7 +28,7 @@ import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
-  isStringInterpolatable, substituteTypeParams, typeParameter, unknownType,
+  isStringInterpolatable, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -42,9 +42,10 @@ import { checkCall, checkLambda, checkConstruct, callableField } from "./checker
 import { checkArray, checkObject } from "./checker-literals"
 import { fieldAssignmentBinding, resolveType, memberType, indexType } from "./checker-resolution"
 import { deprecatedNoneAlias, finish, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
-import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, isTypeOnlyNamespaceImport, namespaceMemberSymbol, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
+import { builtinSourceLocationType, casePatternName, methodSignature, optionalResolvedType, isNamespaceImport, isTypeOnlyNamespaceImport, namespaceMemberSymbol, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
 import { constructorForClass, staticMemberOwner } from "./checker-generics"
 import { checkerSemanticSpan } from "./checker-validation"
+import { classModuleFor } from "./checker-interfaces"
 
 export function checkCaseExpression(state: CheckerState, expression: CaseExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   subjectType := checkExpression(state, expression.subject, scope, none)
@@ -450,6 +451,17 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         return finish(state, expression, namespaceMember!)
       }
       if objectType.kind == "never" { return finish(state, expression, neverType()) }
+      let weakReceiver: WeakResolvedType | none = none
+      case objectType {
+        weak_: WeakResolvedType -> {
+          weakReceiver = weak_
+          objectType = weakAccessTarget(weak_.inner)
+          if !member.optional && !member.force {
+            typeError(state, "Weak reference member access requires '?.' or '!.'", member.span)
+          }
+        }
+        _ -> { }
+      }
       case member.object {
         identifier: Identifier -> {
           if member.property == "parse" && legacyNumericParseType(identifier) {
@@ -472,7 +484,18 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       if member.resolvedStaticOwner != none && !isNamedStaticReceiver(member.object) {
         typeError(state, "Static member '" + member.property + "' cannot be accessed through an instance with '.'; use '::'", member.span)
       }
+      if member.resolvedStaticOwner == none && isNamedStaticReceiver(member.object) && declaredInstanceMember(state, objectType, member.property) {
+        typeError(state, "Instance member '" + member.property + "' cannot be accessed through a class", member.span)
+      }
       member.resolvedCallableField = callableField(state, objectType, member.property)
+      if weakReceiver != none {
+        case memberValue {
+          _: FunctionType -> { return finish(state, expression, memberValue) }
+          _ -> {
+            if member.optional { return finish(state, expression, resultType(unionType([memberValue, noneType()]), weakReferenceErrorType())) }
+          }
+        }
+      }
       return finish(state, expression, memberValue)
     }
     index: IndexExpression -> {
@@ -618,11 +641,36 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         return finish(state, expression, unknownType())
       }
       inner := classType(actorCreation.className, symbol!)
-      constructorMethod := constructorForClass(inner, state.result)
+      actorCreation.resolvedConstructor = constructorForClass(inner, state.result)
+      if actorCreation.resolvedConstructor != none && actorCreation.resolvedConstructor!.private_ && inner.symbol.module != state.info!.path {
+        typeError(state, "Constructor for \"" + inner.name + "\" is private", actorCreation.span)
+      }
+      if actorCreation.resolvedConstructor != none {
+        constructorType := actorCreation.resolvedConstructor!.resolvedType ?? methodSignature(actorCreation.resolvedConstructor!, classModuleFor(state.result, inner.symbol), state.result)
+        case constructorType {
+          function_: FunctionType -> {
+            if !sameType(function_.returnType, inner) {
+              typeError(state, "Actor constructor factory for \"" + inner.name + "\" must return " + inner.name + " directly", actorCreation.span)
+            }
+          }
+          _ -> { }
+        }
+      }
+      params := actorConstructorParameters(state, inner)
+      validateActorFieldConstructorVisibility(state, actorCreation, inner)
+      let requiredCount = 0
+      for parameter of params { if !parameter.hasDefault { requiredCount = requiredCount + 1 } }
+      if actorCreation.args.length < requiredCount || actorCreation.args.length > params.length {
+        range := if requiredCount == params.length then string(requiredCount) else string(requiredCount) + "-" + string(params.length)
+        typeError(state, "Actor \"" + actorCreation.className + "\" expects " + range + " constructor argument(s) but got " + string(actorCreation.args.length), actorCreation.span)
+      }
       for i of 0..<actorCreation.args.length {
         let expectedArgument: ResolvedType | none = none
-        if constructorMethod != none && i < constructorMethod!.params.length { expectedArgument = constructorMethod!.params[i].resolvedType }
+        if i < params.length { expectedArgument = optionalResolvedType(params[i].type_) }
         actual := checkExpression(state, actorCreation.args[i], scope, expectedArgument)
+        if expectedArgument != none && !isAssignable(actual, expectedArgument!) {
+          typeError(state, "Actor constructor argument " + string(i + 1) + " has type " + typeName(actual) + "; expected " + typeName(expectedArgument!), actorCreation.args[i].span)
+        }
         violation := findActorBoundaryViolation(state.result, actual)
         if violation != none {
           typeError(state,
@@ -633,10 +681,88 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       }
       return finish(state, expression, actorType(inner))
     }
-    _: ThisExpression -> { return finish(state, expression, currentThisType(scope)) }
+    this_: ThisExpression -> {
+      let current: Scope | none = scope
+      while current != none {
+        if current!.staticContext {
+          typeError(state, "Cannot use 'this' in a static method", this_.span)
+          return finish(state, expression, unknownType())
+        }
+        if current!.thisType != none { break }
+        current = current!.parent
+      }
+      return finish(state, expression, currentThisType(scope))
+    }
     _ -> { return finish(state, expression, unknownType()) }
   }
   return unknownType()
+}
+
+function weakAccessTarget(type_: ResolvedType): ResolvedType {
+  case type_ {
+    union_: UnionResolvedType -> {
+      let present: ResolvedType[] = []
+      for member of union_.types { if member.kind != "none" { present.push(member) } }
+      if present.length > 0 { return unionType(present) }
+    }
+    _ -> { }
+  }
+  return type_
+}
+
+function actorConstructorParameters(state: CheckerState, inner: ClassType): FunctionParamType[] {
+  constructor := constructorForClass(inner, state.result)
+  if constructor != none {
+    let params: FunctionParamType[] = []
+    for parameter of constructor!.params {
+      params.push(FunctionParamType {
+        name: parameter.name,
+        type_: parameter.resolvedType ?? unknownType(),
+        hasDefault: parameter.defaultValue != none,
+      })
+    }
+    return params
+  }
+  let params: FunctionParamType[] = []
+  declaration := declarationFor(state.result, inner.symbol)
+  if declaration == none { return params }
+  case declaration! {
+    class_: ClassDeclaration -> {
+      for field of class_.fields {
+        if field.static_ || field.const_ { continue }
+        for name of field.names {
+          params.push(FunctionParamType {
+            name,
+            type_: memberType(state, inner, name, field.span, false),
+            hasDefault: field.defaultValue != none,
+          })
+        }
+      }
+    }
+    _ -> { }
+  }
+  return params
+}
+
+function validateActorFieldConstructorVisibility(state: CheckerState, expression: ActorCreationExpression, inner: ClassType): none {
+  if expression.resolvedConstructor != none || inner.symbol.module == state.info!.path { return }
+  declaration := declarationFor(state.result, inner.symbol)
+  if declaration == none { return }
+  case declaration! {
+    owner: ClassDeclaration -> {
+      let parameterIndex = 0
+      for field of owner.fields {
+        if field.static_ || field.const_ { continue }
+        for name of field.names {
+          if parameterIndex < expression.args.length && field.private_ {
+            typeError(state, "Field '" + name + "' is private to module '" + inner.symbol.module + "'", expression.args[parameterIndex].span)
+          }
+          parameterIndex += 1
+        }
+      }
+    }
+    _ -> { }
+  }
 }
 
 function isNamedStaticReceiver(expression: Expression): bool {
@@ -649,6 +775,29 @@ function isNamedStaticReceiver(expression: Expression): bool {
         kind := binding.symbol!.kind
         return kind == "class" || kind == "struct" || kind == "interface"
       }
+    }
+    _ -> { }
+  }
+  return false
+}
+
+function declaredInstanceMember(state: CheckerState, receiver: ResolvedType, property: string): bool {
+  let symbol: Symbol | none = none
+  case receiver {
+    class_: ClassType -> { symbol = class_.symbol }
+    interface_: InterfaceType -> { symbol = interface_.symbol }
+    _ -> { return false }
+  }
+  declaration := declarationFor(state.result, symbol!)
+  if declaration == none { return false }
+  case declaration! {
+    class_: ClassDeclaration -> {
+      for field of class_.fields { for name of field.names { if name == property && !field.static_ { return true } } }
+      for method of class_.methods { if method.name == property && !method.static_ { return true } }
+    }
+    interface_: InterfaceDeclaration -> {
+      for field of interface_.fields { if field.name == property { return true } }
+      for method of interface_.methods { if method.name == property && !method.static_ { return true } }
     }
     _ -> { }
   }

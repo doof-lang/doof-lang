@@ -2325,9 +2325,10 @@ namespace app_src_ast_ {
     std::string kind;
     std::string className;
     std::shared_ptr<std::vector<Expression>> args;
+    std::shared_ptr<FunctionDeclaration> resolvedConstructor = nullptr;
     __type3 resolvedType = std::monostate{};
     SourceSpan span;
-    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedType(resolvedType), span(span) {}
+    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, std::shared_ptr<FunctionDeclaration> resolvedConstructor, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedConstructor(resolvedConstructor), resolvedType(resolvedType), span(span) {}
 };
     struct YieldBlockExpression : public std::enable_shared_from_this<YieldBlockExpression> {
     std::string kind = std::string("yield-block-expression");
@@ -3036,6 +3037,7 @@ namespace app_src_driver_ {
     doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>> loadDriverSource(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<DriverSourceRoot>>>& localRoots, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>>>& acquisitions);
     doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>> configuredDriverSource(const std::string& logicalPath);
     std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquiredPackageForLoadedSource(const std::string& logicalPath, const std::shared_ptr<DriverSourceState>& state);
+    doof::Result<std::shared_ptr<::app_src_package_manifest_::PackageManifest>, std::string> parseDependencyManifestForTarget(const std::string& source, const std::string& manifestPath, const std::string& rootDirectory, const std::string& nativePlatform, const std::string& rootTarget);
     doof::Result<void, std::shared_ptr<::app_src_semantic_::Diagnostic>> registerReachedPackage(const std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>& acquisition);
     std::shared_ptr<DriverAcquiredSource> acquiredSourceFor(const std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>& acquisition);
     doof::Result<void, std::string> ensureStdPackageAcquisition(const std::string& logicalPath);

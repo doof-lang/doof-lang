@@ -47,7 +47,7 @@ std::string emitExpression(const std::variant<std::shared_ptr<::app_src_ast_::In
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NoneLiteral>>(_case_subject)) {
             const auto& none_ = std::get<std::shared_ptr<::app_src_ast_::NoneLiteral>>(_case_subject);
-            (value = ::app_src_emitter_expr_literals_::emitNoneLiteral(expected));
+            (value = ::app_src_emitter_expr_literals_::emitNoneLiteral(expected, context));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CallerExpression>>(_case_subject)) {
             const auto& caller = std::get<std::shared_ptr<::app_src_ast_::CallerExpression>>(_case_subject);

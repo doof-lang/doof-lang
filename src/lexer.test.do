@@ -88,6 +88,14 @@ export function testUnicodeCharacterLiteralsAreSingleTokens(): none {
   Assert.equal(int(charTokenValue(tokens[1], source)), 128578)
 }
 
+export function testStringEscapeDecodingPreservesUnicodeBytes(): none {
+  accent := codePointToUtf8(233)
+  face := codePointToUtf8(128578)
+  source := "\"" + accent + "\\r\\n" + face + "\""
+  tokens := Lexer { source }.tokenize()
+  Assert.equal(tokenValue(tokens[0], source), accent + "\r\n" + face)
+}
+
 export function testShebangIsIgnoredAtSourceStart(): none {
   source := "#!/usr/bin/env doof\nfunction main(): none {}"
   lexer := Lexer { source }

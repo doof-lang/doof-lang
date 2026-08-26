@@ -784,7 +784,7 @@ void collectIdentifierCapture(const std::shared_ptr<::app_src_ast_::Identifier>&
         }
         return;
     }
-    if ((binding->kind == std::string("script-global")) || (binding->kind == std::string("script-arguments"))) {
+    if (((binding->kind == std::string("module-let")) || (binding->kind == std::string("script-global"))) || (binding->kind == std::string("script-arguments"))) {
         return;
     }
     if (((!doof::is_null(binding->symbol)) || (binding->kind == std::string("builtin"))) || (binding->kind == std::string("import"))) {

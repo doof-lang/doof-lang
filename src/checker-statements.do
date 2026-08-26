@@ -25,10 +25,10 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter, TypeParameterConstraint,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
+  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, isWeakReferenceTarget, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType,
+  substituteTypeParams, typeParameter, unknownType, weakType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -40,7 +40,7 @@ import { casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMet
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
 import { deprecatedClassMethodFunction, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
-import { decorateAnnotationWithResolved, blockContainsLoopExit, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
+import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
@@ -328,7 +328,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
 export function checkFunction(state: CheckerState, fn: FunctionDeclaration, outer: Scope, owner: ClassType | none): ResolvedType {
   validateUniqueTypeParameters(state, fn.typeParams, fn.span)
   validateTypeParameterShadowing(state, fn.typeParams, outer, fn.span)
-  scope := Scope { parent: outer, typeParams: [], thisType: if owner == none then unknownType() else owner!, functionName: fn.name }
+  scope := Scope { parent: outer, typeParams: [], thisType: if owner == none then unknownType() else owner!, functionName: fn.name, staticContext: owner != none && fn.static_ }
   populateTypeParameters(state, scope, fn.typeParams, fn.typeParamConstraints)
   if owner != none {
     declaration := declarationFor(state.result, owner!.symbol)
@@ -339,7 +339,7 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
       }
     }
   }
-  if owner != none { addClassFields(state, scope, owner!); addClassMethods(state, scope, owner!) }
+  if owner != none && !fn.static_ { addClassFields(state, scope, owner!); addClassMethods(state, scope, owner!) }
   returnType := if fn.returnType == none then noneType() else resolveType(state, fn.returnType!, state.info!, scope)
   scope.returnType = returnType
   functionValue := functionType(functionParameters(state, fn, scope), returnType, fn.typeParams)
@@ -400,6 +400,7 @@ export function functionParameters(state: CheckerState, fn: FunctionDeclaration,
 
 export function checkClass(state: CheckerState, class_: ClassDeclaration, scope: Scope): none {
   validateUniqueTypeParameters(state, class_.typeParams, class_.span)
+  validateUniqueClassMembers(state, class_)
   symbol := symbolFor(state.info!, class_.name)
   if symbol == none { return }
   classScope := Scope { parent: scope, typeParams: [] }
@@ -421,7 +422,11 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
       state.allowsCaller = previousAllowsCaller
     }
     if field.readonly_ || field.const_ { fieldType = applyDeepReadonly(fieldType) }
-    field.resolvedType = optionalResolvedType(fieldType)
+    field.resolvedType = optionalResolvedType(if field.weak_ then weakType(fieldType) else fieldType)
+    if field.weak_ && !isWeakReferenceTarget(fieldType) {
+      name := if field.names.length == 0 then "<field>" else field.names[0]
+      typeError(state, "Field \"" + name + "\" has type \"" + typeName(fieldType) + "\", which is not a valid weak reference target", field.span)
+    }
     if class_.struct_ && (field.weak_ || containsWeakType(fieldType)) {
       name := if field.names.length == 0 then "<field>" else field.names[0]
       typeError(state, "Struct field \"" + name + "\" cannot be weak", field.span)
@@ -440,6 +445,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
     deprecatedClassMethodFunction(state, method)
     if generatedMemberName(method.name) { typeError(state, "Method name \"" + method.name + "\" is reserved for compiler-generated reflection and JSON support", method.span) }
     checkFunction(state, method, classScope, owner)
+    if method.name == "constructor" { validateConstructorDeclaration(state, class_, method, owner) }
   }
   streamElement := classStreamElementType(class_)
   if streamElement != none { symbol!.streamElementTypes.push(streamElement!) }
@@ -476,6 +482,40 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
       }
       _ -> { typeError(state, "\"" + interfaceRef.name + "\" is not an interface", interfaceRef.span) }
     }
+  }
+}
+
+function validateUniqueClassMembers(state: CheckerState, class_: ClassDeclaration): none {
+  let names: string[] = []
+  for field of class_.fields {
+    for name of field.names {
+      if containsString(names, name) { typeError(state, "Member \"" + name + "\" is already declared in class \"" + class_.name + "\"", field.span) }
+      else { names.push(name) }
+    }
+  }
+  for method of class_.methods {
+    if containsString(names, method.name) { typeError(state, "Member \"" + method.name + "\" is already declared in class \"" + class_.name + "\"", method.span) }
+    else { names.push(method.name) }
+  }
+}
+
+function validateConstructorDeclaration(state: CheckerState, class_: ClassDeclaration, constructor: FunctionDeclaration, owner: ClassType): none {
+  if !constructor.static_ {
+    typeError(state, "Constructor method for \"" + class_.name + "\" must be static", constructor.span)
+  }
+  if constructor.resolvedType == none { return }
+  case constructor.resolvedType! {
+    function_: FunctionType -> {
+      let validReturn = sameType(function_.returnType, owner)
+      case function_.returnType {
+        result: ResultResolvedType -> { validReturn = sameType(result.valueType, owner) }
+        _ -> { }
+      }
+      if !validReturn {
+        typeError(state, "Constructor method for \"" + class_.name + "\" must return " + class_.name + " or Result<" + class_.name + ", E>", constructor.span)
+      }
+    }
+    _ -> { }
   }
 }
 
@@ -519,6 +559,7 @@ function containsWeakType(type_: ResolvedType): bool {
 
 export function checkInterface(state: CheckerState, interface_: InterfaceDeclaration, scope: Scope): none {
   validateUniqueTypeParameters(state, interface_.typeParams, interface_.span)
+  validateUniqueInterfaceMembers(state, interface_)
   interfaceScope := Scope { parent: scope, typeParams: [] }
   populateTypeParameters(state, interfaceScope, interface_.typeParams, interface_.typeParamConstraints)
   for field of interface_.fields {
@@ -527,6 +568,18 @@ export function checkInterface(state: CheckerState, interface_: InterfaceDeclara
     field.resolvedType = optionalResolvedType(fieldType)
   }
   for method of interface_.methods { checkFunction(state, method, interfaceScope, none) }
+}
+
+function validateUniqueInterfaceMembers(state: CheckerState, interface_: InterfaceDeclaration): none {
+  let names: string[] = []
+  for field of interface_.fields {
+    if containsString(names, field.name) { typeError(state, "Member \"" + field.name + "\" is already declared in interface \"" + interface_.name + "\"", field.span) }
+    else { names.push(field.name) }
+  }
+  for method of interface_.methods {
+    if containsString(names, method.name) { typeError(state, "Member \"" + method.name + "\" is already declared in interface \"" + interface_.name + "\"", method.span) }
+    else { names.push(method.name) }
+  }
 }
 
 // Constraint annotations live in the declaration scope so ordinary constraints
@@ -580,12 +633,71 @@ function validateTypeParameterShadowing(state: CheckerState, names: string[], ou
 }
 
 export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Scope): none {
-  for variant of enum_.variants {
+  let names: string[] = []
+  let values: long[] = []
+  let valueNames: string[] = []
+  let nextValue = 0L
+  for index of 0..<enum_.variants.length {
+    variant := enum_.variants[index]
+    if containsString(names, variant.name) { typeError(state, "Variant \"" + variant.name + "\" is already declared in enum \"" + enum_.name + "\"", variant.span) }
+    else { names.push(variant.name) }
+    let value: long | none = nextValue
     if variant.value != none {
       valueType := checkExpression(state, variant.value!, scope, optionalResolvedType(primitive("int")))
       if !isAssignable(valueType, primitive("int")) { typeError(state, "Enum value must be an int", variant.span) }
+      value = enumConstantInt(variant.value!)
+      if value == none { typeError(state, "Enum variant \"" + variant.name + "\" value must be a compile-time int constant", variant.value!.span) }
+    }
+    if value != none {
+      if value! < -2147483648L || value! > 2147483647L {
+        typeError(state, "Enum variant \"" + variant.name + "\" value is outside the int range", variant.span)
+      } else {
+        for previous of 0..<values.length {
+          if values[previous] == value! {
+            typeError(state, "Enum variant \"" + variant.name + "\" duplicates the value of \"" + valueNames[previous] + "\"", variant.span)
+            break
+          }
+        }
+        values.push(value!)
+        valueNames.push(variant.name)
+      }
+      nextValue = value! + 1L
     }
   }
+}
+
+function enumConstantInt(expression: Expression): long | none {
+  case expression {
+    literal: IntLiteral -> { return long(literal.value) }
+    unary: UnaryExpression -> {
+      if !unary.prefix || (unary.operator != "+" && unary.operator != "-") { return none }
+      operand := enumConstantInt(unary.operand)
+      if operand == none { return none }
+      result := if unary.operator == "-" then -operand! else operand!
+      if result < -2147483648L || result > 2147483647L { return none }
+      return result
+    }
+    binary: BinaryExpression -> {
+      left := enumConstantInt(binary.left)
+      right := enumConstantInt(binary.right)
+      if left == none || right == none { return none }
+      let result = 0L
+      if binary.operator == "+" { result = left! + right! }
+      else if binary.operator == "-" { result = left! - right! }
+      else if binary.operator == "*" { result = left! * right! }
+      else if binary.operator == "\\" {
+        if right! == 0L { return none }
+        result = left! \ right!
+      } else if binary.operator == "%" {
+        if right! == 0L { return none }
+        result = left! % right!
+      } else { return none }
+      if result < -2147483648L || result > 2147483647L { return none }
+      return result
+    }
+    _ -> { return none }
+  }
+  return none
 }
 
 export function validateInterfaces(state: CheckerState, module: ModuleInfo): none {
@@ -744,7 +856,7 @@ function positionalDestructuringTypes(state: CheckerState, valueType: ResolvedTy
         owner: ClassDeclaration -> {
           for field of owner.fields {
             if field.static_ { continue }
-            for name of field.names { result.push(memberType(state, class_, name, field.span)) }
+            for name of field.names { result.push(memberType(state, class_, name, span)) }
           }
         }
         _ -> { }

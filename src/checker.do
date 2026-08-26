@@ -7,6 +7,8 @@ import { AnalysisResult } from "./analyzer"
 import { Binding, CheckResult, Diagnostic, Scope } from "./semantic"
 import { CheckerState } from "./checker-state"
 import { checkStatement, validateInterfaces } from "./checker-statements"
+import { checkExpression } from "./checker-expressions"
+import { resolveType } from "./checker-resolution"
 import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
 import { discoverInterfaceImplementations, findModule } from "./checker-interfaces"
 import { declare, predeclareModuleBindings } from "./checker-symbols"
@@ -18,9 +20,10 @@ import {
   ImmutableBinding, InterfaceDeclaration, ClassDeclaration, EnumDeclaration, LetDeclaration,
   MockImportDirective, ReadonlyDeclaration, Statement, TryStatement, TypeAliasDeclaration,
 } from "./ast"
-import { arrayType, primitive } from "./checker-types"
+import { applyDeepReadonly, arrayType, primitive, unknownType, weakType } from "./checker-types"
 import { typeError } from "./checker-common"
 import { validateModuleInitializerStatement } from "./checker-module-initialization"
+import { optionalResolvedType } from "./checker-symbols"
 
 export class ModuleChecker {
   state: CheckerState
@@ -187,7 +190,57 @@ function promoteScriptBinding(statement: Statement, scriptScope: Scope, moduleSc
 }
 
 export function createChecker(result: AnalysisResult, entry: string = "", entryMode: string = "executable"): ModuleChecker {
-  return ModuleChecker { state: CheckerState { result, entry: if entry.endsWith(".do") then entry else entry + ".do", entryMode } }
+  state := CheckerState { result, entry: if entry.endsWith(".do") then entry else entry + ".do", entryMode }
+  prepareClassFieldTypes(state)
+  return ModuleChecker { state }
+}
+
+// Class declarations are semantic signatures consumed across module
+// boundaries. Prepare their field types graph-wide before checking any body so
+// an import cycle cannot expose an inferred field as UnknownType merely because
+// its owning module has not reached its class statement yet. This pass is
+// intentionally diagnostic-free and converges over fields whose defaults
+// depend on other declarations; normal class checking still validates every
+// initializer and reports errors in its owning module.
+function prepareClassFieldTypes(state: CheckerState): none {
+  let changed = true
+  while changed {
+    changed = false
+    for module of state.result.modules {
+      state.info = module
+      state.moduleScope = Scope { parent: none }
+      predeclareModuleBindings(module, state.moduleScope!, state.result)
+      for statement of module.program.statements {
+        case statement {
+          class_: ClassDeclaration -> {
+            classScope := Scope { parent: state.moduleScope, typeParams: class_.typeParams }
+            for field of class_.fields {
+              if field.resolvedType != none { continue }
+              diagnosticCount := state.diagnostics.length
+              let fieldType = unknownType()
+              if field.type_ != none {
+                fieldType = resolveType(state, field.type_!, module, classScope)
+              } else if field.defaultValue != none {
+                previousAllowsCaller := state.allowsCaller
+                state.allowsCaller = true
+                fieldType = checkExpression(state, field.defaultValue!, classScope, none)
+                state.allowsCaller = previousAllowsCaller
+              }
+              while state.diagnostics.length > diagnosticCount { ignored := try! state.diagnostics.pop() }
+              if fieldType.kind == "unknown" { continue }
+              if field.readonly_ || field.const_ { fieldType = applyDeepReadonly(fieldType) }
+              field.resolvedType = optionalResolvedType(if field.weak_ then weakType(fieldType) else fieldType)
+              changed = true
+            }
+          }
+          _ -> { }
+        }
+      }
+    }
+  }
+  state.diagnostics = []
+  state.info = none
+  state.moduleScope = none
 }
 
 export function validateCheckedTypes(result: AnalysisResult): Diagnostic[] {

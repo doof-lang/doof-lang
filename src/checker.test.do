@@ -247,6 +247,13 @@ export function testRejectsStaticMemberAccessThroughInstances(): none {
   Assert.equal(valid.diagnostics.length, 0)
 }
 
+export function testRejectsInstanceMemberAccessThroughClasses(): none {
+  result := checked("class Item { value: int\nread(): int => this.value }\nfunction main(): none { first := Item.value\nsecond := Item.read() }")
+  Assert.equal(result.diagnostics.length, 2)
+  Assert.stringContains(result.diagnostics[0].message, "Instance member 'value'")
+  Assert.stringContains(result.diagnostics[1].message, "Instance member 'read'")
+}
+
 export function testRejectsDuplicateLocalAndParameterBindings(): none {
   locals := checked("function run(): none { value := 1\nvalue := 2 }")
   Assert.equal(locals.diagnostics.length, 1)
@@ -511,6 +518,33 @@ function checkedSources(sources: SourceFile[], entry: string): CheckResult {
   return CheckResult { diagnostics }
 }
 
+export function testResolvesInferredStaticFieldsAcrossCircularImports(): none {
+  result := checkedSources([
+    SourceFile {
+      path: "/transform.do",
+      source:
+        "import { Point } from \"./render\"\n" +
+        "export struct Vec {\n" +
+        "  readonly x: double\n" +
+        "  static readonly up = Vec { x: 1.0 }\n" +
+        "  static fromPoint(point: Point): Vec => Vec { x: point.x }\n" +
+        "}\n",
+    },
+    SourceFile {
+      path: "/render.do",
+      source:
+        "import { Vec } from \"./transform\"\n" +
+        "export struct Point { readonly x: double }\n" +
+        "export function direction(point: Point): Vec {\n" +
+        "  ignored := Vec.fromPoint(point)\n" +
+        "  return Vec.up\n" +
+        "}\n",
+    },
+  ], "/transform.do")
+
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testWarnsForLegacyNoneAliasesWithReplacementAndExactSpans(): none {
   voidAlias := checkedIncludingDeprecations("function legacy(): void {}")
   Assert.equal(voidAlias.diagnostics.length, 1)
@@ -602,7 +636,7 @@ export function testChecksWeakTypesAndStructRestrictions(): none {
   Assert.equal(semantic.diagnostics.length, 0)
   case analysis.modules[0].program.statements[0] {
     class_: ClassDeclaration -> {
-      Assert.equal(typeName(class_.fields[0].resolvedType ?? unknownType()), "Node")
+      Assert.equal(typeName(class_.fields[0].resolvedType ?? unknownType()), "weak Node")
       Assert.equal(typeName(class_.fields[1].resolvedType ?? unknownType()), "weak Node")
     }
     _ -> { panic("expected class") }
@@ -612,6 +646,15 @@ export function testChecksWeakTypesAndStructRestrictions(): none {
   Assert.equal(invalid.diagnostics.length, 2)
   Assert.equal(invalid.diagnostics[0].message.contains("cannot be weak"), true)
   Assert.equal(invalid.diagnostics[1].message.contains("cannot be weak"), true)
+}
+
+export function testDoesNotExposeWeakFieldsAsStrongValues(): none {
+  result := checked("class Node { weak parent: Node\nstrongParent(): Node => parent }")
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.stringContains(result.diagnostics[0].message, "Cannot return weak Node from function returning Node")
+
+  construction := checked("class Node {}\nclass Link { weak parent: Node }\nclass Registry { weak nodes: Node[]\nweak optional: Node | none = none }\nfunction main(): none { parent := Node {}\nlink := Link(parent)\nregistry := Registry([parent]) }")
+  Assert.equal(construction.diagnostics.length, 0)
 }
 
 export function testRejectsGeneratedJsonForWeakFields(): none {
@@ -997,6 +1040,12 @@ export function testInfersWiderCompatibleGenericArgument(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testContextuallyTypesDotShorthandDuringGenericCallInference(): none {
+  source := "enum EncodingError { InvalidData, UnrepresentableCharacter }\nfunction assertEncodingError<T>(result: Result<T, EncodingError>, expected: EncodingError): none {}\nfunction equal<T>(actual: T, expected: T): none {}\nfunction verify(result: Result<int, EncodingError>, error: EncodingError): none {\nassertEncodingError(result, .InvalidData)\nequal(error, .UnrepresentableCharacter)\nequal(.InvalidData, error)\n}"
+  result := checked(source)
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testWidensIntValuesToDoubleAtTypedBoundaries(): none {
   accepted := checked("function scale(value: double): double => value\nfunction apply(value: double): double => value\nfunction main(): double { count: int := 42\nscaled: double := count\nreturn apply(scale(count)) + scaled }")
   Assert.equal(accepted.diagnostics.length, 0)
@@ -1048,6 +1097,16 @@ export function testValidatesDedicatedConstructorPositionalArguments(): none {
   incompatible := checked("class Widget { value: int\nstatic constructor(value: int): Widget => Widget { value } }\nwidget := Widget(\"bad\")\nprintln(\"\")")
   Assert.equal(incompatible.diagnostics.length, 1)
   Assert.equal(incompatible.diagnostics[0].message, "Argument 1 has type string; expected int")
+}
+
+export function testValidatesDedicatedConstructorDeclarationShape(): none {
+  instance := checked("class Broken { value: int\nconstructor(value: int): Broken => Broken { value } }\nfunction main(): none { Broken(1) }")
+  Assert.equal(instance.diagnostics.length, 1)
+  Assert.stringContains(instance.diagnostics[0].message, "must be static")
+
+  wrongReturn := checked("class Broken { value: int\nstatic constructor(value: int): int => value }\nfunction main(): none { Broken(1) }")
+  Assert.equal(wrongReturn.diagnostics.length, 1)
+  Assert.stringContains(wrongReturn.diagnostics[0].message, "must return Broken or Result<Broken, E>")
 }
 
 export function testChecksSupportedJsonDeserializationSurface(): none {
@@ -1240,6 +1299,16 @@ export function testChecksByteCastBuiltin(): none {
 export function testChecksActorCreationSyncAsyncPromiseAndRetire(): none {
   result := checked("class Worker { let value: int\nfunction add(amount: int): int { this.value = this.value + amount\nreturn this.value } }\nfunction run(): int { worker: Actor<Worker> := Actor<Worker>(1)\nvalue := worker.add(2)\npromise: Promise<int> := async worker.add(3)\nasyncValue := try! promise.get()\nstate: Worker := retire worker\nreturn value + asyncValue + state.value }")
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testValidatesActorConstructorArguments(): none {
+  wrongType := checked("class Worker { value: int }\nfunction make(): Actor<Worker> => Actor<Worker>(\"wrong\")")
+  Assert.equal(wrongType.diagnostics.length, 1)
+  Assert.stringContains(wrongType.diagnostics[0].message, "expected int")
+
+  wrongArity := checked("class Worker { value: int }\nfunction make(): Actor<Worker> => Actor<Worker>(1, 2)")
+  Assert.equal(wrongArity.diagnostics.length, 1)
+  Assert.stringContains(wrongArity.diagnostics[0].message, "expects 1 constructor argument")
 }
 
 export function testChecksAsyncBlocksWithImmutableCapturesAndMutableResults(): none {
@@ -1557,6 +1626,12 @@ export function testRequiresActorConstructorFactoriesToBeIsolated(): none {
     if diagnostic.message.contains("Actor<Worker> construction is not isolated") && diagnostic.message.contains("non-isolated function \"constructor\"") { found = true }
   }
   Assert.equal(found, true)
+}
+
+export function testRejectsFallibleActorConstructorFactories(): none {
+  result := checked("class Worker { static constructor(): Result<Worker, string> => Success { value: Worker {} } }\nfunction main(): none { worker := Actor<Worker>() }")
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.stringContains(result.diagnostics[0].message, "must return Worker directly")
 }
 
 export function testChecksPromiseVoidGet(): none {
@@ -2208,4 +2283,192 @@ export function testChecksTryDestructuringAgainstSuccessPayload(): none {
   result := checked("class Person { name: string\nage: int }\nfunction load(): Result<Person, string> => Success { value: Person { name: \"Ada\", age: 37 } }\nfunction run(): Result<int, string> { try { name, age } := load()\nreturn Success { value: name.length + age } }")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testRejectsConflictingGenericInferenceCandidates(): none {
+  result := checked("function choose<T>(left: T, right: T): T => left\nfunction main(): none { choose(1, \"wrong\") }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Cannot infer consistent type arguments")
+}
+
+export function testPreservesConcreteGenericInterfaceArguments(): none {
+  result := checked("interface Box<T> { get(): T }\nclass IntBox implements Box<int> { get(): int => 1 }\nfunction consume(value: Box<string>): string => value.get()\nfunction main(): none { consume(IntBox {}) }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "expected Box<string>")
+}
+
+export function testRejectsPrivateMemberAccessAcrossModules(): none {
+  result := checkedSources([
+    SourceFile {
+      path: "/main.do",
+      source: "import { Secret } from \"./secret\"\n" +
+        "function main(): none {\n" +
+        "  secret := Secret { value: 1 }\n" +
+        "  first := secret.value\n" +
+        "  second := secret.reveal()\n" +
+        "}",
+    },
+    SourceFile { path: "/secret.do", source: "export class Secret { private value: int\nprivate reveal(): int => this.value }" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 3)
+  for diagnostic of result.diagnostics {
+    Assert.stringContains(diagnostic.message, "private")
+    Assert.equal(diagnostic.module, "/main.do")
+  }
+  Assert.equal(result.diagnostics[0].span.start.line, 3)
+  Assert.equal(result.diagnostics[1].span.start.line, 4)
+  Assert.equal(result.diagnostics[2].span.start.line, 5)
+}
+
+export function testAllowsExternalConstructionWithDefaultedPrivateFields(): none {
+  result := checkedSources([
+    SourceFile {
+      path: "/main.do",
+      source: "import { Builder } from \"./builder\"\nfunction main(): none { builder := Builder() }",
+    },
+    SourceFile {
+      path: "/builder.do",
+      source: "export class Builder { private positions: int[] = []\nprivate indices: int[] = [] }",
+    },
+  ], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testReportsPositionalPrivateFieldConstructionAtCaller(): none {
+  result := checkedSources([
+    SourceFile {
+      path: "/main.do",
+      source: "import { Secret } from \"./secret\"\nfunction main(): none {\n  value := Secret(1)\n}",
+    },
+    SourceFile { path: "/secret.do", source: "export class Secret { private value: int }" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Field 'value' is private")
+  Assert.equal(result.diagnostics[0].module, "/main.do")
+  Assert.equal(result.diagnostics[0].span.start.line, 3)
+  Assert.equal(result.diagnostics[0].span.start.column, 19)
+}
+
+export function testReportsActorPrivateFieldConstructionAtCaller(): none {
+  result := checkedSources([
+    SourceFile {
+      path: "/main.do",
+      source: "import { Secret } from \"./secret\"\nfunction make(): Actor<Secret> => Actor<Secret>(1)",
+    },
+    SourceFile { path: "/secret.do", source: "export class Secret { private value: int }" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Field 'value' is private")
+  Assert.equal(result.diagnostics[0].module, "/main.do")
+  Assert.equal(result.diagnostics[0].span.start.line, 2)
+}
+
+export function testRejectsConcreteReturnsForUnconstrainedTypeParameters(): none {
+  result := checked("function fabricate<T>(): T => 1\nfunction main(): string => fabricate<string>()")
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.stringContains(result.diagnostics[0].message, "Cannot return int from function returning T")
+}
+
+export function testRejectsInstanceMemberAccessFromStaticMethods(): none {
+  result := checked("class Counter { value: int\nstatic read(): int => value }")
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.stringContains(result.diagnostics[0].message, "Unknown identifier 'value'")
+}
+
+export function testRejectsPrivateConstructorsAcrossModules(): none {
+  result := checkedSources([
+    SourceFile { path: "/main.do", source: "import { Secret } from \"./secret\"\nfunction main(): none { value := Secret(1) }" },
+    SourceFile { path: "/secret.do", source: "export class Secret { value: int\nprivate static constructor(value: int): Secret => Secret { value } }" },
+  ], "/main.do")
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.stringContains(result.diagnostics[0].message, "private")
+}
+
+export function testPrivateMethodsDoNotSatisfyPublicInterfaces(): none {
+  result := checked("interface Reader { read(): int }\nclass SecretReader implements Reader { private read(): int => 1 }")
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.stringContains(result.diagnostics[0].message, "does not satisfy interface")
+}
+
+export function testRejectsDuplicateClassMembers(): none {
+  result := checked("class Broken { value: int\nvalue: int }")
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.stringContains(result.diagnostics[0].message, "already declared")
+}
+
+export function testRejectsDuplicateInterfaceMembers(): none {
+  fields := checked("interface Duplicate { value: int\nvalue: int }\nclass Value implements Duplicate { value: int }")
+  Assert.isTrue(fields.diagnostics.length > 0)
+  Assert.stringContains(fields.diagnostics[0].message, "already declared in interface")
+
+  methods := checked("interface Duplicate { read(): int\nread(): int }\nclass Reader implements Duplicate { read(): int => 1 }")
+  Assert.isTrue(methods.diagnostics.length > 0)
+  Assert.stringContains(methods.diagnostics[0].message, "already declared in interface")
+}
+
+export function testRejectsDuplicateEnumVariantNames(): none {
+  result := checked("enum Duplicate { Same, Same }")
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.stringContains(result.diagnostics[0].message, "already declared in enum")
+}
+
+export function testRequiresUniqueEnumValues(): none {
+  explicitResult := checked("enum Duplicate { First = 1, Second = 1 }")
+  Assert.isTrue(explicitResult.diagnostics.length > 0)
+  Assert.stringContains(explicitResult.diagnostics[0].message, "duplicates the value")
+
+  implicit := checked("enum Duplicate { First, Second = 0 }")
+  Assert.isTrue(implicit.diagnostics.length > 0)
+  Assert.stringContains(implicit.diagnostics[0].message, "duplicates the value")
+}
+
+export function testRequiresCompileTimeIntegerEnumValues(): none {
+  result := checked("function computed(): int => 1\nenum Dynamic { Value = computed() }")
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.stringContains(result.diagnostics[0].message, "compile-time int constant")
+
+  arithmetic := checked("enum Calculated { Two = 1 + 1, Three = 7 % 4, Five = 10 \\ 2, Six = 2 * 3 }")
+  Assert.equal(arithmetic.diagnostics.length, 0)
+
+  overflow := checked("enum Overflow { Last = 2147483647, TooFar }")
+  Assert.isTrue(overflow.diagnostics.length > 0)
+  Assert.stringContains(overflow.diagnostics[0].message, "outside the int range")
+
+  divideByZero := checked("enum Invalid { Value = 1 \\ 0 }")
+  Assert.isTrue(divideByZero.diagnostics.length > 0)
+  Assert.stringContains(divideByZero.diagnostics[0].message, "compile-time int constant")
+}
+
+export function testRejectsWeakScalarTargets(): none {
+  modifier := checked("class Invalid { weak count: int }")
+  Assert.isTrue(modifier.diagnostics.length > 0)
+  Assert.stringContains(modifier.diagnostics[0].message, "weak reference target")
+
+  annotation := checked("function invalid(value: weak int): none {}")
+  Assert.isTrue(annotation.diagnostics.length > 0)
+  Assert.stringContains(annotation.diagnostics[0].message, "weak reference target")
+}
+
+export function testChecksWeakReferenceAccessOperators(): none {
+  source := "class Node { value: int\nread(): int => value\nfallible(): Result<int, string> => Success { value } }\n" +
+    "function optionalField(node: weak Node): Result<int | none, WeakReferenceError> => node?.value\n" +
+    "function optionalCall(node: weak Node): Result<int | none, WeakReferenceError> => node?.read()\n" +
+    "function optionalFallibleCall(node: weak Node): Result<int | none, string | WeakReferenceError> => node?.fallible()\n" +
+    "function forcedField(node: weak Node): int => node!.value\n" +
+    "function forcedCall(node: weak Node): int => node!.read()"
+  result := checked(source)
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testChecksWeakUnionReferenceAccess(): none {
+  result := checked("class Cat { name: string\nspeak(): string => name }\nclass Dog { name: string\nspeak(): string => name }\nclass Holder { weak pet: Cat | Dog }\nfunction make(cat: Cat): Holder => Holder { pet: cat }\nfunction name(holder: Holder): Result<string | none, WeakReferenceError> => holder.pet?.name\nfunction speak(holder: Holder): string => holder.pet!.speak()")
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testRejectsUncheckedWeakReferenceMemberAccess(): none {
+  result := checked("class Node { value: int\nread(): int => value }\nfunction field(node: weak Node): int => node.value\nfunction call(node: weak Node): int => node.read()")
+  Assert.equal(result.diagnostics.length, 2)
+  Assert.stringContains(result.diagnostics[0].message, "requires '?.' or '!.'")
+  Assert.stringContains(result.diagnostics[1].message, "requires '?.' or '!.'")
 }

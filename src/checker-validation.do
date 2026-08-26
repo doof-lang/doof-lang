@@ -275,7 +275,10 @@ export function validateExpression(expression: Expression, module: string, diagn
       }
     }
     retire_: RetireExpression -> { validateExpression(retire_.actor, module, diagnostics) }
-    actor: ActorCreationExpression -> { for argument of actor.args { validateExpression(argument, module, diagnostics) } }
+    actor: ActorCreationExpression -> {
+      if actor.resolvedConstructor != none { validateResolved(actor.resolvedConstructor!.resolvedType, actor.span, module, "actor constructor", diagnostics) }
+      for argument of actor.args { validateExpression(argument, module, diagnostics) }
+    }
     as_: AsExpression -> { validateExpression(as_.expression, module, diagnostics); validateTypeAnnotation(as_.targetType, module, diagnostics) }
     identifier: Identifier -> {
       if identifier.resolvedBinding == none { addValidationError(module, identifier.span, "Identifier '" + identifier.name + "' has no resolved binding", diagnostics) }

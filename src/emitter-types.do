@@ -154,12 +154,7 @@ export function emitType(resolvedType: ResolvedType, currentModulePath: string =
     promise: PromiseType -> { return "doof::Promise<" + emitResultPayloadType(promise.valueType, currentModulePath) + ">" }
     tuple: TupleResolvedType -> { return emitTupleType(tuple, currentModulePath) }
     union_: UnionResolvedType -> { return emitUnionType(union_, currentModulePath) }
-    weak_: WeakResolvedType -> {
-      case weak_.inner {
-        class_: ClassType -> { return "std::weak_ptr<" + emitClassInnerType(class_, currentModulePath) + ">" }
-        _ -> { return "std::weak_ptr<" + emitType(weak_.inner, currentModulePath) + ">" }
-      }
-    }
+    weak_: WeakResolvedType -> { return emitWeakType(weak_.inner, currentModulePath) }
     _: NoneType -> { return "std::monostate" }
     _: NeverType -> { return "doof::Never" }
     _: UnknownType -> { panic("Cannot emit unresolved unknown type in " + currentModulePath) }
@@ -168,6 +163,33 @@ export function emitType(resolvedType: ResolvedType, currentModulePath: string =
     reflection: MethodReflectionResolvedType -> { return "doof::MethodReflection<" + emitMetadataInnerType(reflection.classType, currentModulePath) + ">" }
   }
   return "void"
+}
+
+function emitWeakType(inner: ResolvedType, currentModulePath: string): string {
+  case inner {
+    class_: ClassType -> { return "std::weak_ptr<" + emitClassInnerType(class_, currentModulePath) + ">" }
+    array: ArrayResolvedType -> { return "std::weak_ptr<std::vector<" + emitType(array.elementType, currentModulePath) + ">>" }
+    map: MapResolvedType -> { return "std::weak_ptr<doof::ordered_map<" + emitType(map.keyType, currentModulePath) + ", " + emitType(map.valueType, currentModulePath) + ">>" }
+    set_: SetResolvedType -> { return "std::weak_ptr<doof::ordered_set<" + emitType(set_.elementType, currentModulePath) + ">>" }
+    union_: UnionResolvedType -> {
+      let nonNone: ResolvedType[] = []
+      let nullable = false
+      for member of union_.types { if member.kind == "none" { nullable = true } else { nonNone.push(member) } }
+      if nonNone.length == 1 {
+        inner := emitWeakType(nonNone[0], currentModulePath)
+        return if nullable then "std::optional<" + inner + ">" else inner
+      }
+      let result = "std::variant<"
+      for index of 0..<nonNone.length {
+        if index > 0 { result = result + ", " }
+        result = result + emitWeakType(nonNone[index], currentModulePath)
+      }
+      result = result + ">"
+      return if nullable then "std::optional<" + result + ">" else result
+    }
+    _ -> { return "std::weak_ptr<" + emitType(inner, currentModulePath) + ">" }
+  }
+  return "std::weak_ptr<void>"
 }
 
 /** Borrows immutable parameters whose C++ carriers do not require Doof value-copy semantics. */

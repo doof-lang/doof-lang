@@ -1,8 +1,8 @@
 // Actor, Promise, async-call, and retirement lowering.
 
-import { ActorCreationExpression, AsyncExpression, Block, CallExpression, Expression, MemberExpression, RetireExpression } from "./ast"
+import { ActorCreationExpression, AsyncExpression, Block, CallExpression, Expression, FunctionDeclaration, MemberExpression, RetireExpression } from "./ast"
 import { ActorType, FunctionType, PromiseType, ResolvedType, NoneType } from "./semantic"
-import { EmitContext } from "./emitter-context"
+import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
 import { emitClassInnerType, emitContextReturnType } from "./emitter-types"
@@ -17,11 +17,32 @@ export function emitActorCreation(expression: ActorCreationExpression, context: 
         args = args + emitExpression(expression.args[i], context)
       }
       className := emitClassInnerType(actor.innerClass, context.modulePath)
+      if expression.resolvedConstructor != none {
+        factory := emitActorConstructorFactory(className, expression.resolvedConstructor!, expression, context)
+        return "std::make_shared<doof::Actor<" + className + ">>(" + factory + ")"
+      }
       return "std::make_shared<doof::Actor<" + className + ">>(" + className + "{" + args + "})"
     }
     _ -> { panic("Actor creation does not have Actor<T> type") }
   }
   return ""
+}
+
+function emitActorConstructorFactory(className: string, constructor: FunctionDeclaration, expression: ActorCreationExpression, context: EmitContext): string {
+  let result = className + "::constructor("
+  for i of 0..<constructor.params.length {
+    if i > 0 { result = result + ", " }
+    parameter := constructor.params[i]
+    if i < expression.args.length { result = result + emitExpression(expression.args[i], context, parameter.resolvedType) }
+    else {
+      if parameter.defaultValue == none { panic("Actor constructor is missing argument " + parameter.name) }
+      previous := context.sourceLocationSpanOverride
+      context.sourceLocationSpanOverride = SourceLocationSpanOverride { span: expression.span }
+      result = result + emitExpression(parameter.defaultValue!, context, parameter.resolvedType)
+      context.sourceLocationSpanOverride = previous
+    }
+  }
+  return result + ")"
 }
 
 export function emitAsyncExpression(expression: AsyncExpression, context: EmitContext): string {

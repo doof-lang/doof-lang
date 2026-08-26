@@ -29,7 +29,7 @@ import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
   neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType, weakType,
+  substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
@@ -259,6 +259,7 @@ export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, 
       if named.name == "JsonValue" { return jsonValueType() }
       if named.name == "JsonObject" { return jsonObjectType() }
       if named.name == "SourceLocation" { return builtinSourceLocationType() }
+      if named.name == "WeakReferenceError" { return weakReferenceErrorType() }
       if named.name == "Range" { return rangeType() }
       for typeParam of typeParams { if named.name == typeParam { return typeParameter(named.name) } }
       if named.name == "Tuple" {

@@ -147,6 +147,10 @@ namespace std_::http::types {
 }
 
 namespace std_::event::index {
+    template <typename T>
+    struct ChannelSender;
+    template <typename T>
+    struct ChannelReceiver;
     struct Timer;
 }
 

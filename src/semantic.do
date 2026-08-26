@@ -228,6 +228,7 @@ export class Scope {
   let returnType: ResolvedType | none = none
   thisType: ResolvedType | none = none
   functionName: string = ""
+  staticContext: bool = false
   let inValueYieldBlock: bool = false
   let yieldType: ResolvedType | none = none
   capturesTryErrors: bool = false

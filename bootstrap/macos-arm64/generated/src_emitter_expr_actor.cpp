@@ -23,6 +23,10 @@ std::string emitActorCreation(const std::shared_ptr<::app_src_ast_::ActorCreatio
                 (args = (args + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, i, "src/emitter-expr-actor", 17), context, std::monostate{})));
             }
             const auto className = ::app_src_emitter_types_::emitClassInnerType(actor->innerClass, context->modulePath);
+            if (!doof::is_null(expression->resolvedConstructor)) {
+                const auto factory = emitActorConstructorFactory(className, doof::unwrap_optional(expression->resolvedConstructor), expression, context);
+                return ((((std::string("std::make_shared<doof::Actor<") + className) + std::string(">>(")) + factory) + std::string(")"));
+            }
             return ((((((std::string("std::make_shared<doof::Actor<") + className) + std::string(">>(")) + className) + std::string("{")) + args) + std::string("})"));
     }
     else {
@@ -31,6 +35,27 @@ std::string emitActorCreation(const std::shared_ptr<::app_src_ast_::ActorCreatio
     }
     doof::unreachable();
     return std::string("");
+}
+std::string emitActorConstructorFactory(const std::string& className, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& constructor, const std::shared_ptr<::app_src_ast_::ActorCreationExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
+    auto result = (className + std::string("::constructor("));
+    for (int32_t i = 0; i < static_cast<int32_t>((constructor->params)->size()); ++i) {
+        if (i > 0) {
+            (result = (result + std::string(", ")));
+        }
+        const auto parameter = doof::array_at(constructor->params, i, "src/emitter-expr-actor", 35);
+        if (i < static_cast<int32_t>((expression->args)->size())) {
+            (result = (result + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, i, "src/emitter-expr-actor", 36), context, parameter->resolvedType)));
+        } else {
+            if (doof::is_null(parameter->defaultValue)) {
+                doof::panic((std::string("Actor constructor is missing argument ") + parameter->name));
+            }
+            const auto previous = context->sourceLocationSpanOverride;
+            (context->sourceLocationSpanOverride = std::make_shared<::app_src_emitter_context_::SourceLocationSpanOverride>(expression->span));
+            (result = (result + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(parameter->defaultValue), context, parameter->resolvedType)));
+            (context->sourceLocationSpanOverride = previous);
+        }
+    }
+    return (result + std::string(")"));
 }
 std::string emitAsyncExpression(const std::shared_ptr<::app_src_ast_::AsyncExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     {
@@ -125,7 +150,7 @@ std::string emitAsyncBlock(const std::shared_ptr<::app_src_ast_::AsyncExpression
         if (i > 0) {
             (captures = (captures + std::string(", ")));
         }
-        (captures = (captures + ::app_src_emitter_expr_::cppIdentifier(doof::array_at(expression->resolvedCaptureNames, i, "src/emitter-expr-actor", 82))));
+        (captures = (captures + ::app_src_emitter_expr_::cppIdentifier(doof::array_at(expression->resolvedCaptureNames, i, "src/emitter-expr-actor", 103))));
     }
     const auto previousYieldState = context->inValueYieldBlock;
     const auto previousVoidState = context->valueYieldReturnsVoid;
@@ -164,9 +189,9 @@ std::string emitActorMethodCall(const std::shared_ptr<::app_src_ast_::CallExpres
         }
         std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> expected = std::monostate{};
         if ((!doof::is_null(methodType)) && (i < static_cast<int32_t>((methodType->params)->size()))) {
-            (expected = doof::optional_value(doof::array_at(methodType->params, i, "src/emitter-expr-actor", 116)->type_));
+            (expected = doof::optional_value(doof::array_at(methodType->params, i, "src/emitter-expr-actor", 137)->type_));
         }
-        (args = (args + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, i, "src/emitter-expr-actor", 117)->value, context, expected)));
+        (args = (args + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->args, i, "src/emitter-expr-actor", 138)->value, context, expected)));
     }
     const auto returnType = expression->resolvedType;
     if (doof::is_null(returnType)) {

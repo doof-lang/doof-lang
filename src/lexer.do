@@ -175,10 +175,12 @@ export function tokenValue(token: Token, source: string): string {
     if raw[index] == '\\' && index + 1 < raw.length {
       index = index + 1
       value = value + decodeEscapeCharacter(raw[index])
+      index = index + 1
     } else {
-      value = value + string(raw[index])
+      width := utf8SequenceLength(raw[index])
+      value = value + raw.substring(index, index + width)
+      index = index + width
     }
-    index = index + 1
   }
   return value
 }

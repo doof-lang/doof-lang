@@ -338,12 +338,13 @@ namespace app_src_semantic_ {
     __type1 returnType = std::monostate{};
     __type1 thisType = std::monostate{};
     std::string functionName = std::string("");
+    bool staticContext = false;
     bool inValueYieldBlock = false;
     __type1 yieldType = std::monostate{};
     bool capturesTryErrors = false;
     std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{});
     bool tryPanics = false;
-    Scope(std::shared_ptr<Scope> parent, std::shared_ptr<std::vector<std::shared_ptr<Binding>>> bindings = std::make_shared<std::vector<std::shared_ptr<Binding>>>(std::vector<std::shared_ptr<Binding>>{}), std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> typeParamConstraintNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::shared_ptr<ResolvedTypeConstraint>>> typeParamConstraints = std::make_shared<std::vector<std::shared_ptr<ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<ResolvedTypeConstraint>>{}), __type1 returnType = std::monostate{}, __type1 thisType = std::monostate{}, std::string functionName = std::string(""), bool inValueYieldBlock = false, __type1 yieldType = std::monostate{}, bool capturesTryErrors = false, std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{}), bool tryPanics = false) : parent(parent), bindings(bindings), typeParams(typeParams), typeParamConstraintNames(typeParamConstraintNames), typeParamConstraints(typeParamConstraints), returnType(returnType), thisType(thisType), functionName(functionName), inValueYieldBlock(inValueYieldBlock), yieldType(yieldType), capturesTryErrors(capturesTryErrors), catchErrorTypes(catchErrorTypes), tryPanics(tryPanics) {}
+    Scope(std::shared_ptr<Scope> parent, std::shared_ptr<std::vector<std::shared_ptr<Binding>>> bindings = std::make_shared<std::vector<std::shared_ptr<Binding>>>(std::vector<std::shared_ptr<Binding>>{}), std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> typeParamConstraintNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::shared_ptr<ResolvedTypeConstraint>>> typeParamConstraints = std::make_shared<std::vector<std::shared_ptr<ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<ResolvedTypeConstraint>>{}), __type1 returnType = std::monostate{}, __type1 thisType = std::monostate{}, std::string functionName = std::string(""), bool staticContext = false, bool inValueYieldBlock = false, __type1 yieldType = std::monostate{}, bool capturesTryErrors = false, std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{}), bool tryPanics = false) : parent(parent), bindings(bindings), typeParams(typeParams), typeParamConstraintNames(typeParamConstraintNames), typeParamConstraints(typeParamConstraints), returnType(returnType), thisType(thisType), functionName(functionName), staticContext(staticContext), inValueYieldBlock(inValueYieldBlock), yieldType(yieldType), capturesTryErrors(capturesTryErrors), catchErrorTypes(catchErrorTypes), tryPanics(tryPanics) {}
 };
     struct ResolvedTypeConstraint : public std::enable_shared_from_this<ResolvedTypeConstraint> {
     __type1 type_ = std::monostate{};
@@ -735,9 +736,10 @@ namespace app_src_ast_ {
     std::string kind;
     std::string className;
     std::shared_ptr<std::vector<Expression>> args;
+    std::shared_ptr<FunctionDeclaration> resolvedConstructor = nullptr;
     __type3 resolvedType = std::monostate{};
     SourceSpan span;
-    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedType(resolvedType), span(span) {}
+    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, std::shared_ptr<FunctionDeclaration> resolvedConstructor, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedConstructor(resolvedConstructor), resolvedType(resolvedType), span(span) {}
 };
     struct YieldBlockExpression : public std::enable_shared_from_this<YieldBlockExpression> {
     std::string kind = std::string("yield-block-expression");

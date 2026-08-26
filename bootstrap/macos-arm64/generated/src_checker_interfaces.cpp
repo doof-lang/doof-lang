@@ -191,7 +191,7 @@ bool classSatisfiesConcreteInterface(const std::shared_ptr<::app_src_analyzer_::
             const auto& _iterable_26 = interface_->fields;
             for (const auto& required : *_iterable_26) {
                 const auto actualField = findClassField(class_->fields, required->name);
-                if (doof::is_null(actualField) || doof::is_null(actualField->type_)) {
+                if ((doof::is_null(actualField) || actualField->private_) || doof::is_null(actualField->type_)) {
                     return false;
                 }
                 if (required->readonly_ && !actualField->readonly_) {
@@ -211,7 +211,7 @@ bool classSatisfiesConcreteInterface(const std::shared_ptr<::app_src_analyzer_::
             const auto& _iterable_28 = interface_->methods;
             for (const auto& requiredMethod : *_iterable_28) {
                 const auto actualMethod = findClassMethod(class_->methods, requiredMethod->name, requiredMethod->static_);
-                if (doof::is_null(actualMethod)) {
+                if (doof::is_null(actualMethod) || actualMethod->private_) {
                     return false;
                 }
                 const auto actualBase = (doof::is_null(actualMethod->resolvedType) ? ::app_src_checker_symbols_::methodSignature(doof::unwrap_optional(actualMethod), classModuleFor(result, classType_->symbol), result) : doof::unwrap_optional(actualMethod->resolvedType));
@@ -248,7 +248,7 @@ bool classSatisfiesInterface(const std::shared_ptr<::app_src_analyzer_::Analysis
                     const auto& _iterable_30 = interface_->fields;
                     for (const auto& required : *_iterable_30) {
                         const auto classField = findClassField(class_->fields, required->name);
-                        if (doof::is_null(classField)) {
+                        if (doof::is_null(classField) || classField->private_) {
                             return false;
                         }
                         if (required->readonly_ && !classField->readonly_) {
@@ -266,7 +266,7 @@ bool classSatisfiesInterface(const std::shared_ptr<::app_src_analyzer_::Analysis
                     const auto& _iterable_32 = interface_->methods;
                     for (const auto& requiredMethod : *_iterable_32) {
                         const auto classMethod = findClassMethod(class_->methods, requiredMethod->name, requiredMethod->static_);
-                        if (doof::is_null(classMethod) || (static_cast<int32_t>((classMethod->params)->size()) != static_cast<int32_t>((requiredMethod->params)->size()))) {
+                        if ((doof::is_null(classMethod) || classMethod->private_) || (static_cast<int32_t>((classMethod->params)->size()) != static_cast<int32_t>((requiredMethod->params)->size()))) {
                             return false;
                         }
                         if (!sameFunctionSignature(doof::unwrap_optional(classMethod), requiredMethod, result, classSymbol, interfaceSymbol)) {

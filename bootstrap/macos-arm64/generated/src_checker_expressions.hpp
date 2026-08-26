@@ -376,12 +376,13 @@ namespace app_src_semantic_ {
     __type1 returnType = std::monostate{};
     __type1 thisType = std::monostate{};
     std::string functionName = std::string("");
+    bool staticContext = false;
     bool inValueYieldBlock = false;
     __type1 yieldType = std::monostate{};
     bool capturesTryErrors = false;
     std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{});
     bool tryPanics = false;
-    Scope(std::shared_ptr<Scope> parent, std::shared_ptr<std::vector<std::shared_ptr<Binding>>> bindings = std::make_shared<std::vector<std::shared_ptr<Binding>>>(std::vector<std::shared_ptr<Binding>>{}), std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> typeParamConstraintNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::shared_ptr<ResolvedTypeConstraint>>> typeParamConstraints = std::make_shared<std::vector<std::shared_ptr<ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<ResolvedTypeConstraint>>{}), __type1 returnType = std::monostate{}, __type1 thisType = std::monostate{}, std::string functionName = std::string(""), bool inValueYieldBlock = false, __type1 yieldType = std::monostate{}, bool capturesTryErrors = false, std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{}), bool tryPanics = false) : parent(parent), bindings(bindings), typeParams(typeParams), typeParamConstraintNames(typeParamConstraintNames), typeParamConstraints(typeParamConstraints), returnType(returnType), thisType(thisType), functionName(functionName), inValueYieldBlock(inValueYieldBlock), yieldType(yieldType), capturesTryErrors(capturesTryErrors), catchErrorTypes(catchErrorTypes), tryPanics(tryPanics) {}
+    Scope(std::shared_ptr<Scope> parent, std::shared_ptr<std::vector<std::shared_ptr<Binding>>> bindings = std::make_shared<std::vector<std::shared_ptr<Binding>>>(std::vector<std::shared_ptr<Binding>>{}), std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> typeParamConstraintNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::shared_ptr<ResolvedTypeConstraint>>> typeParamConstraints = std::make_shared<std::vector<std::shared_ptr<ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<ResolvedTypeConstraint>>{}), __type1 returnType = std::monostate{}, __type1 thisType = std::monostate{}, std::string functionName = std::string(""), bool staticContext = false, bool inValueYieldBlock = false, __type1 yieldType = std::monostate{}, bool capturesTryErrors = false, std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{}), bool tryPanics = false) : parent(parent), bindings(bindings), typeParams(typeParams), typeParamConstraintNames(typeParamConstraintNames), typeParamConstraints(typeParamConstraints), returnType(returnType), thisType(thisType), functionName(functionName), staticContext(staticContext), inValueYieldBlock(inValueYieldBlock), yieldType(yieldType), capturesTryErrors(capturesTryErrors), catchErrorTypes(catchErrorTypes), tryPanics(tryPanics) {}
 };
     struct ResolvedTypeConstraint : public std::enable_shared_from_this<ResolvedTypeConstraint> {
     __type1 type_ = std::monostate{};
@@ -780,9 +781,10 @@ namespace app_src_ast_ {
     std::string kind;
     std::string className;
     std::shared_ptr<std::vector<Expression>> args;
+    std::shared_ptr<FunctionDeclaration> resolvedConstructor = nullptr;
     __type3 resolvedType = std::monostate{};
     SourceSpan span;
-    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedType(resolvedType), span(span) {}
+    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, std::shared_ptr<FunctionDeclaration> resolvedConstructor, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedConstructor(resolvedConstructor), resolvedType(resolvedType), span(span) {}
 };
     struct YieldBlockExpression : public std::enable_shared_from_this<YieldBlockExpression> {
     std::string kind = std::string("yield-block-expression");
@@ -1228,6 +1230,7 @@ namespace app_src_checker_types_ {
     __type9 functionType(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>& params, const __type9& returnType, const std::shared_ptr<std::vector<std::string>>& typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     __type9 typeParameter(const std::string& name, const std::string& constraintName = std::string(""), const std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& constraint = std::monostate{});
     std::shared_ptr<::app_src_semantic_::ClassType> classType(const std::string& name, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::shared_ptr<std::vector<__type9>>& typeArgs = std::make_shared<std::vector<__type9>>(std::vector<__type9>{}));
+    std::shared_ptr<::app_src_semantic_::ClassType> weakReferenceErrorType();
     std::string typeName(const __type9& resolvedType);
     bool sameType(const __type9& left, const __type9& right);
     bool isAssignable(const __type9& value, const __type9& target);
@@ -1239,6 +1242,10 @@ namespace app_src_checker_types_ {
 
 namespace app_src_checker_actor_boundary_ {
     std::shared_ptr<ActorBoundaryViolation> findActorBoundaryViolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_);
+}
+
+namespace app_src_checker_interfaces_ {
+    std::shared_ptr<::app_src_analyzer_::ModuleInfo> classModuleFor(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol);
 }
 
 namespace app_src_checker_validation_ {
@@ -1253,6 +1260,7 @@ namespace app_src_checker_symbols_ {
     bool isTypeOnlyNamespaceImport(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& name);
     __type11 namespaceMemberType(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& namespaceName, const std::string& memberName, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result);
     std::shared_ptr<::app_src_semantic_::Symbol> namespaceMemberSymbol(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& namespaceName, const std::string& memberName, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result);
+    __type11 methodSignature(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& method, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result);
     __type11 resolveAnnotation(const std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>& annotation, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<std::vector<std::string>>& typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     bool declare(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::shared_ptr<::app_src_semantic_::Binding>& binding);
     bool hasTypeParam(const std::shared_ptr<::app_src_semantic_::Scope>& scope, const std::string& name);
@@ -1277,7 +1285,7 @@ namespace app_src_checker_common_ {
 
 namespace app_src_checker_resolution_ {
     __type13 resolveType(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>& annotation, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& module, const std::shared_ptr<::app_src_semantic_::Scope>& scope);
-    __type13 memberType(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const __type13& object, const std::string& property, ::app_src_ast_::SourceSpan span);
+    __type13 memberType(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const __type13& object, const std::string& property, ::app_src_ast_::SourceSpan span, bool validateVisibility = true);
     std::shared_ptr<::app_src_semantic_::Binding> fieldAssignmentBinding(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const __type13& object, const std::string& property, const __type13& fieldType);
     __type13 indexType(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const __type13& object, const __type13& index, ::app_src_ast_::SourceSpan span);
 }
@@ -1317,7 +1325,11 @@ namespace app_src_checker_expressions_ {
     bool unionPatternsExhaustive(const std::shared_ptr<::app_src_semantic_::UnionResolvedType>& union_, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<__type20>>>>& arms);
     void checkCasePatterns(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<std::vector<__type20>>& patterns, const __type18& subjectType, const std::shared_ptr<::app_src_semantic_::Scope>& scope);
     __type18 checkExpression(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const __type21& expression, const std::shared_ptr<::app_src_semantic_::Scope>& scope, const __type19& expected);
+    __type18 weakAccessTarget(const __type18& type_);
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>> actorConstructorParameters(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_semantic_::ClassType>& inner);
+    void validateActorFieldConstructorVisibility(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::ActorCreationExpression>& expression, const std::shared_ptr<::app_src_semantic_::ClassType>& inner);
     bool isNamedStaticReceiver(const __type21& expression);
+    bool declaredInstanceMember(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const __type18& receiver, const std::string& property);
     __type18 checkDotShorthand(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::DotShorthand>& expression, const __type19& expected);
     __type18 checkIdentifier(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::Identifier>& identifier, const std::shared_ptr<::app_src_semantic_::Scope>& scope);
     bool legacyNumericParseType(const std::shared_ptr<::app_src_ast_::Identifier>& identifier);

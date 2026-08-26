@@ -152,6 +152,27 @@ struct SourceLocation {
           functionName(std::move(functionNameValue)) {}
 };
 
+struct WeakReferenceError {
+    bool operator==(const WeakReferenceError&) const { return true; }
+};
+
+template <typename T>
+std::optional<std::shared_ptr<T>> lock_weak(const std::weak_ptr<T>& value) {
+    auto locked = value.lock();
+    if (!locked) return std::nullopt;
+    return locked;
+}
+
+template <typename... T>
+std::optional<std::variant<std::shared_ptr<T>...>> lock_weak(const std::variant<std::weak_ptr<T>...>& value) {
+    using Locked = std::variant<std::shared_ptr<T>...>;
+    return std::visit([](const auto& weak) -> std::optional<Locked> {
+        auto locked = weak.lock();
+        if (!locked) return std::nullopt;
+        return Locked{std::move(locked)};
+    }, value);
+}
+
 namespace detail {
 class CallbackDomain {
 public:
@@ -2450,6 +2471,9 @@ class Actor : public std::enable_shared_from_this<Actor<T>>, public detail::Call
     }
 
 public:
+    explicit Actor(std::shared_ptr<T> instance)
+        : instance_(std::move(instance)) {}
+
     template <typename... Args>
     explicit Actor(Args&&... args)
         : instance_(std::make_shared<T>(std::forward<Args>(args)...)) {}

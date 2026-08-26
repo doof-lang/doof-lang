@@ -23,11 +23,16 @@ std::shared_ptr<AnalysisResult> ModuleAnalyzer::analyze(const std::string& entry
     parseReachableModules(entryPath);
     orderModules(entryPath);
     const auto ignored = resolveModule(entryPath);
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> orderedDiagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{});
     const auto& _iterable_2 = this->resolver->diagnostics;
     for (const auto& diagnostic : *_iterable_2) {
-        this->diagnostics->push_back(diagnostic);
+        orderedDiagnostics->push_back(diagnostic);
     }
-    return std::make_shared<AnalysisResult>(modules, diagnostics);
+    const auto& _iterable_4 = this->diagnostics;
+    for (const auto& diagnostic : *_iterable_4) {
+        orderedDiagnostics->push_back(diagnostic);
+    }
+    return std::make_shared<AnalysisResult>(modules, orderedDiagnostics);
 }
 void ModuleAnalyzer::queueModuleParse(const std::string& path, const std::optional<std::string>& inheritedMockRootPath, const std::shared_ptr<std::vector<std::string>>& scheduled, const std::shared_ptr<std::vector<doof::Promise<std::shared_ptr<ModuleParseResult>>>>& pending) {
     if (contains(scheduled, path)) {
@@ -47,15 +52,15 @@ void ModuleAnalyzer::queueModuleParse(const std::string& path, const std::option
     pending->push_back(doof::submit_async<std::shared_ptr<ModuleParseResult>>([sourceText, modulePath, mockRootPath]() -> std::shared_ptr<ModuleParseResult> {
     const auto parser = std::make_shared<::app_src_parser_::Parser>(sourceText, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), 0, false, false, std::string(""), 0, 0, 0);
     const auto parsed = [&]() -> doof::Result<std::shared_ptr<::app_src_ast_::Program>, std::string> { try { return doof::Success<std::shared_ptr<::app_src_ast_::Program>>{doof::callback<std::shared_ptr<::app_src_ast_::Program>()>([parser]() -> std::shared_ptr<::app_src_ast_::Program> { return parser->parse(); }).call()}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }();
-    auto _binding_value_3 = parsed;
-    if (doof::is_failure(_binding_value_3)) {
-        const auto failure = doof::failure_error(_binding_value_3);
+    auto _binding_value_5 = parsed;
+    if (doof::is_failure(_binding_value_5)) {
+        const auto failure = doof::failure_error(_binding_value_5);
         if (parser->errorMessage == std::string("")) {
             doof::panic(failure);
         }
         return std::make_shared<ModuleParseResult>(modulePath, sourceText, mockRootPath, nullptr, parser->errorMessage, parser->errorLine, parser->errorColumn, parser->errorOffset);
     }
-    const auto program = doof::success_value(_binding_value_3);
+    const auto program = doof::success_value(_binding_value_5);
     return std::make_shared<ModuleParseResult>(modulePath, sourceText, mockRootPath, program, std::string(""), 0, 0, 0);
 }));
 }
@@ -64,12 +69,12 @@ void ModuleAnalyzer::parseReachableModules(const std::string& entryPath) {
     std::shared_ptr<std::vector<doof::Promise<std::shared_ptr<ModuleParseResult>>>> pending = std::make_shared<std::vector<doof::Promise<std::shared_ptr<ModuleParseResult>>>>(std::vector<doof::Promise<std::shared_ptr<ModuleParseResult>>>{});
     queueModuleParse(entryPath, std::nullopt, scheduled, pending);
     while (static_cast<int32_t>((pending)->size()) > 0) {
-        auto _binding_value_4 = doof::promise_take_first_completed(pending);
-        if (doof::is_failure(_binding_value_4)) {
-            const auto failure = doof::failure_error(_binding_value_4);
+        auto _binding_value_6 = doof::promise_take_first_completed(pending);
+        if (doof::is_failure(_binding_value_6)) {
+            const auto failure = doof::failure_error(_binding_value_6);
             doof::panic((std::string("Parser worker failed: ") + failure));
         }
-        const auto completed = doof::success_value(_binding_value_4);
+        const auto completed = doof::success_value(_binding_value_6);
         if (doof::is_null(completed->program)) {
             auto location = ::app_src_semantic_::SemanticLocation{completed->errorLine, completed->errorColumn, completed->errorOffset};
             this->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), completed->errorMessage, ::app_src_semantic_::SemanticSpan{location, location}, completed->path, std::string("")));
@@ -85,8 +90,8 @@ void ModuleAnalyzer::parseReachableModules(const std::string& entryPath) {
         this->modules->push_back(info);
         validateMockImportDirectives(info, completed->inheritedMockRootPath);
         collectSymbols(info);
-        const auto& _iterable_6 = program->statements;
-        for (const auto& statement : *_iterable_6) {
+        const auto& _iterable_8 = program->statements;
+        for (const auto& statement : *_iterable_8) {
             {
                 auto _case_subject = statement;
                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject)) {
@@ -123,8 +128,8 @@ void ModuleAnalyzer::appendModuleOrder(const std::string& path, const std::share
         return;
     }
     ordered->push_back(doof::unwrap_optional(info));
-    const auto& _iterable_8 = info->program->statements;
-    for (const auto& statement : *_iterable_8) {
+    const auto& _iterable_10 = info->program->statements;
+    for (const auto& statement : *_iterable_10) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject)) {
@@ -158,17 +163,17 @@ std::shared_ptr<ModuleInfo> ModuleAnalyzer::resolveModule(const std::string& pat
     resolveImports(info);
     resolveExportLists(info);
     resolveNamedTypes(info);
-    const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(this->inProgress); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 201, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(this->inProgress); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 206, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     this->resolvedPaths->push_back(path);
-    const auto& _iterable_10 = info->diagnostics;
-    for (const auto& item : *_iterable_10) {
+    const auto& _iterable_12 = info->diagnostics;
+    for (const auto& item : *_iterable_12) {
         this->diagnostics->push_back(item);
     }
     return info;
 }
 void ModuleAnalyzer::collectSymbols(const std::shared_ptr<ModuleInfo>& info) {
-    const auto& _iterable_12 = info->program->statements;
-    for (const auto& statement : *_iterable_12) {
+    const auto& _iterable_14 = info->program->statements;
+    for (const auto& statement : *_iterable_14) {
         const auto symbol = symbolFor(statement, info->path);
         if (doof::is_null(symbol)) {
             continue;
@@ -245,8 +250,8 @@ std::shared_ptr<::app_src_semantic_::Symbol> ModuleAnalyzer::exportedSymbol(cons
     return std::make_shared<::app_src_semantic_::Symbol>(symbol->kind, exportedName, symbol->module, true, ((symbol->originalName == std::string("")) ? symbol->name : symbol->originalName), symbol->native_, symbol->nativeHeader, symbol->nativeCppName, symbol->implementations, symbol->implementedInterfaceTypes, symbol->typeParams, symbol->streamElementTypes);
 }
 void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
-    const auto& _iterable_14 = info->program->statements;
-    for (const auto& statement : *_iterable_14) {
+    const auto& _iterable_16 = info->program->statements;
+    for (const auto& statement : *_iterable_16) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject)) {
@@ -257,8 +262,8 @@ void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
                     continue;
                 }
                 const auto source = resolveModule(sourcePath);
-                const auto& _iterable_16 = import_->specifiers;
-                for (const auto& specifier : *_iterable_16) {
+                const auto& _iterable_18 = import_->specifiers;
+                for (const auto& specifier : *_iterable_18) {
                     {
                         auto _case_subject = specifier;
                         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedImport>>(_case_subject)) {
@@ -298,8 +303,8 @@ void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
     }
 }
 void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info) {
-    const auto& _iterable_18 = info->program->statements;
-    for (const auto& statement : *_iterable_18) {
+    const auto& _iterable_20 = info->program->statements;
+    for (const auto& statement : *_iterable_20) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExportList>>(_case_subject)) {
@@ -308,8 +313,8 @@ void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info)
                     const auto sourcePath = resolveImportPath(info, doof::unwrap_optional(list->source));
                     const auto source = resolveModule(sourcePath);
                     info->reExports->push_back(sourcePath);
-                    const auto& _iterable_20 = list->specifiers;
-                    for (const auto& specifier : *_iterable_20) {
+                    const auto& _iterable_22 = list->specifiers;
+                    for (const auto& specifier : *_iterable_22) {
                         std::shared_ptr<::app_src_semantic_::Symbol> exported = nullptr;
                         if (!doof::is_null(source)) {
                             (exported = findExport(doof::unwrap_optional(source), specifier->name));
@@ -325,8 +330,8 @@ void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info)
                     }
                     continue;
                 }
-                const auto& _iterable_22 = list->specifiers;
-                for (const auto& specifier : *_iterable_22) {
+                const auto& _iterable_24 = list->specifiers;
+                for (const auto& specifier : *_iterable_24) {
                     const auto local = findSymbol(info, specifier->name);
                     if (!doof::is_null(local)) {
                         const auto exportedName = (doof::is_null(specifier->alias) ? specifier->name : doof::unwrap_optional(specifier->alias));
@@ -344,8 +349,8 @@ void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info)
     }
 }
 void ModuleAnalyzer::resolveNamedTypes(const std::shared_ptr<ModuleInfo>& info) {
-    const auto& _iterable_24 = info->program->statements;
-    for (const auto& statement : *_iterable_24) {
+    const auto& _iterable_26 = info->program->statements;
+    for (const auto& statement : *_iterable_26) {
         visitStatementTypes(statement, info);
     }
 }
@@ -359,30 +364,30 @@ void ModuleAnalyzer::visitStatementTypes(const std::variant<std::shared_ptr<::ap
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
             visitTypeParameterConstraints(class_->typeParamConstraints, info, class_->typeParams);
-            const auto& _iterable_26 = class_->implements_;
-            for (const auto& annotation : *_iterable_26) {
+            const auto& _iterable_28 = class_->implements_;
+            for (const auto& annotation : *_iterable_28) {
                 visitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(annotation), info, class_->typeParams);
             }
-            const auto& _iterable_28 = class_->fields;
-            for (const auto& field : *_iterable_28) {
+            const auto& _iterable_30 = class_->fields;
+            for (const auto& field : *_iterable_30) {
                 if (!doof::is_null(field->type_)) {
                     visitType(doof::unwrap_optional(field->type_), info, class_->typeParams);
                 }
             }
-            const auto& _iterable_30 = class_->methods;
-            for (const auto& method : *_iterable_30) {
+            const auto& _iterable_32 = class_->methods;
+            for (const auto& method : *_iterable_32) {
                 visitFunctionTypes(method, info, class_->typeParams);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
             const auto& interface_ = std::get<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject);
             visitTypeParameterConstraints(interface_->typeParamConstraints, info, interface_->typeParams);
-            const auto& _iterable_32 = interface_->fields;
-            for (const auto& field : *_iterable_32) {
+            const auto& _iterable_34 = interface_->fields;
+            for (const auto& field : *_iterable_34) {
                 visitType(field->type_, info, interface_->typeParams);
             }
-            const auto& _iterable_34 = interface_->methods;
-            for (const auto& method : *_iterable_34) {
+            const auto& _iterable_36 = interface_->methods;
+            for (const auto& method : *_iterable_36) {
                 visitFunctionTypes(method, info, interface_->typeParams);
             }
     }
@@ -421,17 +426,17 @@ void ModuleAnalyzer::visitStatementTypes(const std::variant<std::shared_ptr<::ap
 }
 void ModuleAnalyzer::visitFunctionTypes(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn, const std::shared_ptr<ModuleInfo>& info, const std::shared_ptr<std::vector<std::string>>& ownerTypeParams) {
     std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_36 = ownerTypeParams;
-    for (const auto& parameter : *_iterable_36) {
-        typeParams->push_back(parameter);
-    }
-    const auto& _iterable_38 = fn->typeParams;
+    const auto& _iterable_38 = ownerTypeParams;
     for (const auto& parameter : *_iterable_38) {
         typeParams->push_back(parameter);
     }
-    visitTypeParameterConstraints(fn->typeParamConstraints, info, typeParams);
-    const auto& _iterable_40 = fn->params;
+    const auto& _iterable_40 = fn->typeParams;
     for (const auto& parameter : *_iterable_40) {
+        typeParams->push_back(parameter);
+    }
+    visitTypeParameterConstraints(fn->typeParamConstraints, info, typeParams);
+    const auto& _iterable_42 = fn->params;
+    for (const auto& parameter : *_iterable_42) {
         if (!doof::is_null(parameter->type_)) {
             visitType(doof::unwrap_optional(parameter->type_), info, typeParams);
         }
@@ -441,8 +446,8 @@ void ModuleAnalyzer::visitFunctionTypes(const std::shared_ptr<::app_src_ast_::Fu
     }
 }
 void ModuleAnalyzer::visitTypeParameterConstraints(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::TypeParameterConstraint>>>& constraints, const std::shared_ptr<ModuleInfo>& info, const std::shared_ptr<std::vector<std::string>>& typeParams) {
-    const auto& _iterable_42 = constraints;
-    for (const auto& constraint : *_iterable_42) {
+    const auto& _iterable_44 = constraints;
+    for (const auto& constraint : *_iterable_44) {
         if (!doof::is_null(constraint->type_)) {
             visitType(doof::unwrap_optional(constraint->type_), info, typeParams);
         }
@@ -456,8 +461,8 @@ void ModuleAnalyzer::visitType(const std::variant<std::shared_ptr<::app_src_ast_
             if (!isBuiltin(named->name) && !containsTypeParam(typeParams, named->name)) {
                 std::shared_ptr<::app_src_semantic_::Symbol> symbol = findSymbol(info, named->name);
                 if (doof::is_null(symbol)) {
-                    const auto& _iterable_44 = info->imports;
-                    for (const auto& imported : *_iterable_44) {
+                    const auto& _iterable_46 = info->imports;
+                    for (const auto& imported : *_iterable_46) {
                         if (imported->localName == named->name) {
                             (symbol = imported->symbol);
                             break;
@@ -475,8 +480,8 @@ void ModuleAnalyzer::visitType(const std::variant<std::shared_ptr<::app_src_ast_
                 }
                 (named->resolvedSymbol = symbol);
             }
-            const auto& _iterable_46 = named->typeArgs;
-            for (const auto& argument : *_iterable_46) {
+            const auto& _iterable_48 = named->typeArgs;
+            for (const auto& argument : *_iterable_48) {
                 visitType(argument, info, typeParams);
             }
     }
@@ -486,15 +491,15 @@ void ModuleAnalyzer::visitType(const std::variant<std::shared_ptr<::app_src_ast_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::UnionType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_ast_::UnionType>>(_case_subject);
-            const auto& _iterable_48 = union_->types;
-            for (const auto& member : *_iterable_48) {
+            const auto& _iterable_50 = union_->types;
+            for (const auto& member : *_iterable_50) {
                 visitType(member, info, typeParams);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::AstFunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_ast_::AstFunctionType>>(_case_subject);
-            const auto& _iterable_50 = function_->params;
-            for (const auto& parameter : *_iterable_50) {
+            const auto& _iterable_52 = function_->params;
+            for (const auto& parameter : *_iterable_52) {
                 visitType(parameter->type_, info, typeParams);
             }
             visitType(function_->returnType, info, typeParams);
@@ -506,8 +511,8 @@ void ModuleAnalyzer::visitType(const std::variant<std::shared_ptr<::app_src_ast_
     }
 }
 bool ModuleAnalyzer::containsTypeParam(const std::shared_ptr<std::vector<std::string>>& typeParams, const std::string& name) {
-    const auto& _iterable_52 = typeParams;
-    for (const auto& typeParam : *_iterable_52) {
+    const auto& _iterable_54 = typeParams;
+    for (const auto& typeParam : *_iterable_54) {
         if (typeParam == name) {
             return true;
         }
@@ -515,8 +520,8 @@ bool ModuleAnalyzer::containsTypeParam(const std::shared_ptr<std::vector<std::st
     return false;
 }
 std::shared_ptr<ModuleInfo> ModuleAnalyzer::findModule(const std::string& path) {
-    const auto& _iterable_54 = this->modules;
-    for (const auto& module : *_iterable_54) {
+    const auto& _iterable_56 = this->modules;
+    for (const auto& module : *_iterable_56) {
         if (module->path == path) {
             return module;
         }
@@ -545,20 +550,20 @@ void ModuleAnalyzer::validateMockImportDirectives(const std::shared_ptr<ModuleIn
         return;
     }
     if (!doof::string_endsWith(info->path, std::string(".test.do"))) {
-        const auto& _iterable_56 = info->mockImportDirectives;
-        for (const auto& directive : *_iterable_56) {
+        const auto& _iterable_58 = info->mockImportDirectives;
+        for (const auto& directive : *_iterable_58) {
             addError(info, std::string("mock import directives are only valid in .test.do files"), directive->span);
         }
     }
     if ((!doof::is_null(inheritedMockRootPath)) && (inheritedMockRootPath != info->path)) {
-        const auto& _iterable_58 = info->mockImportDirectives;
-        for (const auto& directive : *_iterable_58) {
+        const auto& _iterable_60 = info->mockImportDirectives;
+        for (const auto& directive : *_iterable_60) {
             addError(info, std::string("mock import directives are only valid in the root test file"), directive->span);
         }
     }
     auto sawOrdinaryStatement = false;
-    const auto& _iterable_60 = info->program->statements;
-    for (const auto& statement : *_iterable_60) {
+    const auto& _iterable_62 = info->program->statements;
+    for (const auto& statement : *_iterable_62) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject)) {
@@ -572,10 +577,10 @@ void ModuleAnalyzer::validateMockImportDirectives(const std::shared_ptr<ModuleIn
         }
         }
     }
-    const auto& _iterable_62 = info->mockImportDirectives;
-    for (const auto& directive : *_iterable_62) {
-        const auto& _iterable_64 = directive->mappings;
-        for (const auto& mapping : *_iterable_64) {
+    const auto& _iterable_64 = info->mockImportDirectives;
+    for (const auto& directive : *_iterable_64) {
+        const auto& _iterable_66 = directive->mappings;
+        for (const auto& mapping : *_iterable_66) {
             if (mapping->dependency == mapping->replacement) {
                 addError(info, ((std::string("mock import cannot substitute \"") + mapping->dependency) + std::string("\" with itself")), mapping->span);
             }
@@ -584,8 +589,8 @@ void ModuleAnalyzer::validateMockImportDirectives(const std::shared_ptr<ModuleIn
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> collectMockImportDirectives(const std::shared_ptr<::app_src_ast_::Program>& program) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>> directives = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>>(std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>{});
-    const auto& _iterable_66 = program->statements;
-    for (const auto& statement : *_iterable_66) {
+    const auto& _iterable_68 = program->statements;
+    for (const auto& statement : *_iterable_68) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject)) {
@@ -602,7 +607,7 @@ std::string relativeModuleSpecifier(const std::string& fromModule, const std::st
     const auto fromComponents = parentPathComponents(doof::string_replaceAll(fromModule, std::string("\\"), std::string("/")));
     const auto toComponents = doof::string_split(moduleSpecifierPath(doof::string_replaceAll(toModule, std::string("\\"), std::string("/"))), std::string("/"));
     auto common = 0;
-    while (((common < static_cast<int32_t>((fromComponents)->size())) && (common < static_cast<int32_t>((toComponents)->size()))) && (doof::array_at(fromComponents, common, "src/analyzer", 543) == doof::array_at(toComponents, common, "src/analyzer", 543))) {
+    while (((common < static_cast<int32_t>((fromComponents)->size())) && (common < static_cast<int32_t>((toComponents)->size()))) && (doof::array_at(fromComponents, common, "src/analyzer", 548) == doof::array_at(toComponents, common, "src/analyzer", 548))) {
         (common = (common + 1));
     }
     auto result = std::string("");
@@ -613,14 +618,14 @@ std::string relativeModuleSpecifier(const std::string& fromModule, const std::st
         if ((result != std::string("")) && !doof::string_endsWith(result, std::string("/"))) {
             (result = (result + std::string("/")));
         }
-        (result = (result + doof::array_at(toComponents, index, "src/analyzer", 548)));
+        (result = (result + doof::array_at(toComponents, index, "src/analyzer", 553)));
     }
     return (doof::string_startsWith(result, std::string(".")) ? result : (std::string("./") + result));
 }
 std::shared_ptr<std::vector<std::string>> parentPathComponents(const std::string& path) {
     const auto components = doof::array_cloneMutable(doof::string_split(path, std::string("/")), "", 0);
     if (static_cast<int32_t>((components)->size()) > 0) {
-        const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 555, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+        const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 560, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }
     return components;
 }
@@ -634,13 +639,13 @@ std::string moduleSpecifierPath(const std::string& path) {
     return path;
 }
 std::optional<std::string> findMockReplacement(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>>>& directives, const std::string& sourceSpecifier, const std::string& dependencySpecifier) {
-    const auto& _iterable_70 = directives;
-    for (const auto& directive : *_iterable_70) {
+    const auto& _iterable_72 = directives;
+    for (const auto& directive : *_iterable_72) {
         if (directive->sourcePattern != sourceSpecifier) {
             continue;
         }
-        const auto& _iterable_72 = directive->mappings;
-        for (const auto& mapping : *_iterable_72) {
+        const auto& _iterable_74 = directive->mappings;
+        for (const auto& mapping : *_iterable_74) {
             if (mapping->dependency == dependencySpecifier) {
                 return mapping->replacement;
             }
@@ -655,8 +660,8 @@ std::shared_ptr<ModuleAnalyzer> createAnalyzerWithLoader(const std::shared_ptr<s
     return std::make_shared<ModuleAnalyzer>(std::make_shared<::app_src_resolver_::ModuleResolver>(sources, loader, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{})), std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
 }
 std::shared_ptr<::app_src_semantic_::Symbol> findSymbol(const std::shared_ptr<ModuleInfo>& info, const std::string& name) {
-    const auto& _iterable_74 = info->symbols;
-    for (const auto& symbol : *_iterable_74) {
+    const auto& _iterable_76 = info->symbols;
+    for (const auto& symbol : *_iterable_76) {
         if (symbol->name == name) {
             return symbol;
         }
@@ -664,8 +669,8 @@ std::shared_ptr<::app_src_semantic_::Symbol> findSymbol(const std::shared_ptr<Mo
     return nullptr;
 }
 std::shared_ptr<::app_src_semantic_::Symbol> findExport(const std::shared_ptr<ModuleInfo>& info, const std::string& name) {
-    const auto& _iterable_76 = info->exports;
-    for (const auto& symbol : *_iterable_76) {
+    const auto& _iterable_78 = info->exports;
+    for (const auto& symbol : *_iterable_78) {
         if (symbol->name == name) {
             return symbol;
         }
@@ -676,14 +681,14 @@ bool hasModuleBinding(const std::shared_ptr<ModuleInfo>& info, const std::string
     if (!doof::is_null(findSymbol(info, name))) {
         return true;
     }
-    const auto& _iterable_78 = info->imports;
-    for (const auto& imported : *_iterable_78) {
+    const auto& _iterable_80 = info->imports;
+    for (const auto& imported : *_iterable_80) {
         if (imported->localName == name) {
             return true;
         }
     }
-    const auto& _iterable_80 = info->namespaceImports;
-    for (const auto& imported : *_iterable_80) {
+    const auto& _iterable_82 = info->namespaceImports;
+    for (const auto& imported : *_iterable_82) {
         if (imported->localName == name) {
             return true;
         }
@@ -697,8 +702,8 @@ bool isBuiltin(const std::string& name) {
     if ((name == std::string("JsonSerializable")) || (name == std::string("Reflectable"))) {
         return true;
     }
-    const auto& _iterable_82 = BUILTIN_TYPES;
-    for (const auto& builtin : *_iterable_82) {
+    const auto& _iterable_84 = BUILTIN_TYPES;
+    for (const auto& builtin : *_iterable_84) {
         if (builtin == name) {
             return true;
         }
@@ -706,8 +711,8 @@ bool isBuiltin(const std::string& name) {
     return false;
 }
 bool contains(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
-    const auto& _iterable_84 = values;
-    for (const auto& item : *_iterable_84) {
+    const auto& _iterable_86 = values;
+    for (const auto& item : *_iterable_86) {
         if (item == value) {
             return true;
         }
@@ -726,6 +731,6 @@ void addError(const std::shared_ptr<ModuleInfo>& info, const std::string& messag
 }
 
 void __doof_initialize_module() {
-        BUILTIN_TYPES = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("byte"), std::string("int"), std::string("long"), std::string("float"), std::string("double"), std::string("string"), std::string("char"), std::string("bool"), std::string("none"), std::string("never"), std::string("void"), std::string("null"), std::string("JsonValue"), std::string("JsonObject"), std::string("SourceLocation"), std::string("Map"), std::string("ReadonlyMap"), std::string("Set"), std::string("ReadonlySet"), std::string("Result"), std::string("Stream"), std::string("Range"), std::string("Tuple"), std::string("Actor"), std::string("Promise")});
+        BUILTIN_TYPES = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("byte"), std::string("int"), std::string("long"), std::string("float"), std::string("double"), std::string("string"), std::string("char"), std::string("bool"), std::string("none"), std::string("never"), std::string("void"), std::string("null"), std::string("JsonValue"), std::string("JsonObject"), std::string("SourceLocation"), std::string("WeakReferenceError"), std::string("Map"), std::string("ReadonlyMap"), std::string("Set"), std::string("ReadonlySet"), std::string("Result"), std::string("Stream"), std::string("Range"), std::string("Tuple"), std::string("Actor"), std::string("Promise")});
 }
 }

@@ -698,6 +698,7 @@ function getLevel(): LogLevel {
 Shorthand works anywhere the compiler can infer the enum type from context:
 - Variable declarations with explicit type annotations
 - Function arguments with typed parameters
+- Generic function arguments whose type is concrete or inferred from another argument
 - Return statements in functions with explicit return types
 - Parameter defaults and field defaults
 - Case arms matching on an enum value
