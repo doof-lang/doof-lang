@@ -374,6 +374,7 @@ namespace std_::time::stopwatch {
     StopwatchSpan(std::shared_ptr<Stopwatch> stopwatch, std::string name, std::shared_ptr<::std_::time::temporal::Instant> startedAt, bool finished = false, std::shared_ptr<::std_::time::duration::Duration> finishedDuration = nullptr) : stopwatch(stopwatch), name(name), startedAt(startedAt), finished(finished), finishedDuration(finishedDuration) {}
     std::shared_ptr<::std_::time::duration::Duration> finish();
     ~StopwatchSpan() {
+#line 173 "/std/time/stopwatch.do"
         this->finish();
     }
 };

@@ -24,6 +24,7 @@ import { sha256HexString } from "std/crypto"
 
 export class ModuleInfo {
   path: string
+  physicalPath: string = ""
   sourceHash: string = ""
   program: Program
   symbols: Symbol[] = []
@@ -43,6 +44,7 @@ export class AnalysisResult {
 
 class ModuleParseResult {
   path: string
+  physicalPath: string = ""
   source: string
   inheritedMockRootPath: string | none = none
   program: Program | none = none
@@ -104,6 +106,7 @@ export class ModuleAnalyzer {
     }
 
     sourceText := source.source
+    physicalPath := if source.physicalPath == "" then source.path else source.physicalPath
     modulePath := path
     mockRootPath := inheritedMockRootPath
     pending.push(async {
@@ -112,12 +115,12 @@ export class ModuleAnalyzer {
       program := parsed else failure {
         if parser.errorMessage == "" { panic(failure) }
         yield ModuleParseResult {
-          path: modulePath, source: sourceText, inheritedMockRootPath: mockRootPath,
+          path: modulePath, physicalPath: physicalPath, source: sourceText, inheritedMockRootPath: mockRootPath,
           errorMessage: parser.errorMessage,
           errorLine: parser.errorLine, errorColumn: parser.errorColumn, errorOffset: parser.errorOffset,
         }
       }
-      yield ModuleParseResult { path: modulePath, source: sourceText, inheritedMockRootPath: mockRootPath, program }
+      yield ModuleParseResult { path: modulePath, physicalPath: physicalPath, source: sourceText, inheritedMockRootPath: mockRootPath, program }
     })
   }
 
@@ -145,6 +148,7 @@ export class ModuleAnalyzer {
       }
       info := ModuleInfo {
         path: completed.path,
+        physicalPath: completed.physicalPath,
         sourceHash: sha256HexString(completed.source),
         program,
         mockImportDirectives,

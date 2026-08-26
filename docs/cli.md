@@ -12,6 +12,7 @@ doof check <path>
 doof emit <path> [-o <directory>]
 doof build <path> [-o <directory>]
 doof run <path> [build options] [-- program arguments]
+doof profile <path> [build options] [--trace-output <file.trace>] [--time-limit <duration>] [--no-open] [-- program arguments]
 doof package <path> [-o <build-directory>] [--distdir <directory>]
 doof test <path> [filter] [--list] [--coverage]
 ```
@@ -46,6 +47,30 @@ but does not natively launch files through POSIX shebangs.
 from its package root. `package` creates an optimized release artifact and
 records provenance. `test` discovers and runs exported test functions.
 
+`profile` is a macOS-only Time Profiler workflow for native console
+executables and macOS application bundles. It uses a separate
+`<build-directory>/profile` graph with release-like optimization, debug
+information, frame pointers, and retained symbols. Generated debug line
+information points back to physical `.do` files while manifest-native sources
+retain their ordinary native mappings. Profile builds retain ordinary object
+files instead of LTO intermediates and create an adjacent dSYM bundle so
+Instruments can navigate those mappings reliably. WebAssembly and iOS targets
+are not supported by this command.
+
+By default, `profile` records until the target exits, saves a uniquely named
+trace below `<build-directory>/profiles/`, and opens it with Instruments.
+`--trace-output` selects an explicit `.trace` path, `--time-limit` accepts a
+positive integer followed by `ms`, `s`, `m`, or `h`, and `--no-open` retains
+the trace without opening it. Existing explicit trace paths are not
+overwritten. Values after `--` are forwarded verbatim to the profiled target.
+
+The command reports xctrace progress normally and considers creation of the
+trace artifact a successful capture; it does not reproduce the target's exit
+status. Apple's local xctrace launch forwards target standard input and output,
+but folds target standard error into standard output. Use `doof run` when
+separate output channels are part of the program's protocol. Profiling requires
+Xcode's Instruments command-line support to be available through `xcrun`.
+
 Successful compilation performed by `run` is silent: the launched program owns
 its inherited standard input, output, and error streams without compiler
 messages mixed into them. Warning-only source diagnostics and successful native
@@ -71,7 +96,7 @@ compiler planning remains available when an explicit non-MSVC compiler is
 selected. Native object compilation uses at most four compiler workers by
 default to avoid oversubscribing smaller development machines.
 
-For `check`, `emit`, `build`, and `run`, successful exact source/configuration
+For `check`, `emit`, `build`, `run`, and `profile`, successful exact source/configuration
 fingerprints are cached below `<build-directory>/.doof-cache/v1/`. Exact hits
 skip the frontend. After an edit, Doof performs a normal semantic compilation
 and retains any generated module whose transitive inputs and lowering plan are
@@ -86,6 +111,9 @@ fingerprints after metadata changes. Executable resources have a separate
 materialization record: unchanged files are not reread, while edits, additions,
 removals, and changes to copied outputs are synchronized before launch. Cache
 corruption or incompatibility is treated as a miss.
+
+Profile frontend/native caches live below `<build-directory>/profile` so
+switching between development runs and profiling does not churn either graph.
 
 Manifestless WebAssembly libraries use an explicit source and target:
 

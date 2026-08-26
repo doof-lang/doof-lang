@@ -11,7 +11,7 @@ import {
   ActorType, ArrayResolvedType, ClassType, FunctionType, InterfaceType, PromiseType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType,
   UnionResolvedType, UnknownType, NoneType, WeakResolvedType,
 } from "./semantic"
-import { EmitContext, recordCoverageLine } from "./emitter-context"
+import { EmitContext, recordCoverageLine, sourceLineDirective } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
 import { borrowParameterType, emitClassInnerType, emitContextReturnType, emitContextType, emitParameterType, emitReturnType, emitType, specializeEmitType } from "./emitter-types"
@@ -72,7 +72,7 @@ export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitCon
     }
     _ -> { context.currentReturnErrorType = "" }
   }
-  let result = emitCallableDescription(fn, "") + (if context.substitution == none then templatePrefix(fn.typeParams) else "") + emitFunctionSignature(fn, name, context.modulePath, false, context) + " {\n"
+  let result = sourceLineDirective(fn.span, context) + emitCallableDescription(fn, "") + (if context.substitution == none then templatePrefix(fn.typeParams) else "") + emitFunctionSignature(fn, name, context.modulePath, false, context) + " {\n"
   case fn.body {
     expression: Expression -> {
       result = result + emitExpressionCoverageMark(expression, context)
@@ -405,7 +405,7 @@ function emitInlineClassMethod(owner: ClassDeclaration, method: FunctionDeclarat
   for typeParam of method.typeParams { context.genericTypeParams.push(typeParam) }
   staticPrefix := if method.static_ then "static " else ""
   template := if context.substitution == none then templatePrefix(method.typeParams) else ""
-  let result = emitCallableDescription(method, "    ") + "    " + template + staticPrefix + emitFunctionSignature(method, emittedName, context.modulePath, true, context, owner.typeParams) + " {\n"
+  let result = sourceLineDirective(method.span, context) + emitCallableDescription(method, "    ") + "    " + template + staticPrefix + emitFunctionSignature(method, emittedName, context.modulePath, true, context, owner.typeParams) + " {\n"
   case method.body {
     expression: Expression -> { result = result + "        return " + emitExpression(expression, context, functionReturnType(method)) + ";\n" }
     block: Block -> { result = result + emitBlock(block, 2, context) }
@@ -493,7 +493,7 @@ export function emitClassMethodDefinition(owner: ClassDeclaration, method: Funct
     _ -> { context.currentReturnErrorType = "" }
   }
   ownerName := if owner.native_ then (if owner.nativeCppName == "" then owner.name else owner.nativeCppName) else owner.name
-  let result = emitFunctionSignature(method, ownerName + "::" + cppIdentifier(method.name), context.modulePath, false, context) + " {\n"
+  let result = sourceLineDirective(method.span, context) + emitFunctionSignature(method, ownerName + "::" + cppIdentifier(method.name), context.modulePath, false, context) + " {\n"
   case method.body {
     expression: Expression -> {
       result = result + emitExpressionCoverageMark(expression, context)

@@ -256,13 +256,13 @@ namespace app_src_project_ {
     struct ProjectSpec;
 }
 
+namespace app_src_run_command_ {
+    struct RunInvocation;
+}
+
 namespace app_src_resource_state_ {
     struct MaterializedResource;
     struct ResourceState;
-}
-
-namespace app_src_run_command_ {
-    struct RunInvocation;
 }
 
 namespace app_src_test_runner_ {
@@ -1050,6 +1050,37 @@ inline std::optional<DayOfWeek> DayOfWeek_fromValue(int32_t value) {
 inline std::ostream& operator<<(std::ostream& output, DayOfWeek value) { return output << DayOfWeek_name(value); }
 }
 
+namespace app_src_native_build_ {
+    enum class NativeBuildMode {
+    Debug,
+    Release,
+    Profile
+};
+inline const char* NativeBuildMode_name(NativeBuildMode value) {
+  switch (value) {
+    case NativeBuildMode::Debug: return "Debug";
+    case NativeBuildMode::Release: return "Release";
+    case NativeBuildMode::Profile: return "Profile";
+  }
+  return "";
+}
+inline std::optional<NativeBuildMode> NativeBuildMode_fromName(std::string_view value) {
+  if (value == "Debug") return NativeBuildMode::Debug;
+  if (value == "Release") return NativeBuildMode::Release;
+  if (value == "Profile") return NativeBuildMode::Profile;
+  return std::nullopt;
+}
+inline std::optional<NativeBuildMode> NativeBuildMode_fromValue(int32_t value) {
+  switch (static_cast<NativeBuildMode>(value)) {
+    case NativeBuildMode::Debug: return NativeBuildMode::Debug;
+    case NativeBuildMode::Release: return NativeBuildMode::Release;
+    case NativeBuildMode::Profile: return NativeBuildMode::Profile;
+    default: return std::nullopt;
+  }
+}
+inline std::ostream& operator<<(std::ostream& output, NativeBuildMode value) { return output << NativeBuildMode_name(value); }
+}
+
 namespace app_src_native_build_driver_ {
     enum class NativeBuildOutputMode {
     Silent,
@@ -1119,7 +1150,8 @@ namespace app_src_semantic_ {
     struct SourceFile : public std::enable_shared_from_this<SourceFile> {
     std::string path;
     std::string source;
-    SourceFile(std::string path, std::string source) : path(path), source(source) {}
+    std::string physicalPath = std::string("");
+    SourceFile(std::string path, std::string source, std::string physicalPath = std::string("")) : path(path), source(source), physicalPath(physicalPath) {}
 };
     struct PrimitiveType : public std::enable_shared_from_this<PrimitiveType> {
     std::string kind = std::string("primitive");
@@ -1329,6 +1361,9 @@ namespace app_src_cli_ {
     bool listOnly = false;
     bool coverage = false;
     std::string coverageOutput = std::string("");
+    std::string traceOutput = std::string("");
+    std::string profileTimeLimit = std::string("");
+    bool profileNoOpen = false;
     std::string distDirectory = std::string("");
     std::string macosSigning = std::string("");
     std::string macosSignIdentity = std::string("");
@@ -1340,7 +1375,7 @@ namespace app_src_cli_ {
     std::string iosProvisioningProfile = std::string("");
     std::string targetOverride = std::string("");
     std::shared_ptr<std::vector<std::string>> programArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    CliRequest(std::string command, std::string entry, std::string outputDirectory = std::string(""), std::string compiler = std::string(""), std::string filter = std::string(""), bool listOnly = false, bool coverage = false, std::string coverageOutput = std::string(""), std::string distDirectory = std::string(""), std::string macosSigning = std::string(""), std::string macosSignIdentity = std::string(""), bool macosSandbox = false, std::string macosEntitlements = std::string(""), std::string iosDestination = std::string("simulator"), std::string iosDevice = std::string(""), std::string iosSignIdentity = std::string(""), std::string iosProvisioningProfile = std::string(""), std::string targetOverride = std::string(""), std::shared_ptr<std::vector<std::string>> programArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : command(command), entry(entry), outputDirectory(outputDirectory), compiler(compiler), filter(filter), listOnly(listOnly), coverage(coverage), coverageOutput(coverageOutput), distDirectory(distDirectory), macosSigning(macosSigning), macosSignIdentity(macosSignIdentity), macosSandbox(macosSandbox), macosEntitlements(macosEntitlements), iosDestination(iosDestination), iosDevice(iosDevice), iosSignIdentity(iosSignIdentity), iosProvisioningProfile(iosProvisioningProfile), targetOverride(targetOverride), programArguments(programArguments) {}
+    CliRequest(std::string command, std::string entry, std::string outputDirectory = std::string(""), std::string compiler = std::string(""), std::string filter = std::string(""), bool listOnly = false, bool coverage = false, std::string coverageOutput = std::string(""), std::string traceOutput = std::string(""), std::string profileTimeLimit = std::string(""), bool profileNoOpen = false, std::string distDirectory = std::string(""), std::string macosSigning = std::string(""), std::string macosSignIdentity = std::string(""), bool macosSandbox = false, std::string macosEntitlements = std::string(""), std::string iosDestination = std::string("simulator"), std::string iosDevice = std::string(""), std::string iosSignIdentity = std::string(""), std::string iosProvisioningProfile = std::string(""), std::string targetOverride = std::string(""), std::shared_ptr<std::vector<std::string>> programArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : command(command), entry(entry), outputDirectory(outputDirectory), compiler(compiler), filter(filter), listOnly(listOnly), coverage(coverage), coverageOutput(coverageOutput), traceOutput(traceOutput), profileTimeLimit(profileTimeLimit), profileNoOpen(profileNoOpen), distDirectory(distDirectory), macosSigning(macosSigning), macosSignIdentity(macosSignIdentity), macosSandbox(macosSandbox), macosEntitlements(macosEntitlements), iosDestination(iosDestination), iosDevice(iosDevice), iosSignIdentity(iosSignIdentity), iosProvisioningProfile(iosProvisioningProfile), targetOverride(targetOverride), programArguments(programArguments) {}
 };
     struct CliParseResult : public std::enable_shared_from_this<CliParseResult> {
     std::shared_ptr<CliRequest> request;
@@ -1868,6 +1903,15 @@ namespace app_src_project_ {
 };
 }
 
+namespace app_src_run_command_ {
+    struct RunInvocation : public std::enable_shared_from_this<RunInvocation> {
+    std::string command;
+    std::shared_ptr<std::vector<std::string>> arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::string directory;
+    RunInvocation(std::string command, std::shared_ptr<std::vector<std::string>> arguments, std::string directory) : command(command), arguments(arguments), directory(directory) {}
+};
+}
+
 namespace app_src_resource_state_ {
     struct MaterializedResource : public std::enable_shared_from_this<MaterializedResource> {
     std::string sourcePath;
@@ -1886,15 +1930,6 @@ namespace app_src_resource_state_ {
     ResourceState(int32_t version = 1, std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>> files = std::make_shared<std::vector<std::shared_ptr<MaterializedResource>>>(std::vector<std::shared_ptr<MaterializedResource>>{})) : version(version), files(files) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ResourceState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
-};
-}
-
-namespace app_src_run_command_ {
-    struct RunInvocation : public std::enable_shared_from_this<RunInvocation> {
-    std::string command;
-    std::shared_ptr<std::vector<std::string>> arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::string directory;
-    RunInvocation(std::string command, std::shared_ptr<std::vector<std::string>> arguments, std::string directory) : command(command), arguments(arguments), directory(directory) {}
 };
 }
 
@@ -2773,7 +2808,7 @@ namespace app_src_diagnostics_ {
 }
 
 namespace app_src_compiler_ {
-    std::shared_ptr<Compilation> compileWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const std::string& entry, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>& namespaceMappings = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>(std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>{}), const std::string& entryMode = std::string("executable"), bool coverage = false, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>>& reusableModules = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>>(std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>{}), const std::string& emissionConfigurationFingerprint = std::string(""));
+    std::shared_ptr<Compilation> compileWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const std::string& entry, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>& namespaceMappings = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>(std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>{}), const std::string& entryMode = std::string("executable"), bool coverage = false, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>>& reusableModules = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>>(std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>{}), const std::string& emissionConfigurationFingerprint = std::string(""), bool physicalSourcePaths = false);
     std::shared_ptr<Compilation> checkWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const std::string& entry, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader, const std::string& entryMode = std::string("executable"));
 }
 
@@ -2955,7 +2990,7 @@ namespace app_src_module_acquisition_ {
 }
 
 namespace app_src_native_build_driver_ {
-    int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, bool release, const std::string& platform, NativeBuildOutputMode outputMode);
+    int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, ::app_src_native_build_::NativeBuildMode mode, const std::string& platform, NativeBuildOutputMode outputMode);
 }
 
 namespace app_src_package_acquisition_ {
@@ -2993,13 +3028,6 @@ namespace app_src_provenance_ {
     std::string renderBuildProvenance(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>>& packages, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>>& externals, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& nativeBuild, const std::shared_ptr<::app_src_std_catalog_::StdCatalog>& catalog);
 }
 
-namespace app_src_resource_state_ {
-    std::shared_ptr<ResourceState> parseResourceState(const std::string& source);
-    std::string renderResourceState(const std::shared_ptr<ResourceState>& state);
-    std::shared_ptr<MaterializedResource> findMaterializedResource(const std::shared_ptr<ResourceState>& state, const std::string& sourcePath, const std::string& outputPath);
-    bool materializedResourceIsCurrent(const std::shared_ptr<MaterializedResource>& previous, int64_t sourceSize, int64_t sourceModifiedNanos, int64_t outputSize, int64_t outputModifiedNanos);
-}
-
 namespace app_src_run_command_ {
     std::shared_ptr<RunInvocation> planNativeProgramRun(const std::string& executablePath, const std::shared_ptr<std::vector<std::string>>& programArguments, const std::string& packageRoot);
     std::shared_ptr<RunInvocation> planMacOSAppRun(const std::string& appPath, const std::string& packageRoot);
@@ -3007,6 +3035,19 @@ namespace app_src_run_command_ {
     std::shared_ptr<RunInvocation> planIOSSimulatorLaunch(const std::string& bundleId, const std::string& packageRoot);
     std::shared_ptr<RunInvocation> planIOSDeviceInstall(const std::string& appPath, const std::string& deviceIdentifier, const std::string& packageRoot);
     std::shared_ptr<RunInvocation> planIOSDeviceLaunch(const std::string& bundleId, const std::string& deviceIdentifier, const std::string& packageRoot);
+}
+
+namespace app_src_profile_command_ {
+    std::shared_ptr<::app_src_run_command_::RunInvocation> planProfileSymbols(const std::string& binaryPath, const std::string& symbolsPath, const std::string& packageRoot);
+    std::shared_ptr<::app_src_run_command_::RunInvocation> planProfileCapture(const std::string& targetPath, const std::shared_ptr<std::vector<std::string>>& programArguments, const std::string& packageRoot, const std::string& tracePath, const std::string& timeLimit = std::string(""), bool consoleTarget = true);
+    std::shared_ptr<::app_src_run_command_::RunInvocation> planProfileOpen(const std::string& tracePath, const std::string& packageRoot);
+}
+
+namespace app_src_resource_state_ {
+    std::shared_ptr<ResourceState> parseResourceState(const std::string& source);
+    std::string renderResourceState(const std::shared_ptr<ResourceState>& state);
+    std::shared_ptr<MaterializedResource> findMaterializedResource(const std::shared_ptr<ResourceState>& state, const std::string& sourcePath, const std::string& outputPath);
+    bool materializedResourceIsCurrent(const std::shared_ptr<MaterializedResource>& previous, int64_t sourceSize, int64_t sourceModifiedNanos, int64_t outputSize, int64_t outputModifiedNanos);
 }
 
 namespace app_src_test_runner_ {
@@ -3026,6 +3067,7 @@ namespace app_src_test_runner_ {
 
 namespace app_src_driver_ {
     ::app_src_native_build_driver_::NativeBuildOutputMode nativeBuildOutputModeForCommand(const std::string& command);
+    int32_t runProfileTarget(const std::shared_ptr<::app_src_cli_::CliRequest>& request, const std::string& targetPath, const std::string& binaryPath, const std::string& symbolsPath, const std::string& packageRoot, const std::string& buildDirectory, const std::string& traceName, bool consoleTarget);
     std::string hostPlatform();
     std::shared_ptr<NativeCommandResult> runNativeCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::optional<std::string>& directory = std::nullopt, bool inheritOutput = false, ::std_::os::index::ProcessGroupMode processGroupMode = ::std_::os::index::ProcessGroupMode::Isolated, int64_t maxOutputBytes = 262144LL);
     int32_t printNativeCommandOutput(const std::shared_ptr<NativeCommandResult>& result, int32_t remainingLines);

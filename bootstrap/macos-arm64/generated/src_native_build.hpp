@@ -15,6 +15,37 @@ namespace app_src_native_build_ {
 }
 
 namespace app_src_native_build_ {
+    enum class NativeBuildMode {
+    Debug,
+    Release,
+    Profile
+};
+inline const char* NativeBuildMode_name(NativeBuildMode value) {
+  switch (value) {
+    case NativeBuildMode::Debug: return "Debug";
+    case NativeBuildMode::Release: return "Release";
+    case NativeBuildMode::Profile: return "Profile";
+  }
+  return "";
+}
+inline std::optional<NativeBuildMode> NativeBuildMode_fromName(std::string_view value) {
+  if (value == "Debug") return NativeBuildMode::Debug;
+  if (value == "Release") return NativeBuildMode::Release;
+  if (value == "Profile") return NativeBuildMode::Profile;
+  return std::nullopt;
+}
+inline std::optional<NativeBuildMode> NativeBuildMode_fromValue(int32_t value) {
+  switch (static_cast<NativeBuildMode>(value)) {
+    case NativeBuildMode::Debug: return NativeBuildMode::Debug;
+    case NativeBuildMode::Release: return NativeBuildMode::Release;
+    case NativeBuildMode::Profile: return NativeBuildMode::Profile;
+    default: return std::nullopt;
+  }
+}
+inline std::ostream& operator<<(std::ostream& output, NativeBuildMode value) { return output << NativeBuildMode_name(value); }
+}
+
+namespace app_src_native_build_ {
     using NativeCompileTaskBatch = std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>;
 }
 
@@ -85,11 +116,11 @@ namespace std_::crypto::index {
 namespace app_src_native_build_ {
     bool isMsvcCompiler(const std::string& compiler);
     std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(const std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>& tasks, int32_t maximumWorkers = 4);
-    std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, bool release = false, const std::string& platform = std::string(""), const std::shared_ptr<std::vector<std::string>>& wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool wasm = false);
-    std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, bool release);
+    std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, NativeBuildMode mode = NativeBuildMode::Debug, const std::string& platform = std::string(""), const std::shared_ptr<std::vector<std::string>>& wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool wasm = false);
+    std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, NativeBuildMode mode);
     std::string msvcPchHeaderSource();
     void appendMsvcObjectArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& sourcePath, const std::string& outputPath, const std::string& dependencyFilePath, bool cSource);
-    void appendReleaseLinkerArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& platform, bool swiftLink);
+    void appendOptimizedLinkerArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& platform, bool swiftLink, bool stripSymbols);
     void appendLinkerOption(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& option, bool swiftLink);
     std::string replaceSourceExtension(const std::string& path, const std::string& extension);
     std::shared_ptr<std::vector<std::string>> copyArguments(const std::shared_ptr<std::vector<std::string>>& source);
@@ -97,7 +128,7 @@ namespace app_src_native_build_ {
     bool isCSource(const std::string& path);
     bool isSwiftSource(const std::string& path);
     bool hasSwiftSource(const std::shared_ptr<std::vector<std::string>>& paths);
-    std::shared_ptr<std::vector<std::string>> swiftObjectArguments(const std::string& sourcePath, const std::string& objectPath);
+    std::shared_ptr<std::vector<std::string>> swiftObjectArguments(const std::string& sourcePath, const std::string& objectPath, NativeBuildMode mode);
     std::string deriveCCompiler(const std::string& compiler);
     std::string wasmExportList(const std::shared_ptr<std::vector<std::string>>& names);
     void appendObjectArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& sourcePath, const std::string& outputPath);

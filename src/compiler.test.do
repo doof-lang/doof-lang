@@ -21,6 +21,32 @@ export function testCheckOnlyDoesNotProduceEmission(): none {
   Assert.equal(result.emission, none)
 }
 
+export function testEmitsPhysicalDoofSourceLineMappingsForProfiling(): none {
+  result := compileWithLoader([
+    SourceFile {
+      path: "/main.do",
+      physicalPath: "/tmp/project/main.do",
+      source: "function main(): int {\nvalue := 1\nreturn value\n}",
+    },
+  ], "/main.do", noSourceLoader, [], "executable", false, [], "profile", true)
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "#line 1 \"/tmp/project/main.do\"")
+  Assert.stringContains(source, "#line 2 \"/tmp/project/main.do\"")
+  Assert.stringContains(source, "#line 3 \"/tmp/project/main.do\"")
+  Assert.stringContains(source, "#line 1 \"<doof-generated>\"")
+}
+
+export function testEscapesDebugSourcePathsAndFallsBackToLogicalIdentity(): none {
+  escaped := compileWithLoader([
+    SourceFile { path: "/main.do", physicalPath: "C:\\work\\\"odd\\main.do", source: "function main(): int => 1" },
+  ], "/main.do", noSourceLoader, [], "executable", false, [], "profile", true)
+  Assert.stringContains(escaped.emission!.modules[0].source, "#line 1 \"C:\\\\work\\\\\\\"odd\\\\main.do\"")
+
+  logical := compile([SourceFile { path: "/memory/main.do", source: "function main(): int => 1" }], "/memory/main.do")
+  Assert.stringContains(logical.emission!.modules[0].source, "#line 1 \"/memory/main.do\"")
+}
+
 export function testReusesOnlyModulesWhoseDependencyFingerprintIsUnchanged(): none {
   firstSources := [
     SourceFile { path: "/main.do", source: "import { left } from \"./left\"\nimport { right } from \"./right\"\nfunction main(): int => left() + right()" },

@@ -135,8 +135,11 @@ namespace std_::event::index {
 struct ChannelSender : public std::enable_shared_from_this<ChannelSender<T>> {
     std::shared_ptr<::doof_event::NativeChannel> native;
     ChannelSender(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
+#line 54 "/std/event/index.do"
     doof::Result<Backpressure, SendError> send(T value, const std::optional<std::string>& key = std::nullopt) {
+#line 55 "/std/event/index.do"
         const auto code = (doof::is_null(key) ? ::doof_event::trySendChannelMessage<T>(this->native, value, false, std::string("")) : ::doof_event::trySendChannelMessage<T>(this->native, value, true, key.value()));
+#line 57 "/std/event/index.do"
         return [&]() -> doof::Result<Backpressure, SendError> {
     auto _case_subject = code;
     if (_case_subject == 0) {
@@ -154,13 +157,19 @@ struct ChannelSender : public std::enable_shared_from_this<ChannelSender<T>> {
     throw std::runtime_error("non-exhaustive case expression");
 }();
     }
+#line 65 "/std/event/index.do"
     void onReady(const doof::callback<void()>& handler) {
+#line 66 "/std/event/index.do"
         this->native->registerSenderReady(handler);
     }
+#line 69 "/std/event/index.do"
     void onClosed(const doof::callback<void()>& handler) {
+#line 70 "/std/event/index.do"
         this->native->registerSenderClosed(handler);
     }
+#line 73 "/std/event/index.do"
     void close() {
+#line 74 "/std/event/index.do"
         this->native->tryClose();
     }
 };
@@ -168,13 +177,19 @@ struct ChannelSender : public std::enable_shared_from_this<ChannelSender<T>> {
 struct ChannelReceiver : public std::enable_shared_from_this<ChannelReceiver<T>> {
     std::shared_ptr<::doof_event::NativeChannel> native;
     ChannelReceiver(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
+#line 81 "/std/event/index.do"
     void onMessage(const doof::callback<void(T)>& handler) {
+#line 82 "/std/event/index.do"
         ::doof_event::registerChannelReceiverMessage<T>(this->native, handler);
     }
+#line 85 "/std/event/index.do"
     void onClosed(const doof::callback<void()>& handler) {
+#line 86 "/std/event/index.do"
         this->native->registerReceiverClosed(handler);
     }
+#line 89 "/std/event/index.do"
     void close() {
+#line 90 "/std/event/index.do"
         this->native->tryClose();
     }
 };

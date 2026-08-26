@@ -8,7 +8,7 @@ import { formatJsonValue, parseJsonValue } from "std/json"
 export readonly FRONTEND_CACHE_VERSION = 2
 // Bump when checker or lowering semantics change without changing the JSON
 // shape. Cache correctness must never depend on a stale compiler decision.
-export readonly FRONTEND_SEMANTIC_ABI = 7
+export readonly FRONTEND_SEMANTIC_ABI = 8
 
 export class FrontendSourceProbe {
   logicalPath: string

@@ -26,7 +26,8 @@ namespace app_src_semantic_ {
     struct SourceFile : public std::enable_shared_from_this<SourceFile> {
     std::string path;
     std::string source;
-    SourceFile(std::string path, std::string source) : path(path), source(source) {}
+    std::string physicalPath = std::string("");
+    SourceFile(std::string path, std::string source, std::string physicalPath = std::string("")) : path(path), source(source), physicalPath(physicalPath) {}
 };
 }
 

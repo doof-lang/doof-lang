@@ -8,6 +8,12 @@ import { ModuleEmission } from "./emitter-module"
 import { NativeBuildPlan } from "./package-manifest"
 import { sha1HexString } from "std/crypto"
 
+export enum NativeBuildMode {
+  Debug,
+  Release,
+  Profile,
+}
+
 /** One independently executable object compilation task. */
 export class NativeCompileTask {
   readonly id: string
@@ -76,19 +82,21 @@ export function planNativeCompile(
   outputPath: string,
   modules: ModuleEmission[],
   native: NativeBuildPlan,
-  release: bool = false,
+  mode: NativeBuildMode = .Debug,
   platform: string = "",
   wasmExportNames: string[] = [],
   wasm: bool = false,
 ): NativeCompilePlan {
   if isMsvcCompiler(compiler) && !wasm {
-    return planMsvcNativeCompile(compiler, outputDirectory, outputPath, modules, native, release)
+    return planMsvcNativeCompile(compiler, outputDirectory, outputPath, modules, native, mode)
   }
+  release := mode == .Release
+  profile := mode == .Profile
   swiftLink := hasSwiftSource(native.sourceFiles)
   let compileArguments: string[] = ["-std=c++17"]
   // Release defaults precede manifest flags so packages can intentionally
   // override optimization while still receiving the NDEBUG contract.
-  if release {
+  if release || profile {
     compileArguments.push("-O2")
     compileArguments.push("-DNDEBUG")
     // Keep generated and native functions independently discardable. Apple
@@ -96,10 +104,14 @@ export function planNativeCompile(
     // section granularity to reliably remove unreachable code and data.
     compileArguments.push("-ffunction-sections")
     compileArguments.push("-fdata-sections")
-    // Full LTO is supported by both Clang and GCC-compatible drivers and is
-    // especially valuable for generated template-heavy C++. Keep mixed Swift
-    // builds on ordinary objects for portability across Swift linker drivers.
-    if !wasm && !swiftLink { compileArguments.push("-flto") }
+    // Full LTO is valuable for release builds, but a later dsymutil invocation
+    // cannot recover line tables from the linker's deleted temporary LTO
+    // object. Profile builds retain ordinary optimized objects instead.
+    if release && !wasm && !swiftLink { compileArguments.push("-flto") }
+  }
+  if profile {
+    compileArguments.push("-g")
+    compileArguments.push("-fno-omit-frame-pointer")
   }
   if wasm {
     compileArguments.push("-Oz")
@@ -177,7 +189,7 @@ export function planNativeCompile(
     objectPath := resolveBuildPath(outputDirectory, ".doof-objects/native/" + sha1HexString(native.sourceFiles[index]) + ".o")
     dependencyFile := if swiftSource then "" else objectPath + ".d"
     cSource := isCSource(sourcePath)
-    arguments := if swiftSource then swiftObjectArguments(sourcePath, objectPath) else copyNativeCompileArguments(compileArguments, cSource)
+    arguments := if swiftSource then swiftObjectArguments(sourcePath, objectPath, mode) else copyNativeCompileArguments(compileArguments, cSource)
     if !swiftSource {
       arguments.push("-MMD")
       arguments.push("-MF")
@@ -210,9 +222,9 @@ export function planNativeCompile(
     linkArguments.push("-Xlinker")
     linkArguments.push("-lc++")
   }
-  if release && !wasm {
-    if !swiftLink { linkArguments.push("-flto") }
-    appendReleaseLinkerArguments(linkArguments, platform, swiftLink)
+  if (release || profile) && !wasm {
+    if release && !swiftLink { linkArguments.push("-flto") }
+    appendOptimizedLinkerArguments(linkArguments, platform, swiftLink, release)
   }
   if !wasm { for flag of native.linkerFlags { linkArguments.push(flag) } }
   if wasm {
@@ -246,17 +258,23 @@ function planMsvcNativeCompile(
   outputPath: string,
   modules: ModuleEmission[],
   native: NativeBuildPlan,
-  release: bool,
+  mode: NativeBuildMode,
 ): NativeCompilePlan {
+  release := mode == .Release
+  profile := mode == .Profile
   let compileArguments: string[] = [
     "/nologo", "/std:c++17", "/EHsc", "/utf-8", "/Zc:__cplusplus", "/permissive-",
   ]
-  if release {
+  if release || profile {
     compileArguments.push("/O2")
     compileArguments.push("/DNDEBUG")
     compileArguments.push("/Gy")
     compileArguments.push("/Gw")
     compileArguments.push("/GL")
+  }
+  if profile {
+    compileArguments.push("/Zi")
+    compileArguments.push("/Oy-")
   }
   for define of native.defines { compileArguments.push("/D" + define) }
   compileArguments.push("/I")
@@ -351,11 +369,12 @@ function planMsvcNativeCompile(
   for library of native.linkLibraries {
     linkArguments.push(if library.toLowerCase().endsWith(".lib") then library else library + ".lib")
   }
-  if release {
+  if release || profile {
     linkArguments.push("/LTCG")
     linkArguments.push("/OPT:REF")
     linkArguments.push("/OPT:ICF")
   }
+  if profile { linkArguments.push("/DEBUG") }
   for flag of native.linkerFlags { linkArguments.push(flag) }
   linkArguments.push("/OUT:" + outputPath)
   return NativeCompilePlan {
@@ -396,16 +415,18 @@ function appendMsvcObjectArguments(
   arguments.push("/Fo" + outputPath)
 }
 
-/** Adds release-only dead-code elimination and symbol stripping. */
-function appendReleaseLinkerArguments(arguments: string[], platform: string, swiftLink: bool): none {
+/** Adds optimized dead-code elimination and optional release symbol stripping. */
+function appendOptimizedLinkerArguments(arguments: string[], platform: string, swiftLink: bool, stripSymbols: bool): none {
   if platform == "macos" || platform.startsWith("ios-") {
     appendLinkerOption(arguments, "-dead_strip", swiftLink)
-    appendLinkerOption(arguments, "-S", swiftLink)
-    appendLinkerOption(arguments, "-x", swiftLink)
+    if stripSymbols {
+      appendLinkerOption(arguments, "-S", swiftLink)
+      appendLinkerOption(arguments, "-x", swiftLink)
+    }
     return
   }
   appendLinkerOption(arguments, "--gc-sections", swiftLink)
-  appendLinkerOption(arguments, "--strip-all", swiftLink)
+  if stripSymbols { appendLinkerOption(arguments, "--strip-all", swiftLink) }
 }
 
 function appendLinkerOption(arguments: string[], option: string, swiftLink: bool): none {
@@ -449,8 +470,14 @@ function hasSwiftSource(paths: string[]): bool {
   return false
 }
 
-function swiftObjectArguments(sourcePath: string, objectPath: string): string[] {
-  return ["-parse-as-library", "-emit-object", sourcePath, "-o", objectPath]
+function swiftObjectArguments(sourcePath: string, objectPath: string, mode: NativeBuildMode): string[] {
+  let arguments = ["-parse-as-library", "-emit-object"]
+  if mode == .Release || mode == .Profile { arguments.push("-O") }
+  if mode == .Profile { arguments.push("-g") }
+  arguments.push(sourcePath)
+  arguments.push("-o")
+  arguments.push(objectPath)
+  return arguments
 }
 
 /** Selects the C driver adjacent to the configured GCC-compatible C++ driver. */

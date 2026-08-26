@@ -3,7 +3,7 @@
 // incremental state, dependency signatures, compiler workers, and linking.
 
 import { ProjectEmission } from "./emitter-project"
-import { NativeCompilePlan, NativeCompileTask, batchNativeCompileTasks, isMsvcCompiler, planNativeCompile } from "./native-build"
+import { NativeBuildMode, NativeCompilePlan, NativeCompileTask, batchNativeCompileTasks, isMsvcCompiler, planNativeCompile } from "./native-build"
 import {
   NativeBuildState, NativeInputSignature, NativeTaskState,
   parseMakeDependencies, parseMsvcDependencies, parseNativeBuildState, renderNativeBuildState,
@@ -110,7 +110,7 @@ export function buildNativeProject(
   outputDirectory: string,
   outputPath: string,
   project: ProjectEmission,
-  release: bool,
+  mode: NativeBuildMode,
   platform: string,
   outputMode: NativeBuildOutputMode,
 ): int {
@@ -135,7 +135,7 @@ export function buildNativeProject(
     if configured != "" { compiler = configured }
   }
   if compiler == "" { compiler = if platform == "windows" then "cl.exe" else "c++" }
-  plan := planNativeCompile(compiler, outputDirectory, outputPath, project.modules, project.nativeBuild, release, platform, project.wasmExportNames, wasm)
+  plan := planNativeCompile(compiler, outputDirectory, outputPath, project.modules, project.nativeBuild, mode, platform, project.wasmExportNames, wasm)
   return executeNativePlan(outputDirectory, plan, project, outputMode)
 }
 

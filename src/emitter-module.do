@@ -10,7 +10,7 @@ import {
   IntLiteral, LongLiteral, ReadonlyDeclaration, Statement, TryStatement, TypeAliasDeclaration,
 } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { createEmitContext, createEmitContextForModule, EmitContext, EmitModuleSurface } from "./emitter-context"
+import { createEmitContext, createEmitContextForModule, EmitContext, EmitModuleSurface, generatedLineDirective } from "./emitter-context"
 import { emitClassDeclaration, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitModuleValueStorage, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions, emitValueDeclaration } from "./emitter-decl"
 import { emitGeneratedJsonMethods, emitInterfaceJsonDefinition } from "./emitter-json"
 import { emitMetadataDefinition } from "./emitter-metadata"
@@ -105,10 +105,12 @@ export class CxxModuleEmitter {
   jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}
   jsonSerializationKeys: string[] = []
   jsonDeserializationKeys: string[] = []
+  sourcePaths: Map<string, string> = {}
 
   emit(program: Program, entryMode: string = "executable"): ModuleEmission {
     context := if modulePath == "" then createEmitContext(program) else createEmitContextForModule(program, modulePath, allPrograms)
     context.namespaceImports = namespaceImports
+    context.sourcePath = sourcePathFor(sourcePaths, context.modulePath)
     context.imports = imports
     context.moduleSurfaces = moduleSurfaces
     context.jsonEligibility = jsonEligibility
@@ -125,6 +127,7 @@ export class CxxModuleEmitter {
     for view of views {
       sectionContext := createEmitContextForModule(view.program, view.path, allPrograms)
       sectionContext.imports = surfaceImports(moduleSurfaces, view.path)
+      sectionContext.sourcePath = sourcePathFor(sourcePaths, view.path)
       sectionContext.moduleSurfaces = moduleSurfaces
       sectionContext.jsonEligibility = jsonEligibility
       configureJsonDemandRegistry(sectionContext, jsonSerializationKeys, jsonDeserializationKeys)
@@ -165,6 +168,7 @@ export class CxxModuleEmitter {
         }
       }
     }
+    sourceBuilder.append(generatedLineDirective())
     sourceBuilder.append(emitModuleInitializer(programs, context, !context.scriptEntry))
     if context.scriptEntry { sourceBuilder.append(emitScriptRunner(programs, context)) }
     if instantiations != none { sourceBuilder.append(emitConcreteFunctions(context, instantiations!)) }
@@ -174,8 +178,8 @@ export class CxxModuleEmitter {
       sourceBuilder.append("\nusing namespace ::" + namespaceName + ";\n\n" + nativeMethods)
     }
     initializationCall := emitGraphInitializationCall(initializationModuleNamespaces)
-    if entryMode == "executable" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(emitMainWrapper(namespaceName, plan, context.scriptEntry, initializationCall)) }
-    if entryMode == "ios-app" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(emitAppEntryWrapper(namespaceName, plan, context.scriptEntry, initializationCall)) }
+    if entryMode == "executable" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(generatedLineDirective() + emitMainWrapper(namespaceName, plan, context.scriptEntry, initializationCall)) }
+    if entryMode == "ios-app" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(generatedLineDirective() + emitAppEntryWrapper(namespaceName, plan, context.scriptEntry, initializationCall)) }
     source := sourceBuilder.drainToString()
     return ModuleEmission {
       modulePath: context.modulePath, header, source, headerName, sourceName,
@@ -183,6 +187,11 @@ export class CxxModuleEmitter {
       instrumentedLines: sortedCoverageLines(context.coverageInstrumentedLines),
     }
   }
+}
+
+function sourcePathFor(paths: Map<string, string>, modulePath: string): string {
+  path := paths.get(modulePath) else { return modulePath }
+  return path
 }
 
 function hasScriptStatements(programs: Program[]): bool {
@@ -341,6 +350,7 @@ export function emitModuleGraph(
   coverage: bool = false,
   reusableModules: ModuleEmissionCacheKey[] = [],
   configurationFingerprint: string = "",
+  physicalSourcePaths: bool = false,
 ): ModuleGraphEmission {
   graph := ModuleGraphEmission {}
   concretePlan := instantiations ?? buildInstantiationPlan(result)
@@ -353,6 +363,10 @@ export function emitModuleGraph(
   instantiationFingerprintInput := moduleInstantiationFingerprintInput(concretePlan)
   jsonEligibility := JsonEligibilityCache {}
   worldviewGraphIndex := indexWorldviewGraph(result)
+  let sourcePaths: Map<string, string> = {}
+  for info of result.modules {
+    sourcePaths.set(info.path, if physicalSourcePaths && info.physicalPath != "" then info.physicalPath else info.path)
+  }
   let nextCoverageModuleId = 0
   for module of plan.modules {
     info := indexedGraphModule(moduleIndex, module.path)
@@ -364,7 +378,7 @@ export function emitModuleGraph(
     }
     fingerprint := moduleEmissionFingerprint(
       result, moduleIndex, module.path, entry, entryMode, coverage,
-      initializationOrder, configurationFingerprint, instantiationFingerprintInput,
+      initializationOrder, configurationFingerprint + "\nphysical-source-paths:" + string(physicalSourcePaths), instantiationFingerprintInput,
     )
     if !coverage && reusableModuleMatches(reusableFingerprints, module.path, fingerprint) {
       graph.modules.push(ModuleEmission {
@@ -387,6 +401,7 @@ export function emitModuleGraph(
       coverageModuleId,
       initializationModuleNamespaces: if module.path == entry then moduleInitializationNamespaces(initializationOrder) else [],
       jsonEligibility,
+      sourcePaths,
     }
     worldview := planWorldview(result, module.path, concretePlan, worldviewGraphIndex)
     emitter.worldviewModules = worldview.modules

@@ -67,7 +67,7 @@ export function testPlansMsvcNativeExecutableSuffixOnWindows(): none {
 
 export function testSelectsCommandAwareNativeBuildOutput(): none {
   Assert.equal(nativeBuildOutputModeForCommand("run"), NativeBuildOutputMode.Silent)
-  for command of ["build", "test", "package"] {
+  for command of ["build", "profile", "test", "package"] {
     Assert.equal(nativeBuildOutputModeForCommand(command), NativeBuildOutputMode.Progress)
   }
 }

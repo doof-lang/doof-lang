@@ -8,6 +8,7 @@ namespace std_::fs::types { struct FileInfo; }
 namespace std_::fs::types { enum class EntryKind; }
 namespace app_src_native_build_driver_ { enum class NativeBuildOutputMode; }
 namespace app_src_emitter_project_ { struct ProjectEmission; }
+namespace app_src_native_build_ { enum class NativeBuildMode; }
 namespace app_src_native_build_ { struct NativeCompilePlan; }
 namespace app_src_native_build_ { struct NativeCompileTask; }
 namespace app_src_native_build_state_ { struct NativeBuildState; }
@@ -337,6 +338,37 @@ inline std::optional<ProcessGroupMode> ProcessGroupMode_fromValue(int32_t value)
   }
 }
 inline std::ostream& operator<<(std::ostream& output, ProcessGroupMode value) { return output << ProcessGroupMode_name(value); }
+}
+
+namespace app_src_native_build_ {
+    enum class NativeBuildMode {
+    Debug,
+    Release,
+    Profile
+};
+inline const char* NativeBuildMode_name(NativeBuildMode value) {
+  switch (value) {
+    case NativeBuildMode::Debug: return "Debug";
+    case NativeBuildMode::Release: return "Release";
+    case NativeBuildMode::Profile: return "Profile";
+  }
+  return "";
+}
+inline std::optional<NativeBuildMode> NativeBuildMode_fromName(std::string_view value) {
+  if (value == "Debug") return NativeBuildMode::Debug;
+  if (value == "Release") return NativeBuildMode::Release;
+  if (value == "Profile") return NativeBuildMode::Profile;
+  return std::nullopt;
+}
+inline std::optional<NativeBuildMode> NativeBuildMode_fromValue(int32_t value) {
+  switch (static_cast<NativeBuildMode>(value)) {
+    case NativeBuildMode::Debug: return NativeBuildMode::Debug;
+    case NativeBuildMode::Release: return NativeBuildMode::Release;
+    case NativeBuildMode::Profile: return NativeBuildMode::Profile;
+    default: return std::nullopt;
+  }
+}
+inline std::ostream& operator<<(std::ostream& output, NativeBuildMode value) { return output << NativeBuildMode_name(value); }
 }
 
 namespace app_src_native_build_driver_ {
@@ -758,7 +790,7 @@ namespace std_::os::index {
 namespace app_src_native_build_ {
     bool isMsvcCompiler(const std::string& compiler);
     std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(const std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>& tasks, int32_t maximumWorkers = 4);
-    std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, bool release = false, const std::string& platform = std::string(""), const std::shared_ptr<std::vector<std::string>>& wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool wasm = false);
+    std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, NativeBuildMode mode = NativeBuildMode::Debug, const std::string& platform = std::string(""), const std::shared_ptr<std::vector<std::string>>& wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool wasm = false);
 }
 
 namespace app_src_native_build_state_ {
@@ -774,6 +806,7 @@ namespace app_src_pkg_config_ {
 
 namespace doof { using NativeBuildOutputMode = ::app_src_native_build_driver_::NativeBuildOutputMode; }
 namespace doof { using ProjectEmission = ::app_src_emitter_project_::ProjectEmission; }
+namespace doof { using NativeBuildMode = ::app_src_native_build_::NativeBuildMode; }
 namespace doof { using NativeCompilePlan = ::app_src_native_build_::NativeCompilePlan; }
 namespace doof { using NativeCompileTask = ::app_src_native_build_::NativeCompileTask; }
 namespace doof { using NativeBuildState = ::app_src_native_build_state_::NativeBuildState; }
@@ -797,7 +830,7 @@ namespace app_src_native_build_driver_ {
     std::string nativeCompilationProgress(int32_t fileCount);
     bool shouldPrintNativeCompilationMarker(NativeBuildOutputMode outputMode, int32_t exitCode);
     bool shouldPrintNativeCommandOutput(int32_t exitCode);
-    int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, bool release, const std::string& platform, NativeBuildOutputMode outputMode);
+    int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, ::app_src_native_build_::NativeBuildMode mode, const std::string& platform, NativeBuildOutputMode outputMode);
     std::string envCompiler();
     int32_t executeNativePlan(const std::string& outputDirectory, const std::shared_ptr<::app_src_native_build_::NativeCompilePlan>& plan, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, NativeBuildOutputMode outputMode);
     std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<::app_src_native_build_state_::NativeTaskState>>> indexNativeTaskStates(const std::shared_ptr<::app_src_native_build_state_::NativeBuildState>& state);

@@ -54,6 +54,9 @@ export class NamespaceBinding {
 export class SourceFile {
   path: string
   source: string
+  // Optional physical location used by native debug information. Logical
+  // module identity remains authoritative for imports and diagnostics.
+  physicalPath: string = ""
 }
 
 export class PrimitiveType {

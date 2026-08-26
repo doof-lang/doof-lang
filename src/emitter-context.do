@@ -28,6 +28,7 @@ export class SourceLocationSpanOverride {
 
 export class EmitContext {
   let modulePath: string = ""
+  let sourcePath: string = ""
   allPrograms: Program[] = []
   let namespaceImports: NamespaceBinding[] = []
   let imports: ImportBinding[] = []
@@ -74,6 +75,16 @@ export class EmitContext {
   coverageInstrumentedLines: int[] = []
 }
 
+/** Maps generated C++ back to the active Doof source location. */
+export function sourceLineDirective(span: SourceSpan, context: EmitContext): string {
+  path := if context.sourcePath == "" then context.modulePath else context.sourcePath
+  escaped := path.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")
+  return "#line " + string(span.start.line) + " \"" + escaped + "\"\n"
+}
+
+/** Marks compiler-owned glue so it is not attributed to an adjacent Doof line. */
+export function generatedLineDirective(): string => "#line 1 \"<doof-generated>\"\n"
+
 export function recordCoverageLine(context: EmitContext, line: int): none {
   for existing of context.coverageInstrumentedLines { if existing == line { return } }
   context.coverageInstrumentedLines.push(line)
@@ -97,5 +108,6 @@ export function createEmitContextForModule(program: Program, modulePath: string,
   if programs.length == 0 { programs = [program] }
   context := createEmitContextForPrograms(programs)
   context.modulePath = modulePath
+  context.sourcePath = modulePath
   return context
 }

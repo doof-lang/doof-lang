@@ -24,6 +24,7 @@ import {
 } from "./frontend-cache"
 import { ModuleAcquisition, acquiredManifestPath, acquiredModuleDiskPath, acquiredPackageForModule } from "./module-acquisition"
 import { NativeBuildOutputMode, buildNativeProject } from "./native-build-driver"
+import { NativeBuildMode } from "./native-build"
 import {
   ExternalDependency, NativeBuildPlan, PackageDependency, PackageManifest, PackageResource, parsePackageManifest,
 } from "./package-manifest"
@@ -36,6 +37,7 @@ import { resolveIOSDeviceIdentifier, resolveIOSDeviceSigningOptions, signIOSDevi
 import { Parser } from "./parser"
 import { environmentValue, fileName, joinPath, parentPath, projectEntryRequestError, readProjectSpec } from "./project"
 import { renderBuildProvenance } from "./provenance"
+import { planProfileCapture, planProfileOpen, planProfileSymbols } from "./profile-command"
 import {
   MaterializedResource, ResourceState, findMaterializedResource, materializedResourceIsCurrent,
   parseResourceState, renderResourceState,
@@ -58,6 +60,7 @@ import { sha256HexString } from "std/crypto"
 import { EntryKind, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
 import { ExecOptions, ProcessGroupMode, architecture, run, platform } from "std/os"
 import { absolute } from "std/path"
+import { Instant } from "std/time"
 
 readonly MAX_PRINTED_DIAGNOSTICS = 20
 readonly MAX_NATIVE_COMPILER_OUTPUT_BYTES = 262144L
@@ -66,6 +69,52 @@ readonly MAX_COVERAGE_OUTPUT_BYTES = 16777216L
 /** Selects whether a top-level command may report successful native build progress. */
 export function nativeBuildOutputModeForCommand(command: string): NativeBuildOutputMode {
   return if command == "run" then .Silent else .Progress
+}
+
+function runProfileTarget(
+  request: CliRequest,
+  targetPath: string,
+  binaryPath: string,
+  symbolsPath: string,
+  packageRoot: string,
+  buildDirectory: string,
+  traceName: string,
+  consoleTarget: bool,
+): int {
+  symbolsPlan := planProfileSymbols(binaryPath, symbolsPath, packageRoot)
+  symbolsResult := runNativeCommand(symbolsPlan.command, symbolsPlan.arguments, symbolsPlan.directory, true)
+  if symbolsResult.error != "" { println("error: " + symbolsResult.error) }
+  if symbolsResult.exitCode != 0 {
+    println("error: could not create profiling symbols at " + symbolsPath)
+    return symbolsResult.exitCode
+  }
+  tracePath := if request.traceOutput == ""
+    then joinPath(joinPath(buildDirectory, "profiles"), traceName + "-" + string(Instant.now().toEpochMillis()) + ".trace")
+    else try! absolute(request.traceOutput)
+  if exists(tracePath) {
+    println("error: profile trace already exists: " + tracePath)
+    return 1
+  }
+  ensureOutputDirectory(parentPath(tracePath))
+  plan := planProfileCapture(
+    targetPath, request.programArguments, packageRoot, tracePath,
+    request.profileTimeLimit, consoleTarget,
+  )
+  result := runNativeCommand(plan.command, plan.arguments, plan.directory, true, .Inherited)
+  if !exists(tracePath) {
+    if result.error != "" { println("error: " + result.error) }
+    println("error: profiling did not produce a trace at " + tracePath)
+    return 1
+  }
+  if !request.profileNoOpen {
+    openPlan := planProfileOpen(tracePath, packageRoot)
+    opened := runNativeCommand(openPlan.command, openPlan.arguments, openPlan.directory)
+    if opened.exitCode != 0 {
+      println("error: profile trace was saved at " + tracePath + " but could not be opened")
+      return 1
+    }
+  }
+  return 0
 }
 
 function hostPlatform(): string {
@@ -239,7 +288,7 @@ function loadDriverSource(
   source := readText(diskPath) else {
     return Failure(driverDiagnostic(logicalPath, "Could not read source file ${diskPath}"))
   }
-  return Success(SourceFile { path: logicalPath, source })
+  return Success(SourceFile { path: logicalPath, physicalPath: diskPath, source })
 }
 
 function configuredDriverSource(logicalPath: string): Result<SourceFile | none, Diagnostic> {
@@ -1221,7 +1270,7 @@ function testRequest(request: CliRequest): int {
     binary := joinPath(outputDirectory, "doof-tests")
     println("BUILD " + group.outputName)
     buildExitCode := buildNativeProject(
-      request.compiler, outputDirectory, binary, emission, false, hostPlatform(), .Progress,
+      request.compiler, outputDirectory, binary, emission, .Debug, hostPlatform(), .Progress,
     )
     if buildExitCode != 0 { return buildExitCode }
 
@@ -1276,10 +1325,18 @@ function testRequest(request: CliRequest): int {
 }
 
 function emitRequest(request: CliRequest): int {
+  if request.command == "profile" && hostPlatform() != "macos" {
+    println("error: doof profile is currently supported only on macOS")
+    return 1
+  }
   let project = readProjectSpec(request.entry, hostPlatform(), request.targetOverride)
   entryError := projectEntryRequestError(project, request.entry)
   if entryError != "" {
     println("error: " + entryError)
+    return 1
+  }
+  if request.command == "profile" && (project.target == "wasm" || project.iosApp != none) {
+    println("error: doof profile supports native console executables and macOS applications")
     return 1
   }
   iosDestination := if request.command == "package" then "device" else request.iosDestination
@@ -1317,19 +1374,20 @@ function emitRequest(request: CliRequest): int {
     else try! absolute(request.outputDirectory)
   outputDirectory := if request.command == "package"
     then joinPath(buildDirectory, "release")
-    else buildDirectory
+    else if request.command == "profile" then joinPath(buildDirectory, "profile") else buildDirectory
+  cacheDirectory := if request.command == "profile" then outputDirectory else buildDirectory
   frontendConfiguration := frontendConfigurationFingerprint(
     entry, entryMode, project.target, rootManifest, stdlibRoot, nativePlatform, externalTarget,
   )
-  checkCachePath := frontendCachePath(buildDirectory, "check")
+  checkCachePath := frontendCachePath(cacheDirectory, "check")
   if request.command == "check" && frontendStateMatches(readFrontendState(checkCachePath), frontendConfiguration, loader) {
     return 0
   }
-  emissionCachePath := frontendCachePath(buildDirectory, "emission")
+  emissionCachePath := frontendCachePath(cacheDirectory, "emission")
   previousEmissionState := readFrontendState(emissionCachePath)
   let reusedFrontend = false
   let result = Compilation { emission: none, diagnostics: [] }
-  cachedGraph := if request.command == "emit" || request.command == "build" || request.command == "run"
+  cachedGraph := if request.command == "emit" || request.command == "build" || request.command == "run" || request.command == "profile"
     then if !frontendEmissionCacheSupported(project.target)
       then none
       else if frontendStateMatches(previousEmissionState, frontendConfiguration, loader) && previousEmissionState != none
@@ -1346,6 +1404,7 @@ function emitRequest(request: CliRequest): int {
         [], entry, loader, namespaceMappings, entryMode, false,
         if request.command == "package" then [] else reusableEmissionKeys(previousEmissionState, outputDirectory),
         frontendConfiguration,
+        request.command == "profile",
       )
   }
   hasCompilationErrors := hasErrorDiagnostics(result.diagnostics)
@@ -1398,7 +1457,7 @@ function emitRequest(request: CliRequest): int {
       return 1
     }
   }
-  if request.command == "build" || request.command == "run" {
+  if request.command == "build" || request.command == "run" || request.command == "profile" {
     if request.command == "run" && project.target == "wasm" {
       println("error: doof run is not supported for --target wasm; instantiate the generated .wasm from your host runtime")
       return 1
@@ -1406,10 +1465,11 @@ function emitRequest(request: CliRequest): int {
     executableName := if project.target == "wasm" then nativeBuildOutputName(project.name, "") + ".wasm" else if project.macosApp != none then project.macosApp!.executableName else if project.iosApp != none then project.iosApp!.executableName else nativeBuildOutputName(project.name, nativePlatform)
     outputPath := driverOutputPath(outputDirectory, executableName)
     if project.macosApp == none && project.iosApp == none {
-      synchronizeExecutableResources(project.resources, outputDirectory, frontendCachePath(buildDirectory, "resources"))
+      synchronizeExecutableResources(project.resources, outputDirectory, frontendCachePath(cacheDirectory, "resources"))
     }
     exitCode := buildNativeProject(
-      request.compiler, outputDirectory, outputPath, emission, false, hostPlatform(),
+      request.compiler, outputDirectory, outputPath, emission,
+      if request.command == "profile" then .Profile else .Debug, hostPlatform(),
       nativeBuildOutputModeForCommand(request.command),
     )
     if exitCode != 0 { return exitCode }
@@ -1470,12 +1530,24 @@ function emitRequest(request: CliRequest): int {
         return 1
       }
       if request.command == "build" { return 0 }
+      if request.command == "profile" {
+        return runProfileTarget(
+          request, appPath, outputPath, appPath + ".dSYM",
+          project.rootDirectory, buildDirectory, executableName, false,
+        )
+      }
       launchPlan := planMacOSAppRun(appPath, project.rootDirectory)
       launchResult := runNativeCommand(launchPlan.command, launchPlan.arguments, launchPlan.directory, true)
       if launchResult.error != "" { println("error: " + launchResult.error) }
       return launchResult.exitCode
     }
     if request.command == "build" { return 0 }
+    if request.command == "profile" {
+      return runProfileTarget(
+        request, outputPath, outputPath, outputPath + ".dSYM",
+        project.rootDirectory, buildDirectory, executableName, true,
+      )
+    }
     runPlan := planNativeProgramRun(outputPath, request.programArguments, project.rootDirectory)
     runResult := runNativeCommand(runPlan.command, runPlan.arguments, runPlan.directory, true, .Inherited)
     if runResult.error != "" { println("error: " + runResult.error) }
@@ -1490,7 +1562,7 @@ function emitRequest(request: CliRequest): int {
       then driverOutputPath(distDirectory, executableName)
       else driverOutputPath(outputDirectory, executableName)
     exitCode := buildNativeProject(
-      request.compiler, outputDirectory, outputPath, emission, true, hostPlatform(), .Progress,
+      request.compiler, outputDirectory, outputPath, emission, .Release, hostPlatform(), .Progress,
     )
     if exitCode != 0 { return exitCode }
     if project.macosApp == none && project.iosApp == none {

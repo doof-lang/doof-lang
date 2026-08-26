@@ -67,7 +67,30 @@ export function testDirectScriptArgumentsAreForwardedVerbatim(): none {
 
 export function testRejectsProgramArgumentSeparatorForNonRunCommands(): none {
   result := parseCli(["build", "demo", "--", "--verbose"])
-  Assert.equal(result.error, "-- is only supported with the run command")
+  Assert.equal(result.error, "-- is only supported with the run and profile commands")
+}
+
+export function testParsesProfileRequestAndProgramArguments(): none {
+  result := parseCli([
+    "profile", "demo", "--trace-output", "reports/demo.trace",
+    "--time-limit", "750ms", "--no-open", "--", "--scenario", "large",
+  ])
+  Assert.equal(result.error, "")
+  Assert.equal(result.request!.command, "profile")
+  Assert.equal(result.request!.traceOutput, "reports/demo.trace")
+  Assert.equal(result.request!.profileTimeLimit, "750ms")
+  Assert.equal(result.request!.profileNoOpen, true)
+  Assert.equal(result.request!.programArguments.length, 2)
+  Assert.equal(result.request!.programArguments[0], "--scenario")
+  Assert.equal(result.request!.programArguments[1], "large")
+}
+
+export function testValidatesProfileOnlyOptions(): none {
+  Assert.equal(parseCli(["run", "demo", "--no-open"]).error, "--no-open is only supported with the profile command")
+  Assert.equal(parseCli(["build", "demo", "--trace-output", "demo.trace"]).error, "--trace-output is only supported with the profile command")
+  Assert.equal(parseCli(["profile", "demo", "--trace-output", "demo.data"]).error, "--trace-output must end with .trace")
+  Assert.equal(parseCli(["profile", "demo", "--time-limit", "fast"]).error, "invalid --time-limit; expected Nms, Ns, Nm, or Nh")
+  Assert.equal(parseCli(["profile", "demo", "--time-limit", "5s"]).error, "")
 }
 
 export function testParsesWasmTargetOverride(): none {

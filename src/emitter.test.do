@@ -1058,7 +1058,11 @@ export function testKeepsTryStructBindingsShallowImmutableAcrossFailureContexts(
 
 export function testEmitsWithBindingsInOrderedLexicalScope(): none {
   result := emit("function main(): int { with base := 20, doubled := base * 2 { return doubled + 2 }\nreturn 0 }")
-  Assert.equal(result.source.contains("    {\n        const auto base = 20;\n        const auto doubled = (base * 2);\n        return (doubled + 2);\n    }"), true)
+  scope := result.source.indexOf("    {\n")
+  base := result.source.indexOf("const auto base = 20;")
+  doubled := result.source.indexOf("const auto doubled = (base * 2);")
+  returned := result.source.indexOf("return (doubled + 2);")
+  Assert.equal(scope >= 0 && scope < base && base < doubled && doubled < returned, true)
 }
 
 export function testEmitsTypedWithUnionUsingItsVariantCarrier(): none {
@@ -1459,7 +1463,9 @@ export function testEmitsPositionAwareNoneRepresentations(): none {
   Assert.stringContains(result.header, "doof::Result<void, std::string> save()")
   Assert.stringContains(result.header, "doof::Result<int32_t, void> fail()")
   Assert.stringContains(result.header, "doof::Promise<void> settle(const doof::Promise<void>& value)")
-  Assert.stringContains(result.source, "void explicit_() {\n    return;")
+  explicitStart := result.source.indexOf("void explicit_() {")
+  explicitReturn := result.source.indexOf("return;")
+  Assert.equal(explicitStart >= 0 && explicitStart < explicitReturn, true)
 }
 
 export function testEmitsNullableMapsWithTheirPointerCarrier(): none {

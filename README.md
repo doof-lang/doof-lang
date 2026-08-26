@@ -37,6 +37,7 @@ dist/doof check path/to/package
 dist/doof emit path/to/package
 dist/doof build path/to/package
 dist/doof run path/to/package -- --program-argument
+dist/doof profile path/to/package -- --program-argument
 dist/doof package path/to/package
 dist/doof test path/to/package
 ```

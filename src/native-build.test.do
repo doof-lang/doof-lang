@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 
 import { ModuleEmission } from "./emitter-module"
-import { NativeCompileTask, NativeCompileTaskBatch, batchNativeCompileTasks, isMsvcCompiler, msvcPchHeaderSource, planNativeCompile } from "./native-build"
+import { NativeBuildMode, NativeCompileTask, NativeCompileTaskBatch, batchNativeCompileTasks, isMsvcCompiler, msvcPchHeaderSource, planNativeCompile } from "./native-build"
 import { NativeBuildPlan } from "./package-manifest"
 
 export function testPlansGeneratedAndManifestNativeSources(): none {
@@ -125,7 +125,7 @@ export function testCompilesSwiftSourcesAndLinksWithSwiftRuntime(): none {
       frameworks: ["Foundation", "FoundationModels"],
       linkerFlags: ["-Wl,-rpath,/tmp/lib"],
     },
-    false,
+    .Debug,
     "macos",
   )
 
@@ -161,7 +161,7 @@ export function testAddsReleaseDefaultsBeforeManifestFlags(): none {
       defines: ["APP_RELEASE=1"],
       compilerFlags: ["-O3"],
     },
-    true,
+    .Release,
     "macos",
   )
   Assert.equal(plan.compileTasks[0].arguments[0], "-std=c++17")
@@ -182,21 +182,52 @@ export function testAddsReleaseDefaultsBeforeManifestFlags(): none {
 export function testAddsElfReleaseLinkerDefaultsOnlyForReleaseBuilds(): none {
   release := planNativeCompile(
     "g++", "/tmp/generated", "/tmp/dist/demo", [],
-    NativeBuildPlan { linkerFlags: ["-pthread"] }, true, "linux",
+    NativeBuildPlan { linkerFlags: ["-pthread"] }, .Release, "linux",
   )
   Assert.equal(release.linkArguments.contains("-Wl,--gc-sections"), true)
   Assert.equal(release.linkArguments.contains("-Wl,--strip-all"), true)
   Assert.equal(release.linkArguments.indexOf("-Wl,--strip-all") < release.linkArguments.indexOf("-pthread"), true)
 
-  debug := planNativeCompile("g++", "/tmp/generated", "/tmp/generated/demo", [], NativeBuildPlan {}, false, "linux")
+  debug := planNativeCompile("g++", "/tmp/generated", "/tmp/generated/demo", [], NativeBuildPlan {}, .Debug, "linux")
   Assert.equal(debug.linkArguments.contains("-Wl,--gc-sections"), false)
   Assert.equal(debug.linkArguments.contains("-Wl,--strip-all"), false)
+}
+
+export function testAddsOptimizedObservableProfileDefaultsWithoutStripping(): none {
+  plan := planNativeCompile(
+    "clang++", "/tmp/generated", "/tmp/generated/demo", [], NativeBuildPlan {}, .Profile, "macos",
+  )
+  Assert.equal(plan.linkArguments.contains("-flto"), false)
+  Assert.equal(plan.linkArguments.contains("-Wl,-dead_strip"), true)
+  Assert.equal(plan.linkArguments.contains("-Wl,-S"), false)
+  Assert.equal(plan.linkArguments.contains("-Wl,-x"), false)
+  // With no source modules there are no compile tasks, so use the PCH-free
+  // Swift path below to verify profile-specific source flags separately.
+  swift := planNativeCompile(
+    "clang++", "/tmp/generated", "/tmp/generated/swift-demo", [],
+    NativeBuildPlan { sourceFiles: ["native/bridge.swift"] }, .Profile, "macos",
+  )
+  Assert.equal(swift.compileTasks[0].arguments.contains("-O"), true)
+  Assert.equal(swift.compileTasks[0].arguments.contains("-g"), true)
+}
+
+export function testAddsCppProfileDebugInformationAndFramePointers(): none {
+  plan := planNativeCompile(
+    "clang++", "/tmp/generated", "/tmp/generated/demo",
+    [ModuleEmission { modulePath: "/main.do", header: "", source: "", headerName: "main.hpp", sourceName: "main.cpp" }],
+    NativeBuildPlan {}, .Profile, "macos",
+  )
+  Assert.equal(plan.compileTasks[0].arguments.contains("-O2"), true)
+  Assert.equal(plan.compileTasks[0].arguments.contains("-DNDEBUG"), true)
+  Assert.equal(plan.compileTasks[0].arguments.contains("-g"), true)
+  Assert.equal(plan.compileTasks[0].arguments.contains("-fno-omit-frame-pointer"), true)
+  Assert.equal(plan.compileTasks[0].arguments.contains("-flto"), false)
 }
 
 export function testUsesSwiftLinkerSpellingForAppleReleaseDefaults(): none {
   plan := planNativeCompile(
     "clang++", "/tmp/generated", "/tmp/dist/demo", [],
-    NativeBuildPlan { sourceFiles: ["native/bridge.swift"] }, true, "macos",
+    NativeBuildPlan { sourceFiles: ["native/bridge.swift"] }, .Release, "macos",
   )
   Assert.equal(plan.linker, "swiftc")
   Assert.equal(plan.compileTasks[0].arguments.contains("-flto"), false)
@@ -218,7 +249,7 @@ export function testPlansClangPrecompiledRuntimeForMultiModuleBuilds(): none {
     "/tmp/generated/demo",
     modules,
     NativeBuildPlan { defines: ["DEBUG_BUILD=1"], compilerFlags: ["-Wconversion"] },
-    false,
+    .Debug,
     "macos",
   )
 
@@ -244,7 +275,7 @@ export function testDoesNotApplyCxxPrecompiledHeaderToObjectiveCxxSources(): non
     "/tmp/generated/demo",
     modules,
     NativeBuildPlan { sourceFiles: ["std/http/native_http_client_apple.mm"] },
-    false,
+    .Debug,
     "macos",
   )
 
@@ -284,8 +315,8 @@ export function testBatchesCompileTasksAcrossAtMostFourWorkers(): none {
 export function testUsesStableObjectPathsAndDependencyFiles(): none {
   first := ModuleEmission { modulePath: "/one.do", header: "", source: "", headerName: "one.hpp", sourceName: "one.cpp" }
   second := ModuleEmission { modulePath: "/two.do", header: "", source: "", headerName: "two.hpp", sourceName: "two.cpp" }
-  forward := planNativeCompile("clang++", "/tmp/generated", "/tmp/generated/demo", [first, second], NativeBuildPlan {}, false, "macos")
-  reverse := planNativeCompile("clang++", "/tmp/generated", "/tmp/generated/demo", [second, first], NativeBuildPlan {}, false, "macos")
+  forward := planNativeCompile("clang++", "/tmp/generated", "/tmp/generated/demo", [first, second], NativeBuildPlan {}, .Debug, "macos")
+  reverse := planNativeCompile("clang++", "/tmp/generated", "/tmp/generated/demo", [second, first], NativeBuildPlan {}, .Debug, "macos")
 
   Assert.equal(forward.compileTasks[0].outputPath, reverse.compileTasks[1].outputPath)
   Assert.equal(forward.compileTasks[1].outputPath, reverse.compileTasks[0].outputPath)
@@ -320,7 +351,7 @@ export function testPlansStandaloneEmscriptenWasmLink(): none {
     "/tmp/generated/demo.wasm",
     [ModuleEmission { modulePath: "/main.do", header: "", source: "", headerName: "main.hpp", sourceName: "main.cpp" }],
     NativeBuildPlan { sourceFiles: ["doof_wasm.cpp"], linkerFlags: ["-sINITIAL_MEMORY=33554432"] },
-    false,
+    .Debug,
     "linux",
     ["doof_initialize", "doof_export_add"],
     true,
@@ -360,7 +391,7 @@ export function testPlansMsvcCompilationAndLinking(): none {
       compilerFlags: ["/W4"],
       linkerFlags: ["/INCREMENTAL:NO"],
     },
-    true,
+    .Release,
     "windows",
   )
 
@@ -404,7 +435,7 @@ export function testPlansMsvcPrecompiledRuntimeAndWindowsHeadersForGeneratedModu
       defines: ["WINDOWS_BUILD=1"],
       compilerFlags: ["/W4"],
     },
-    false,
+    .Debug,
     "windows",
   )
 

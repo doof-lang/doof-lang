@@ -136,143 +136,220 @@ doof::Result<std::shared_ptr<NativeBuildState>, std::string> NativeBuildState::f
         return doof::Failure<std::string>{_error.message()};
     }
 }
+#line 32 "/src/native-build-state.do"
 std::shared_ptr<NativeBuildState> parseNativeBuildState(const std::string& source) {
+#line 33 "/src/native-build-state.do"
     auto _binding_value_1 = ::doof_json::parse(source);
     if (doof::is_failure(_binding_value_1)) {
         const auto& value = _binding_value_1;
+#line 33 "/src/native-build-state.do"
         return nullptr;
     }
     const auto value = doof::success_value(_binding_value_1);
+#line 34 "/src/native-build-state.do"
     auto _binding_value_2 = NativeBuildState::fromJsonValue(value, true);
     if (doof::is_failure(_binding_value_2)) {
         const auto& state = _binding_value_2;
+#line 34 "/src/native-build-state.do"
         return nullptr;
     }
     const auto state = doof::success_value(_binding_value_2);
+#line 35 "/src/native-build-state.do"
     if (state->version != NATIVE_BUILD_STATE_VERSION) {
+#line 35 "/src/native-build-state.do"
         return nullptr;
     }
+#line 36 "/src/native-build-state.do"
     return state;
 }
+#line 39 "/src/native-build-state.do"
 std::string renderNativeBuildState(const std::shared_ptr<NativeBuildState>& state) {
+#line 40 "/src/native-build-state.do"
     return (::doof_json::format(doof::json_value(state->toJsonObject())) + std::string("\n"));
 }
+#line 43 "/src/native-build-state.do"
 std::shared_ptr<NativeTaskState> findNativeTaskState(const std::shared_ptr<NativeBuildState>& state, const std::string& id) {
+#line 44 "/src/native-build-state.do"
     const auto& _iterable_4 = state->tasks;
     for (const auto& task : *_iterable_4) {
+#line 44 "/src/native-build-state.do"
         if (task->id == id) {
+#line 44 "/src/native-build-state.do"
             return task;
         }
     }
+#line 45 "/src/native-build-state.do"
     return nullptr;
 }
+#line 49 "/src/native-build-state.do"
 std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::string& source) {
+#line 50 "/src/native-build-state.do"
     const auto flattened = doof::string_replaceAll(doof::string_replaceAll(source, std::string("\\\r\n"), std::string(" ")), std::string("\\\n"), std::string(" "));
+#line 51 "/src/native-build-state.do"
     auto colon = -1;
+#line 52 "/src/native-build-state.do"
     auto escaped = false;
+#line 53 "/src/native-build-state.do"
     for (int32_t index = 0; index < static_cast<int32_t>(flattened.size()); ++index) {
+#line 54 "/src/native-build-state.do"
         const auto char_ = doof::string_at(flattened, index, "src/native-build-state", 54);
+#line 55 "/src/native-build-state.do"
         if (!escaped && (char_ == U'\u003A')) {
+#line 55 "/src/native-build-state.do"
             (colon = index);
+#line 55 "/src/native-build-state.do"
             break;
         }
+#line 56 "/src/native-build-state.do"
         if ((char_ == U'\\') && !escaped) {
+#line 56 "/src/native-build-state.do"
             (escaped = true);
         } else {
+#line 56 "/src/native-build-state.do"
             (escaped = false);
         }
     }
+#line 58 "/src/native-build-state.do"
     if (colon < 0) {
+#line 58 "/src/native-build-state.do"
         return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
+#line 59 "/src/native-build-state.do"
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+#line 60 "/src/native-build-state.do"
     auto current = std::string("");
+#line 61 "/src/native-build-state.do"
     (escaped = false);
+#line 62 "/src/native-build-state.do"
     for (int32_t index = (colon + 1); index < static_cast<int32_t>(flattened.size()); ++index) {
+#line 63 "/src/native-build-state.do"
         const auto char_ = doof::string_at(flattened, index, "src/native-build-state", 63);
+#line 64 "/src/native-build-state.do"
         if (escaped) {
+#line 65 "/src/native-build-state.do"
             (current = (current + doof::to_string(char_)));
+#line 66 "/src/native-build-state.do"
             (escaped = false);
+#line 67 "/src/native-build-state.do"
             continue;
         }
+#line 69 "/src/native-build-state.do"
         if (char_ == U'\\') {
+#line 70 "/src/native-build-state.do"
             (escaped = true);
+#line 71 "/src/native-build-state.do"
             continue;
         }
+#line 73 "/src/native-build-state.do"
         if ((((char_ == U'\u0020') || (char_ == U'\t')) || (char_ == U'\r')) || (char_ == U'\n')) {
+#line 74 "/src/native-build-state.do"
             if (current != std::string("")) {
+#line 74 "/src/native-build-state.do"
                 appendUnique(result, current);
+#line 74 "/src/native-build-state.do"
                 (current = std::string(""));
             }
+#line 75 "/src/native-build-state.do"
             continue;
         }
+#line 77 "/src/native-build-state.do"
         (current = (current + doof::to_string(char_)));
     }
+#line 79 "/src/native-build-state.do"
     if (escaped) {
+#line 79 "/src/native-build-state.do"
         (current = (current + std::string("\\")));
     }
+#line 80 "/src/native-build-state.do"
     if (current != std::string("")) {
+#line 80 "/src/native-build-state.do"
         appendUnique(result, current);
     }
+#line 81 "/src/native-build-state.do"
     return result;
 }
+#line 85 "/src/native-build-state.do"
 std::shared_ptr<std::vector<std::string>> parseMsvcDependencies(const std::string& source) {
+#line 86 "/src/native-build-state.do"
     auto _binding_value_7 = ::doof_json::parse(source);
     if (doof::is_failure(_binding_value_7)) {
         const auto& parsed = _binding_value_7;
+#line 86 "/src/native-build-state.do"
         return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     const auto parsed = doof::success_value(_binding_value_7);
+#line 87 "/src/native-build-state.do"
     auto _binding_value_8 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = parsed; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
     if (doof::is_failure(_binding_value_8)) {
         const auto& root = _binding_value_8;
+#line 87 "/src/native-build-state.do"
         return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     const auto root = doof::success_value(_binding_value_8);
+#line 88 "/src/native-build-state.do"
     auto _binding_value_9 = doof::map_get(root, std::string("Data"), "", 0);
     if (doof::is_failure(_binding_value_9)) {
         const auto& dataValue = _binding_value_9;
+#line 88 "/src/native-build-state.do"
         return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     const auto dataValue = doof::success_value(_binding_value_9);
+#line 89 "/src/native-build-state.do"
     auto _binding_value_10 = [&]() -> doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, std::string> { auto _as_value = dataValue; if (doof::json_is_object(_as_value)) return doof::Success<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>>{doof::json_object(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
     if (doof::is_failure(_binding_value_10)) {
         const auto& data = _binding_value_10;
+#line 89 "/src/native-build-state.do"
         return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     const auto data = doof::success_value(_binding_value_10);
+#line 90 "/src/native-build-state.do"
     auto _binding_value_11 = doof::map_get(data, std::string("Includes"), "", 0);
     if (doof::is_failure(_binding_value_11)) {
         const auto& includesValue = _binding_value_11;
+#line 90 "/src/native-build-state.do"
         return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     const auto includesValue = doof::success_value(_binding_value_11);
+#line 91 "/src/native-build-state.do"
     auto _binding_value_12 = [&]() -> doof::Result<std::shared_ptr<std::vector<doof::JsonValue>>, std::string> { auto _as_value = includesValue; if (doof::json_is_array(_as_value)) return doof::Success<std::shared_ptr<std::vector<doof::JsonValue>>>{std::get<doof::JsonArray>(doof::json_storage(_as_value))}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
     if (doof::is_failure(_binding_value_12)) {
         const auto& includes = _binding_value_12;
+#line 91 "/src/native-build-state.do"
         return std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
     const auto includes = doof::success_value(_binding_value_12);
+#line 92 "/src/native-build-state.do"
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+#line 93 "/src/native-build-state.do"
     const auto& _iterable_14 = includes;
     for (const auto& value : *_iterable_14) {
+#line 94 "/src/native-build-state.do"
         auto _binding_value_15 = [&]() -> doof::Result<std::string, std::string> { auto _as_value = value; if (doof::json_is_string(_as_value)) return doof::Success<std::string>{doof::json_as_string(_as_value)}; return doof::Failure<std::string>{"JsonValue narrowing failed"}; }();
         if (doof::is_failure(_binding_value_15)) {
             const auto& path = _binding_value_15;
+#line 94 "/src/native-build-state.do"
             continue;
         }
         const auto path = doof::success_value(_binding_value_15);
+#line 95 "/src/native-build-state.do"
         appendUnique(result, path);
     }
+#line 97 "/src/native-build-state.do"
     return result;
 }
+#line 100 "/src/native-build-state.do"
 void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
+#line 101 "/src/native-build-state.do"
     const auto& _iterable_17 = values;
     for (const auto& existing : *_iterable_17) {
+#line 101 "/src/native-build-state.do"
         if (existing == value) {
+#line 101 "/src/native-build-state.do"
             return;
         }
     }
+#line 102 "/src/native-build-state.do"
     values->push_back(value);
 }
+#line 1 "<doof-generated>"
 }

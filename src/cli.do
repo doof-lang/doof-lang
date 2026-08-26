@@ -13,6 +13,9 @@ export class CliRequest {
   let listOnly: bool = false
   let coverage: bool = false
   let coverageOutput: string = ""
+  let traceOutput: string = ""
+  let profileTimeLimit: string = ""
+  let profileNoOpen: bool = false
   let distDirectory: string = ""
   let macosSigning: string = ""
   let macosSignIdentity: string = ""
@@ -33,12 +36,13 @@ export class CliParseResult {
 }
 
 export function cliUsage(): string {
-  return "usage: doof <build|run|package|emit|check|test> [entry.do|package-dir] [options] [-- program-args...]\n" +
+  return "usage: doof <build|run|profile|package|emit|check|test> [entry.do|package-dir] [options] [-- program-args...]\n" +
     "       doof <script.do> [program-args...]\n" +
     "\n" +
     "commands:\n" +
     "  build   emit generated C++ and build the executable\n" +
     "  run     emit, build, and run the executable\n" +
+    "  profile emit, build, and record a macOS Time Profiler trace\n" +
     "  package build an optimized executable in the package dist directory\n" +
     "  emit    check the source graph and write generated C++\n" +
     "  check   check the source graph without writing output\n" +
@@ -61,8 +65,24 @@ export function cliUsage(): string {
     "  --list                      list tests without building or running\n" +
     "  --coverage                  collect line coverage while running tests\n" +
     "  --coverage-output <path>    write coverage JSON to this path\n" +
+    "  --trace-output <path>       write the profile trace to this .trace path\n" +
+    "  --time-limit <duration>     stop profiling after Nms, Ns, Nm, or Nh\n" +
+    "  --no-open                   do not open a completed trace in Instruments\n" +
     "  -h, --help                  show this help\n" +
-    "  --                           pass remaining arguments to doof run"
+    "  --                           pass remaining arguments to doof run/profile"
+}
+
+function validProfileTimeLimit(value: string): bool {
+  let unitLength = 1
+  if value.endsWith("ms") { unitLength = 2 }
+  else if !value.endsWith("s") && !value.endsWith("m") && !value.endsWith("h") { return false }
+  digitCount := value.length - unitLength
+  if digitCount <= 0 { return false }
+  for index of 0..<digitCount {
+    digit := value[index]
+    if digit < '0' || digit > '9' { return false }
+  }
+  return true
 }
 
 export function parseCli(args: string[]): CliParseResult {
@@ -78,7 +98,7 @@ export function parseCli(args: string[]): CliParseResult {
   }
 
   command := args[0]
-  if command != "build" && command != "run" && command != "package" && command != "emit" && command != "check" && command != "test" {
+  if command != "build" && command != "run" && command != "profile" && command != "package" && command != "emit" && command != "check" && command != "test" {
     return CliParseResult { request: none, error: "unknown command '" + command + "'" }
   }
   request := CliRequest { command, entry: if args.length < 2 then "." else args[1] }
@@ -86,8 +106,8 @@ export function parseCli(args: string[]): CliParseResult {
   while index < args.length {
     argument := args[index]
     if argument == "--" {
-      if command != "run" {
-        return CliParseResult { request: none, error: "-- is only supported with the run command" }
+      if command != "run" && command != "profile" {
+        return CliParseResult { request: none, error: "-- is only supported with the run and profile commands" }
       }
       index += 1
       while index < args.length {
@@ -202,6 +222,30 @@ export function parseCli(args: string[]): CliParseResult {
       if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --coverage-output" } }
       request.coverageOutput = args[index + 1]
       index = index + 2
+      continue
+    }
+    if argument == "--trace-output" {
+      if command != "profile" { return CliParseResult { request: none, error: "--trace-output is only supported with the profile command" } }
+      if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --trace-output" } }
+      value := args[index + 1]
+      if !value.endsWith(".trace") { return CliParseResult { request: none, error: "--trace-output must end with .trace" } }
+      request.traceOutput = value
+      index += 2
+      continue
+    }
+    if argument == "--time-limit" {
+      if command != "profile" { return CliParseResult { request: none, error: "--time-limit is only supported with the profile command" } }
+      if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --time-limit" } }
+      value := args[index + 1]
+      if !validProfileTimeLimit(value) { return CliParseResult { request: none, error: "invalid --time-limit; expected Nms, Ns, Nm, or Nh" } }
+      request.profileTimeLimit = value
+      index += 2
+      continue
+    }
+    if argument == "--no-open" {
+      if command != "profile" { return CliParseResult { request: none, error: "--no-open is only supported with the profile command" } }
+      request.profileNoOpen = true
+      index += 1
       continue
     }
     return CliParseResult { request: none, error: "unknown option '" + argument + "'" }

@@ -14,7 +14,7 @@ import {
 } from "./ast"
 import type { TypeAnnotation } from "./ast"
 import { ArrayResolvedType, ClassType, InterfaceType, PrimitiveType, RangeResolvedType, ResolvedType, ResultResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
-import { EmitContext, isCapturedMutable, recordCoverageLine } from "./emitter-context"
+import { EmitContext, isCapturedMutable, recordCoverageLine, sourceLineDirective } from "./emitter-context"
 import { emitCaseTypePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
@@ -30,6 +30,10 @@ export function emitBlock(block: Block, level: int, context: EmitContext): strin
 
 export function emitStatement(statement: Statement, level: int = 1, context: EmitContext): string {
   ind := indent(level)
+  let sourceMark = ""
+  if level > 0 && statement.kind != "block" && statement.kind != "mock-import-directive" {
+    sourceMark = sourceLineDirective(statement.span, context)
+  }
   let coverageMark = ""
   if context.coverageEnabled && context.coverageModuleId >= 0 && level > 0 && statement.kind != "block" && statement.kind != "mock-import-directive" {
     line := statement.span.start.line
@@ -38,38 +42,38 @@ export function emitStatement(statement: Statement, level: int = 1, context: Emi
   }
   case statement {
     _: MockImportDirective -> { return "" }
-    const_: ConstDeclaration -> { return coverageMark + emitLocalDeclaration(ind, const_.name, const_.type_, const_.resolvedType!, const_.value, context, true) }
-    readonly_: ReadonlyDeclaration -> { return coverageMark + emitLocalDeclaration(ind, readonly_.name, readonly_.type_, readonly_.resolvedType!, readonly_.value, context, true) }
+    const_: ConstDeclaration -> { return sourceMark + coverageMark + emitLocalDeclaration(ind, const_.name, const_.type_, const_.resolvedType!, const_.value, context, true) }
+    readonly_: ReadonlyDeclaration -> { return sourceMark + coverageMark + emitLocalDeclaration(ind, readonly_.name, readonly_.type_, readonly_.resolvedType!, readonly_.value, context, true) }
     binding: ImmutableBinding -> {
-      if binding.else_ != none { return coverageMark + emitBindingElse(binding, level, context) }
-      return coverageMark + emitLocalDeclaration(ind, binding.name, binding.type_, binding.resolvedType!, binding.value, context, true, true)
+      if binding.else_ != none { return sourceMark + coverageMark + emitBindingElse(binding, level, context) }
+      return sourceMark + coverageMark + emitLocalDeclaration(ind, binding.name, binding.type_, binding.resolvedType!, binding.value, context, true, true)
     }
-    let_: LetDeclaration -> { return coverageMark + emitLocalDeclaration(ind, let_.name, let_.type_, let_.resolvedType!, let_.value, context, false) }
-    return_: ReturnStatement -> { return coverageMark + ind + emitReturn(return_, context) }
+    let_: LetDeclaration -> { return sourceMark + coverageMark + emitLocalDeclaration(ind, let_.name, let_.type_, let_.resolvedType!, let_.value, context, false) }
+    return_: ReturnStatement -> { return sourceMark + coverageMark + ind + emitReturn(return_, context) }
     yield_: YieldStatement -> {
       if !context.inValueYieldBlock { panic("yield statement is outside a value-producing block") }
       if context.valueYieldReturnsVoid {
-        return coverageMark + ind + emitExpression(yield_.value, context) + ";\n" + ind + "return;\n"
+        return sourceMark + coverageMark + ind + emitExpression(yield_.value, context) + ";\n" + ind + "return;\n"
       }
-      return coverageMark + ind + "return " + emitExpression(yield_.value, context) + ";\n"
+      return sourceMark + coverageMark + ind + "return " + emitExpression(yield_.value, context) + ";\n"
     }
-    expression: ExpressionStatement -> { return coverageMark + ind + emitExpression(expression.expression, context) + ";\n" }
-    if_: IfStatement -> { return coverageMark + emitIf(if_, level, context) }
-    case_: CaseStatement -> { return coverageMark + emitCase(case_, level, context) }
-    while_: WhileStatement -> { return coverageMark + emitWhile(while_, level, context) }
-    forOf: ForOfStatement -> { return coverageMark + emitForOf(forOf, level, context) }
-    for_: ForStatement -> { return coverageMark + emitFor(for_, level, context) }
-    with_: WithStatement -> { return coverageMark + emitWith(with_, level, context) }
-    destructuring: DestructuringStatement -> { return coverageMark + emitDestructuring(destructuring, level, context) }
-    try_: TryStatement -> { return coverageMark + emitTry(try_, level, context) }
+    expression: ExpressionStatement -> { return sourceMark + coverageMark + ind + emitExpression(expression.expression, context) + ";\n" }
+    if_: IfStatement -> { return sourceMark + coverageMark + emitIf(if_, level, context) }
+    case_: CaseStatement -> { return sourceMark + coverageMark + emitCase(case_, level, context) }
+    while_: WhileStatement -> { return sourceMark + coverageMark + emitWhile(while_, level, context) }
+    forOf: ForOfStatement -> { return sourceMark + coverageMark + emitForOf(forOf, level, context) }
+    for_: ForStatement -> { return sourceMark + coverageMark + emitFor(for_, level, context) }
+    with_: WithStatement -> { return sourceMark + coverageMark + emitWith(with_, level, context) }
+    destructuring: DestructuringStatement -> { return sourceMark + coverageMark + emitDestructuring(destructuring, level, context) }
+    try_: TryStatement -> { return sourceMark + coverageMark + emitTry(try_, level, context) }
     assignment: YieldBlockAssignmentStatement -> {
       target := if isCapturedMutable(context, assignment.name)
         then "(*" + cppIdentifier(assignment.name) + ")"
         else cppIdentifier(assignment.name)
-      return coverageMark + ind + target + " = " + emitExpression(assignment.value, context, assignment.resolvedType) + ";\n"
+      return sourceMark + coverageMark + ind + target + " = " + emitExpression(assignment.value, context, assignment.resolvedType) + ";\n"
     }
-    _: BreakStatement -> { return coverageMark + ind + "break;\n" }
-    _: ContinueStatement -> { return coverageMark + ind + "continue;\n" }
+    _: BreakStatement -> { return sourceMark + coverageMark + ind + "break;\n" }
+    _: ContinueStatement -> { return sourceMark + coverageMark + ind + "continue;\n" }
     block: Block -> { return emitBlock(block, level, context) }
     _ -> { panic("Unsupported statement in initial C++ emitter: " + statement.kind) }
   }

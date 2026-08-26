@@ -132,6 +132,7 @@ threads or reconstruct scheduling policy.
 | `native-build-driver.do` | Native compiler processes, fingerprints, dependency signatures, PCH/object/link execution |
 | `test-runner.do` | Pure test discovery, grouping, harness generation, and coverage reports |
 | `run-command.do` | Pure invocation plans for built artifacts |
+| `profile-command.do` | Pure macOS xctrace capture and completed-trace open plans |
 | `macos-app.do` / `ios-app.do` | Deterministic bundle metadata, signing arguments, and platform plans |
 | `macos-app-driver.do` / `ios-app-driver.do` | Bundle materialization and Apple tool execution |
 | `ios-device.do` | Physical-device discovery, provisioning selection, signing, install, and launch boundary |

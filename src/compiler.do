@@ -34,10 +34,11 @@ export function compileWithLoader(
   coverage: bool = false,
   reusableModules: ModuleEmissionCacheKey[] = [],
   emissionConfigurationFingerprint: string = "",
+  physicalSourcePaths: bool = false,
 ): Compilation {
   return compileInternal(
     sources, entry, loader, namespaceMappings, entryMode, coverage, true,
-    reusableModules, emissionConfigurationFingerprint,
+    reusableModules, emissionConfigurationFingerprint, physicalSourcePaths,
   )
 }
 
@@ -61,6 +62,7 @@ function compileInternal(
   emit: bool = true,
   reusableModules: ModuleEmissionCacheKey[] = [],
   emissionConfigurationFingerprint: string = "",
+  physicalSourcePaths: bool = false,
 ): Compilation {
   configureModuleNamespaces(namespaceMappings)
   analyzer := createAnalyzerWithLoader(sources, loader)
@@ -111,7 +113,7 @@ function compileInternal(
   }
   emission := emitModuleGraph(
     analysis, entry, instantiations, entryMode, coverage,
-    reusableModules, emissionConfigurationFingerprint,
+    reusableModules, emissionConfigurationFingerprint, physicalSourcePaths,
   )
   if wasmEmission != none {
     emission.wasmSupportSource = wasmEmission!.source

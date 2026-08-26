@@ -70,6 +70,7 @@ the row from left to right.
 | Incremental frontend/emission | resolver probes, source hashes, configuration, and transitive module dependencies | `frontend-cache.do` persists pointer-free exact state; `emitter-module.do` fingerprints module inputs plus the global lowering plan | `driver.do` skips exact graph hits and retains matching generated files without changing timestamps |
 | Incremental executable resources | root-package resource declarations and recursive source trees | `resource-state.do` persists source/output metadata for copied files | `driver.do` skips unchanged blob reads and synchronizes edited, added, removed, or externally changed outputs before launch |
 | Tests, mocks, and coverage | `test-runner.do` discovers tests and generates harnesses | analyzer rewrites mock imports; emitter inserts stable coverage markers | driver groups, builds, isolates, runs, merges, and renders reports |
+| Runtime profiling | source loaders retain optional physical paths; CLI selects profile requests | emitter writes Doof `#line` mappings; native planner selects optimized symbol-rich profile flags | `profile-command.do` plans xctrace launch/open operations; driver records the trace |
 
 ## The decorated-AST boundary
 
