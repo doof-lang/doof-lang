@@ -3,5 +3,4 @@
 namespace std_::http::types {
 
 
-#line 1 "<doof-generated>"
 }

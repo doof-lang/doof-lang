@@ -1,0 +1,11 @@
+import { Assert } from "std/assert"
+import { add } from "./math"
+
+export function testAddsValues(): none {
+  Assert.equal(add(2, 3), 5)
+}
+
+export function testReportsFailure(): none {
+  println("failure-context")
+  Assert.equal(add(1, 1), 3)
+}

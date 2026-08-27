@@ -43,6 +43,7 @@ run_fixture="$output_root/run-fixture"
 test_run_fixture="$output_root/test-fixture"
 cp -R "$command_fixture" "$run_fixture"
 cp -R "$test_fixture" "$test_run_fixture"
+rm -rf "$test_run_fixture/build"
 
 run_output=$(DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" run "$run_fixture" -o "$output_root/run-build" 2>&1)
 if [ "$run_output" != "program-output 7" ]; then
@@ -95,11 +96,20 @@ assert_not_contains "$warm_test_output" "Compiling "
 cp "$test_run_fixture/math.test.changed" "$test_run_fixture/math.test.do"
 changed_test_output=$(DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" test "$test_run_fixture" 2>&1)
 assert_contains "$changed_test_output" "Compiling 1 file"
-dot_lines=$(printf '%s\n' "$changed_test_output" | grep -c '^\.$' || true)
-if [ "$dot_lines" -ne 1 ]; then
-  echo "expected exactly one test recompilation progress dot" >&2
-  echo "$changed_test_output" >&2
+assert_contains "$changed_test_output" "1/1"
+assert_not_contains "$changed_test_output" "PASS "
+
+cp "$test_run_fixture/math.test.failure" "$test_run_fixture/math.test.do"
+set +e
+failed_test_output=$(DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" test "$test_run_fixture" 2>&1)
+failed_test_status=$?
+set -e
+if [ "$failed_test_status" -eq 0 ]; then
+  echo "failing test run unexpectedly succeeded" >&2
   exit 1
 fi
+assert_contains "$failed_test_output" "failure-context"
+assert_contains "$failed_test_output" "FAIL math.test.do::testReportsFailure"
+assert_not_contains "$failed_test_output" "PASS "
 
 echo "Command output policy test passed"

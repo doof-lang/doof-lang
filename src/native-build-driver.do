@@ -3,12 +3,13 @@
 // incremental state, dependency signatures, compiler workers, and linking.
 
 import { ProjectEmission } from "./emitter-project"
-import { NativeBuildMode, NativeCompilePlan, NativeCompileTask, batchNativeCompileTasks, isMsvcCompiler, planNativeCompile } from "./native-build"
+import { NativeBuildMode, NativeCompilePlan, NativeCompileTask, isMsvcCompiler, planNativeCompile } from "./native-build"
 import {
   NativeBuildState, NativeInputSignature, NativeTaskState,
   parseMakeDependencies, parseMsvcDependencies, parseNativeBuildState, renderNativeBuildState,
 } from "./native-build-state"
 import { PkgConfigCommandResult, applyPkgConfigResult } from "./pkg-config"
+import { boundedWorkerCount, renderProgressBar } from "./progress"
 import { BlobReader } from "std/blob"
 import { sha256Hex, sha256HexString } from "std/crypto"
 import { exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, remove, rename, writeText } from "std/fs"
@@ -30,9 +31,9 @@ class NativeCommandResult {
   readonly truncated: bool
 }
 
-class NativeCompilerBatchResult {
-  readonly exitCode: int
-  readonly outputs: readonly NativeCommandResult[]
+class NativeCompilerTaskResult {
+  readonly workerIndex: int
+  readonly output: NativeCommandResult
 }
 
 class NativeCompilerIdentity {
@@ -72,36 +73,15 @@ export function nativeCompilationSummary(fileCount: int): string {
   return "Compiling " + string(fileCount) + if fileCount == 1 then " file" else " files"
 }
 
-/** Renders one progress marker per successfully compiled native source. */
-export function nativeCompilationProgress(fileCount: int): string {
-  return if fileCount <= 0 then "" else ".".repeat(fileCount)
-}
-
-/** Selects whether a completed native command should advance visible progress. */
-export function shouldPrintNativeCompilationMarker(outputMode: NativeBuildOutputMode, exitCode: int): bool {
-  return outputMode == .Progress && exitCode == 0
-}
-
 /** Successful compiler chatter is hidden; failed commands disclose their captured output. */
 export function shouldPrintNativeCommandOutput(exitCode: int): bool {
   return exitCode != 0
 }
 
 class NativeCompilerWorker {
-  readonly tasks: readonly NativeCompileTask[]
-  readonly outputMode: NativeBuildOutputMode
-
-  compile(): NativeCompilerBatchResult {
-    let outputs: NativeCommandResult[] = []
-    for task of this.tasks {
-      result := runBuildCommand(task.compiler, mutableArguments(task.arguments))
-      outputs.push(result)
-      if shouldPrintNativeCompilationMarker(this.outputMode, result.exitCode) { printFlushed(".") }
-      if result.exitCode != 0 {
-        return NativeCompilerBatchResult { exitCode: result.exitCode, outputs: outputs.drainToReadonly() }
-      }
-    }
-    return NativeCompilerBatchResult { exitCode: 0, outputs: outputs.drainToReadonly() }
+  compile(workerIndex: int, task: NativeCompileTask): NativeCompilerTaskResult {
+    result := runBuildCommand(task.compiler, mutableArguments(task.arguments))
+    return NativeCompilerTaskResult { workerIndex, output: result }
   }
 }
 
@@ -195,37 +175,45 @@ function executeNativePlan(
 
   if outputMode == .Progress && dirtyTasks.length > 0 {
     println(nativeCompilationSummary(dirtyTasks.length))
+    printFlushed(renderProgressBar(0, dirtyTasks.length))
   }
 
   let workers: Actor<NativeCompilerWorker>[] = []
-  let promises: Promise<NativeCompilerBatchResult>[] = []
+  let promises: Promise<NativeCompilerTaskResult>[] = []
   for task of dirtyTasks { ensureDirectory(parentDirectory(task.outputPath)) }
-  for batch of batchNativeCompileTasks(dirtyTasks) {
-    worker := Actor<NativeCompilerWorker>(batch, outputMode)
+  let nextTaskIndex = 0
+  for workerIndex of 0..<boundedWorkerCount(dirtyTasks.length) {
+    worker := Actor<NativeCompilerWorker>()
     workers.push(worker)
-    promises.push(async worker.compile())
+    promises.push(async worker.compile(workerIndex, dirtyTasks[nextTaskIndex]))
+    nextTaskIndex += 1
   }
   let compileExitCode = 0
-  let batchResults: NativeCompilerBatchResult[] = []
-  for index of 0..<promises.length {
-    batchResult := promises[index].get() else error {
-      ignoredWorker := retire workers[index]
+  let completedTasks = 0
+  let commandResults: NativeCommandResult[] = []
+  while promises.length > 0 {
+    taskResult := promises.takeFirstCompleted() else error {
+      for worker of workers { ignoredWorker := retire worker }
       if outputMode == .Progress && dirtyTasks.length > 0 { println("") }
       println("error: native compiler worker failed: " + error)
       return 1
     }
-    retire workers[index]
-    batchResults.push(batchResult)
-  }
-  if outputMode == .Progress && dirtyTasks.length > 0 { println("") }
-  for batchResult of batchResults {
-    for commandResult of batchResult.outputs {
-      if shouldPrintNativeCommandOutput(commandResult.exitCode) {
-        printBuildOutput(commandResult)
-        if commandResult.truncated && !truncationReported { println("... native compiler output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes"); truncationReported = true }
-      }
+    commandResults.push(taskResult.output)
+    completedTasks += 1
+    if outputMode == .Progress { printFlushed("\r" + renderProgressBar(completedTasks, dirtyTasks.length)) }
+    if nextTaskIndex < dirtyTasks.length {
+      promises.push(async workers[taskResult.workerIndex].compile(taskResult.workerIndex, dirtyTasks[nextTaskIndex]))
+      nextTaskIndex += 1
     }
-    if compileExitCode == 0 && batchResult.exitCode != 0 { compileExitCode = batchResult.exitCode }
+  }
+  for worker of workers { retire worker }
+  if outputMode == .Progress && dirtyTasks.length > 0 { println("") }
+  for commandResult of commandResults {
+    if shouldPrintNativeCommandOutput(commandResult.exitCode) {
+      printBuildOutput(commandResult)
+      if commandResult.truncated && !truncationReported { println("... native compiler output capture truncated after " + string(MAX_NATIVE_OUTPUT_BYTES) + " bytes"); truncationReported = true }
+    }
+    if compileExitCode == 0 && commandResult.exitCode != 0 { compileExitCode = commandResult.exitCode }
   }
   if compileExitCode != 0 { println("error: native object compiler exited with code " + string(compileExitCode)); return compileExitCode }
 

@@ -6,7 +6,10 @@ module paths. Dedicated profile builds use the physical paths retained by the
 filesystem source loader so native debug information can open the original
 `.do` files. Compiler-owned entry wrappers and other glue reset attribution to
 `<doof-generated>`. Manifest-native sources are compiled unchanged and retain
-their native language debug mappings.
+their native language debug mappings. The reviewed bootstrap snapshot is the
+one exception: its refresh pipeline removes emitted `#line` directives after
+fixed-point verification so source-line-only changes do not churn the trust
+root. This canonicalization does not change ordinary compiler emission.
 
 Doof primitives map to fixed-width C++ values. Classes use shared ownership,
 structs use value semantics, weak class references use `std::weak_ptr`, and

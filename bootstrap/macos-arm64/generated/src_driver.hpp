@@ -6,6 +6,45 @@ namespace std_::blob::types { enum class EncodingError; }
 namespace std_::fs::types { enum class IoError; }
 namespace std_::fs::types { struct FileInfo; }
 namespace std_::fs::types { enum class EntryKind; }
+namespace app_src_compiler_ { struct Compilation; }
+namespace app_src_cli_ { struct CliRequest; }
+namespace app_src_external_dependency_ { struct ExternalDependencyTarget; }
+namespace app_src_dependency_policy_ { struct ReachedPackageInput; }
+namespace app_src_dependency_policy_ { struct ResolvedExternalInput; }
+namespace app_src_emitter_project_ { struct NativePackageInput; }
+namespace app_src_emitter_project_ { struct ProjectEmission; }
+namespace app_src_emitter_names_ { struct ModuleNamespaceMapping; }
+namespace app_src_emitter_module_ { struct ModuleEmission; }
+namespace app_src_emitter_module_ { struct ModuleEmissionCacheKey; }
+namespace app_src_emitter_module_ { struct ModuleGraphEmission; }
+namespace app_src_frontend_cache_ { struct FrontendCacheState; }
+namespace app_src_frontend_cache_ { struct FrontendFileInput; }
+namespace app_src_frontend_cache_ { struct FrontendModuleOutput; }
+namespace app_src_frontend_cache_ { struct FrontendSourceProbe; }
+namespace app_src_module_acquisition_ { struct ModuleAcquisition; }
+namespace app_src_native_build_driver_ { enum class NativeBuildOutputMode; }
+namespace app_src_native_build_ { enum class NativeBuildMode; }
+namespace app_src_package_manifest_ { struct ExternalDependency; }
+namespace app_src_package_manifest_ { struct NativeBuildPlan; }
+namespace app_src_package_manifest_ { struct PackageDependency; }
+namespace app_src_package_manifest_ { struct PackageManifest; }
+namespace app_src_package_manifest_ { struct PackageResource; }
+namespace app_src_package_acquisition_ { struct ExactPackageSource; }
+namespace app_src_parser_ { struct Parser; }
+namespace app_src_resource_state_ { struct MaterializedResource; }
+namespace app_src_resource_state_ { struct ResourceState; }
+namespace app_src_semantic_ { struct Diagnostic; }
+namespace app_src_semantic_ { struct SemanticLocation; }
+namespace app_src_semantic_ { struct SemanticSpan; }
+namespace app_src_semantic_ { struct SourceFile; }
+namespace app_src_std_catalog_ { struct StdCatalog; }
+namespace app_src_emitter_module_ { struct CoverageModuleMetadata; }
+namespace app_src_test_runner_ { struct CoverageReport; }
+namespace app_src_test_runner_ { struct DiscoveredTest; }
+namespace std_::fs::types { enum class EntryKind; }
+namespace std_::os::index { struct ExecOptions; }
+namespace std_::os::index { enum class ProcessGroupMode; }
+namespace std_::time::temporal { struct Instant; }
 
 namespace app_src_semantic_ {
     struct SemanticLocation;
@@ -275,6 +314,9 @@ namespace app_src_test_runner_ {
 
 namespace app_src_driver_ {
     struct NativeCommandResult;
+    struct TestExecutionResult;
+    struct TestWorkerCompletion;
+    struct TestProcessWorker;
     struct DriverSourceRoot;
     struct DriverReachedPackage;
     struct DriverAcquiredSource;
@@ -1979,6 +2021,23 @@ namespace app_src_driver_ {
     bool truncated;
     NativeCommandResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> output, std::string error, bool truncated) : exitCode(exitCode), output(output), error(error), truncated(truncated) {}
 };
+    struct TestExecutionResult : public std::enable_shared_from_this<TestExecutionResult> {
+    std::string id;
+    std::shared_ptr<NativeCommandResult> command;
+    TestExecutionResult(std::string id, std::shared_ptr<NativeCommandResult> command) : id(id), command(command) {}
+};
+    struct TestWorkerCompletion : public std::enable_shared_from_this<TestWorkerCompletion> {
+    int32_t workerIndex;
+    std::shared_ptr<TestExecutionResult> test;
+    TestWorkerCompletion(int32_t workerIndex, std::shared_ptr<TestExecutionResult> test) : workerIndex(workerIndex), test(test) {}
+};
+    struct TestProcessWorker : public std::enable_shared_from_this<TestProcessWorker> {
+    std::string binary;
+    std::string directory;
+    int64_t maxOutputBytes;
+    TestProcessWorker(std::string binary, std::string directory, int64_t maxOutputBytes) : binary(binary), directory(directory), maxOutputBytes(maxOutputBytes) {}
+    std::shared_ptr<TestWorkerCompletion> runTest(int32_t workerIndex, const std::string& id);
+};
     struct DriverSourceRoot : public std::enable_shared_from_this<DriverSourceRoot> {
     std::string logicalPrefix;
     std::string diskRoot;
@@ -2990,6 +3049,11 @@ namespace app_src_module_acquisition_ {
     std::string acquiredManifestPath(const std::shared_ptr<ModuleAcquisition>& acquisition);
 }
 
+namespace app_src_progress_ {
+    std::string renderProgressBar(int32_t completed, int32_t total, int32_t width);
+    int32_t boundedWorkerCount(int32_t itemCount, int32_t maximumWorkers);
+}
+
 namespace app_src_native_build_driver_ {
     int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, ::app_src_native_build_::NativeBuildMode mode, const std::string& platform, NativeBuildOutputMode outputMode);
 }
@@ -3066,7 +3130,50 @@ namespace app_src_test_runner_ {
     std::string coverageFileRelativePath(const std::string& path);
 }
 
+namespace doof { using Compilation = ::app_src_compiler_::Compilation; }
+namespace doof { using CliRequest = ::app_src_cli_::CliRequest; }
+namespace doof { using ExternalDependencyTarget = ::app_src_external_dependency_::ExternalDependencyTarget; }
+namespace doof { using ReachedPackageInput = ::app_src_dependency_policy_::ReachedPackageInput; }
+namespace doof { using ResolvedExternalInput = ::app_src_dependency_policy_::ResolvedExternalInput; }
+namespace doof { using NativePackageInput = ::app_src_emitter_project_::NativePackageInput; }
+namespace doof { using ProjectEmission = ::app_src_emitter_project_::ProjectEmission; }
+namespace doof { using ModuleNamespaceMapping = ::app_src_emitter_names_::ModuleNamespaceMapping; }
+namespace doof { using ModuleEmission = ::app_src_emitter_module_::ModuleEmission; }
+namespace doof { using ModuleEmissionCacheKey = ::app_src_emitter_module_::ModuleEmissionCacheKey; }
+namespace doof { using ModuleGraphEmission = ::app_src_emitter_module_::ModuleGraphEmission; }
+namespace doof { using FrontendCacheState = ::app_src_frontend_cache_::FrontendCacheState; }
+namespace doof { using FrontendFileInput = ::app_src_frontend_cache_::FrontendFileInput; }
+namespace doof { using FrontendModuleOutput = ::app_src_frontend_cache_::FrontendModuleOutput; }
+namespace doof { using FrontendSourceProbe = ::app_src_frontend_cache_::FrontendSourceProbe; }
+namespace doof { using ModuleAcquisition = ::app_src_module_acquisition_::ModuleAcquisition; }
+namespace doof { using NativeBuildOutputMode = ::app_src_native_build_driver_::NativeBuildOutputMode; }
+namespace doof { using NativeBuildMode = ::app_src_native_build_::NativeBuildMode; }
+namespace doof { using ExternalDependency = ::app_src_package_manifest_::ExternalDependency; }
+namespace doof { using NativeBuildPlan = ::app_src_package_manifest_::NativeBuildPlan; }
+namespace doof { using PackageDependency = ::app_src_package_manifest_::PackageDependency; }
+namespace doof { using PackageManifest = ::app_src_package_manifest_::PackageManifest; }
+namespace doof { using PackageResource = ::app_src_package_manifest_::PackageResource; }
+namespace doof { using ExactPackageSource = ::app_src_package_acquisition_::ExactPackageSource; }
+namespace doof { using Parser = ::app_src_parser_::Parser; }
+namespace doof { using MaterializedResource = ::app_src_resource_state_::MaterializedResource; }
+namespace doof { using ResourceState = ::app_src_resource_state_::ResourceState; }
+namespace doof { using SourceLoader = ::app_src_resolver_::SourceLoader; }
+namespace doof { using Diagnostic = ::app_src_semantic_::Diagnostic; }
+namespace doof { using SemanticLocation = ::app_src_semantic_::SemanticLocation; }
+namespace doof { using SemanticSpan = ::app_src_semantic_::SemanticSpan; }
+namespace doof { using SourceFile = ::app_src_semantic_::SourceFile; }
+namespace doof { using StdCatalog = ::app_src_std_catalog_::StdCatalog; }
+namespace doof { using CoverageModuleMetadata = ::app_src_emitter_module_::CoverageModuleMetadata; }
+namespace doof { using CoverageReport = ::app_src_test_runner_::CoverageReport; }
+namespace doof { using DiscoveredTest = ::app_src_test_runner_::DiscoveredTest; }
+namespace doof { using EntryKind = ::std_::fs::types::EntryKind; }
+namespace doof { using ExecOptions = ::std_::os::index::ExecOptions; }
+namespace doof { using ProcessGroupMode = ::std_::os::index::ProcessGroupMode; }
+namespace doof { using Instant = ::std_::time::temporal::Instant; }
+#include "doof_runtime.hpp"
+
 namespace app_src_driver_ {
+    void printFlushed(const std::string& value);
     ::app_src_native_build_driver_::NativeBuildOutputMode nativeBuildOutputModeForCommand(const std::string& command);
     int32_t runProfileTarget(const std::shared_ptr<::app_src_cli_::CliRequest>& request, const std::string& targetPath, const std::string& binaryPath, const std::string& symbolsPath, const std::string& packageRoot, const std::string& buildDirectory, const std::string& traceName, bool consoleTarget);
     std::string hostPlatform();
@@ -3134,6 +3241,7 @@ namespace app_src_driver_ {
     std::string coverageHtmlPath(const std::string& jsonPath);
     std::string writeCoverageHtml(const std::shared_ptr<::app_src_test_runner_::CoverageReport>& report, const std::string& jsonPath, const std::string& rootDirectory);
     int32_t testRequest(const std::shared_ptr<::app_src_cli_::CliRequest>& request);
+    std::shared_ptr<TestExecutionResult> findTestExecutionResult(const std::shared_ptr<std::vector<std::shared_ptr<TestExecutionResult>>>& results, const std::string& id);
     int32_t emitRequest(const std::shared_ptr<::app_src_cli_::CliRequest>& request);
     int32_t doof_main(const std::shared_ptr<std::vector<std::string>>& args);
 }

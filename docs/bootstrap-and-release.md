@@ -16,9 +16,10 @@ resources to `dist/`. B5 and B6 remain ordinary development builds because the
 fixed-point decision concerns their generated source, not their native flags.
 
 Bootstrap snapshots are source-only and must not contain binaries, objects,
-PCH files, build databases, or absolute developer paths. Refresh them only
-from a verified Doof compiler using the final repository layout, then
-run the complete release gate and review the generated diff.
+PCH files, build databases, absolute developer paths, or emitted C++ `#line`
+directives. Refresh them only from a verified Doof compiler using the final
+repository layout, then run the complete release gate and review the generated
+diff.
 
 Run `./scripts/refresh-bootstrap.sh` to perform that workflow. It advances
 compiler generations until two adjacent generated source graphs match, runs
@@ -26,6 +27,10 @@ release verification before changing the trust root, preserves reviewed
 Windows and Linux native alternatives that are not emitted by a macOS build,
 updates the source-only snapshot, and reruns the complete release gate from the
 refreshed stage 0. If the final gate fails, it restores the original snapshot.
+Before updating the trust root, the refresh canonicalizes all candidate source
+files by removing generated `#line` directives. Ordinary compiler output keeps
+those mappings for diagnostics and profiling, while source-line-only edits do
+not create unrelated churn in the reviewed bootstrap snapshot.
 Set `DOOF_REFRESH_MAX_GENERATIONS` to change the default six-generation
 convergence limit.
 

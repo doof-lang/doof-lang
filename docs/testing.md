@@ -33,6 +33,10 @@ modules in that shared graph perform module-level initialization in each test
 process. A test file that declares `mock import` receives its own isolated
 harness and executable so its substitutions cannot affect another root.
 
+Test processes run through a bounded queue of at most four workers. Progress is shown
+as a fixed-width completed/total bar; successful cases stay quiet, while failed
+cases replay their captured output and print their test id.
+
 Generated files are written only when their contents change. Native builds
 persist dependency-aware object, precompiled-header, and link state under the
 output directory, so an unchanged warm test run performs no native compiler or

@@ -74,7 +74,7 @@ namespace app_src_pkg_config_ {
 
 namespace app_src_native_build_driver_ {
     struct NativeCommandResult;
-    struct NativeCompilerBatchResult;
+    struct NativeCompilerTaskResult;
     struct NativeCompilerIdentity;
     struct NativeCompilerWorker;
     extern int64_t MAX_NATIVE_OUTPUT_BYTES;
@@ -398,10 +398,6 @@ inline std::optional<NativeBuildOutputMode> NativeBuildOutputMode_fromValue(int3
 inline std::ostream& operator<<(std::ostream& output, NativeBuildOutputMode value) { return output << NativeBuildOutputMode_name(value); }
 }
 
-namespace app_src_native_build_ {
-    using NativeCompileTaskBatch = std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>;
-}
-
 namespace app_src_emitter_module_ {
     struct ModuleEmission : public std::enable_shared_from_this<ModuleEmission> {
     std::string modulePath;
@@ -715,15 +711,19 @@ namespace app_src_native_build_driver_ {
     bool truncated;
     NativeCommandResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> output, std::string error, bool truncated) : exitCode(exitCode), output(output), error(error), truncated(truncated) {}
 };
-    struct NativeCompilerBatchResult : public std::enable_shared_from_this<NativeCompilerBatchResult> {
-    int32_t exitCode;
-    std::shared_ptr<std::vector<std::shared_ptr<NativeCommandResult>>> outputs;
-    NativeCompilerBatchResult(int32_t exitCode, std::shared_ptr<std::vector<std::shared_ptr<NativeCommandResult>>> outputs) : exitCode(exitCode), outputs(outputs) {}
+    struct NativeCompilerTaskResult : public std::enable_shared_from_this<NativeCompilerTaskResult> {
+    int32_t workerIndex;
+    std::shared_ptr<NativeCommandResult> output;
+    NativeCompilerTaskResult(int32_t workerIndex, std::shared_ptr<NativeCommandResult> output) : workerIndex(workerIndex), output(output) {}
 };
     struct NativeCompilerIdentity : public std::enable_shared_from_this<NativeCompilerIdentity> {
     std::string command;
     std::string signature;
     NativeCompilerIdentity(std::string command, std::string signature) : command(command), signature(signature) {}
+};
+    struct NativeCompilerWorker : public std::enable_shared_from_this<NativeCompilerWorker> {
+    NativeCompilerWorker() {}
+    std::shared_ptr<NativeCompilerTaskResult> compile(int32_t workerIndex, const std::shared_ptr<::app_src_native_build_::NativeCompileTask>& task);
 };
 }
 
@@ -789,7 +789,6 @@ namespace std_::os::index {
 
 namespace app_src_native_build_ {
     bool isMsvcCompiler(const std::string& compiler);
-    std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(const std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>& tasks, int32_t maximumWorkers);
     std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, NativeBuildMode mode, const std::string& platform, const std::shared_ptr<std::vector<std::string>>& wasmExportNames, bool wasm);
 }
 
@@ -802,6 +801,11 @@ namespace app_src_native_build_state_ {
 
 namespace app_src_pkg_config_ {
     doof::Result<void, std::string> applyPkgConfigResult(const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, const std::string& packageName, const std::string& mode, const std::shared_ptr<PkgConfigCommandResult>& result);
+}
+
+namespace app_src_progress_ {
+    std::string renderProgressBar(int32_t completed, int32_t total, int32_t width);
+    int32_t boundedWorkerCount(int32_t itemCount, int32_t maximumWorkers);
 }
 
 namespace doof { using NativeBuildOutputMode = ::app_src_native_build_driver_::NativeBuildOutputMode; }
@@ -818,17 +822,9 @@ namespace doof { using ExecOptions = ::std_::os::index::ExecOptions; }
 
 namespace app_src_native_build_driver_ {
     void printFlushed(const std::string& value);
-    struct NativeCompilerWorker : public std::enable_shared_from_this<NativeCompilerWorker> {
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>> tasks;
-    NativeBuildOutputMode outputMode;
-    NativeCompilerWorker(std::shared_ptr<std::vector<std::shared_ptr<::app_src_native_build_::NativeCompileTask>>> tasks, NativeBuildOutputMode outputMode) : tasks(tasks), outputMode(outputMode) {}
-    std::shared_ptr<NativeCompilerBatchResult> compile();
-};
     std::shared_ptr<NativeCommandResult> runBuildCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments);
     void printBuildOutput(const std::shared_ptr<NativeCommandResult>& result);
     std::string nativeCompilationSummary(int32_t fileCount);
-    std::string nativeCompilationProgress(int32_t fileCount);
-    bool shouldPrintNativeCompilationMarker(NativeBuildOutputMode outputMode, int32_t exitCode);
     bool shouldPrintNativeCommandOutput(int32_t exitCode);
     int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, ::app_src_native_build_::NativeBuildMode mode, const std::string& platform, NativeBuildOutputMode outputMode);
     std::string envCompiler();

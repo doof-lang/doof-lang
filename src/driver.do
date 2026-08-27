@@ -55,12 +55,15 @@ import {
   mergeCoverageOutput, renderCoverageFileHtml, renderCoverageHtml, renderCoverageJson,
   stripCoverageLines, testDisplayPath,
 } from "./test-runner"
+import { boundedWorkerCount, renderProgressBar } from "./progress"
 import { BlobReader } from "std/blob"
 import { sha256HexString } from "std/crypto"
 import { EntryKind, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
 import { ExecOptions, ProcessGroupMode, architecture, run, platform } from "std/os"
 import { absolute } from "std/path"
 import { Instant } from "std/time"
+
+import isolated function printFlushed(value: string): none from "doof_runtime.hpp" as doof::print_flushed
 
 readonly MAX_PRINTED_DIAGNOSTICS = 20
 readonly MAX_NATIVE_COMPILER_OUTPUT_BYTES = 262144L
@@ -127,6 +130,27 @@ class NativeCommandResult {
   readonly output: readonly byte[] = []
   readonly error: string = ""
   readonly truncated: bool
+}
+
+class TestExecutionResult {
+  readonly id: string
+  readonly command: NativeCommandResult
+}
+
+class TestWorkerCompletion {
+  readonly workerIndex: int
+  readonly test: TestExecutionResult
+}
+
+class TestProcessWorker {
+  readonly binary: string
+  readonly directory: string
+  readonly maxOutputBytes: long
+
+  runTest(workerIndex: int, id: string): TestWorkerCompletion {
+    command := runNativeCommand(this.binary, [id], this.directory, false, .Isolated, this.maxOutputBytes)
+    return TestWorkerCompletion { workerIndex, test: TestExecutionResult { id, command } }
+  }
 }
 
 isolated function runNativeCommand(
@@ -1274,15 +1298,44 @@ function testRequest(request: CliRequest): int {
     )
     if buildExitCode != 0 { return buildExitCode }
 
+    println("Testing " + string(moduleTests.length) + if moduleTests.length == 1 then " test" else " tests")
+    printFlushed(renderProgressBar(0, moduleTests.length))
+    let testWorkers: Actor<TestProcessWorker>[] = []
+    let pendingTests: Promise<TestWorkerCompletion>[] = []
+    maxTestOutput := if request.coverage then MAX_COVERAGE_OUTPUT_BYTES else MAX_NATIVE_COMPILER_OUTPUT_BYTES
+    let nextTestIndex = 0
+    for workerIndex of 0..<boundedWorkerCount(moduleTests.length) {
+      worker := Actor<TestProcessWorker>(binary, project.rootDirectory, maxTestOutput)
+      testWorkers.push(worker)
+      test := moduleTests[nextTestIndex]
+      pendingTests.push(async worker.runTest(workerIndex, test.id))
+      nextTestIndex += 1
+    }
+    let completedTests = 0
+    let executionResults: TestExecutionResult[] = []
+    while pendingTests.length > 0 {
+      workerResult := pendingTests.takeFirstCompleted() else error {
+        for worker of testWorkers { ignoredWorker := retire worker }
+        println("")
+        println("error: test worker failed: " + error)
+        return 1
+      }
+      executionResults.push(workerResult.test)
+      completedTests += 1
+      printFlushed("\r" + renderProgressBar(completedTests, moduleTests.length))
+      if nextTestIndex < moduleTests.length {
+        test := moduleTests[nextTestIndex]
+        pendingTests.push(async testWorkers[workerResult.workerIndex].runTest(workerResult.workerIndex, test.id))
+        nextTestIndex += 1
+      }
+    }
+    for worker of testWorkers { retire worker }
+    println("")
+
     for test of moduleTests {
-      testResult := runNativeCommand(
-        binary,
-        [test.id],
-        project.rootDirectory,
-        !request.coverage,
-        .Isolated,
-        if request.coverage then MAX_COVERAGE_OUTPUT_BYTES else MAX_NATIVE_COMPILER_OUTPUT_BYTES,
-      )
+      execution := findTestExecutionResult(executionResults, test.id)
+      if execution == none { panic("test worker returned no result for " + test.id) }
+      testResult := execution!.command
       if request.coverage {
         if testResult.truncated {
           println("error: coverage output exceeded " + string(MAX_COVERAGE_OUTPUT_BYTES) + " bytes for " + test.id)
@@ -1297,11 +1350,13 @@ function testRequest(request: CliRequest): int {
           visibleOutput := stripCoverageLines(output)
           if visibleOutput != "" { println(visibleOutput) }
         }
+      } else if testResult.exitCode != 0 {
+        ignored := printNativeCommandOutput(testResult, MAX_PRINTED_DIAGNOSTICS)
+        if testResult.truncated { println("... test output capture truncated after " + string(MAX_NATIVE_COMPILER_OUTPUT_BYTES) + " bytes") }
       }
       exitCode := testResult.exitCode
       if exitCode == 0 {
         passed = passed + 1
-        println("PASS " + test.id)
       } else {
         failed = failed + 1
         println("FAIL " + test.id)
@@ -1322,6 +1377,11 @@ function testRequest(request: CliRequest): int {
     println("Coverage HTML report written to " + htmlPath)
   }
   return if failed == 0 then 0 else 1
+}
+
+function findTestExecutionResult(results: TestExecutionResult[], id: string): TestExecutionResult | none {
+  for result of results { if result.id == id { return result } }
+  return none
 }
 
 function emitRequest(request: CliRequest): int {

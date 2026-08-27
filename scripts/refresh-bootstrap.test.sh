@@ -3,6 +3,7 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 script="$repo_root/scripts/refresh-bootstrap.sh"
+canonicalizer="$repo_root/scripts/canonicalize-bootstrap-snapshot.sh"
 test_root=$(mktemp -d "${TMPDIR:-/tmp}/doof-refresh-bootstrap-test.XXXXXX")
 
 finish() {
@@ -13,6 +14,7 @@ finish() {
 trap finish EXIT HUP INT TERM
 
 sh -n "$script"
+sh -n "$canonicalizer"
 "$script" --help > "$test_root/help"
 grep -q '^usage: .*refresh-bootstrap.sh \[--help\]$' "$test_root/help"
 grep -q 'DOOF_REFRESH_MAX_GENERATIONS' "$test_root/help"
@@ -35,5 +37,38 @@ if DOOF_REFRESH_SEED_COMPILER="$test_root/missing" "$script" > "$test_root/seed"
   exit 1
 fi
 grep -q 'DOOF_REFRESH_SEED_COMPILER is not executable' "$test_root/seed"
+
+fixture_root="$test_root/snapshot"
+mkdir -p "$fixture_root/nested"
+cat > "$fixture_root/nested/module.cpp" <<'EOF'
+#include "module.hpp"
+#line 7 "/src/module.do"
+int answer() { return 42; }
+#line 1 "<doof-generated>"
+EOF
+cat > "$fixture_root/nested/module.hpp" <<'EOF'
+#pragma once
+#line 3 "/src/module.do"
+int answer();
+EOF
+cat > "$fixture_root/notes.txt" <<'EOF'
+#line 9 "documentation-example"
+EOF
+
+"$canonicalizer" "$fixture_root"
+if grep '^#line ' "$fixture_root/nested/module.cpp" "$fixture_root/nested/module.hpp" >/dev/null 2>&1; then
+  echo "Expected bootstrap canonicalization to remove generated #line directives." >&2
+  exit 1
+fi
+grep -q '^#include "module.hpp"$' "$fixture_root/nested/module.cpp"
+grep -q '^int answer() { return 42; }$' "$fixture_root/nested/module.cpp"
+grep -q '^#pragma once$' "$fixture_root/nested/module.hpp"
+grep -q '^#line 9 "documentation-example"$' "$fixture_root/notes.txt"
+
+if "$canonicalizer" "$test_root/missing-snapshot" > "$test_root/canonicalizer-error" 2>&1; then
+  echo "Expected bootstrap canonicalization to reject a missing snapshot root." >&2
+  exit 1
+fi
+grep -q 'Bootstrap snapshot root is not a directory' "$test_root/canonicalizer-error"
 
 echo "Bootstrap refresh script tests passed"

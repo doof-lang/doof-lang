@@ -2,5 +2,4 @@
 
 namespace std_::fs::types {
 
-#line 1 "<doof-generated>"
 }

@@ -160,6 +160,11 @@ find "$snapshot_root" -type f | LC_ALL=C sort | while IFS= read -r source; do
   esac
 done
 
+# Keep source-location mappings in ordinary compiler output, but omit them from
+# the reviewed trust root. Source line changes should not create bootstrap
+# snapshot churn unrelated to the generated C++ semantics.
+"$repo_root/scripts/canonicalize-bootstrap-snapshot.sh" "$candidate_root"
+
 source_count=$(find "$candidate_root" -type f | wc -l | tr -d ' ')
 if [ "$source_count" -eq 0 ]; then
   echo "Verified compiler produced no bootstrap source artifacts." >&2

@@ -151,36 +151,25 @@ doof::Result<std::shared_ptr<FrontendCacheState>, std::string> FrontendCacheStat
         return doof::Failure<std::string>{_error.message()};
     }
 }
-#line 39 "/src/frontend-cache.do"
 std::shared_ptr<FrontendCacheState> parseFrontendCacheState(const std::string& source) {
-#line 40 "/src/frontend-cache.do"
     auto _binding_value_1 = ::doof_json::parse(source);
     if (doof::is_failure(_binding_value_1)) {
         const auto& value = _binding_value_1;
-#line 40 "/src/frontend-cache.do"
         return nullptr;
     }
     const auto value = doof::success_value(_binding_value_1);
-#line 41 "/src/frontend-cache.do"
     auto _binding_value_2 = FrontendCacheState::fromJsonValue(value, true);
     if (doof::is_failure(_binding_value_2)) {
         const auto& state = _binding_value_2;
-#line 41 "/src/frontend-cache.do"
         return nullptr;
     }
     const auto state = doof::success_value(_binding_value_2);
-#line 42 "/src/frontend-cache.do"
     if (state->version != FRONTEND_CACHE_VERSION) {
-#line 42 "/src/frontend-cache.do"
         return nullptr;
     }
-#line 43 "/src/frontend-cache.do"
     return state;
 }
-#line 46 "/src/frontend-cache.do"
 std::string renderFrontendCacheState(const std::shared_ptr<FrontendCacheState>& state) {
-#line 47 "/src/frontend-cache.do"
     return (::doof_json::format(doof::json_value(state->toJsonObject())) + std::string("\n"));
 }
-#line 1 "<doof-generated>"
 }

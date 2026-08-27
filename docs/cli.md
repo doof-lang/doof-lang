@@ -78,8 +78,8 @@ compiler or linker output are suppressed. If compilation fails and the program
 cannot launch, Doof prints the captured diagnostics.
 
 `build`, `test`, and `package` report native recompilation concisely. When native
-source files are dirty they print `Compiling N files` followed by one dot per
-successfully compiled source, grouped as worker batches finish. Exact native
+source files are dirty they print `Compiling N files` followed by a fixed-width
+completed/total progress bar that advances as individual sources finish. Exact native
 cache hits print no compilation progress. Successful compiler and linker
 chatter remains hidden; failed steps print their captured output. `emit` does
 not invoke the native compiler and remains quiet except for source diagnostics.
@@ -95,6 +95,10 @@ language and include environments and do not consume this PCH. GCC-compatible
 compiler planning remains available when an explicit non-MSVC compiler is
 selected. Native object compilation uses at most four compiler workers by
 default to avoid oversubscribing smaller development machines.
+
+Test execution also uses at most four process workers and reports a fixed-width
+completed/total bar. Successful cases and their captured output remain quiet;
+failed cases print their captured output followed by the failing test id.
 
 For `check`, `emit`, `build`, `run`, and `profile`, successful exact source/configuration
 fingerprints are cached below `<build-directory>/.doof-cache/v1/`. Exact hits

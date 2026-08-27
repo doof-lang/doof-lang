@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 import {
-  NativeBuildOutputMode, msvcLinkResponseFile, nativeCompilationProgress, nativeCompilationSummary, nativeManagedOutputsChanged, nativeSupportFileNeedsWrite,
-  nativeTaskStateIsCurrent, shouldPrintNativeCommandOutput, shouldPrintNativeCompilationMarker, staleManagedOutputCandidates,
+  msvcLinkResponseFile, nativeCompilationSummary, nativeManagedOutputsChanged, nativeSupportFileNeedsWrite,
+  nativeTaskStateIsCurrent, shouldPrintNativeCommandOutput, staleManagedOutputCandidates,
 } from "./native-build-driver"
 import { NativeInputSignature, NativeTaskState } from "./native-build-state"
 
@@ -41,21 +41,12 @@ export function testRendersNativeCompilationProgress(): none {
   Assert.equal(nativeCompilationSummary(0), "")
   Assert.equal(nativeCompilationSummary(1), "Compiling 1 file")
   Assert.equal(nativeCompilationSummary(3), "Compiling 3 files")
-  Assert.equal(nativeCompilationProgress(0), "")
-  Assert.equal(nativeCompilationProgress(1), ".")
-  Assert.equal(nativeCompilationProgress(4), "....")
 }
 
 export function testDisclosesNativeCommandOutputOnlyOnFailure(): none {
   Assert.equal(shouldPrintNativeCommandOutput(0), false)
   Assert.equal(shouldPrintNativeCommandOutput(1), true)
   Assert.equal(shouldPrintNativeCommandOutput(-1), true)
-}
-
-export function testAdvancesNativeCompilationProgressOnlyForSuccessfulVisibleCommands(): none {
-  Assert.equal(shouldPrintNativeCompilationMarker(NativeBuildOutputMode.Progress, 0), true)
-  Assert.equal(shouldPrintNativeCompilationMarker(NativeBuildOutputMode.Progress, 1), false)
-  Assert.equal(shouldPrintNativeCompilationMarker(NativeBuildOutputMode.Silent, 0), false)
 }
 
 export function testWritesNativeSupportFilesOnlyWhenTheirContentChanges(): none {

@@ -77,60 +77,40 @@ doof::Result<std::shared_ptr<ResourceState>, std::string> ResourceState::fromJso
         return doof::Failure<std::string>{_error.message()};
     }
 }
-#line 23 "/src/resource-state.do"
 std::shared_ptr<ResourceState> parseResourceState(const std::string& source) {
-#line 24 "/src/resource-state.do"
     auto _binding_value_1 = ::doof_json::parse(source);
     if (doof::is_failure(_binding_value_1)) {
         const auto& value = _binding_value_1;
-#line 24 "/src/resource-state.do"
         return nullptr;
     }
     const auto value = doof::success_value(_binding_value_1);
-#line 25 "/src/resource-state.do"
     auto _binding_value_2 = ResourceState::fromJsonValue(value, true);
     if (doof::is_failure(_binding_value_2)) {
         const auto& state = _binding_value_2;
-#line 25 "/src/resource-state.do"
         return nullptr;
     }
     const auto state = doof::success_value(_binding_value_2);
-#line 26 "/src/resource-state.do"
     if (state->version != RESOURCE_STATE_VERSION) {
-#line 26 "/src/resource-state.do"
         return nullptr;
     }
-#line 27 "/src/resource-state.do"
     return state;
 }
-#line 30 "/src/resource-state.do"
 std::string renderResourceState(const std::shared_ptr<ResourceState>& state) {
-#line 31 "/src/resource-state.do"
     return (::doof_json::format(doof::json_value(state->toJsonObject())) + std::string("\n"));
 }
-#line 34 "/src/resource-state.do"
 std::shared_ptr<MaterializedResource> findMaterializedResource(const std::shared_ptr<ResourceState>& state, const std::string& sourcePath, const std::string& outputPath) {
-#line 39 "/src/resource-state.do"
     const auto& _iterable_4 = state->files;
     for (const auto& file : *_iterable_4) {
-#line 40 "/src/resource-state.do"
         if ((file->sourcePath == sourcePath) && (file->outputPath == outputPath)) {
-#line 40 "/src/resource-state.do"
             return file;
         }
     }
-#line 42 "/src/resource-state.do"
     return nullptr;
 }
-#line 45 "/src/resource-state.do"
 bool materializedResourceIsCurrent(const std::shared_ptr<MaterializedResource>& previous, int64_t sourceSize, int64_t sourceModifiedNanos, int64_t outputSize, int64_t outputModifiedNanos) {
-#line 52 "/src/resource-state.do"
     if (doof::is_null(previous)) {
-#line 52 "/src/resource-state.do"
         return false;
     }
-#line 53 "/src/resource-state.do"
     return ((((previous->sourceSize == sourceSize) && (previous->sourceModifiedNanos == sourceModifiedNanos)) && (previous->outputSize == outputSize)) && (previous->outputModifiedNanos == outputModifiedNanos));
 }
-#line 1 "<doof-generated>"
 }
