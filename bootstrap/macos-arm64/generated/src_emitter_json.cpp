@@ -15,7 +15,7 @@ std::string emitInterfaceJsonDeclaration(const std::shared_ptr<::app_src_ast_::I
         return std::string("");
     }
 #line 15 "/src/emitter-json.do"
-    return ((((std::string("doof::Result<") + owner->name) + std::string(", std::string> ")) + owner->name) + std::string("_fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);\n"));
+    return ((((std::string("doof::Result<") + owner->name) + std::string(", std::string> ")) + owner->name) + std::string("_fromJsonValue(const doof::JsonValue& _json, bool _lenient);\n"));
 }
 #line 18 "/src/emitter-json.do"
 std::string emitInterfaceJsonDefinition(const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
@@ -85,7 +85,7 @@ std::string emitGeneratedJsonDeclarations(const std::shared_ptr<::app_src_ast_::
 #line 51 "/src/emitter-json.do"
         const auto valueType = jsonResultValueType(owner);
 #line 52 "/src/emitter-json.do"
-        (result = (((result + std::string("    static doof::Result<")) + valueType) + std::string(", std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);\n")));
+        (result = (((result + std::string("    static doof::Result<")) + valueType) + std::string(", std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);\n")));
     }
 #line 54 "/src/emitter-json.do"
     return result;

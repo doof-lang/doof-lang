@@ -51,14 +51,6 @@ export function emitResultPayloadType(resolvedType: ResolvedType, currentModuleP
 function lowerRegisteredTypes(type_: ResolvedType, context: EmitContext): ResolvedType {
   case type_ {
     class_: ClassType -> {
-      boundaryKey := class_.symbol.module + "::" + class_.name
-      for existing of context.nativeTemplateClassKeys {
-        if existing == boundaryKey {
-          let arguments: ResolvedType[] = []
-          for argument of class_.typeArgs { arguments.push(lowerRegisteredTypes(argument, context)) }
-          return ClassType { name: class_.name, symbol: class_.symbol, typeArgs: arguments }
-        }
-      }
       if class_.typeArgs.length > 0 && !class_.symbol.native_ {
         key := classInstantiationKey(class_.symbol.module, class_.name, class_.typeArgs)
         for i of 0..<context.concreteClassKeys.length {
@@ -74,14 +66,27 @@ function lowerRegisteredTypes(type_: ResolvedType, context: EmitContext): Resolv
     }
     interface_: InterfaceType -> {
       if interface_.typeArgs.length > 0 {
-        return InterfaceType { name: concreteName(interface_.name, interface_.typeArgs), symbol: interface_.symbol }
+        key := interfaceInstantiationKey(interface_.symbol.module, interface_.name, interface_.typeArgs)
+        registeredName := concreteInterfaceName(context, key)
+        name := if registeredName == "" then concreteName(interface_.name, interface_.typeArgs) else registeredName
+        return InterfaceType { name, symbol: interface_.symbol }
       }
       return interface_
     }
     array: ArrayResolvedType -> { return ArrayResolvedType { elementType: lowerRegisteredTypes(array.elementType, context), readonly_: array.readonly_ } }
     map: MapResolvedType -> { return MapResolvedType { keyType: lowerRegisteredTypes(map.keyType, context), valueType: lowerRegisteredTypes(map.valueType, context), readonly_: map.readonly_ } }
     set_: SetResolvedType -> { return SetResolvedType { elementType: lowerRegisteredTypes(set_.elementType, context), readonly_: set_.readonly_ } }
-    stream: StreamResolvedType -> { return StreamResolvedType { elementType: lowerRegisteredTypes(stream.elementType, context) } }
+    stream: StreamResolvedType -> {
+      key := interfaceInstantiationKey("", "Stream", [stream.elementType])
+      registeredName := concreteInterfaceName(context, key)
+      if registeredName != "" {
+        return InterfaceType {
+          name: registeredName,
+          symbol: Symbol { kind: "interface", name: registeredName, module: context.modulePath, exported: false },
+        }
+      }
+      return StreamResolvedType { elementType: lowerRegisteredTypes(stream.elementType, context) }
+    }
     result_: ResultResolvedType -> { return ResultResolvedType { valueType: lowerRegisteredTypes(result_.valueType, context), errorType: lowerRegisteredTypes(result_.errorType, context) } }
     weak_: WeakResolvedType -> { return WeakResolvedType { inner: lowerRegisteredTypes(weak_.inner, context) } }
     actor: ActorType -> {
@@ -270,6 +275,12 @@ function emitMetadataInnerType(owner: ResolvedType, currentModulePath: string): 
 export function emitClassInnerType(class_: ClassType, currentModulePath: string = ""): string {
   let className = if class_.symbol.native_ then nativeCppName(class_.symbol) else ownedName(class_.name, class_.symbol.module, currentModulePath)
   if class_.typeArgs.length > 0 {
+    if !class_.symbol.native_ {
+      panic(
+        "Non-native generic class reached C++ type emission before monomorphization: " +
+        class_.symbol.module + "::" + class_.name,
+      )
+    }
     className = className + "<"
     for i of 0..<class_.typeArgs.length {
       if i > 0 { className = className + ", " }

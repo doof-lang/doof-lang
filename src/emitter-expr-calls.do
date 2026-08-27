@@ -280,6 +280,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           if i > 0 { args = args + ", " }
           args = args + emitExpression(expression.args[i].value, context)
         }
+        if expression.args.length == 1 { args = args + ", false" }
         objectType := decoratedExpressionType(member.object)
         if objectType != none {
           case objectType! {
@@ -602,6 +603,7 @@ function emitInterfaceJsonCall(member: MemberExpression, call: CallExpression, c
     if i > 0 { args = args + ", " }
     args = args + emitExpression(call.args[i].value, context)
   }
+  if call.args.length == 1 { args = args + ", false" }
   return emitExpression(member.object, context) + "_fromJsonValue(" + args + ")"
 }
 
@@ -791,19 +793,6 @@ function concreteClassName(class_: ClassType, context: EmitContext): string {
   let typeArgs: ResolvedType[] = []
   for argument of class_.typeArgs { typeArgs.push(specializeEmitType(argument, context)) }
   if typeArgs.length == 0 { return "" }
-  boundaryKey := class_.symbol.module + "::" + class_.name
-  for existing of context.nativeTemplateClassKeys {
-    if existing == boundaryKey {
-      let name = emittedSymbolName(class_.symbol)
-      if class_.symbol.module != "" && class_.symbol.module != context.modulePath { name = "::" + exprModuleNamespaceFor(class_.symbol.module) + "::" + name }
-      name = name + "<"
-      for i of 0..<typeArgs.length {
-        if i > 0 { name = name + ", " }
-        name = name + emitContextType(typeArgs[i], context)
-      }
-      return name + ">"
-    }
-  }
   key := classInstantiationKey(class_.symbol.module, class_.name, typeArgs)
   for i of 0..<context.concreteClassKeys.length {
     if context.concreteClassKeys[i] == key {

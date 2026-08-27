@@ -46,11 +46,11 @@ namespace std_::http::types {
 }
 
 namespace std_::event::index {
-    template <typename T>
-    struct ChannelSender;
-    template <typename T>
-    struct ChannelReceiver;
     struct Timer;
+    struct ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_;
+    struct ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_;
+    struct ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_;
+    struct ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_;
 }
 
 namespace std_::http::websocket {
@@ -77,8 +77,8 @@ namespace std_::http::websocket {
 }
 
 namespace std_::event::index {
-    using __type1 = std::variant<std::shared_ptr<::std_::http::websocket::WebSocketOpen>, std::shared_ptr<::std_::http::websocket::WebSocketText>, std::shared_ptr<::std_::http::websocket::WebSocketBinary>, std::shared_ptr<::std_::http::websocket::WebSocketWritable>, std::shared_ptr<::std_::http::websocket::WebSocketClose>, std::shared_ptr<::std_::http::websocket::WebSocketError>>;
-    using __type2 = std::variant<std::shared_ptr<::std_::http::websocket::WebSocketSendText>, std::shared_ptr<::std_::http::websocket::WebSocketSendBinary>, std::shared_ptr<::std_::http::websocket::WebSocketPing>, std::shared_ptr<::std_::http::websocket::WebSocketCloseCommand>>;
+    using doof_header_type_1 = std::variant<std::shared_ptr<::std_::http::websocket::WebSocketOpen>, std::shared_ptr<::std_::http::websocket::WebSocketText>, std::shared_ptr<::std_::http::websocket::WebSocketBinary>, std::shared_ptr<::std_::http::websocket::WebSocketWritable>, std::shared_ptr<::std_::http::websocket::WebSocketClose>, std::shared_ptr<::std_::http::websocket::WebSocketError>>;
+    using doof_header_type_2 = std::variant<std::shared_ptr<::std_::http::websocket::WebSocketSendText>, std::shared_ptr<::std_::http::websocket::WebSocketSendBinary>, std::shared_ptr<::std_::http::websocket::WebSocketPing>, std::shared_ptr<::std_::http::websocket::WebSocketCloseCommand>>;
 }
 
 namespace std_::blob::types {
@@ -328,10 +328,10 @@ namespace std_::http::types {
 
 namespace std_::http::websocket {
     struct WebSocketOptions : public std::enable_shared_from_this<WebSocketOptions> {
-    int32_t eventCapacity = 1024;
-    int32_t commandCapacity = 1024;
+    int32_t eventCapacity;
+    int32_t commandCapacity;
     std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers;
-    int32_t timeoutMs = 30000;
+    int32_t timeoutMs;
     WebSocketOptions(int32_t eventCapacity, int32_t commandCapacity, std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers, int32_t timeoutMs) : eventCapacity(eventCapacity), commandCapacity(commandCapacity), headers(headers), timeoutMs(timeoutMs) {}
 };
     struct WebSocketOpen : public std::enable_shared_from_this<WebSocketOpen> {
@@ -366,21 +366,21 @@ namespace std_::http::websocket {
 };
     struct WebSocketSendText : public std::enable_shared_from_this<WebSocketSendText> {
     std::string text;
-    std::optional<std::string> coalesceKey = std::nullopt;
-    WebSocketSendText(std::string text, std::optional<std::string> coalesceKey = std::nullopt) : text(text), coalesceKey(coalesceKey) {}
+    std::optional<std::string> coalesceKey;
+    WebSocketSendText(std::string text, std::optional<std::string> coalesceKey) : text(text), coalesceKey(coalesceKey) {}
 };
     struct WebSocketSendBinary : public std::enable_shared_from_this<WebSocketSendBinary> {
     std::shared_ptr<std::vector<uint8_t>> bytes;
-    std::optional<std::string> coalesceKey = std::nullopt;
-    WebSocketSendBinary(std::shared_ptr<std::vector<uint8_t>> bytes, std::optional<std::string> coalesceKey = std::nullopt) : bytes(bytes), coalesceKey(coalesceKey) {}
+    std::optional<std::string> coalesceKey;
+    WebSocketSendBinary(std::shared_ptr<std::vector<uint8_t>> bytes, std::optional<std::string> coalesceKey) : bytes(bytes), coalesceKey(coalesceKey) {}
 };
     struct WebSocketPing : public std::enable_shared_from_this<WebSocketPing> {
     WebSocketPing() {}
 };
     struct WebSocketCloseCommand : public std::enable_shared_from_this<WebSocketCloseCommand> {
-    int32_t code = 1000;
-    std::string reason = std::string("");
-    WebSocketCloseCommand(int32_t code = 1000, std::string reason = std::string("")) : code(code), reason(reason) {}
+    int32_t code;
+    std::string reason;
+    WebSocketCloseCommand(int32_t code, std::string reason) : code(code), reason(reason) {}
 };
 }
 
@@ -404,75 +404,47 @@ namespace std_::event::index {
     int32_t _drainMainEventLoop();
     void _setMainEventWakeHandler(const doof::callback<void()>& handler);
     void _clearMainEventWakeHandler();
-    template <typename T>
-struct ChannelSender : public std::enable_shared_from_this<ChannelSender<T>> {
-    std::shared_ptr<::doof_event::NativeChannel> native;
-    ChannelSender(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
-#line 54 "/std/event/index.do"
-    doof::Result<Backpressure, SendError> send(T value, const std::optional<std::string>& key = std::nullopt) {
-#line 55 "/std/event/index.do"
-        const auto code = (doof::is_null(key) ? ::doof_event::trySendChannelMessage<T>(this->native, value, false, std::string("")) : ::doof_event::trySendChannelMessage<T>(this->native, value, true, key.value()));
-#line 57 "/std/event/index.do"
-        return [&]() -> doof::Result<Backpressure, SendError> {
-    auto _case_subject = code;
-    if (_case_subject == 0) {
-        return doof::Success<Backpressure>{ Backpressure::None };
-    }
-    if (_case_subject == 1) {
-        return doof::Success<Backpressure>{ Backpressure::High };
-    }
-    if (_case_subject == 2) {
-        return doof::Failure<SendError>{ SendError::Full };
-    }
-    if (true) {
-        return doof::Failure<SendError>{ SendError::Closed };
-    }
-    throw std::runtime_error("non-exhaustive case expression");
-}();
-    }
-#line 65 "/std/event/index.do"
-    void onReady(const doof::callback<void()>& handler) {
-#line 66 "/std/event/index.do"
-        this->native->registerSenderReady(handler);
-    }
-#line 69 "/std/event/index.do"
-    void onClosed(const doof::callback<void()>& handler) {
-#line 70 "/std/event/index.do"
-        this->native->registerSenderClosed(handler);
-    }
-#line 73 "/std/event/index.do"
-    void close() {
-#line 74 "/std/event/index.do"
-        this->native->tryClose();
-    }
-};
-    template <typename T>
-struct ChannelReceiver : public std::enable_shared_from_this<ChannelReceiver<T>> {
-    std::shared_ptr<::doof_event::NativeChannel> native;
-    ChannelReceiver(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
-#line 81 "/std/event/index.do"
-    void onMessage(const doof::callback<void(T)>& handler) {
-#line 82 "/std/event/index.do"
-        ::doof_event::registerChannelReceiverMessage<T>(this->native, handler);
-    }
-#line 85 "/std/event/index.do"
-    void onClosed(const doof::callback<void()>& handler) {
-#line 86 "/std/event/index.do"
-        this->native->registerReceiverClosed(handler);
-    }
-#line 89 "/std/event/index.do"
-    void close() {
-#line 90 "/std/event/index.do"
-        this->native->tryClose();
-    }
-};
+    int32_t _trySendChannelMessage__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(const std::shared_ptr<::doof_event::NativeChannel>& channel, doof_header_type_1 value, bool hasKey, const std::string& key);
+    void _registerChannelReceiverMessage__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(const std::shared_ptr<::doof_event::NativeChannel>& channel, const doof::callback<void(doof_header_type_2)>& handler);
+    void _registerChannelReceiverMessage__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(const std::shared_ptr<::doof_event::NativeChannel>& channel, const doof::callback<void(doof_header_type_1)>& handler);
+    int32_t _trySendChannelMessage__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(const std::shared_ptr<::doof_event::NativeChannel>& channel, doof_header_type_2 value, bool hasKey, const std::string& key);
     struct Timer : public std::enable_shared_from_this<Timer> {
     std::shared_ptr<::doof_event::NativeTimer> native;
     Timer(std::shared_ptr<::doof_event::NativeTimer> native) : native(native) {}
     bool cancel();
 };
-    std::tuple<std::shared_ptr<ChannelSender<__type1>>, std::shared_ptr<ChannelReceiver<__type1>>> createChannel__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(int32_t capacity = 256, int32_t highWater = 0, int32_t lowWater = -1, bool keepsAlive = true);
-    std::tuple<std::shared_ptr<ChannelSender<__type2>>, std::shared_ptr<ChannelReceiver<__type2>>> createChannel__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(int32_t capacity = 256, int32_t highWater = 0, int32_t lowWater = -1, bool keepsAlive = true);
+    struct ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_ : public std::enable_shared_from_this<ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> {
+    std::shared_ptr<::doof_event::NativeChannel> native;
+    ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
+    doof::Result<Backpressure, SendError> send(doof_header_type_1 value, const std::optional<std::string>& key);
+    void onReady(const doof::callback<void()>& handler);
+    void onClosed(const doof::callback<void()>& handler);
+    void close();
+};
+    struct ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_ : public std::enable_shared_from_this<ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> {
+    std::shared_ptr<::doof_event::NativeChannel> native;
+    ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
+    void onMessage(const doof::callback<void(doof_header_type_2)>& handler);
+    void onClosed(const doof::callback<void()>& handler);
+    void close();
+};
+    struct ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_ : public std::enable_shared_from_this<ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> {
+    std::shared_ptr<::doof_event::NativeChannel> native;
+    ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
+    void onMessage(const doof::callback<void(doof_header_type_1)>& handler);
+    void onClosed(const doof::callback<void()>& handler);
+    void close();
+};
+    struct ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_ : public std::enable_shared_from_this<ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> {
+    std::shared_ptr<::doof_event::NativeChannel> native;
+    ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
+    doof::Result<Backpressure, SendError> send(doof_header_type_2 value, const std::optional<std::string>& key);
+    void onReady(const doof::callback<void()>& handler);
+    void onClosed(const doof::callback<void()>& handler);
+    void close();
+};
+    std::tuple<std::shared_ptr<ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_>, std::shared_ptr<ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_>> createChannel__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(int32_t capacity, int32_t highWater, int32_t lowWater, bool keepsAlive);
+    std::tuple<std::shared_ptr<ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_>, std::shared_ptr<ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_>> createChannel__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(int32_t capacity, int32_t highWater, int32_t lowWater, bool keepsAlive);
 }
 
 using WebSocketConnection = ::std_::http::websocket::WebSocketConnection;
@@ -497,17 +469,17 @@ using HttpHeader = ::std_::http::types::HttpHeader;
 namespace std_::http::websocket {
     struct WebSocketConnection : public std::enable_shared_from_this<WebSocketConnection> {
     std::string url;
-    std::shared_ptr<::std_::event::index::ChannelReceiver<WebSocketEvent>> events;
-    std::shared_ptr<::std_::event::index::ChannelSender<WebSocketCommand>> commands;
+    std::shared_ptr<::std_::event::index::ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> events;
+    std::shared_ptr<::std_::event::index::ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> commands;
     std::shared_ptr<WebSocketOptions> options;
-    std::shared_ptr<::std_::event::index::ChannelSender<WebSocketEvent>> eventSender;
-    std::shared_ptr<::std_::event::index::ChannelReceiver<WebSocketCommand>> commandReceiver;
+    std::shared_ptr<::std_::event::index::ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> eventSender;
+    std::shared_ptr<::std_::event::index::ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> commandReceiver;
     std::shared_ptr<::NativeHttpWebSocketConnection> native;
-    WebSocketConnection(std::string url, std::shared_ptr<::std_::event::index::ChannelReceiver<WebSocketEvent>> events, std::shared_ptr<::std_::event::index::ChannelSender<WebSocketCommand>> commands, std::shared_ptr<WebSocketOptions> options, std::shared_ptr<::std_::event::index::ChannelSender<WebSocketEvent>> eventSender, std::shared_ptr<::std_::event::index::ChannelReceiver<WebSocketCommand>> commandReceiver, std::shared_ptr<::NativeHttpWebSocketConnection> native) : url(url), events(events), commands(commands), options(options), eventSender(eventSender), commandReceiver(commandReceiver), native(native) {}
+    WebSocketConnection(std::string url, std::shared_ptr<::std_::event::index::ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> events, std::shared_ptr<::std_::event::index::ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> commands, std::shared_ptr<WebSocketOptions> options, std::shared_ptr<::std_::event::index::ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> eventSender, std::shared_ptr<::std_::event::index::ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> commandReceiver, std::shared_ptr<::NativeHttpWebSocketConnection> native) : url(url), events(events), commands(commands), options(options), eventSender(eventSender), commandReceiver(commandReceiver), native(native) {}
     WebSocketState state();
     void close();
 };
-    doof::Result<std::shared_ptr<WebSocketConnection>, std::shared_ptr<::std_::http::types::HttpError>> connectWebSocket(const std::string& url, const std::shared_ptr<WebSocketOptions>& options = std::make_shared<WebSocketOptions>(1024, 1024, std::make_shared<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>>(std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>{}), 30000));
+    doof::Result<std::shared_ptr<WebSocketConnection>, std::shared_ptr<::std_::http::types::HttpError>> connectWebSocket(const std::string& url, const std::shared_ptr<WebSocketOptions>& options);
     void emitLocalWebSocketEvent(const std::shared_ptr<WebSocketConnection>& connection, const WebSocketEvent& event);
     WebSocketState nativeStateToPublic(int32_t state);
     std::shared_ptr<::std_::http::types::HttpError> parseWebSocketError(const std::string& raw);

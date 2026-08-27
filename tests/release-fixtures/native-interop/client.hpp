@@ -4,6 +4,11 @@
 #include <memory>
 
 namespace release_native {
+template <typename Box>
+auto boxValue(const std::shared_ptr<Box>& box) -> decltype(box->value) {
+  return box->value;
+}
+
 struct Client : std::enable_shared_from_this<Client> {
   int32_t value;
   explicit Client(int32_t value) : value(value) {}

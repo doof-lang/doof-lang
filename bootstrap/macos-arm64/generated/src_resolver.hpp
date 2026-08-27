@@ -26,8 +26,8 @@ namespace app_src_semantic_ {
     struct SourceFile : public std::enable_shared_from_this<SourceFile> {
     std::string path;
     std::string source;
-    std::string physicalPath = std::string("");
-    SourceFile(std::string path, std::string source, std::string physicalPath = std::string("")) : path(path), source(source), physicalPath(physicalPath) {}
+    std::string physicalPath;
+    SourceFile(std::string path, std::string source, std::string physicalPath) : path(path), source(source), physicalPath(physicalPath) {}
 };
 }
 
@@ -35,8 +35,8 @@ namespace app_src_resolver_ {
     struct ModuleResolver : public std::enable_shared_from_this<ModuleResolver> {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sources;
     doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)> loader;
-    std::shared_ptr<std::vector<std::string>> loadedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> failedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> loadedPaths;
+    std::shared_ptr<std::vector<std::string>> failedPaths;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics;
     ModuleResolver(std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sources, doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)> loader, std::shared_ptr<std::vector<std::string>> loadedPaths, std::shared_ptr<std::vector<std::string>> failedPaths, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics) : sources(sources), loader(loader), loadedPaths(loadedPaths), failedPaths(failedPaths), diagnostics(diagnostics) {}
     std::shared_ptr<::app_src_semantic_::SourceFile> find(const std::string& path);
@@ -57,8 +57,8 @@ namespace app_src_semantic_ {
     std::string message;
     SemanticSpan span;
     std::string module;
-    std::string replacement = std::string("");
-    Diagnostic(std::string severity, std::string message, SemanticSpan span, std::string module, std::string replacement = std::string("")) : severity(severity), message(message), span(span), module(module), replacement(replacement) {}
+    std::string replacement;
+    Diagnostic(std::string severity, std::string message, SemanticSpan span, std::string module, std::string replacement) : severity(severity), message(message), span(span), module(module), replacement(replacement) {}
 };
 }
 

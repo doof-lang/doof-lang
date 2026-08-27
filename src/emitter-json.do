@@ -12,7 +12,7 @@ import { interfaceJsonDiscriminator, jsonOwnerKey, nullableJsonMember } from "./
 
 export function emitInterfaceJsonDeclaration(owner: InterfaceDeclaration): string {
   if !owner.needsJson { return "" }
-  return "doof::Result<" + owner.name + ", std::string> " + owner.name + "_fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);\n"
+  return "doof::Result<" + owner.name + ", std::string> " + owner.name + "_fromJsonValue(const doof::JsonValue& _json, bool _lenient);\n"
 }
 
 export function emitInterfaceJsonDefinition(owner: InterfaceDeclaration, context: EmitContext): string {
@@ -49,7 +49,7 @@ export function emitGeneratedJsonDeclarations(owner: ClassDeclaration, context: 
   }
   if containsJsonDemand(context.jsonDeserializationKeys, key) {
     valueType := jsonResultValueType(owner)
-    result = result + "    static doof::Result<" + valueType + ", std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);\n"
+    result = result + "    static doof::Result<" + valueType + ", std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);\n"
   }
   return result
 }

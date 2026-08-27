@@ -137,9 +137,9 @@ export function testDeclaresPublicAndPrivateModuleConstantsBeforeClassFieldDefau
   Assert.isTrue(privateDeclaration >= 0)
   Assert.isTrue(publicDeclaration < classDefinition)
   Assert.isTrue(privateDeclaration < classDefinition)
-  Assert.stringContains(result.header, "double publicDuration = PUBLIC_DURATION;")
-  Assert.stringContains(result.header, "double privateDuration = PRIVATE_DURATION;")
-  Assert.stringContains(result.header, "Movement(double publicDuration = PUBLIC_DURATION, double privateDuration = PRIVATE_DURATION)")
+  Assert.stringContains(result.header, "double publicDuration;")
+  Assert.stringContains(result.header, "double privateDuration;")
+  Assert.stringContains(result.header, "Movement(double publicDuration, double privateDuration)")
 }
 
 export function testEmitsAssignableDefaultConstructedStructStaticStorage(): none {
@@ -153,9 +153,10 @@ export function testEmitsAssignableDefaultConstructedStructStaticStorage(): none
   Assert.stringContains(result.header, "std::string kind = std::string(\"vec3\");")
   Assert.equal(result.header.contains("const std::string kind"), false)
   Assert.stringContains(result.header, "Vec3() {}")
-  Assert.stringContains(result.header, "Defaults(int32_t value = 0)")
-  Assert.equal(result.header.contains("Defaults() {}"), false)
+  Assert.stringContains(result.header, "Defaults(int32_t value)")
+  Assert.stringContains(result.header, "Defaults() {}")
   Assert.stringContains(result.source, "Vec3 Vec3::zero;")
+  Assert.stringContains(result.source, "Defaults Defaults::zero;")
   Assert.stringContains(result.source, "Vec3 origin;")
   Assert.stringContains(result.source, "Vec3::zero = Vec3{")
   Assert.stringContains(result.source, "origin = Vec3{")
@@ -194,7 +195,7 @@ export function testEmitsWeakFieldsAsWeakPointers(): none {
   Assert.equal(result.header.contains("Node(std::weak_ptr<Node> parent, std::weak_ptr<Node> ancestor)"), true)
   Assert.stringContains(result.header, "std::weak_ptr<std::vector<std::shared_ptr<Node>>> nodes")
   Assert.stringNotContains(result.header, "std::weak_ptr<std::shared_ptr<std::vector<std::shared_ptr<Node>>>> nodes")
-  Assert.stringContains(result.header, "std::optional<std::weak_ptr<Node>> optional = std::optional<std::weak_ptr<Node>>{}")
+  Assert.stringContains(result.header, "std::optional<std::weak_ptr<Node>> optional;")
 }
 
 export function testEmitsCheckedWeakReferenceAccess(): none {
@@ -285,9 +286,10 @@ export function testEmitsJsonValueAsNarrowing(): none {
 }
 
 export function testEmitsDotShorthandEnumMapKeys(): none {
-  result := emit("enum Suit { Spades, Hearts }\nclass Pile {}\nclass State { foundations: Map<Suit, Pile> = { .Spades: Pile {}, .Hearts: Pile {} } }")
-  Assert.stringContains(result.header, "{Suit::Spades, std::make_shared<Pile>()}")
-  Assert.stringContains(result.header, "{Suit::Hearts, std::make_shared<Pile>()}")
+  result := emit("enum Suit { Spades, Hearts }\nclass Pile {}\nclass State { foundations: Map<Suit, Pile> = { .Spades: Pile {}, .Hearts: Pile {} } }\nfunction make(): State => State()")
+  Assert.stringNotContains(result.header, "{Suit::Spades, std::make_shared<Pile>()}")
+  Assert.stringContains(result.source, "{Suit::Spades, std::make_shared<Pile>()}")
+  Assert.stringContains(result.source, "{Suit::Hearts, std::make_shared<Pile>()}")
 }
 
 export function testEmitsEnumInstanceNameLookup(): none {
@@ -405,7 +407,7 @@ export function testWrapsIdentityAsInItsDeclaredResultType(): none {
 
 export function testEmitsLenientGeneratedJsonDecode(): none {
   result := emit("class Options { enabled: bool\nname: string }\nfunction decode(value: JsonValue): Result<Options, string> => Options.fromJsonValue(value, true)")
-  Assert.equal(result.header.contains("bool _lenient = false"), true)
+  Assert.equal(result.header.contains("bool _lenient = false"), false)
   Assert.equal(result.source.contains("json_is_lenient_boolean"), true)
   Assert.equal(result.source.contains("json_as_string_lenient"), true)
 }
@@ -600,6 +602,18 @@ export function testEmitsActorCreationThroughStaticConstructor(): none {
   Assert.stringContains(result.source, "Worker::constructor(4)")
 }
 
+export function testActorCallsMaterializeOmittedMethodDefaults(): none {
+  result := emit(
+    "class Worker { add(first: int = 20, second: int = 22): int => first + second }\n" +
+    "function syncDefaulted(worker: Actor<Worker>): int => worker.add()\n" +
+    "function syncNamed(worker: Actor<Worker>): int => worker.add{second: 7}\n" +
+    "function asyncDefaulted(worker: Actor<Worker>): Promise<int> => async worker.add()",
+  )
+  Assert.stringContains(result.source, "_self.add(20, 22)")
+  Assert.stringContains(result.source, "_self.add(20, 7)")
+  Assert.equal(result.source.contains("_self.add()"), false)
+}
+
 export function testEmitsAsyncValueBlocksWithDecoratedCaptures(): none {
   source := "function run(input: int): Promise<int[]> { offset := 2\nreturn async { let values = [input, offset]\nvalues.push(5)\nyield values } }"
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
@@ -648,8 +662,41 @@ export function testTryBangPanicIncludesOriginAndStringFailure(): none {
 
 export function testActorCreationUsesTrailingFieldDefaults(): none {
   result := emit("class Worker { values: int[] = []\nlimit: int = 4 }\nfunction create(): Actor<Worker> => Actor<Worker>()")
-  Assert.equal(result.header.contains("Worker(std::shared_ptr<std::vector<int32_t>> values = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), int32_t limit = 4)"), true)
-  Assert.equal(result.source.contains("std::make_shared<doof::Actor<Worker>>(Worker{})"), true)
+  Assert.equal(result.header.contains("Worker(std::shared_ptr<std::vector<int32_t>> values, int32_t limit)"), true)
+  Assert.stringContains(result.source, "std::make_shared<doof::Actor<Worker>>(Worker{std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), 4})")
+}
+
+export function testKeepsDoofDefaultsOutOfHeadersAndMaterializesCalls(): none {
+  result := emit(
+    "let DEFAULT_COUNT = 3\n" +
+    "function fallback(): int => 7\n" +
+    "class Later { static value(): int => 9 }\n" +
+    "class Holder { fromLet: int = DEFAULT_COUNT\nfromFunction: int = fallback()\nfromClass: int = Later.value() }\n" +
+    "function choose(value: int = fallback()): int => value\n" +
+    "function make(): Holder => Holder()\n" +
+    "function call(): int => choose()",
+  )
+  Assert.stringContains(result.header, "extern int32_t DEFAULT_COUNT;")
+  Assert.stringContains(result.header, "Holder(int32_t fromLet, int32_t fromFunction, int32_t fromClass)")
+  Assert.stringContains(result.header, "int32_t choose(int32_t value);")
+  Assert.stringNotContains(result.header, "= fallback()")
+  Assert.stringNotContains(result.header, "= Later::value()")
+  Assert.stringContains(result.source, "std::make_shared<::app_main_::Holder>(DEFAULT_COUNT, fallback(), Later::value())")
+  Assert.stringContains(result.source, "return choose(fallback());")
+}
+
+export function testEmitsGenericMethodsAndDestructorsAfterCallableDeclarations(): none {
+  result := emitMonomorphized(
+    "function helper(): int => 7\n" +
+    "class GenericCaller { call<T>(value: T): int => helper() }\n" +
+    "class Cleanup { destructor { helper() } }\n" +
+    "function main(): int => GenericCaller().call<int>(1)",
+  )
+  Assert.stringContains(result.header, "int32_t call__int(int32_t value);")
+  Assert.stringContains(result.header, "~Cleanup();")
+  Assert.stringNotContains(result.header, "return helper()")
+  Assert.stringContains(result.source, "int32_t GenericCaller::call__int(int32_t value)")
+  Assert.stringContains(result.source, "Cleanup::~Cleanup()")
 }
 
 export function testActorCallsUseConcreteGenericReturnTypes(): none {
@@ -819,9 +866,32 @@ export function testReusesNamedAliasesForRepeatedHeaderVariants(): none {
 export function testSynthesizesNamesForRepeatedAnonymousHeaderVariants(): none {
   result := emit("class Left {}\nclass Right {}\nclass Pair { left: Left | Right\nright: Left | Right }")
   spelling := "std::variant<std::shared_ptr<Left>, std::shared_ptr<Right>>"
-  Assert.stringContains(result.header, "using __type1 = " + spelling + ";")
-  Assert.stringContains(result.header, "__type1 left;")
-  Assert.stringContains(result.header, "__type1 right;")
+  Assert.stringContains(result.header, "using doof_header_type_1 = " + spelling + ";")
+  Assert.stringContains(result.header, "doof_header_type_1 left;")
+  Assert.stringContains(result.header, "doof_header_type_1 right;")
+}
+
+export function testAvoidsUserNamesWhenSynthesizingHeaderVariantAliases(): none {
+  result := emit(
+    "class __type1 {}\nclass doof_header_type_1 {}\n" +
+    "class Left {}\nclass Right {}\n" +
+    "class Pair { left: Left | Right\nright: Left | Right }",
+  )
+  Assert.stringContains(result.header, "using doof_header_type_2 = std::variant<std::shared_ptr<Left>, std::shared_ptr<Right>>;")
+  Assert.stringNotContains(result.header, "using __type1 =")
+  Assert.stringNotContains(result.header, "using doof_header_type_1 =")
+}
+
+export function testCollectsNativeAliasesThroughPromiseAndActorTypes(): none {
+  sources := [SourceFile {
+    path: "/main.do",
+    source: "class Payload { value: int }\nimport function acceptPromise(value: Promise<Payload>): none from \"native.hpp\" as native_review::acceptPromise\nimport function acceptActor(value: Actor<Payload>): none from \"native.hpp\" as native_review::acceptActor\nfunction main(): int => 0",
+  }]
+  analysis := createAnalyzer(sources).analyze("/main.do")
+  Assert.equal(hasErrorDiagnostics(createChecker(analysis).check("/main.do").diagnostics), false)
+  header := emitModuleGraph(analysis, "/main.do").modules[0].header
+  Assert.stringContains(header, "namespace native_review { using Payload = ::app_main_::Payload; }")
+  Assert.isTrue(header.indexOf("using Payload = ::app_main_::Payload") < header.indexOf("#include \"native.hpp\""))
 }
 
 export function testProjectsNamedAliasesIntoConsumerHeaders(): none {
@@ -843,7 +913,7 @@ export function testProjectsNamedAliasesIntoConsumerHeaders(): none {
   Assert.stringContains(header, "using Node = std::variant<std::shared_ptr<Leaf>, std::shared_ptr<Branch>>;")
   Assert.stringContains(header, "Node left;")
   Assert.stringContains(header, "Node right;")
-  Assert.equal(header.contains("using __type"), false)
+  Assert.equal(header.contains("using doof_header_type_"), false)
 }
 
 export function testIndexesAnonymousHeaderTypesAcrossProjectedNamespaces(): none {
@@ -861,17 +931,17 @@ export function testIndexesAnonymousHeaderTypesAcrossProjectedNamespaces(): none
   graph := emitModuleGraph(analysis, "/main.do")
   let header = ""
   for module of graph.modules { if module.modulePath == "/main.do" { header = module.header } }
-  Assert.equal(header.split("using __type1 =").length, 2)
-  Assert.equal(header.split("using __type2 =").length, 2)
-  Assert.stringContains(header, "namespace app_a_ {\n    using __type1 =")
-  Assert.stringContains(header, "namespace app_b_ {\n    using __type2 =")
+  Assert.equal(header.split("using doof_header_type_1 =").length, 2)
+  Assert.equal(header.split("using doof_header_type_2 =").length, 2)
+  Assert.stringContains(header, "namespace app_a_ {\n    using doof_header_type_1 =")
+  Assert.stringContains(header, "namespace app_b_ {\n    using doof_header_type_2 =")
 }
 
 export function testDoesNotHoistSingleOrValueBearingHeaderVariants(): none {
   single := emit("class Left {}\nclass Right {}\nfunction choose(value: Left | Right): none {}")
-  Assert.equal(single.header.contains("using __type"), false)
+  Assert.equal(single.header.contains("using doof_header_type_"), false)
   valueBearing := emit("struct Left { value: int }\nstruct Right { value: int }\nclass Pair { left: Left | Right\nright: Left | Right }")
-  Assert.equal(valueBearing.header.contains("using __type"), false)
+  Assert.equal(valueBearing.header.contains("using doof_header_type_"), false)
 }
 
 export function testEmitsArbitrarySharedUnionMembersFromResolvedTypes(): none {
@@ -1116,15 +1186,18 @@ export function testEmitsClassesMethodsAndConstruction(): none {
 
 export function testEmitsClassDestructorBody(): none {
   result := emit("class Resource { value: int = 1\ndestructor { println(\"closed\") } }\nfunction open(): Resource => Resource {}")
-  Assert.equal(result.header.contains("~Resource()"), true)
-  Assert.equal(result.header.contains("doof::println(std::string(\"closed\"));"), true)
+  Assert.equal(result.header.contains("~Resource();"), true)
+  Assert.equal(result.header.contains("doof::println(std::string(\"closed\"));"), false)
+  Assert.equal(result.source.contains("Resource::~Resource()"), true)
+  Assert.equal(result.source.contains("doof::println(std::string(\"closed\"));"), true)
   Assert.equal(result.source.contains("std::make_shared<Resource>(1)"), true)
   Assert.equal(result.source.contains("std::make_shared<Resource>(Resource{"), false)
 }
 
 export function testEmitsStrictPrimitiveJsonDeserialization(): none {
   result := emit("class Config { name: string\nenabled: bool\ncount: int = 10\nnotes: string | null = null }\nfunction parse(value: JsonValue): Result<Config, string> => Config.fromJsonValue(value)")
-  Assert.equal(result.header.contains("static doof::Result<std::shared_ptr<Config>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);"), true)
+  Assert.equal(result.header.contains("static doof::Result<std::shared_ptr<Config>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);"), true)
+  Assert.stringContains(result.source, "Config::fromJsonValue(value, false)")
   Assert.equal(result.source.contains("const auto* _object = doof::json_as_object(_json);"), true)
   Assert.equal(result.source.contains("Missing required field \\\"name\\\""), true)
   Assert.equal(result.source.contains("Field \\\"enabled\\\" expected boolean but got"), true)
@@ -1143,7 +1216,7 @@ export function testDeserializesDefaultedStructFieldsWithoutDefaultConstruction(
 
 export function testEmitsStructJsonDeserializationByValue(): none {
   result := emit("struct Point { x: int\ny: double }\nfunction parse(value: JsonValue): Result<Point, string> => Point.fromJsonValue(value)")
-  Assert.equal(result.header.contains("static doof::Result<Point, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);"), true)
+  Assert.equal(result.header.contains("static doof::Result<Point, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);"), true)
   Assert.equal(result.source.contains("return doof::Success<Point>{Point{_field_x, _field_y}};"), true)
   Assert.equal(result.source.contains("std::make_shared<Point>"), false)
 }
@@ -1244,7 +1317,7 @@ export function testEmitsStringMapAutomaticJsonTypes(): none {
 
 export function testEmitsDiscriminatedInterfaceJsonDeserialization(): none {
   result := emit("interface Shape { area(): double }\nclass Circle implements Shape { const kind = \"circle\"\nradius: double\narea(): double => radius * radius }\nclass Rect implements Shape { const kind = \"rect\"\nwidth: double\nheight: double\narea(): double => width * height }\nfunction decode(value: JsonValue): Result<Shape, string> => Shape.fromJsonValue(value, true)")
-  Assert.stringContains(result.header, "doof::Result<Shape, std::string> Shape_fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);")
+  Assert.stringContains(result.header, "doof::Result<Shape, std::string> Shape_fromJsonValue(const doof::JsonValue& _json, bool _lenient);")
   Assert.stringContains(result.source, "Shape_fromJsonValue(value, true)")
   Assert.stringContains(result.source, "_object->find(\"kind\")")
   Assert.stringContains(result.source, "if (_discriminator == \"circle\")")
@@ -1442,9 +1515,9 @@ export function testKeepsImportedStaticDefaultsOutOfHeaders(): none {
 
 export function testEmitsNullableStructParametersAsOptionalValues(): none {
   result := emit("struct Point { x: int }\nfunction read(point: Point | none = none): bool => point == none\nfunction legacy(point: Point | null = null): bool => null == point")
-  Assert.equal(result.header.contains("bool read(std::optional<Point> point = std::nullopt)"), true)
+  Assert.equal(result.header.contains("bool read(std::optional<Point> point)"), true)
   Assert.equal(result.source.contains("doof::is_null(point)"), true)
-  Assert.equal(result.header.contains("bool legacy(std::optional<Point> point = std::nullopt)"), true)
+  Assert.equal(result.header.contains("bool legacy(std::optional<Point> point)"), true)
   Assert.equal(result.source.contains("bool legacy"), true)
 }
 

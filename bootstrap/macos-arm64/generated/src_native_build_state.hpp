@@ -11,12 +11,12 @@ namespace app_src_native_build_state_ {
     struct NativeInputSignature : public std::enable_shared_from_this<NativeInputSignature> {
     std::string path;
     std::string signature;
-    bool contentHash = true;
-    int64_t size = -1LL;
-    int64_t modifiedNanos = -1LL;
-    NativeInputSignature(std::string path, std::string signature, bool contentHash = true, int64_t size = -1LL, int64_t modifiedNanos = -1LL) : path(path), signature(signature), contentHash(contentHash), size(size), modifiedNanos(modifiedNanos) {}
+    bool contentHash;
+    int64_t size;
+    int64_t modifiedNanos;
+    NativeInputSignature(std::string path, std::string signature, bool contentHash, int64_t size, int64_t modifiedNanos) : path(path), signature(signature), contentHash(contentHash), size(size), modifiedNanos(modifiedNanos) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeInputSignature>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<NativeInputSignature>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
     struct NativeTaskState : public std::enable_shared_from_this<NativeTaskState> {
     std::string id;
@@ -24,18 +24,18 @@ namespace app_src_native_build_state_ {
     std::string outputPath;
     int64_t outputSize;
     int64_t outputModifiedNanos;
-    std::shared_ptr<std::vector<std::shared_ptr<NativeInputSignature>>> inputs = std::make_shared<std::vector<std::shared_ptr<NativeInputSignature>>>(std::vector<std::shared_ptr<NativeInputSignature>>{});
-    NativeTaskState(std::string id, std::string fingerprint, std::string outputPath, int64_t outputSize, int64_t outputModifiedNanos, std::shared_ptr<std::vector<std::shared_ptr<NativeInputSignature>>> inputs = std::make_shared<std::vector<std::shared_ptr<NativeInputSignature>>>(std::vector<std::shared_ptr<NativeInputSignature>>{})) : id(id), fingerprint(fingerprint), outputPath(outputPath), outputSize(outputSize), outputModifiedNanos(outputModifiedNanos), inputs(inputs) {}
+    std::shared_ptr<std::vector<std::shared_ptr<NativeInputSignature>>> inputs;
+    NativeTaskState(std::string id, std::string fingerprint, std::string outputPath, int64_t outputSize, int64_t outputModifiedNanos, std::shared_ptr<std::vector<std::shared_ptr<NativeInputSignature>>> inputs) : id(id), fingerprint(fingerprint), outputPath(outputPath), outputSize(outputSize), outputModifiedNanos(outputModifiedNanos), inputs(inputs) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeTaskState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<NativeTaskState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
     struct NativeBuildState : public std::enable_shared_from_this<NativeBuildState> {
-    int32_t version = 2;
-    std::shared_ptr<std::vector<std::shared_ptr<NativeTaskState>>> tasks = std::make_shared<std::vector<std::shared_ptr<NativeTaskState>>>(std::vector<std::shared_ptr<NativeTaskState>>{});
-    std::shared_ptr<std::vector<std::string>> managedOutputs = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    NativeBuildState(int32_t version = 2, std::shared_ptr<std::vector<std::shared_ptr<NativeTaskState>>> tasks = std::make_shared<std::vector<std::shared_ptr<NativeTaskState>>>(std::vector<std::shared_ptr<NativeTaskState>>{}), std::shared_ptr<std::vector<std::string>> managedOutputs = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : version(version), tasks(tasks), managedOutputs(managedOutputs) {}
+    int32_t version;
+    std::shared_ptr<std::vector<std::shared_ptr<NativeTaskState>>> tasks;
+    std::shared_ptr<std::vector<std::string>> managedOutputs;
+    NativeBuildState(int32_t version, std::shared_ptr<std::vector<std::shared_ptr<NativeTaskState>>> tasks, std::shared_ptr<std::vector<std::string>> managedOutputs) : version(version), tasks(tasks), managedOutputs(managedOutputs) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<NativeBuildState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<NativeBuildState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
 }
 

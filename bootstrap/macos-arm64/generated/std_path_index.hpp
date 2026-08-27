@@ -5,16 +5,16 @@
 namespace std_::path::index {
     doof::Result<std::string, std::string> _homeDirectory();
     std::string _tempDirectory();
-    doof::Result<std::string, std::string> _dataDirectory(const std::optional<std::string>& appId = std::nullopt);
-    doof::Result<std::string, std::string> _cacheDirectory(const std::optional<std::string>& appId = std::nullopt);
+    doof::Result<std::string, std::string> _dataDirectory(const std::optional<std::string>& appId);
+    doof::Result<std::string, std::string> _cacheDirectory(const std::optional<std::string>& appId);
     doof::Result<std::string, std::string> _currentWorkingDirectory();
     doof::Result<std::string, std::string> _absolute(const std::string& path);
     doof::Result<std::string, std::string> _resourcesDirectory();
     doof::Result<std::string, std::string> normalizePathResult(const doof::Result<std::string, std::string>& result);
     doof::Result<std::string, std::string> homeDirectory();
     std::string tempDirectory();
-    doof::Result<std::string, std::string> dataDirectory(const std::optional<std::string>& appId = std::nullopt);
-    doof::Result<std::string, std::string> cacheDirectory(const std::optional<std::string>& appId = std::nullopt);
+    doof::Result<std::string, std::string> dataDirectory(const std::optional<std::string>& appId);
+    doof::Result<std::string, std::string> cacheDirectory(const std::optional<std::string>& appId);
     doof::Result<std::string, std::string> currentWorkingDirectory();
     doof::Result<std::string, std::string> absolute(const std::string& path);
     doof::Result<std::string, std::string> resourcesDirectory();

@@ -129,6 +129,16 @@ second := BlobReader { data: payload, offset: 1 }
 
 When an imported class declares a `static constructor(...): SameClass` or `static constructor(...): Result<SameClass, E>` method, direct construction routes through that factory. Positional construction follows the factory parameter order, named construction uses the factory parameter names, omitted arguments use the Doof defaults declared on the imported signature, and fallible constructor calls have the declared `Result` type.
 
+Generated C++ declarations do not expose Doof parameter or field defaults.
+Doof-generated calls and constructions materialize omitted arguments explicitly;
+native C++ callers of generated declarations must pass every argument.
+
+Open C++ template identities at a native ABI boundary must be owned by the
+native header (or runtime). Doof-owned generic declarations are always emitted
+as reached concrete specializations. Native templates and overloads may accept
+those concrete Doof representations through their included self-contained
+headers.
+
 ---
 
 ## Module Paths

@@ -2,14 +2,16 @@
 #include "doof_runtime.hpp"
 namespace app_src_emitter_names_ {
     struct ModuleNamespaceMapping;
+    extern std::shared_ptr<std::vector<std::shared_ptr<ModuleNamespaceMapping>>> configuredModuleNamespaceMappings;
+    extern std::shared_ptr<doof::ordered_map<std::string, std::string>> cachedModuleNamespaces;
 }
 
 namespace app_src_emitter_names_ {
     struct ModuleNamespaceMapping : public std::enable_shared_from_this<ModuleNamespaceMapping> {
     std::string logicalPrefix;
     std::string packageName;
-    std::string outputRoot = std::string("");
-    ModuleNamespaceMapping(std::string logicalPrefix, std::string packageName, std::string outputRoot = std::string("")) : logicalPrefix(logicalPrefix), packageName(packageName), outputRoot(outputRoot) {}
+    std::string outputRoot;
+    ModuleNamespaceMapping(std::string logicalPrefix, std::string packageName, std::string outputRoot) : logicalPrefix(logicalPrefix), packageName(packageName), outputRoot(outputRoot) {}
 };
 }
 

@@ -83,6 +83,16 @@ namespace std_::http::index { struct BodyChunkStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
+namespace std_::http::websocket { struct WebSocketOpen; }
+namespace std_::http::websocket { struct WebSocketText; }
+namespace std_::http::websocket { struct WebSocketBinary; }
+namespace std_::http::websocket { struct WebSocketWritable; }
+namespace std_::http::websocket { struct WebSocketClose; }
+namespace std_::http::websocket { struct WebSocketError; }
+namespace std_::http::websocket { struct WebSocketSendText; }
+namespace std_::http::websocket { struct WebSocketSendBinary; }
+namespace std_::http::websocket { struct WebSocketPing; }
+namespace std_::http::websocket { struct WebSocketCloseCommand; }
 namespace std_::http::websocket { struct WebSocketConnection; }
 namespace std_::http::websocket { struct WebSocketOpen; }
 namespace std_::http::websocket { struct WebSocketText; }
@@ -189,11 +199,11 @@ namespace std_::http::types {
 }
 
 namespace std_::event::index {
-    template <typename T>
-    struct ChannelSender;
-    template <typename T>
-    struct ChannelReceiver;
     struct Timer;
+    struct ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_;
+    struct ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_;
+    struct ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_;
+    struct ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_;
 }
 
 namespace std_::http::websocket {
@@ -228,6 +238,11 @@ namespace app_src_external_dependency_ {
     struct ExternalDependencyTarget;
     extern std::string EXTERNAL_SOURCE_MARKER;
     extern int64_t MAX_EXTERNAL_COMMAND_OUTPUT_BYTES;
+}
+
+namespace std_::event::index {
+    using doof_header_type_1 = std::variant<std::shared_ptr<::std_::http::websocket::WebSocketOpen>, std::shared_ptr<::std_::http::websocket::WebSocketText>, std::shared_ptr<::std_::http::websocket::WebSocketBinary>, std::shared_ptr<::std_::http::websocket::WebSocketWritable>, std::shared_ptr<::std_::http::websocket::WebSocketClose>, std::shared_ptr<::std_::http::websocket::WebSocketError>>;
+    using doof_header_type_2 = std::variant<std::shared_ptr<::std_::http::websocket::WebSocketSendText>, std::shared_ptr<::std_::http::websocket::WebSocketSendBinary>, std::shared_ptr<::std_::http::websocket::WebSocketPing>, std::shared_ptr<::std_::http::websocket::WebSocketCloseCommand>>;
 }
 
 namespace std_::blob::types {
@@ -687,30 +702,30 @@ namespace app_src_macos_app_ {
     MacOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
 };
     struct MacOSEmbeddedLibrary : public std::enable_shared_from_this<MacOSEmbeddedLibrary> {
-    std::string library = std::string("");
-    std::string path = std::string("");
-    MacOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
+    std::string library;
+    std::string path;
+    MacOSEmbeddedLibrary(std::string library, std::string path) : library(library), path(path) {}
 };
     struct MacOSAppConfig : public std::enable_shared_from_this<MacOSAppConfig> {
     std::string executableName;
     std::string bundleId;
     std::string displayName;
     std::string version;
-    std::string iconPath = std::string("");
-    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr;
-    std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{});
-    std::string category = std::string("public.app-category.developer-tools");
-    std::string minimumSystemVersion = std::string("11.0");
-    MacOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{}), std::string category = std::string("public.app-category.developer-tools"), std::string minimumSystemVersion = std::string("11.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), category(category), minimumSystemVersion(minimumSystemVersion) {}
+    std::string iconPath;
+    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist;
+    std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources;
+    std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries;
+    std::string category;
+    std::string minimumSystemVersion;
+    MacOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist, std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries, std::string category, std::string minimumSystemVersion) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), category(category), minimumSystemVersion(minimumSystemVersion) {}
 };
     struct MacOSPackageConfig : public std::enable_shared_from_this<MacOSPackageConfig> {
-    std::string distDirectory = std::string("");
-    std::string signing = std::string("developer-id");
-    std::string identity = std::string("");
-    bool sandbox = false;
-    std::string entitlementsPath = std::string("");
-    MacOSPackageConfig(std::string distDirectory = std::string(""), std::string signing = std::string("developer-id"), std::string identity = std::string(""), bool sandbox = false, std::string entitlementsPath = std::string("")) : distDirectory(distDirectory), signing(signing), identity(identity), sandbox(sandbox), entitlementsPath(entitlementsPath) {}
+    std::string distDirectory;
+    std::string signing;
+    std::string identity;
+    bool sandbox;
+    std::string entitlementsPath;
+    MacOSPackageConfig(std::string distDirectory, std::string signing, std::string identity, bool sandbox, std::string entitlementsPath) : distDirectory(distDirectory), signing(signing), identity(identity), sandbox(sandbox), entitlementsPath(entitlementsPath) {}
 };
 }
 
@@ -721,42 +736,42 @@ namespace app_src_ios_app_ {
     IOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
 };
     struct IOSEmbeddedLibrary : public std::enable_shared_from_this<IOSEmbeddedLibrary> {
-    std::string library = std::string("");
-    std::string path = std::string("");
-    IOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
+    std::string library;
+    std::string path;
+    IOSEmbeddedLibrary(std::string library, std::string path) : library(library), path(path) {}
 };
     struct IOSAppConfig : public std::enable_shared_from_this<IOSAppConfig> {
     std::string executableName;
     std::string bundleId;
     std::string displayName;
     std::string version;
-    std::string iconPath = std::string("");
-    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr;
-    std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(std::vector<std::shared_ptr<IOSAppResource>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{});
-    std::string minimumDeploymentTarget = std::string("16.0");
-    IOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(std::vector<std::shared_ptr<IOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{}), std::string minimumDeploymentTarget = std::string("16.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), minimumDeploymentTarget(minimumDeploymentTarget) {}
+    std::string iconPath;
+    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist;
+    std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources;
+    std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries;
+    std::string minimumDeploymentTarget;
+    IOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist, std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries, std::string minimumDeploymentTarget) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), minimumDeploymentTarget(minimumDeploymentTarget) {}
 };
     struct IOSPackageConfig : public std::enable_shared_from_this<IOSPackageConfig> {
-    std::string identity = std::string("");
-    std::string provisioningProfilePath = std::string("");
-    IOSPackageConfig(std::string identity = std::string(""), std::string provisioningProfilePath = std::string("")) : identity(identity), provisioningProfilePath(provisioningProfilePath) {}
+    std::string identity;
+    std::string provisioningProfilePath;
+    IOSPackageConfig(std::string identity, std::string provisioningProfilePath) : identity(identity), provisioningProfilePath(provisioningProfilePath) {}
 };
 }
 
 namespace app_src_package_manifest_ {
     struct NativeBuildPlan : public std::enable_shared_from_this<NativeBuildPlan> {
-    std::shared_ptr<std::vector<std::string>> includePaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> sourceFiles = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> libraryPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> extraCopyPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> linkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> frameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> pkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> defines = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> compilerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> linkerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    NativeBuildPlan(std::shared_ptr<std::vector<std::string>> includePaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> sourceFiles = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> libraryPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> extraCopyPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> linkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> frameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> pkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> defines = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> compilerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> linkerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : includePaths(includePaths), sourceFiles(sourceFiles), libraryPaths(libraryPaths), extraCopyPaths(extraCopyPaths), linkLibraries(linkLibraries), frameworks(frameworks), pkgConfigPackages(pkgConfigPackages), defines(defines), compilerFlags(compilerFlags), linkerFlags(linkerFlags) {}
+    std::shared_ptr<std::vector<std::string>> includePaths;
+    std::shared_ptr<std::vector<std::string>> sourceFiles;
+    std::shared_ptr<std::vector<std::string>> libraryPaths;
+    std::shared_ptr<std::vector<std::string>> extraCopyPaths;
+    std::shared_ptr<std::vector<std::string>> linkLibraries;
+    std::shared_ptr<std::vector<std::string>> frameworks;
+    std::shared_ptr<std::vector<std::string>> pkgConfigPackages;
+    std::shared_ptr<std::vector<std::string>> defines;
+    std::shared_ptr<std::vector<std::string>> compilerFlags;
+    std::shared_ptr<std::vector<std::string>> linkerFlags;
+    NativeBuildPlan(std::shared_ptr<std::vector<std::string>> includePaths, std::shared_ptr<std::vector<std::string>> sourceFiles, std::shared_ptr<std::vector<std::string>> libraryPaths, std::shared_ptr<std::vector<std::string>> extraCopyPaths, std::shared_ptr<std::vector<std::string>> linkLibraries, std::shared_ptr<std::vector<std::string>> frameworks, std::shared_ptr<std::vector<std::string>> pkgConfigPackages, std::shared_ptr<std::vector<std::string>> defines, std::shared_ptr<std::vector<std::string>> compilerFlags, std::shared_ptr<std::vector<std::string>> linkerFlags) : includePaths(includePaths), sourceFiles(sourceFiles), libraryPaths(libraryPaths), extraCopyPaths(extraCopyPaths), linkLibraries(linkLibraries), frameworks(frameworks), pkgConfigPackages(pkgConfigPackages), defines(defines), compilerFlags(compilerFlags), linkerFlags(linkerFlags) {}
 };
     struct PackageResource : public std::enable_shared_from_this<PackageResource> {
     std::string sourcePath;
@@ -770,72 +785,72 @@ namespace app_src_package_manifest_ {
 };
     struct ExternalDependencyCommand : public std::enable_shared_from_this<ExternalDependencyCommand> {
     std::string program;
-    std::shared_ptr<std::vector<std::string>> args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
-    std::string workingDirectory = std::string("");
-    ExternalDependencyCommand(std::string program, std::shared_ptr<std::vector<std::string>> args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), std::string workingDirectory = std::string("")) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
+    std::shared_ptr<std::vector<std::string>> args;
+    std::shared_ptr<doof::ordered_map<std::string, std::string>> env;
+    std::string workingDirectory;
+    ExternalDependencyCommand(std::string program, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, std::string workingDirectory) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
 };
     struct ExternalDependency : public std::enable_shared_from_this<ExternalDependency> {
     std::string name;
     std::string kind;
     std::string url;
     std::string destination;
-    std::string sha256 = std::string("");
-    int32_t stripComponents = 1;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{});
-    std::string ref = std::string("");
-    std::string commit = std::string("");
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{});
-    ExternalDependency(std::string name, std::string kind, std::string url, std::string destination, std::string sha256 = std::string(""), int32_t stripComponents = 1, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{}), std::string ref = std::string(""), std::string commit = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{})) : name(name), kind(kind), url(url), destination(destination), sha256(sha256), stripComponents(stripComponents), copyFiles(copyFiles), ref(ref), commit(commit), commands(commands) {}
+    std::string sha256;
+    int32_t stripComponents;
+    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles;
+    std::string ref;
+    std::string commit;
+    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands;
+    ExternalDependency(std::string name, std::string kind, std::string url, std::string destination, std::string sha256, int32_t stripComponents, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles, std::string ref, std::string commit, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands) : name(name), kind(kind), url(url), destination(destination), sha256(sha256), stripComponents(stripComponents), copyFiles(copyFiles), ref(ref), commit(commit), commands(commands) {}
 };
     struct PackageDependency : public std::enable_shared_from_this<PackageDependency> {
     std::string name;
-    std::string path = std::string("");
-    std::string url = std::string("");
-    std::string ref = std::string("");
-    std::string commit = std::string("");
-    PackageDependency(std::string name, std::string path = std::string(""), std::string url = std::string(""), std::string ref = std::string(""), std::string commit = std::string("")) : name(name), path(path), url(url), ref(ref), commit(commit) {}
+    std::string path;
+    std::string url;
+    std::string ref;
+    std::string commit;
+    PackageDependency(std::string name, std::string path, std::string url, std::string ref, std::string commit) : name(name), path(path), url(url), ref(ref), commit(commit) {}
 };
     struct DependencyResolution : public std::enable_shared_from_this<DependencyResolution> {
     std::string name;
-    std::string kind = std::string("git");
+    std::string kind;
     std::string url;
-    std::string ref = std::string("");
-    std::string commit = std::string("");
-    std::string sha256 = std::string("");
-    DependencyResolution(std::string name, std::string kind, std::string url, std::string ref = std::string(""), std::string commit = std::string(""), std::string sha256 = std::string("")) : name(name), kind(kind), url(url), ref(ref), commit(commit), sha256(sha256) {}
+    std::string ref;
+    std::string commit;
+    std::string sha256;
+    DependencyResolution(std::string name, std::string kind, std::string url, std::string ref, std::string commit, std::string sha256) : name(name), kind(kind), url(url), ref(ref), commit(commit), sha256(sha256) {}
 };
     struct DependencyPolicy : public std::enable_shared_from_this<DependencyPolicy> {
-    bool hasPackageSourceAllowlist = false;
-    std::shared_ptr<std::vector<std::string>> allowedPackageSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    bool hasExternalSourceAllowlist = false;
-    std::shared_ptr<std::vector<std::string>> allowedExternalSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    bool hasLinkLibraryAllowlist = false;
-    std::shared_ptr<std::vector<std::string>> allowedLinkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    bool hasFrameworkAllowlist = false;
-    std::shared_ptr<std::vector<std::string>> allowedFrameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    bool hasPkgConfigAllowlist = false;
-    std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    DependencyPolicy(bool hasPackageSourceAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedPackageSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasExternalSourceAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedExternalSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasLinkLibraryAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedLinkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasFrameworkAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedFrameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasPkgConfigAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : hasPackageSourceAllowlist(hasPackageSourceAllowlist), allowedPackageSources(allowedPackageSources), hasExternalSourceAllowlist(hasExternalSourceAllowlist), allowedExternalSources(allowedExternalSources), hasLinkLibraryAllowlist(hasLinkLibraryAllowlist), allowedLinkLibraries(allowedLinkLibraries), hasFrameworkAllowlist(hasFrameworkAllowlist), allowedFrameworks(allowedFrameworks), hasPkgConfigAllowlist(hasPkgConfigAllowlist), allowedPkgConfigPackages(allowedPkgConfigPackages) {}
+    bool hasPackageSourceAllowlist;
+    std::shared_ptr<std::vector<std::string>> allowedPackageSources;
+    bool hasExternalSourceAllowlist;
+    std::shared_ptr<std::vector<std::string>> allowedExternalSources;
+    bool hasLinkLibraryAllowlist;
+    std::shared_ptr<std::vector<std::string>> allowedLinkLibraries;
+    bool hasFrameworkAllowlist;
+    std::shared_ptr<std::vector<std::string>> allowedFrameworks;
+    bool hasPkgConfigAllowlist;
+    std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages;
+    DependencyPolicy(bool hasPackageSourceAllowlist, std::shared_ptr<std::vector<std::string>> allowedPackageSources, bool hasExternalSourceAllowlist, std::shared_ptr<std::vector<std::string>> allowedExternalSources, bool hasLinkLibraryAllowlist, std::shared_ptr<std::vector<std::string>> allowedLinkLibraries, bool hasFrameworkAllowlist, std::shared_ptr<std::vector<std::string>> allowedFrameworks, bool hasPkgConfigAllowlist, std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages) : hasPackageSourceAllowlist(hasPackageSourceAllowlist), allowedPackageSources(allowedPackageSources), hasExternalSourceAllowlist(hasExternalSourceAllowlist), allowedExternalSources(allowedExternalSources), hasLinkLibraryAllowlist(hasLinkLibraryAllowlist), allowedLinkLibraries(allowedLinkLibraries), hasFrameworkAllowlist(hasFrameworkAllowlist), allowedFrameworks(allowedFrameworks), hasPkgConfigAllowlist(hasPkgConfigAllowlist), allowedPkgConfigPackages(allowedPkgConfigPackages) {}
 };
     struct PackageManifest : public std::enable_shared_from_this<PackageManifest> {
     std::string name;
-    std::string version = std::string("1.0");
+    std::string version;
     std::string manifestPath;
     std::string rootDirectory;
-    std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources = std::make_shared<std::vector<std::shared_ptr<PackageResource>>>(std::vector<std::shared_ptr<PackageResource>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies = std::make_shared<std::vector<std::shared_ptr<PackageDependency>>>(std::vector<std::shared_ptr<PackageDependency>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies = std::make_shared<std::vector<std::shared_ptr<ExternalDependency>>>(std::vector<std::shared_ptr<ExternalDependency>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions = std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions = std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{});
-    std::shared_ptr<DependencyPolicy> policy = std::make_shared<DependencyPolicy>(false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+    std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources;
+    std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies;
+    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies;
+    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions;
+    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions;
+    std::shared_ptr<DependencyPolicy> policy;
     std::shared_ptr<NativeBuildPlan> nativeBuild;
-    std::string target = std::string("");
-    std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp = nullptr;
-    std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp = nullptr;
-    std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr;
-    std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr;
-    PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions, std::shared_ptr<DependencyPolicy> policy, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target = std::string(""), std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp = nullptr, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp = nullptr, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), externalDependencies(externalDependencies), packageResolutions(packageResolutions), externalResolutions(externalResolutions), policy(policy), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
+    std::string target;
+    std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp;
+    std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp;
+    std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig;
+    std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig;
+    PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions, std::shared_ptr<DependencyPolicy> policy, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), externalDependencies(externalDependencies), packageResolutions(packageResolutions), externalResolutions(externalResolutions), policy(policy), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
 };
 }
 
@@ -942,7 +957,7 @@ struct Time : public std::enable_shared_from_this<Time> {
     static std::shared_ptr<Time> MIDNIGHT;
     static std::shared_ptr<Time> NOON;
     Time(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond) : hour(hour), minute(minute), second(second), nanosecond(nanosecond) {}
-    static doof::Result<std::shared_ptr<Time>, std::string> create(int32_t hour, int32_t minute, int32_t second = 0, int32_t nanosecond = 0);
+    static doof::Result<std::shared_ptr<Time>, std::string> create(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
     static doof::Result<std::shared_ptr<Time>, std::string> parse(const std::string& s);
     std::shared_ptr<Time> plusHours(int32_t n);
     std::shared_ptr<Time> plusMinutes(int32_t n);
@@ -960,7 +975,7 @@ struct DateTime : public std::enable_shared_from_this<DateTime> {
     std::shared_ptr<Time> time;
     DateTime(std::shared_ptr<Date> date, std::shared_ptr<Time> time) : date(date), time(time) {}
     static std::shared_ptr<DateTime> create(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time);
-    static doof::Result<std::shared_ptr<DateTime>, std::string> fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second = 0, int32_t nanosecond = 0);
+    static doof::Result<std::shared_ptr<DateTime>, std::string> fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
     static std::shared_ptr<DateTime> nowUTC();
     static doof::Result<std::shared_ptr<DateTime>, std::string> parse(const std::string& s);
     std::shared_ptr<DateTime> plusDays(int32_t n);
@@ -1027,10 +1042,10 @@ namespace std_::http::types {
 
 namespace std_::http::websocket {
     struct WebSocketOptions : public std::enable_shared_from_this<WebSocketOptions> {
-    int32_t eventCapacity = 1024;
-    int32_t commandCapacity = 1024;
+    int32_t eventCapacity;
+    int32_t commandCapacity;
     std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers;
-    int32_t timeoutMs = 30000;
+    int32_t timeoutMs;
     WebSocketOptions(int32_t eventCapacity, int32_t commandCapacity, std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers, int32_t timeoutMs) : eventCapacity(eventCapacity), commandCapacity(commandCapacity), headers(headers), timeoutMs(timeoutMs) {}
 };
     struct WebSocketOpen : public std::enable_shared_from_this<WebSocketOpen> {
@@ -1065,21 +1080,21 @@ namespace std_::http::websocket {
 };
     struct WebSocketSendText : public std::enable_shared_from_this<WebSocketSendText> {
     std::string text;
-    std::optional<std::string> coalesceKey = std::nullopt;
-    WebSocketSendText(std::string text, std::optional<std::string> coalesceKey = std::nullopt) : text(text), coalesceKey(coalesceKey) {}
+    std::optional<std::string> coalesceKey;
+    WebSocketSendText(std::string text, std::optional<std::string> coalesceKey) : text(text), coalesceKey(coalesceKey) {}
 };
     struct WebSocketSendBinary : public std::enable_shared_from_this<WebSocketSendBinary> {
     std::shared_ptr<std::vector<uint8_t>> bytes;
-    std::optional<std::string> coalesceKey = std::nullopt;
-    WebSocketSendBinary(std::shared_ptr<std::vector<uint8_t>> bytes, std::optional<std::string> coalesceKey = std::nullopt) : bytes(bytes), coalesceKey(coalesceKey) {}
+    std::optional<std::string> coalesceKey;
+    WebSocketSendBinary(std::shared_ptr<std::vector<uint8_t>> bytes, std::optional<std::string> coalesceKey) : bytes(bytes), coalesceKey(coalesceKey) {}
 };
     struct WebSocketPing : public std::enable_shared_from_this<WebSocketPing> {
     WebSocketPing() {}
 };
     struct WebSocketCloseCommand : public std::enable_shared_from_this<WebSocketCloseCommand> {
-    int32_t code = 1000;
-    std::string reason = std::string("");
-    WebSocketCloseCommand(int32_t code = 1000, std::string reason = std::string("")) : code(code), reason(reason) {}
+    int32_t code;
+    std::string reason;
+    WebSocketCloseCommand(int32_t code, std::string reason) : code(code), reason(reason) {}
 };
 }
 
@@ -1092,22 +1107,22 @@ namespace std_::http::index {
     struct SetCookie : public std::enable_shared_from_this<SetCookie> {
     std::string name;
     std::string value;
-    std::optional<std::string> domain = std::nullopt;
-    std::optional<std::string> path = std::nullopt;
-    std::optional<std::string> expires = std::nullopt;
-    std::optional<std::string> maxAge = std::nullopt;
-    bool secure = false;
-    bool httpOnly = false;
-    std::optional<std::string> sameSite = std::nullopt;
-    SetCookie(std::string name, std::string value, std::optional<std::string> domain = std::nullopt, std::optional<std::string> path = std::nullopt, std::optional<std::string> expires = std::nullopt, std::optional<std::string> maxAge = std::nullopt, bool secure = false, bool httpOnly = false, std::optional<std::string> sameSite = std::nullopt) : name(name), value(value), domain(domain), path(path), expires(expires), maxAge(maxAge), secure(secure), httpOnly(httpOnly), sameSite(sameSite) {}
+    std::optional<std::string> domain;
+    std::optional<std::string> path;
+    std::optional<std::string> expires;
+    std::optional<std::string> maxAge;
+    bool secure;
+    bool httpOnly;
+    std::optional<std::string> sameSite;
+    SetCookie(std::string name, std::string value, std::optional<std::string> domain, std::optional<std::string> path, std::optional<std::string> expires, std::optional<std::string> maxAge, bool secure, bool httpOnly, std::optional<std::string> sameSite) : name(name), value(value), domain(domain), path(path), expires(expires), maxAge(maxAge), secure(secure), httpOnly(httpOnly), sameSite(sameSite) {}
 };
     struct HttpRequest : public std::enable_shared_from_this<HttpRequest> {
     std::string method;
     std::string url;
     std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers;
-    std::shared_ptr<std::vector<uint8_t>> body = nullptr;
-    int32_t timeoutMs = 30000;
-    bool followRedirects = true;
+    std::shared_ptr<std::vector<uint8_t>> body;
+    int32_t timeoutMs;
+    bool followRedirects;
     HttpRequest(std::string method, std::string url, std::shared_ptr<std::vector<std::shared_ptr<::std_::http::types::HttpHeader>>> headers, std::shared_ptr<std::vector<uint8_t>> body, int32_t timeoutMs, bool followRedirects) : method(method), url(url), headers(headers), body(body), timeoutMs(timeoutMs), followRedirects(followRedirects) {}
     std::optional<std::string> header(const std::string& name);
 };
@@ -1131,20 +1146,20 @@ namespace std_::os::index {
     int32_t exitCode;
     std::shared_ptr<std::vector<uint8_t>> stdout_;
     std::shared_ptr<std::vector<uint8_t>> stderr_;
-    bool stdoutTruncated = false;
-    bool stderrTruncated = false;
-    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
+    bool stdoutTruncated;
+    bool stderrTruncated;
+    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated, bool stderrTruncated) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
 };
 }
 
 namespace app_src_external_dependency_ {
     struct ExternalDependencyTarget : public std::enable_shared_from_this<ExternalDependencyTarget> {
     std::string nativeTarget;
-    std::string sdkPath = std::string("");
-    std::string targetTriple = std::string("");
-    std::string configureHost = std::string("");
-    int32_t jobs = 1;
-    ExternalDependencyTarget(std::string nativeTarget, std::string sdkPath = std::string(""), std::string targetTriple = std::string(""), std::string configureHost = std::string(""), int32_t jobs = 1) : nativeTarget(nativeTarget), sdkPath(sdkPath), targetTriple(targetTriple), configureHost(configureHost), jobs(jobs) {}
+    std::string sdkPath;
+    std::string targetTriple;
+    std::string configureHost;
+    int32_t jobs;
+    ExternalDependencyTarget(std::string nativeTarget, std::string sdkPath, std::string targetTriple, std::string configureHost, int32_t jobs) : nativeTarget(nativeTarget), sdkPath(sdkPath), targetTriple(targetTriple), configureHost(configureHost), jobs(jobs) {}
 };
 }
 
@@ -1173,13 +1188,13 @@ namespace std_::path::index {
 namespace std_::stream::index {
     struct DecodedLineStream : public std::enable_shared_from_this<DecodedLineStream> {
     Stream__readonly_array_byte source;
-    std::shared_ptr<::doof_blob::NativeBlobBuilder> pendingLine = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
-    std::shared_ptr<::doof_blob::NativeBlobReader> current = ::doof_blob::NativeBlobReader::constructor(std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), ::std_::blob::types::Endian::LittleEndian);
-    std::optional<std::string> currentValue = std::nullopt;
-    std::shared_ptr<std::vector<uint8_t>> lineBreakBytes = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{10, 13});
-    bool sourceDone = false;
-    bool skipLeadingLf = false;
-    DecodedLineStream(Stream__readonly_array_byte source, std::shared_ptr<::doof_blob::NativeBlobBuilder> pendingLine = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian), std::shared_ptr<::doof_blob::NativeBlobReader> current = ::doof_blob::NativeBlobReader::constructor(std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), ::std_::blob::types::Endian::LittleEndian), std::optional<std::string> currentValue = std::nullopt, std::shared_ptr<std::vector<uint8_t>> lineBreakBytes = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{10, 13}), bool sourceDone = false, bool skipLeadingLf = false) : source(source), pendingLine(pendingLine), current(current), currentValue(currentValue), lineBreakBytes(lineBreakBytes), sourceDone(sourceDone), skipLeadingLf(skipLeadingLf) {}
+    std::shared_ptr<::doof_blob::NativeBlobBuilder> pendingLine;
+    std::shared_ptr<::doof_blob::NativeBlobReader> current;
+    std::optional<std::string> currentValue;
+    std::shared_ptr<std::vector<uint8_t>> lineBreakBytes;
+    bool sourceDone;
+    bool skipLeadingLf;
+    DecodedLineStream(Stream__readonly_array_byte source, std::shared_ptr<::doof_blob::NativeBlobBuilder> pendingLine, std::shared_ptr<::doof_blob::NativeBlobReader> current, std::optional<std::string> currentValue, std::shared_ptr<std::vector<uint8_t>> lineBreakBytes, bool sourceDone, bool skipLeadingLf) : source(source), pendingLine(pendingLine), current(current), currentValue(currentValue), lineBreakBytes(lineBreakBytes), sourceDone(sourceDone), skipLeadingLf(skipLeadingLf) {}
     bool loadNextChunk();
     void skipLeadingLineFeed();
     std::string finishPendingLine();
@@ -1235,72 +1250,44 @@ namespace std_::event::index {
     int32_t _drainMainEventLoop();
     void _setMainEventWakeHandler(const doof::callback<void()>& handler);
     void _clearMainEventWakeHandler();
-    template <typename T>
-struct ChannelSender : public std::enable_shared_from_this<ChannelSender<T>> {
-    std::shared_ptr<::doof_event::NativeChannel> native;
-    ChannelSender(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
-#line 54 "/std/event/index.do"
-    doof::Result<Backpressure, SendError> send(T value, const std::optional<std::string>& key = std::nullopt) {
-#line 55 "/std/event/index.do"
-        const auto code = (doof::is_null(key) ? ::doof_event::trySendChannelMessage<T>(this->native, value, false, std::string("")) : ::doof_event::trySendChannelMessage<T>(this->native, value, true, key.value()));
-#line 57 "/std/event/index.do"
-        return [&]() -> doof::Result<Backpressure, SendError> {
-    auto _case_subject = code;
-    if (_case_subject == 0) {
-        return doof::Success<Backpressure>{ Backpressure::None };
-    }
-    if (_case_subject == 1) {
-        return doof::Success<Backpressure>{ Backpressure::High };
-    }
-    if (_case_subject == 2) {
-        return doof::Failure<SendError>{ SendError::Full };
-    }
-    if (true) {
-        return doof::Failure<SendError>{ SendError::Closed };
-    }
-    throw std::runtime_error("non-exhaustive case expression");
-}();
-    }
-#line 65 "/std/event/index.do"
-    void onReady(const doof::callback<void()>& handler) {
-#line 66 "/std/event/index.do"
-        this->native->registerSenderReady(handler);
-    }
-#line 69 "/std/event/index.do"
-    void onClosed(const doof::callback<void()>& handler) {
-#line 70 "/std/event/index.do"
-        this->native->registerSenderClosed(handler);
-    }
-#line 73 "/std/event/index.do"
-    void close() {
-#line 74 "/std/event/index.do"
-        this->native->tryClose();
-    }
-};
-    template <typename T>
-struct ChannelReceiver : public std::enable_shared_from_this<ChannelReceiver<T>> {
-    std::shared_ptr<::doof_event::NativeChannel> native;
-    ChannelReceiver(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
-#line 81 "/std/event/index.do"
-    void onMessage(const doof::callback<void(T)>& handler) {
-#line 82 "/std/event/index.do"
-        ::doof_event::registerChannelReceiverMessage<T>(this->native, handler);
-    }
-#line 85 "/std/event/index.do"
-    void onClosed(const doof::callback<void()>& handler) {
-#line 86 "/std/event/index.do"
-        this->native->registerReceiverClosed(handler);
-    }
-#line 89 "/std/event/index.do"
-    void close() {
-#line 90 "/std/event/index.do"
-        this->native->tryClose();
-    }
-};
+    int32_t _trySendChannelMessage__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(const std::shared_ptr<::doof_event::NativeChannel>& channel, doof_header_type_1 value, bool hasKey, const std::string& key);
+    void _registerChannelReceiverMessage__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(const std::shared_ptr<::doof_event::NativeChannel>& channel, const doof::callback<void(doof_header_type_2)>& handler);
+    void _registerChannelReceiverMessage__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(const std::shared_ptr<::doof_event::NativeChannel>& channel, const doof::callback<void(doof_header_type_1)>& handler);
+    int32_t _trySendChannelMessage__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(const std::shared_ptr<::doof_event::NativeChannel>& channel, doof_header_type_2 value, bool hasKey, const std::string& key);
     struct Timer : public std::enable_shared_from_this<Timer> {
     std::shared_ptr<::doof_event::NativeTimer> native;
     Timer(std::shared_ptr<::doof_event::NativeTimer> native) : native(native) {}
     bool cancel();
+};
+    struct ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_ : public std::enable_shared_from_this<ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> {
+    std::shared_ptr<::doof_event::NativeChannel> native;
+    ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
+    doof::Result<Backpressure, SendError> send(doof_header_type_1 value, const std::optional<std::string>& key);
+    void onReady(const doof::callback<void()>& handler);
+    void onClosed(const doof::callback<void()>& handler);
+    void close();
+};
+    struct ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_ : public std::enable_shared_from_this<ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> {
+    std::shared_ptr<::doof_event::NativeChannel> native;
+    ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
+    void onMessage(const doof::callback<void(doof_header_type_2)>& handler);
+    void onClosed(const doof::callback<void()>& handler);
+    void close();
+};
+    struct ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_ : public std::enable_shared_from_this<ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> {
+    std::shared_ptr<::doof_event::NativeChannel> native;
+    ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
+    void onMessage(const doof::callback<void(doof_header_type_1)>& handler);
+    void onClosed(const doof::callback<void()>& handler);
+    void close();
+};
+    struct ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_ : public std::enable_shared_from_this<ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> {
+    std::shared_ptr<::doof_event::NativeChannel> native;
+    ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(std::shared_ptr<::doof_event::NativeChannel> native) : native(native) {}
+    doof::Result<Backpressure, SendError> send(doof_header_type_2 value, const std::optional<std::string>& key);
+    void onReady(const doof::callback<void()>& handler);
+    void onClosed(const doof::callback<void()>& handler);
+    void close();
 };
 }
 
@@ -1326,13 +1313,13 @@ using HttpHeader = ::std_::http::types::HttpHeader;
 namespace std_::http::websocket {
     struct WebSocketConnection : public std::enable_shared_from_this<WebSocketConnection> {
     std::string url;
-    std::shared_ptr<::std_::event::index::ChannelReceiver<WebSocketEvent>> events;
-    std::shared_ptr<::std_::event::index::ChannelSender<WebSocketCommand>> commands;
+    std::shared_ptr<::std_::event::index::ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> events;
+    std::shared_ptr<::std_::event::index::ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> commands;
     std::shared_ptr<WebSocketOptions> options;
-    std::shared_ptr<::std_::event::index::ChannelSender<WebSocketEvent>> eventSender;
-    std::shared_ptr<::std_::event::index::ChannelReceiver<WebSocketCommand>> commandReceiver;
+    std::shared_ptr<::std_::event::index::ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> eventSender;
+    std::shared_ptr<::std_::event::index::ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> commandReceiver;
     std::shared_ptr<::NativeHttpWebSocketConnection> native;
-    WebSocketConnection(std::string url, std::shared_ptr<::std_::event::index::ChannelReceiver<WebSocketEvent>> events, std::shared_ptr<::std_::event::index::ChannelSender<WebSocketCommand>> commands, std::shared_ptr<WebSocketOptions> options, std::shared_ptr<::std_::event::index::ChannelSender<WebSocketEvent>> eventSender, std::shared_ptr<::std_::event::index::ChannelReceiver<WebSocketCommand>> commandReceiver, std::shared_ptr<::NativeHttpWebSocketConnection> native) : url(url), events(events), commands(commands), options(options), eventSender(eventSender), commandReceiver(commandReceiver), native(native) {}
+    WebSocketConnection(std::string url, std::shared_ptr<::std_::event::index::ChannelReceiver__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> events, std::shared_ptr<::std_::event::index::ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> commands, std::shared_ptr<WebSocketOptions> options, std::shared_ptr<::std_::event::index::ChannelSender__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_> eventSender, std::shared_ptr<::std_::event::index::ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_> commandReceiver, std::shared_ptr<::NativeHttpWebSocketConnection> native) : url(url), events(events), commands(commands), options(options), eventSender(eventSender), commandReceiver(commandReceiver), native(native) {}
     WebSocketState state();
     void close();
 };
@@ -1373,19 +1360,19 @@ namespace std_::http::index {
 
 namespace std_::os::index {
     struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
-    std::optional<std::string> cwd = std::nullopt;
-    std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
-    bool inheritEnv = true;
-    bool withStdin = true;
-    bool mergeStderrIntoStdout = false;
-    bool inheritOutput = false;
-    ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated;
-    std::optional<int64_t> maxOutputBytes = std::nullopt;
-    std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
-    ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
+    std::optional<std::string> cwd;
+    std::shared_ptr<doof::ordered_map<std::string, std::string>> env;
+    bool inheritEnv;
+    bool withStdin;
+    bool mergeStderrIntoStdout;
+    bool inheritOutput;
+    ProcessGroupMode processGroupMode;
+    std::optional<int64_t> maxOutputBytes;
+    std::shared_ptr<::std_::time::duration::Duration> timeout;
+    ExecOptions(std::optional<std::string> cwd, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, bool inheritEnv, bool withStdin, bool mergeStderrIntoStdout, bool inheritOutput, ProcessGroupMode processGroupMode, std::optional<int64_t> maxOutputBytes, std::shared_ptr<::std_::time::duration::Duration> timeout) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
 };
     std::string platform();
-    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ProcessGroupMode::Isolated, std::nullopt, nullptr));
+    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options);
 }
 
 namespace app_src_external_dependency_ {
@@ -1394,7 +1381,7 @@ namespace app_src_external_dependency_ {
     doof::Result<void, std::string> removeExternalTree(const std::string& path);
     doof::Result<void, std::string> copyExternalPath(const std::string& sourcePath, const std::string& destinationPath);
     bool externalPathWithinRoot(const std::string& path, const std::string& root);
-    doof::Result<std::string, std::string> commandOutput(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::shared_ptr<::std_::os::index::ExecOptions>& options = std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ::std_::os::index::ProcessGroupMode::Isolated, std::nullopt, nullptr));
+    doof::Result<std::string, std::string> commandOutput(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::shared_ptr<::std_::os::index::ExecOptions>& options);
     std::string externalCommandFingerprint(const std::shared_ptr<::app_src_package_manifest_::ExternalDependencyCommand>& command);
     std::string externalSourceFingerprint(const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency);
     std::string externalNativeFingerprint(const std::shared_ptr<::app_src_package_manifest_::ExternalDependency>& dependency, const std::shared_ptr<ExternalDependencyTarget>& target);

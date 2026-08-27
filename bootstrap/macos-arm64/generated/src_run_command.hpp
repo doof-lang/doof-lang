@@ -7,7 +7,7 @@ namespace app_src_run_command_ {
 namespace app_src_run_command_ {
     struct RunInvocation : public std::enable_shared_from_this<RunInvocation> {
     std::string command;
-    std::shared_ptr<std::vector<std::string>> arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> arguments;
     std::string directory;
     RunInvocation(std::string command, std::shared_ptr<std::vector<std::string>> arguments, std::string directory) : command(command), arguments(arguments), directory(directory) {}
 };

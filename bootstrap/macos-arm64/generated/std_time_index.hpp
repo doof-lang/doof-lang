@@ -245,7 +245,7 @@ struct Time : public std::enable_shared_from_this<Time> {
     static std::shared_ptr<Time> MIDNIGHT;
     static std::shared_ptr<Time> NOON;
     Time(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond) : hour(hour), minute(minute), second(second), nanosecond(nanosecond) {}
-    static doof::Result<std::shared_ptr<Time>, std::string> create(int32_t hour, int32_t minute, int32_t second = 0, int32_t nanosecond = 0);
+    static doof::Result<std::shared_ptr<Time>, std::string> create(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
     static doof::Result<std::shared_ptr<Time>, std::string> parse(const std::string& s);
     std::shared_ptr<Time> plusHours(int32_t n);
     std::shared_ptr<Time> plusMinutes(int32_t n);
@@ -263,7 +263,7 @@ struct DateTime : public std::enable_shared_from_this<DateTime> {
     std::shared_ptr<Time> time;
     DateTime(std::shared_ptr<Date> date, std::shared_ptr<Time> time) : date(date), time(time) {}
     static std::shared_ptr<DateTime> create(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time);
-    static doof::Result<std::shared_ptr<DateTime>, std::string> fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second = 0, int32_t nanosecond = 0);
+    static doof::Result<std::shared_ptr<DateTime>, std::string> fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
     static std::shared_ptr<DateTime> nowUTC();
     static doof::Result<std::shared_ptr<DateTime>, std::string> parse(const std::string& s);
     std::shared_ptr<DateTime> plusDays(int32_t n);
@@ -336,12 +336,12 @@ namespace std_::time::stopwatch {
     TimerSummary(std::shared_ptr<std::vector<std::shared_ptr<TimerStats>>> entries) : entries(entries) {}
 };
     struct TimerBucket : public std::enable_shared_from_this<TimerBucket> {
-    int32_t count = 0;
-    int64_t totalNanos = 0LL;
-    int64_t minNanos = 0LL;
-    int64_t maxNanos = 0LL;
-    std::shared_ptr<std::vector<int64_t>> durations = std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{});
-    TimerBucket(int32_t count = 0, int64_t totalNanos = 0LL, int64_t minNanos = 0LL, int64_t maxNanos = 0LL, std::shared_ptr<std::vector<int64_t>> durations = std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{})) : count(count), totalNanos(totalNanos), minNanos(minNanos), maxNanos(maxNanos), durations(durations) {}
+    int32_t count;
+    int64_t totalNanos;
+    int64_t minNanos;
+    int64_t maxNanos;
+    std::shared_ptr<std::vector<int64_t>> durations;
+    TimerBucket(int32_t count, int64_t totalNanos, int64_t minNanos, int64_t maxNanos, std::shared_ptr<std::vector<int64_t>> durations) : count(count), totalNanos(totalNanos), minNanos(minNanos), maxNanos(maxNanos), durations(durations) {}
     void record(const std::shared_ptr<::std_::time::duration::Duration>& duration);
     std::shared_ptr<::std_::time::duration::Duration> total();
     std::shared_ptr<::std_::time::duration::Duration> mean();
@@ -351,8 +351,8 @@ namespace std_::time::stopwatch {
     void insertSorted(int64_t nanos);
 };
     struct Stopwatch : public std::enable_shared_from_this<Stopwatch> {
-    std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>> timers = std::make_shared<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<TimerBucket>>>{});
-    Stopwatch(std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>> timers = std::make_shared<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<TimerBucket>>>{})) : timers(timers) {}
+    std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>> timers;
+    Stopwatch(std::shared_ptr<doof::ordered_map<std::string, std::shared_ptr<TimerBucket>>> timers) : timers(timers) {}
     std::shared_ptr<StopwatchSpan> measure(const std::string& name);
     int32_t count(const std::string& name);
     doof::Result<std::shared_ptr<::std_::time::duration::Duration>, std::shared_ptr<TimerError>> total(const std::string& name);
@@ -369,13 +369,10 @@ namespace std_::time::stopwatch {
     std::shared_ptr<Stopwatch> stopwatch;
     std::string name;
     std::shared_ptr<::std_::time::temporal::Instant> startedAt;
-    bool finished = false;
-    std::shared_ptr<::std_::time::duration::Duration> finishedDuration = nullptr;
-    StopwatchSpan(std::shared_ptr<Stopwatch> stopwatch, std::string name, std::shared_ptr<::std_::time::temporal::Instant> startedAt, bool finished = false, std::shared_ptr<::std_::time::duration::Duration> finishedDuration = nullptr) : stopwatch(stopwatch), name(name), startedAt(startedAt), finished(finished), finishedDuration(finishedDuration) {}
+    bool finished;
+    std::shared_ptr<::std_::time::duration::Duration> finishedDuration;
+    StopwatchSpan(std::shared_ptr<Stopwatch> stopwatch, std::string name, std::shared_ptr<::std_::time::temporal::Instant> startedAt, bool finished, std::shared_ptr<::std_::time::duration::Duration> finishedDuration) : stopwatch(stopwatch), name(name), startedAt(startedAt), finished(finished), finishedDuration(finishedDuration) {}
     std::shared_ptr<::std_::time::duration::Duration> finish();
-    ~StopwatchSpan() {
-#line 173 "/std/time/stopwatch.do"
-        this->finish();
-    }
+    ~StopwatchSpan();
 };
 }

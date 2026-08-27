@@ -312,30 +312,30 @@ namespace app_src_macos_app_ {
     MacOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
 };
     struct MacOSEmbeddedLibrary : public std::enable_shared_from_this<MacOSEmbeddedLibrary> {
-    std::string library = std::string("");
-    std::string path = std::string("");
-    MacOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
+    std::string library;
+    std::string path;
+    MacOSEmbeddedLibrary(std::string library, std::string path) : library(library), path(path) {}
 };
     struct MacOSAppConfig : public std::enable_shared_from_this<MacOSAppConfig> {
     std::string executableName;
     std::string bundleId;
     std::string displayName;
     std::string version;
-    std::string iconPath = std::string("");
-    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr;
-    std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{});
-    std::string category = std::string("public.app-category.developer-tools");
-    std::string minimumSystemVersion = std::string("11.0");
-    MacOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{}), std::string category = std::string("public.app-category.developer-tools"), std::string minimumSystemVersion = std::string("11.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), category(category), minimumSystemVersion(minimumSystemVersion) {}
+    std::string iconPath;
+    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist;
+    std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources;
+    std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries;
+    std::string category;
+    std::string minimumSystemVersion;
+    MacOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist, std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries, std::string category, std::string minimumSystemVersion) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), category(category), minimumSystemVersion(minimumSystemVersion) {}
 };
     struct MacOSPackageConfig : public std::enable_shared_from_this<MacOSPackageConfig> {
-    std::string distDirectory = std::string("");
-    std::string signing = std::string("developer-id");
-    std::string identity = std::string("");
-    bool sandbox = false;
-    std::string entitlementsPath = std::string("");
-    MacOSPackageConfig(std::string distDirectory = std::string(""), std::string signing = std::string("developer-id"), std::string identity = std::string(""), bool sandbox = false, std::string entitlementsPath = std::string("")) : distDirectory(distDirectory), signing(signing), identity(identity), sandbox(sandbox), entitlementsPath(entitlementsPath) {}
+    std::string distDirectory;
+    std::string signing;
+    std::string identity;
+    bool sandbox;
+    std::string entitlementsPath;
+    MacOSPackageConfig(std::string distDirectory, std::string signing, std::string identity, bool sandbox, std::string entitlementsPath) : distDirectory(distDirectory), signing(signing), identity(identity), sandbox(sandbox), entitlementsPath(entitlementsPath) {}
 };
 }
 
@@ -442,7 +442,7 @@ struct Time : public std::enable_shared_from_this<Time> {
     static std::shared_ptr<Time> MIDNIGHT;
     static std::shared_ptr<Time> NOON;
     Time(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond) : hour(hour), minute(minute), second(second), nanosecond(nanosecond) {}
-    static doof::Result<std::shared_ptr<Time>, std::string> create(int32_t hour, int32_t minute, int32_t second = 0, int32_t nanosecond = 0);
+    static doof::Result<std::shared_ptr<Time>, std::string> create(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
     static doof::Result<std::shared_ptr<Time>, std::string> parse(const std::string& s);
     std::shared_ptr<Time> plusHours(int32_t n);
     std::shared_ptr<Time> plusMinutes(int32_t n);
@@ -460,7 +460,7 @@ struct DateTime : public std::enable_shared_from_this<DateTime> {
     std::shared_ptr<Time> time;
     DateTime(std::shared_ptr<Date> date, std::shared_ptr<Time> time) : date(date), time(time) {}
     static std::shared_ptr<DateTime> create(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time);
-    static doof::Result<std::shared_ptr<DateTime>, std::string> fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second = 0, int32_t nanosecond = 0);
+    static doof::Result<std::shared_ptr<DateTime>, std::string> fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
     static std::shared_ptr<DateTime> nowUTC();
     static doof::Result<std::shared_ptr<DateTime>, std::string> parse(const std::string& s);
     std::shared_ptr<DateTime> plusDays(int32_t n);
@@ -516,26 +516,26 @@ namespace std_::os::index {
     int32_t exitCode;
     std::shared_ptr<std::vector<uint8_t>> stdout_;
     std::shared_ptr<std::vector<uint8_t>> stderr_;
-    bool stdoutTruncated = false;
-    bool stderrTruncated = false;
-    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
+    bool stdoutTruncated;
+    bool stderrTruncated;
+    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated, bool stderrTruncated) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
 };
 }
 
 namespace app_src_macos_app_driver_ {
     struct MacOSCommandResult : public std::enable_shared_from_this<MacOSCommandResult> {
     int32_t exitCode;
-    std::shared_ptr<std::vector<uint8_t>> output = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    std::string error = std::string("");
-    MacOSCommandResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> output = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), std::string error = std::string("")) : exitCode(exitCode), output(output), error(error) {}
+    std::shared_ptr<std::vector<uint8_t>> output;
+    std::string error;
+    MacOSCommandResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> output, std::string error) : exitCode(exitCode), output(output), error(error) {}
 };
     struct EmbeddedCode : public std::enable_shared_from_this<EmbeddedCode> {
     std::string sourcePath;
     std::string bundledRoot;
     std::string bundledPath;
     std::string bundleReference;
-    std::string installId = std::string("");
-    EmbeddedCode(std::string sourcePath, std::string bundledRoot, std::string bundledPath, std::string bundleReference, std::string installId = std::string("")) : sourcePath(sourcePath), bundledRoot(bundledRoot), bundledPath(bundledPath), bundleReference(bundleReference), installId(installId) {}
+    std::string installId;
+    EmbeddedCode(std::string sourcePath, std::string bundledRoot, std::string bundledPath, std::string bundleReference, std::string installId) : sourcePath(sourcePath), bundledRoot(bundledRoot), bundledPath(bundledPath), bundleReference(bundleReference), installId(installId) {}
 };
 }
 
@@ -552,7 +552,7 @@ namespace std_::path::index {
 
 namespace app_src_macos_app_ {
     std::string renderMacOSInfoPlist(const std::shared_ptr<MacOSAppConfig>& config);
-    std::shared_ptr<std::vector<std::string>> macOSCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& signing, const std::string& entitlementsPath = std::string(""));
+    std::shared_ptr<std::vector<std::string>> macOSCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& signing, const std::string& entitlementsPath);
 }
 
 namespace std_::fs::types {
@@ -590,19 +590,19 @@ namespace std_::fs::index {
 
 namespace std_::os::index {
     struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
-    std::optional<std::string> cwd = std::nullopt;
-    std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
-    bool inheritEnv = true;
-    bool withStdin = true;
-    bool mergeStderrIntoStdout = false;
-    bool inheritOutput = false;
-    ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated;
-    std::optional<int64_t> maxOutputBytes = std::nullopt;
-    std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
-    ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
+    std::optional<std::string> cwd;
+    std::shared_ptr<doof::ordered_map<std::string, std::string>> env;
+    bool inheritEnv;
+    bool withStdin;
+    bool mergeStderrIntoStdout;
+    bool inheritOutput;
+    ProcessGroupMode processGroupMode;
+    std::optional<int64_t> maxOutputBytes;
+    std::shared_ptr<::std_::time::duration::Duration> timeout;
+    ExecOptions(std::optional<std::string> cwd, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, bool inheritEnv, bool withStdin, bool mergeStderrIntoStdout, bool inheritOutput, ProcessGroupMode processGroupMode, std::optional<int64_t> maxOutputBytes, std::shared_ptr<::std_::time::duration::Duration> timeout) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
 };
     std::string platform();
-    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ProcessGroupMode::Isolated, std::nullopt, nullptr));
+    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options);
 }
 
 namespace app_src_macos_app_driver_ {
@@ -615,7 +615,7 @@ namespace app_src_macos_app_driver_ {
     void copyPath(const std::string& sourcePath, const std::string& destinationPath);
     void removeTree(const std::string& path);
     std::string globBaseDirectory(const std::string& pattern);
-    bool globMatches(const std::string& pattern, const std::string& value, int32_t patternIndex = 0, int32_t valueIndex = 0);
+    bool globMatches(const std::string& pattern, const std::string& value, int32_t patternIndex, int32_t valueIndex);
     void collectResourceFiles(const std::string& path, const std::string& baseDirectory, const std::string& pattern, const std::shared_ptr<std::vector<std::string>>& results);
     void materializeMacOSResources(const std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>& config, const std::string& resourcesDirectory);
     doof::Result<void, std::string> runRequiredCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& description);

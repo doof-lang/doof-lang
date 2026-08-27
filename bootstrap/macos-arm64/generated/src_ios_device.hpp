@@ -624,7 +624,7 @@ struct Time : public std::enable_shared_from_this<Time> {
     static std::shared_ptr<Time> MIDNIGHT;
     static std::shared_ptr<Time> NOON;
     Time(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond) : hour(hour), minute(minute), second(second), nanosecond(nanosecond) {}
-    static doof::Result<std::shared_ptr<Time>, std::string> create(int32_t hour, int32_t minute, int32_t second = 0, int32_t nanosecond = 0);
+    static doof::Result<std::shared_ptr<Time>, std::string> create(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
     static doof::Result<std::shared_ptr<Time>, std::string> parse(const std::string& s);
     std::shared_ptr<Time> plusHours(int32_t n);
     std::shared_ptr<Time> plusMinutes(int32_t n);
@@ -642,7 +642,7 @@ struct DateTime : public std::enable_shared_from_this<DateTime> {
     std::shared_ptr<Time> time;
     DateTime(std::shared_ptr<Date> date, std::shared_ptr<Time> time) : date(date), time(time) {}
     static std::shared_ptr<DateTime> create(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time);
-    static doof::Result<std::shared_ptr<DateTime>, std::string> fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second = 0, int32_t nanosecond = 0);
+    static doof::Result<std::shared_ptr<DateTime>, std::string> fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
     static std::shared_ptr<DateTime> nowUTC();
     static doof::Result<std::shared_ptr<DateTime>, std::string> parse(const std::string& s);
     std::shared_ptr<DateTime> plusDays(int32_t n);
@@ -695,9 +695,9 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
 
 namespace std_::http::index {
     struct BodyChunkStream : public std::enable_shared_from_this<BodyChunkStream> {
-    std::shared_ptr<std::vector<uint8_t>> chunk = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    bool consumed = false;
-    BodyChunkStream(std::shared_ptr<std::vector<uint8_t>> chunk = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}), bool consumed = false) : chunk(chunk), consumed(consumed) {}
+    std::shared_ptr<std::vector<uint8_t>> chunk;
+    bool consumed;
+    BodyChunkStream(std::shared_ptr<std::vector<uint8_t>> chunk, bool consumed) : chunk(chunk), consumed(consumed) {}
     bool next();
     std::shared_ptr<std::vector<uint8_t>> value();
 };
@@ -708,9 +708,9 @@ namespace std_::os::index {
     int32_t exitCode;
     std::shared_ptr<std::vector<uint8_t>> stdout_;
     std::shared_ptr<std::vector<uint8_t>> stderr_;
-    bool stdoutTruncated = false;
-    bool stderrTruncated = false;
-    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
+    bool stdoutTruncated;
+    bool stderrTruncated;
+    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated, bool stderrTruncated) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
 };
 }
 
@@ -728,12 +728,12 @@ namespace app_src_ios_device_ {
     struct IOSProvisioningProfile : public std::enable_shared_from_this<IOSProvisioningProfile> {
     std::string profilePath;
     std::string applicationIdentifier;
-    std::shared_ptr<std::vector<std::string>> certFingerprints = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> certFingerprints;
     int64_t expirationEpochMs;
-    int32_t provisionedDeviceCount = 0;
-    bool provisionsAllDevices = false;
-    bool getTaskAllow = false;
-    IOSProvisioningProfile(std::string profilePath, std::string applicationIdentifier, std::shared_ptr<std::vector<std::string>> certFingerprints, int64_t expirationEpochMs, int32_t provisionedDeviceCount = 0, bool provisionsAllDevices = false, bool getTaskAllow = false) : profilePath(profilePath), applicationIdentifier(applicationIdentifier), certFingerprints(certFingerprints), expirationEpochMs(expirationEpochMs), provisionedDeviceCount(provisionedDeviceCount), provisionsAllDevices(provisionsAllDevices), getTaskAllow(getTaskAllow) {}
+    int32_t provisionedDeviceCount;
+    bool provisionsAllDevices;
+    bool getTaskAllow;
+    IOSProvisioningProfile(std::string profilePath, std::string applicationIdentifier, std::shared_ptr<std::vector<std::string>> certFingerprints, int64_t expirationEpochMs, int32_t provisionedDeviceCount, bool provisionsAllDevices, bool getTaskAllow) : profilePath(profilePath), applicationIdentifier(applicationIdentifier), certFingerprints(certFingerprints), expirationEpochMs(expirationEpochMs), provisionedDeviceCount(provisionedDeviceCount), provisionsAllDevices(provisionsAllDevices), getTaskAllow(getTaskAllow) {}
 };
     struct IOSDeviceSigningOptions : public std::enable_shared_from_this<IOSDeviceSigningOptions> {
     std::string signIdentity;
@@ -742,9 +742,9 @@ namespace app_src_ios_device_ {
 };
     struct IOSDeviceCommandResult : public std::enable_shared_from_this<IOSDeviceCommandResult> {
     int32_t exitCode;
-    std::string output = std::string("");
-    std::string error = std::string("");
-    IOSDeviceCommandResult(int32_t exitCode, std::string output = std::string(""), std::string error = std::string("")) : exitCode(exitCode), output(output), error(error) {}
+    std::string output;
+    std::string error;
+    IOSDeviceCommandResult(int32_t exitCode, std::string output, std::string error) : exitCode(exitCode), output(output), error(error) {}
 };
 }
 
@@ -787,7 +787,7 @@ namespace std_::path::index {
 }
 
 namespace app_src_ios_app_ {
-    std::shared_ptr<std::vector<std::string>> iosCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& entitlementsPath = std::string(""));
+    std::shared_ptr<std::vector<std::string>> iosCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& entitlementsPath);
 }
 
 namespace std_::fs::types {
@@ -823,8 +823,8 @@ namespace std_::fs::index {
     bool isFile(const std::string& path);
     struct BlockReadStream : public std::enable_shared_from_this<BlockReadStream> {
     std::shared_ptr<::NativeBlobReadStream> native;
-    std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    BlockReadStream(std::shared_ptr<::NativeBlobReadStream> native, std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{})) : native(native), currentValue(currentValue) {}
+    std::shared_ptr<std::vector<uint8_t>> currentValue;
+    BlockReadStream(std::shared_ptr<::NativeBlobReadStream> native, std::shared_ptr<std::vector<uint8_t>> currentValue) : native(native), currentValue(currentValue) {}
     bool next();
     std::shared_ptr<std::vector<uint8_t>> value();
 };
@@ -855,35 +855,35 @@ namespace std_::os::index {
     std::string _platform();
     std::string _architecture();
     struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
-    std::optional<std::string> cwd = std::nullopt;
-    std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
-    bool inheritEnv = true;
-    bool withStdin = true;
-    bool mergeStderrIntoStdout = false;
-    bool inheritOutput = false;
-    ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated;
-    std::optional<int64_t> maxOutputBytes = std::nullopt;
-    std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
-    ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
+    std::optional<std::string> cwd;
+    std::shared_ptr<doof::ordered_map<std::string, std::string>> env;
+    bool inheritEnv;
+    bool withStdin;
+    bool mergeStderrIntoStdout;
+    bool inheritOutput;
+    ProcessGroupMode processGroupMode;
+    std::optional<int64_t> maxOutputBytes;
+    std::shared_ptr<::std_::time::duration::Duration> timeout;
+    ExecOptions(std::optional<std::string> cwd, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, bool inheritEnv, bool withStdin, bool mergeStderrIntoStdout, bool inheritOutput, ProcessGroupMode processGroupMode, std::optional<int64_t> maxOutputBytes, std::shared_ptr<::std_::time::duration::Duration> timeout) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
 };
     struct ExecStdoutStream : public std::enable_shared_from_this<ExecStdoutStream> {
     std::shared_ptr<::NativeExecProcess> process;
-    std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    ExecStdoutStream(std::shared_ptr<::NativeExecProcess> process, std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{})) : process(process), currentValue(currentValue) {}
+    std::shared_ptr<std::vector<uint8_t>> currentValue;
+    ExecStdoutStream(std::shared_ptr<::NativeExecProcess> process, std::shared_ptr<std::vector<uint8_t>> currentValue) : process(process), currentValue(currentValue) {}
     bool next();
     std::shared_ptr<std::vector<uint8_t>> value();
 };
     struct ExecStderrStream : public std::enable_shared_from_this<ExecStderrStream> {
     std::shared_ptr<::NativeExecProcess> process;
-    std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    ExecStderrStream(std::shared_ptr<::NativeExecProcess> process, std::shared_ptr<std::vector<uint8_t>> currentValue = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{})) : process(process), currentValue(currentValue) {}
+    std::shared_ptr<std::vector<uint8_t>> currentValue;
+    ExecStderrStream(std::shared_ptr<::NativeExecProcess> process, std::shared_ptr<std::vector<uint8_t>> currentValue) : process(process), currentValue(currentValue) {}
     bool next();
     std::shared_ptr<std::vector<uint8_t>> value();
 };
     struct Exec : public std::enable_shared_from_this<Exec> {
     std::shared_ptr<::NativeExecProcess> native;
     Exec(std::shared_ptr<::NativeExecProcess> native) : native(native) {}
-    static doof::Result<std::shared_ptr<Exec>, std::string> spawn(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ProcessGroupMode::Isolated, std::nullopt, nullptr));
+    static doof::Result<std::shared_ptr<Exec>, std::string> spawn(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options);
     Stream__readonly_array_byte stdoutStream();
     Stream__readonly_array_byte stderrStream();
     std::shared_ptr<std::vector<uint8_t>> nextStdoutChunk();
@@ -892,12 +892,12 @@ namespace std_::os::index {
     doof::Result<void, std::string> closeStdin();
     bool isRunning();
     doof::Result<int32_t, std::string> wait();
-    doof::Result<void, std::string> terminate(int32_t signal = 15);
+    doof::Result<void, std::string> terminate(int32_t signal);
     bool stdoutOpen();
     bool stderrOpen();
 };
     std::string platform();
-    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ProcessGroupMode::Isolated, std::nullopt, nullptr));
+    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options);
 }
 
 namespace app_src_ios_device_ {
@@ -930,7 +930,7 @@ namespace app_src_ios_device_ {
     doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisioningProfile(const std::string& profilePath, const std::string& workDirectory);
     std::shared_ptr<std::vector<std::string>> collectProvisioningProfilePaths(const std::shared_ptr<std::vector<std::string>>& profileDirectories);
     doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> autoResolveProvisioningProfile(const std::string& bundleId, const std::string& workDirectory, const std::shared_ptr<std::vector<std::string>>& profileDirectories);
-    doof::Result<std::shared_ptr<IOSDeviceSigningOptions>, std::string> resolveIOSDeviceSigningOptions(const std::string& bundleId, const std::string& signIdentityOverride, const std::string& provisioningProfileOverride, const std::string& workDirectory, const std::shared_ptr<std::vector<std::string>>& profileDirectories = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+    doof::Result<std::shared_ptr<IOSDeviceSigningOptions>, std::string> resolveIOSDeviceSigningOptions(const std::string& bundleId, const std::string& signIdentityOverride, const std::string& provisioningProfileOverride, const std::string& workDirectory, const std::shared_ptr<std::vector<std::string>>& profileDirectories);
     doof::Result<std::string, std::string> resolveIOSDeviceIdentifier(const std::string& overrideIdentifier, const std::string& workDirectory);
     void collectNestedIOSCode(const std::string& path, const std::shared_ptr<std::vector<std::string>>& results);
     doof::Result<void, std::string> signIOSDeviceApp(const std::string& appPath, const std::string& bundleId, const std::shared_ptr<IOSDeviceSigningOptions>& options, const std::string& workDirectory);

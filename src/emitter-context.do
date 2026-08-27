@@ -32,8 +32,6 @@ export class EmitContext {
   allPrograms: Program[] = []
   let namespaceImports: NamespaceBinding[] = []
   let imports: ImportBinding[] = []
-  let importedDefinitionNeedles: string[] = []
-  let importedDefinitionNeedlesReady: bool = false
   let moduleSurfaces: EmitModuleSurface[] = []
   let jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}
   let currentClass: string = ""
@@ -55,7 +53,6 @@ export class EmitContext {
   concreteFunctionKeys: string[] = []
   concreteClassNames: string[] = []
   concreteClassKeys: string[] = []
-  nativeTemplateClassKeys: string[] = []
   concreteMethodNames: string[] = []
   concreteMethodKeys: string[] = []
   concreteInterfaceNames: string[] = []

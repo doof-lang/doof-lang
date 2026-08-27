@@ -3,8 +3,8 @@
 // The checker decorates calls and nominal types with inferred type arguments.
 // This pass follows those decorations to a fixed point before header planning,
 // so ordinary generic functions and generic nominal types do not delegate Doof
-// specialization to C++ templates. Generic methods on non-generic owners are
-// the deliberate exception documented in addMethod below.
+// specialization to C++ templates. Native-owned templates remain native;
+// every Doof-owned generic declaration is emitted as a reached concrete form.
 
 import {
   ActorCreationExpression, ArrayLiteral, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression, CaseExpression, CaseStatement,
@@ -17,7 +17,7 @@ import {
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { isAssignable, sameType, substituteTypeParams, typeName } from "./checker-types"
 import {
-  ActorType, ArrayResolvedType, ClassType, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SetResolvedType,
+  ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SetResolvedType,
   StreamResolvedType, TupleResolvedType, TypeParameterType, TypeSubstitution, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 import { moduleNamespace } from "./emitter-names"
@@ -61,6 +61,7 @@ export class MethodInstantiation {
   owner: ClassDeclaration
   declaration: FunctionDeclaration
   substitution: TypeSubstitution
+  ownerEmittedName: string
   emittedName: string
   trace: string[] = []
 }
@@ -73,15 +74,14 @@ export class InstantiationPlan {
   let overflow: bool = false
   overflowTrace: string[] = []
   let currentTrace: string[] = []
-  nativeTemplateClassKeys: string[] = []
   jsonSerializationKeys: string[] = []
   jsonDeserializationKeys: string[] = []
-  let visitedTemplateMethodKeys: string[] = []
+  concreteNameScopes: string[] = []
+  concreteNames: string[] = []
 }
 
 export function buildInstantiationPlan(result: AnalysisResult): InstantiationPlan {
   plan := InstantiationPlan {}
-  discoverNativeTemplateClasses(result, plan)
   for module of result.modules {
     for statement of module.program.statements { collectStatement(statement, module.path, result, plan, [], []) }
   }
@@ -268,11 +268,7 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
                   ownerType: ClassType -> {
                     owner := classDeclaration(analysis, ownerType.symbol.module, ownerType.symbol.name)
                     if owner != none && call.resolvedFunction!.typeParams.length > 0 {
-                      if owner!.typeParams.length == 0 {
-                        collectTemplateMethodBody(plan, ownerType, call.resolvedFunction!, concreteArgs, analysis)
-                      } else {
-                        addMethod(plan, ownerType, owner!, call.resolvedFunction!, concreteArgs)
-                      }
+                      if !owner!.native_ { addMethod(plan, ownerType, owner!, call.resolvedFunction!, concreteArgs) }
                       recordedMethod = true
                     }
                   }
@@ -328,14 +324,6 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     catch_: CatchExpression -> { collectBlock(catch_.body, modulePath, analysis, plan, names, arguments) }
     _ -> { }
   }
-}
-
-function collectTemplateMethodBody(plan: InstantiationPlan, owner: ClassType, method: FunctionDeclaration, typeArgs: ResolvedType[], analysis: AnalysisResult): none {
-  ownerKey := owner.symbol.module + "::class::" + owner.symbol.name
-  key := methodInstantiationKey(ownerKey, method.name, typeArgs)
-  if containsString(plan.visitedTemplateMethodKeys, key) { return }
-  plan.visitedTemplateMethodKeys.push(key)
-  collectFunctionBody(method, owner.symbol.module, analysis, plan, method.typeParams, typeArgs)
 }
 
 function collectJsonMemberDemand(member: MemberExpression, analysis: AnalysisResult, plan: InstantiationPlan, names: string[], arguments: ResolvedType[]): none {
@@ -457,66 +445,15 @@ function collectType(type_: ResolvedType, analysis: AnalysisResult, plan: Instan
 function addFunction(plan: InstantiationPlan, modulePath: string, declaration: FunctionDeclaration, typeArgs: ResolvedType[]): none {
   key := functionInstantiationKey(modulePath, declaration.name, typeArgs)
   for existing of plan.functions { if existing.key == key { return } }
-  emittedName := concreteName(declaration.name, typeArgs)
+  emittedName := allocateConcreteName(plan, "module:" + modulePath, concreteName(declaration.name, typeArgs))
   plan.functions.push(FunctionInstantiation { key, modulePath, declaration, substitution: TypeSubstitution { names: declaration.typeParams, arguments: typeArgs }, emittedName, trace: extendedTrace(plan.currentTrace, emittedName) })
 }
 
 function addClass(plan: InstantiationPlan, modulePath: string, declaration: ClassDeclaration, typeArgs: ResolvedType[]): none {
   key := classInstantiationKey(modulePath, declaration.name, typeArgs)
-  if containsString(plan.nativeTemplateClassKeys, nativeTemplateClassKey(modulePath, declaration.name)) { return }
   for existing of plan.classes { if existing.key == key { return } }
-  emittedName := concreteName(declaration.name, typeArgs)
+  emittedName := allocateConcreteName(plan, "module:" + modulePath, concreteName(declaration.name, typeArgs))
   plan.classes.push(ClassInstantiation { key, modulePath, declaration, substitution: TypeSubstitution { names: declaration.typeParams, arguments: typeArgs }, emittedName, trace: extendedTrace(plan.currentTrace, emittedName) })
-}
-
-export function nativeTemplateClassKey(modulePath: string, name: string): string => modulePath + "::" + name
-
-function discoverNativeTemplateClasses(analysis: AnalysisResult, plan: InstantiationPlan): none {
-  for module of analysis.modules {
-    for statement of module.program.statements { discoverNativeTemplateClassesInStatement(statement, plan) }
-  }
-}
-
-function discoverNativeTemplateClassesInStatement(statement: Statement, plan: InstantiationPlan): none {
-  case statement {
-    class_: ClassDeclaration -> {
-      if !class_.native_ { return }
-      for field of class_.fields { if field.resolvedType != none { collectNativeTemplateClasses(field.resolvedType!, plan) } }
-      for method of class_.methods { if method.resolvedType != none { collectNativeTemplateClasses(method.resolvedType!, plan) } }
-    }
-    fn: FunctionDeclaration -> { if fn.native_ && fn.resolvedType != none { collectNativeTemplateClasses(fn.resolvedType!, plan) } }
-    export_: ExportDeclaration -> { discoverNativeTemplateClassesInStatement(export_.declaration, plan) }
-    _ -> { }
-  }
-}
-
-function collectNativeTemplateClasses(type_: ResolvedType, plan: InstantiationPlan): none {
-  case type_ {
-    class_: ClassType -> {
-      if !class_.symbol.native_ && class_.typeArgs.length > 0 { addString(plan.nativeTemplateClassKeys, nativeTemplateClassKey(class_.symbol.module, class_.name)) }
-      for argument of class_.typeArgs { collectNativeTemplateClasses(argument, plan) }
-    }
-    interface_: InterfaceType -> { for argument of interface_.typeArgs { collectNativeTemplateClasses(argument, plan) } }
-    array: ArrayResolvedType -> { collectNativeTemplateClasses(array.elementType, plan) }
-    map: MapResolvedType -> { collectNativeTemplateClasses(map.keyType, plan); collectNativeTemplateClasses(map.valueType, plan) }
-    set_: SetResolvedType -> { collectNativeTemplateClasses(set_.elementType, plan) }
-    stream: StreamResolvedType -> { collectNativeTemplateClasses(stream.elementType, plan) }
-    result_: ResultResolvedType -> { collectNativeTemplateClasses(result_.valueType, plan); collectNativeTemplateClasses(result_.errorType, plan) }
-    actor: ActorType -> { collectNativeTemplateClasses(actor.innerClass, plan) }
-    promise: PromiseType -> { collectNativeTemplateClasses(promise.valueType, plan) }
-    tuple: TupleResolvedType -> { for element of tuple.elements { collectNativeTemplateClasses(element, plan) } }
-    union_: UnionResolvedType -> { for member of union_.types { collectNativeTemplateClasses(member, plan) } }
-    weak_: WeakResolvedType -> { collectNativeTemplateClasses(weak_.inner, plan) }
-    function_: FunctionType -> {
-      for parameter of function_.params { collectNativeTemplateClasses(parameter.type_, plan) }
-      collectNativeTemplateClasses(function_.returnType, plan)
-    }
-    _ -> { }
-  }
-}
-
-function addString(values: string[], value: string): none {
-  if !containsString(values, value) { values.push(value) }
 }
 
 function containsString(values: string[], value: string): bool {
@@ -528,15 +465,18 @@ function addInterface(plan: InstantiationPlan, modulePath: string, name: string,
   if containsTypeParameters(typeArgs) { return }
   key := interfaceInstantiationKey(modulePath, name, typeArgs)
   for existing of plan.interfaces { if existing.key == key { return } }
-  plan.interfaces.push(InterfaceInstantiation { key, modulePath, name, substitution: TypeSubstitution { arguments: typeArgs }, emittedName: concreteName(name, typeArgs) })
+  emittedName := allocateConcreteName(plan, "module:" + modulePath, concreteName(name, typeArgs))
+  plan.interfaces.push(InterfaceInstantiation { key, modulePath, name, substitution: TypeSubstitution { arguments: typeArgs }, emittedName })
 }
 
 function addMethod(plan: InstantiationPlan, ownerType: ClassType, owner: ClassDeclaration, declaration: FunctionDeclaration, methodArgs: ResolvedType[]): none {
-  // Generic methods on ordinary classes map directly to C++ member templates.
-  // Whole-program method specialization is reserved for specialized generic
-  // owners, where the owner substitution must participate in the method key.
-  if owner.typeParams.length == 0 { return }
-  ownerKey := classInstantiationKey(ownerType.symbol.module, ownerType.name, ownerType.typeArgs)
+  ownerKey := if owner.typeParams.length == 0
+    then classInstantiationKey(ownerType.symbol.module, owner.name, [])
+    else classInstantiationKey(ownerType.symbol.module, owner.name, ownerType.typeArgs)
+  let ownerEmittedName = owner.name
+  if owner.typeParams.length > 0 {
+    for existing of plan.classes { if existing.key == ownerKey { ownerEmittedName = existing.emittedName } }
+  }
   key := methodInstantiationKey(ownerKey, declaration.name, methodArgs)
   for existing of plan.methods { if existing.key == key { return } }
   let names: string[] = []
@@ -545,11 +485,32 @@ function addMethod(plan: InstantiationPlan, ownerType: ClassType, owner: ClassDe
   for argument of ownerType.typeArgs { arguments.push(argument) }
   for name of declaration.typeParams { names.push(name) }
   for argument of methodArgs { arguments.push(argument) }
+  emittedName := allocateConcreteName(plan, "owner:" + ownerKey, concreteName(declaration.name, methodArgs))
   plan.methods.push(MethodInstantiation {
     key, modulePath: ownerType.symbol.module, ownerKey, owner, declaration,
-    substitution: TypeSubstitution { names, arguments }, emittedName: concreteName(declaration.name, methodArgs),
-    trace: extendedTrace(plan.currentTrace, concreteName(owner.name + "__" + declaration.name, methodArgs)),
+    substitution: TypeSubstitution { names, arguments }, ownerEmittedName,
+    emittedName,
+    trace: extendedTrace(plan.currentTrace, ownerEmittedName + "__" + emittedName),
   })
+}
+
+function allocateConcreteName(plan: InstantiationPlan, scope: string, base: string): string {
+  let candidate = base
+  let suffix = 2
+  while concreteNameAllocated(plan, scope, candidate) {
+    candidate = base + "_" + string(suffix)
+    suffix = suffix + 1
+  }
+  plan.concreteNameScopes.push(scope)
+  plan.concreteNames.push(candidate)
+  return candidate
+}
+
+function concreteNameAllocated(plan: InstantiationPlan, scope: string, name: string): bool {
+  for index of 0..<plan.concreteNames.length {
+    if plan.concreteNameScopes[index] == scope && plan.concreteNames[index] == name { return true }
+  }
+  return false
 }
 
 function extendedTrace(parent: string[], item: string): string[] {
@@ -769,6 +730,7 @@ function concreteTypeListKey(types: ResolvedType[]): string {
 function canonicalTypeKey(type_: ResolvedType): string {
   case type_ {
     class_: ClassType -> { return "class:" + class_.symbol.module + ":" + class_.name + concreteTypeListKey(class_.typeArgs) }
+    enum_: EnumType -> { return "enum:" + enum_.symbol.module + ":" + enum_.name }
     interface_: InterfaceType -> { return "interface:" + interface_.symbol.module + ":" + interface_.name + concreteTypeListKey(interface_.typeArgs) }
     array: ArrayResolvedType -> { return (if array.readonly_ then "readonly-array:" else "array:") + canonicalTypeKey(array.elementType) }
     map: MapResolvedType -> { return (if map.readonly_ then "readonly-map:" else "map:") + canonicalTypeKey(map.keyType) + ":" + canonicalTypeKey(map.valueType) }

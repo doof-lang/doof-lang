@@ -18,7 +18,7 @@ import { EmitContext, isCapturedMutable, recordCoverageLine, sourceLineDirective
 import { emitCaseTypePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
-import { emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { emitContextType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 
 export function emitBlock(block: Block, level: int, context: EmitContext): string {
   let result = ""
@@ -355,12 +355,12 @@ function emitTryDestructuring(statement: DestructuringStatement, temporaryName: 
 
 function emitLocalDeclaration(ind: string, name: string, annotation: TypeAnnotation | none, resolvedType: ResolvedType | none, value: Expression, context: EmitContext, readonly_: bool, shallowImmutable: bool = false): string {
   if resolvedType == none { panic("Local declaration was not resolved before emission") }
-  let typeText = if annotation == none then "auto" else emitType(resolvedType!, context.modulePath)
+  let typeText = if annotation == none then "auto" else emitContextType(resolvedType!, context)
   prefix := localConstPrefix(resolvedType!, readonly_, shallowImmutable)
   let expected: ResolvedType | none = resolvedType
   let valueText = emitExpression(value, context, expected)
   if !readonly_ && isCapturedMutable(context, name) {
-    return ind + "auto " + cppIdentifier(name) + " = std::make_shared<" + emitType(resolvedType!, context.modulePath) + ">(" + valueText + ");\n"
+    return ind + "auto " + cppIdentifier(name) + " = std::make_shared<" + emitContextType(resolvedType!, context) + ">(" + valueText + ");\n"
   }
   return ind + prefix + typeText + " " + cppIdentifier(name) + " = " + valueText + ";\n"
 }

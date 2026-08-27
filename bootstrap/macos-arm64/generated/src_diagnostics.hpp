@@ -28,8 +28,8 @@ namespace app_src_semantic_ {
     std::string message;
     SemanticSpan span;
     std::string module;
-    std::string replacement = std::string("");
-    Diagnostic(std::string severity, std::string message, SemanticSpan span, std::string module, std::string replacement = std::string("")) : severity(severity), message(message), span(span), module(module), replacement(replacement) {}
+    std::string replacement;
+    Diagnostic(std::string severity, std::string message, SemanticSpan span, std::string module, std::string replacement) : severity(severity), message(message), span(span), module(module), replacement(replacement) {}
 };
 }
 

@@ -282,25 +282,26 @@ namespace app_src_driver_ {
     extern int32_t MAX_PRINTED_DIAGNOSTICS;
     extern int64_t MAX_NATIVE_COMPILER_OUTPUT_BYTES;
     extern int64_t MAX_COVERAGE_OUTPUT_BYTES;
+    extern std::shared_ptr<DriverSourceState> configuredDriverSourceState;
 }
 
 namespace app_src_semantic_ {
-    using __type1 = std::variant<std::monostate, std::shared_ptr<PrimitiveType>, std::shared_ptr<ClassType>, std::shared_ptr<EnumType>, std::shared_ptr<InterfaceType>, std::shared_ptr<FunctionType>, std::shared_ptr<ActorType>, std::shared_ptr<PromiseType>, std::shared_ptr<ArrayResolvedType>, std::shared_ptr<MapResolvedType>, std::shared_ptr<SetResolvedType>, std::shared_ptr<StreamResolvedType>, std::shared_ptr<RangeResolvedType>, std::shared_ptr<JsonValueResolvedType>, std::shared_ptr<ResultResolvedType>, std::shared_ptr<TupleResolvedType>, std::shared_ptr<UnionResolvedType>, std::shared_ptr<WeakResolvedType>, std::shared_ptr<NoneType>, std::shared_ptr<NeverType>, std::shared_ptr<UnknownType>, std::shared_ptr<TypeParameterType>, std::shared_ptr<ClassMetadataResolvedType>, std::shared_ptr<MethodReflectionResolvedType>>;
+    using doof_header_type_1 = std::variant<std::monostate, std::shared_ptr<PrimitiveType>, std::shared_ptr<ClassType>, std::shared_ptr<EnumType>, std::shared_ptr<InterfaceType>, std::shared_ptr<FunctionType>, std::shared_ptr<ActorType>, std::shared_ptr<PromiseType>, std::shared_ptr<ArrayResolvedType>, std::shared_ptr<MapResolvedType>, std::shared_ptr<SetResolvedType>, std::shared_ptr<StreamResolvedType>, std::shared_ptr<RangeResolvedType>, std::shared_ptr<JsonValueResolvedType>, std::shared_ptr<ResultResolvedType>, std::shared_ptr<TupleResolvedType>, std::shared_ptr<UnionResolvedType>, std::shared_ptr<WeakResolvedType>, std::shared_ptr<NoneType>, std::shared_ptr<NeverType>, std::shared_ptr<UnknownType>, std::shared_ptr<TypeParameterType>, std::shared_ptr<ClassMetadataResolvedType>, std::shared_ptr<MethodReflectionResolvedType>>;
 }
 
 namespace app_src_ast_ {
-    using __type2 = std::variant<std::monostate, std::shared_ptr<NamedType>, std::shared_ptr<ArrayType>, std::shared_ptr<UnionType>, std::shared_ptr<AstFunctionType>, std::shared_ptr<WeakType>>;
-    using __type3 = std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
-    using __type4 = std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
-    using __type5 = std::variant<std::monostate, std::shared_ptr<IntLiteral>, std::shared_ptr<LongLiteral>, std::shared_ptr<FloatLiteral>, std::shared_ptr<DoubleLiteral>, std::shared_ptr<StringLiteral>, std::shared_ptr<CharLiteral>, std::shared_ptr<BoolLiteral>, std::shared_ptr<NoneLiteral>, std::shared_ptr<Identifier>, std::shared_ptr<BinaryExpression>, std::shared_ptr<UnaryExpression>, std::shared_ptr<AssignmentExpression>, std::shared_ptr<MemberExpression>, std::shared_ptr<IndexExpression>, std::shared_ptr<CallExpression>, std::shared_ptr<ArrayLiteral>, std::shared_ptr<ObjectLiteral>, std::shared_ptr<TupleLiteral>, std::shared_ptr<LambdaExpression>, std::shared_ptr<IfExpression>, std::shared_ptr<CaseExpression>, std::shared_ptr<ConstructExpression>, std::shared_ptr<DotShorthand>, std::shared_ptr<ThisExpression>, std::shared_ptr<CallerExpression>, std::shared_ptr<AsyncExpression>, std::shared_ptr<RetireExpression>, std::shared_ptr<AsExpression>, std::shared_ptr<ActorCreationExpression>, std::shared_ptr<YieldBlockExpression>, std::shared_ptr<CatchExpression>>;
-    using __type6 = std::variant<std::shared_ptr<IntLiteral>, std::shared_ptr<LongLiteral>, std::shared_ptr<FloatLiteral>, std::shared_ptr<DoubleLiteral>, std::shared_ptr<StringLiteral>, std::shared_ptr<CharLiteral>, std::shared_ptr<BoolLiteral>, std::shared_ptr<NoneLiteral>, std::shared_ptr<Identifier>, std::shared_ptr<BinaryExpression>, std::shared_ptr<UnaryExpression>, std::shared_ptr<AssignmentExpression>, std::shared_ptr<MemberExpression>, std::shared_ptr<IndexExpression>, std::shared_ptr<CallExpression>, std::shared_ptr<ArrayLiteral>, std::shared_ptr<ObjectLiteral>, std::shared_ptr<TupleLiteral>, std::shared_ptr<LambdaExpression>, std::shared_ptr<IfExpression>, std::shared_ptr<CaseExpression>, std::shared_ptr<ConstructExpression>, std::shared_ptr<DotShorthand>, std::shared_ptr<ThisExpression>, std::shared_ptr<CallerExpression>, std::shared_ptr<AsyncExpression>, std::shared_ptr<RetireExpression>, std::shared_ptr<AsExpression>, std::shared_ptr<ActorCreationExpression>, std::shared_ptr<YieldBlockExpression>, std::shared_ptr<CatchExpression>, std::shared_ptr<Block>>;
-    using __type7 = std::variant<std::monostate, std::shared_ptr<ConstDeclaration>, std::shared_ptr<ReadonlyDeclaration>, std::shared_ptr<ImmutableBinding>, std::shared_ptr<LetDeclaration>, std::shared_ptr<FunctionDeclaration>, std::shared_ptr<ClassDeclaration>, std::shared_ptr<InterfaceDeclaration>, std::shared_ptr<EnumDeclaration>, std::shared_ptr<TypeAliasDeclaration>, std::shared_ptr<ImportDeclaration>, std::shared_ptr<MockImportDirective>, std::shared_ptr<ExportDeclaration>, std::shared_ptr<ExportList>, std::shared_ptr<IfStatement>, std::shared_ptr<CaseStatement>, std::shared_ptr<WhileStatement>, std::shared_ptr<ForStatement>, std::shared_ptr<ForOfStatement>, std::shared_ptr<WithStatement>, std::shared_ptr<ReturnStatement>, std::shared_ptr<YieldStatement>, std::shared_ptr<BreakStatement>, std::shared_ptr<ContinueStatement>, std::shared_ptr<ExpressionStatement>, std::shared_ptr<DestructuringStatement>, std::shared_ptr<TryStatement>, std::shared_ptr<YieldBlockAssignmentStatement>, std::shared_ptr<Block>>;
-    using __type8 = std::variant<std::shared_ptr<ConstDeclaration>, std::shared_ptr<ReadonlyDeclaration>, std::shared_ptr<ImmutableBinding>, std::shared_ptr<LetDeclaration>, std::shared_ptr<ExpressionStatement>, std::shared_ptr<DestructuringStatement>>;
+    using doof_header_type_2 = std::variant<std::monostate, std::shared_ptr<NamedType>, std::shared_ptr<ArrayType>, std::shared_ptr<UnionType>, std::shared_ptr<AstFunctionType>, std::shared_ptr<WeakType>>;
+    using doof_header_type_3 = std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
+    using doof_header_type_4 = std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
+    using doof_header_type_5 = std::variant<std::monostate, std::shared_ptr<IntLiteral>, std::shared_ptr<LongLiteral>, std::shared_ptr<FloatLiteral>, std::shared_ptr<DoubleLiteral>, std::shared_ptr<StringLiteral>, std::shared_ptr<CharLiteral>, std::shared_ptr<BoolLiteral>, std::shared_ptr<NoneLiteral>, std::shared_ptr<Identifier>, std::shared_ptr<BinaryExpression>, std::shared_ptr<UnaryExpression>, std::shared_ptr<AssignmentExpression>, std::shared_ptr<MemberExpression>, std::shared_ptr<IndexExpression>, std::shared_ptr<CallExpression>, std::shared_ptr<ArrayLiteral>, std::shared_ptr<ObjectLiteral>, std::shared_ptr<TupleLiteral>, std::shared_ptr<LambdaExpression>, std::shared_ptr<IfExpression>, std::shared_ptr<CaseExpression>, std::shared_ptr<ConstructExpression>, std::shared_ptr<DotShorthand>, std::shared_ptr<ThisExpression>, std::shared_ptr<CallerExpression>, std::shared_ptr<AsyncExpression>, std::shared_ptr<RetireExpression>, std::shared_ptr<AsExpression>, std::shared_ptr<ActorCreationExpression>, std::shared_ptr<YieldBlockExpression>, std::shared_ptr<CatchExpression>>;
+    using doof_header_type_6 = std::variant<std::shared_ptr<IntLiteral>, std::shared_ptr<LongLiteral>, std::shared_ptr<FloatLiteral>, std::shared_ptr<DoubleLiteral>, std::shared_ptr<StringLiteral>, std::shared_ptr<CharLiteral>, std::shared_ptr<BoolLiteral>, std::shared_ptr<NoneLiteral>, std::shared_ptr<Identifier>, std::shared_ptr<BinaryExpression>, std::shared_ptr<UnaryExpression>, std::shared_ptr<AssignmentExpression>, std::shared_ptr<MemberExpression>, std::shared_ptr<IndexExpression>, std::shared_ptr<CallExpression>, std::shared_ptr<ArrayLiteral>, std::shared_ptr<ObjectLiteral>, std::shared_ptr<TupleLiteral>, std::shared_ptr<LambdaExpression>, std::shared_ptr<IfExpression>, std::shared_ptr<CaseExpression>, std::shared_ptr<ConstructExpression>, std::shared_ptr<DotShorthand>, std::shared_ptr<ThisExpression>, std::shared_ptr<CallerExpression>, std::shared_ptr<AsyncExpression>, std::shared_ptr<RetireExpression>, std::shared_ptr<AsExpression>, std::shared_ptr<ActorCreationExpression>, std::shared_ptr<YieldBlockExpression>, std::shared_ptr<CatchExpression>, std::shared_ptr<Block>>;
+    using doof_header_type_7 = std::variant<std::monostate, std::shared_ptr<ConstDeclaration>, std::shared_ptr<ReadonlyDeclaration>, std::shared_ptr<ImmutableBinding>, std::shared_ptr<LetDeclaration>, std::shared_ptr<FunctionDeclaration>, std::shared_ptr<ClassDeclaration>, std::shared_ptr<InterfaceDeclaration>, std::shared_ptr<EnumDeclaration>, std::shared_ptr<TypeAliasDeclaration>, std::shared_ptr<ImportDeclaration>, std::shared_ptr<MockImportDirective>, std::shared_ptr<ExportDeclaration>, std::shared_ptr<ExportList>, std::shared_ptr<IfStatement>, std::shared_ptr<CaseStatement>, std::shared_ptr<WhileStatement>, std::shared_ptr<ForStatement>, std::shared_ptr<ForOfStatement>, std::shared_ptr<WithStatement>, std::shared_ptr<ReturnStatement>, std::shared_ptr<YieldStatement>, std::shared_ptr<BreakStatement>, std::shared_ptr<ContinueStatement>, std::shared_ptr<ExpressionStatement>, std::shared_ptr<DestructuringStatement>, std::shared_ptr<TryStatement>, std::shared_ptr<YieldBlockAssignmentStatement>, std::shared_ptr<Block>>;
+    using doof_header_type_8 = std::variant<std::shared_ptr<ConstDeclaration>, std::shared_ptr<ReadonlyDeclaration>, std::shared_ptr<ImmutableBinding>, std::shared_ptr<LetDeclaration>, std::shared_ptr<ExpressionStatement>, std::shared_ptr<DestructuringStatement>>;
 }
 
 namespace app_src_parser_ {
-    using __type9 = std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>;
-    using __type10 = std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>;
+    using doof_header_type_9 = std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>;
+    using doof_header_type_10 = std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>;
 }
 
 namespace std_::blob::types {
@@ -1137,53 +1138,53 @@ namespace app_src_semantic_ {
     std::string name;
     std::string module;
     bool exported;
-    std::string originalName = std::string("");
-    bool native_ = false;
-    std::string nativeHeader = std::string("");
-    std::string nativeCppName = std::string("");
-    std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{});
-    std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<ResolvedType>> streamElementTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{});
-    Symbol(std::string kind, std::string name, std::string module, bool exported, std::string originalName = std::string(""), bool native_ = false, std::string nativeHeader = std::string(""), std::string nativeCppName = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations = std::make_shared<std::vector<std::shared_ptr<Symbol>>>(std::vector<std::shared_ptr<Symbol>>{}), std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<ResolvedType>> streamElementTypes = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{})) : kind(kind), name(name), module(module), exported(exported), originalName(originalName), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), implementations(implementations), implementedInterfaceTypes(implementedInterfaceTypes), typeParams(typeParams), streamElementTypes(streamElementTypes) {}
+    std::string originalName;
+    bool native_;
+    std::string nativeHeader;
+    std::string nativeCppName;
+    std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations;
+    std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes;
+    std::shared_ptr<std::vector<std::string>> typeParams;
+    std::shared_ptr<std::vector<ResolvedType>> streamElementTypes;
+    Symbol(std::string kind, std::string name, std::string module, bool exported, std::string originalName, bool native_, std::string nativeHeader, std::string nativeCppName, std::shared_ptr<std::vector<std::shared_ptr<Symbol>>> implementations, std::shared_ptr<std::vector<std::string>> implementedInterfaceTypes, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<ResolvedType>> streamElementTypes) : kind(kind), name(name), module(module), exported(exported), originalName(originalName), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), implementations(implementations), implementedInterfaceTypes(implementedInterfaceTypes), typeParams(typeParams), streamElementTypes(streamElementTypes) {}
 };
     struct SourceFile : public std::enable_shared_from_this<SourceFile> {
     std::string path;
     std::string source;
-    std::string physicalPath = std::string("");
-    SourceFile(std::string path, std::string source, std::string physicalPath = std::string("")) : path(path), source(source), physicalPath(physicalPath) {}
+    std::string physicalPath;
+    SourceFile(std::string path, std::string source, std::string physicalPath) : path(path), source(source), physicalPath(physicalPath) {}
 };
     struct PrimitiveType : public std::enable_shared_from_this<PrimitiveType> {
-    std::string kind = std::string("primitive");
+    std::string kind;
     std::string name;
     PrimitiveType(std::string kind, std::string name) : kind(kind), name(name) {}
 };
     struct ClassType : public std::enable_shared_from_this<ClassType> {
-    std::string kind = std::string("class");
+    std::string kind;
     std::string name;
     std::shared_ptr<Symbol> symbol;
-    std::shared_ptr<std::vector<ResolvedType>> typeArgs = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{});
-    ClassType(std::string kind, std::string name, std::shared_ptr<Symbol> symbol, std::shared_ptr<std::vector<ResolvedType>> typeArgs = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{})) : kind(kind), name(name), symbol(symbol), typeArgs(typeArgs) {}
+    std::shared_ptr<std::vector<ResolvedType>> typeArgs;
+    ClassType(std::string kind, std::string name, std::shared_ptr<Symbol> symbol, std::shared_ptr<std::vector<ResolvedType>> typeArgs) : kind(kind), name(name), symbol(symbol), typeArgs(typeArgs) {}
 };
     struct EnumType : public std::enable_shared_from_this<EnumType> {
-    std::string kind = std::string("enum");
+    std::string kind;
     std::string name;
     std::shared_ptr<Symbol> symbol;
     EnumType(std::string kind, std::string name, std::shared_ptr<Symbol> symbol) : kind(kind), name(name), symbol(symbol) {}
 };
     struct InterfaceType : public std::enable_shared_from_this<InterfaceType> {
-    std::string kind = std::string("interface");
+    std::string kind;
     std::string name;
     std::shared_ptr<Symbol> symbol;
-    std::shared_ptr<std::vector<ResolvedType>> typeArgs = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{});
-    InterfaceType(std::string kind, std::string name, std::shared_ptr<Symbol> symbol, std::shared_ptr<std::vector<ResolvedType>> typeArgs = std::make_shared<std::vector<ResolvedType>>(std::vector<ResolvedType>{})) : kind(kind), name(name), symbol(symbol), typeArgs(typeArgs) {}
+    std::shared_ptr<std::vector<ResolvedType>> typeArgs;
+    InterfaceType(std::string kind, std::string name, std::shared_ptr<Symbol> symbol, std::shared_ptr<std::vector<ResolvedType>> typeArgs) : kind(kind), name(name), symbol(symbol), typeArgs(typeArgs) {}
 };
     struct FunctionType : public std::enable_shared_from_this<FunctionType> {
-    std::string kind = std::string("function");
+    std::string kind;
     std::shared_ptr<std::vector<std::shared_ptr<FunctionParamType>>> params;
     ResolvedType returnType;
-    std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    FunctionType(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<FunctionParamType>>> params, ResolvedType returnType, std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : kind(kind), params(params), returnType(returnType), typeParams(typeParams) {}
+    std::shared_ptr<std::vector<std::string>> typeParams;
+    FunctionType(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<FunctionParamType>>> params, ResolvedType returnType, std::shared_ptr<std::vector<std::string>> typeParams) : kind(kind), params(params), returnType(returnType), typeParams(typeParams) {}
 };
     struct FunctionParamType : public std::enable_shared_from_this<FunctionParamType> {
     std::string name;
@@ -1192,94 +1193,94 @@ namespace app_src_semantic_ {
     FunctionParamType(std::string name, ResolvedType type_, bool hasDefault) : name(name), type_(type_), hasDefault(hasDefault) {}
 };
     struct ActorType : public std::enable_shared_from_this<ActorType> {
-    std::string kind = std::string("actor");
+    std::string kind;
     std::shared_ptr<ClassType> innerClass;
     ActorType(std::string kind, std::shared_ptr<ClassType> innerClass) : kind(kind), innerClass(innerClass) {}
 };
     struct PromiseType : public std::enable_shared_from_this<PromiseType> {
-    std::string kind = std::string("promise");
+    std::string kind;
     ResolvedType valueType;
     PromiseType(std::string kind, ResolvedType valueType) : kind(kind), valueType(valueType) {}
 };
     struct ArrayResolvedType : public std::enable_shared_from_this<ArrayResolvedType> {
-    std::string kind = std::string("array");
+    std::string kind;
     ResolvedType elementType;
     bool readonly_;
     ArrayResolvedType(std::string kind, ResolvedType elementType, bool readonly_) : kind(kind), elementType(elementType), readonly_(readonly_) {}
 };
     struct MapResolvedType : public std::enable_shared_from_this<MapResolvedType> {
-    std::string kind = std::string("map");
+    std::string kind;
     ResolvedType keyType;
     ResolvedType valueType;
     bool readonly_;
     MapResolvedType(std::string kind, ResolvedType keyType, ResolvedType valueType, bool readonly_) : kind(kind), keyType(keyType), valueType(valueType), readonly_(readonly_) {}
 };
     struct SetResolvedType : public std::enable_shared_from_this<SetResolvedType> {
-    std::string kind = std::string("set");
+    std::string kind;
     ResolvedType elementType;
     bool readonly_;
     SetResolvedType(std::string kind, ResolvedType elementType, bool readonly_) : kind(kind), elementType(elementType), readonly_(readonly_) {}
 };
     struct StreamResolvedType : public std::enable_shared_from_this<StreamResolvedType> {
-    std::string kind = std::string("stream");
+    std::string kind;
     ResolvedType elementType;
     StreamResolvedType(std::string kind, ResolvedType elementType) : kind(kind), elementType(elementType) {}
 };
     struct RangeResolvedType : public std::enable_shared_from_this<RangeResolvedType> {
-    std::string kind = std::string("range");
-    RangeResolvedType(std::string kind = std::string("range")) : kind(kind) {}
+    std::string kind;
+    RangeResolvedType(std::string kind) : kind(kind) {}
 };
     struct JsonValueResolvedType : public std::enable_shared_from_this<JsonValueResolvedType> {
-    std::string kind = std::string("json-value");
-    JsonValueResolvedType(std::string kind = std::string("json-value")) : kind(kind) {}
+    std::string kind;
+    JsonValueResolvedType(std::string kind) : kind(kind) {}
 };
     struct ResultResolvedType : public std::enable_shared_from_this<ResultResolvedType> {
-    std::string kind = std::string("result");
+    std::string kind;
     ResolvedType valueType;
     ResolvedType errorType;
     ResultResolvedType(std::string kind, ResolvedType valueType, ResolvedType errorType) : kind(kind), valueType(valueType), errorType(errorType) {}
 };
     struct TupleResolvedType : public std::enable_shared_from_this<TupleResolvedType> {
-    std::string kind = std::string("tuple");
+    std::string kind;
     std::shared_ptr<std::vector<ResolvedType>> elements;
     TupleResolvedType(std::string kind, std::shared_ptr<std::vector<ResolvedType>> elements) : kind(kind), elements(elements) {}
 };
     struct UnionResolvedType : public std::enable_shared_from_this<UnionResolvedType> {
-    std::string kind = std::string("union");
+    std::string kind;
     std::shared_ptr<std::vector<ResolvedType>> types;
     UnionResolvedType(std::string kind, std::shared_ptr<std::vector<ResolvedType>> types) : kind(kind), types(types) {}
 };
     struct WeakResolvedType : public std::enable_shared_from_this<WeakResolvedType> {
-    std::string kind = std::string("weak");
+    std::string kind;
     ResolvedType inner;
     WeakResolvedType(std::string kind, ResolvedType inner) : kind(kind), inner(inner) {}
 };
     struct NoneType : public std::enable_shared_from_this<NoneType> {
-    std::string kind = std::string("none");
-    NoneType(std::string kind = std::string("none")) : kind(kind) {}
+    std::string kind;
+    NoneType(std::string kind) : kind(kind) {}
 };
     struct NeverType : public std::enable_shared_from_this<NeverType> {
-    std::string kind = std::string("never");
-    NeverType(std::string kind = std::string("never")) : kind(kind) {}
+    std::string kind;
+    NeverType(std::string kind) : kind(kind) {}
 };
     struct UnknownType : public std::enable_shared_from_this<UnknownType> {
-    std::string kind = std::string("unknown");
-    UnknownType(std::string kind = std::string("unknown")) : kind(kind) {}
+    std::string kind;
+    UnknownType(std::string kind) : kind(kind) {}
 };
     struct TypeParameterType : public std::enable_shared_from_this<TypeParameterType> {
-    std::string kind = std::string("type-parameter");
+    std::string kind;
     std::string name;
-    std::string constraintName = std::string("");
-    __type1 constraint = std::monostate{};
-    TypeParameterType(std::string kind, std::string name, std::string constraintName = std::string(""), __type1 constraint = std::monostate{}) : kind(kind), name(name), constraintName(constraintName), constraint(constraint) {}
+    std::string constraintName;
+    doof_header_type_1 constraint;
+    TypeParameterType(std::string kind, std::string name, std::string constraintName, doof_header_type_1 constraint) : kind(kind), name(name), constraintName(constraintName), constraint(constraint) {}
 };
     struct ClassMetadataResolvedType : public std::enable_shared_from_this<ClassMetadataResolvedType> {
-    std::string kind = std::string("class-metadata");
+    std::string kind;
     ResolvedType classType;
     ClassMetadataResolvedType(std::string kind, ResolvedType classType) : kind(kind), classType(classType) {}
 };
     struct MethodReflectionResolvedType : public std::enable_shared_from_this<MethodReflectionResolvedType> {
-    std::string kind = std::string("method-reflection");
+    std::string kind;
     ResolvedType classType;
     MethodReflectionResolvedType(std::string kind, ResolvedType classType) : kind(kind), classType(classType) {}
 };
@@ -1294,8 +1295,8 @@ namespace app_src_ast_ {
     AstLocation() {}
 };
     struct TypeParameterConstraint : public std::enable_shared_from_this<TypeParameterConstraint> {
-    __type2 type_ = std::monostate{};
-    TypeParameterConstraint(__type2 type_ = std::monostate{}) : type_(type_) {}
+    doof_header_type_2 type_;
+    TypeParameterConstraint(doof_header_type_2 type_) : type_(type_) {}
 };
 }
 
@@ -1303,8 +1304,8 @@ namespace app_src_emitter_names_ {
     struct ModuleNamespaceMapping : public std::enable_shared_from_this<ModuleNamespaceMapping> {
     std::string logicalPrefix;
     std::string packageName;
-    std::string outputRoot = std::string("");
-    ModuleNamespaceMapping(std::string logicalPrefix, std::string packageName, std::string outputRoot = std::string("")) : logicalPrefix(logicalPrefix), packageName(packageName), outputRoot(outputRoot) {}
+    std::string outputRoot;
+    ModuleNamespaceMapping(std::string logicalPrefix, std::string packageName, std::string outputRoot) : logicalPrefix(logicalPrefix), packageName(packageName), outputRoot(outputRoot) {}
 };
 }
 
@@ -1315,11 +1316,11 @@ namespace app_src_emitter_module_ {
     std::string source;
     std::string headerName;
     std::string sourceName;
-    int32_t coverageModuleId = -1;
-    std::shared_ptr<std::vector<int32_t>> instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    bool reused = false;
-    std::string fingerprint = std::string("");
-    ModuleEmission(std::string modulePath, std::string header, std::string source, std::string headerName, std::string sourceName, int32_t coverageModuleId = -1, std::shared_ptr<std::vector<int32_t>> instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), bool reused = false, std::string fingerprint = std::string("")) : modulePath(modulePath), header(header), source(source), headerName(headerName), sourceName(sourceName), coverageModuleId(coverageModuleId), instrumentedLines(instrumentedLines), reused(reused), fingerprint(fingerprint) {}
+    int32_t coverageModuleId;
+    std::shared_ptr<std::vector<int32_t>> instrumentedLines;
+    bool reused;
+    std::string fingerprint;
+    ModuleEmission(std::string modulePath, std::string header, std::string source, std::string headerName, std::string sourceName, int32_t coverageModuleId, std::shared_ptr<std::vector<int32_t>> instrumentedLines, bool reused, std::string fingerprint) : modulePath(modulePath), header(header), source(source), headerName(headerName), sourceName(sourceName), coverageModuleId(coverageModuleId), instrumentedLines(instrumentedLines), reused(reused), fingerprint(fingerprint) {}
 };
     struct ModuleEmissionCacheKey : public std::enable_shared_from_this<ModuleEmissionCacheKey> {
     std::string modulePath;
@@ -1329,15 +1330,15 @@ namespace app_src_emitter_module_ {
     struct CoverageModuleMetadata : public std::enable_shared_from_this<CoverageModuleMetadata> {
     int32_t moduleId;
     std::string modulePath;
-    std::shared_ptr<std::vector<int32_t>> instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    CoverageModuleMetadata(int32_t moduleId, std::string modulePath, std::shared_ptr<std::vector<int32_t>> instrumentedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})) : moduleId(moduleId), modulePath(modulePath), instrumentedLines(instrumentedLines) {}
+    std::shared_ptr<std::vector<int32_t>> instrumentedLines;
+    CoverageModuleMetadata(int32_t moduleId, std::string modulePath, std::shared_ptr<std::vector<int32_t>> instrumentedLines) : moduleId(moduleId), modulePath(modulePath), instrumentedLines(instrumentedLines) {}
 };
     struct ModuleGraphEmission : public std::enable_shared_from_this<ModuleGraphEmission> {
-    std::shared_ptr<std::vector<std::shared_ptr<ModuleEmission>>> modules = std::make_shared<std::vector<std::shared_ptr<ModuleEmission>>>(std::vector<std::shared_ptr<ModuleEmission>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<CoverageModuleMetadata>>> coverageModules = std::make_shared<std::vector<std::shared_ptr<CoverageModuleMetadata>>>(std::vector<std::shared_ptr<CoverageModuleMetadata>>{});
-    std::string wasmSupportSource = std::string("");
-    std::shared_ptr<std::vector<std::string>> wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    ModuleGraphEmission(std::shared_ptr<std::vector<std::shared_ptr<ModuleEmission>>> modules = std::make_shared<std::vector<std::shared_ptr<ModuleEmission>>>(std::vector<std::shared_ptr<ModuleEmission>>{}), std::shared_ptr<std::vector<std::shared_ptr<CoverageModuleMetadata>>> coverageModules = std::make_shared<std::vector<std::shared_ptr<CoverageModuleMetadata>>>(std::vector<std::shared_ptr<CoverageModuleMetadata>>{}), std::string wasmSupportSource = std::string(""), std::shared_ptr<std::vector<std::string>> wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : modules(modules), coverageModules(coverageModules), wasmSupportSource(wasmSupportSource), wasmExportNames(wasmExportNames) {}
+    std::shared_ptr<std::vector<std::shared_ptr<ModuleEmission>>> modules;
+    std::shared_ptr<std::vector<std::shared_ptr<CoverageModuleMetadata>>> coverageModules;
+    std::string wasmSupportSource;
+    std::shared_ptr<std::vector<std::string>> wasmExportNames;
+    ModuleGraphEmission(std::shared_ptr<std::vector<std::shared_ptr<ModuleEmission>>> modules, std::shared_ptr<std::vector<std::shared_ptr<CoverageModuleMetadata>>> coverageModules, std::string wasmSupportSource, std::shared_ptr<std::vector<std::string>> wasmExportNames) : modules(modules), coverageModules(coverageModules), wasmSupportSource(wasmSupportSource), wasmExportNames(wasmExportNames) {}
 };
 }
 
@@ -1346,7 +1347,7 @@ namespace app_src_compiler_ {
     std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission> emission;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sourceFiles;
-    std::shared_ptr<std::vector<std::string>> resolutionProbes = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> resolutionProbes;
     Compilation(std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission> emission, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>> sourceFiles, std::shared_ptr<std::vector<std::string>> resolutionProbes) : emission(emission), diagnostics(diagnostics), sourceFiles(sourceFiles), resolutionProbes(resolutionProbes) {}
 };
 }
@@ -1355,33 +1356,33 @@ namespace app_src_cli_ {
     struct CliRequest : public std::enable_shared_from_this<CliRequest> {
     std::string command;
     std::string entry;
-    std::string outputDirectory = std::string("");
-    std::string compiler = std::string("");
-    std::string filter = std::string("");
-    bool listOnly = false;
-    bool coverage = false;
-    std::string coverageOutput = std::string("");
-    std::string traceOutput = std::string("");
-    std::string profileTimeLimit = std::string("");
-    bool profileNoOpen = false;
-    std::string distDirectory = std::string("");
-    std::string macosSigning = std::string("");
-    std::string macosSignIdentity = std::string("");
-    bool macosSandbox = false;
-    std::string macosEntitlements = std::string("");
-    std::string iosDestination = std::string("simulator");
-    std::string iosDevice = std::string("");
-    std::string iosSignIdentity = std::string("");
-    std::string iosProvisioningProfile = std::string("");
-    std::string targetOverride = std::string("");
-    std::shared_ptr<std::vector<std::string>> programArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    CliRequest(std::string command, std::string entry, std::string outputDirectory = std::string(""), std::string compiler = std::string(""), std::string filter = std::string(""), bool listOnly = false, bool coverage = false, std::string coverageOutput = std::string(""), std::string traceOutput = std::string(""), std::string profileTimeLimit = std::string(""), bool profileNoOpen = false, std::string distDirectory = std::string(""), std::string macosSigning = std::string(""), std::string macosSignIdentity = std::string(""), bool macosSandbox = false, std::string macosEntitlements = std::string(""), std::string iosDestination = std::string("simulator"), std::string iosDevice = std::string(""), std::string iosSignIdentity = std::string(""), std::string iosProvisioningProfile = std::string(""), std::string targetOverride = std::string(""), std::shared_ptr<std::vector<std::string>> programArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : command(command), entry(entry), outputDirectory(outputDirectory), compiler(compiler), filter(filter), listOnly(listOnly), coverage(coverage), coverageOutput(coverageOutput), traceOutput(traceOutput), profileTimeLimit(profileTimeLimit), profileNoOpen(profileNoOpen), distDirectory(distDirectory), macosSigning(macosSigning), macosSignIdentity(macosSignIdentity), macosSandbox(macosSandbox), macosEntitlements(macosEntitlements), iosDestination(iosDestination), iosDevice(iosDevice), iosSignIdentity(iosSignIdentity), iosProvisioningProfile(iosProvisioningProfile), targetOverride(targetOverride), programArguments(programArguments) {}
+    std::string outputDirectory;
+    std::string compiler;
+    std::string filter;
+    bool listOnly;
+    bool coverage;
+    std::string coverageOutput;
+    std::string traceOutput;
+    std::string profileTimeLimit;
+    bool profileNoOpen;
+    std::string distDirectory;
+    std::string macosSigning;
+    std::string macosSignIdentity;
+    bool macosSandbox;
+    std::string macosEntitlements;
+    std::string iosDestination;
+    std::string iosDevice;
+    std::string iosSignIdentity;
+    std::string iosProvisioningProfile;
+    std::string targetOverride;
+    std::shared_ptr<std::vector<std::string>> programArguments;
+    CliRequest(std::string command, std::string entry, std::string outputDirectory, std::string compiler, std::string filter, bool listOnly, bool coverage, std::string coverageOutput, std::string traceOutput, std::string profileTimeLimit, bool profileNoOpen, std::string distDirectory, std::string macosSigning, std::string macosSignIdentity, bool macosSandbox, std::string macosEntitlements, std::string iosDestination, std::string iosDevice, std::string iosSignIdentity, std::string iosProvisioningProfile, std::string targetOverride, std::shared_ptr<std::vector<std::string>> programArguments) : command(command), entry(entry), outputDirectory(outputDirectory), compiler(compiler), filter(filter), listOnly(listOnly), coverage(coverage), coverageOutput(coverageOutput), traceOutput(traceOutput), profileTimeLimit(profileTimeLimit), profileNoOpen(profileNoOpen), distDirectory(distDirectory), macosSigning(macosSigning), macosSignIdentity(macosSignIdentity), macosSandbox(macosSandbox), macosEntitlements(macosEntitlements), iosDestination(iosDestination), iosDevice(iosDevice), iosSignIdentity(iosSignIdentity), iosProvisioningProfile(iosProvisioningProfile), targetOverride(targetOverride), programArguments(programArguments) {}
 };
     struct CliParseResult : public std::enable_shared_from_this<CliParseResult> {
     std::shared_ptr<CliRequest> request;
-    std::string error = std::string("");
-    bool help = false;
-    CliParseResult(std::shared_ptr<CliRequest> request, std::string error = std::string(""), bool help = false) : request(request), error(error), help(help) {}
+    std::string error;
+    bool help;
+    CliParseResult(std::shared_ptr<CliRequest> request, std::string error, bool help) : request(request), error(error), help(help) {}
 };
 }
 
@@ -1392,30 +1393,30 @@ namespace app_src_macos_app_ {
     MacOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
 };
     struct MacOSEmbeddedLibrary : public std::enable_shared_from_this<MacOSEmbeddedLibrary> {
-    std::string library = std::string("");
-    std::string path = std::string("");
-    MacOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
+    std::string library;
+    std::string path;
+    MacOSEmbeddedLibrary(std::string library, std::string path) : library(library), path(path) {}
 };
     struct MacOSAppConfig : public std::enable_shared_from_this<MacOSAppConfig> {
     std::string executableName;
     std::string bundleId;
     std::string displayName;
     std::string version;
-    std::string iconPath = std::string("");
-    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr;
-    std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{});
-    std::string category = std::string("public.app-category.developer-tools");
-    std::string minimumSystemVersion = std::string("11.0");
-    MacOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<MacOSAppResource>>>(std::vector<std::shared_ptr<MacOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>{}), std::string category = std::string("public.app-category.developer-tools"), std::string minimumSystemVersion = std::string("11.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), category(category), minimumSystemVersion(minimumSystemVersion) {}
+    std::string iconPath;
+    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist;
+    std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources;
+    std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries;
+    std::string category;
+    std::string minimumSystemVersion;
+    MacOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist, std::shared_ptr<std::vector<std::shared_ptr<MacOSAppResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<MacOSEmbeddedLibrary>>> embeddedLibraries, std::string category, std::string minimumSystemVersion) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), category(category), minimumSystemVersion(minimumSystemVersion) {}
 };
     struct MacOSPackageConfig : public std::enable_shared_from_this<MacOSPackageConfig> {
-    std::string distDirectory = std::string("");
-    std::string signing = std::string("developer-id");
-    std::string identity = std::string("");
-    bool sandbox = false;
-    std::string entitlementsPath = std::string("");
-    MacOSPackageConfig(std::string distDirectory = std::string(""), std::string signing = std::string("developer-id"), std::string identity = std::string(""), bool sandbox = false, std::string entitlementsPath = std::string("")) : distDirectory(distDirectory), signing(signing), identity(identity), sandbox(sandbox), entitlementsPath(entitlementsPath) {}
+    std::string distDirectory;
+    std::string signing;
+    std::string identity;
+    bool sandbox;
+    std::string entitlementsPath;
+    MacOSPackageConfig(std::string distDirectory, std::string signing, std::string identity, bool sandbox, std::string entitlementsPath) : distDirectory(distDirectory), signing(signing), identity(identity), sandbox(sandbox), entitlementsPath(entitlementsPath) {}
 };
 }
 
@@ -1426,42 +1427,42 @@ namespace app_src_ios_app_ {
     IOSAppResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
 };
     struct IOSEmbeddedLibrary : public std::enable_shared_from_this<IOSEmbeddedLibrary> {
-    std::string library = std::string("");
-    std::string path = std::string("");
-    IOSEmbeddedLibrary(std::string library = std::string(""), std::string path = std::string("")) : library(library), path(path) {}
+    std::string library;
+    std::string path;
+    IOSEmbeddedLibrary(std::string library, std::string path) : library(library), path(path) {}
 };
     struct IOSAppConfig : public std::enable_shared_from_this<IOSAppConfig> {
     std::string executableName;
     std::string bundleId;
     std::string displayName;
     std::string version;
-    std::string iconPath = std::string("");
-    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr;
-    std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(std::vector<std::shared_ptr<IOSAppResource>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{});
-    std::string minimumDeploymentTarget = std::string("16.0");
-    IOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath = std::string(""), std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist = nullptr, std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources = std::make_shared<std::vector<std::shared_ptr<IOSAppResource>>>(std::vector<std::shared_ptr<IOSAppResource>>{}), std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries = std::make_shared<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>>(std::vector<std::shared_ptr<IOSEmbeddedLibrary>>{}), std::string minimumDeploymentTarget = std::string("16.0")) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), minimumDeploymentTarget(minimumDeploymentTarget) {}
+    std::string iconPath;
+    std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist;
+    std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources;
+    std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries;
+    std::string minimumDeploymentTarget;
+    IOSAppConfig(std::string executableName, std::string bundleId, std::string displayName, std::string version, std::string iconPath, std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> infoPlist, std::shared_ptr<std::vector<std::shared_ptr<IOSAppResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<IOSEmbeddedLibrary>>> embeddedLibraries, std::string minimumDeploymentTarget) : executableName(executableName), bundleId(bundleId), displayName(displayName), version(version), iconPath(iconPath), infoPlist(infoPlist), resources(resources), embeddedLibraries(embeddedLibraries), minimumDeploymentTarget(minimumDeploymentTarget) {}
 };
     struct IOSPackageConfig : public std::enable_shared_from_this<IOSPackageConfig> {
-    std::string identity = std::string("");
-    std::string provisioningProfilePath = std::string("");
-    IOSPackageConfig(std::string identity = std::string(""), std::string provisioningProfilePath = std::string("")) : identity(identity), provisioningProfilePath(provisioningProfilePath) {}
+    std::string identity;
+    std::string provisioningProfilePath;
+    IOSPackageConfig(std::string identity, std::string provisioningProfilePath) : identity(identity), provisioningProfilePath(provisioningProfilePath) {}
 };
 }
 
 namespace app_src_package_manifest_ {
     struct NativeBuildPlan : public std::enable_shared_from_this<NativeBuildPlan> {
-    std::shared_ptr<std::vector<std::string>> includePaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> sourceFiles = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> libraryPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> extraCopyPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> linkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> frameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> pkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> defines = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> compilerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::string>> linkerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    NativeBuildPlan(std::shared_ptr<std::vector<std::string>> includePaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> sourceFiles = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> libraryPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> extraCopyPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> linkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> frameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> pkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> defines = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> compilerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<std::string>> linkerFlags = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : includePaths(includePaths), sourceFiles(sourceFiles), libraryPaths(libraryPaths), extraCopyPaths(extraCopyPaths), linkLibraries(linkLibraries), frameworks(frameworks), pkgConfigPackages(pkgConfigPackages), defines(defines), compilerFlags(compilerFlags), linkerFlags(linkerFlags) {}
+    std::shared_ptr<std::vector<std::string>> includePaths;
+    std::shared_ptr<std::vector<std::string>> sourceFiles;
+    std::shared_ptr<std::vector<std::string>> libraryPaths;
+    std::shared_ptr<std::vector<std::string>> extraCopyPaths;
+    std::shared_ptr<std::vector<std::string>> linkLibraries;
+    std::shared_ptr<std::vector<std::string>> frameworks;
+    std::shared_ptr<std::vector<std::string>> pkgConfigPackages;
+    std::shared_ptr<std::vector<std::string>> defines;
+    std::shared_ptr<std::vector<std::string>> compilerFlags;
+    std::shared_ptr<std::vector<std::string>> linkerFlags;
+    NativeBuildPlan(std::shared_ptr<std::vector<std::string>> includePaths, std::shared_ptr<std::vector<std::string>> sourceFiles, std::shared_ptr<std::vector<std::string>> libraryPaths, std::shared_ptr<std::vector<std::string>> extraCopyPaths, std::shared_ptr<std::vector<std::string>> linkLibraries, std::shared_ptr<std::vector<std::string>> frameworks, std::shared_ptr<std::vector<std::string>> pkgConfigPackages, std::shared_ptr<std::vector<std::string>> defines, std::shared_ptr<std::vector<std::string>> compilerFlags, std::shared_ptr<std::vector<std::string>> linkerFlags) : includePaths(includePaths), sourceFiles(sourceFiles), libraryPaths(libraryPaths), extraCopyPaths(extraCopyPaths), linkLibraries(linkLibraries), frameworks(frameworks), pkgConfigPackages(pkgConfigPackages), defines(defines), compilerFlags(compilerFlags), linkerFlags(linkerFlags) {}
 };
     struct PackageResource : public std::enable_shared_from_this<PackageResource> {
     std::string sourcePath;
@@ -1475,72 +1476,72 @@ namespace app_src_package_manifest_ {
 };
     struct ExternalDependencyCommand : public std::enable_shared_from_this<ExternalDependencyCommand> {
     std::string program;
-    std::shared_ptr<std::vector<std::string>> args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
-    std::string workingDirectory = std::string("");
-    ExternalDependencyCommand(std::string program, std::shared_ptr<std::vector<std::string>> args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), std::string workingDirectory = std::string("")) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
+    std::shared_ptr<std::vector<std::string>> args;
+    std::shared_ptr<doof::ordered_map<std::string, std::string>> env;
+    std::string workingDirectory;
+    ExternalDependencyCommand(std::string program, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, std::string workingDirectory) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
 };
     struct ExternalDependency : public std::enable_shared_from_this<ExternalDependency> {
     std::string name;
     std::string kind;
     std::string url;
     std::string destination;
-    std::string sha256 = std::string("");
-    int32_t stripComponents = 1;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{});
-    std::string ref = std::string("");
-    std::string commit = std::string("");
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{});
-    ExternalDependency(std::string name, std::string kind, std::string url, std::string destination, std::string sha256 = std::string(""), int32_t stripComponents = 1, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>(std::vector<std::shared_ptr<ExternalDependencyCopyFile>>{}), std::string ref = std::string(""), std::string commit = std::string(""), std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands = std::make_shared<std::vector<std::shared_ptr<ExternalDependencyCommand>>>(std::vector<std::shared_ptr<ExternalDependencyCommand>>{})) : name(name), kind(kind), url(url), destination(destination), sha256(sha256), stripComponents(stripComponents), copyFiles(copyFiles), ref(ref), commit(commit), commands(commands) {}
+    std::string sha256;
+    int32_t stripComponents;
+    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles;
+    std::string ref;
+    std::string commit;
+    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands;
+    ExternalDependency(std::string name, std::string kind, std::string url, std::string destination, std::string sha256, int32_t stripComponents, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles, std::string ref, std::string commit, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands) : name(name), kind(kind), url(url), destination(destination), sha256(sha256), stripComponents(stripComponents), copyFiles(copyFiles), ref(ref), commit(commit), commands(commands) {}
 };
     struct PackageDependency : public std::enable_shared_from_this<PackageDependency> {
     std::string name;
-    std::string path = std::string("");
-    std::string url = std::string("");
-    std::string ref = std::string("");
-    std::string commit = std::string("");
-    PackageDependency(std::string name, std::string path = std::string(""), std::string url = std::string(""), std::string ref = std::string(""), std::string commit = std::string("")) : name(name), path(path), url(url), ref(ref), commit(commit) {}
+    std::string path;
+    std::string url;
+    std::string ref;
+    std::string commit;
+    PackageDependency(std::string name, std::string path, std::string url, std::string ref, std::string commit) : name(name), path(path), url(url), ref(ref), commit(commit) {}
 };
     struct DependencyResolution : public std::enable_shared_from_this<DependencyResolution> {
     std::string name;
-    std::string kind = std::string("git");
+    std::string kind;
     std::string url;
-    std::string ref = std::string("");
-    std::string commit = std::string("");
-    std::string sha256 = std::string("");
-    DependencyResolution(std::string name, std::string kind, std::string url, std::string ref = std::string(""), std::string commit = std::string(""), std::string sha256 = std::string("")) : name(name), kind(kind), url(url), ref(ref), commit(commit), sha256(sha256) {}
+    std::string ref;
+    std::string commit;
+    std::string sha256;
+    DependencyResolution(std::string name, std::string kind, std::string url, std::string ref, std::string commit, std::string sha256) : name(name), kind(kind), url(url), ref(ref), commit(commit), sha256(sha256) {}
 };
     struct DependencyPolicy : public std::enable_shared_from_this<DependencyPolicy> {
-    bool hasPackageSourceAllowlist = false;
-    std::shared_ptr<std::vector<std::string>> allowedPackageSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    bool hasExternalSourceAllowlist = false;
-    std::shared_ptr<std::vector<std::string>> allowedExternalSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    bool hasLinkLibraryAllowlist = false;
-    std::shared_ptr<std::vector<std::string>> allowedLinkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    bool hasFrameworkAllowlist = false;
-    std::shared_ptr<std::vector<std::string>> allowedFrameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    bool hasPkgConfigAllowlist = false;
-    std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    DependencyPolicy(bool hasPackageSourceAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedPackageSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasExternalSourceAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedExternalSources = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasLinkLibraryAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedLinkLibraries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasFrameworkAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedFrameworks = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), bool hasPkgConfigAllowlist = false, std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : hasPackageSourceAllowlist(hasPackageSourceAllowlist), allowedPackageSources(allowedPackageSources), hasExternalSourceAllowlist(hasExternalSourceAllowlist), allowedExternalSources(allowedExternalSources), hasLinkLibraryAllowlist(hasLinkLibraryAllowlist), allowedLinkLibraries(allowedLinkLibraries), hasFrameworkAllowlist(hasFrameworkAllowlist), allowedFrameworks(allowedFrameworks), hasPkgConfigAllowlist(hasPkgConfigAllowlist), allowedPkgConfigPackages(allowedPkgConfigPackages) {}
+    bool hasPackageSourceAllowlist;
+    std::shared_ptr<std::vector<std::string>> allowedPackageSources;
+    bool hasExternalSourceAllowlist;
+    std::shared_ptr<std::vector<std::string>> allowedExternalSources;
+    bool hasLinkLibraryAllowlist;
+    std::shared_ptr<std::vector<std::string>> allowedLinkLibraries;
+    bool hasFrameworkAllowlist;
+    std::shared_ptr<std::vector<std::string>> allowedFrameworks;
+    bool hasPkgConfigAllowlist;
+    std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages;
+    DependencyPolicy(bool hasPackageSourceAllowlist, std::shared_ptr<std::vector<std::string>> allowedPackageSources, bool hasExternalSourceAllowlist, std::shared_ptr<std::vector<std::string>> allowedExternalSources, bool hasLinkLibraryAllowlist, std::shared_ptr<std::vector<std::string>> allowedLinkLibraries, bool hasFrameworkAllowlist, std::shared_ptr<std::vector<std::string>> allowedFrameworks, bool hasPkgConfigAllowlist, std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages) : hasPackageSourceAllowlist(hasPackageSourceAllowlist), allowedPackageSources(allowedPackageSources), hasExternalSourceAllowlist(hasExternalSourceAllowlist), allowedExternalSources(allowedExternalSources), hasLinkLibraryAllowlist(hasLinkLibraryAllowlist), allowedLinkLibraries(allowedLinkLibraries), hasFrameworkAllowlist(hasFrameworkAllowlist), allowedFrameworks(allowedFrameworks), hasPkgConfigAllowlist(hasPkgConfigAllowlist), allowedPkgConfigPackages(allowedPkgConfigPackages) {}
 };
     struct PackageManifest : public std::enable_shared_from_this<PackageManifest> {
     std::string name;
-    std::string version = std::string("1.0");
+    std::string version;
     std::string manifestPath;
     std::string rootDirectory;
-    std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources = std::make_shared<std::vector<std::shared_ptr<PackageResource>>>(std::vector<std::shared_ptr<PackageResource>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies = std::make_shared<std::vector<std::shared_ptr<PackageDependency>>>(std::vector<std::shared_ptr<PackageDependency>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies = std::make_shared<std::vector<std::shared_ptr<ExternalDependency>>>(std::vector<std::shared_ptr<ExternalDependency>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions = std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions = std::make_shared<std::vector<std::shared_ptr<DependencyResolution>>>(std::vector<std::shared_ptr<DependencyResolution>>{});
-    std::shared_ptr<DependencyPolicy> policy = std::make_shared<DependencyPolicy>(false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+    std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources;
+    std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies;
+    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies;
+    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions;
+    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions;
+    std::shared_ptr<DependencyPolicy> policy;
     std::shared_ptr<NativeBuildPlan> nativeBuild;
-    std::string target = std::string("");
-    std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp = nullptr;
-    std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp = nullptr;
-    std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr;
-    std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr;
-    PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions, std::shared_ptr<DependencyPolicy> policy, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target = std::string(""), std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp = nullptr, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp = nullptr, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), externalDependencies(externalDependencies), packageResolutions(packageResolutions), externalResolutions(externalResolutions), policy(policy), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
+    std::string target;
+    std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp;
+    std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp;
+    std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig;
+    std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig;
+    PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions, std::shared_ptr<DependencyPolicy> policy, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), externalDependencies(externalDependencies), packageResolutions(packageResolutions), externalResolutions(externalResolutions), policy(policy), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
 };
 }
 
@@ -1549,20 +1550,20 @@ namespace std_::os::index {
     int32_t exitCode;
     std::shared_ptr<std::vector<uint8_t>> stdout_;
     std::shared_ptr<std::vector<uint8_t>> stderr_;
-    bool stdoutTruncated = false;
-    bool stderrTruncated = false;
-    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated = false, bool stderrTruncated = false) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
+    bool stdoutTruncated;
+    bool stderrTruncated;
+    ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated, bool stderrTruncated) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
 };
 }
 
 namespace app_src_external_dependency_ {
     struct ExternalDependencyTarget : public std::enable_shared_from_this<ExternalDependencyTarget> {
     std::string nativeTarget;
-    std::string sdkPath = std::string("");
-    std::string targetTriple = std::string("");
-    std::string configureHost = std::string("");
-    int32_t jobs = 1;
-    ExternalDependencyTarget(std::string nativeTarget, std::string sdkPath = std::string(""), std::string targetTriple = std::string(""), std::string configureHost = std::string(""), int32_t jobs = 1) : nativeTarget(nativeTarget), sdkPath(sdkPath), targetTriple(targetTriple), configureHost(configureHost), jobs(jobs) {}
+    std::string sdkPath;
+    std::string targetTriple;
+    std::string configureHost;
+    int32_t jobs;
+    ExternalDependencyTarget(std::string nativeTarget, std::string sdkPath, std::string targetTriple, std::string configureHost, int32_t jobs) : nativeTarget(nativeTarget), sdkPath(sdkPath), targetTriple(targetTriple), configureHost(configureHost), jobs(jobs) {}
 };
 }
 
@@ -1669,7 +1670,7 @@ struct Time : public std::enable_shared_from_this<Time> {
     static std::shared_ptr<Time> MIDNIGHT;
     static std::shared_ptr<Time> NOON;
     Time(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond) : hour(hour), minute(minute), second(second), nanosecond(nanosecond) {}
-    static doof::Result<std::shared_ptr<Time>, std::string> create(int32_t hour, int32_t minute, int32_t second = 0, int32_t nanosecond = 0);
+    static doof::Result<std::shared_ptr<Time>, std::string> create(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
     static doof::Result<std::shared_ptr<Time>, std::string> parse(const std::string& s);
     std::shared_ptr<Time> plusHours(int32_t n);
     std::shared_ptr<Time> plusMinutes(int32_t n);
@@ -1687,7 +1688,7 @@ struct DateTime : public std::enable_shared_from_this<DateTime> {
     std::shared_ptr<Time> time;
     DateTime(std::shared_ptr<Date> date, std::shared_ptr<Time> time) : date(date), time(time) {}
     static std::shared_ptr<DateTime> create(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time);
-    static doof::Result<std::shared_ptr<DateTime>, std::string> fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second = 0, int32_t nanosecond = 0);
+    static doof::Result<std::shared_ptr<DateTime>, std::string> fromParts(int32_t year, int32_t month, int32_t day, int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
     static std::shared_ptr<DateTime> nowUTC();
     static doof::Result<std::shared_ptr<DateTime>, std::string> parse(const std::string& s);
     std::shared_ptr<DateTime> plusDays(int32_t n);
@@ -1762,25 +1763,25 @@ namespace app_src_dependency_policy_ {
     std::string introducedBy;
     std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest;
     std::string sourceKind;
-    std::string sourceUrl = std::string("");
-    std::string sourceRef = std::string("");
-    std::string sourceCommit = std::string("");
-    std::string requestedUrl = std::string("");
-    std::string requestedRef = std::string("");
-    std::string requestedCommit = std::string("");
-    bool mutable_ = false;
-    ReachedPackageInput(std::string logicalPrefix, std::string introducedBy, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::string sourceKind, std::string sourceUrl = std::string(""), std::string sourceRef = std::string(""), std::string sourceCommit = std::string(""), std::string requestedUrl = std::string(""), std::string requestedRef = std::string(""), std::string requestedCommit = std::string(""), bool mutable_ = false) : logicalPrefix(logicalPrefix), introducedBy(introducedBy), manifest(manifest), sourceKind(sourceKind), sourceUrl(sourceUrl), sourceRef(sourceRef), sourceCommit(sourceCommit), requestedUrl(requestedUrl), requestedRef(requestedRef), requestedCommit(requestedCommit), mutable_(mutable_) {}
+    std::string sourceUrl;
+    std::string sourceRef;
+    std::string sourceCommit;
+    std::string requestedUrl;
+    std::string requestedRef;
+    std::string requestedCommit;
+    bool mutable_;
+    ReachedPackageInput(std::string logicalPrefix, std::string introducedBy, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::string sourceKind, std::string sourceUrl, std::string sourceRef, std::string sourceCommit, std::string requestedUrl, std::string requestedRef, std::string requestedCommit, bool mutable_) : logicalPrefix(logicalPrefix), introducedBy(introducedBy), manifest(manifest), sourceKind(sourceKind), sourceUrl(sourceUrl), sourceRef(sourceRef), sourceCommit(sourceCommit), requestedUrl(requestedUrl), requestedRef(requestedRef), requestedCommit(requestedCommit), mutable_(mutable_) {}
 };
     struct ResolvedExternalInput : public std::enable_shared_from_this<ResolvedExternalInput> {
     std::shared_ptr<ReachedPackageInput> owner;
     std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency;
     std::string selectedKind;
     std::string selectedUrl;
-    std::string selectedRef = std::string("");
-    std::string selectedCommit = std::string("");
-    std::string selectedSha256 = std::string("");
-    bool overridden = false;
-    ResolvedExternalInput(std::shared_ptr<ReachedPackageInput> owner, std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::string selectedKind, std::string selectedUrl, std::string selectedRef = std::string(""), std::string selectedCommit = std::string(""), std::string selectedSha256 = std::string(""), bool overridden = false) : owner(owner), dependency(dependency), selectedKind(selectedKind), selectedUrl(selectedUrl), selectedRef(selectedRef), selectedCommit(selectedCommit), selectedSha256(selectedSha256), overridden(overridden) {}
+    std::string selectedRef;
+    std::string selectedCommit;
+    std::string selectedSha256;
+    bool overridden;
+    ResolvedExternalInput(std::shared_ptr<ReachedPackageInput> owner, std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::string selectedKind, std::string selectedUrl, std::string selectedRef, std::string selectedCommit, std::string selectedSha256, bool overridden) : owner(owner), dependency(dependency), selectedKind(selectedKind), selectedUrl(selectedUrl), selectedRef(selectedRef), selectedCommit(selectedCommit), selectedSha256(selectedSha256), overridden(overridden) {}
 };
 }
 
@@ -1803,10 +1804,10 @@ namespace app_src_emitter_project_ {
 };
     struct ProjectEmission : public std::enable_shared_from_this<ProjectEmission> {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules;
-    std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>> supportFiles = std::make_shared<std::vector<std::shared_ptr<ProjectSupportFile>>>(std::vector<std::shared_ptr<ProjectSupportFile>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>> nativeCopies = std::make_shared<std::vector<std::shared_ptr<ProjectNativeCopy>>>(std::vector<std::shared_ptr<ProjectNativeCopy>>{});
+    std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>> supportFiles;
+    std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>> nativeCopies;
     std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild;
-    std::shared_ptr<std::vector<std::string>> wasmExportNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> wasmExportNames;
     ProjectEmission(std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules, std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>> supportFiles, std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>> nativeCopies, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::shared_ptr<std::vector<std::string>> wasmExportNames) : modules(modules), supportFiles(supportFiles), nativeCopies(nativeCopies), nativeBuild(nativeBuild), wasmExportNames(wasmExportNames) {}
 };
 }
@@ -1814,37 +1815,37 @@ namespace app_src_emitter_project_ {
 namespace app_src_frontend_cache_ {
     struct FrontendSourceProbe : public std::enable_shared_from_this<FrontendSourceProbe> {
     std::string logicalPath;
-    std::string sourceHash = std::string("");
-    bool missing = false;
-    FrontendSourceProbe(std::string logicalPath, std::string sourceHash = std::string(""), bool missing = false) : logicalPath(logicalPath), sourceHash(sourceHash), missing(missing) {}
+    std::string sourceHash;
+    bool missing;
+    FrontendSourceProbe(std::string logicalPath, std::string sourceHash, bool missing) : logicalPath(logicalPath), sourceHash(sourceHash), missing(missing) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FrontendSourceProbe>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<FrontendSourceProbe>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
     struct FrontendFileInput : public std::enable_shared_from_this<FrontendFileInput> {
     std::string path;
     std::string sourceHash;
     FrontendFileInput(std::string path, std::string sourceHash) : path(path), sourceHash(sourceHash) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FrontendFileInput>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<FrontendFileInput>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
     struct FrontendModuleOutput : public std::enable_shared_from_this<FrontendModuleOutput> {
     std::string modulePath;
     std::string headerName;
     std::string sourceName;
-    std::string fingerprint = std::string("");
-    FrontendModuleOutput(std::string modulePath, std::string headerName, std::string sourceName, std::string fingerprint = std::string("")) : modulePath(modulePath), headerName(headerName), sourceName(sourceName), fingerprint(fingerprint) {}
+    std::string fingerprint;
+    FrontendModuleOutput(std::string modulePath, std::string headerName, std::string sourceName, std::string fingerprint) : modulePath(modulePath), headerName(headerName), sourceName(sourceName), fingerprint(fingerprint) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FrontendModuleOutput>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<FrontendModuleOutput>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
     struct FrontendCacheState : public std::enable_shared_from_this<FrontendCacheState> {
-    int32_t version = 2;
+    int32_t version;
     std::string configurationFingerprint;
-    std::shared_ptr<std::vector<std::shared_ptr<FrontendSourceProbe>>> probes = std::make_shared<std::vector<std::shared_ptr<FrontendSourceProbe>>>(std::vector<std::shared_ptr<FrontendSourceProbe>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<FrontendFileInput>>> fileInputs = std::make_shared<std::vector<std::shared_ptr<FrontendFileInput>>>(std::vector<std::shared_ptr<FrontendFileInput>>{});
-    std::shared_ptr<std::vector<std::shared_ptr<FrontendModuleOutput>>> modules = std::make_shared<std::vector<std::shared_ptr<FrontendModuleOutput>>>(std::vector<std::shared_ptr<FrontendModuleOutput>>{});
-    FrontendCacheState(int32_t version, std::string configurationFingerprint, std::shared_ptr<std::vector<std::shared_ptr<FrontendSourceProbe>>> probes = std::make_shared<std::vector<std::shared_ptr<FrontendSourceProbe>>>(std::vector<std::shared_ptr<FrontendSourceProbe>>{}), std::shared_ptr<std::vector<std::shared_ptr<FrontendFileInput>>> fileInputs = std::make_shared<std::vector<std::shared_ptr<FrontendFileInput>>>(std::vector<std::shared_ptr<FrontendFileInput>>{}), std::shared_ptr<std::vector<std::shared_ptr<FrontendModuleOutput>>> modules = std::make_shared<std::vector<std::shared_ptr<FrontendModuleOutput>>>(std::vector<std::shared_ptr<FrontendModuleOutput>>{})) : version(version), configurationFingerprint(configurationFingerprint), probes(probes), fileInputs(fileInputs), modules(modules) {}
+    std::shared_ptr<std::vector<std::shared_ptr<FrontendSourceProbe>>> probes;
+    std::shared_ptr<std::vector<std::shared_ptr<FrontendFileInput>>> fileInputs;
+    std::shared_ptr<std::vector<std::shared_ptr<FrontendModuleOutput>>> modules;
+    FrontendCacheState(int32_t version, std::string configurationFingerprint, std::shared_ptr<std::vector<std::shared_ptr<FrontendSourceProbe>>> probes, std::shared_ptr<std::vector<std::shared_ptr<FrontendFileInput>>> fileInputs, std::shared_ptr<std::vector<std::shared_ptr<FrontendModuleOutput>>> modules) : version(version), configurationFingerprint(configurationFingerprint), probes(probes), fileInputs(fileInputs), modules(modules) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FrontendCacheState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<FrontendCacheState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
 }
 
@@ -1859,7 +1860,7 @@ namespace app_src_module_acquisition_ {
 namespace app_src_package_acquisition_ {
     struct ExactPackageSource : public std::enable_shared_from_this<ExactPackageSource> {
     std::string name;
-    std::string expectedManifestName = std::string("");
+    std::string expectedManifestName;
     std::string url;
     std::string ref;
     std::string commit;
@@ -1868,8 +1869,8 @@ namespace app_src_package_acquisition_ {
     struct AcquiredPackage : public std::enable_shared_from_this<AcquiredPackage> {
     std::shared_ptr<ExactPackageSource> source;
     std::string rootDirectory;
-    bool mutable_ = false;
-    AcquiredPackage(std::shared_ptr<ExactPackageSource> source, std::string rootDirectory, bool mutable_ = false) : source(source), rootDirectory(rootDirectory), mutable_(mutable_) {}
+    bool mutable_;
+    AcquiredPackage(std::shared_ptr<ExactPackageSource> source, std::string rootDirectory, bool mutable_) : source(source), rootDirectory(rootDirectory), mutable_(mutable_) {}
 };
 }
 
@@ -1889,24 +1890,24 @@ namespace app_src_project_ {
     std::string entry;
     std::string buildDirectory;
     bool hasManifest;
-    bool explicitEntry = false;
+    bool explicitEntry;
     std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependency>>> externalDependencies;
     std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild;
-    std::string target = std::string("");
-    std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp = nullptr;
-    std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp = nullptr;
-    std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr;
-    std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr;
-    ProjectSpec(std::string rootDirectory, std::string manifestPath, std::string name, std::string entry, std::string buildDirectory, bool hasManifest, bool explicitEntry, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependency>>> externalDependencies, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::string target = std::string(""), std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp = nullptr, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp = nullptr, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig = nullptr, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig = nullptr) : rootDirectory(rootDirectory), manifestPath(manifestPath), name(name), entry(entry), buildDirectory(buildDirectory), hasManifest(hasManifest), explicitEntry(explicitEntry), manifest(manifest), resources(resources), externalDependencies(externalDependencies), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
+    std::string target;
+    std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp;
+    std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp;
+    std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig;
+    std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig;
+    ProjectSpec(std::string rootDirectory, std::string manifestPath, std::string name, std::string entry, std::string buildDirectory, bool hasManifest, bool explicitEntry, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependency>>> externalDependencies, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : rootDirectory(rootDirectory), manifestPath(manifestPath), name(name), entry(entry), buildDirectory(buildDirectory), hasManifest(hasManifest), explicitEntry(explicitEntry), manifest(manifest), resources(resources), externalDependencies(externalDependencies), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
 };
 }
 
 namespace app_src_run_command_ {
     struct RunInvocation : public std::enable_shared_from_this<RunInvocation> {
     std::string command;
-    std::shared_ptr<std::vector<std::string>> arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::string>> arguments;
     std::string directory;
     RunInvocation(std::string command, std::shared_ptr<std::vector<std::string>> arguments, std::string directory) : command(command), arguments(arguments), directory(directory) {}
 };
@@ -1922,14 +1923,14 @@ namespace app_src_resource_state_ {
     int64_t outputModifiedNanos;
     MaterializedResource(std::string sourcePath, std::string outputPath, int64_t sourceSize, int64_t sourceModifiedNanos, int64_t outputSize, int64_t outputModifiedNanos) : sourcePath(sourcePath), outputPath(outputPath), sourceSize(sourceSize), sourceModifiedNanos(sourceModifiedNanos), outputSize(outputSize), outputModifiedNanos(outputModifiedNanos) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MaterializedResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<MaterializedResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
     struct ResourceState : public std::enable_shared_from_this<ResourceState> {
-    int32_t version = 1;
-    std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>> files = std::make_shared<std::vector<std::shared_ptr<MaterializedResource>>>(std::vector<std::shared_ptr<MaterializedResource>>{});
-    ResourceState(int32_t version = 1, std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>> files = std::make_shared<std::vector<std::shared_ptr<MaterializedResource>>>(std::vector<std::shared_ptr<MaterializedResource>>{})) : version(version), files(files) {}
+    int32_t version;
+    std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>> files;
+    ResourceState(int32_t version, std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>> files) : version(version), files(files) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ResourceState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<ResourceState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
 }
 
@@ -1939,42 +1940,42 @@ namespace app_src_test_runner_ {
     int32_t covered;
     int32_t total;
     int32_t percentTenths;
-    std::shared_ptr<std::vector<int32_t>> hitLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    std::shared_ptr<std::vector<int32_t>> missedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    CoverageFileReport(std::string path, int32_t covered, int32_t total, int32_t percentTenths, std::shared_ptr<std::vector<int32_t>> hitLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> missedLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})) : path(path), covered(covered), total(total), percentTenths(percentTenths), hitLines(hitLines), missedLines(missedLines) {}
+    std::shared_ptr<std::vector<int32_t>> hitLines;
+    std::shared_ptr<std::vector<int32_t>> missedLines;
+    CoverageFileReport(std::string path, int32_t covered, int32_t total, int32_t percentTenths, std::shared_ptr<std::vector<int32_t>> hitLines, std::shared_ptr<std::vector<int32_t>> missedLines) : path(path), covered(covered), total(total), percentTenths(percentTenths), hitLines(hitLines), missedLines(missedLines) {}
 };
     struct CoverageReport : public std::enable_shared_from_this<CoverageReport> {
-    int32_t totalCovered = 0;
-    int32_t totalLines = 0;
-    int32_t totalPercentTenths = 1000;
-    std::shared_ptr<std::vector<std::shared_ptr<CoverageFileReport>>> files = std::make_shared<std::vector<std::shared_ptr<CoverageFileReport>>>(std::vector<std::shared_ptr<CoverageFileReport>>{});
-    CoverageReport(int32_t totalCovered = 0, int32_t totalLines = 0, int32_t totalPercentTenths = 1000, std::shared_ptr<std::vector<std::shared_ptr<CoverageFileReport>>> files = std::make_shared<std::vector<std::shared_ptr<CoverageFileReport>>>(std::vector<std::shared_ptr<CoverageFileReport>>{})) : totalCovered(totalCovered), totalLines(totalLines), totalPercentTenths(totalPercentTenths), files(files) {}
+    int32_t totalCovered;
+    int32_t totalLines;
+    int32_t totalPercentTenths;
+    std::shared_ptr<std::vector<std::shared_ptr<CoverageFileReport>>> files;
+    CoverageReport(int32_t totalCovered, int32_t totalLines, int32_t totalPercentTenths, std::shared_ptr<std::vector<std::shared_ptr<CoverageFileReport>>> files) : totalCovered(totalCovered), totalLines(totalLines), totalPercentTenths(totalPercentTenths), files(files) {}
 };
     struct DiscoveredTest : public std::enable_shared_from_this<DiscoveredTest> {
     std::string id;
     std::string name;
     std::string modulePath;
     std::string moduleDisplayPath;
-    bool usesMocks = false;
-    DiscoveredTest(std::string id, std::string name, std::string modulePath, std::string moduleDisplayPath, bool usesMocks = false) : id(id), name(name), modulePath(modulePath), moduleDisplayPath(moduleDisplayPath), usesMocks(usesMocks) {}
+    bool usesMocks;
+    DiscoveredTest(std::string id, std::string name, std::string modulePath, std::string moduleDisplayPath, bool usesMocks) : id(id), name(name), modulePath(modulePath), moduleDisplayPath(moduleDisplayPath), usesMocks(usesMocks) {}
 };
     struct TestCompilationGroup : public std::enable_shared_from_this<TestCompilationGroup> {
     std::string outputName;
-    std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{});
-    TestCompilationGroup(std::string outputName, std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{})) : outputName(outputName), tests(tests) {}
+    std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests;
+    TestCompilationGroup(std::string outputName, std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests) : outputName(outputName), tests(tests) {}
 };
     struct TestDiscovery : public std::enable_shared_from_this<TestDiscovery> {
-    std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{});
-    std::shared_ptr<std::vector<std::string>> errors = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    TestDiscovery(std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{}), std::shared_ptr<std::vector<std::string>> errors = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})) : tests(tests), errors(errors) {}
+    std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests;
+    std::shared_ptr<std::vector<std::string>> errors;
+    TestDiscovery(std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> tests, std::shared_ptr<std::vector<std::string>> errors) : tests(tests), errors(errors) {}
 };
 }
 
 namespace app_src_driver_ {
     struct NativeCommandResult : public std::enable_shared_from_this<NativeCommandResult> {
     int32_t exitCode;
-    std::shared_ptr<std::vector<uint8_t>> output = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
-    std::string error = std::string("");
+    std::shared_ptr<std::vector<uint8_t>> output;
+    std::string error;
     bool truncated;
     NativeCommandResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> output, std::string error, bool truncated) : exitCode(exitCode), output(output), error(error), truncated(truncated) {}
 };
@@ -1988,27 +1989,27 @@ namespace app_src_driver_ {
     std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest;
     std::string introducedBy;
     std::string sourceKind;
-    std::string sourceUrl = std::string("");
-    std::string sourceRef = std::string("");
-    std::string sourceCommit = std::string("");
-    std::string requestedUrl = std::string("");
-    std::string requestedRef = std::string("");
-    std::string requestedCommit = std::string("");
-    bool mutable_ = false;
-    DriverReachedPackage(std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquisition, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::string introducedBy, std::string sourceKind, std::string sourceUrl = std::string(""), std::string sourceRef = std::string(""), std::string sourceCommit = std::string(""), std::string requestedUrl = std::string(""), std::string requestedRef = std::string(""), std::string requestedCommit = std::string(""), bool mutable_ = false) : acquisition(acquisition), manifest(manifest), introducedBy(introducedBy), sourceKind(sourceKind), sourceUrl(sourceUrl), sourceRef(sourceRef), sourceCommit(sourceCommit), requestedUrl(requestedUrl), requestedRef(requestedRef), requestedCommit(requestedCommit), mutable_(mutable_) {}
+    std::string sourceUrl;
+    std::string sourceRef;
+    std::string sourceCommit;
+    std::string requestedUrl;
+    std::string requestedRef;
+    std::string requestedCommit;
+    bool mutable_;
+    DriverReachedPackage(std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquisition, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::string introducedBy, std::string sourceKind, std::string sourceUrl, std::string sourceRef, std::string sourceCommit, std::string requestedUrl, std::string requestedRef, std::string requestedCommit, bool mutable_) : acquisition(acquisition), manifest(manifest), introducedBy(introducedBy), sourceKind(sourceKind), sourceUrl(sourceUrl), sourceRef(sourceRef), sourceCommit(sourceCommit), requestedUrl(requestedUrl), requestedRef(requestedRef), requestedCommit(requestedCommit), mutable_(mutable_) {}
 };
     struct DriverAcquiredSource : public std::enable_shared_from_this<DriverAcquiredSource> {
     std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquisition;
     std::string introducedBy;
     std::string sourceKind;
-    std::string sourceUrl = std::string("");
-    std::string sourceRef = std::string("");
-    std::string sourceCommit = std::string("");
-    std::string requestedUrl = std::string("");
-    std::string requestedRef = std::string("");
-    std::string requestedCommit = std::string("");
-    bool mutable_ = false;
-    DriverAcquiredSource(std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquisition, std::string introducedBy, std::string sourceKind, std::string sourceUrl = std::string(""), std::string sourceRef = std::string(""), std::string sourceCommit = std::string(""), std::string requestedUrl = std::string(""), std::string requestedRef = std::string(""), std::string requestedCommit = std::string(""), bool mutable_ = false) : acquisition(acquisition), introducedBy(introducedBy), sourceKind(sourceKind), sourceUrl(sourceUrl), sourceRef(sourceRef), sourceCommit(sourceCommit), requestedUrl(requestedUrl), requestedRef(requestedRef), requestedCommit(requestedCommit), mutable_(mutable_) {}
+    std::string sourceUrl;
+    std::string sourceRef;
+    std::string sourceCommit;
+    std::string requestedUrl;
+    std::string requestedRef;
+    std::string requestedCommit;
+    bool mutable_;
+    DriverAcquiredSource(std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquisition, std::string introducedBy, std::string sourceKind, std::string sourceUrl, std::string sourceRef, std::string sourceCommit, std::string requestedUrl, std::string requestedRef, std::string requestedCommit, bool mutable_) : acquisition(acquisition), introducedBy(introducedBy), sourceKind(sourceKind), sourceUrl(sourceUrl), sourceRef(sourceRef), sourceCommit(sourceCommit), requestedUrl(requestedUrl), requestedRef(requestedRef), requestedCommit(requestedCommit), mutable_(mutable_) {}
 };
     struct DriverSourceState : public std::enable_shared_from_this<DriverSourceState> {
     std::shared_ptr<std::vector<std::shared_ptr<DriverSourceRoot>>> localRoots;
@@ -2037,8 +2038,8 @@ namespace app_src_semantic_ {
     std::string message;
     SemanticSpan span;
     std::string module;
-    std::string replacement = std::string("");
-    Diagnostic(std::string severity, std::string message, SemanticSpan span, std::string module, std::string replacement = std::string("")) : severity(severity), message(message), span(span), module(module), replacement(replacement) {}
+    std::string replacement;
+    Diagnostic(std::string severity, std::string message, SemanticSpan span, std::string module, std::string replacement) : severity(severity), message(message), span(span), module(module), replacement(replacement) {}
 };
     struct Binding : public std::enable_shared_from_this<Binding> {
     std::string name;
@@ -2047,11 +2048,11 @@ namespace app_src_semantic_ {
     bool mutable_;
     SemanticSpan span;
     std::string module;
-    std::shared_ptr<Symbol> symbol = nullptr;
-    std::string casePattern = std::string("");
-    std::string fieldMode = std::string("");
-    std::string fieldOwner = std::string("");
-    Binding(std::string name, std::string kind, ResolvedType type_, bool mutable_, SemanticSpan span, std::string module, std::shared_ptr<Symbol> symbol = nullptr, std::string casePattern = std::string(""), std::string fieldMode = std::string(""), std::string fieldOwner = std::string("")) : name(name), kind(kind), type_(type_), mutable_(mutable_), span(span), module(module), symbol(symbol), casePattern(casePattern), fieldMode(fieldMode), fieldOwner(fieldOwner) {}
+    std::shared_ptr<Symbol> symbol;
+    std::string casePattern;
+    std::string fieldMode;
+    std::string fieldOwner;
+    Binding(std::string name, std::string kind, ResolvedType type_, bool mutable_, SemanticSpan span, std::string module, std::shared_ptr<Symbol> symbol, std::string casePattern, std::string fieldMode, std::string fieldOwner) : name(name), kind(kind), type_(type_), mutable_(mutable_), span(span), module(module), symbol(symbol), casePattern(casePattern), fieldMode(fieldMode), fieldOwner(fieldOwner) {}
 };
 }
 
@@ -2066,40 +2067,40 @@ namespace app_src_ast_ {
     std::string kind;
     std::string name;
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
-    std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol = nullptr;
-    __type3 resolvedType = std::monostate{};
+    std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    NamedType(std::string kind, std::string name, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), typeArgs(typeArgs), resolvedSymbol(resolvedSymbol), resolvedType(resolvedType), span(span) {}
+    NamedType(std::string kind, std::string name, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), typeArgs(typeArgs), resolvedSymbol(resolvedSymbol), resolvedType(resolvedType), span(span) {}
 };
     struct ArrayType : public std::enable_shared_from_this<ArrayType> {
     std::string kind;
     TypeAnnotation elementType;
     bool readonly_;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    ArrayType(std::string kind, TypeAnnotation elementType, bool readonly_, __type3 resolvedType, SourceSpan span) : kind(kind), elementType(elementType), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
+    ArrayType(std::string kind, TypeAnnotation elementType, bool readonly_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), elementType(elementType), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
 };
     struct UnionType : public std::enable_shared_from_this<UnionType> {
     std::string kind;
     std::shared_ptr<std::vector<TypeAnnotation>> types;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    UnionType(std::string kind, std::shared_ptr<std::vector<TypeAnnotation>> types, __type3 resolvedType, SourceSpan span) : kind(kind), types(types), resolvedType(resolvedType), span(span) {}
+    UnionType(std::string kind, std::shared_ptr<std::vector<TypeAnnotation>> types, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), types(types), resolvedType(resolvedType), span(span) {}
 };
     struct AstFunctionType : public std::enable_shared_from_this<AstFunctionType> {
     std::string kind;
     std::shared_ptr<std::vector<std::shared_ptr<FunctionTypeParam>>> params;
     TypeAnnotation returnType;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    AstFunctionType(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<FunctionTypeParam>>> params, TypeAnnotation returnType, __type3 resolvedType, SourceSpan span) : kind(kind), params(params), returnType(returnType), resolvedType(resolvedType), span(span) {}
+    AstFunctionType(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<FunctionTypeParam>>> params, TypeAnnotation returnType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), params(params), returnType(returnType), resolvedType(resolvedType), span(span) {}
 };
     struct WeakType : public std::enable_shared_from_this<WeakType> {
-    std::string kind = std::string("weak-type");
+    std::string kind;
     TypeAnnotation type_;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    WeakType(std::string kind, TypeAnnotation type_, __type3 resolvedType, SourceSpan span) : kind(kind), type_(type_), resolvedType(resolvedType), span(span) {}
+    WeakType(std::string kind, TypeAnnotation type_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), resolvedType(resolvedType), span(span) {}
 };
     struct FunctionTypeParam : public std::enable_shared_from_this<FunctionTypeParam> {
     std::string name;
@@ -2110,97 +2111,97 @@ namespace app_src_ast_ {
     struct IntLiteral : public std::enable_shared_from_this<IntLiteral> {
     std::string kind;
     int32_t value;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    IntLiteral(std::string kind, int32_t value, __type3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
+    IntLiteral(std::string kind, int32_t value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct LongLiteral : public std::enable_shared_from_this<LongLiteral> {
     std::string kind;
     int64_t value;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    LongLiteral(std::string kind, int64_t value, __type3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
+    LongLiteral(std::string kind, int64_t value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct FloatLiteral : public std::enable_shared_from_this<FloatLiteral> {
     std::string kind;
     float value;
-    std::string raw = std::string("");
-    __type3 resolvedType = std::monostate{};
+    std::string raw;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    FloatLiteral(std::string kind, float value, std::string raw, __type3 resolvedType, SourceSpan span) : kind(kind), value(value), raw(raw), resolvedType(resolvedType), span(span) {}
+    FloatLiteral(std::string kind, float value, std::string raw, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), raw(raw), resolvedType(resolvedType), span(span) {}
 };
     struct DoubleLiteral : public std::enable_shared_from_this<DoubleLiteral> {
     std::string kind;
     double value;
-    std::string raw = std::string("");
-    __type3 resolvedType = std::monostate{};
+    std::string raw;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    DoubleLiteral(std::string kind, double value, std::string raw, __type3 resolvedType, SourceSpan span) : kind(kind), value(value), raw(raw), resolvedType(resolvedType), span(span) {}
+    DoubleLiteral(std::string kind, double value, std::string raw, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), raw(raw), resolvedType(resolvedType), span(span) {}
 };
     struct StringLiteral : public std::enable_shared_from_this<StringLiteral> {
     std::string kind;
     std::string value;
     std::shared_ptr<std::vector<std::string>> parts;
     std::shared_ptr<std::vector<Expression>> interpolations;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    StringLiteral(std::string kind, std::string value, std::shared_ptr<std::vector<std::string>> parts, std::shared_ptr<std::vector<Expression>> interpolations, __type3 resolvedType, SourceSpan span) : kind(kind), value(value), parts(parts), interpolations(interpolations), resolvedType(resolvedType), span(span) {}
+    StringLiteral(std::string kind, std::string value, std::shared_ptr<std::vector<std::string>> parts, std::shared_ptr<std::vector<Expression>> interpolations, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), parts(parts), interpolations(interpolations), resolvedType(resolvedType), span(span) {}
 };
     struct CharLiteral : public std::enable_shared_from_this<CharLiteral> {
     std::string kind;
     char32_t value;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    CharLiteral(std::string kind, char32_t value, __type3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
+    CharLiteral(std::string kind, char32_t value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct BoolLiteral : public std::enable_shared_from_this<BoolLiteral> {
     std::string kind;
     bool value;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    BoolLiteral(std::string kind, bool value, __type3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
+    BoolLiteral(std::string kind, bool value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct NoneLiteral : public std::enable_shared_from_this<NoneLiteral> {
     std::string kind;
-    std::string sourceSpelling = std::string("none");
-    __type3 resolvedType = std::monostate{};
+    std::string sourceSpelling;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    NoneLiteral(std::string kind, std::string sourceSpelling, __type3 resolvedType, SourceSpan span) : kind(kind), sourceSpelling(sourceSpelling), resolvedType(resolvedType), span(span) {}
+    NoneLiteral(std::string kind, std::string sourceSpelling, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), sourceSpelling(sourceSpelling), resolvedType(resolvedType), span(span) {}
 };
     struct Identifier : public std::enable_shared_from_this<Identifier> {
     std::string kind;
     std::string name;
-    __type3 resolvedType = std::monostate{};
-    std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding = nullptr;
+    doof_header_type_3 resolvedType;
+    std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding;
     SourceSpan span;
-    Identifier(std::string kind, std::string name, __type3 resolvedType, std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding, SourceSpan span) : kind(kind), name(name), resolvedType(resolvedType), resolvedBinding(resolvedBinding), span(span) {}
+    Identifier(std::string kind, std::string name, doof_header_type_3 resolvedType, std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding, SourceSpan span) : kind(kind), name(name), resolvedType(resolvedType), resolvedBinding(resolvedBinding), span(span) {}
 };
     struct BinaryExpression : public std::enable_shared_from_this<BinaryExpression> {
     std::string kind;
     std::string operator_;
     Expression left;
     Expression right;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    BinaryExpression(std::string kind, std::string operator_, Expression left, Expression right, __type3 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), left(left), right(right), resolvedType(resolvedType), span(span) {}
+    BinaryExpression(std::string kind, std::string operator_, Expression left, Expression right, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), left(left), right(right), resolvedType(resolvedType), span(span) {}
 };
     struct UnaryExpression : public std::enable_shared_from_this<UnaryExpression> {
     std::string kind;
     std::string operator_;
     Expression operand;
     bool prefix;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    UnaryExpression(std::string kind, std::string operator_, Expression operand, bool prefix, __type3 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), operand(operand), prefix(prefix), resolvedType(resolvedType), span(span) {}
+    UnaryExpression(std::string kind, std::string operator_, Expression operand, bool prefix, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), operand(operand), prefix(prefix), resolvedType(resolvedType), span(span) {}
 };
     struct AssignmentExpression : public std::enable_shared_from_this<AssignmentExpression> {
     std::string kind;
     std::string operator_;
     Expression target;
     Expression value;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    AssignmentExpression(std::string kind, std::string operator_, Expression target, Expression value, __type3 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), target(target), value(value), resolvedType(resolvedType), span(span) {}
+    AssignmentExpression(std::string kind, std::string operator_, Expression target, Expression value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), target(target), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct MemberExpression : public std::enable_shared_from_this<MemberExpression> {
     std::string kind;
@@ -2208,22 +2209,22 @@ namespace app_src_ast_ {
     std::string property;
     bool optional;
     bool force;
-    std::shared_ptr<ClassDeclaration> resolvedStaticOwner = nullptr;
-    bool resolvedNamespaceAccess = false;
-    std::shared_ptr<::app_src_semantic_::Symbol> resolvedNamespaceSymbol = nullptr;
-    bool resolvedCallableField = false;
-    __type3 resolvedType = std::monostate{};
+    std::shared_ptr<ClassDeclaration> resolvedStaticOwner;
+    bool resolvedNamespaceAccess;
+    std::shared_ptr<::app_src_semantic_::Symbol> resolvedNamespaceSymbol;
+    bool resolvedCallableField;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    MemberExpression(std::string kind, Expression object, std::string property, bool optional, bool force, std::shared_ptr<ClassDeclaration> resolvedStaticOwner, bool resolvedNamespaceAccess, std::shared_ptr<::app_src_semantic_::Symbol> resolvedNamespaceSymbol, bool resolvedCallableField, __type3 resolvedType, SourceSpan span) : kind(kind), object(object), property(property), optional(optional), force(force), resolvedStaticOwner(resolvedStaticOwner), resolvedNamespaceAccess(resolvedNamespaceAccess), resolvedNamespaceSymbol(resolvedNamespaceSymbol), resolvedCallableField(resolvedCallableField), resolvedType(resolvedType), span(span) {}
+    MemberExpression(std::string kind, Expression object, std::string property, bool optional, bool force, std::shared_ptr<ClassDeclaration> resolvedStaticOwner, bool resolvedNamespaceAccess, std::shared_ptr<::app_src_semantic_::Symbol> resolvedNamespaceSymbol, bool resolvedCallableField, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), object(object), property(property), optional(optional), force(force), resolvedStaticOwner(resolvedStaticOwner), resolvedNamespaceAccess(resolvedNamespaceAccess), resolvedNamespaceSymbol(resolvedNamespaceSymbol), resolvedCallableField(resolvedCallableField), resolvedType(resolvedType), span(span) {}
 };
     struct IndexExpression : public std::enable_shared_from_this<IndexExpression> {
     std::string kind;
     Expression object;
     Expression index;
     bool optional;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    IndexExpression(std::string kind, Expression object, Expression index, bool optional, __type3 resolvedType, SourceSpan span) : kind(kind), object(object), index(index), optional(optional), resolvedType(resolvedType), span(span) {}
+    IndexExpression(std::string kind, Expression object, Expression index, bool optional, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), object(object), index(index), optional(optional), resolvedType(resolvedType), span(span) {}
 };
     struct CallArgument : public std::enable_shared_from_this<CallArgument> {
     std::optional<std::string> name;
@@ -2235,66 +2236,66 @@ namespace app_src_ast_ {
     std::string kind;
     Expression callee;
     std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args;
-    std::shared_ptr<std::vector<TypeAnnotation>> typeArgs = std::make_shared<std::vector<TypeAnnotation>>(std::vector<TypeAnnotation>{});
-    std::shared_ptr<std::vector<__type4>> resolvedGenericTypeArgs;
-    std::shared_ptr<FunctionDeclaration> resolvedFunction = nullptr;
-    std::shared_ptr<FunctionDeclaration> resolvedConstructor = nullptr;
-    std::shared_ptr<ClassDeclaration> resolvedClass = nullptr;
-    __type3 resolvedType = std::monostate{};
+    std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
+    std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs;
+    std::shared_ptr<FunctionDeclaration> resolvedFunction;
+    std::shared_ptr<FunctionDeclaration> resolvedConstructor;
+    std::shared_ptr<ClassDeclaration> resolvedClass;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<__type4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, __type3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
+    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
 };
     struct ArrayLiteral : public std::enable_shared_from_this<ArrayLiteral> {
     std::string kind;
     std::shared_ptr<std::vector<Expression>> elements;
     bool readonly_;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    ArrayLiteral(std::string kind, std::shared_ptr<std::vector<Expression>> elements, bool readonly_, __type3 resolvedType, SourceSpan span) : kind(kind), elements(elements), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
+    ArrayLiteral(std::string kind, std::shared_ptr<std::vector<Expression>> elements, bool readonly_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), elements(elements), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
 };
     struct ObjectProperty : public std::enable_shared_from_this<ObjectProperty> {
     std::string name;
-    __type5 key = std::monostate{};
-    __type5 value;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_5 key;
+    doof_header_type_5 value;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    ObjectProperty(std::string name, __type5 key, __type5 value, __type3 resolvedType, SourceSpan span) : name(name), key(key), value(value), resolvedType(resolvedType), span(span) {}
+    ObjectProperty(std::string name, doof_header_type_5 key, doof_header_type_5 value, doof_header_type_3 resolvedType, SourceSpan span) : name(name), key(key), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct ObjectLiteral : public std::enable_shared_from_this<ObjectLiteral> {
     std::string kind;
     std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> properties;
-    __type5 spread;
-    std::shared_ptr<ClassDeclaration> resolvedClass = nullptr;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_5 spread;
+    std::shared_ptr<ClassDeclaration> resolvedClass;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    ObjectLiteral(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> properties, __type5 spread, std::shared_ptr<ClassDeclaration> resolvedClass, __type3 resolvedType, SourceSpan span) : kind(kind), properties(properties), spread(spread), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
+    ObjectLiteral(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> properties, doof_header_type_5 spread, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), properties(properties), spread(spread), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
 };
     struct TupleLiteral : public std::enable_shared_from_this<TupleLiteral> {
     std::string kind;
     std::shared_ptr<std::vector<Expression>> elements;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    TupleLiteral(std::string kind, std::shared_ptr<std::vector<Expression>> elements, __type3 resolvedType, SourceSpan span) : kind(kind), elements(elements), resolvedType(resolvedType), span(span) {}
+    TupleLiteral(std::string kind, std::shared_ptr<std::vector<Expression>> elements, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), elements(elements), resolvedType(resolvedType), span(span) {}
 };
     struct LambdaExpression : public std::enable_shared_from_this<LambdaExpression> {
     std::string kind;
     std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params;
-    __type2 returnType;
-    __type6 body;
+    doof_header_type_2 returnType;
+    doof_header_type_6 body;
     bool parameterless;
     bool trailing;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    LambdaExpression(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, __type2 returnType, __type6 body, bool parameterless, bool trailing, __type3 resolvedType, SourceSpan span) : kind(kind), params(params), returnType(returnType), body(body), parameterless(parameterless), trailing(trailing), resolvedType(resolvedType), span(span) {}
+    LambdaExpression(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, doof_header_type_2 returnType, doof_header_type_6 body, bool parameterless, bool trailing, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), params(params), returnType(returnType), body(body), parameterless(parameterless), trailing(trailing), resolvedType(resolvedType), span(span) {}
 };
     struct IfExpression : public std::enable_shared_from_this<IfExpression> {
     std::string kind;
     Expression condition;
     Expression then_;
     Expression else_;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    IfExpression(std::string kind, Expression condition, Expression then_, Expression else_, __type3 resolvedType, SourceSpan span) : kind(kind), condition(condition), then_(then_), else_(else_), resolvedType(resolvedType), span(span) {}
+    IfExpression(std::string kind, Expression condition, Expression then_, Expression else_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), condition(condition), then_(then_), else_(else_), resolvedType(resolvedType), span(span) {}
 };
     struct ConstructExpression : public std::enable_shared_from_this<ConstructExpression> {
     std::string kind;
@@ -2302,91 +2303,91 @@ namespace app_src_ast_ {
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args;
     bool named;
-    std::shared_ptr<ClassDeclaration> resolvedClass = nullptr;
-    std::shared_ptr<FunctionDeclaration> resolvedConstructor = nullptr;
-    __type3 resolvedConstructedType = std::monostate{};
-    __type3 resolvedType = std::monostate{};
+    std::shared_ptr<ClassDeclaration> resolvedClass;
+    std::shared_ptr<FunctionDeclaration> resolvedConstructor;
+    doof_header_type_3 resolvedConstructedType;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, __type3 resolvedConstructedType, __type3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
+    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedConstructedType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
 };
     struct DotShorthand : public std::enable_shared_from_this<DotShorthand> {
     std::string kind;
     std::string name;
-    std::string resolvedShorthandOwnerName = std::string("");
-    std::string resolvedShorthandOwnerKind = std::string("");
-    std::string resolvedShorthandOwnerModule = std::string("");
-    bool resolvedShorthandOwnerNative = false;
-    std::string resolvedShorthandOwnerCppName = std::string("");
-    __type3 resolvedType = std::monostate{};
+    std::string resolvedShorthandOwnerName;
+    std::string resolvedShorthandOwnerKind;
+    std::string resolvedShorthandOwnerModule;
+    bool resolvedShorthandOwnerNative;
+    std::string resolvedShorthandOwnerCppName;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    DotShorthand(std::string kind, std::string name, std::string resolvedShorthandOwnerName, std::string resolvedShorthandOwnerKind, std::string resolvedShorthandOwnerModule, bool resolvedShorthandOwnerNative, std::string resolvedShorthandOwnerCppName, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), resolvedShorthandOwnerName(resolvedShorthandOwnerName), resolvedShorthandOwnerKind(resolvedShorthandOwnerKind), resolvedShorthandOwnerModule(resolvedShorthandOwnerModule), resolvedShorthandOwnerNative(resolvedShorthandOwnerNative), resolvedShorthandOwnerCppName(resolvedShorthandOwnerCppName), resolvedType(resolvedType), span(span) {}
+    DotShorthand(std::string kind, std::string name, std::string resolvedShorthandOwnerName, std::string resolvedShorthandOwnerKind, std::string resolvedShorthandOwnerModule, bool resolvedShorthandOwnerNative, std::string resolvedShorthandOwnerCppName, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), resolvedShorthandOwnerName(resolvedShorthandOwnerName), resolvedShorthandOwnerKind(resolvedShorthandOwnerKind), resolvedShorthandOwnerModule(resolvedShorthandOwnerModule), resolvedShorthandOwnerNative(resolvedShorthandOwnerNative), resolvedShorthandOwnerCppName(resolvedShorthandOwnerCppName), resolvedType(resolvedType), span(span) {}
 };
     struct ThisExpression : public std::enable_shared_from_this<ThisExpression> {
     std::string kind;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    ThisExpression(std::string kind, __type3 resolvedType, SourceSpan span) : kind(kind), resolvedType(resolvedType), span(span) {}
+    ThisExpression(std::string kind, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), resolvedType(resolvedType), span(span) {}
 };
     struct CallerExpression : public std::enable_shared_from_this<CallerExpression> {
     std::string kind;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    CallerExpression(std::string kind, __type3 resolvedType, SourceSpan span) : kind(kind), resolvedType(resolvedType), span(span) {}
+    CallerExpression(std::string kind, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), resolvedType(resolvedType), span(span) {}
 };
     struct AsyncExpression : public std::enable_shared_from_this<AsyncExpression> {
     std::string kind;
-    __type6 expression;
-    std::shared_ptr<std::vector<std::string>> resolvedCaptureNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_6 expression;
+    std::shared_ptr<std::vector<std::string>> resolvedCaptureNames;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    AsyncExpression(std::string kind, __type6 expression, std::shared_ptr<std::vector<std::string>> resolvedCaptureNames, __type3 resolvedType, SourceSpan span) : kind(kind), expression(expression), resolvedCaptureNames(resolvedCaptureNames), resolvedType(resolvedType), span(span) {}
+    AsyncExpression(std::string kind, doof_header_type_6 expression, std::shared_ptr<std::vector<std::string>> resolvedCaptureNames, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), expression(expression), resolvedCaptureNames(resolvedCaptureNames), resolvedType(resolvedType), span(span) {}
 };
     struct RetireExpression : public std::enable_shared_from_this<RetireExpression> {
     std::string kind;
     Expression actor;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    RetireExpression(std::string kind, Expression actor, __type3 resolvedType, SourceSpan span) : kind(kind), actor(actor), resolvedType(resolvedType), span(span) {}
+    RetireExpression(std::string kind, Expression actor, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), actor(actor), resolvedType(resolvedType), span(span) {}
 };
     struct AsExpression : public std::enable_shared_from_this<AsExpression> {
     std::string kind;
     Expression expression;
     TypeAnnotation targetType;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    AsExpression(std::string kind, Expression expression, TypeAnnotation targetType, __type3 resolvedType, SourceSpan span) : kind(kind), expression(expression), targetType(targetType), resolvedType(resolvedType), span(span) {}
+    AsExpression(std::string kind, Expression expression, TypeAnnotation targetType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), expression(expression), targetType(targetType), resolvedType(resolvedType), span(span) {}
 };
     struct ActorCreationExpression : public std::enable_shared_from_this<ActorCreationExpression> {
     std::string kind;
     std::string className;
     std::shared_ptr<std::vector<Expression>> args;
-    std::shared_ptr<FunctionDeclaration> resolvedConstructor = nullptr;
-    __type3 resolvedType = std::monostate{};
+    std::shared_ptr<FunctionDeclaration> resolvedConstructor;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, std::shared_ptr<FunctionDeclaration> resolvedConstructor, __type3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedConstructor(resolvedConstructor), resolvedType(resolvedType), span(span) {}
+    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedConstructor(resolvedConstructor), resolvedType(resolvedType), span(span) {}
 };
     struct YieldBlockExpression : public std::enable_shared_from_this<YieldBlockExpression> {
-    std::string kind = std::string("yield-block-expression");
+    std::string kind;
     std::shared_ptr<Block> body;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    YieldBlockExpression(std::string kind, std::shared_ptr<Block> body, __type3 resolvedType, SourceSpan span) : kind(kind), body(body), resolvedType(resolvedType), span(span) {}
+    YieldBlockExpression(std::string kind, std::shared_ptr<Block> body, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), body(body), resolvedType(resolvedType), span(span) {}
 };
     struct CatchExpression : public std::enable_shared_from_this<CatchExpression> {
-    std::string kind = std::string("catch-expression");
+    std::string kind;
     std::shared_ptr<Block> body;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    CatchExpression(std::string kind, std::shared_ptr<Block> body, __type3 resolvedType, SourceSpan span) : kind(kind), body(body), resolvedType(resolvedType), span(span) {}
+    CatchExpression(std::string kind, std::shared_ptr<Block> body, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), body(body), resolvedType(resolvedType), span(span) {}
 };
     struct Parameter : public std::enable_shared_from_this<Parameter> {
     std::string name;
-    std::string description = std::string("");
-    __type2 type_;
-    __type5 defaultValue;
-    __type3 resolvedType = std::monostate{};
+    std::string description;
+    doof_header_type_2 type_;
+    doof_header_type_5 defaultValue;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    Parameter(std::string name, std::string description, __type2 type_, __type5 defaultValue, __type3 resolvedType, SourceSpan span) : name(name), description(description), type_(type_), defaultValue(defaultValue), resolvedType(resolvedType), span(span) {}
+    Parameter(std::string name, std::string description, doof_header_type_2 type_, doof_header_type_5 defaultValue, doof_header_type_3 resolvedType, SourceSpan span) : name(name), description(description), type_(type_), defaultValue(defaultValue), resolvedType(resolvedType), span(span) {}
 };
     struct Block : public std::enable_shared_from_this<Block> {
     std::string kind;
@@ -2397,79 +2398,79 @@ namespace app_src_ast_ {
     struct ConstDeclaration : public std::enable_shared_from_this<ConstDeclaration> {
     std::string kind;
     std::string name;
-    std::string description = std::string("");
-    __type2 type_;
+    std::string description;
+    doof_header_type_2 type_;
     Expression value;
     bool exported;
-    __type3 resolvedType = std::monostate{};
-    bool moduleInitializerChecked = false;
+    doof_header_type_3 resolvedType;
+    bool moduleInitializerChecked;
     SourceSpan span;
-    ConstDeclaration(std::string kind, std::string name, std::string description, __type2 type_, Expression value, bool exported, __type3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), value(value), exported(exported), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
+    ConstDeclaration(std::string kind, std::string name, std::string description, doof_header_type_2 type_, Expression value, bool exported, doof_header_type_3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), value(value), exported(exported), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
 };
     struct ReadonlyDeclaration : public std::enable_shared_from_this<ReadonlyDeclaration> {
     std::string kind;
     std::string name;
-    std::string description = std::string("");
-    __type2 type_;
+    std::string description;
+    doof_header_type_2 type_;
     Expression value;
     bool exported;
-    __type3 resolvedType = std::monostate{};
-    bool moduleInitializerChecked = false;
+    doof_header_type_3 resolvedType;
+    bool moduleInitializerChecked;
     SourceSpan span;
-    ReadonlyDeclaration(std::string kind, std::string name, std::string description, __type2 type_, Expression value, bool exported, __type3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), value(value), exported(exported), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
+    ReadonlyDeclaration(std::string kind, std::string name, std::string description, doof_header_type_2 type_, Expression value, bool exported, doof_header_type_3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), value(value), exported(exported), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
 };
     struct ImmutableBinding : public std::enable_shared_from_this<ImmutableBinding> {
     std::string kind;
     std::string name;
-    __type2 type_;
+    doof_header_type_2 type_;
     Expression value;
     bool exported;
-    std::shared_ptr<Block> else_ = nullptr;
-    std::optional<std::string> failureName = std::nullopt;
-    __type3 resolvedType = std::monostate{};
-    bool moduleInitializerChecked = false;
+    std::shared_ptr<Block> else_;
+    std::optional<std::string> failureName;
+    doof_header_type_3 resolvedType;
+    bool moduleInitializerChecked;
     SourceSpan span;
-    ImmutableBinding(std::string kind, std::string name, __type2 type_, Expression value, bool exported, std::shared_ptr<Block> else_, std::optional<std::string> failureName, __type3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), type_(type_), value(value), exported(exported), else_(else_), failureName(failureName), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
+    ImmutableBinding(std::string kind, std::string name, doof_header_type_2 type_, Expression value, bool exported, std::shared_ptr<Block> else_, std::optional<std::string> failureName, doof_header_type_3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), type_(type_), value(value), exported(exported), else_(else_), failureName(failureName), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
 };
     struct LetDeclaration : public std::enable_shared_from_this<LetDeclaration> {
     std::string kind;
     std::string name;
-    __type2 type_;
+    doof_header_type_2 type_;
     Expression value;
-    __type3 resolvedType = std::monostate{};
-    bool moduleInitializerChecked = false;
+    doof_header_type_3 resolvedType;
+    bool moduleInitializerChecked;
     SourceSpan span;
-    LetDeclaration(std::string kind, std::string name, __type2 type_, Expression value, __type3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), type_(type_), value(value), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
+    LetDeclaration(std::string kind, std::string name, doof_header_type_2 type_, Expression value, doof_header_type_3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), type_(type_), value(value), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
 };
     struct FunctionDeclaration : public std::enable_shared_from_this<FunctionDeclaration> {
     std::string kind;
     std::string name;
-    std::string description = std::string("");
+    std::string description;
     std::shared_ptr<std::vector<std::string>> typeParams;
-    std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints = std::make_shared<std::vector<std::shared_ptr<TypeParameterConstraint>>>(std::vector<std::shared_ptr<TypeParameterConstraint>>{});
+    std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints;
     std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params;
-    __type2 returnType;
-    __type6 body;
+    doof_header_type_2 returnType;
+    doof_header_type_6 body;
     bool exported;
     bool static_;
     bool isolated_;
-    bool resolvedIsolated = false;
+    bool resolvedIsolated;
     bool private_;
-    bool bodyless = false;
-    bool native_ = false;
-    std::string nativeHeader = std::string("");
-    std::string nativeCppName = std::string("");
-    std::optional<SourceSpan> legacyMethodFunctionSpan = std::nullopt;
-    __type3 resolvedType = std::monostate{};
+    bool bodyless;
+    bool native_;
+    std::string nativeHeader;
+    std::string nativeCppName;
+    std::optional<SourceSpan> legacyMethodFunctionSpan;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    FunctionDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, __type2 returnType, __type6 body, bool exported, bool static_, bool isolated_, bool resolvedIsolated, bool private_, bool bodyless, bool native_, std::string nativeHeader, std::string nativeCppName, std::optional<SourceSpan> legacyMethodFunctionSpan, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), params(params), returnType(returnType), body(body), exported(exported), static_(static_), isolated_(isolated_), resolvedIsolated(resolvedIsolated), private_(private_), bodyless(bodyless), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), legacyMethodFunctionSpan(legacyMethodFunctionSpan), resolvedType(resolvedType), span(span) {}
+    FunctionDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, doof_header_type_2 returnType, doof_header_type_6 body, bool exported, bool static_, bool isolated_, bool resolvedIsolated, bool private_, bool bodyless, bool native_, std::string nativeHeader, std::string nativeCppName, std::optional<SourceSpan> legacyMethodFunctionSpan, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), params(params), returnType(returnType), body(body), exported(exported), static_(static_), isolated_(isolated_), resolvedIsolated(resolvedIsolated), private_(private_), bodyless(bodyless), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), legacyMethodFunctionSpan(legacyMethodFunctionSpan), resolvedType(resolvedType), span(span) {}
 };
     struct ReturnStatement : public std::enable_shared_from_this<ReturnStatement> {
     std::string kind;
-    __type5 value = std::monostate{};
-    __type3 resolvedExpectedType = std::monostate{};
+    doof_header_type_5 value;
+    doof_header_type_3 resolvedExpectedType;
     SourceSpan span;
-    ReturnStatement(std::string kind, __type5 value, __type3 resolvedExpectedType, SourceSpan span) : kind(kind), value(value), resolvedExpectedType(resolvedExpectedType), span(span) {}
+    ReturnStatement(std::string kind, doof_header_type_5 value, doof_header_type_3 resolvedExpectedType, SourceSpan span) : kind(kind), value(value), resolvedExpectedType(resolvedExpectedType), span(span) {}
 };
     struct YieldStatement : public std::enable_shared_from_this<YieldStatement> {
     std::string kind;
@@ -2478,12 +2479,12 @@ namespace app_src_ast_ {
     YieldStatement(std::string kind, Expression value, SourceSpan span) : kind(kind), value(value), span(span) {}
 };
     struct YieldBlockAssignmentStatement : public std::enable_shared_from_this<YieldBlockAssignmentStatement> {
-    std::string kind = std::string("yield-block-assignment-statement");
+    std::string kind;
     std::string name;
     std::shared_ptr<YieldBlockExpression> value;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    YieldBlockAssignmentStatement(std::string kind, std::string name, std::shared_ptr<YieldBlockExpression> value, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), value(value), resolvedType(resolvedType), span(span) {}
+    YieldBlockAssignmentStatement(std::string kind, std::string name, std::shared_ptr<YieldBlockExpression> value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct IfStatement : public std::enable_shared_from_this<IfStatement> {
     std::string kind;
@@ -2498,39 +2499,39 @@ namespace app_src_ast_ {
     std::string kind;
     Expression subject;
     std::shared_ptr<std::vector<std::shared_ptr<CaseExpressionArm>>> arms;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    CaseExpression(std::string kind, Expression subject, std::shared_ptr<std::vector<std::shared_ptr<CaseExpressionArm>>> arms, __type3 resolvedType, SourceSpan span) : kind(kind), subject(subject), arms(arms), resolvedType(resolvedType), span(span) {}
+    CaseExpression(std::string kind, Expression subject, std::shared_ptr<std::vector<std::shared_ptr<CaseExpressionArm>>> arms, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), subject(subject), arms(arms), resolvedType(resolvedType), span(span) {}
 };
     struct CaseStatement : public std::enable_shared_from_this<CaseStatement> {
     std::string kind;
     Expression subject;
     std::shared_ptr<std::vector<std::shared_ptr<CaseArm>>> arms;
-    std::optional<bool> resolvedCompletes = std::nullopt;
+    std::optional<bool> resolvedCompletes;
     SourceSpan span;
     CaseStatement(std::string kind, Expression subject, std::shared_ptr<std::vector<std::shared_ptr<CaseArm>>> arms, std::optional<bool> resolvedCompletes, SourceSpan span) : kind(kind), subject(subject), arms(arms), resolvedCompletes(resolvedCompletes), span(span) {}
 };
     struct CaseArm : public std::enable_shared_from_this<CaseArm> {
     std::string kind;
     std::shared_ptr<std::vector<CasePattern>> patterns;
-    __type6 body;
+    doof_header_type_6 body;
     SourceSpan span;
-    CaseArm(std::string kind, std::shared_ptr<std::vector<CasePattern>> patterns, __type6 body, SourceSpan span) : kind(kind), patterns(patterns), body(body), span(span) {}
+    CaseArm(std::string kind, std::shared_ptr<std::vector<CasePattern>> patterns, doof_header_type_6 body, SourceSpan span) : kind(kind), patterns(patterns), body(body), span(span) {}
 };
     struct CaseExpressionArm : public std::enable_shared_from_this<CaseExpressionArm> {
     std::string kind;
     std::shared_ptr<std::vector<CasePattern>> patterns;
-    __type6 body;
+    doof_header_type_6 body;
     SourceSpan span;
-    CaseExpressionArm(std::string kind, std::shared_ptr<std::vector<CasePattern>> patterns, __type6 body, SourceSpan span) : kind(kind), patterns(patterns), body(body), span(span) {}
+    CaseExpressionArm(std::string kind, std::shared_ptr<std::vector<CasePattern>> patterns, doof_header_type_6 body, SourceSpan span) : kind(kind), patterns(patterns), body(body), span(span) {}
 };
     struct TypePattern : public std::enable_shared_from_this<TypePattern> {
     std::string kind;
     std::string name;
     TypeAnnotation type_;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    TypePattern(std::string kind, std::string name, TypeAnnotation type_, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), type_(type_), resolvedType(resolvedType), span(span) {}
+    TypePattern(std::string kind, std::string name, TypeAnnotation type_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), type_(type_), resolvedType(resolvedType), span(span) {}
 };
     struct WildcardPattern : public std::enable_shared_from_this<WildcardPattern> {
     std::string kind;
@@ -2545,11 +2546,11 @@ namespace app_src_ast_ {
 };
     struct RangePattern : public std::enable_shared_from_this<RangePattern> {
     std::string kind;
-    __type5 start;
-    __type5 end;
+    doof_header_type_5 start;
+    doof_header_type_5 end;
     bool inclusive;
     SourceSpan span;
-    RangePattern(std::string kind, __type5 start, __type5 end, bool inclusive, SourceSpan span) : kind(kind), start(start), end(end), inclusive(inclusive), span(span) {}
+    RangePattern(std::string kind, doof_header_type_5 start, doof_header_type_5 end, bool inclusive, SourceSpan span) : kind(kind), start(start), end(end), inclusive(inclusive), span(span) {}
 };
     struct IfBranch : public std::enable_shared_from_this<IfBranch> {
     Expression condition;
@@ -2568,14 +2569,14 @@ namespace app_src_ast_ {
 };
     struct ForStatement : public std::enable_shared_from_this<ForStatement> {
     std::string kind;
-    __type7 init;
-    __type5 condition;
+    doof_header_type_7 init;
+    doof_header_type_5 condition;
     std::shared_ptr<std::vector<Expression>> update;
     std::shared_ptr<Block> body;
     std::optional<std::string> label;
     std::shared_ptr<Block> then_;
     SourceSpan span;
-    ForStatement(std::string kind, __type7 init, __type5 condition, std::shared_ptr<std::vector<Expression>> update, std::shared_ptr<Block> body, std::optional<std::string> label, std::shared_ptr<Block> then_, SourceSpan span) : kind(kind), init(init), condition(condition), update(update), body(body), label(label), then_(then_), span(span) {}
+    ForStatement(std::string kind, doof_header_type_7 init, doof_header_type_5 condition, std::shared_ptr<std::vector<Expression>> update, std::shared_ptr<Block> body, std::optional<std::string> label, std::shared_ptr<Block> then_, SourceSpan span) : kind(kind), init(init), condition(condition), update(update), body(body), label(label), then_(then_), span(span) {}
 };
     struct ForOfStatement : public std::enable_shared_from_this<ForOfStatement> {
     std::string kind;
@@ -2589,11 +2590,11 @@ namespace app_src_ast_ {
 };
     struct WithBinding : public std::enable_shared_from_this<WithBinding> {
     std::string name;
-    __type2 type_;
+    doof_header_type_2 type_;
     Expression value;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    WithBinding(std::string name, __type2 type_, Expression value, __type3 resolvedType, SourceSpan span) : name(name), type_(type_), value(value), resolvedType(resolvedType), span(span) {}
+    WithBinding(std::string name, doof_header_type_2 type_, Expression value, doof_header_type_3 resolvedType, SourceSpan span) : name(name), type_(type_), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct WithStatement : public std::enable_shared_from_this<WithStatement> {
     std::string kind;
@@ -2622,8 +2623,8 @@ namespace app_src_ast_ {
 };
     struct DestructuringStatement : public std::enable_shared_from_this<DestructuringStatement> {
     std::string kind;
-    std::shared_ptr<std::vector<std::string>> bindings = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<std::shared_ptr<DestructureBinding>>> namedBindings = std::make_shared<std::vector<std::shared_ptr<DestructureBinding>>>(std::vector<std::shared_ptr<DestructureBinding>>{});
+    std::shared_ptr<std::vector<std::string>> bindings;
+    std::shared_ptr<std::vector<std::shared_ptr<DestructureBinding>>> namedBindings;
     std::string bindingKind;
     Expression value;
     SourceSpan span;
@@ -2631,83 +2632,83 @@ namespace app_src_ast_ {
 };
     struct DestructureBinding : public std::enable_shared_from_this<DestructureBinding> {
     std::string name;
-    std::optional<std::string> alias = std::nullopt;
+    std::optional<std::string> alias;
     SourceSpan span;
     DestructureBinding(std::string name, std::optional<std::string> alias, SourceSpan span) : name(name), alias(alias), span(span) {}
 };
     struct TryStatement : public std::enable_shared_from_this<TryStatement> {
     std::string kind;
-    __type8 binding;
+    doof_header_type_8 binding;
     SourceSpan span;
-    TryStatement(std::string kind, __type8 binding, SourceSpan span) : kind(kind), binding(binding), span(span) {}
+    TryStatement(std::string kind, doof_header_type_8 binding, SourceSpan span) : kind(kind), binding(binding), span(span) {}
 };
     struct ClassDeclaration : public std::enable_shared_from_this<ClassDeclaration> {
     std::string kind;
     std::string name;
-    std::string description = std::string("");
-    bool struct_ = false;
+    std::string description;
+    bool struct_;
     std::shared_ptr<std::vector<std::string>> typeParams;
-    std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints = std::make_shared<std::vector<std::shared_ptr<TypeParameterConstraint>>>(std::vector<std::shared_ptr<TypeParameterConstraint>>{});
+    std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints;
     std::shared_ptr<std::vector<std::shared_ptr<NamedType>>> implements_;
     std::shared_ptr<std::vector<std::shared_ptr<ClassField>>> fields;
     std::shared_ptr<std::vector<std::shared_ptr<FunctionDeclaration>>> methods;
-    std::shared_ptr<Block> destructor_ = nullptr;
+    std::shared_ptr<Block> destructor_;
     bool exported;
     bool private_;
-    bool native_ = false;
-    std::string nativeHeader = std::string("");
-    std::string nativeCppName = std::string("");
-    std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol = nullptr;
-    bool needsMetadata = false;
+    bool native_;
+    std::string nativeHeader;
+    std::string nativeCppName;
+    std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol;
+    bool needsMetadata;
     SourceSpan span;
     ClassDeclaration(std::string kind, std::string name, std::string description, bool struct_, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, std::shared_ptr<std::vector<std::shared_ptr<NamedType>>> implements_, std::shared_ptr<std::vector<std::shared_ptr<ClassField>>> fields, std::shared_ptr<std::vector<std::shared_ptr<FunctionDeclaration>>> methods, std::shared_ptr<Block> destructor_, bool exported, bool private_, bool native_, std::string nativeHeader, std::string nativeCppName, std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol, bool needsMetadata, SourceSpan span) : kind(kind), name(name), description(description), struct_(struct_), typeParams(typeParams), typeParamConstraints(typeParamConstraints), implements_(implements_), fields(fields), methods(methods), destructor_(destructor_), exported(exported), private_(private_), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), resolvedSymbol(resolvedSymbol), needsMetadata(needsMetadata), span(span) {}
 };
     struct ClassField : public std::enable_shared_from_this<ClassField> {
     std::string kind;
     std::shared_ptr<std::vector<std::string>> names;
-    std::shared_ptr<std::vector<std::string>> descriptions = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    __type2 type_;
-    __type5 defaultValue;
+    std::shared_ptr<std::vector<std::string>> descriptions;
+    doof_header_type_2 type_;
+    doof_header_type_5 defaultValue;
     bool static_;
-    bool const_ = false;
-    bool let_ = false;
+    bool const_;
+    bool let_;
     bool readonly_;
-    bool weak_ = false;
+    bool weak_;
     bool private_;
-    __type3 resolvedType = std::monostate{};
-    bool moduleInitializerChecked = false;
+    doof_header_type_3 resolvedType;
+    bool moduleInitializerChecked;
     SourceSpan span;
-    ClassField(std::string kind, std::shared_ptr<std::vector<std::string>> names, std::shared_ptr<std::vector<std::string>> descriptions, __type2 type_, __type5 defaultValue, bool static_, bool const_, bool let_, bool readonly_, bool weak_, bool private_, __type3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), names(names), descriptions(descriptions), type_(type_), defaultValue(defaultValue), static_(static_), const_(const_), let_(let_), readonly_(readonly_), weak_(weak_), private_(private_), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
+    ClassField(std::string kind, std::shared_ptr<std::vector<std::string>> names, std::shared_ptr<std::vector<std::string>> descriptions, doof_header_type_2 type_, doof_header_type_5 defaultValue, bool static_, bool const_, bool let_, bool readonly_, bool weak_, bool private_, doof_header_type_3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), names(names), descriptions(descriptions), type_(type_), defaultValue(defaultValue), static_(static_), const_(const_), let_(let_), readonly_(readonly_), weak_(weak_), private_(private_), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
 };
     struct InterfaceDeclaration : public std::enable_shared_from_this<InterfaceDeclaration> {
     std::string kind;
     std::string name;
-    std::string description = std::string("");
+    std::string description;
     std::shared_ptr<std::vector<std::string>> typeParams;
-    std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints = std::make_shared<std::vector<std::shared_ptr<TypeParameterConstraint>>>(std::vector<std::shared_ptr<TypeParameterConstraint>>{});
+    std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints;
     std::shared_ptr<std::vector<std::shared_ptr<InterfaceField>>> fields;
     std::shared_ptr<std::vector<std::shared_ptr<FunctionDeclaration>>> methods;
     bool exported;
-    std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol = nullptr;
-    bool needsJson = false;
+    std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol;
+    bool needsJson;
     SourceSpan span;
     InterfaceDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, std::shared_ptr<std::vector<std::shared_ptr<InterfaceField>>> fields, std::shared_ptr<std::vector<std::shared_ptr<FunctionDeclaration>>> methods, bool exported, std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol, bool needsJson, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), fields(fields), methods(methods), exported(exported), resolvedSymbol(resolvedSymbol), needsJson(needsJson), span(span) {}
 };
     struct InterfaceField : public std::enable_shared_from_this<InterfaceField> {
     std::string kind;
     std::string name;
-    std::string description = std::string("");
+    std::string description;
     TypeAnnotation type_;
-    bool let_ = false;
-    bool readonly_ = false;
-    __type3 resolvedType = std::monostate{};
+    bool let_;
+    bool readonly_;
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    InterfaceField(std::string kind, std::string name, std::string description, TypeAnnotation type_, bool let_, bool readonly_, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), let_(let_), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
+    InterfaceField(std::string kind, std::string name, std::string description, TypeAnnotation type_, bool let_, bool readonly_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), let_(let_), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
 };
     struct EnumDeclaration : public std::enable_shared_from_this<EnumDeclaration> {
     std::string kind;
     std::string name;
-    std::string description = std::string("");
+    std::string description;
     std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants;
     bool exported;
     SourceSpan span;
@@ -2716,22 +2717,22 @@ namespace app_src_ast_ {
     struct EnumVariant : public std::enable_shared_from_this<EnumVariant> {
     std::string kind;
     std::string name;
-    std::string description = std::string("");
-    __type5 value;
+    std::string description;
+    doof_header_type_5 value;
     SourceSpan span;
-    EnumVariant(std::string kind, std::string name, std::string description, __type5 value, SourceSpan span) : kind(kind), name(name), description(description), value(value), span(span) {}
+    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_5 value, SourceSpan span) : kind(kind), name(name), description(description), value(value), span(span) {}
 };
     struct TypeAliasDeclaration : public std::enable_shared_from_this<TypeAliasDeclaration> {
     std::string kind;
     std::string name;
-    std::string description = std::string("");
+    std::string description;
     std::shared_ptr<std::vector<std::string>> typeParams;
-    std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints = std::make_shared<std::vector<std::shared_ptr<TypeParameterConstraint>>>(std::vector<std::shared_ptr<TypeParameterConstraint>>{});
+    std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints;
     TypeAnnotation type_;
     bool exported;
-    __type3 resolvedType = std::monostate{};
+    doof_header_type_3 resolvedType;
     SourceSpan span;
-    TypeAliasDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, TypeAnnotation type_, bool exported, __type3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), type_(type_), exported(exported), resolvedType(resolvedType), span(span) {}
+    TypeAliasDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, TypeAnnotation type_, bool exported, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), type_(type_), exported(exported), resolvedType(resolvedType), span(span) {}
 };
     struct NamedImport : public std::enable_shared_from_this<NamedImport> {
     std::string kind;
@@ -2808,8 +2809,8 @@ namespace app_src_diagnostics_ {
 }
 
 namespace app_src_compiler_ {
-    std::shared_ptr<Compilation> compileWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const std::string& entry, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>& namespaceMappings = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>(std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>{}), const std::string& entryMode = std::string("executable"), bool coverage = false, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>>& reusableModules = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>>(std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>{}), const std::string& emissionConfigurationFingerprint = std::string(""), bool physicalSourcePaths = false);
-    std::shared_ptr<Compilation> checkWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const std::string& entry, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader, const std::string& entryMode = std::string("executable"));
+    std::shared_ptr<Compilation> compileWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const std::string& entry, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>& namespaceMappings, const std::string& entryMode, bool coverage, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmissionCacheKey>>>& reusableModules, const std::string& emissionConfigurationFingerprint, bool physicalSourcePaths);
+    std::shared_ptr<Compilation> checkWithLoader(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::SourceFile>>>& sources, const std::string& entry, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader, const std::string& entryMode);
 }
 
 namespace app_src_lexer_ {
@@ -2831,22 +2832,22 @@ namespace app_src_parser_ {
     struct Parser : public std::enable_shared_from_this<Parser> {
     std::string source;
     std::shared_ptr<std::vector<::app_src_lexer_::Token>> tokens;
-    int32_t pos = 0;
-    bool inForIterable = false;
-    bool inTagAttribute = false;
-    std::string errorMessage = std::string("");
-    int32_t errorLine = 0;
-    int32_t errorColumn = 0;
-    int32_t errorOffset = 0;
+    int32_t pos;
+    bool inForIterable;
+    bool inTagAttribute;
+    std::string errorMessage;
+    int32_t errorLine;
+    int32_t errorColumn;
+    int32_t errorOffset;
     Parser(std::string source, std::shared_ptr<std::vector<::app_src_lexer_::Token>> tokens, int32_t pos, bool inForIterable, bool inTagAttribute, std::string errorMessage, int32_t errorLine, int32_t errorColumn, int32_t errorOffset) : source(source), tokens(tokens), pos(pos), inForIterable(inForIterable), inTagAttribute(inTagAttribute), errorMessage(errorMessage), errorLine(errorLine), errorColumn(errorColumn), errorOffset(errorOffset) {}
     std::shared_ptr<::app_src_ast_::Program> parse();
     ::app_src_lexer_::Token current();
-    ::app_src_lexer_::Token peek(int32_t offset = 0);
+    ::app_src_lexer_::Token peek(int32_t offset);
     bool atEnd();
     ::app_src_lexer_::Token advance();
     bool check(::app_src_lexer_::TokenType kind);
     bool match(::app_src_lexer_::TokenType kind);
-    ::app_src_lexer_::Token expect(::app_src_lexer_::TokenType kind, const std::string& message = std::string(""));
+    ::app_src_lexer_::Token expect(::app_src_lexer_::TokenType kind, const std::string& message);
     void fail(const std::string& message);
     std::string expectedLabel(::app_src_lexer_::TokenType kind);
     std::string text(::app_src_lexer_::Token token);
@@ -2858,28 +2859,28 @@ namespace app_src_parser_ {
     bool immediatelyAfterPrevious();
     void consumeSemicolon();
     ::app_src_ast_::SourceSpan locationSpan();
-    __type9 parseStatement();
-    __type9 parseExport();
-    __type9 parseConst(bool exported);
-    __type9 parseReadonly(bool exported);
-    __type9 parseLet();
-    std::shared_ptr<::app_src_ast_::FunctionDeclaration> parseFunction(bool exported, bool static_, bool isolated_, bool private_, bool legacyMethod = false);
-    __type9 parseClass(bool exported, bool private_);
-    __type9 parseInterface(bool exported);
-    __type9 parseEnum(bool exported);
-    __type9 parseTypeAlias(bool exported);
-    __type9 parseImport();
-    __type9 parseMockImport();
+    doof_header_type_9 parseStatement();
+    doof_header_type_9 parseExport();
+    doof_header_type_9 parseConst(bool exported);
+    doof_header_type_9 parseReadonly(bool exported);
+    doof_header_type_9 parseLet();
+    std::shared_ptr<::app_src_ast_::FunctionDeclaration> parseFunction(bool exported, bool static_, bool isolated_, bool private_, bool legacyMethod);
+    doof_header_type_9 parseClass(bool exported, bool private_);
+    doof_header_type_9 parseInterface(bool exported);
+    doof_header_type_9 parseEnum(bool exported);
+    doof_header_type_9 parseTypeAlias(bool exported);
+    doof_header_type_9 parseImport();
+    doof_header_type_9 parseMockImport();
     std::shared_ptr<::app_src_ast_::Block> parseBlock();
-    __type10 parseCaseExpression();
+    doof_header_type_10 parseCaseExpression();
     bool looksLikePattern(::app_src_lexer_::TokenType separator);
-    __type9 parseDestructuring(const std::string& shape, const std::string& bindingKind, ::app_src_lexer_::TokenType separator);
-    __type9 parseTryStatement();
+    doof_header_type_9 parseDestructuring(const std::string& shape, const std::string& bindingKind, ::app_src_lexer_::TokenType separator);
+    doof_header_type_9 parseTryStatement();
     std::variant<std::monostate, std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseOptionalType();
     std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseTypeAnnotation();
-    __type10 parseExpression();
-    __type10 parseAdditive();
-    __type10 parseUnary();
+    doof_header_type_10 parseExpression();
+    doof_header_type_10 parseAdditive();
+    doof_header_type_10 parseUnary();
 };
 }
 
@@ -2902,7 +2903,7 @@ namespace app_src_ios_app_ {
 }
 
 namespace app_src_package_manifest_ {
-    doof::Result<std::shared_ptr<PackageManifest>, std::string> parsePackageManifest(const std::string& source, const std::string& manifestPath, const std::string& rootDirectory, const std::string& platform, const std::string& targetOverride = std::string(""));
+    doof::Result<std::shared_ptr<PackageManifest>, std::string> parsePackageManifest(const std::string& source, const std::string& manifestPath, const std::string& rootDirectory, const std::string& platform, const std::string& targetOverride);
 }
 
 namespace std_::fs::types {
@@ -2941,20 +2942,20 @@ namespace std_::fs::index {
 
 namespace std_::os::index {
     struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
-    std::optional<std::string> cwd = std::nullopt;
-    std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
-    bool inheritEnv = true;
-    bool withStdin = true;
-    bool mergeStderrIntoStdout = false;
-    bool inheritOutput = false;
-    ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated;
-    std::optional<int64_t> maxOutputBytes = std::nullopt;
-    std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr;
-    ExecOptions(std::optional<std::string> cwd = std::nullopt, std::shared_ptr<doof::ordered_map<std::string, std::string>> env = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), bool inheritEnv = true, bool withStdin = true, bool mergeStderrIntoStdout = false, bool inheritOutput = false, ProcessGroupMode processGroupMode = ProcessGroupMode::Isolated, std::optional<int64_t> maxOutputBytes = std::nullopt, std::shared_ptr<::std_::time::duration::Duration> timeout = nullptr) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
+    std::optional<std::string> cwd;
+    std::shared_ptr<doof::ordered_map<std::string, std::string>> env;
+    bool inheritEnv;
+    bool withStdin;
+    bool mergeStderrIntoStdout;
+    bool inheritOutput;
+    ProcessGroupMode processGroupMode;
+    std::optional<int64_t> maxOutputBytes;
+    std::shared_ptr<::std_::time::duration::Duration> timeout;
+    ExecOptions(std::optional<std::string> cwd, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, bool inheritEnv, bool withStdin, bool mergeStderrIntoStdout, bool inheritOutput, ProcessGroupMode processGroupMode, std::optional<int64_t> maxOutputBytes, std::shared_ptr<::std_::time::duration::Duration> timeout) : cwd(cwd), env(env), inheritEnv(inheritEnv), withStdin(withStdin), mergeStderrIntoStdout(mergeStderrIntoStdout), inheritOutput(inheritOutput), processGroupMode(processGroupMode), maxOutputBytes(maxOutputBytes), timeout(timeout) {}
 };
     std::string platform();
     std::string architecture();
-    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), const std::shared_ptr<ExecOptions>& options = std::make_shared<ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, true, false, false, ProcessGroupMode::Isolated, std::nullopt, nullptr));
+    doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options);
 }
 
 namespace app_src_external_dependency_ {
@@ -3004,14 +3005,14 @@ namespace app_src_macos_app_driver_ {
 }
 
 namespace app_src_ios_device_ {
-    doof::Result<std::shared_ptr<IOSDeviceSigningOptions>, std::string> resolveIOSDeviceSigningOptions(const std::string& bundleId, const std::string& signIdentityOverride, const std::string& provisioningProfileOverride, const std::string& workDirectory, const std::shared_ptr<std::vector<std::string>>& profileDirectories = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+    doof::Result<std::shared_ptr<IOSDeviceSigningOptions>, std::string> resolveIOSDeviceSigningOptions(const std::string& bundleId, const std::string& signIdentityOverride, const std::string& provisioningProfileOverride, const std::string& workDirectory, const std::shared_ptr<std::vector<std::string>>& profileDirectories);
     doof::Result<std::string, std::string> resolveIOSDeviceIdentifier(const std::string& overrideIdentifier, const std::string& workDirectory);
     doof::Result<void, std::string> signIOSDeviceApp(const std::string& appPath, const std::string& bundleId, const std::shared_ptr<IOSDeviceSigningOptions>& options, const std::string& workDirectory);
 }
 
 namespace app_src_ios_app_driver_ {
     doof::Result<void, std::string> configureIOSNativeBuild(const std::string& outputDirectory, const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& destination, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native);
-    doof::Result<std::string, std::string> assembleIOSApp(const std::string& buildDirectory, const std::string& executablePath, const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& destination = std::string("simulator"));
+    doof::Result<std::string, std::string> assembleIOSApp(const std::string& buildDirectory, const std::string& executablePath, const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& destination);
     doof::Result<void, std::string> signAndArchiveIOSApp(const std::string& appPath, const std::string& archivePath, const std::string& bundleId, const std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>& config, const std::string& buildDirectory);
 }
 
@@ -3021,7 +3022,7 @@ namespace app_src_project_ {
     std::string parentPath(const std::string& path);
     std::string joinPath(const std::string& directory, const std::string& name);
     std::string projectEntryRequestError(const std::shared_ptr<ProjectSpec>& project, const std::string& requestedPath);
-    std::shared_ptr<ProjectSpec> readProjectSpec(const std::string& requestedPath, const std::string& platform = std::string(""), const std::string& targetOverride = std::string(""));
+    std::shared_ptr<ProjectSpec> readProjectSpec(const std::string& requestedPath, const std::string& platform, const std::string& targetOverride);
 }
 
 namespace app_src_provenance_ {
@@ -3039,7 +3040,7 @@ namespace app_src_run_command_ {
 
 namespace app_src_profile_command_ {
     std::shared_ptr<::app_src_run_command_::RunInvocation> planProfileSymbols(const std::string& binaryPath, const std::string& symbolsPath, const std::string& packageRoot);
-    std::shared_ptr<::app_src_run_command_::RunInvocation> planProfileCapture(const std::string& targetPath, const std::shared_ptr<std::vector<std::string>>& programArguments, const std::string& packageRoot, const std::string& tracePath, const std::string& timeLimit = std::string(""), bool consoleTarget = true);
+    std::shared_ptr<::app_src_run_command_::RunInvocation> planProfileCapture(const std::string& targetPath, const std::shared_ptr<std::vector<std::string>>& programArguments, const std::string& packageRoot, const std::string& tracePath, const std::string& timeLimit, bool consoleTarget);
     std::shared_ptr<::app_src_run_command_::RunInvocation> planProfileOpen(const std::string& tracePath, const std::string& packageRoot);
 }
 
@@ -3069,7 +3070,7 @@ namespace app_src_driver_ {
     ::app_src_native_build_driver_::NativeBuildOutputMode nativeBuildOutputModeForCommand(const std::string& command);
     int32_t runProfileTarget(const std::shared_ptr<::app_src_cli_::CliRequest>& request, const std::string& targetPath, const std::string& binaryPath, const std::string& symbolsPath, const std::string& packageRoot, const std::string& buildDirectory, const std::string& traceName, bool consoleTarget);
     std::string hostPlatform();
-    std::shared_ptr<NativeCommandResult> runNativeCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::optional<std::string>& directory = std::nullopt, bool inheritOutput = false, ::std_::os::index::ProcessGroupMode processGroupMode = ::std_::os::index::ProcessGroupMode::Isolated, int64_t maxOutputBytes = 262144LL);
+    std::shared_ptr<NativeCommandResult> runNativeCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments, const std::optional<std::string>& directory, bool inheritOutput, ::std_::os::index::ProcessGroupMode processGroupMode, int64_t maxOutputBytes);
     int32_t printNativeCommandOutput(const std::shared_ptr<NativeCommandResult>& result, int32_t remainingLines);
     std::string driverWithExtension(const std::string& path);
     std::string driverLogicalPath(const std::string& path);
@@ -3086,7 +3087,7 @@ namespace app_src_driver_ {
     doof::Result<void, std::string> ensureStdPackageReached(const std::string& packageName);
     std::shared_ptr<::app_src_semantic_::Diagnostic> driverDiagnostic(const std::string& module, const std::string& message);
     std::string driverSourceDiskRoot(const std::string& path);
-    doof::Result<doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>, std::string> sourceLoaderForRequest(const std::string& entryPath, const std::string& stdlibRoot, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>& namespaceMappings, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest, const std::string& nativePlatform = std::string(""), const std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget>& externalTarget = nullptr);
+    doof::Result<doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>, std::string> sourceLoaderForRequest(const std::string& entryPath, const std::string& stdlibRoot, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>& namespaceMappings, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest, const std::string& nativePlatform, const std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget>& externalTarget);
     doof::Result<void, std::string> configureDeclaredDependencies(const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& manifest, const std::string& ownerPrefix, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest, const std::string& packageAcquisitionRoot, const std::string& nativePlatform, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>>>& acquisitions, const std::shared_ptr<std::vector<std::shared_ptr<DriverAcquiredSource>>>& acquiredSources);
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>> reachedPackageInputs(const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest);
     doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>>, std::string> resolvedDependencyInputs(const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest);
@@ -3097,7 +3098,7 @@ namespace app_src_driver_ {
     std::string driverRootLogicalPrefix(const std::string& packageName, const std::string& rootDirectory);
     std::string driverRootLogicalPath(const std::string& path, const std::string& rootDirectory, const std::string& packageName);
     std::string driverPackageOutputRoot(const std::string& logicalPrefix);
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>> projectNativePackages(const std::string& projectRoot, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& projectManifest, const std::string& stdlibRoot = std::string(""));
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_project_::NativePackageInput>>> projectNativePackages(const std::string& projectRoot, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& projectManifest, const std::string& stdlibRoot);
     void ensureOutputDirectory(const std::string& path);
     void materializeNativeCopy(const std::string& sourcePath, const std::string& outputPath);
     void writeTextIfChanged(const std::string& path, const std::string& content);
@@ -3125,7 +3126,7 @@ namespace app_src_driver_ {
     void materializeRuntimeHeader(const std::string& outputDirectory);
     std::string nativeBuildOutputName(const std::string& projectName, const std::string& nativePlatform);
     void printDiagnostics(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
-    void collectTestFiles(const std::string& path, const std::shared_ptr<std::vector<std::string>>& results, bool root = true);
+    void collectTestFiles(const std::string& path, const std::shared_ptr<std::vector<std::string>>& results, bool root);
     std::shared_ptr<std::vector<std::string>> sortedTestFiles(const std::shared_ptr<std::vector<std::string>>& values);
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_test_runner_::DiscoveredTest>>> sortedDiscoveredTests(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_test_runner_::DiscoveredTest>>>& values);
     void mergeCoverageGroup(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>>& groupModules, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>>& groupHits, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>>& allModules, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>>& allHits);

@@ -30,10 +30,24 @@ Each generated header is a consumer-projected, self-contained C++ worldview:
 it renders the canonical declarations required by its matching source directly
 in their defining namespaces and never includes another generated Doof header.
 Sources include only their matching header and own definitions and executable
-entry wrappers. Module storage declarations needed
-by inline class-field or parameter defaults are emitted before their consumers,
-including for Doof-private bindings. This generated C++ visibility is a lowering
-detail and does not widen the binding's Doof module visibility.
+entry wrappers. Generated headers contain declarations and dependency-free
+constructors, not executable Doof defaults or method/destructor bodies. Module
+storage declarations needed by generated definitions are emitted even for
+Doof-private bindings; this generated C++ visibility is a lowering detail and
+does not widen the binding's Doof module visibility.
+
+Every reached Doof-owned generic, including a generic method on a non-generic
+class, is closed-world monomorphized. Only runtime- and native-owned C++
+templates survive lowering. Native headers may define templates or overloads
+that consume concrete monomorphized Doof representations, but an ABI requiring
+an exact open C++ template identity must define that template natively. Concrete
+names use compact type spellings; when two nominally distinct specializations
+produce the same spelling in one C++ scope, later names receive deterministic
+numeric suffixes such as `_2` and `_3`.
+
+Doof parameter and field defaults are materialized at generated Doof call and
+construction sites. They are not emitted as C++ default arguments, so native
+C++ callers of generated declarations must pass every argument explicitly.
 
 `doof_runtime.hpp` is the first include in every generated header and owns the
 standard-library baseline used by generated declarations. Native builds
@@ -51,8 +65,9 @@ caller's stack frame.
 Consumer-projected headers preserve referenced, non-generic Doof type aliases
 when their identity is present on checked annotations. Repeated anonymous
 unions whose C++ alternatives are only `std::monostate` and `std::shared_ptr`
-receive generated aliases such as `__type1`. Anonymous alias indices are unique
-across the complete projected header, including across namespace sections. This keeps large
+receive generated aliases such as `doof_header_type_1`. Anonymous alias names
+are unique after C++ identifier escaping across the complete projected header,
+including user declarations, concrete specializations, and namespace sections. This keeps large
 reference-only `std::variant` carriers single-spelled without hoisting variants
 that require complete by-value nominal definitions.
 

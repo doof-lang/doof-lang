@@ -790,7 +790,7 @@ std::string emitLocalDeclaration(const std::string& ind, const std::string& name
         doof::panic(std::string("Local declaration was not resolved before emission"));
     }
 #line 358 "/src/emitter-stmt.do"
-    auto typeText = (doof::is_null(annotation) ? std::string("auto") : ::app_src_emitter_types_::emitType(doof::unwrap_optional(resolvedType), context->modulePath));
+    auto typeText = (doof::is_null(annotation) ? std::string("auto") : ::app_src_emitter_types_::emitContextType(doof::unwrap_optional(resolvedType), context));
 #line 359 "/src/emitter-stmt.do"
     const auto prefix = localConstPrefix(doof::unwrap_optional(resolvedType), readonly_, shallowImmutable);
 #line 360 "/src/emitter-stmt.do"
@@ -800,7 +800,7 @@ std::string emitLocalDeclaration(const std::string& ind, const std::string& name
 #line 362 "/src/emitter-stmt.do"
     if (!readonly_ && ::app_src_emitter_context_::isCapturedMutable(context, name)) {
 #line 363 "/src/emitter-stmt.do"
-        return (((((((ind + std::string("auto ")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(" = std::make_shared<")) + ::app_src_emitter_types_::emitType(doof::unwrap_optional(resolvedType), context->modulePath)) + std::string(">(")) + valueText) + std::string(");\n"));
+        return (((((((ind + std::string("auto ")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(" = std::make_shared<")) + ::app_src_emitter_types_::emitContextType(doof::unwrap_optional(resolvedType), context)) + std::string(">(")) + valueText) + std::string(");\n"));
     }
 #line 365 "/src/emitter-stmt.do"
     return (((((((ind + prefix) + typeText) + std::string(" ")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(" = ")) + valueText) + std::string(";\n"));

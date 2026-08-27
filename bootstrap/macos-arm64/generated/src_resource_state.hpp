@@ -16,14 +16,14 @@ namespace app_src_resource_state_ {
     int64_t outputModifiedNanos;
     MaterializedResource(std::string sourcePath, std::string outputPath, int64_t sourceSize, int64_t sourceModifiedNanos, int64_t outputSize, int64_t outputModifiedNanos) : sourcePath(sourcePath), outputPath(outputPath), sourceSize(sourceSize), sourceModifiedNanos(sourceModifiedNanos), outputSize(outputSize), outputModifiedNanos(outputModifiedNanos) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<MaterializedResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<MaterializedResource>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
     struct ResourceState : public std::enable_shared_from_this<ResourceState> {
-    int32_t version = 1;
-    std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>> files = std::make_shared<std::vector<std::shared_ptr<MaterializedResource>>>(std::vector<std::shared_ptr<MaterializedResource>>{});
-    ResourceState(int32_t version = 1, std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>> files = std::make_shared<std::vector<std::shared_ptr<MaterializedResource>>>(std::vector<std::shared_ptr<MaterializedResource>>{})) : version(version), files(files) {}
+    int32_t version;
+    std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>> files;
+    ResourceState(int32_t version, std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>> files) : version(version), files(files) {}
     doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<ResourceState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient = false);
+    static doof::Result<std::shared_ptr<ResourceState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
 };
 }
 

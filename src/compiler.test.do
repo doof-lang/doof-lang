@@ -399,7 +399,95 @@ export function testMonomorphizesDoofFunctionsAndClasses(): none {
   Assert.equal(module.source.contains("map__int(4)"), true)
 }
 
-export function testForwardDeclaresNativeBoundaryTemplatesBeforeConsumerClasses(): none {
+export function testMonomorphizesGenericMethodsOnOrdinaryOwnersTransitively(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "function identity<T>(value: T): T => value\nclass Box<T> { value: T }\nclass Mapper { map<T>(value: T): T => identity(Box<T> { value }.value) }\nfunction main(): int => Mapper().map<int>(7)",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  module := result.emission!.modules[0]
+  Assert.stringContains(module.header, "int32_t map__int(int32_t value);")
+  Assert.stringContains(module.header, "struct Box__int")
+  Assert.stringNotContains(module.header, "template <typename T>")
+  Assert.stringContains(module.source, "int32_t Mapper::map__int(int32_t value)")
+  Assert.stringContains(module.source, "identity__int(std::make_shared<Box__int>(value)->value)")
+  Assert.stringContains(module.source, "map__int(7)")
+  Assert.stringNotContains(module.source, "map<int32_t>")
+}
+
+export function testDisambiguatesConcreteMethodNamesOnlyWhenShortNominalNamesClash(): none {
+  result := compile([
+    SourceFile { path: "/tools.do", source: "export class Tools { static same<T>(value: T): T => value }" },
+    SourceFile { path: "/left.do", source: "import { Tools } from \"./tools\"\nexport enum Choice { Left }\nexport function left(): Choice => Tools.same(Choice.Left)" },
+    SourceFile { path: "/right.do", source: "import { Tools } from \"./tools\"\nexport enum Choice { Right }\nexport function right(): Choice => Tools.same(Choice.Right)" },
+    SourceFile { path: "/third.do", source: "import { Tools } from \"./tools\"\nexport enum Choice { Third }\nexport function third(): Choice => Tools.same(Choice.Third)" },
+    SourceFile { path: "/main.do", source: "import { left } from \"./left\"\nimport { right } from \"./right\"\nimport { third } from \"./third\"\nfunction main(): none { left()\nright()\nthird() }" },
+  ], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let toolsHeader = ""
+  let toolsSource = ""
+  let leftSource = ""
+  let rightSource = ""
+  let thirdSource = ""
+  for module of result.emission!.modules {
+    if module.modulePath == "/tools.do" { toolsHeader = module.header; toolsSource = module.source }
+    if module.modulePath == "/left.do" { leftSource = module.source }
+    if module.modulePath == "/right.do" { rightSource = module.source }
+    if module.modulePath == "/third.do" { thirdSource = module.source }
+  }
+  Assert.stringContains(toolsHeader, "same__Choice(::app_left_::Choice value)")
+  Assert.stringContains(toolsHeader, "same__Choice_2(::app_right_::Choice value)")
+  Assert.stringContains(toolsHeader, "same__Choice_3(::app_third_::Choice value)")
+  Assert.stringContains(toolsSource, "Tools::same__Choice(::app_left_::Choice value)")
+  Assert.stringContains(toolsSource, "Tools::same__Choice_2(::app_right_::Choice value)")
+  Assert.stringContains(toolsSource, "Tools::same__Choice_3(::app_third_::Choice value)")
+  Assert.stringContains(leftSource, "Tools::same__Choice(Choice::Left)")
+  Assert.stringContains(rightSource, "Tools::same__Choice_2(Choice::Right)")
+  Assert.stringContains(thirdSource, "Tools::same__Choice_3(Choice::Third)")
+  Assert.stringNotContains(toolsHeader, "same__app_left__Choice")
+  Assert.stringNotContains(toolsHeader, "same__app_right__Choice")
+}
+
+export function testCallsConcreteGenericMethodsAcrossModules(): none {
+  result := compile([
+    SourceFile { path: "/tools.do", source: "export class Tools { static same<T>(value: T): T => value }" },
+    SourceFile { path: "/main.do", source: "import { Tools } from \"./tools\"\nclass Item { value: int }\nfunction main(): int => Tools.same<Item>(Item { value: 7 }).value" },
+  ], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let mainSource = ""
+  let toolsHeader = ""
+  let toolsSource = ""
+  for module of result.emission!.modules {
+    if module.modulePath == "/main.do" { mainSource = module.source }
+    if module.modulePath == "/tools.do" { toolsHeader = module.header; toolsSource = module.source }
+  }
+  Assert.stringContains(toolsHeader, "namespace app_main_ { struct Item; }")
+  Assert.stringContains(toolsHeader, "same__app_main__Item")
+  Assert.stringContains(toolsSource, "Tools::same__app_main__Item")
+  Assert.stringContains(mainSource, "::app_tools_::Tools::same__app_main__Item")
+  Assert.stringNotContains(mainSource, "same<std::shared_ptr")
+}
+
+export function testEmitsConcreteGenericClassSupportOutOfLine(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "class Box<T> { static fallback: int = 1\nvalue: T\nget(): T => value\ndestructor { println(\"bye\") } }\nfunction main(): int => Box<int> { value: 7 }.get()",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  module := result.emission!.modules[0]
+  Assert.stringContains(module.header, "int32_t get();")
+  Assert.stringContains(module.header, "~Box__int();")
+  Assert.stringNotContains(module.header, "return value")
+  Assert.stringContains(module.source, "int32_t Box__int::fallback;")
+  Assert.stringContains(module.source, "int32_t Box__int::get()")
+  Assert.stringContains(module.source, "Box__int::~Box__int()")
+}
+
+export function testMonomorphizesDoofClassesReferencedByNativeTemplates(): none {
   result := compile([
     SourceFile {
       path: "/channel.do",
@@ -417,12 +505,13 @@ export function testForwardDeclaresNativeBoundaryTemplatesBeforeConsumerClasses(
   for module of result.emission!.modules {
     if module.modulePath == "/main.do" { mainHeader = module.header }
   }
-  templateForward := mainHeader.indexOf("template <typename T>\n    struct Channel;")
+  concreteForward := mainHeader.indexOf("struct Channel__int;")
   consumerDefinition := mainHeader.indexOf("struct Connection :")
-  templateDefinition := mainHeader.indexOf("struct Channel :")
-  Assert.equal(templateForward >= 0, true)
-  Assert.equal(consumerDefinition > templateForward, true)
-  Assert.equal(templateDefinition > consumerDefinition, true)
+  concreteDefinition := mainHeader.indexOf("struct Channel__int :")
+  Assert.equal(concreteForward >= 0, true)
+  Assert.equal(consumerDefinition > concreteForward, true)
+  Assert.equal(concreteDefinition > consumerDefinition, true)
+  Assert.equal(mainHeader.contains("template <typename T>"), false)
 }
 
 export function testDiagnosesExpandingGenericInstantiations(): none {

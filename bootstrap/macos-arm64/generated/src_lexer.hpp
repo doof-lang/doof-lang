@@ -531,26 +531,26 @@ namespace app_src_lexer_ {
 };
     struct Lexer : public std::enable_shared_from_this<Lexer> {
     std::string source;
-    int32_t pos = 0;
-    int32_t line = 1;
-    int32_t column = 1;
-    std::shared_ptr<std::vector<Token>> tokens = std::make_shared<std::vector<Token>>(std::vector<Token>{});
-    std::shared_ptr<std::vector<LexerDiagnostic>> diagnostics = std::make_shared<std::vector<LexerDiagnostic>>(std::vector<LexerDiagnostic>{});
-    std::shared_ptr<std::vector<char32_t>> templateDelimiters = std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{});
-    std::shared_ptr<std::vector<int32_t>> braceDepth = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    std::shared_ptr<std::vector<int32_t>> interpolationLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    std::shared_ptr<std::vector<int32_t>> interpolationColumns = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    std::string tagMode = std::string("code");
-    std::shared_ptr<std::vector<std::string>> tagModeStack = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    std::shared_ptr<std::vector<int32_t>> tagExpressionDepths = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
-    int32_t tagGenericDepth = 0;
-    Lexer(std::string source, int32_t pos = 0, int32_t line = 1, int32_t column = 1, std::shared_ptr<std::vector<Token>> tokens = std::make_shared<std::vector<Token>>(std::vector<Token>{}), std::shared_ptr<std::vector<LexerDiagnostic>> diagnostics = std::make_shared<std::vector<LexerDiagnostic>>(std::vector<LexerDiagnostic>{}), std::shared_ptr<std::vector<char32_t>> templateDelimiters = std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::shared_ptr<std::vector<int32_t>> braceDepth = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> interpolationLines = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::shared_ptr<std::vector<int32_t>> interpolationColumns = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::string tagMode = std::string("code"), std::shared_ptr<std::vector<std::string>> tagModeStack = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::shared_ptr<std::vector<int32_t>> tagExpressionDepths = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), int32_t tagGenericDepth = 0) : source(source), pos(pos), line(line), column(column), tokens(tokens), diagnostics(diagnostics), templateDelimiters(templateDelimiters), braceDepth(braceDepth), interpolationLines(interpolationLines), interpolationColumns(interpolationColumns), tagMode(tagMode), tagModeStack(tagModeStack), tagExpressionDepths(tagExpressionDepths), tagGenericDepth(tagGenericDepth) {}
+    int32_t pos;
+    int32_t line;
+    int32_t column;
+    std::shared_ptr<std::vector<Token>> tokens;
+    std::shared_ptr<std::vector<LexerDiagnostic>> diagnostics;
+    std::shared_ptr<std::vector<char32_t>> templateDelimiters;
+    std::shared_ptr<std::vector<int32_t>> braceDepth;
+    std::shared_ptr<std::vector<int32_t>> interpolationLines;
+    std::shared_ptr<std::vector<int32_t>> interpolationColumns;
+    std::string tagMode;
+    std::shared_ptr<std::vector<std::string>> tagModeStack;
+    std::shared_ptr<std::vector<int32_t>> tagExpressionDepths;
+    int32_t tagGenericDepth;
+    Lexer(std::string source, int32_t pos, int32_t line, int32_t column, std::shared_ptr<std::vector<Token>> tokens, std::shared_ptr<std::vector<LexerDiagnostic>> diagnostics, std::shared_ptr<std::vector<char32_t>> templateDelimiters, std::shared_ptr<std::vector<int32_t>> braceDepth, std::shared_ptr<std::vector<int32_t>> interpolationLines, std::shared_ptr<std::vector<int32_t>> interpolationColumns, std::string tagMode, std::shared_ptr<std::vector<std::string>> tagModeStack, std::shared_ptr<std::vector<int32_t>> tagExpressionDepths, int32_t tagGenericDepth) : source(source), pos(pos), line(line), column(column), tokens(tokens), diagnostics(diagnostics), templateDelimiters(templateDelimiters), braceDepth(braceDepth), interpolationLines(interpolationLines), interpolationColumns(interpolationColumns), tagMode(tagMode), tagModeStack(tagModeStack), tagExpressionDepths(tagExpressionDepths), tagGenericDepth(tagGenericDepth) {}
     std::shared_ptr<std::vector<Token>> tokenize();
     void beginTag();
     void beginTagExpression();
     void readTagText();
     bool canStartTag();
-    char32_t peek(int32_t offset = 0);
+    char32_t peek(int32_t offset);
     char32_t advance();
     void addToken(TokenType kind, int32_t tokenOffset, int32_t tokenLength, int32_t valueOffset, int32_t valueLength, bool needsDecode, int32_t tokenLine, int32_t tokenColumn);
     void diagnostic(const std::string& message, int32_t diagnosticLine, int32_t diagnosticColumn);

@@ -211,6 +211,10 @@ std::shared_ptr<::std_::time::duration::Duration> StopwatchSpan::finish() {
 #line 169 "/std/time/stopwatch.do"
     return elapsed;
 }
+StopwatchSpan::~StopwatchSpan() {
+#line 173 "/std/time/stopwatch.do"
+    this->finish();
+}
 #line 177 "/std/time/stopwatch.do"
 std::shared_ptr<TimerError> missingTimer(const std::string& name) {
 #line 178 "/std/time/stopwatch.do"

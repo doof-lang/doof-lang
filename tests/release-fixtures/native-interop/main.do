@@ -5,9 +5,16 @@ import class Client from "client.hpp" as release_native::Client {
   same(): Client { return this }
 }
 
+import function boxValue<T>(box: Box<T>): T from "client.hpp" as release_native::boxValue
+
+class Box<T> {
+  value: T
+}
+
 function main(): int {
   client := Client { value: 4 }
   made := Client.make(6)
   same := client.same()
-  return if client.get() + made.get() + same.get() == 14 then 0 else 1
+  boxed := boxValue(Box<int> { value: 7 })
+  return if client.get() + made.get() + same.get() + boxed == 21 then 0 else 1
 }

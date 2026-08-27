@@ -11,22 +11,22 @@ import {
 } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { createEmitContext, createEmitContextForModule, EmitContext, EmitModuleSurface, generatedLineDirective } from "./emitter-context"
-import { emitClassDeclaration, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitModuleValueStorage, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions, emitValueDeclaration } from "./emitter-decl"
+import { emitClassDeclaration, emitClassDestructorDefinition, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitModuleValueStorage, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions, emitValueDeclaration } from "./emitter-decl"
 import { emitGeneratedJsonMethods, emitInterfaceJsonDefinition } from "./emitter-json"
 import { emitMetadataDefinition } from "./emitter-metadata"
 import { emitStatement } from "./emitter-stmt"
 import { emitContextType } from "./emitter-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { HeaderPlan, HeaderSection, planHeader, renderProjectedHeader } from "./emitter-header"
+import { HeaderPlan, HeaderSection, planHeader, renderProjectedHeader, reserveHeaderNamespaceName } from "./emitter-header"
 import { indexWorldviewGraph, planWorldview, WorldviewModule } from "./emitter-worldview"
-import { buildInstantiationPlan, ClassInstantiation, FunctionInstantiation, InstantiationPlan, MethodInstantiation, nativeTemplateClassKey } from "./emitter-monomorphize"
+import { buildInstantiationPlan, classInstantiationKey, ClassInstantiation, concreteName, FunctionInstantiation, InstantiationPlan, MethodInstantiation } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
 import { sha256HexString } from "std/crypto"
 import { JsonEligibilityCache } from "./json-semantics"
 import { StringBuilder } from "./string-builder"
 import {
-  ArrayResolvedType, ClassType, FunctionType, ImportBinding, InterfaceType, MapResolvedType, NamespaceBinding,
-  ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeSubstitution, UnionResolvedType, WeakResolvedType,
+  ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, ImportBinding, InterfaceType, MapResolvedType, NamespaceBinding,
+  PromiseType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeSubstitution, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 
 export class ModulePlan {
@@ -132,7 +132,7 @@ export class CxxModuleEmitter {
       sectionContext.jsonEligibility = jsonEligibility
       configureJsonDemandRegistry(sectionContext, jsonSerializationKeys, jsonDeserializationKeys)
       if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
-      sectionPlan := planHeader(view.program, sectionContext)
+      sectionPlan := planHeader(view.program, sectionContext, if instantiations == none then [] else instantiations!.methods)
       if instantiations != none {
         addConcreteHeaderDeclarations(sectionPlan, sectionContext, instantiations!, view.program, worldviewInterfaceKeys)
       }
@@ -171,7 +171,11 @@ export class CxxModuleEmitter {
     sourceBuilder.append(generatedLineDirective())
     sourceBuilder.append(emitModuleInitializer(programs, context, !context.scriptEntry))
     if context.scriptEntry { sourceBuilder.append(emitScriptRunner(programs, context)) }
-    if instantiations != none { sourceBuilder.append(emitConcreteFunctions(context, instantiations!)) }
+    if instantiations != none {
+      sourceBuilder.append(emitConcreteClassDefinitions(context, instantiations!))
+      sourceBuilder.append(emitConcreteMethodDefinitions(context, instantiations!))
+      sourceBuilder.append(emitConcreteFunctions(context, instantiations!))
+    }
     sourceBuilder.append("}\n")
     nativeMethods := emitNativeClassMethods(programs, context)
     if nativeMethods != "" {
@@ -457,7 +461,6 @@ function moduleInstantiationFingerprintInput(instantiations: InstantiationPlan):
       value = value + ":" + implementation.modulePath + ":" + implementation.typeName
     }
   }
-  for key of instantiations.nativeTemplateClassKeys { value = value + "\nnative:" + key }
   for key of instantiations.jsonSerializationKeys { value = value + "\njson-serialize:" + key }
   for key of instantiations.jsonDeserializationKeys { value = value + "\njson-deserialize:" + key }
   return value
@@ -523,7 +526,6 @@ function sortedCoverageLines(lines: int[]): int[] {
 }
 
 function configureInstantiationRegistry(context: EmitContext, plan: InstantiationPlan): none {
-  for key of plan.nativeTemplateClassKeys { context.nativeTemplateClassKeys.push(key) }
   for instantiation of plan.functions {
     context.concreteFunctionKeys.push(instantiation.key)
     context.concreteFunctionNames.push(instantiation.emittedName)
@@ -556,6 +558,11 @@ function addConcreteHeaderDeclarations(
   program: Program,
   interfaceKeys: string[] = [],
 ): none {
+  for instantiation of instantiations.methods {
+    if instantiation.modulePath != context.modulePath { continue }
+    if !programDeclares(program, instantiation.owner.name) { continue }
+    for argument of instantiation.substitution.arguments { addConcreteTypeForwardDeclarations(plan, context, argument) }
+  }
   for interface_ of instantiations.interfaces {
     if !containsString(interfaceKeys, interface_.key) { continue }
     if interface_.name != "Stream" && interface_.modulePath != context.modulePath { continue }
@@ -572,6 +579,7 @@ function addConcreteHeaderDeclarations(
       alternatives = alternatives + "std::shared_ptr<" + typeName + ">"
     }
     if alternatives == "" { alternatives = "std::monostate" }
+    reserveHeaderNamespaceName(plan, interface_.emittedName)
     plan.interfaceAliases.push("using " + interface_.emittedName + " = std::variant<" + alternatives + ">;\n")
   }
   for instantiation of instantiations.classes {
@@ -579,6 +587,7 @@ function addConcreteHeaderDeclarations(
     if !programDeclares(program, instantiation.declaration.name) { continue }
     for argument of instantiation.substitution.arguments { addConcreteTypeForwardDeclarations(plan, context, argument) }
     plan.classForwardDeclarations.push("struct " + instantiation.emittedName + ";\n")
+    reserveHeaderNamespaceName(plan, instantiation.emittedName)
     context.substitution = instantiation.substitution
     let methods: MethodInstantiation[] = []
     for method of instantiations.methods { if method.ownerKey == instantiation.key { methods.push(method) } }
@@ -591,6 +600,7 @@ function addConcreteHeaderDeclarations(
     for argument of instantiation.substitution.arguments { addConcreteTypeForwardDeclarations(plan, context, argument) }
     context.substitution = instantiation.substitution
     signature := emitFunctionDeclaration(instantiation.declaration, instantiation.emittedName, context.modulePath, context)
+    reserveHeaderNamespaceName(plan, instantiation.emittedName)
     if instantiation.declaration.native_ { plan.nativeAdapterSignatures.push(signature) }
     else { plan.functionSignatures.push(signature) }
     clearInstantiation(context)
@@ -617,10 +627,17 @@ function addConcreteTypeForwardDeclarations(plan: HeaderPlan, context: EmitConte
   case type_ {
     class_: ClassType -> {
       if class_.symbol.module != "" && class_.symbol.module != context.modulePath {
-        declaration := "namespace " + moduleNamespace(class_.symbol.module) + " { struct " + class_.name + "; }\n"
+        typeName := concreteClassTypeName(context, class_)
+        declaration := "namespace " + moduleNamespace(class_.symbol.module) + " { struct " + typeName + "; }\n"
         if !containsString(plan.typeOnlyForwardDeclarations, declaration) { plan.typeOnlyForwardDeclarations.push(declaration) }
       }
       for argument of class_.typeArgs { addConcreteTypeForwardDeclarations(plan, context, argument) }
+    }
+    enum_: EnumType -> {
+      if enum_.symbol.module != "" && enum_.symbol.module != context.modulePath {
+        declaration := "namespace " + moduleNamespace(enum_.symbol.module) + " { enum class " + enum_.name + "; }\n"
+        if !containsString(plan.typeOnlyForwardDeclarations, declaration) { plan.typeOnlyForwardDeclarations.push(declaration) }
+      }
     }
     interface_: InterfaceType -> { for argument of interface_.typeArgs { addConcreteTypeForwardDeclarations(plan, context, argument) } }
     array: ArrayResolvedType -> { addConcreteTypeForwardDeclarations(plan, context, array.elementType) }
@@ -628,6 +645,8 @@ function addConcreteTypeForwardDeclarations(plan: HeaderPlan, context: EmitConte
     set_: SetResolvedType -> { addConcreteTypeForwardDeclarations(plan, context, set_.elementType) }
     stream: StreamResolvedType -> { addConcreteTypeForwardDeclarations(plan, context, stream.elementType) }
     result_: ResultResolvedType -> { addConcreteTypeForwardDeclarations(plan, context, result_.valueType); addConcreteTypeForwardDeclarations(plan, context, result_.errorType) }
+    actor: ActorType -> { addConcreteTypeForwardDeclarations(plan, context, actor.innerClass) }
+    promise: PromiseType -> { addConcreteTypeForwardDeclarations(plan, context, promise.valueType) }
     tuple: TupleResolvedType -> { for element of tuple.elements { addConcreteTypeForwardDeclarations(plan, context, element) } }
     union_: UnionResolvedType -> { for member of union_.types { addConcreteTypeForwardDeclarations(plan, context, member) } }
     weak_: WeakResolvedType -> { addConcreteTypeForwardDeclarations(plan, context, weak_.inner) }
@@ -639,6 +658,15 @@ function addConcreteTypeForwardDeclarations(plan: HeaderPlan, context: EmitConte
   }
 }
 
+function concreteClassTypeName(context: EmitContext, class_: ClassType): string {
+  if class_.typeArgs.length == 0 { return class_.name }
+  key := classInstantiationKey(class_.symbol.module, class_.name, class_.typeArgs)
+  for index of 0..<context.concreteClassKeys.length {
+    if context.concreteClassKeys[index] == key { return context.concreteClassNames[index] }
+  }
+  return concreteName(class_.name, class_.typeArgs)
+}
+
 function emitConcreteFunctions(context: EmitContext, instantiations: InstantiationPlan): string {
   let result = ""
   for instantiation of instantiations.functions {
@@ -646,6 +674,37 @@ function emitConcreteFunctions(context: EmitContext, instantiations: Instantiati
     context.substitution = instantiation.substitution
     if instantiation.declaration.native_ { result = result + emitNativeFunctionAdapterDefinition(instantiation.declaration, instantiation.emittedName, context) }
     else { result = result + emitFunctionDefinition(instantiation.declaration, context, instantiation.emittedName) }
+    clearInstantiation(context)
+  }
+  return result
+}
+
+function emitConcreteClassDefinitions(context: EmitContext, instantiations: InstantiationPlan): string {
+  let result = ""
+  for instantiation of instantiations.classes {
+    if instantiation.modulePath != context.modulePath { continue }
+    context.substitution = instantiation.substitution
+    result = result + emitStaticClassFieldDefinitions(instantiation.declaration, context, instantiation.emittedName)
+    for method of instantiation.declaration.methods {
+      if method.typeParams.length == 0 {
+        result = result + emitClassMethodDefinition(instantiation.declaration, method, context, instantiation.emittedName)
+      }
+    }
+    result = result + emitClassDestructorDefinition(instantiation.declaration, context, instantiation.emittedName)
+    clearInstantiation(context)
+  }
+  return result
+}
+
+function emitConcreteMethodDefinitions(context: EmitContext, instantiations: InstantiationPlan): string {
+  let result = ""
+  for instantiation of instantiations.methods {
+    if instantiation.modulePath != context.modulePath { continue }
+    context.substitution = instantiation.substitution
+    result = result + emitClassMethodDefinition(
+      instantiation.owner, instantiation.declaration, context,
+      instantiation.ownerEmittedName, instantiation.emittedName,
+    )
     clearInstantiation(context)
   }
   return result
@@ -772,6 +831,7 @@ function emitSourceStatement(statement: Statement, context: EmitContext): string
       let result = "\n" + emitStaticClassFieldDefinitions(class_, context)
       if class_.typeParams.length == 0 {
         for method of class_.methods { result = result + emitClassMethodDefinition(class_, method, context) }
+        result = result + emitClassDestructorDefinition(class_, context)
       }
       result = result + emitGeneratedJsonMethods(class_, context)
       result = result + emitMetadataDefinition(class_, context)

@@ -1045,17 +1045,17 @@ constraints restrict admissible concrete arguments; `JsonSerializable` and
 
 ### Generic Emission
 
-Doof uses closed-world compilation. Generic functions and generic nominal types
-are emitted as concrete specializations reached from the program. Discovery
-continues to a fixed point and reports an error after 256 concrete function,
-class, and method instantiations, which bounds non-converging patterns such as a
-generic recursively calling itself with `T[]`.
+Doof uses closed-world compilation. Every reached Doof-owned generic function,
+method, class, struct, and interface is emitted as a concrete specialization.
+This includes generic methods on non-generic owners. Discovery continues to a
+fixed point and reports an error after 256 concrete function, class, and method
+instantiations, which bounds non-converging patterns such as a generic
+recursively calling itself with `T[]`.
 
-Generic methods on a non-generic class are currently emitted as C++ member
-templates; generic methods on specialized generic classes participate in the
-whole-program specialization plan. This is an implementation boundary rather
-than an additional source-language capability: checking and constraints are
-the same in both cases.
+Doof-owned declarations never expose an open C++ template identity. Templates
+that survive at the ABI boundary are owned by a native header or the Doof
+runtime. A native C++ function template may accept a concrete monomorphized
+Doof type; the generated adapter invokes it with that concrete representation.
 
 ```javascript
 scores: Map := { "Alice": 100, "Bob": 95 }        // Map<string, int>
