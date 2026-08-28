@@ -312,6 +312,10 @@ namespace app_src_test_runner_ {
     struct TestDiscovery;
 }
 
+namespace app_src_wasm_test_runner_ {
+    struct WasmTestRunnerPlan;
+}
+
 namespace app_src_driver_ {
     struct NativeCommandResult;
     struct TestExecutionResult;
@@ -2013,6 +2017,14 @@ namespace app_src_test_runner_ {
 };
 }
 
+namespace app_src_wasm_test_runner_ {
+    struct WasmTestRunnerPlan : public std::enable_shared_from_this<WasmTestRunnerPlan> {
+    std::string command;
+    std::shared_ptr<std::vector<std::string>> arguments;
+    WasmTestRunnerPlan(std::string command, std::shared_ptr<std::vector<std::string>> arguments) : command(command), arguments(arguments) {}
+};
+}
+
 namespace app_src_driver_ {
     struct NativeCommandResult : public std::enable_shared_from_this<NativeCommandResult> {
     int32_t exitCode;
@@ -2032,10 +2044,11 @@ namespace app_src_driver_ {
     TestWorkerCompletion(int32_t workerIndex, std::shared_ptr<TestExecutionResult> test) : workerIndex(workerIndex), test(test) {}
 };
     struct TestProcessWorker : public std::enable_shared_from_this<TestProcessWorker> {
-    std::string binary;
+    std::string command;
+    std::string wasmModule;
     std::string directory;
     int64_t maxOutputBytes;
-    TestProcessWorker(std::string binary, std::string directory, int64_t maxOutputBytes) : binary(binary), directory(directory), maxOutputBytes(maxOutputBytes) {}
+    TestProcessWorker(std::string command, std::string wasmModule, std::string directory, int64_t maxOutputBytes) : command(command), wasmModule(wasmModule), directory(directory), maxOutputBytes(maxOutputBytes) {}
     std::shared_ptr<TestWorkerCompletion> runTest(int32_t workerIndex, const std::string& id);
 };
     struct DriverSourceRoot : public std::enable_shared_from_this<DriverSourceRoot> {
@@ -3055,7 +3068,7 @@ namespace app_src_progress_ {
 }
 
 namespace app_src_native_build_driver_ {
-    int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, ::app_src_native_build_::NativeBuildMode mode, const std::string& platform, NativeBuildOutputMode outputMode);
+    int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, ::app_src_native_build_::NativeBuildMode mode, const std::string& platform, NativeBuildOutputMode outputMode, bool wasmCommand);
 }
 
 namespace app_src_package_acquisition_ {
@@ -3128,6 +3141,11 @@ namespace app_src_test_runner_ {
     std::string renderCoverageHtml(const std::shared_ptr<CoverageReport>& report, const std::string& fileDirectoryName);
     std::string renderCoverageFileHtml(const std::shared_ptr<CoverageFileReport>& file, const std::string& source, const std::string& indexHref);
     std::string coverageFileRelativePath(const std::string& path);
+}
+
+namespace app_src_wasm_test_runner_ {
+    std::shared_ptr<WasmTestRunnerPlan> planAppleWasmTestRunnerBuild(const std::string& sourcePath, const std::string& outputPath);
+    std::shared_ptr<WasmTestRunnerPlan> planAppleWasmTestRun(const std::string& runnerPath, const std::string& modulePath, const std::string& testId);
 }
 
 namespace doof { using Compilation = ::app_src_compiler_::Compilation; }
@@ -3231,6 +3249,7 @@ namespace app_src_driver_ {
     bool resourceOutputIsCurrent(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_resource_state_::MaterializedResource>>>& files, const std::string& outputPath);
     void synchronizeExecutableResources(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>>& resources, const std::string& outputDirectory, const std::string& statePath);
     void materializeRuntimeHeader(const std::string& outputDirectory);
+    doof::Result<std::string, std::string> buildAppleWasmTestRunner(const std::string& buildRoot);
     std::string nativeBuildOutputName(const std::string& projectName, const std::string& nativePlatform);
     void printDiagnostics(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
     void collectTestFiles(const std::string& path, const std::shared_ptr<std::vector<std::string>>& results, bool root);

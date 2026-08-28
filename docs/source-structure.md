@@ -131,6 +131,7 @@ threads or reconstruct scheduling policy.
 | `native-build-state.do` | Versioned incremental state plus Make/MSVC dependency parsing |
 | `native-build-driver.do` | Native compiler processes, fingerprints, dependency signatures, PCH/object/link execution |
 | `test-runner.do` | Pure test discovery, grouping, harness generation, and coverage reports |
+| `wasm-test-runner.do` | Pure Apple JavaScriptCore runner build and per-test invocation plans |
 | `run-command.do` | Pure invocation plans for built artifacts |
 | `profile-command.do` | Pure macOS xctrace capture and completed-trace open plans |
 | `macos-app.do` / `ios-app.do` | Deterministic bundle metadata, signing arguments, and platform plans |
@@ -145,6 +146,7 @@ the driver.
 Other maintained inputs:
 
 - `runtime/doof_runtime.h` — canonical generated-program runtime
+- `runtime/doof_wasm_test_runner_apple.swift` — bounded JavaScriptCore/WASI host for Wasm test commands
 - `resources/std-catalog.json` — embedded exact standard-package catalog
 - `tools/update-std-catalog.do` — catalog maintenance tool
 - `tests/release-fixtures/` — native and platform acceptance packages

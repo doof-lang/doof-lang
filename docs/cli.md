@@ -14,7 +14,7 @@ doof build <path> [-o <directory>]
 doof run <path> [build options] [-- program arguments]
 doof profile <path> [build options] [--trace-output <file.trace>] [--time-limit <duration>] [--no-open] [-- program arguments]
 doof package <path> [-o <build-directory>] [--distdir <directory>]
-doof test <path> [filter] [--list] [--coverage]
+doof test <path> [filter] [--list] [--coverage] [--target wasm]
 ```
 
 ## Executable scripts
@@ -99,6 +99,12 @@ default to avoid oversubscribing smaller development machines.
 Test execution also uses at most four process workers and reports a fixed-width
 completed/total bar. Successful cases and their captured output remain quiet;
 failed cases print their captured output followed by the failing test id.
+On macOS, `--target wasm` compiles each generated test harness as a standalone
+Emscripten command and runs every selected test in a fresh JavaScriptCore
+process and WebAssembly instance. The bundled host supplies the bounded WASI
+surface needed for arguments, environment, standard output/error, and process
+exit; it does not currently expose a guest filesystem. Building requires
+`em++`, and materializing the Apple runner requires `xcrun swiftc`.
 
 For `check`, `emit`, `build`, `run`, and `profile`, successful exact source/configuration
 fingerprints are cached below `<build-directory>/.doof-cache/v1/`. Exact hits

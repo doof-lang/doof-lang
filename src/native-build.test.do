@@ -366,6 +366,27 @@ export function testPlansStandaloneEmscriptenWasmLink(): none {
   Assert.equal(plan.linkArguments.contains("-sINITIAL_MEMORY=33554432"), true)
 }
 
+export function testPlansStandaloneEmscriptenWasmCommand(): none {
+  plan := planNativeCompile(
+    "em++",
+    "/tmp/generated",
+    "/tmp/generated/doof-tests.wasm",
+    [ModuleEmission { modulePath: "/tests.do", header: "", source: "", headerName: "tests.hpp", sourceName: "tests.cpp" }],
+    NativeBuildPlan {},
+    .Debug,
+    "macos",
+    [],
+    true,
+    true,
+  )
+
+  Assert.equal(plan.compileTasks[0].arguments.contains("-fwasm-exceptions"), true)
+  Assert.equal(plan.linkArguments.contains("-fwasm-exceptions"), true)
+  Assert.equal(plan.linkArguments.contains("-sSTANDALONE_WASM=1"), true)
+  Assert.equal(plan.linkArguments.contains("--no-entry"), false)
+  Assert.equal(plan.linkArguments.contains("-sEXPORTED_FUNCTIONS=[]"), false)
+}
+
 export function testPlansMsvcCompilationAndLinking(): none {
   Assert.equal(isMsvcCompiler("cl.exe"), true)
   Assert.equal(isMsvcCompiler("C:\\VS\\bin\\cl.exe"), true)

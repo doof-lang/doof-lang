@@ -196,6 +196,7 @@ Write-Host "  Linking $($objects.Count) bootstrap objects and the PCH creator...
 if ($LASTEXITCODE -ne 0) { throw "MSVC bootstrap link failed with exit code $LASTEXITCODE." }
 
 Copy-Item -LiteralPath (Join-Path $repoRoot "runtime\doof_runtime.h") -Destination $outputRoot
+Copy-Item -LiteralPath (Join-Path $repoRoot "runtime\doof_wasm_test_runner_apple.swift") -Destination $outputRoot
 Copy-Item -LiteralPath (Join-Path $repoRoot "resources\std-catalog.json") -Destination $outputRoot
 
 Write-Host "  Windows stage-0 compiler is ready: $executable"

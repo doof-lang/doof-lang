@@ -93,6 +93,7 @@ export function buildNativeProject(
   mode: NativeBuildMode,
   platform: string,
   outputMode: NativeBuildOutputMode,
+  wasmCommand: bool = false,
 ): int {
   for packageName of project.nativeBuild.pkgConfigPackages {
     for mode of ["cflags", "libs"] {
@@ -115,7 +116,10 @@ export function buildNativeProject(
     if configured != "" { compiler = configured }
   }
   if compiler == "" { compiler = if platform == "windows" then "cl.exe" else "c++" }
-  plan := planNativeCompile(compiler, outputDirectory, outputPath, project.modules, project.nativeBuild, mode, platform, project.wasmExportNames, wasm)
+  plan := planNativeCompile(
+    compiler, outputDirectory, outputPath, project.modules, project.nativeBuild,
+    mode, platform, project.wasmExportNames, wasm, wasmCommand,
+  )
   return executeNativePlan(outputDirectory, plan, project, outputMode)
 }
 

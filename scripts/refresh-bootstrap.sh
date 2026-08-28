@@ -126,6 +126,7 @@ rm -rf "$repo_root/dist"
 mkdir -p "$repo_root/dist"
 cp "$fixed_root/doof" "$repo_root/dist/doof"
 cp "$repo_root/runtime/doof_runtime.h" "$repo_root/dist/doof_runtime.h"
+cp "$repo_root/runtime/doof_wasm_test_runner_apple.swift" "$repo_root/dist/doof_wasm_test_runner_apple.swift"
 cp "$repo_root/resources/std-catalog.json" "$repo_root/dist/std-catalog.json"
 DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/scripts/release-verify.sh"
 

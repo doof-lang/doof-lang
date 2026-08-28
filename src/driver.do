@@ -56,6 +56,7 @@ import {
   stripCoverageLines, testDisplayPath,
 } from "./test-runner"
 import { boundedWorkerCount, renderProgressBar } from "./progress"
+import { planAppleWasmTestRun, planAppleWasmTestRunnerBuild } from "./wasm-test-runner"
 import { BlobReader } from "std/blob"
 import { sha256HexString } from "std/crypto"
 import { EntryKind, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
@@ -143,13 +144,21 @@ class TestWorkerCompletion {
 }
 
 class TestProcessWorker {
-  readonly binary: string
+  readonly command: string
+  readonly wasmModule: string = ""
   readonly directory: string
   readonly maxOutputBytes: long
 
   runTest(workerIndex: int, id: string): TestWorkerCompletion {
-    command := runNativeCommand(this.binary, [id], this.directory, false, .Isolated, this.maxOutputBytes)
-    return TestWorkerCompletion { workerIndex, test: TestExecutionResult { id, command } }
+    let command = this.command
+    let arguments = [id]
+    if this.wasmModule != "" {
+      invocation := planAppleWasmTestRun(this.command, this.wasmModule, id)
+      command = invocation.command
+      arguments = invocation.arguments
+    }
+    result := runNativeCommand(command, arguments, this.directory, false, .Isolated, this.maxOutputBytes)
+    return TestWorkerCompletion { workerIndex, test: TestExecutionResult { id, command: result } }
   }
 }
 
@@ -1065,6 +1074,33 @@ function materializeRuntimeHeader(outputDirectory: string): none {
   writeTextIfChanged(driverOutputPath(outputDirectory, "doof_runtime.hpp"), try! runtimeSource)
 }
 
+function buildAppleWasmTestRunner(buildRoot: string): Result<string, string> {
+  runnerDirectory := joinPath(joinPath(buildRoot, ".doof-tests"), "apple-wasm-runner")
+  ensureOutputDirectory(runnerDirectory)
+  sourcePath := joinPath(runnerDirectory, "doof-wasm-test-runner.swift")
+  runnerPath := joinPath(runnerDirectory, "doof-wasm-test-runner")
+  fingerprintPath := joinPath(runnerDirectory, "source.sha256")
+  source := readTextResource("doof_wasm_test_runner_apple.swift") else {
+    return Failure("Could not read embedded doof_wasm_test_runner_apple.swift")
+  }
+  writeTextIfChanged(sourcePath, source)
+  fingerprint := sha256HexString(source)
+  if exists(runnerPath) && exists(fingerprintPath) {
+    previousFingerprint := try! readText(fingerprintPath)
+    if previousFingerprint.trim() == fingerprint { return Success(runnerPath) }
+  }
+  plan := planAppleWasmTestRunnerBuild(sourcePath, runnerPath)
+  built := runNativeCommand(plan.command, plan.arguments, runnerDirectory)
+  if built.exitCode != 0 {
+    output := if built.error != ""
+      then built.error
+      else BlobReader(built.output).readString(long(built.output.length)).trim()
+    return Failure("Could not build the Apple JavaScriptCore Wasm test runner" + if output == "" then "" else ":\n" + output)
+  }
+  try! writeText(fingerprintPath, fingerprint + "\n")
+  return Success(runnerPath)
+}
+
 export function nativeBuildOutputName(projectName: string, nativePlatform: string): string {
   name := projectName.replaceAll("/", "-").replaceAll("\\", "-")
   if nativePlatform == "windows" && !name.toLowerCase().endsWith(".exe") { return name + ".exe" }
@@ -1246,16 +1282,23 @@ function testRequest(request: CliRequest): int {
   let failed = 0
   let coverageModules: CoverageModuleMetadata[] = []
   let coverageHits: int[][] = []
+  let appleWasmRunner = ""
   groups := groupTestsForCompilation(selected)
   for group of groups {
     moduleTests := group.tests
     testFile := moduleTests[0].modulePath
-    project := readProjectSpec(testFile, hostPlatform())
+    project := readProjectSpec(testFile, hostPlatform(), request.targetOverride)
+    wasmTests := project.target == "wasm"
+    if wasmTests && hostPlatform() != "macos" {
+      println("error: doof test --target wasm currently requires macOS and JavaScriptCore")
+      return 1
+    }
     buildRoot := if request.outputDirectory == ""
       then joinPath(project.rootDirectory, project.buildDirectory)
       else try! absolute(request.outputDirectory)
     coverageSuffix := if request.coverage then "-coverage" else ""
-    outputDirectory := joinPath(joinPath(buildRoot, ".doof-tests"), group.outputName + coverageSuffix)
+    targetSuffix := if wasmTests then "-wasm" else ""
+    outputDirectory := joinPath(joinPath(buildRoot, ".doof-tests"), group.outputName + targetSuffix + coverageSuffix)
     harnessPath := joinPath(outputDirectory, "__doof_tests__.do")
     ensureOutputDirectory(outputDirectory)
     writeTextIfChanged(harnessPath, generateTestHarness(harnessPath, moduleTests))
@@ -1267,8 +1310,16 @@ function testRequest(request: CliRequest): int {
       packageName: project.name,
       outputRoot: "",
     }]
+    let testExternalTarget = ExternalDependencyTarget { nativeTarget: hostPlatform() }
+    if wasmTests {
+      resolvedTarget := externalTargetForRequest("wasm", hostPlatform(), "", "") else error {
+        println("error: " + error)
+        return 1
+      }
+      testExternalTarget = resolvedTarget
+    }
     loader := sourceLoaderForRequest(
-      harnessPath, stdlibRoot, namespaceMappings, project.manifest,
+      harnessPath, stdlibRoot, namespaceMappings, project.manifest, hostPlatform(), testExternalTarget,
     ) else error {
       println("error: " + error)
       return 1
@@ -1278,7 +1329,6 @@ function testRequest(request: CliRequest): int {
     if hasErrorDiagnostics(result.diagnostics) { return 1 }
     if result.emission == none { panic("test compiler produced no emission") }
     rootManifest := project.manifest
-    testExternalTarget := ExternalDependencyTarget { nativeTarget: hostPlatform() }
     externalInputs := resolvedDependencyInputs(rootManifest) else error {
       println("error: " + error)
       return 1
@@ -1291,12 +1341,21 @@ function testRequest(request: CliRequest): int {
     if request.coverage { emission.nativeBuild.defines.push("DOOF_COVERAGE") }
     materializeProject(outputDirectory, emission)
     materializeRuntimeHeader(outputDirectory)
-    binary := joinPath(outputDirectory, "doof-tests")
+    binary := joinPath(outputDirectory, if wasmTests then "doof-tests.wasm" else "doof-tests")
     println("BUILD " + group.outputName)
     buildExitCode := buildNativeProject(
       request.compiler, outputDirectory, binary, emission, .Debug, hostPlatform(), .Progress,
+      wasmTests,
     )
     if buildExitCode != 0 { return buildExitCode }
+
+    if wasmTests && appleWasmRunner == "" {
+      builtRunner := buildAppleWasmTestRunner(buildRoot) else error {
+        println("error: " + error)
+        return 1
+      }
+      appleWasmRunner = builtRunner
+    }
 
     println("Testing " + string(moduleTests.length) + if moduleTests.length == 1 then " test" else " tests")
     printFlushed(renderProgressBar(0, moduleTests.length))
@@ -1305,7 +1364,12 @@ function testRequest(request: CliRequest): int {
     maxTestOutput := if request.coverage then MAX_COVERAGE_OUTPUT_BYTES else MAX_NATIVE_COMPILER_OUTPUT_BYTES
     let nextTestIndex = 0
     for workerIndex of 0..<boundedWorkerCount(moduleTests.length) {
-      worker := Actor<TestProcessWorker>(binary, project.rootDirectory, maxTestOutput)
+      worker := Actor<TestProcessWorker>(
+        if wasmTests then appleWasmRunner else binary,
+        if wasmTests then binary else "",
+        project.rootDirectory,
+        maxTestOutput,
+      )
       testWorkers.push(worker)
       test := moduleTests[nextTestIndex]
       pendingTests.push(async worker.runTest(workerIndex, test.id))

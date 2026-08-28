@@ -1,0 +1,6 @@
+{
+  "name": "doof-release-wasm-test-runner",
+  "build": {
+    "target": "wasm"
+  }
+}

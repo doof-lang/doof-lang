@@ -33,6 +33,7 @@ interactive_run_fixture="$fixtures_root/interactive-run"
 command_output_fixture="$fixtures_root/command-output"
 script_fixture="$fixtures_root/manifestless-script/script.do"
 wasm_fixture="$fixtures_root/manifestless-wasm/library.do"
+wasm_test_fixture="$fixtures_root/wasm-test-runner"
 
 DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" check "$runtime_fixture"
 DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" emit "$runtime_fixture" -o "$verify_root/emit"
@@ -73,6 +74,9 @@ grep -q "doof_export_add" "$verify_root/manifestless-wasm-emit/doof_wasm.cpp"
 if command -v em++ >/dev/null 2>&1; then
   DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" build "$wasm_fixture" --target wasm -o "$verify_root/manifestless-wasm"
   test -f "$verify_root/manifestless-wasm/doof.wasm"
+  if test "$(uname -s)" = "Darwin" && xcrun --find swiftc >/dev/null 2>&1; then
+    DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" test "$wasm_test_fixture" -o "$verify_root/wasm-test-runner"
+  fi
 fi
 
 platform_fixture="$fixtures_root/platform-framework"

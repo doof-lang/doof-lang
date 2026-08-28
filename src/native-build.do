@@ -86,6 +86,7 @@ export function planNativeCompile(
   platform: string = "",
   wasmExportNames: string[] = [],
   wasm: bool = false,
+  wasmCommand: bool = false,
 ): NativeCompilePlan {
   if isMsvcCompiler(compiler) && !wasm {
     return planMsvcNativeCompile(compiler, outputDirectory, outputPath, modules, native, mode)
@@ -116,6 +117,7 @@ export function planNativeCompile(
   if wasm {
     compileArguments.push("-Oz")
     compileArguments.push("-flto")
+    if wasmCommand { compileArguments.push("-fwasm-exceptions") }
   }
   for define of native.defines { compileArguments.push("-D" + define) }
   compileArguments.push("-I")
@@ -234,9 +236,13 @@ export function planNativeCompile(
     linkArguments.push("-sASSERTIONS=0")
     linkArguments.push("-sMALLOC=emmalloc")
     linkArguments.push("-sSTANDALONE_WASM=1")
-    linkArguments.push("--no-entry")
     linkArguments.push("-sFILESYSTEM=0")
-    linkArguments.push("-sEXPORTED_FUNCTIONS=" + wasmExportList(wasmExportNames))
+    if wasmCommand {
+      linkArguments.push("-fwasm-exceptions")
+    } else {
+      linkArguments.push("--no-entry")
+      linkArguments.push("-sEXPORTED_FUNCTIONS=" + wasmExportList(wasmExportNames))
+    }
     for flag of native.linkerFlags { linkArguments.push(flag) }
   }
   linkArguments.push("-o")

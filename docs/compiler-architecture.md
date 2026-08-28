@@ -97,6 +97,10 @@ after installing the application actor scope; initializer functions contain no
 per-module lifecycle state. Native entry scripts retain their separate
 source-order runner. Standalone WebAssembly exposes the graph protocol through
 `doof_initialize` after the host calls Emscripten `_initialize`.
+Wasm test harnesses instead retain their generated executable `main(arguments)`
+and link as Emscripten command modules with `_start`. On macOS the driver runs
+each test id in a fresh JavaScriptCore host process and Wasm instance through a
+bounded WASI command shim.
 
 Closed-world information drives interface variants, generic specialization,
 actor isolation validation, JSON/reflection generation, and stable module

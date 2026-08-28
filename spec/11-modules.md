@@ -556,6 +556,15 @@ modules reached by the shared graph therefore perform module-level
 initialization in every test process. Roots containing `mock import` are each
 compiled into a separate executable so substitutions remain root-scoped.
 
+When the selected package target is `wasm`, including through `--target wasm`,
+the generated harness is a standalone WebAssembly command rather than a JSON
+ABI library. Every selected test id is passed as a command argument to a fresh
+host process and WebAssembly instance. The macOS host uses JavaScriptCore and a
+bounded WASI Preview 1 shim for arguments, an empty environment, standard
+output/error, and process exit. Guest filesystem access is not part of this
+test-host contract. Other hosts currently diagnose that Wasm test execution is
+unsupported after discovery and filtering.
+
 The native test build is incremental: unchanged generated files retain their
 timestamps, and compiler-produced dependency files determine which PCH and
 object tasks need rebuilding. Coverage and ordinary test builds use separate

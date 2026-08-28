@@ -75,6 +75,7 @@ doof test --list src
 doof test --filter math src
 doof test src --coverage
 doof test src --coverage --coverage-output build/coverage/report.json
+doof test src --target wasm
 ```
 
 Runner behavior:
@@ -87,6 +88,7 @@ Runner behavior:
 - `--filter` matches ids of the form `<relative-path>::<functionName>`.
 - Recursive directory discovery skips subdirectories that contain their own `doof.json`; run `doof test` against that package directly to test it.
 - `--coverage` instruments non-test, non-stdlib Doof modules and writes JSON plus HTML reports; `--coverage-output` selects the JSON path.
+- On macOS, `--target wasm` uses Emscripten plus the bundled JavaScriptCore host. Each case receives a fresh process and Wasm instance; the bounded host supports arguments, an empty environment, stdout/stderr, and exit, but not a guest filesystem.
 
 ## Mocking
 
