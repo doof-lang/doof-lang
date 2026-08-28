@@ -8,7 +8,7 @@ import {
   ImmutableBinding, LetDeclaration, ReadonlyDeclaration,
 } from "./ast"
 import {
-  ActorType, ArrayResolvedType, ClassType, FunctionType, InterfaceType, PromiseType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType,
+  ActorType, ArrayResolvedType, ClassType, FunctionType, PromiseType, ResolvedType, ResultResolvedType, SetResolvedType, Symbol, TupleResolvedType,
   UnionResolvedType, UnknownType, NoneType, WeakResolvedType,
 } from "./semantic"
 import { EmitContext, recordCoverageLine, sourceLineDirective } from "./emitter-context"
@@ -50,6 +50,9 @@ export function emitFunctionSignature(fn: FunctionDeclaration, name: string = ""
 
 export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitContext, name: string = ""): string {
   if fn.bodyless { return "" }
+  if fn.typeParams.length > 0 && context.substitution == none {
+    panic("Generic function " + fn.name + " reached emission without a concrete instantiation")
+  }
   previousReturnErrorType := context.currentReturnErrorType
   previousFunctionName := context.currentFunctionName
   previousCapturedMutables := context.capturedMutables
@@ -68,7 +71,7 @@ export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitCon
     }
     _ -> { context.currentReturnErrorType = "" }
   }
-  let result = sourceLineDirective(fn.span, context) + emitCallableDescription(fn, "") + (if context.substitution == none then templatePrefix(fn.typeParams) else "") + emitFunctionSignature(fn, name, context.modulePath, context) + " {\n"
+  let result = sourceLineDirective(fn.span, context) + emitCallableDescription(fn, "") + emitFunctionSignature(fn, name, context.modulePath, context) + " {\n"
   case fn.body {
     expression: Expression -> {
       result = result + emitExpressionCoverageMark(expression, context)
@@ -90,8 +93,10 @@ export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitCon
 }
 
 export function emitFunctionDeclaration(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none): string {
-  template := if context == none || context!.substitution == none then templatePrefix(fn.typeParams) else ""
-  return emitCallableDescription(fn, "") + template + emitFunctionSignature(fn, name, modulePath, context) + ";\n"
+  if fn.typeParams.length > 0 && (context == none || context!.substitution == none) {
+    panic("Generic function " + fn.name + " reached declaration emission without a concrete instantiation")
+  }
+  return emitCallableDescription(fn, "") + emitFunctionSignature(fn, name, modulePath, context) + ";\n"
 }
 
 // A generic native import is a Doof generic declaration, not a promise that
@@ -113,16 +118,6 @@ export function emitNativeFunctionAdapterDefinition(fn: FunctionDeclaration, emi
   return signature + " {\n    return " + call + ";\n}\n"
 }
 
-export function emitValueDeclaration(statement: ConstDeclaration | ReadonlyDeclaration | ImmutableBinding | LetDeclaration, context: EmitContext): string {
-  case statement {
-    const_: ConstDeclaration -> { return emitDescriptionComment(const_.description, "") + valuePrefix(const_.name, const_.resolvedType!, false, context) + " = " + emitExpression(const_.value, context, const_.resolvedType) + ";\n" }
-    readonly_: ReadonlyDeclaration -> { return emitDescriptionComment(readonly_.description, "") + valuePrefix(readonly_.name, readonly_.resolvedType!, false, context) + " = " + emitExpression(readonly_.value, context, readonly_.resolvedType) + ";\n" }
-    binding: ImmutableBinding -> { return valuePrefix(binding.name, binding.resolvedType!, false, context) + " = " + emitExpression(binding.value, context, binding.resolvedType) + ";\n" }
-    let_: LetDeclaration -> { return valuePrefix(let_.name, let_.resolvedType!, true, context) + " = " + emitExpression(let_.value, context, let_.resolvedType) + ";\n" }
-  }
-  return ""
-}
-
 /** Emits default-initialized direct storage for a module binding. */
 export function emitModuleValueStorage(
   statement: ConstDeclaration | ReadonlyDeclaration | ImmutableBinding | LetDeclaration,
@@ -140,15 +135,6 @@ export function emitModuleValueStorage(
   if name == "" || name == "_" || type_ == none { return "" }
   return emitContextType(type_!, context) + " " + cppIdentifier(name) +
     (if initializer == "" then "" else " = " + initializer) + ";\n"
-}
-
-function valuePrefix(name: string, resolvedType: ResolvedType, mutable: bool, context: EmitContext): string {
-  case resolvedType {
-    _: InterfaceType -> { return (if mutable then "" else "const ") + emitContextType(resolvedType, context) + " " + cppIdentifier(name) }
-    _: StreamResolvedType -> { return (if mutable then "" else "const ") + emitContextType(resolvedType, context) + " " + cppIdentifier(name) }
-    _ -> { return (if mutable then "auto " else "const auto ") + cppIdentifier(name) }
-  }
-  return "auto " + cppIdentifier(name)
 }
 
 function checkedFunctionType(fn: FunctionDeclaration): FunctionType {
@@ -191,18 +177,12 @@ function ensureKnown(resolvedType: ResolvedType, owner: string): none {
 
 export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContext, emittedName: string = "", concreteMethods: MethodInstantiation[] = []): string {
   if decl.native_ { return "" }
-  className := if emittedName == "" then decl.name else emittedName
-  let ownershipName = className
-  if emittedName == "" && decl.typeParams.length > 0 {
-    ownershipName = ownershipName + "<"
-    for index of 0..<decl.typeParams.length {
-      if index > 0 { ownershipName = ownershipName + ", " }
-      ownershipName = ownershipName + decl.typeParams[index]
-    }
-    ownershipName = ownershipName + ">"
+  if decl.typeParams.length > 0 && context.substitution == none {
+    panic("Generic class " + decl.name + " reached emission without a concrete instantiation")
   }
-  let inheritance = if decl.struct_ then "" else " : public std::enable_shared_from_this<" + ownershipName + ">"
-  let result = emitDescriptionComment(decl.description, "") + (if context.substitution == none then templatePrefix(decl.typeParams) else "") + "struct " + className + inheritance + " {\n"
+  className := if emittedName == "" then decl.name else emittedName
+  let inheritance = if decl.struct_ then "" else " : public std::enable_shared_from_this<" + className + ">"
+  let result = emitDescriptionComment(decl.description, "") + "struct " + className + inheritance + " {\n"
   for field of decl.fields {
     for index of 0..<field.names.length {
       name := field.names[index]
@@ -317,16 +297,6 @@ export function emitStaticClassFieldDefinitions(owner: ClassDeclaration, context
     }
   }
   return result
-}
-
-function templatePrefix(typeParams: string[]): string {
-  if typeParams.length == 0 { return "" }
-  let result = "template <"
-  for i of 0..<typeParams.length {
-    if i > 0 { result = result + ", " }
-    result = result + "typename " + typeParams[i]
-  }
-  return result + ">\n"
 }
 
 /** Renders declaration descriptions as stable C++ line comments. */

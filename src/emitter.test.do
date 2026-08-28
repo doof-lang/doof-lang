@@ -2,11 +2,12 @@ import { Assert } from "std/assert"
 import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
 import { createAnalyzer } from "./analyzer"
 import { createChecker, validateIsolationEffects } from "./checker"
+import { compile } from "./compiler"
 import { AnalysisResult } from "./analyzer"
 import { ClassDeclaration, ConstructExpression, ImmutableBinding, Program } from "./ast"
 import { SourceFile } from "./semantic"
 import { ModuleEmission, emitModule, emitModuleGraph, ModuleGraphPlan, planModuleGraph } from "./emitter-module"
-import { buildInstantiationPlan, InstantiationPlan } from "./emitter-monomorphize"
+import { InstantiationPlan } from "./emitter-monomorphize"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, JsonEligibilityCache } from "./json-semantics"
 import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
 import { hasErrorDiagnostics } from "./diagnostics"
@@ -16,21 +17,15 @@ function emit(source: string): ModuleEmission {
 }
 
 function emitSources(sources: SourceFile[], entry: string): ModuleEmission {
-  analysis := createAnalyzer(sources).analyze(entry)
-  Assert.equal(analysis.diagnostics.length, 0)
-  checked := createChecker(analysis, entry).check(entry)
-  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
-  program := findProgram(analysis, entry)
-  return emitModule(program!, "main", buildInstantiationPlan(analysis))
+  compilation := compile(sources, entry)
+  Assert.equal(hasErrorDiagnostics(compilation.diagnostics), false)
+  graph := compilation.emission else { panic("source graph was not emitted") }
+  for module of graph.modules { if module.modulePath == entry { return module } }
+  panic("entry module was not emitted")
 }
 
 function emitMonomorphized(source: string): ModuleEmission {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
-  Assert.equal(analysis.diagnostics.length, 0)
-  checked := createChecker(analysis).check("/main.do")
-  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
-  graph := emitModuleGraph(analysis, "/main.do")
-  return graph.modules[0]
+  return emit(source)
 }
 
 export function testCachesJsonEligibilityAcrossProjectedHeaders(): none {
@@ -82,13 +77,13 @@ export function testEscapesQuestionMarksInCppStringLiteralsToAvoidTrigraphs(): n
 
 export function testOmitsEmptyNamespaceBlocksFromHeaders(): none {
   functionOnly := emit("function main(): int => 0")
-  Assert.stringNotContains(functionOnly.header, "namespace main_ {\n}\n")
-  Assert.stringContains(functionOnly.header, "namespace main_ {\n    int32_t doof_main()")
+  Assert.stringNotContains(functionOnly.header, "namespace app_main_ {\n}\n")
+  Assert.stringContains(functionOnly.header, "namespace app_main_ {\n    int32_t doof_main()")
   Assert.isFalse(functionOnly.header.endsWith("\n\n"))
 
   enumOnly := emit("enum Color { Red }")
-  Assert.stringNotContains(enumOnly.header, "namespace main_ {\n}\n")
-  Assert.stringContains(enumOnly.header, "namespace main_ {\n    enum class Color")
+  Assert.stringNotContains(enumOnly.header, "namespace app_main_ {\n}\n")
+  Assert.stringContains(enumOnly.header, "namespace app_main_ {\n    enum class Color")
   Assert.isFalse(enumOnly.header.endsWith("\n\n"))
 }
 
@@ -199,7 +194,7 @@ export function testEmitsWeakFieldsAsWeakPointers(): none {
 }
 
 export function testEmitsCheckedWeakReferenceAccess(): none {
-  result := emit("class Node { value: int\nread(): int => value\nfallible(): Result<int, string> => Success { value } }\nfunction optionalField(node: weak Node): Result<int | none, WeakReferenceError> => node?.value\nfunction optionalCall(node: weak Node): Result<int | none, WeakReferenceError> => node?.read()\nfunction optionalFallibleCall(node: weak Node): Result<int | none, string | WeakReferenceError> => node?.fallible()\nfunction forcedField(node: weak Node): int => node!.value\nfunction forcedCall(node: weak Node): int => node!.read()")
+  result := emit("class Node { value: int\nread(): int => value\nfallible(): Result<int, string> => Success { value: value } }\nfunction optionalField(node: weak Node): Result<int | none, WeakReferenceError> => node?.value\nfunction optionalCall(node: weak Node): Result<int | none, WeakReferenceError> => node?.read()\nfunction optionalFallibleCall(node: weak Node): Result<int | none, string | WeakReferenceError> => node?.fallible()\nfunction forcedField(node: weak Node): int => node!.value\nfunction forcedCall(node: weak Node): int => node!.read()")
   Assert.stringContains(result.source, "doof::lock_weak(")
   Assert.stringContains(result.source, "doof::WeakReferenceError{}")
   Assert.stringContains(result.source, "Weak reference has expired")
@@ -421,7 +416,7 @@ export function testEscapesShortCppKeywordEverywhere(): none {
 
 export function testEscapesCharCppKeywordEverywhere(): none {
   result := emit("function first(value: string): char { char := value[0]\nreturn char }")
-  Assert.stringContains(result.source, "const auto char_ = doof::string_at(value, 0, \"<module>\", 1)")
+  Assert.stringContains(result.source, "const auto char_ = doof::string_at(value, 0, \"main\", 1)")
   Assert.equal(result.source.contains("return char_"), true)
   Assert.equal(result.source.contains("auto char ="), false)
 }
@@ -565,7 +560,7 @@ export function testKeepsHeaderAndSourceSeparate(): none {
   Assert.equal(result.source.contains("int32_t add(int32_t a, int32_t b)"), true)
   Assert.equal(result.source.contains("doof::detail::ApplicationDomain::shared()"), true)
   Assert.equal(result.source.contains("doof::detail::ActiveActorScope __doof_application_scope"), true)
-  Assert.equal(result.source.contains("return main_::doof_main();"), true)
+  Assert.equal(result.source.contains("return app_main_::doof_main();"), true)
 }
 
 export function testEmitsNamedNativeConstructionThroughStaticConstructor(): none {
@@ -681,7 +676,7 @@ export function testKeepsDoofDefaultsOutOfHeadersAndMaterializesCalls(): none {
   Assert.stringContains(result.header, "int32_t choose(int32_t value);")
   Assert.stringNotContains(result.header, "= fallback()")
   Assert.stringNotContains(result.header, "= Later::value()")
-  Assert.stringContains(result.source, "std::make_shared<::app_main_::Holder>(DEFAULT_COUNT, fallback(), Later::value())")
+  Assert.stringContains(result.source, "std::make_shared<Holder>(DEFAULT_COUNT, fallback(), Later::value())")
   Assert.stringContains(result.source, "return choose(fallback());")
 }
 
@@ -729,15 +724,15 @@ export function testMainWrapperReportsPanicsForEverySupportedSignature(): none {
 export function testEmitsCheckedCoreExpressions(): none {
   result := emit("function main(): int { values: int[] := [1, 2, 3]\nreturn values[1] + 4 }")
   Assert.equal(result.source.contains("std::make_shared<std::vector<int32_t>>"), true)
-  Assert.stringContains(result.source, "doof::array_at(values, 1, \"<module>\", 2)")
+  Assert.stringContains(result.source, "doof::array_at(values, 1, \"main\", 2)")
   Assert.equal(result.source.contains("return ("), true)
 }
 
 export function testEmitsCheckedCollectionIndexReads(): none {
   result := emit("function readArray(values: int[], index: int): int => values[index]\nfunction readString(value: string, index: int): char => value[index]\nfunction readMap(values: Map<string, int>, key: string): int => values[key]")
-  Assert.stringContains(result.source, "doof::array_at(values, index, \"<module>\", 1)")
-  Assert.stringContains(result.source, "doof::string_at(value, index, \"<module>\", 2)")
-  Assert.stringContains(result.source, "doof::map_at(values, key, \"<module>\", 3)")
+  Assert.stringContains(result.source, "doof::array_at(values, index, \"main\", 1)")
+  Assert.stringContains(result.source, "doof::string_at(value, index, \"main\", 2)")
+  Assert.stringContains(result.source, "doof::map_at(values, key, \"main\", 3)")
   Assert.stringNotContains(result.source, "(*values)[index]")
   Assert.stringNotContains(result.source, "value[index]")
   Assert.stringNotContains(result.source, "(*values)[key]")
@@ -745,15 +740,15 @@ export function testEmitsCheckedCollectionIndexReads(): none {
 
 export function testEmitsCheckedBooleanArrayIndexReadsAndWrites(): none {
   result := emit("function settle(settled: bool[], index: int): bool { if settled[index] { return false }\nsettled[index] = true\nreturn settled[index] }")
-  Assert.stringContains(result.source, "if (doof::array_at(settled, index, \"<module>\", 1))")
-  Assert.stringContains(result.source, "doof::array_at(settled, index, \"<module>\", 2) = true")
-  Assert.stringContains(result.source, "return doof::array_at(settled, index, \"<module>\", 3)")
+  Assert.stringContains(result.source, "if (doof::array_at(settled, index, \"main\", 1))")
+  Assert.stringContains(result.source, "doof::array_at(settled, index, \"main\", 2) = true")
+  Assert.stringContains(result.source, "return doof::array_at(settled, index, \"main\", 3)")
 }
 
 export function testEmitsSafeCollectionIndexWrites(): none {
   result := emit("function writeArray(values: int[], index: int): none { values[index] = 7 }\nfunction writeMap(values: Map<string, int>, key: string): none { values[key] = 7 }")
-  Assert.stringContains(result.source, "doof::array_at(values, index, \"<module>\", 1) = 7")
-  Assert.stringContains(result.source, "doof::map_index(values, key, \"<module>\", 2) = 7")
+  Assert.stringContains(result.source, "doof::array_at(values, index, \"main\", 1) = 7")
+  Assert.stringContains(result.source, "doof::map_index(values, key, \"main\", 2) = 7")
   Assert.stringNotContains(result.source, "(*values)[index]")
   Assert.stringNotContains(result.source, "(*values)[key]")
 }
@@ -1564,7 +1559,7 @@ export function testEmitsEnumsAndTypeAliases(): none {
 
 export function testEmitsAssignmentsAndArrayLoops(): none {
   result := emit("function main(): int { let values: int[] = [1, 2]\nvalues[0] = 4\nlet total = 0\nfor item of values { total = total + item }\nreturn total }")
-  Assert.stringContains(result.source, "doof::array_at(values, 0, \"<module>\", 2) = 4")
+  Assert.stringContains(result.source, "doof::array_at(values, 0, \"main\", 2) = 4")
   Assert.equal(result.source.contains("const auto& _iterable_"), true)
   Assert.equal(result.source.contains("for (const auto& item : *_iterable_"), true)
 }
@@ -1856,7 +1851,7 @@ export function testEmitsNonGenericNativeFunctionNameAcrossModules(): none {
 export function testEmitsContextualResultAndClassObjectLiterals(): none {
   result := emit("class Payload { count: int }\nfunction load(): Result<Payload, string> => { value: { count: 4 } }")
   Assert.equal(result.source.contains("doof::Success<std::shared_ptr<Payload>>"), true)
-  Assert.stringContains(result.source, "std::make_shared<::app_main_::Payload>(4)")
+  Assert.stringContains(result.source, "std::make_shared<Payload>(4)")
 }
 
 export function testEmitsContextualSumObjectLiteralsAndPromotions(): none {
@@ -1866,8 +1861,8 @@ export function testEmitsContextualSumObjectLiteralsAndPromotions(): none {
     "type Knowledge = Animal | Question\n" +
     "function initial(): Knowledge => { text: \"Does it swim\", yes: { name: \"fish\" }, no: { name: \"bird\" } }",
   )
-  Assert.stringContains(result.source, "std::make_shared<::app_main_::Question>")
-  Assert.stringContains(result.source, "std::make_shared<::app_main_::Animal>")
+  Assert.stringContains(result.source, "std::make_shared<Question>")
+  Assert.stringContains(result.source, "std::make_shared<Animal>")
   Assert.stringContains(result.source, "doof::variant_promote<")
 }
 
