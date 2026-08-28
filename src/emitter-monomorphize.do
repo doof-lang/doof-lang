@@ -262,6 +262,20 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
         if !containsTypeParameters(concreteArgs) {
           let recordedMethod = false
           case call.callee {
+            identifier: Identifier -> {
+              if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "method" && identifier.resolvedBinding!.symbol != none {
+                symbol := identifier.resolvedBinding!.symbol!
+                owner := classDeclaration(analysis, symbol.module, symbol.name)
+                if owner != none && call.resolvedFunction!.typeParams.length > 0 {
+                  let ownerArgs: ResolvedType[] = []
+                  for typeParam of owner!.typeParams {
+                    ownerArgs.push(specialize(TypeParameterType { name: typeParam }, names, arguments))
+                  }
+                  addMethod(plan, ClassType { name: symbol.name, symbol, typeArgs: ownerArgs }, owner!, call.resolvedFunction!, concreteArgs)
+                  recordedMethod = true
+                }
+              }
+            }
             member: MemberExpression -> {
               if member.object.resolvedType != none {
                 case specialize(member.object.resolvedType!, names, arguments) {

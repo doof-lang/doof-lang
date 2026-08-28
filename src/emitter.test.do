@@ -6,7 +6,7 @@ import { AnalysisResult } from "./analyzer"
 import { ClassDeclaration, ConstructExpression, ImmutableBinding, Program } from "./ast"
 import { SourceFile } from "./semantic"
 import { ModuleEmission, emitModule, emitModuleGraph, ModuleGraphPlan, planModuleGraph } from "./emitter-module"
-import { buildInstantiationPlan } from "./emitter-monomorphize"
+import { buildInstantiationPlan, InstantiationPlan } from "./emitter-monomorphize"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, JsonEligibilityCache } from "./json-semantics"
 import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
 import { hasErrorDiagnostics } from "./diagnostics"
@@ -1683,10 +1683,29 @@ export function testEmitsByteCastBuiltin(): none {
   Assert.equal(result.source.contains("byte.call"), false)
 }
 
-export function testEmitsExplicitArgumentsForTemplateGenericMethods(): none {
-  result := emit("class Assert { static equal<T>(actual: T, expected: T): void {} }\nfunction compare(value: string | null): void { Assert.equal(value, \"ok\") }")
-  Assert.equal(result.source.contains("Assert::equal<std::optional<std::string>>"), true)
+export function testEmitsConcreteGenericMethodCalls(): none {
+  result := emitMonomorphized("class Assert { static equal<T>(actual: T, expected: T): void {} }\nfunction compare(value: string | null): void { Assert.equal(value, \"ok\") }")
+  Assert.stringContains(result.source, "Assert::equal__")
   Assert.equal(result.source.contains("value, std::string(\"ok\"))"), true)
+  Assert.stringNotContains(result.source, "Assert::equal<std::optional<std::string>>")
+}
+
+export function testFailsFastWhenConcreteGenericCallIsMissingFromPlan(): none {
+  analysis := createAnalyzer([SourceFile {
+    path: "/main.do",
+    source: "function identity<T>(value: T): T => value\nfunction main(): int => identity<int>(7)",
+  }]).analyze("/main.do")
+  Assert.equal(analysis.diagnostics.length, 0)
+  checked := createChecker(analysis, "/main.do").check("/main.do")
+  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
+  result := catchPanic(=> emitModuleGraph(analysis, "/main.do", InstantiationPlan {}))
+  case result {
+    failure: Failure<string> -> {
+      Assert.stringContains(failure.error, "Missing concrete generic instantiation for /main.do::identity")
+      Assert.stringContains(failure.error, "at line 2:")
+    }
+    _ -> { panic("expected missing concrete generic instantiation to fail during emission") }
+  }
 }
 
 export function testEmitsImportedTypeAliasesForNativeNamespaces(): none {

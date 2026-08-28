@@ -416,6 +416,36 @@ export function testMonomorphizesGenericMethodsOnOrdinaryOwnersTransitively(): n
   Assert.stringNotContains(module.source, "map<int32_t>")
 }
 
+export function testMonomorphizesUnqualifiedGenericMethodCalls(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "class Parser {\nparse(): Result<int, string> => failure<int>(\"bad\")\nprivate failure<T>(message: string): Result<T, string> => Failure(message) }\nfunction main(): none { result := Parser().parse() }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.emission != none, true)
+  module := result.emission!.modules[0]
+  Assert.stringContains(module.header, "failure__int(const std::string& message);")
+  Assert.stringContains(module.source, "return failure__int(std::string(\"bad\"));")
+  Assert.stringContains(module.source, "Parser::failure__int(const std::string& message)")
+  Assert.stringNotContains(module.source, "Result<int32_t, std::string> failure__int")
+}
+
+export function testMonomorphizesUnqualifiedGenericMethodCallsOnGenericOwners(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "class Box<T> {\nvalue: T\nconvert<U>(other: U): U => identity<U>(other)\nprivate identity<V>(input: V): V => input }\nfunction main(): int => Box<int> { value: 1 }.convert<int>(7)",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.emission != none, true)
+  module := result.emission!.modules[0]
+  Assert.stringContains(module.header, "struct Box__int")
+  Assert.stringContains(module.header, "int32_t identity__int(int32_t input);")
+  Assert.stringContains(module.source, "return identity__int(other);")
+  Assert.stringContains(module.source, "Box__int::identity__int(int32_t input)")
+}
+
 export function testDisambiguatesConcreteMethodNamesOnlyWhenShortNominalNamesClash(): none {
   result := compile([
     SourceFile { path: "/tools.do", source: "export class Tools { static same<T>(value: T): T => value }" },

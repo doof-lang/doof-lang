@@ -1,7 +1,7 @@
 // Call, native-constructor, and class-construction lowering.
 
 import { CallArgument, CallExpression, ClassDeclaration, ConstructExpression, Expression, FunctionDeclaration, Identifier, MemberExpression, ObjectProperty, SourceSpan, ThisExpression } from "./ast"
-import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, Symbol, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, Symbol, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -326,7 +326,16 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     case expression.callee {
       identifier: Identifier -> {
         if identifier.resolvedBinding != none {
-          if identifier.resolvedBinding!.symbol != none { targetModule = identifier.resolvedBinding!.symbol!.module }
+          if identifier.resolvedBinding!.kind == "method" && identifier.resolvedBinding!.symbol != none {
+            symbol := identifier.resolvedBinding!.symbol!
+            let ownerArgs: ResolvedType[] = []
+            for typeParam of symbol.typeParams {
+              ownerArgs.push(specializeEmitType(TypeParameterType { name: typeParam }, context))
+            }
+            ownerKey := classInstantiationKey(symbol.module, symbol.name, ownerArgs)
+            methodKey := methodInstantiationKey(ownerKey, functionDeclaration!.name, concreteGenericArgs)
+            concreteMethodName = concreteMethodNameFor(context, methodKey)
+          } else if identifier.resolvedBinding!.symbol != none { targetModule = identifier.resolvedBinding!.symbol!.module }
           else if identifier.resolvedBinding!.module != "" { targetModule = identifier.resolvedBinding!.module }
         }
       }
@@ -348,6 +357,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     if concreteMethodName != "" {
       usesConcreteInstantiation = true
       case expression.callee {
+        _: Identifier -> { callee = concreteMethodName }
         member: MemberExpression -> { callee = callee.substring(0, callee.length - member.property.length) + concreteMethodName }
         _ -> { }
       }
@@ -361,12 +371,10 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     }
   }
   if concreteGenericArgs.length > 0 && functionDeclaration != none && functionDeclaration!.typeParams.length > 0 && !usesConcreteInstantiation {
-    callee = callee + "<"
-    for i of 0..<concreteGenericArgs.length {
-      if i > 0 { callee = callee + ", " }
-      callee = callee + emitContextType(concreteGenericArgs[i], context)
-    }
-    callee = callee + ">"
+    panic(
+      "Missing concrete generic instantiation for " + context.modulePath + "::" + functionDeclaration!.name +
+      " at line " + string(expression.span.start.line) + ":" + string(expression.span.start.column),
+    )
   }
   let invokesCallback = false
   case expression.callee {
