@@ -19,7 +19,6 @@ export class EmitModuleSurface {
   exports: Symbol[] = []
   imports: ImportBinding[] = []
   genericTypes: string[] = []
-  genericFunctions: string[] = []
 }
 
 export class SourceLocationSpanOverride {
@@ -45,7 +44,6 @@ export class EmitContext {
   let catchResultType: ResolvedType | none = none
   // Call-site override used while materializing defaults such as @caller.
   let sourceLocationSpanOverride: SourceLocationSpanOverride | none = none
-  let genericTypeParams: string[] = []
   // Concrete Doof monomorphization substitution active while emitting a
   // specialized function, class, or method body.
   let substitution: TypeSubstitution | none = none

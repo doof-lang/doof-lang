@@ -2,8 +2,9 @@ import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
 import { hasErrorDiagnostics } from "./diagnostics"
+import { emitFunctionDeclaration } from "./emitter-decl"
 import { emitModule, ModuleEmission } from "./emitter-module"
-import { Program } from "./ast"
+import { FunctionDeclaration, Program } from "./ast"
 import { SourceFile } from "./semantic"
 
 function emit(source: string): ModuleEmission {
@@ -50,4 +51,26 @@ export function testKeepsCallbackAbiOwningWhileBorrowingNamedFunctions(): none {
   Assert.stringContains(result.header, "const doof::callback<int32_t(std::string)>& callback")
   Assert.stringContains(result.header, "const std::string& value")
   Assert.stringContains(result.header, "doof::callback<int32_t(std::string)>")
+}
+
+export function testRejectsGenericDeclarationsWithoutConcreteInstantiation(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function identity<T>(value: T): T => value" }]).analyze("/main.do")
+  Assert.equal(analysis.diagnostics.length, 0)
+  checked := createChecker(analysis, "/main.do").check("/main.do")
+  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
+  let declaration: FunctionDeclaration | none = none
+  for module of analysis.modules {
+    if module.path != "/main.do" { continue }
+    case module.program.statements[0] {
+      function_: FunctionDeclaration -> { declaration = function_ }
+      _ -> { }
+    }
+  }
+  Assert.isTrue(declaration != none)
+
+  result := catchPanic(=> emitFunctionDeclaration(declaration!))
+  case result {
+    failure: Failure<string> -> { Assert.stringContains(failure.error, "without a concrete instantiation") }
+    _ -> { panic("expected generic declaration emission to panic") }
+  }
 }

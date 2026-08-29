@@ -11,7 +11,7 @@ import {
 } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { createEmitContext, createEmitContextForModule, EmitContext, EmitModuleSurface, generatedLineDirective } from "./emitter-context"
-import { emitClassDeclaration, emitClassDestructorDefinition, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitModuleValueStorage, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions, emitValueDeclaration } from "./emitter-decl"
+import { emitClassDeclaration, emitClassDestructorDefinition, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitModuleValueStorage, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions } from "./emitter-decl"
 import { emitGeneratedJsonMethods, emitInterfaceJsonDefinition } from "./emitter-json"
 import { emitMetadataDefinition } from "./emitter-metadata"
 import { emitStatement } from "./emitter-stmt"
@@ -19,14 +19,14 @@ import { emitContextType } from "./emitter-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { HeaderPlan, HeaderSection, planHeader, renderProjectedHeader, reserveHeaderNamespaceName } from "./emitter-header"
 import { indexWorldviewGraph, planWorldview, WorldviewModule } from "./emitter-worldview"
-import { buildInstantiationPlan, classInstantiationKey, ClassInstantiation, concreteName, FunctionInstantiation, InstantiationPlan, MethodInstantiation } from "./emitter-monomorphize"
+import { buildInstantiationPlan, classInstantiationKey, ClassInstantiation, FunctionInstantiation, InstantiationPlan, MethodInstantiation } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
 import { sha256HexString } from "std/crypto"
 import { JsonEligibilityCache } from "./json-semantics"
 import { StringBuilder } from "./string-builder"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, ImportBinding, InterfaceType, MapResolvedType, NamespaceBinding,
-  PromiseType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeSubstitution, UnionResolvedType, WeakResolvedType,
+  PromiseType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 
 export class ModulePlan {
@@ -664,7 +664,8 @@ function concreteClassTypeName(context: EmitContext, class_: ClassType): string 
   for index of 0..<context.concreteClassKeys.length {
     if context.concreteClassKeys[index] == key { return context.concreteClassNames[index] }
   }
-  return concreteName(class_.name, class_.typeArgs)
+  panic("Missing concrete class instantiation for " + key)
+  return ""
 }
 
 function emitConcreteFunctions(context: EmitContext, instantiations: InstantiationPlan): string {
@@ -710,10 +711,6 @@ function emitConcreteMethodDefinitions(context: EmitContext, instantiations: Ins
   return result
 }
 
-function withInstantiation(context: EmitContext, names: string[], arguments: ResolvedType[]): none {
-  context.substitution = TypeSubstitution { names, arguments }
-}
-
 function clearInstantiation(context: EmitContext): none {
   context.substitution = none
 }
@@ -722,20 +719,18 @@ function emitModuleSurfaces(result: AnalysisResult): EmitModuleSurface[] {
   let surfaces: EmitModuleSurface[] = []
   for module of result.modules {
     let genericTypes: string[] = []
-    let genericFunctions: string[] = []
-    for statement of module.program.statements { collectGenericSurfaceSymbols(statement, genericTypes, genericFunctions) }
-    surfaces.push(EmitModuleSurface { path: module.path, exports: module.exports, imports: module.imports, genericTypes, genericFunctions })
+    for statement of module.program.statements { collectGenericSurfaceSymbols(statement, genericTypes) }
+    surfaces.push(EmitModuleSurface { path: module.path, exports: module.exports, imports: module.imports, genericTypes })
   }
   return surfaces
 }
 
-function collectGenericSurfaceSymbols(statement: Statement, typeNames: string[], functionNames: string[]): none {
+function collectGenericSurfaceSymbols(statement: Statement, typeNames: string[]): none {
   case statement {
     class_: ClassDeclaration -> { if class_.typeParams.length > 0 { typeNames.push(class_.name) } }
     interface_: InterfaceDeclaration -> { if interface_.typeParams.length > 0 { typeNames.push(interface_.name) } }
     alias: TypeAliasDeclaration -> { if alias.typeParams.length > 0 { typeNames.push(alias.name) } }
-    function_: FunctionDeclaration -> { if function_.typeParams.length > 0 { functionNames.push(function_.name) } }
-    export_: ExportDeclaration -> { collectGenericSurfaceSymbols(export_.declaration, typeNames, functionNames) }
+    export_: ExportDeclaration -> { collectGenericSurfaceSymbols(export_.declaration, typeNames) }
     _ -> { }
   }
 }
@@ -811,13 +806,8 @@ function moduleInitializationNamespaces(paths: string[]): string[] {
   return result
 }
 
-export function emitModule(program: Program, moduleName: string = "main", instantiations: InstantiationPlan | none = none): ModuleEmission {
-  if instantiations == none { return CxxModuleEmitter { moduleName }.emit(program, "executable") }
-  return CxxModuleEmitter {
-    moduleName,
-    jsonSerializationKeys: instantiations!.jsonSerializationKeys,
-    jsonDeserializationKeys: instantiations!.jsonDeserializationKeys,
-  }.emit(program, "executable")
+export function emitModule(program: Program, moduleName: string = "main"): ModuleEmission {
+  return CxxModuleEmitter { moduleName }.emit(program, "executable")
 }
 
 function emitSourceStatement(statement: Statement, context: EmitContext): string {

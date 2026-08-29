@@ -58,7 +58,7 @@ function lowerRegisteredTypes(type_: ResolvedType, context: EmitContext): Resolv
             return ClassType { name: context.concreteClassNames[i], symbol: class_.symbol }
           }
         }
-        return ClassType { name: concreteName(class_.name, class_.typeArgs), symbol: class_.symbol }
+        panic("Missing concrete class instantiation for " + key)
       }
       let arguments: ResolvedType[] = []
       for argument of class_.typeArgs { arguments.push(lowerRegisteredTypes(argument, context)) }
@@ -68,8 +68,8 @@ function lowerRegisteredTypes(type_: ResolvedType, context: EmitContext): Resolv
       if interface_.typeArgs.length > 0 {
         key := interfaceInstantiationKey(interface_.symbol.module, interface_.name, interface_.typeArgs)
         registeredName := concreteInterfaceName(context, key)
-        name := if registeredName == "" then concreteName(interface_.name, interface_.typeArgs) else registeredName
-        return InterfaceType { name, symbol: interface_.symbol }
+        if registeredName == "" { panic("Missing concrete interface instantiation for " + key) }
+        return InterfaceType { name: registeredName, symbol: interface_.symbol }
       }
       return interface_
     }

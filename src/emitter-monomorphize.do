@@ -7,11 +7,11 @@
 // every Doof-owned generic declaration is emitted as a reached concrete form.
 
 import {
-  ActorCreationExpression, ArrayLiteral, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression, CaseExpression, CaseStatement,
+  ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression, CaseExpression, CasePattern, CaseStatement,
   ClassDeclaration, ClassField, ConstDeclaration, ConstructExpression, DestructuringStatement, ExportDeclaration, Expression,
   ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, Identifier, IfExpression, IfStatement,
   ImmutableBinding, IndexExpression, InterfaceDeclaration, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, Program,
-  ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral, UnaryExpression,
+  RangePattern, ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral, TypePattern, UnaryExpression, ValuePattern,
   WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression,
 } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
@@ -143,16 +143,6 @@ export function concreteName(name: string, typeArgs: ResolvedType[]): string {
   return result
 }
 
-export function findConcreteFunctionName(plan: InstantiationPlan, key: string): string {
-  for instantiation of plan.functions { if instantiation.key == key { return instantiation.emittedName } }
-  return ""
-}
-
-export function findConcreteClassName(plan: InstantiationPlan, key: string): string {
-  for instantiation of plan.classes { if instantiation.key == key { return instantiation.emittedName } }
-  return ""
-}
-
 function collectFunctionBody(fn: FunctionDeclaration, modulePath: string, analysis: AnalysisResult, plan: InstantiationPlan, names: string[], arguments: ResolvedType[]): none {
   for parameter of fn.params {
     if parameter.resolvedType != none { collectType(specialize(parameter.resolvedType!, names, arguments), analysis, plan) }
@@ -198,6 +188,7 @@ function collectStatement(statement: Statement, modulePath: string, analysis: An
     case_: CaseStatement -> {
       collectExpression(case_.subject, modulePath, analysis, plan, names, arguments)
       for arm of case_.arms {
+        for pattern of arm.patterns { collectPattern(pattern, modulePath, analysis, plan, names, arguments) }
         case arm.body {
           block: Block -> { collectBlock(block, modulePath, analysis, plan, names, arguments) }
           expression: Expression -> { collectExpression(expression, modulePath, analysis, plan, names, arguments) }
@@ -319,6 +310,7 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     case_: CaseExpression -> {
       collectExpression(case_.subject, modulePath, analysis, plan, names, arguments)
       for arm of case_.arms {
+        for pattern of arm.patterns { collectPattern(pattern, modulePath, analysis, plan, names, arguments) }
         case arm.body {
           block: Block -> { collectBlock(block, modulePath, analysis, plan, names, arguments) }
           bodyExpression: Expression -> { collectExpression(bodyExpression, modulePath, analysis, plan, names, arguments) }
@@ -336,6 +328,19 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     actor: ActorCreationExpression -> { for argument of actor.args { collectExpression(argument, modulePath, analysis, plan, names, arguments) } }
     yieldBlock: YieldBlockExpression -> { collectBlock(yieldBlock.body, modulePath, analysis, plan, names, arguments) }
     catch_: CatchExpression -> { collectBlock(catch_.body, modulePath, analysis, plan, names, arguments) }
+    as_: AsExpression -> { collectExpression(as_.expression, modulePath, analysis, plan, names, arguments) }
+    _ -> { }
+  }
+}
+
+function collectPattern(pattern: CasePattern, modulePath: string, analysis: AnalysisResult, plan: InstantiationPlan, names: string[], arguments: ResolvedType[]): none {
+  case pattern {
+    type_: TypePattern -> { collectOptionalType(type_.resolvedType, names, arguments, analysis, plan) }
+    value: ValuePattern -> { collectExpression(value.value, modulePath, analysis, plan, names, arguments) }
+    range: RangePattern -> {
+      if range.start != none { collectExpression(range.start!, modulePath, analysis, plan, names, arguments) }
+      if range.end != none { collectExpression(range.end!, modulePath, analysis, plan, names, arguments) }
+    }
     _ -> { }
   }
 }

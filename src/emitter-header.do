@@ -25,7 +25,6 @@ import { classInstantiationKey, MethodInstantiation } from "./emitter-monomorphi
 export class HeaderPlan {
   functionSignatures: string[] = []
   nativeAdapterSignatures: string[] = []
-  genericFunctionDefinitions: string[] = []
   earlyModuleValueDeclarations: string[] = []
   moduleValueDeclarations: string[] = []
   earlyClassDefinitions: string[] = []
@@ -56,14 +55,8 @@ export class HeaderSection {
 }
 
 export function planHeader(program: Program, context: EmitContext, methods: MethodInstantiation[] = []): HeaderPlan {
-  return planHeaders([program], context, methods)
-}
-
-export function planHeaders(programs: Program[], context: EmitContext, methods: MethodInstantiation[] = []): HeaderPlan {
   plan := HeaderPlan {}
-  for program of programs {
-    for statement of program.statements { collect(statement, plan, context, methods) }
-  }
+  for statement of program.statements { collect(statement, plan, context, methods) }
   // Native headers are opaque to the Doof compiler. Give each selected native
   // namespace the nominal names visible in its defining module, while keeping
   // recursively required declarations in their original namespaces.
@@ -305,10 +298,6 @@ function addNativeSymbolAlias(symbol: Symbol, namespace: string, plan: HeaderPla
   addUnique(plan.nativeAliases, if namespace == "" then alias + "\n" else "namespace " + namespace + " { " + alias + " }\n")
 }
 
-export function renderHeader(plan: HeaderPlan, guardName: string): string {
-  return renderProjectedHeader([HeaderSection { namespaceName: guardName, plan }])
-}
-
 export function renderProjectedHeader(sections: HeaderSection[]): string {
   compression := HeaderCompressionState {}
   for section of sections { compressRepeatedHeaderVariants(section.plan, compression) }
@@ -392,12 +381,6 @@ export function renderProjectedHeader(sections: HeaderSection[]): string {
     if emittedNative { result.append("\n") }
     renderFinalSection(result, section)
   }
-  for section of sections {
-    if section.plan.genericFunctionDefinitions.length == 0 { continue }
-    result.append("namespace " + section.namespaceName + " {\n")
-    for definition of section.plan.genericFunctionDefinitions { result.append(definition) }
-    result.append("}\n")
-  }
   let rendered = result.drainToString()
   while rendered.endsWith("\n\n") { rendered = rendered.substring(0, rendered.length - 1) }
   return rendered
@@ -430,8 +413,7 @@ function headerPlanEmitsNamespaceContent(plan: HeaderPlan): bool {
     plan.moduleValueDeclarations.length > 0 ||
     plan.classDefinitions.length > 0 ||
     plan.typeAliases.length > 0 ||
-    plan.functionSignatures.length > 0 ||
-    plan.genericFunctionDefinitions.length > 0
+    plan.functionSignatures.length > 0
 }
 
 class HeaderTypeUse {
@@ -451,7 +433,6 @@ function compressRepeatedHeaderVariants(plan: HeaderPlan, state: HeaderCompressi
   let uses: HeaderTypeUse[] = []
   collectHeaderTypeUses(plan.functionSignatures, uses)
   collectHeaderTypeUses(plan.nativeAdapterSignatures, uses)
-  collectHeaderTypeUses(plan.genericFunctionDefinitions, uses)
   collectHeaderTypeUses(plan.earlyModuleValueDeclarations, uses)
   collectHeaderTypeUses(plan.moduleValueDeclarations, uses)
   collectHeaderTypeUses(plan.earlyClassDefinitions, uses)
@@ -470,7 +451,6 @@ function compressRepeatedHeaderVariants(plan: HeaderPlan, state: HeaderCompressi
     }
     replaceHeaderTypeUses(plan.functionSignatures, use.spelling, name)
     replaceHeaderTypeUses(plan.nativeAdapterSignatures, use.spelling, name)
-    replaceHeaderTypeUses(plan.genericFunctionDefinitions, use.spelling, name)
     replaceHeaderTypeUses(plan.earlyModuleValueDeclarations, use.spelling, name)
     replaceHeaderTypeUses(plan.moduleValueDeclarations, use.spelling, name)
     replaceHeaderTypeUses(plan.earlyClassDefinitions, use.spelling, name)
