@@ -55,7 +55,6 @@ namespace doof_time { using Thread = ::std_::time::duration::Thread; }
 #include "doof_time.hpp"
 
 namespace std_::time::duration {
-    void _threadSleepNanos(int64_t nanos);
     doof::Result<std::shared_ptr<Duration>, std::string> parseDuration(const std::string& s);
     bool isDigit(char32_t c);
     int32_t digitValue(char32_t c);

@@ -11,7 +11,7 @@ import {
   InterfaceDeclaration, SourceSpan, Statement, ThisExpression,
 } from "./ast"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
-import { collectBlockExpressions, collectNestedExpressions } from "./checker-actor-lifecycle"
+import { collectBlockExpressions, collectNestedExpressions } from "./ast-walk"
 import { declarationFor } from "./checker-symbols"
 import { substituteTypeParams, typeName } from "./checker-types"
 

@@ -127,20 +127,29 @@ export function concreteTypes(types: ResolvedType[]): bool {
 }
 
 export function classSatisfiesConcreteInterface(result: AnalysisResult, class_: ClassDeclaration, classType_: ClassType, interfaceType_: InterfaceType): bool {
+  return classSatisfiesConcreteInterfaceSeen(result, class_, classType_, interfaceType_, [])
+}
+
+function classSatisfiesConcreteInterfaceSeen(result: AnalysisResult, class_: ClassDeclaration, classType_: ClassType, interfaceType_: InterfaceType, seen: string[]): bool {
+  key := concreteInterfacePairKey(classType_, interfaceType_)
+  if containsString(seen, key) { return true }
+  let next = [key]
+  for existing of seen { next.push(existing) }
   declaration := declarationFor(result, interfaceType_.symbol)
   if declaration == none { return false }
   case declaration! {
     interface_: InterfaceDeclaration -> {
       for required of interface_.fields {
         actualField := findClassField(class_.fields, required.name)
-        if actualField == none || actualField!.private_ || actualField!.type_ == none { return false }
+        if actualField == none || actualField!.private_ { return false }
         if required.readonly_ && !actualField!.readonly_ { return false }
         if required.let_ && !actualField!.let_ { return false }
-        actualBase := if actualField!.resolvedType == none then resolveAnnotation(actualField!.type_!, classModuleFor(result, classType_.symbol), result, class_.typeParams) else actualField!.resolvedType!
+        actualBase := resolvedClassFieldType(result, actualField!, classType_.symbol, class_.typeParams)
+        if actualBase == none { return false }
         requiredBase := if required.resolvedType == none then resolveAnnotation(required.type_, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams) else required.resolvedType!
-        actual := substituteTypeParams(actualBase, class_.typeParams, classType_.typeArgs)
+        actual := substituteTypeParams(actualBase!, class_.typeParams, classType_.typeArgs)
         expected := substituteTypeParams(requiredBase, interface_.typeParams, interfaceType_.typeArgs)
-        if !isAssignable(actual, expected) { return false }
+        if !isAssignableWithInterfacesSeen(result, actual, expected, next) { return false }
       }
       for requiredMethod of interface_.methods {
         actualMethod := findClassMethod(class_.methods, requiredMethod.name, requiredMethod.static_)
@@ -149,7 +158,7 @@ export function classSatisfiesConcreteInterface(result: AnalysisResult, class_: 
         requiredBase := if requiredMethod.resolvedType == none then methodSignature(requiredMethod, classModuleFor(result, interfaceType_.symbol), result) else requiredMethod.resolvedType!
         actual := substituteTypeParams(actualBase, class_.typeParams, classType_.typeArgs)
         expected := substituteTypeParams(requiredBase, interface_.typeParams, interfaceType_.typeArgs)
-        if !sameConcreteMethodType(actual, expected) { return false }
+        if !compatibleConcreteMethodType(result, actual, expected, next) { return false }
       }
       return true
     }
@@ -166,31 +175,67 @@ export function classSatisfiesInterface(result: AnalysisResult, classSymbol: Sym
     class_: ClassDeclaration -> {
       case interfaceDeclaration! {
         interface_: InterfaceDeclaration -> {
-          for required of interface_.fields {
-            classField := findClassField(class_.fields, required.name)
-            if classField == none || classField!.private_ { return false }
-            if required.readonly_ && !classField!.readonly_ { return false }
-            if required.let_ && !classField!.let_ { return false }
-            actual := if classField!.resolvedType == none then resolveAnnotation(classField!.type_!, classModuleFor(result, classSymbol), result) else classField!.resolvedType!
-            expected := if required.resolvedType == none then resolveAnnotation(required.type_, classModuleFor(result, interfaceSymbol), result) else required.resolvedType!
-            if !isAssignable(actual, expected) { return false }
-          }
-          for requiredMethod of interface_.methods {
-            classMethod := findClassMethod(class_.methods, requiredMethod.name, requiredMethod.static_)
-            if classMethod == none || classMethod!.private_ || classMethod!.params.length != requiredMethod.params.length { return false }
-            if !sameFunctionSignature(classMethod!, requiredMethod, result, classSymbol, interfaceSymbol) { return false }
-          }
-          return true
+          return classSatisfiesConcreteInterface(
+            result,
+            class_,
+            classType(class_.name, classSymbol),
+            interfaceType(interface_.name, interfaceSymbol),
+          )
         }
-        _ -> { return false }
+        _ -> { }
       }
     }
-    _ -> { return false }
+    _ -> { }
   }
   return false
 }
 
-export function sameConcreteMethodType(actual: ResolvedType, expected: ResolvedType): bool {
+export function isAssignableWithInterfaces(result: AnalysisResult, value: ResolvedType, target: ResolvedType): bool {
+  return isAssignableWithInterfacesSeen(result, value, target, [])
+}
+
+function isAssignableWithInterfacesSeen(result: AnalysisResult, value: ResolvedType, target: ResolvedType, seen: string[]): bool {
+  if isAssignable(value, target) { return true }
+  case value {
+    union_: UnionResolvedType -> {
+      for member of union_.types {
+        if !isAssignableWithInterfacesSeen(result, member, target, seen) { return false }
+      }
+      return true
+    }
+    function_: FunctionType -> {
+      case target {
+        targetFunction: FunctionType -> { return compatibleConcreteMethodType(result, function_, targetFunction, seen) }
+        _ -> { }
+      }
+    }
+    class_: ClassType -> {
+      case target {
+        interface_: InterfaceType -> {
+          declaration := declarationFor(result, class_.symbol)
+          if declaration == none { return false }
+          case declaration! {
+            owner: ClassDeclaration -> { return classSatisfiesConcreteInterfaceSeen(result, owner, class_, interface_, seen) }
+            _ -> { }
+          }
+        }
+        _ -> { }
+      }
+    }
+    _ -> { }
+  }
+  case target {
+    union_: UnionResolvedType -> {
+      for member of union_.types {
+        if isAssignableWithInterfacesSeen(result, value, member, seen) { return true }
+      }
+    }
+    _ -> { }
+  }
+  return false
+}
+
+function compatibleConcreteMethodType(result: AnalysisResult, actual: ResolvedType, expected: ResolvedType, seen: string[]): bool {
   case actual {
     actualFunction: FunctionType -> {
       case expected {
@@ -199,13 +244,28 @@ export function sameConcreteMethodType(actual: ResolvedType, expected: ResolvedT
           for index of 0..<actualFunction.params.length {
             if !sameType(actualFunction.params[index].type_, expectedFunction.params[index].type_) { return false }
           }
-          return sameType(actualFunction.returnType, expectedFunction.returnType)
+          return isAssignableWithInterfacesSeen(result, actualFunction.returnType, expectedFunction.returnType, seen)
         }
         _ -> { return false }
       }
     }
     _ -> { return sameType(actual, expected) }
   }
+  return false
+}
+
+function resolvedClassFieldType(result: AnalysisResult, field: ClassField, symbol: Symbol, typeParams: string[]): ResolvedType | none {
+  if field.resolvedType != none { return field.resolvedType }
+  if field.type_ == none { return none }
+  return resolveAnnotation(field.type_!, classModuleFor(result, symbol), result, typeParams)
+}
+
+function concreteInterfacePairKey(class_: ClassType, interface_: InterfaceType): string {
+  return class_.symbol.module + "::" + typeName(class_) + "->" + interface_.symbol.module + "::" + typeName(interface_)
+}
+
+function containsString(values: string[], value: string): bool {
+  for existing of values { if existing == value { return true } }
   return false
 }
 
@@ -217,19 +277,6 @@ export function findClassField(fields: ClassField[], name: string): ClassField |
 export function findClassMethod(methods: FunctionDeclaration[], name: string, static_: bool): FunctionDeclaration | none {
   for method of methods { if method.name == name && method.static_ == static_ { return method } }
   return none
-}
-
-export function sameFunctionSignature(classMethod: FunctionDeclaration, interfaceMethod: FunctionDeclaration, result: AnalysisResult, classSymbol: Symbol, interfaceSymbol: Symbol): bool {
-  classModule := classModuleFor(result, classSymbol)
-  interfaceModule := classModuleFor(result, interfaceSymbol)
-  for i of 0..<classMethod.params.length {
-    actualParameterType := if classMethod.params[i].resolvedType == none then resolveAnnotation(classMethod.params[i].type_!, classModule, result) else classMethod.params[i].resolvedType!
-    interfaceType_ := if interfaceMethod.params[i].resolvedType == none then resolveAnnotation(interfaceMethod.params[i].type_!, interfaceModule, result) else interfaceMethod.params[i].resolvedType!
-    if !sameType(actualParameterType, interfaceType_) { return false }
-  }
-  classReturn := if classMethod.returnType == none then noneType() else resolveAnnotation(classMethod.returnType!, classModule, result)
-  interfaceReturn := if interfaceMethod.returnType == none then noneType() else resolveAnnotation(interfaceMethod.returnType!, interfaceModule, result)
-  return isAssignable(classReturn, interfaceReturn)
 }
 
 export function classModuleFor(result: AnalysisResult, symbol: Symbol): ModuleInfo {

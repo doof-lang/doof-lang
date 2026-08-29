@@ -1,5 +1,8 @@
 #pragma once
 #include "doof_runtime.hpp"
+namespace std_::json::index {
+}
+
 namespace app_src_native_build_state_ {
     struct NativeInputSignature;
     struct NativeTaskState;
@@ -41,15 +44,9 @@ namespace app_src_native_build_state_ {
 
 #include "std/json/native_json.hpp"
 
-namespace std_::json::index {
-    doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text);
-    std::string formatJsonValue(const doof::JsonValue& value);
-}
-
 namespace app_src_native_build_state_ {
     std::shared_ptr<NativeBuildState> parseNativeBuildState(const std::string& source);
     std::string renderNativeBuildState(const std::shared_ptr<NativeBuildState>& state);
-    std::shared_ptr<NativeTaskState> findNativeTaskState(const std::shared_ptr<NativeBuildState>& state, const std::string& id);
     std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::string& source);
     std::shared_ptr<std::vector<std::string>> parseMsvcDependencies(const std::string& source);
     void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);

@@ -201,6 +201,9 @@ export function validateExpression(expression: Expression, module: string, diagn
     index: IndexExpression -> { validateExpression(index.object, module, diagnostics); validateExpression(index.index, module, diagnostics) }
     call: CallExpression -> {
       validateExpression(call.callee, module, diagnostics)
+      if call.resolvedFunction != none && call.resolvedFunctionModule == "" {
+        addValidationError(module, call.span, "Resolved call target has no defining module", diagnostics)
+      }
       for argument of call.typeArgs { validateTypeAnnotation(argument, module, diagnostics) }
       for argument of call.resolvedGenericTypeArgs { validateResolved(optionalResolvedType(argument), call.span, module, "generic call argument", diagnostics) }
       for argument of call.args { validateExpression(argument.value, module, diagnostics) }

@@ -2,7 +2,9 @@
 
 This document is the horizontal concept map: it shows how information crosses
 phase and file boundaries. For a file-by-file ownership index, see
-[source structure](source-structure.md).
+[source structure](source-structure.md). For the detailed checker, decorated
+call, structural-interface, and generic-specialization paths, see
+[checker and monomorphisation](checker-and-monomorphisation.md).
 
 ## Pipeline and data contracts
 
@@ -57,7 +59,7 @@ the row from left to right.
 | Source identity and diagnostics | token/AST spans in `lexer.do` and `ast.do`; diagnostic records in `semantic.do` | analyzer and focused checker module attach semantic spans | `driver.do` formats bounded diagnostic output |
 | Modules and names | `resolver.do` resolves logical paths; `analyzer.do` owns imports, exports, symbols, and defining-module identity | `checker-symbols.do` resolves lexical, named-import, and namespace-member bindings | `emitter-names.do` derives stable C++ identity; the worldview planner projects referenced declarations into each module header |
 | Types and assignability | resolved type records in `semantic.do`; shared operations in `checker-types.do` | focused checker modules decorate annotations and expressions | `emitter-types.do` chooses representation; expression/declaration emitters require decorations |
-| Calls and dispatch | declarations and symbols from analysis | `checker-calls.do`, `checker-generics.do`, and `checker-interfaces.do` choose targets and substitutions | `emitter-expr-calls.do` lowers the recorded target |
+| Calls and dispatch | declarations and symbols from analysis | `checker-calls.do`, `checker-generics.do`, and `checker-interfaces.do` choose targets, defining modules, and substitutions | `emitter-expr-calls.do` lowers the recorded target without resolving callee syntax again |
 | Control flow and narrowing | statement/expression/pattern AST in parser modules | `checker-statements.do` and `checker-expressions.do` determine continuation, exhaustiveness, and narrowed bindings | `emitter-stmt.do`, `emitter-expr-control.do`, and `emitter-case-pattern.do` lower those decisions |
 | Generics | type parameters in AST and resolved types | checker infers/substitutes concrete arguments | `emitter-monomorphize.do` discovers a fixed point; emitters output concrete forms for every Doof-owned generic, including methods, while runtime/native-owned C++ templates remain external |
 | Interfaces | interface/class declarations and resolved nominal types | `checker-interfaces.do` validates structural conformance and discovers the closed implementor set | `emitter-types.do` and declaration/JSON emitters lower interface variants |

@@ -215,6 +215,20 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> functionDeclarationForCalle
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
             const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
+            if (!doof::is_null(member->resolvedNamespaceSymbol)) {
+                const auto declaration = ::app_src_checker_symbols_::declarationFor(result, doof::unwrap_optional(member->resolvedNamespaceSymbol));
+                if (!doof::is_null(declaration)) {
+                    {
+                        auto _case_subject = doof::unwrap_optional(declaration);
+                        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
+                            const auto& fn = std::get<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject);
+                            return fn;
+                    }
+                    else {
+                    }
+                    }
+                }
+            }
             const auto objectType = std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object);
             if (!doof::is_null(objectType)) {
                 {
@@ -288,6 +302,50 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> functionDeclarationForCalle
     }
     }
     return nullptr;
+}
+std::string functionModuleForCallee(const std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>& callee, const std::string& fallback) {
+    {
+        auto _case_subject = callee;
+        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
+            const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
+            if (!doof::is_null(identifier->resolvedBinding)) {
+                if (!doof::is_null(identifier->resolvedBinding->symbol)) {
+                    return identifier->resolvedBinding->symbol->module;
+                }
+                if (identifier->resolvedBinding->module != std::string("")) {
+                    return identifier->resolvedBinding->module;
+                }
+            }
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject)) {
+            const auto& member = std::get<std::shared_ptr<::app_src_ast_::MemberExpression>>(_case_subject);
+            if (!doof::is_null(member->resolvedNamespaceSymbol)) {
+                return member->resolvedNamespaceSymbol->module;
+            }
+            if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object))) {
+                {
+                    auto _case_subject = doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object));
+                    if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
+                        const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
+                        return class_->symbol->module;
+                }
+                else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject)) {
+                        const auto& actor = std::get<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject);
+                        return actor->innerClass->symbol->module;
+                }
+                else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject)) {
+                        const auto& interface_ = std::get<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject);
+                        return interface_->symbol->module;
+                }
+                else {
+                }
+                }
+            }
+    }
+    else {
+    }
+    }
+    return fallback;
 }
 std::shared_ptr<::app_src_ast_::FunctionDeclaration> constructorForClass(const std::shared_ptr<::app_src_semantic_::ClassType>& class_, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     const auto declaration = ::app_src_checker_symbols_::declarationFor(result, class_->symbol);

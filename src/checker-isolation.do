@@ -11,9 +11,7 @@ import {
 } from "./ast"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { validateAsyncBlock } from "./checker-async"
-import {
-  collectBlockExpressions, collectNestedExpressions, collectStatementExpressions,
-} from "./checker-actor-lifecycle"
+import { collectBlockExpressions, collectNestedExpressions, collectStatementExpressions } from "./ast-walk"
 import { declarationFor } from "./checker-symbols"
 
 export class IsolationReason {

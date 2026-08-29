@@ -2,7 +2,6 @@
 
 namespace app_src_checker_common_ {
 using namespace ::app_src_semantic_;
-using namespace ::app_src_analyzer_;
 using namespace ::app_src_ast_;
 using namespace ::app_src_checker_types_;
 using namespace ::app_src_checker_state_;
@@ -55,7 +54,5 @@ void requireBool(const std::shared_ptr<::app_src_checker_state_::CheckerState>& 
     if ((::app_src_checker_types_::typeName(resolvedType) != std::string("bool")) && (::app_src_checker_types_::typeName(resolvedType) != std::string("unknown"))) {
         typeError(state, (std::string("Expected bool, got ") + ::app_src_checker_types_::typeName(resolvedType)), span);
     }
-}
-void keepAstTypes(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::EnumDeclaration>& enum_, const std::shared_ptr<::app_src_ast_::ImportDeclaration>& import_, const std::shared_ptr<::app_src_ast_::ExportDeclaration>& export_, const std::shared_ptr<::app_src_ast_::ExportList>& exports_, const std::shared_ptr<::app_src_ast_::NamedImport>& namedImport, const std::shared_ptr<::app_src_ast_::NamespaceImport>& namespaceImport, const std::shared_ptr<::app_src_ast_::DotShorthand>& dot, const std::shared_ptr<::app_src_ast_::CallerExpression>& caller, const std::shared_ptr<::app_src_ast_::YieldStatement>& yield_) {
 }
 }

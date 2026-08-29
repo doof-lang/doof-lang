@@ -207,7 +207,7 @@ bool checkStatement(const std::shared_ptr<::app_src_checker_state_::CheckerState
                 }
                 const auto declaredType = (doof::is_null(binding->type_) ? valueType : ::app_src_checker_resolution_::resolveType(state, doof::unwrap_optional(binding->type_), doof::unwrap_optional(state->info), scope));
                 (binding->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(declaredType));
-                if (!::app_src_checker_types_::isAssignable(valueType, declaredType)) {
+                if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, valueType, declaredType)) {
                     ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(valueType)) + std::string(" to ")) + ::app_src_checker_types_::typeName(declaredType)), binding->span);
                 }
                 if (binding->name == std::string("_")) {
@@ -251,8 +251,8 @@ bool checkStatement(const std::shared_ptr<::app_src_checker_state_::CheckerState
                         (target->yieldType = ::app_src_checker_symbols_::optionalResolvedType(valueType));
                 }
                 else {
-                        if (::app_src_checker_types_::isAssignable(valueType, expectedType)) {
-                        } else if (::app_src_checker_types_::isAssignable(expectedType, valueType)) {
+                        if (::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, valueType, expectedType)) {
+                        } else if (::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, expectedType, valueType)) {
                             (target->yieldType = ::app_src_checker_symbols_::optionalResolvedType(valueType));
                         } else {
                             ::app_src_checker_common_::typeError(state, (((std::string("Cannot yield ") + ::app_src_checker_types_::typeName(valueType)) + std::string(" from block yielding ")) + ::app_src_checker_types_::typeName(expectedType)), yield_->span);
@@ -278,7 +278,7 @@ bool checkStatement(const std::shared_ptr<::app_src_checker_state_::CheckerState
                 return true;
             }
             ::app_src_checker_common_::validateAssignmentBinding(state, doof::unwrap_optional(binding), assignment->span);
-            if (!::app_src_checker_types_::isAssignable(valueType, binding->type_)) {
+            if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, valueType, binding->type_)) {
                 ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(valueType)) + std::string(" to ")) + ::app_src_checker_types_::typeName(binding->type_)), assignment->span);
             }
             (assignment->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(binding->type_));
@@ -428,7 +428,7 @@ bool checkValueDeclaration(const std::shared_ptr<::app_src_checker_state_::Check
         }
         if (doof::is_null(annotation)) {
             (declaredType = narrowedType);
-        } else if (validElseSubject && !::app_src_checker_types_::isAssignable(narrowedType, declaredType)) {
+        } else if (validElseSubject && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, narrowedType, declaredType)) {
             ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(narrowedType)) + std::string(" to ")) + ::app_src_checker_types_::typeName(declaredType)), span);
         }
         const auto elseScope = std::make_shared<::app_src_semantic_::Scope>(scope, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>{}), std::monostate{}, std::monostate{}, std::string(""), false, false, std::monostate{}, false, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}), false);
@@ -445,7 +445,7 @@ bool checkValueDeclaration(const std::shared_ptr<::app_src_checker_state_::Check
         if ((name != std::string("_")) && handlerCompletes) {
             ::app_src_checker_common_::typeError(state, std::string("Declaration-else block must exit scope"), elseBlock->span);
         }
-    } else if (!::app_src_checker_types_::isAssignable(valueType, declaredType)) {
+    } else if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, valueType, declaredType)) {
         ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(valueType)) + std::string(" to ")) + ::app_src_checker_types_::typeName(declaredType)), span);
     }
     {
@@ -515,7 +515,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             (state->allowsCaller = true);
             const auto defaultType = ::app_src_checker_expressions_::checkExpression(state, doof::unwrap_optional(parameter->defaultValue), scope, ::app_src_checker_symbols_::optionalResolvedType(parameterType));
             (state->allowsCaller = previousAllowsCaller);
-            if (!::app_src_checker_types_::isAssignable(defaultType, parameterType)) {
+            if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, defaultType, parameterType)) {
                 ::app_src_checker_common_::typeError(state, (((((std::string("Cannot use default value of type ") + ::app_src_checker_types_::typeName(defaultType)) + std::string(" for parameter '")) + parameter->name) + std::string("' of type ")) + ::app_src_checker_types_::typeName(parameterType)), std::visit([](auto&& _obj) { return _obj->span; }, doof::unwrap_optional(parameter->defaultValue)));
             }
         }
@@ -533,7 +533,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
         if (doof::variant_is<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(_case_subject)) {
             const auto expression = doof::variant_narrow<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(_case_subject);
             (actualReturn = ::app_src_checker_expressions_::checkExpression(state, expression, scope, ::app_src_checker_symbols_::optionalResolvedType(returnType)));
-            if ((std::visit([](auto&& _obj) { return _obj->kind; }, returnType) != std::string("never")) && !::app_src_checker_types_::isAssignable(actualReturn, returnType)) {
+            if ((std::visit([](auto&& _obj) { return _obj->kind; }, returnType) != std::string("never")) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, actualReturn, returnType)) {
                 ::app_src_checker_common_::typeError(state, (((std::string("Cannot return ") + ::app_src_checker_types_::typeName(actualReturn)) + std::string(" from function returning ")) + ::app_src_checker_types_::typeName(returnType)), std::visit([](auto&& _obj) { return _obj->span; }, expression));
             }
             if ((std::visit([](auto&& _obj) { return _obj->kind; }, returnType) == std::string("never")) && (std::visit([](auto&& _obj) { return _obj->kind; }, actualReturn) != std::string("never"))) {
@@ -618,7 +618,7 @@ void checkClass(const std::shared_ptr<::app_src_checker_state_::CheckerState>& s
             (state->allowsCaller = true);
             const auto defaultType = ::app_src_checker_expressions_::checkExpression(state, doof::unwrap_optional(field->defaultValue), classScope, ::app_src_checker_symbols_::optionalResolvedType(fieldType));
             (state->allowsCaller = previousAllowsCaller);
-            if (!::app_src_checker_types_::isAssignable(defaultType, fieldType)) {
+            if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, defaultType, fieldType)) {
                 ::app_src_checker_common_::typeError(state, (((std::string("Cannot use default value of type ") + ::app_src_checker_types_::typeName(defaultType)) + std::string(" for field of type ")) + ::app_src_checker_types_::typeName(fieldType)), std::visit([](auto&& _obj) { return _obj->span; }, doof::unwrap_optional(field->defaultValue)));
             }
         }
@@ -919,7 +919,7 @@ void checkEnum(const std::shared_ptr<::app_src_checker_state_::CheckerState>& st
         std::optional<int64_t> value = nextValue;
         if (!doof::is_null(variant->value)) {
             const auto valueType = ::app_src_checker_expressions_::checkExpression(state, doof::unwrap_optional(variant->value), scope, ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::primitive(std::string("int"))));
-            if (!::app_src_checker_types_::isAssignable(valueType, ::app_src_checker_types_::primitive(std::string("int")))) {
+            if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, valueType, ::app_src_checker_types_::primitive(std::string("int")))) {
                 ::app_src_checker_common_::typeError(state, std::string("Enum value must be an int"), variant->span);
             }
             (value = enumConstantInt(doof::unwrap_optional(variant->value)));
@@ -1048,7 +1048,7 @@ bool checkReturn(const std::shared_ptr<::app_src_checker_state_::CheckerState>& 
         }
     } else {
         const auto valueType = ::app_src_checker_expressions_::checkExpression(state, doof::unwrap_optional(statement->value), scope, ::app_src_checker_symbols_::optionalResolvedType(returnType));
-        if (!::app_src_checker_types_::isAssignable(valueType, returnType)) {
+        if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, valueType, returnType)) {
             ::app_src_checker_common_::typeError(state, (((std::string("Cannot return ") + ::app_src_checker_types_::typeName(valueType)) + std::string(" from function returning ")) + ::app_src_checker_types_::typeName(returnType)), statement->span);
         }
     }
@@ -1263,7 +1263,7 @@ void validateDestructuringTarget(const std::shared_ptr<::app_src_checker_state_:
         return;
     }
     ::app_src_checker_common_::validateAssignmentBinding(state, doof::unwrap_optional(target), span);
-    if (!::app_src_checker_types_::isAssignable(valueType, target->type_)) {
+    if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, valueType, target->type_)) {
         ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(valueType)) + std::string(" to ")) + ::app_src_checker_types_::typeName(target->type_)), span);
     }
 }

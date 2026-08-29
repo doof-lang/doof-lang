@@ -274,7 +274,4 @@ void Thread::sleep(const std::shared_ptr<Duration>& duration) {
 void __doof_initialize_module() {
         Duration::ZERO = std::make_shared<Duration>(0LL);
 }
-void _threadSleepNanos(int64_t nanos) {
-    ::doof_time::thread_sleep_nanos(nanos);
-}
 }

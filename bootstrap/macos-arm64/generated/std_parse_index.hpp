@@ -2,6 +2,9 @@
 #include "doof_runtime.hpp"
 namespace std_::parse::types { enum class ParsingError; }
 
+namespace std_::parse::index {
+}
+
 namespace std_::parse::types {
     enum class ParsingError {
     InvalidFormat = 0,
@@ -39,7 +42,3 @@ inline std::ostream& operator<<(std::ostream& output, ParsingError value) { retu
 
 namespace doof_parse { using ParsingError = ::std_::parse::types::ParsingError; }
 #include "native_parse.hpp"
-
-namespace std_::parse::index {
-    doof::Result<int32_t, ::std_::parse::types::ParsingError> parseInt(const std::string& value);
-}

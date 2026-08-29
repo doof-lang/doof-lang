@@ -25,7 +25,7 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
+  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
   isStringInterpolatable, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType,
@@ -45,7 +45,7 @@ import { deprecatedNoneAlias, finish, typeError, requireBool, validateAssignment
 import { builtinSourceLocationType, casePatternName, methodSignature, optionalResolvedType, isNamespaceImport, isTypeOnlyNamespaceImport, namespaceMemberSymbol, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
 import { constructorForClass, staticMemberOwner } from "./checker-generics"
 import { checkerSemanticSpan } from "./checker-validation"
-import { classModuleFor } from "./checker-interfaces"
+import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 
 export function checkCaseExpression(state: CheckerState, expression: CaseExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   subjectType := checkExpression(state, expression.subject, scope, none)
@@ -295,7 +295,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
           _ -> { }
         }
         type_.resolvedType = optionalResolvedType(resolved)
-        if !typesOverlap(subjectType, resolved) {
+        if !typesOverlap(state, subjectType, resolved) {
           typeError(state, "Case type pattern \"" + typeName(resolved) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", type_.span)
         }
         if type_.name != "_" {
@@ -312,7 +312,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
       }
       value: ValuePattern -> {
         valueType := checkExpression(state, value.value, scope, optionalResolvedType(subjectType))
-        if !typesOverlap(subjectType, valueType) {
+        if !typesOverlap(state, subjectType, valueType) {
           typeError(state, "Case value pattern of type \"" + typeName(valueType) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", value.span)
         }
       }
@@ -668,7 +668,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         let expectedArgument: ResolvedType | none = none
         if i < params.length { expectedArgument = optionalResolvedType(params[i].type_) }
         actual := checkExpression(state, actorCreation.args[i], scope, expectedArgument)
-        if expectedArgument != none && !isAssignable(actual, expectedArgument!) {
+        if expectedArgument != none && !isAssignableWithInterfaces(state.result, actual, expectedArgument!) {
           typeError(state, "Actor constructor argument " + string(i + 1) + " has type " + typeName(actual) + "; expected " + typeName(expectedArgument!), actorCreation.args[i].span)
         }
         violation := findActorBoundaryViolation(state.result, actual)
@@ -972,7 +972,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   if operator == "??" {
     if !isFallibleType(left) { typeError(state, "Operator '??' requires a nullable or Result left operand, got " + typeName(left), expression.left.span) }
     expectedFallback := fallibleValueType(left)
-    if expectedFallback != none && !isAssignable(right, expectedFallback!) && !isAssignable(right, left) {
+    if expectedFallback != none && !isAssignableWithInterfaces(state.result, right, expectedFallback!) && !isAssignableWithInterfaces(state.result, right, left) {
       typeError(state, "Cannot use " + typeName(right) + " as fallback for " + typeName(left), expression.right.span)
     }
     return finish(state, expression, coalescedType(state, left, right))
@@ -985,7 +985,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   }
   if operator == "==" || operator == "!=" {
     validateNoneComparison(state, operator, left, right, expression.span)
-    if left.kind != "none" && right.kind != "none" && !typesOverlap(left, right) {
+    if left.kind != "none" && right.kind != "none" && !typesOverlap(state, left, right) {
       typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span)
     }
     return finish(state, expression, primitive("bool"))
@@ -1201,7 +1201,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       if target == none { typeError(state, "Unknown assignment target '" + identifier.name + "'", identifier.span) }
       else {
         validateAssignmentBinding(state, target!, identifier.span)
-        if expression.operator == "=" && !isAssignable(value, target!.type_) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(target!.type_), expression.span) }
+        if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, target!.type_) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(target!.type_), expression.span) }
       }
     }
     index: IndexExpression -> {
@@ -1210,13 +1210,13 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
         array: ArrayResolvedType -> {
           checkExpression(state, index.index, scope, optionalResolvedType(primitive("int")))
           if array.readonly_ { typeError(state, "Cannot assign through readonly array", expression.span) }
-          if expression.operator == "=" && !isAssignable(value, array.elementType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(array.elementType), expression.span) }
+          if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, array.elementType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(array.elementType), expression.span) }
         }
         map: MapResolvedType -> {
           key := checkExpression(state, index.index, scope, optionalResolvedType(map.keyType))
-          if !isAssignable(key, map.keyType) { typeError(state, "Cannot use " + typeName(key) + " as map key " + typeName(map.keyType), index.index.span) }
+          if !isAssignableWithInterfaces(state.result, key, map.keyType) { typeError(state, "Cannot use " + typeName(key) + " as map key " + typeName(map.keyType), index.index.span) }
           if map.readonly_ { typeError(state, "Cannot assign through readonly map", expression.span) }
-          if expression.operator == "=" && !isAssignable(value, map.valueType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(map.valueType), expression.span) }
+          if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, map.valueType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(map.valueType), expression.span) }
         }
         _ -> { typeError(state, "Index assignment requires an array or map", expression.span) }
       }
@@ -1226,7 +1226,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       targetType := memberType(state, objectType, member.property, member.span)
       fieldBinding := fieldAssignmentBinding(state, objectType, member.property, targetType)
       if fieldBinding != none { validateAssignmentBinding(state, fieldBinding!, member.span) }
-      if expression.operator == "=" && !isAssignable(value, targetType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(targetType), expression.span) }
+      if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, targetType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(targetType), expression.span) }
     }
     _ -> { typeError(state, "Assignment target must be a binding", expression.target.span) }
   }
@@ -1240,17 +1240,17 @@ function validateAssignmentOperator(state: CheckerState, operator: string, targe
     if !isFallibleType(target) { typeError(state, "Operator '??=' requires a nullable or Result assignment target, got " + typeName(target), span); return }
     case target {
       result: ResultResolvedType -> {
-        if !isAssignable(value, target) && !isAssignable(value, result.valueType) {
+        if !isAssignableWithInterfaces(state.result, value, target) && !isAssignableWithInterfaces(state.result, value, result.valueType) {
           typeError(state, "Cannot assign " + typeName(value) + " through ??= to " + typeName(target), span)
         }
       }
-      _ -> { if !isAssignable(value, target) { typeError(state, "Cannot assign " + typeName(value) + " through ??= to " + typeName(target), span) } }
+      _ -> { if !isAssignableWithInterfaces(state.result, value, target) { typeError(state, "Cannot assign " + typeName(value) + " through ??= to " + typeName(target), span) } }
     }
     return
   }
   base := operator.substring(0, operator.length - 1)
   result := binaryOperatorType(state, base, target, value, span)
-  if !isAssignable(result, target) { typeError(state, "Operator '" + operator + "' produces " + typeName(result) + ", which cannot be assigned to " + typeName(target), span) }
+  if !isAssignableWithInterfaces(state.result, result, target) { typeError(state, "Operator '" + operator + "' produces " + typeName(result) + ", which cannot be assigned to " + typeName(target), span) }
 }
 
 function binaryOperatorType(state: CheckerState, operator: string, left: ResolvedType, right: ResolvedType, span: SourceSpan): ResolvedType {
@@ -1320,29 +1320,29 @@ function orderedTypes(left: ResolvedType, right: ResolvedType): bool {
   return false
 }
 
-function typesOverlap(left: ResolvedType, right: ResolvedType): bool {
+function typesOverlap(state: CheckerState, left: ResolvedType, right: ResolvedType): bool {
   if left.kind == "unknown" || right.kind == "unknown" { return true }
   case left {
     union_: UnionResolvedType -> {
-      for member of union_.types { if typesOverlap(member, right) { return true } }
+      for member of union_.types { if typesOverlap(state, member, right) { return true } }
       return false
     }
     _ -> { }
   }
   case right {
     union_: UnionResolvedType -> {
-      for member of union_.types { if typesOverlap(left, member) { return true } }
+      for member of union_.types { if typesOverlap(state, left, member) { return true } }
       return false
     }
     _ -> { }
   }
-  return isAssignable(left, right) || isAssignable(right, left) || (isNumeric(left) && isNumeric(right))
+  return isAssignableWithInterfaces(state.result, left, right) || isAssignableWithInterfaces(state.result, right, left) || (isNumeric(left) && isNumeric(right))
 }
 
 function validateCaseRangeBound(state: CheckerState, bound: Expression | none, subjectType: ResolvedType, scope: Scope, span: SourceSpan): none {
   if bound == none { return }
   boundType := checkExpression(state, bound!, scope, optionalResolvedType(subjectType))
-  if !isInteger(subjectType) || !isInteger(boundType) || !typesOverlap(subjectType, boundType) {
+  if !isInteger(subjectType) || !isInteger(boundType) || !typesOverlap(state, subjectType, boundType) {
     typeError(state, "Case range bound of type \"" + typeName(boundType) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", span)
   }
 }

@@ -660,11 +660,12 @@ namespace app_src_ast_ {
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs;
     std::shared_ptr<FunctionDeclaration> resolvedFunction;
+    std::string resolvedFunctionModule;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
     std::shared_ptr<ClassDeclaration> resolvedClass;
     doof_header_type_3 resolvedType;
     SourceSpan span;
-    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
+    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::string resolvedFunctionModule, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedFunctionModule(resolvedFunctionModule), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
 };
     struct ArrayLiteral : public std::enable_shared_from_this<ArrayLiteral> {
     std::string kind;
@@ -1225,7 +1226,10 @@ namespace app_src_checker_types_ {
     doof_header_type_9 substituteTypeParams(const doof_header_type_9& type_, const std::shared_ptr<std::vector<std::string>>& names, const std::shared_ptr<std::vector<doof_header_type_9>>& arguments);
     std::string typeName(const doof_header_type_9& resolvedType);
     bool sameType(const doof_header_type_9& left, const doof_header_type_9& right);
-    bool isAssignable(const doof_header_type_9& value, const doof_header_type_9& target);
+}
+
+namespace app_src_checker_interfaces_ {
+    bool classSatisfiesConcreteInterface(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::shared_ptr<::app_src_semantic_::ClassType>& classType_, const std::shared_ptr<::app_src_semantic_::InterfaceType>& interfaceType_);
 }
 
 namespace app_src_emitter_monomorphize_ {
@@ -1259,11 +1263,8 @@ namespace app_src_emitter_monomorphize_ {
     void discoverConcreteInterfaceImplementations(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& analysis, const std::shared_ptr<InstantiationPlan>& plan);
     void addImplementation(const std::shared_ptr<InterfaceInstantiation>& interface_, const std::string& modulePath, const std::string& typeName_);
     bool classImplementsConcreteInterface(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::shared_ptr<std::vector<doof_header_type_10>>& classArgs, const std::shared_ptr<InterfaceInstantiation>& interface_, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& analysis);
-    std::shared_ptr<::app_src_ast_::ClassField> classField(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::string& name);
-    bool sameConcreteMethodType(const doof_header_type_10& actual, const doof_header_type_10& expected);
     std::shared_ptr<::app_src_ast_::FunctionDeclaration> classMethod(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::string& name);
     std::shared_ptr<::app_src_ast_::InterfaceDeclaration> interfaceDeclaration(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& analysis, const std::string& modulePath, const std::string& name);
-    std::string functionModule(const std::shared_ptr<::app_src_ast_::CallExpression>& call, const std::string& fallback);
     std::shared_ptr<::app_src_ast_::ClassDeclaration> classDeclaration(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& analysis, const std::string& modulePath, const std::string& name);
     std::shared_ptr<::app_src_ast_::ClassDeclaration> classFromStatement(const doof_header_type_11& statement, const std::string& name);
     doof_header_type_10 specialize(const doof_header_type_10& type_, const std::shared_ptr<std::vector<std::string>>& names, const std::shared_ptr<std::vector<doof_header_type_10>>& arguments);

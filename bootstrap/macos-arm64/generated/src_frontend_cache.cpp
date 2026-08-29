@@ -3,7 +3,7 @@
 namespace app_src_frontend_cache_ {
 using namespace ::std_::json::index;
 int32_t FRONTEND_CACHE_VERSION = 2;
-int32_t FRONTEND_SEMANTIC_ABI = 9;
+int32_t FRONTEND_SEMANTIC_ABI = 10;
 
 doof::JsonObject FrontendSourceProbe::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();

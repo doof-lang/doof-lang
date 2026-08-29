@@ -17,10 +17,4 @@ doof::Result<std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>, s
     }
     doof::unreachable();
 }
-doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text) {
-    return ::doof_json::parse(text);
-}
-std::string formatJsonValue(const doof::JsonValue& value) {
-    return ::doof_json::format(value);
-}
 }

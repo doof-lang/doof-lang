@@ -141,37 +141,4 @@ doof::Result<std::shared_ptr<Jwt>, JwtError> verifyJwtHs256(const std::string& t
     }
     return doof::Success<std::shared_ptr<Jwt>>{ jwt };
 }
-std::shared_ptr<std::vector<uint8_t>> sha1(const std::shared_ptr<std::vector<uint8_t>>& data) {
-    return ::doof_crypto::sha1_bytes(data);
-}
-std::string encodeHex(const std::shared_ptr<std::vector<uint8_t>>& data) {
-    return ::doof_crypto::encode_hex(data);
-}
-std::shared_ptr<std::vector<uint8_t>> sha1String(const std::string& text) {
-    return ::doof_crypto::sha1_utf8(text);
-}
-std::shared_ptr<std::vector<uint8_t>> sha256(const std::shared_ptr<std::vector<uint8_t>>& data) {
-    return ::doof_crypto::sha256_bytes(data);
-}
-std::shared_ptr<std::vector<uint8_t>> sha256String(const std::string& text) {
-    return ::doof_crypto::sha256_utf8(text);
-}
-std::string encodeBase64(const std::shared_ptr<std::vector<uint8_t>>& data) {
-    return ::doof_crypto::encode_base64(data);
-}
-std::string encodeBase64Url(const std::shared_ptr<std::vector<uint8_t>>& data) {
-    return ::doof_crypto::encode_base64_url(data);
-}
-std::shared_ptr<std::vector<uint8_t>> hmacSha256(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data) {
-    return ::doof_crypto::hmac_sha256(key, data);
-}
-doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64Url(const std::string& text) {
-    return ::doof_crypto::decode_base64_url(text);
-}
-bool timingSafeEqual(const std::shared_ptr<std::vector<uint8_t>>& a, const std::shared_ptr<std::vector<uint8_t>>& b) {
-    return ::doof_crypto::timing_safe_equal(a, b);
-}
-doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64(const std::string& text) {
-    return ::doof_crypto::decode_base64(text);
-}
 }

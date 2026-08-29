@@ -618,6 +618,35 @@ export function testMonomorphizesGenericStructuralInterfaces(): none {
   Assert.equal(module.source.contains("std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, reader)"), true)
 }
 
+export function testCompilesNamespaceQualifiedGenericCallsAcrossModules(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction main(): int => tools.identity<int>(1)" },
+    SourceFile { path: "/tools.do", source: "export function identity<T>(value: T): T => value" },
+  ], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.emission != none, true)
+  let mainSource = ""
+  let toolsSource = ""
+  for module of result.emission!.modules {
+    if module.modulePath == "/main.do" { mainSource = module.source }
+    if module.modulePath == "/tools.do" { toolsSource = module.source }
+  }
+  Assert.stringContains(mainSource, "::app_tools_::identity__int(1)")
+  Assert.stringContains(toolsSource, "identity__int")
+}
+
+export function testMonomorphizesGenericStructuralInterfaceImplementations(): none {
+  result := compile([SourceFile {
+    path: "/main.do",
+    source: "interface Reader<T> { read(): T }\nclass Box<T> { value: T\nread(): T => value }\nfunction read(reader: Reader<int>): int => reader.read()\nfunction main(): int => read(Box<int> { value: 7 })",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(result.emission != none, true)
+  Assert.stringContains(result.emission!.modules[0].header, "using Reader__int = std::variant<std::shared_ptr<Box__int>>;")
+}
+
 export function testCompilesWithTransitiveSourceLoading(): none {
   let requested: string[] = []
   loader := (path: string): Result<SourceFile | none, Diagnostic> => {

@@ -362,7 +362,7 @@ void validateTypeArgumentConstraints(const std::shared_ptr<::app_src_checker_sta
         }
         const auto resolvedConstraint = resolveType(state, annotation, module, constraintScope);
         const auto substitutedConstraint = ::app_src_checker_types_::substituteTypeParams(resolvedConstraint, names, arguments);
-        if (!::app_src_checker_types_::isAssignable(doof::array_at(arguments, index, "src/checker-resolution", 269), substitutedConstraint)) {
+        if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, doof::array_at(arguments, index, "src/checker-resolution", 269), substitutedConstraint)) {
             reportConstraintViolation(state, doof::array_at(names, index, "src/checker-resolution", 270), doof::array_at(arguments, index, "src/checker-resolution", 270), ::app_src_checker_types_::typeName(substitutedConstraint), span);
         }
     }
@@ -986,14 +986,14 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
         auto _case_subject = object;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject);
-            if (!::app_src_checker_types_::isAssignable(index, ::app_src_checker_types_::primitive(std::string("int"))) && (::app_src_checker_types_::typeName(index) != std::string("unknown"))) {
+            if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, index, ::app_src_checker_types_::primitive(std::string("int"))) && (::app_src_checker_types_::typeName(index) != std::string("unknown"))) {
                 ::app_src_checker_common_::typeError(state, std::string("Index must be an int"), span);
             }
             return array->elementType;
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
             const auto& map = std::get<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject);
-            if (!::app_src_checker_types_::isAssignable(index, map->keyType) && (::app_src_checker_types_::typeName(index) != std::string("unknown"))) {
+            if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, index, map->keyType) && (::app_src_checker_types_::typeName(index) != std::string("unknown"))) {
                 ::app_src_checker_common_::typeError(state, std::string("Invalid map key type"), span);
             }
             return map->valueType;
@@ -1004,7 +1004,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
             const auto& primitive_ = std::get<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject);
             if (primitive_->name == std::string("string")) {
-                if (!::app_src_checker_types_::isAssignable(index, ::app_src_checker_types_::primitive(std::string("int"))) && (::app_src_checker_types_::typeName(index) != std::string("unknown"))) {
+                if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, index, ::app_src_checker_types_::primitive(std::string("int"))) && (::app_src_checker_types_::typeName(index) != std::string("unknown"))) {
                     ::app_src_checker_common_::typeError(state, std::string("Index must be an int"), span);
                 }
                 return ::app_src_checker_types_::primitive(std::string("char"));

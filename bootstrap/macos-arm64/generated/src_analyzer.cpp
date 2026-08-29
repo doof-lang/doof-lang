@@ -164,7 +164,7 @@ std::shared_ptr<ModuleInfo> ModuleAnalyzer::resolveModule(const std::string& pat
     resolveImports(info);
     resolveExportLists(info);
     resolveNamedTypes(info);
-    const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(this->inProgress); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 210, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(this->inProgress); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 207, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     this->resolvedPaths->push_back(path);
     const auto& _iterable_12 = info->diagnostics;
     for (const auto& item : *_iterable_12) {
@@ -528,8 +528,6 @@ std::shared_ptr<ModuleInfo> ModuleAnalyzer::findModule(const std::string& path) 
         }
     }
     return nullptr;
-}
-void ModuleAnalyzer::keepStatementTypes(const std::shared_ptr<::app_src_ast_::Block>& block, const std::shared_ptr<::app_src_ast_::ExportDeclaration>& export_, const std::shared_ptr<::app_src_ast_::ImportDeclaration>& import_, const std::shared_ptr<::app_src_ast_::MockImportDirective>& mockImport, const std::shared_ptr<::app_src_ast_::IfStatement>& if_, const std::shared_ptr<::app_src_ast_::CaseStatement>& case_, const std::shared_ptr<::app_src_ast_::WhileStatement>& while_, const std::shared_ptr<::app_src_ast_::ForStatement>& for_, const std::shared_ptr<::app_src_ast_::ForOfStatement>& forOf, const std::shared_ptr<::app_src_ast_::WithStatement>& with_, const std::shared_ptr<::app_src_ast_::ReturnStatement>& return_, const std::shared_ptr<::app_src_ast_::YieldStatement>& yield_, const std::shared_ptr<::app_src_ast_::BreakStatement>& break_, const std::shared_ptr<::app_src_ast_::ContinueStatement>& continue_, const std::shared_ptr<::app_src_ast_::ExpressionStatement>& expression, const std::shared_ptr<::app_src_ast_::DestructuringStatement>& destructuring) {
 }
 std::string ModuleAnalyzer::resolveImportPath(const std::shared_ptr<ModuleInfo>& info, const std::string& specifier) {
     if (doof::is_null(info->mockRootPath)) {

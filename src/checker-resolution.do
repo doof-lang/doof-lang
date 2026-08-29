@@ -25,7 +25,7 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter, WeakType, TypeParameterConstraint,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classMetadataType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
+  actorType, applyDeepReadonly, arrayType, classMetadataType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
   isJsonValueType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
   neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
   isWeakReferenceTarget, methodReflectionType, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType,
@@ -38,7 +38,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 import { CheckerState } from "./checker-state"
 import { deprecatedBuildReadonly, deprecatedNoneAlias, typeError } from "./checker-common"
 import { builtinSourceLocationType, declaredSymbolName, optionalResolvedType, methodSignature, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
-import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor } from "./checker-interfaces"
+import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
 export function resolveType(state: CheckerState, annotation: TypeAnnotation, module: ModuleInfo, scope: Scope): ResolvedType {
@@ -266,7 +266,7 @@ export function validateTypeArgumentConstraints(state: CheckerState, names: stri
     }
     resolvedConstraint := resolveType(state, annotation, module, constraintScope)
     substitutedConstraint := substituteTypeParams(resolvedConstraint, names, arguments)
-    if !isAssignable(arguments[index], substitutedConstraint) {
+    if !isAssignableWithInterfaces(state.result, arguments[index], substitutedConstraint) {
       reportConstraintViolation(state, names[index], arguments[index], typeName(substitutedConstraint), span)
     }
   }
@@ -704,17 +704,17 @@ function jsonPrograms(result: AnalysisResult): Program[] {
 export function indexType(state: CheckerState, object: ResolvedType, index: ResolvedType, span: SourceSpan): ResolvedType {
   case object {
     array: ArrayResolvedType -> {
-      if !isAssignable(index, primitive("int")) && typeName(index) != "unknown" { typeError(state, "Index must be an int", span) }
+      if !isAssignableWithInterfaces(state.result, index, primitive("int")) && typeName(index) != "unknown" { typeError(state, "Index must be an int", span) }
       return array.elementType
     }
     map: MapResolvedType -> {
-      if !isAssignable(index, map.keyType) && typeName(index) != "unknown" { typeError(state, "Invalid map key type", span) }
+      if !isAssignableWithInterfaces(state.result, index, map.keyType) && typeName(index) != "unknown" { typeError(state, "Invalid map key type", span) }
       return map.valueType
     }
     _: TupleResolvedType -> { return unknownType() }
     primitive_: PrimitiveType -> {
       if primitive_.name == "string" {
-        if !isAssignable(index, primitive("int")) && typeName(index) != "unknown" { typeError(state, "Index must be an int", span) }
+        if !isAssignableWithInterfaces(state.result, index, primitive("int")) && typeName(index) != "unknown" { typeError(state, "Index must be an int", span) }
         return primitive("char")
       }
     }

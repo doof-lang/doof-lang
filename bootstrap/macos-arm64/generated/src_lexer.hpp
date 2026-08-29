@@ -516,7 +516,6 @@ namespace doof { using Lexer = ::app_src_lexer_::Lexer; }
 #include "doof_runtime.hpp"
 
 namespace app_src_lexer_ {
-    char32_t charFromUtf8(const std::string& value);
     struct Token {
     TokenType kind;
     int32_t length;

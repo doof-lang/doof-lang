@@ -543,7 +543,7 @@ std::string emitCall(const std::shared_ptr<::app_src_ast_::CallExpression>& expr
     const auto functionDeclaration = expression->resolvedFunction;
     auto usesConcreteInstantiation = false;
     if ((!doof::is_null(functionDeclaration)) && (static_cast<int32_t>((functionDeclaration->typeParams)->size()) > 0)) {
-        auto targetModule = context->modulePath;
+        auto targetModule = expression->resolvedFunctionModule;
         auto concreteMethodName = std::string("");
         {
             auto _case_subject = expression->callee;

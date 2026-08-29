@@ -285,8 +285,7 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
             _ -> { }
           }
           if !recordedMethod {
-            targetModule := functionModule(call, modulePath)
-            addFunction(plan, targetModule, call.resolvedFunction!, concreteArgs)
+            addFunction(plan, call.resolvedFunctionModule, call.resolvedFunction!, concreteArgs)
           }
         }
       }
@@ -635,27 +634,6 @@ function interfaceDeclaration(analysis: AnalysisResult, modulePath: string, name
     }
   }
   return none
-}
-
-function functionModule(call: CallExpression, fallback: string): string {
-  case call.callee {
-    identifier: Identifier -> {
-      if identifier.resolvedBinding != none {
-        if identifier.resolvedBinding!.symbol != none { return identifier.resolvedBinding!.symbol!.module }
-        if identifier.resolvedBinding!.module != "" { return identifier.resolvedBinding!.module }
-      }
-    }
-    member: MemberExpression -> {
-      if member.object.resolvedType != none {
-        case member.object.resolvedType! {
-          class_: ClassType -> { return class_.symbol.module }
-          _ -> { }
-        }
-      }
-    }
-    _ -> { }
-  }
-  return fallback
 }
 
 function classDeclaration(analysis: AnalysisResult, modulePath: string, name: string): ClassDeclaration | none {

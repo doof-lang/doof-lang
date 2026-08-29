@@ -201,6 +201,10 @@ export class CallExpression {
   typeArgs: TypeAnnotation[] = []
   let resolvedGenericTypeArgs: ResolvedType[] = []
   let resolvedFunction: FunctionDeclaration | none = none
+  // Defining Doof module for resolvedFunction. Generic discovery and call
+  // lowering consume this decoration instead of reconstructing ownership from
+  // the callee's syntax.
+  let resolvedFunctionModule: string = ""
   let resolvedConstructor: FunctionDeclaration | none = none
   let resolvedClass: ClassDeclaration | none = none
   resolvedType: ResolvedType | none = none

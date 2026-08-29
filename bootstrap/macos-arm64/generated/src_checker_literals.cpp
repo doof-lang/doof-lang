@@ -145,7 +145,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                 const auto& _iterable_4 = expression->elements;
                 for (const auto& item : *_iterable_4) {
                     const auto actual = ::app_src_checker_expressions_::checkExpression(state, item, scope, ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::jsonValueType()));
-                    if (!::app_src_checker_types_::isAssignable(actual, ::app_src_checker_types_::jsonValueType())) {
+                    if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, actual, ::app_src_checker_types_::jsonValueType())) {
                         ::app_src_checker_common_::typeError(state, ((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(actual)) + std::string(" to JsonValue")), std::visit([](auto&& _obj) { return _obj->span; }, item));
                     }
                 }
@@ -157,7 +157,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     const auto& _iterable_6 = expression->elements;
                     for (const auto& item : *_iterable_6) {
                         const auto actual = ::app_src_checker_expressions_::checkExpression(state, item, scope, ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::jsonValueType()));
-                        if (!::app_src_checker_types_::isAssignable(actual, ::app_src_checker_types_::jsonValueType())) {
+                        if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, actual, ::app_src_checker_types_::jsonValueType())) {
                             ::app_src_checker_common_::typeError(state, ((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(actual)) + std::string(" to JsonValue")), std::visit([](auto&& _obj) { return _obj->span; }, item));
                         }
                     }
@@ -201,7 +201,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
         const auto& _iterable_8 = expression->elements;
         for (const auto& item : *_iterable_8) {
             const auto actual = ::app_src_checker_expressions_::checkExpression(state, item, scope, ::app_src_checker_symbols_::optionalResolvedType(doof::unwrap_optional(expectedElement)));
-            if (!::app_src_checker_types_::isAssignable(actual, doof::unwrap_optional(expectedElement))) {
+            if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, actual, doof::unwrap_optional(expectedElement))) {
                 ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(actual)) + std::string(" to ")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(expectedElement))), std::visit([](auto&& _obj) { return _obj->span; }, item));
             }
         }
@@ -259,7 +259,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                             (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(binding->type_));
                         }
                     }
-                    if ((!doof::is_null(propertyExpected)) && !::app_src_checker_types_::isAssignable(doof::unwrap_optional(property->resolvedType), doof::unwrap_optional(propertyExpected))) {
+                    if ((!doof::is_null(propertyExpected)) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, doof::unwrap_optional(property->resolvedType), doof::unwrap_optional(propertyExpected))) {
                         ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(doof::unwrap_optional(property->resolvedType))) + std::string(" to ")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(propertyExpected))), property->span);
                     }
                 }
@@ -308,7 +308,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                 for (const auto& property : *_iterable_14) {
                     if (!doof::is_null(property->key)) {
                         const auto actualKey = ::app_src_checker_expressions_::checkExpression(state, doof::unwrap_optional(property->key), scope, ::app_src_checker_symbols_::optionalResolvedType(map->keyType));
-                        if (!::app_src_checker_types_::isAssignable(actualKey, map->keyType)) {
+                        if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, actualKey, map->keyType)) {
                             ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(actualKey)) + std::string(" to map key type ")) + ::app_src_checker_types_::typeName(map->keyType)), property->span);
                         }
                     } else if (!::app_src_checker_types_::sameType(map->keyType, ::app_src_checker_types_::primitive(std::string("string")))) {
@@ -325,7 +325,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
     for (const auto& property : *_iterable_16) {
         if (!doof::is_null(property->value)) {
             (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_expressions_::checkExpression(state, doof::unwrap_optional(property->value), scope, expectedValue)));
-            if ((!doof::is_null(expectedValue)) && !::app_src_checker_types_::isAssignable(doof::unwrap_optional(property->resolvedType), doof::unwrap_optional(expectedValue))) {
+            if ((!doof::is_null(expectedValue)) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, doof::unwrap_optional(property->resolvedType), doof::unwrap_optional(expectedValue))) {
                 ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(doof::unwrap_optional(property->resolvedType))) + std::string(" to ")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(expectedValue))), property->span);
             }
         }
@@ -371,7 +371,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                 }
                 const auto fieldType = ::app_src_checker_resolution_::memberType(state, doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(class_), property->name, property->span, true);
                 decorateObjectProperty(state, property, scope, ::app_src_checker_symbols_::optionalResolvedType(fieldType));
-                if (!::app_src_checker_types_::isAssignable(doof::unwrap_optional(property->resolvedType), fieldType)) {
+                if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, doof::unwrap_optional(property->resolvedType), fieldType)) {
                     ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(doof::unwrap_optional(property->resolvedType))) + std::string(" to ")) + ::app_src_checker_types_::typeName(fieldType)), property->span);
                 }
                 if (structural && field->const_) {

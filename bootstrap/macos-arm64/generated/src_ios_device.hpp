@@ -750,11 +750,6 @@ namespace app_src_ios_device_ {
 
 #include "std/json/native_json.hpp"
 
-namespace std_::json::index {
-    doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text);
-    std::string formatJsonValue(const doof::JsonValue& value);
-}
-
 namespace doof_blob { using Endian = ::std_::blob::types::Endian; }
 namespace doof_blob { using TextEncoding = ::std_::blob::types::TextEncoding; }
 namespace doof_blob { using EncodingError = ::std_::blob::types::EncodingError; }
@@ -765,17 +760,6 @@ namespace doof_crypto { using JwtError = ::std_::crypto::index::JwtError; }
 #include "doof_crypto.hpp"
 
 namespace std_::crypto::index {
-    std::shared_ptr<std::vector<uint8_t>> sha1(const std::shared_ptr<std::vector<uint8_t>>& data);
-    std::string encodeHex(const std::shared_ptr<std::vector<uint8_t>>& data);
-    std::shared_ptr<std::vector<uint8_t>> sha1String(const std::string& text);
-    std::shared_ptr<std::vector<uint8_t>> sha256(const std::shared_ptr<std::vector<uint8_t>>& data);
-    std::shared_ptr<std::vector<uint8_t>> sha256String(const std::string& text);
-    std::string encodeBase64(const std::shared_ptr<std::vector<uint8_t>>& data);
-    std::string encodeBase64Url(const std::shared_ptr<std::vector<uint8_t>>& data);
-    std::shared_ptr<std::vector<uint8_t>> hmacSha256(const std::shared_ptr<::doof_crypto::SecretBytes>& key, const std::shared_ptr<std::vector<uint8_t>>& data);
-    doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64Url(const std::string& text);
-    bool timingSafeEqual(const std::shared_ptr<std::vector<uint8_t>>& a, const std::shared_ptr<std::vector<uint8_t>>& b);
-    doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> decodeBase64(const std::string& text);
     std::string sha1Hex(const std::shared_ptr<std::vector<uint8_t>>& data);
 }
 
@@ -809,19 +793,6 @@ using FileInfo = ::std_::fs::types::FileInfo;
 #include "native_fs.hpp"
 
 namespace std_::fs::index {
-    bool exists(const std::string& path);
-    doof::Result<std::string, ::std_::fs::types::IoError> readText(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> mkdir(const std::string& path);
-    bool isDirectory(const std::string& path);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readDir(const std::string& path);
-    doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlob(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> writeText(const std::string& path, const std::string& content);
-    doof::Result<void, ::std_::fs::types::IoError> rename(const std::string& sourcePath, const std::string& destPath);
-    doof::Result<void, ::std_::fs::types::IoError> remove(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& data);
-    doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> copyPermissions(const std::string& sourcePath, const std::string& destPath);
-    bool isFile(const std::string& path);
     struct BlockReadStream : public std::enable_shared_from_this<BlockReadStream> {
     std::shared_ptr<::NativeBlobReadStream> native;
     std::shared_ptr<std::vector<uint8_t>> currentValue;
@@ -833,10 +804,6 @@ namespace std_::fs::index {
 
 namespace doof_parse { using ParsingError = ::std_::parse::types::ParsingError; }
 #include "native_parse.hpp"
-
-namespace std_::parse::index {
-    doof::Result<int32_t, ::std_::parse::types::ParsingError> parseInt(const std::string& value);
-}
 
 namespace doof_os { using ProcessGroupMode = ::std_::os::index::ProcessGroupMode; }
 namespace doof_os { using ExecOptions = ::std_::os::index::ExecOptions; }
@@ -851,10 +818,6 @@ using Duration = ::std_::time::duration::Duration;
 #include "native_os.hpp"
 
 namespace std_::os::index {
-    doof::Result<std::string, std::string> _env(const std::string& name);
-    int32_t _pid();
-    std::string _platform();
-    std::string _architecture();
     struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
     std::optional<std::string> cwd;
     std::shared_ptr<doof::ordered_map<std::string, std::string>> env;

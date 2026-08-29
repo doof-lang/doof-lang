@@ -12,12 +12,9 @@ import {
 } from "./semantic"
 import {
   ArrayType, AstLocation, ClassDeclaration, ConstDeclaration, EnumDeclaration,
-  Block, ExportDeclaration, ExportList, ForOfStatement, ForStatement, FunctionDeclaration,
-  AstFunctionType, IfStatement, ImmutableBinding, InterfaceDeclaration, LetDeclaration,
-  NamedImport, NamedType, NamespaceImport, ReadonlyDeclaration, ReturnStatement,
-  YieldStatement, WhileStatement, WithStatement, BreakStatement, ContinueStatement,
-  ExpressionStatement, DestructuringStatement, ImportDeclaration, TypeAliasDeclaration, UnionType,
-  CaseStatement, MockImportDirective, WeakType, YieldBlockAssignmentStatement, TypeParameterConstraint,
+  ExportList, FunctionDeclaration, AstFunctionType, ImmutableBinding, InterfaceDeclaration, LetDeclaration,
+  NamedImport, NamedType, NamespaceImport, ReadonlyDeclaration, ImportDeclaration, TypeAliasDeclaration, UnionType,
+  MockImportDirective, WeakType, YieldBlockAssignmentStatement, TypeParameterConstraint,
 } from "./ast"
 import type { Program, SourceSpan, Statement, TryStatement, TypeAnnotation } from "./ast"
 import { sha256HexString } from "std/crypto"
@@ -466,27 +463,6 @@ export class ModuleAnalyzer {
     for module of modules { if module.path == path { return module } }
     return none
   }
-
-  // Keep the complete Statement union visible in this module's generated
-  // header.  These forms are dispatched by shared Statement-typed helpers.
-  private keepStatementTypes(
-    block: Block | none = none,
-    export_: ExportDeclaration | none = none,
-    import_: ImportDeclaration | none = none,
-    mockImport: MockImportDirective | none = none,
-    if_: IfStatement | none = none,
-    case_: CaseStatement | none = none,
-    while_: WhileStatement | none = none,
-    for_: ForStatement | none = none,
-    forOf: ForOfStatement | none = none,
-    with_: WithStatement | none = none,
-    return_: ReturnStatement | none = none,
-    yield_: YieldStatement | none = none,
-    break_: BreakStatement | none = none,
-    continue_: ContinueStatement | none = none,
-    expression: ExpressionStatement | none = none,
-    destructuring: DestructuringStatement | none = none,
-  ): none { }
 
   /** Applies the root test's mock environment before ordinary path resolution. */
   private resolveImportPath(info: ModuleInfo, specifier: string): string {

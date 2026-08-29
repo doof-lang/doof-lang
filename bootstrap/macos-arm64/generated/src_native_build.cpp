@@ -11,31 +11,12 @@ bool isMsvcCompiler(const std::string& compiler) {
     const auto normalized = doof::string_toLowerCase(doof::string_replaceAll(compiler, std::string("\\"), std::string("/")));
     auto slash = -1;
     for (int32_t index = 0; index < static_cast<int32_t>(normalized.size()); ++index) {
-        if (doof::string_at(normalized, index, "src/native-build", 53) == U'\u002F') {
+        if (doof::string_at(normalized, index, "src/native-build", 50) == U'\u002F') {
             (slash = index);
         }
     }
     const auto name = ((slash < 0) ? normalized : doof::string_substring(normalized, (slash + 1), static_cast<int32_t>(normalized.size())));
     return ((name == std::string("cl")) || (name == std::string("cl.exe")));
-}
-std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(const std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>& tasks, int32_t maximumWorkers) {
-    if ((static_cast<int32_t>((tasks)->size()) == 0) || (maximumWorkers <= 0)) {
-        return std::make_shared<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>>(std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>{});
-    }
-    const auto workerCount = ((static_cast<int32_t>((tasks)->size()) < maximumWorkers) ? static_cast<int32_t>((tasks)->size()) : maximumWorkers);
-    std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batches = std::make_shared<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>>(std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>{});
-    while (static_cast<int32_t>((batches)->size()) < workerCount) {
-        batches->push_back(std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(std::vector<std::shared_ptr<NativeCompileTask>>{}));
-    }
-    for (int32_t index = 0; index < static_cast<int32_t>((tasks)->size()); ++index) {
-        doof::array_at(batches, (index % workerCount), "src/native-build", 67)->push_back(doof::array_at(tasks, index, "src/native-build", 67));
-    }
-    std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> readonlyBatches = std::make_shared<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>>(std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>{});
-    const auto& _iterable_4 = batches;
-    for (const auto& batch : *_iterable_4) {
-        readonlyBatches->push_back(doof::array_drainToReadonly(batch, "", 0));
-    }
-    return doof::array_drainToReadonly(readonlyBatches, "", 0);
 }
 std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, NativeBuildMode mode, const std::string& platform, const std::shared_ptr<std::vector<std::string>>& wasmExportNames, bool wasm, bool wasmCommand) {
     if (isMsvcCompiler(compiler) && !wasm) {
@@ -65,19 +46,19 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
             compileArguments->push_back(std::string("-fwasm-exceptions"));
         }
     }
-    const auto& _iterable_6 = native->defines;
-    for (const auto& define : *_iterable_6) {
+    const auto& _iterable_3 = native->defines;
+    for (const auto& define : *_iterable_3) {
         compileArguments->push_back((std::string("-D") + define));
     }
     compileArguments->push_back(std::string("-I"));
     compileArguments->push_back(outputDirectory);
-    const auto& _iterable_8 = native->includePaths;
-    for (const auto& includePath : *_iterable_8) {
+    const auto& _iterable_5 = native->includePaths;
+    for (const auto& includePath : *_iterable_5) {
         compileArguments->push_back(std::string("-I"));
         compileArguments->push_back(resolveBuildPath(outputDirectory, includePath));
     }
-    const auto& _iterable_10 = native->compilerFlags;
-    for (const auto& flag : *_iterable_10) {
+    const auto& _iterable_7 = native->compilerFlags;
+    for (const auto& flag : *_iterable_7) {
         compileArguments->push_back(flag);
     }
     std::shared_ptr<NativeCompileTask> precompiledHeaderTask = nullptr;
@@ -87,8 +68,8 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
         const auto clangPch = usesClangPrecompiledHeader(compiler, platform);
         const auto pchPath = (runtimeHeader + (clangPch ? std::string(".pch") : std::string(".gch")));
         std::shared_ptr<std::vector<std::string>> pchArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-        const auto& _iterable_12 = compileArguments;
-        for (const auto& argument : *_iterable_12) {
+        const auto& _iterable_9 = compileArguments;
+        for (const auto& argument : *_iterable_9) {
             pchArguments->push_back(argument);
         }
         const auto dependencyFile = (pchPath + std::string(".d"));
@@ -108,8 +89,8 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
     std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>> compileTasks = std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(std::vector<std::shared_ptr<NativeCompileTask>>{});
     std::shared_ptr<std::vector<std::string>> objectPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     for (int32_t index = 0; index < static_cast<int32_t>((modules)->size()); ++index) {
-        const auto sourcePath = resolveBuildPath(outputDirectory, doof::array_at(modules, index, "src/native-build", 163)->sourceName);
-        const auto objectPath = resolveBuildPath(outputDirectory, (std::string(".doof-objects/generated/") + replaceSourceExtension(doof::array_at(modules, index, "src/native-build", 164)->sourceName, std::string(".o"))));
+        const auto sourcePath = resolveBuildPath(outputDirectory, doof::array_at(modules, index, "src/native-build", 145)->sourceName);
+        const auto objectPath = resolveBuildPath(outputDirectory, (std::string(".doof-objects/generated/") + replaceSourceExtension(doof::array_at(modules, index, "src/native-build", 146)->sourceName, std::string(".o"))));
         const auto dependencyFile = (objectPath + std::string(".d"));
         const auto arguments = copyArguments(compileArguments);
         if (clangPchPath != std::string("")) {
@@ -124,9 +105,9 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
         objectPaths->push_back(objectPath);
     }
     for (int32_t index = 0; index < static_cast<int32_t>((native->sourceFiles)->size()); ++index) {
-        const auto sourcePath = resolveBuildPath(outputDirectory, doof::array_at(native->sourceFiles, index, "src/native-build", 189));
+        const auto sourcePath = resolveBuildPath(outputDirectory, doof::array_at(native->sourceFiles, index, "src/native-build", 171));
         const auto swiftSource = isSwiftSource(sourcePath);
-        const auto objectPath = resolveBuildPath(outputDirectory, ((std::string(".doof-objects/native/") + ::std_::crypto::index::sha1HexString(doof::array_at(native->sourceFiles, index, "src/native-build", 191))) + std::string(".o")));
+        const auto objectPath = resolveBuildPath(outputDirectory, ((std::string(".doof-objects/native/") + ::std_::crypto::index::sha1HexString(doof::array_at(native->sourceFiles, index, "src/native-build", 173))) + std::string(".o")));
         const auto dependencyFile = (swiftSource ? std::string("") : (objectPath + std::string(".d")));
         const auto cSource = isCSource(sourcePath);
         const auto arguments = (swiftSource ? swiftObjectArguments(sourcePath, objectPath, mode) : copyNativeCompileArguments(compileArguments, cSource));
@@ -141,20 +122,20 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
         objectPaths->push_back(objectPath);
     }
     std::shared_ptr<std::vector<std::string>> linkArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_16 = objectPaths;
-    for (const auto& objectPath : *_iterable_16) {
+    const auto& _iterable_13 = objectPaths;
+    for (const auto& objectPath : *_iterable_13) {
         linkArguments->push_back(objectPath);
     }
-    const auto& _iterable_18 = native->libraryPaths;
-    for (const auto& libraryPath : *_iterable_18) {
+    const auto& _iterable_15 = native->libraryPaths;
+    for (const auto& libraryPath : *_iterable_15) {
         linkArguments->push_back((std::string("-L") + resolveBuildPath(outputDirectory, libraryPath)));
     }
-    const auto& _iterable_20 = native->linkLibraries;
-    for (const auto& library : *_iterable_20) {
+    const auto& _iterable_17 = native->linkLibraries;
+    for (const auto& library : *_iterable_17) {
         linkArguments->push_back((std::string("-l") + library));
     }
-    const auto& _iterable_22 = native->frameworks;
-    for (const auto& framework : *_iterable_22) {
+    const auto& _iterable_19 = native->frameworks;
+    for (const auto& framework : *_iterable_19) {
         linkArguments->push_back(std::string("-framework"));
         linkArguments->push_back(framework);
     }
@@ -169,8 +150,8 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
         appendOptimizedLinkerArguments(linkArguments, platform, swiftLink, release);
     }
     if (!wasm) {
-        const auto& _iterable_24 = native->linkerFlags;
-        for (const auto& flag : *_iterable_24) {
+        const auto& _iterable_21 = native->linkerFlags;
+        for (const auto& flag : *_iterable_21) {
             linkArguments->push_back(flag);
         }
     }
@@ -188,8 +169,8 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
             linkArguments->push_back(std::string("--no-entry"));
             linkArguments->push_back((std::string("-sEXPORTED_FUNCTIONS=") + wasmExportList(wasmExportNames)));
         }
-        const auto& _iterable_26 = native->linkerFlags;
-        for (const auto& flag : *_iterable_26) {
+        const auto& _iterable_23 = native->linkerFlags;
+        for (const auto& flag : *_iterable_23) {
             linkArguments->push_back(flag);
         }
     }
@@ -212,19 +193,19 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
         compileArguments->push_back(std::string("/Zi"));
         compileArguments->push_back(std::string("/Oy-"));
     }
-    const auto& _iterable_28 = native->defines;
-    for (const auto& define : *_iterable_28) {
+    const auto& _iterable_25 = native->defines;
+    for (const auto& define : *_iterable_25) {
         compileArguments->push_back((std::string("/D") + define));
     }
     compileArguments->push_back(std::string("/I"));
     compileArguments->push_back(outputDirectory);
-    const auto& _iterable_30 = native->includePaths;
-    for (const auto& includePath : *_iterable_30) {
+    const auto& _iterable_27 = native->includePaths;
+    for (const auto& includePath : *_iterable_27) {
         compileArguments->push_back(std::string("/I"));
         compileArguments->push_back(resolveBuildPath(outputDirectory, includePath));
     }
-    const auto& _iterable_32 = native->compilerFlags;
-    for (const auto& flag : *_iterable_32) {
+    const auto& _iterable_29 = native->compilerFlags;
+    for (const auto& flag : *_iterable_29) {
         compileArguments->push_back(flag);
     }
     std::shared_ptr<std::vector<std::shared_ptr<NativeBuildSupportFile>>> supportFiles = std::make_shared<std::vector<std::shared_ptr<NativeBuildSupportFile>>>(std::vector<std::shared_ptr<NativeBuildSupportFile>>{});
@@ -257,8 +238,8 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
     if (pchObjectPath != std::string("")) {
         objectPaths->push_back(pchObjectPath);
     }
-    const auto& _iterable_34 = modules;
-    for (const auto& module : *_iterable_34) {
+    const auto& _iterable_31 = modules;
+    for (const auto& module : *_iterable_31) {
         const auto sourcePath = resolveBuildPath(outputDirectory, module->sourceName);
         const auto objectPath = resolveBuildPath(outputDirectory, (std::string(".doof-objects/generated/") + replaceSourceExtension(module->sourceName, std::string(".obj"))));
         const auto dependencyFile = (objectPath + std::string(".json"));
@@ -272,8 +253,8 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
         compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), (!doof::is_null(precompiledHeaderTask)), doof::array_drainToReadonly(arguments, "", 0)));
         objectPaths->push_back(objectPath);
     }
-    const auto& _iterable_36 = native->sourceFiles;
-    for (const auto& sourceFile : *_iterable_36) {
+    const auto& _iterable_33 = native->sourceFiles;
+    for (const auto& sourceFile : *_iterable_33) {
         const auto sourcePath = resolveBuildPath(outputDirectory, sourceFile);
         const auto objectPath = resolveBuildPath(outputDirectory, ((std::string(".doof-objects/native/") + ::std_::crypto::index::sha1HexString(sourceFile)) + std::string(".obj")));
         const auto dependencyFile = (objectPath + std::string(".json"));
@@ -283,16 +264,16 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
         objectPaths->push_back(objectPath);
     }
     std::shared_ptr<std::vector<std::string>> linkArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("/nologo")});
-    const auto& _iterable_38 = objectPaths;
-    for (const auto& objectPath : *_iterable_38) {
+    const auto& _iterable_35 = objectPaths;
+    for (const auto& objectPath : *_iterable_35) {
         linkArguments->push_back(objectPath);
     }
-    const auto& _iterable_40 = native->libraryPaths;
-    for (const auto& libraryPath : *_iterable_40) {
+    const auto& _iterable_37 = native->libraryPaths;
+    for (const auto& libraryPath : *_iterable_37) {
         linkArguments->push_back((std::string("/LIBPATH:") + resolveBuildPath(outputDirectory, libraryPath)));
     }
-    const auto& _iterable_42 = native->linkLibraries;
-    for (const auto& library : *_iterable_42) {
+    const auto& _iterable_39 = native->linkLibraries;
+    for (const auto& library : *_iterable_39) {
         linkArguments->push_back((doof::string_endsWith(doof::string_toLowerCase(library), std::string(".lib")) ? library : (library + std::string(".lib"))));
     }
     if (release || profile) {
@@ -303,8 +284,8 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
     if (profile) {
         linkArguments->push_back(std::string("/DEBUG"));
     }
-    const auto& _iterable_44 = native->linkerFlags;
-    for (const auto& flag : *_iterable_44) {
+    const auto& _iterable_41 = native->linkerFlags;
+    for (const auto& flag : *_iterable_41) {
         linkArguments->push_back(flag);
     }
     linkArguments->push_back((std::string("/OUT:") + outputPath));
@@ -351,16 +332,16 @@ std::string replaceSourceExtension(const std::string& path, const std::string& e
 }
 std::shared_ptr<std::vector<std::string>> copyArguments(const std::shared_ptr<std::vector<std::string>>& source) {
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_46 = source;
-    for (const auto& argument : *_iterable_46) {
+    const auto& _iterable_43 = source;
+    for (const auto& argument : *_iterable_43) {
         result->push_back(argument);
     }
     return result;
 }
 std::shared_ptr<std::vector<std::string>> copyNativeCompileArguments(const std::shared_ptr<std::vector<std::string>>& source, bool cSource) {
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_48 = source;
-    for (const auto& argument : *_iterable_48) {
+    const auto& _iterable_45 = source;
+    for (const auto& argument : *_iterable_45) {
         if (!cSource || (argument != std::string("-std=c++17"))) {
             result->push_back(argument);
         }
@@ -374,8 +355,8 @@ bool isSwiftSource(const std::string& path) {
     return doof::string_endsWith(doof::string_toLowerCase(path), std::string(".swift"));
 }
 bool hasSwiftSource(const std::shared_ptr<std::vector<std::string>>& paths) {
-    const auto& _iterable_50 = paths;
-    for (const auto& path : *_iterable_50) {
+    const auto& _iterable_47 = paths;
+    for (const auto& path : *_iterable_47) {
         if (isSwiftSource(path)) {
             return true;
         }
@@ -412,8 +393,8 @@ std::string deriveCCompiler(const std::string& compiler) {
 }
 std::string wasmExportList(const std::shared_ptr<std::vector<std::string>>& names) {
     auto result = std::string("[\"_malloc\",\"_free\",\"_doof_free\"");
-    const auto& _iterable_52 = names;
-    for (const auto& name : *_iterable_52) {
+    const auto& _iterable_49 = names;
+    for (const auto& name : *_iterable_49) {
         (result = (((result + std::string(",\"_")) + name) + std::string("\"")));
     }
     return (result + std::string("]"));

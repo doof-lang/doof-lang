@@ -321,7 +321,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   functionDeclaration := expression.resolvedFunction
   let usesConcreteInstantiation = false
   if functionDeclaration != none && functionDeclaration!.typeParams.length > 0 {
-    let targetModule = context.modulePath
+    let targetModule = expression.resolvedFunctionModule
     let concreteMethodName = ""
     case expression.callee {
       identifier: Identifier -> {

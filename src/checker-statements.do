@@ -25,7 +25,7 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter, TypeParameterConstraint,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, isWeakReferenceTarget, joinTypes,
+  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, isWeakReferenceTarget, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
   substituteTypeParams, typeParameter, unknownType, weakType,
@@ -41,7 +41,7 @@ import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
 import { deprecatedClassMethodFunction, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
-import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface } from "./checker-interfaces"
+import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
 export function checkStatement(state: CheckerState, statement: Statement, scope: Scope, inLoop: bool = false): bool {
@@ -150,7 +150,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         if valueType.kind == "never" { bindingsComplete = false }
         declaredType := if binding.type_ == none then valueType else resolveType(state, binding.type_!, state.info!, scope)
         binding.resolvedType = optionalResolvedType(declaredType)
-        if !isAssignable(valueType, declaredType) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(declaredType), binding.span) }
+        if !isAssignableWithInterfaces(state.result, valueType, declaredType) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(declaredType), binding.span) }
         if binding.name == "_" {
           case valueType {
             _: ResultResolvedType -> { typeError(state, "Scoped discard '_' cannot discard a Result; handle the Result before entering the with scope", binding.span) }
@@ -180,8 +180,8 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         case expectedType {
           _: UnknownType -> { target!.yieldType = optionalResolvedType(valueType) }
           _ -> {
-            if isAssignable(valueType, expectedType) { }
-            else if isAssignable(expectedType, valueType) { target!.yieldType = optionalResolvedType(valueType) }
+            if isAssignableWithInterfaces(state.result, valueType, expectedType) { }
+            else if isAssignableWithInterfaces(state.result, expectedType, valueType) { target!.yieldType = optionalResolvedType(valueType) }
             else { typeError(state, "Cannot yield " + typeName(valueType) + " from block yielding " + typeName(expectedType), yield_.span) }
           }
         }
@@ -201,7 +201,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         return true
       }
       validateAssignmentBinding(state, binding!, assignment.span)
-      if !isAssignable(valueType, binding!.type_) {
+      if !isAssignableWithInterfaces(state.result, valueType, binding!.type_) {
         typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(binding!.type_), assignment.span)
       }
       assignment.resolvedType = optionalResolvedType(binding!.type_)
@@ -289,7 +289,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
       _ -> { typeError(state, "declaration-else requires a Result or nullable expression", span); validElseSubject = false }
     }
     if annotation == none { declaredType = narrowedType }
-    else if validElseSubject && !isAssignable(narrowedType, declaredType) {
+    else if validElseSubject && !isAssignableWithInterfaces(state.result, narrowedType, declaredType) {
       typeError(state, "Cannot assign " + typeName(narrowedType) + " to " + typeName(declaredType), span)
     }
     elseScope := Scope { parent: scope }
@@ -306,7 +306,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
     if name != "_" && handlerCompletes {
       typeError(state, "Declaration-else block must exit scope", elseBlock!.span)
     }
-  } else if !isAssignable(valueType, declaredType) {
+  } else if !isAssignableWithInterfaces(state.result, valueType, declaredType) {
     typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(declaredType), span)
   }
   case declaration {
@@ -352,7 +352,7 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
       state.allowsCaller = true
       defaultType := checkExpression(state, parameter.defaultValue!, scope, optionalResolvedType(parameterType))
       state.allowsCaller = previousAllowsCaller
-      if !isAssignable(defaultType, parameterType) {
+      if !isAssignableWithInterfaces(state.result, defaultType, parameterType) {
         typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for parameter '" + parameter.name + "' of type " + typeName(parameterType), parameter.defaultValue!.span)
       }
     }
@@ -366,7 +366,7 @@ export function checkFunction(state: CheckerState, fn: FunctionDeclaration, oute
   case fn.body {
     expression: Expression -> {
       actualReturn = checkExpression(state, expression, scope, optionalResolvedType(returnType))
-      if returnType.kind != "never" && !isAssignable(actualReturn, returnType) {
+      if returnType.kind != "never" && !isAssignableWithInterfaces(state.result, actualReturn, returnType) {
         typeError(state, "Cannot return " + typeName(actualReturn) + " from function returning " + typeName(returnType), expression.span)
       }
       if returnType.kind == "never" && actualReturn.kind != "never" {
@@ -436,7 +436,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
       state.allowsCaller = true
       defaultType := checkExpression(state, field.defaultValue!, classScope, optionalResolvedType(fieldType))
       state.allowsCaller = previousAllowsCaller
-      if !isAssignable(defaultType, fieldType) {
+      if !isAssignableWithInterfaces(state.result, defaultType, fieldType) {
         typeError(state, "Cannot use default value of type " + typeName(defaultType) + " for field of type " + typeName(fieldType), field.defaultValue!.span)
       }
     }
@@ -644,7 +644,7 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
     let value: long | none = nextValue
     if variant.value != none {
       valueType := checkExpression(state, variant.value!, scope, optionalResolvedType(primitive("int")))
-      if !isAssignable(valueType, primitive("int")) { typeError(state, "Enum value must be an int", variant.span) }
+      if !isAssignableWithInterfaces(state.result, valueType, primitive("int")) { typeError(state, "Enum value must be an int", variant.span) }
       value = enumConstantInt(variant.value!)
       if value == none { typeError(state, "Enum variant \"" + variant.name + "\" value must be a compile-time int constant", variant.value!.span) }
     }
@@ -729,7 +729,7 @@ export function checkReturn(state: CheckerState, statement: ReturnStatement, sco
     }
   } else {
     valueType := checkExpression(state, statement.value!, scope, optionalResolvedType(returnType))
-    if !isAssignable(valueType, returnType) { typeError(state, "Cannot return " + typeName(valueType) + " from function returning " + typeName(returnType), statement.span) }
+    if !isAssignableWithInterfaces(state.result, valueType, returnType) { typeError(state, "Cannot return " + typeName(valueType) + " from function returning " + typeName(returnType), statement.span) }
   }
   return false
 }
@@ -883,7 +883,7 @@ function validateDestructuringTarget(state: CheckerState, scope: Scope, name: st
   target := lookup(scope, name)
   if target == none { typeError(state, "Destructuring assignment target \"" + name + "\" is not defined", span); return }
   validateAssignmentBinding(state, target!, span)
-  if !isAssignable(valueType, target!.type_) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(target!.type_), span) }
+  if !isAssignableWithInterfaces(state.result, valueType, target!.type_) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(target!.type_), span) }
 }
 
 function catchErrorScope(scope: Scope): Scope | none {

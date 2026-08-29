@@ -745,6 +745,60 @@ export function testDecoratesImportedNamespaceMemberWithResolvedSymbol(): none {
   Assert.stringContains(diagnostics[0].message, "has no resolved symbol")
 }
 
+export function testDecoratesNamespaceGenericCallWithDefiningModule(): none {
+  analysis := createAnalyzer([
+    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction value(): int => tools.identity<int>(1)" },
+    SourceFile { path: "/tools.do", source: "export function identity<T>(value: T): T => value" },
+  ]).analyze("/main.do")
+  checker := createChecker(analysis)
+  Assert.equal(checker.check("/tools.do").diagnostics.length, 0)
+  Assert.equal(checker.check("/main.do").diagnostics.length, 0)
+  case analysis.modules[0].program.statements[1] {
+    fn: FunctionDeclaration -> { case fn.body {
+      call: CallExpression -> {
+        Assert.equal(call.resolvedFunction != none, true)
+        Assert.equal(call.resolvedFunction!.name, "identity")
+        Assert.equal(call.resolvedFunctionModule, "/tools.do")
+        call.resolvedFunctionModule = ""
+      }
+      _ -> { panic("expected generic call") }
+    } }
+    _ -> { panic("expected function") }
+  }
+  diagnostics := validateCheckedTypes(analysis)
+  Assert.equal(diagnostics.length, 1)
+  Assert.stringContains(diagnostics[0].message, "no defining module")
+}
+
+export function testChecksGenericClassesAgainstConcreteStructuralInterfaces(): none {
+  result := checked(
+    "interface Reader<T> { readonly value: T\nread(): T }\n" +
+    "class Box<T> { readonly value: T\nread(): T => value }\n" +
+    "class Base {}\nclass Derived {}\n" +
+    "interface Factory { make(): Base | Derived }\n" +
+    "class DerivedFactory { make(): Derived => Derived {} }\n" +
+    "function consume(reader: Reader<int>): int => reader.read()\n" +
+    "function produce(factory: Factory): Base | Derived => factory.make()\n" +
+    "function main(): int { reader: Reader<int> := Box<int> { value: 7 }\n" +
+    "consume(Box<int> { value: reader.read() })\n" +
+    "produce(DerivedFactory {})\nreturn reader.read() }",
+  )
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testUnresolvedInferredFieldsFailConformanceWithoutPanicking(): none {
+  result := checked(
+    "shared := \"text\"\n" +
+    "interface HasInt { readonly value: int }\n" +
+    "class Inferred { readonly value = shared }\n" +
+    "function consume(value: HasInt): none {}\n" +
+    "function main(): none { consume(Inferred {}) }",
+  )
+  Assert.equal(result.diagnostics.length > 0, true)
+  Assert.stringContains(result.diagnostics[0].message, "expected HasInt")
+}
+
 export function testValueBindingsShadowBuiltinConversionNames(): none {
   result := checked("class Parser { parse(value: string): int => value.length }\nfunction read(): int { byte := Parser {}\nreturn byte.parse(\"ok\") }")
   Assert.equal(result.diagnostics.length, 0)

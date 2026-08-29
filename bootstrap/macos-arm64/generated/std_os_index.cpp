@@ -128,16 +128,4 @@ doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& co
     throw std::runtime_error("non-exhaustive case expression");
 }();
 }
-doof::Result<std::string, std::string> _env(const std::string& name) {
-    return ::doof_os::env(name);
-}
-int32_t _pid() {
-    return ::doof_os::pid();
-}
-std::string _platform() {
-    return ::doof_os::platform();
-}
-std::string _architecture() {
-    return ::doof_os::architecture();
-}
 }

@@ -1,5 +1,8 @@
 #pragma once
 #include "doof_runtime.hpp"
+namespace std_::json::index {
+}
+
 namespace app_src_macos_app_ {
     struct MacOSAppResource;
     struct MacOSEmbeddedLibrary;
@@ -242,11 +245,6 @@ namespace app_src_dependency_policy_ {
 }
 
 #include "std/json/native_json.hpp"
-
-namespace std_::json::index {
-    doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text);
-    std::string formatJsonValue(const doof::JsonValue& value);
-}
 
 namespace app_src_std_catalog_ {
     std::string canonicalDependencyUrl(const std::string& value);

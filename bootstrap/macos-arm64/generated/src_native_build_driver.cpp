@@ -632,7 +632,4 @@ void ensureDirectory(const std::string& path) {
     }
     [&]() -> void { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/native-build-driver", 550, std::string("try! failed"));  }();
 }
-void printFlushed(const std::string& value) {
-    ::doof::print_flushed(value);
-}
 }

@@ -113,8 +113,8 @@ Names must be unique and must not shadow a visible type parameter from an
 enclosing generic declaration. Calls either provide every argument
 explicitly or infer the complete list from value arguments; expected return
 types do not infer otherwise-unresolved parameters. Closed-world emission
-specializes reached generic functions and nominal types, while generic methods
-on non-generic owners remain C++ member templates.
+specializes every reached Doof-owned generic function, nominal type, and
+method. Runtime- and native-owned C++ templates remain external.
 
 ## Type Inference
 

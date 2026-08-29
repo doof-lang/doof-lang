@@ -1,4 +1,8 @@
-// AST traversal owned by consumer-worldview planning.
+// Shared shallow AST traversal primitives.
+//
+// Statement collection descends through statement-owned blocks. Expression
+// collection returns direct expression children; consumers choose whether to
+// recurse, use a worklist, or stop at a semantic boundary.
 
 import {
   ActorCreationExpression, ArrayLiteral, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression,
@@ -10,39 +14,39 @@ import {
   YieldStatement, AsExpression,
 } from "./ast"
 
-export function collectWorldviewStatementExpressions(statement: Statement, result: Expression[]): none {
+export function collectStatementExpressions(statement: Statement, result: Expression[]): none {
   case statement {
     value: ConstDeclaration -> { result.push(value.value) }
     value: ReadonlyDeclaration -> { result.push(value.value) }
-    value: ImmutableBinding -> { result.push(value.value); if value.else_ != none { collectWorldviewBlockExpressions(value.else_!, result) } }
+    value: ImmutableBinding -> { result.push(value.value); if value.else_ != none { collectBlockExpressions(value.else_!, result) } }
     value: LetDeclaration -> { result.push(value.value) }
     expression: ExpressionStatement -> { result.push(expression.expression) }
     return_: ReturnStatement -> { if return_.value != none { result.push(return_.value!) } }
     yield_: YieldStatement -> { result.push(yield_.value) }
     if_: IfStatement -> {
       result.push(if_.condition)
-      collectWorldviewBlockExpressions(if_.body, result)
-      for branch of if_.elseIfs { result.push(branch.condition); collectWorldviewBlockExpressions(branch.body, result) }
-      if if_.else_ != none { collectWorldviewBlockExpressions(if_.else_!, result) }
+      collectBlockExpressions(if_.body, result)
+      for branch of if_.elseIfs { result.push(branch.condition); collectBlockExpressions(branch.body, result) }
+      if if_.else_ != none { collectBlockExpressions(if_.else_!, result) }
     }
     while_: WhileStatement -> {
-      result.push(while_.condition); collectWorldviewBlockExpressions(while_.body, result)
-      if while_.then_ != none { collectWorldviewBlockExpressions(while_.then_!, result) }
+      result.push(while_.condition); collectBlockExpressions(while_.body, result)
+      if while_.then_ != none { collectBlockExpressions(while_.then_!, result) }
     }
     for_: ForStatement -> {
-      if for_.init != none { collectWorldviewStatementExpressions(for_.init!, result) }
+      if for_.init != none { collectStatementExpressions(for_.init!, result) }
       if for_.condition != none { result.push(for_.condition!) }
       for update of for_.update { result.push(update) }
-      collectWorldviewBlockExpressions(for_.body, result)
-      if for_.then_ != none { collectWorldviewBlockExpressions(for_.then_!, result) }
+      collectBlockExpressions(for_.body, result)
+      if for_.then_ != none { collectBlockExpressions(for_.then_!, result) }
     }
     forOf: ForOfStatement -> {
-      result.push(forOf.iterable); collectWorldviewBlockExpressions(forOf.body, result)
-      if forOf.then_ != none { collectWorldviewBlockExpressions(forOf.then_!, result) }
+      result.push(forOf.iterable); collectBlockExpressions(forOf.body, result)
+      if forOf.then_ != none { collectBlockExpressions(forOf.then_!, result) }
     }
     with_: WithStatement -> {
       for binding of with_.bindings { result.push(binding.value) }
-      collectWorldviewBlockExpressions(with_.body, result)
+      collectBlockExpressions(with_.body, result)
     }
     case_: CaseStatement -> {
       result.push(case_.subject)
@@ -58,7 +62,7 @@ export function collectWorldviewStatementExpressions(statement: Statement, resul
           }
         }
         case arm.body {
-          block: Block -> { collectWorldviewBlockExpressions(block, result) }
+          block: Block -> { collectBlockExpressions(block, result) }
           expression: Expression -> { result.push(expression) }
         }
       }
@@ -66,26 +70,26 @@ export function collectWorldviewStatementExpressions(statement: Statement, resul
     destructuring: DestructuringStatement -> { result.push(destructuring.value) }
     try_: TryStatement -> {
       case try_.binding {
-        declaration: ConstDeclaration -> { collectWorldviewStatementExpressions(declaration, result) }
-        declaration: ReadonlyDeclaration -> { collectWorldviewStatementExpressions(declaration, result) }
-        binding: ImmutableBinding -> { collectWorldviewStatementExpressions(binding, result) }
-        declaration: LetDeclaration -> { collectWorldviewStatementExpressions(declaration, result) }
-        expression: ExpressionStatement -> { collectWorldviewStatementExpressions(expression, result) }
-        destructuring: DestructuringStatement -> { collectWorldviewStatementExpressions(destructuring, result) }
+        declaration: ConstDeclaration -> { collectStatementExpressions(declaration, result) }
+        declaration: ReadonlyDeclaration -> { collectStatementExpressions(declaration, result) }
+        binding: ImmutableBinding -> { collectStatementExpressions(binding, result) }
+        declaration: LetDeclaration -> { collectStatementExpressions(declaration, result) }
+        expression: ExpressionStatement -> { collectStatementExpressions(expression, result) }
+        destructuring: DestructuringStatement -> { collectStatementExpressions(destructuring, result) }
       }
     }
     assignment: YieldBlockAssignmentStatement -> { result.push(assignment.value) }
-    export_: ExportDeclaration -> { collectWorldviewStatementExpressions(export_.declaration, result) }
-    block: Block -> { collectWorldviewBlockExpressions(block, result) }
+    export_: ExportDeclaration -> { collectStatementExpressions(export_.declaration, result) }
+    block: Block -> { collectBlockExpressions(block, result) }
     _ -> { }
   }
 }
 
-export function collectWorldviewBlockExpressions(block: Block, result: Expression[]): none {
-  for statement of block.statements { collectWorldviewStatementExpressions(statement, result) }
+export function collectBlockExpressions(block: Block, result: Expression[]): none {
+  for statement of block.statements { collectStatementExpressions(statement, result) }
 }
 
-export function collectWorldviewNestedExpressions(expression: Expression, result: Expression[]): none {
+export function collectNestedExpressions(expression: Expression, result: Expression[]): none {
   case expression {
     string_: StringLiteral -> { for interpolation of string_.interpolations { result.push(interpolation) } }
     binary: BinaryExpression -> { result.push(binary.left); result.push(binary.right) }
@@ -105,7 +109,7 @@ export function collectWorldviewNestedExpressions(expression: Expression, result
     tuple: TupleLiteral -> { for element of tuple.elements { result.push(element) } }
     lambda: LambdaExpression -> {
       case lambda.body {
-        block: Block -> { collectWorldviewBlockExpressions(block, result) }
+        block: Block -> { collectBlockExpressions(block, result) }
         body: Expression -> { result.push(body) }
       }
     }
@@ -124,16 +128,16 @@ export function collectWorldviewNestedExpressions(expression: Expression, result
           }
         }
         case arm.body {
-          block: Block -> { collectWorldviewBlockExpressions(block, result) }
+          block: Block -> { collectBlockExpressions(block, result) }
           bodyExpression: Expression -> { result.push(bodyExpression) }
         }
       }
     }
-    yieldBlock: YieldBlockExpression -> { collectWorldviewBlockExpressions(yieldBlock.body, result) }
-    catch_: CatchExpression -> { collectWorldviewBlockExpressions(catch_.body, result) }
+    yieldBlock: YieldBlockExpression -> { collectBlockExpressions(yieldBlock.body, result) }
+    catch_: CatchExpression -> { collectBlockExpressions(catch_.body, result) }
     async_: AsyncExpression -> {
       case async_.expression {
-        block: Block -> { collectWorldviewBlockExpressions(block, result) }
+        block: Block -> { collectBlockExpressions(block, result) }
         inner: Expression -> { result.push(inner) }
       }
     }

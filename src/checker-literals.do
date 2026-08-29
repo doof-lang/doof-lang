@@ -25,7 +25,7 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
+  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
   isJsonValueType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
   noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
   substituteTypeParams, typeParameter, unknownType,
@@ -40,7 +40,7 @@ import { checkExpression } from "./checker-expressions"
 import { memberType } from "./checker-resolution"
 import { finish, typeError } from "./checker-common"
 import { optionalResolvedType, hasObjectProperty, lookup, declarationFor } from "./checker-symbols"
-import { findClassField } from "./checker-interfaces"
+import { findClassField, isAssignableWithInterfaces } from "./checker-interfaces"
 
 // Bare Map/Set annotations are declaration-local inference requests. Keep the
 // literal inspection here so contextual literal typing and collection
@@ -135,7 +135,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
       _: JsonValueResolvedType -> {
         for item of expression.elements {
           actual := checkExpression(state, item, scope, optionalResolvedType(jsonValueType()))
-          if !isAssignable(actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to JsonValue", item.span) }
+          if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to JsonValue", item.span) }
         }
         return finish(state, expression, expected!)
       }
@@ -143,7 +143,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
         if containsJsonValue(state, union_) {
           for item of expression.elements {
             actual := checkExpression(state, item, scope, optionalResolvedType(jsonValueType()))
-            if !isAssignable(actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to JsonValue", item.span) }
+            if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to JsonValue", item.span) }
           }
           return finish(state, expression, jsonValueType())
         }
@@ -169,7 +169,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
   if expectedElement != none {
     for item of expression.elements {
       actual := checkExpression(state, item, scope, optionalResolvedType(expectedElement!))
-      if !isAssignable(actual, expectedElement!) { typeError(state, "Cannot assign " + typeName(actual) + " to " + typeName(expectedElement!), item.span) }
+      if !isAssignableWithInterfaces(state.result, actual, expectedElement!) { typeError(state, "Cannot assign " + typeName(actual) + " to " + typeName(expectedElement!), item.span) }
     }
     case expected! {
       array: ArrayResolvedType -> { return finish(state, expression, arrayType(expectedElement!, array.readonly_)) }
@@ -200,7 +200,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
             if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
             else { property.resolvedBinding = binding; property.resolvedType = optionalResolvedType(binding!.type_) }
           }
-          if propertyExpected != none && !isAssignable(property.resolvedType!, propertyExpected!) {
+          if propertyExpected != none && !isAssignableWithInterfaces(state.result, property.resolvedType!, propertyExpected!) {
             typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(propertyExpected!), property.span)
           }
         }
@@ -232,7 +232,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
         for property of expression.properties {
           if property.key != none {
             actualKey := checkExpression(state, property.key!, scope, optionalResolvedType(map.keyType))
-            if !isAssignable(actualKey, map.keyType) { typeError(state, "Cannot assign " + typeName(actualKey) + " to map key type " + typeName(map.keyType), property.span) }
+            if !isAssignableWithInterfaces(state.result, actualKey, map.keyType) { typeError(state, "Cannot assign " + typeName(actualKey) + " to map key type " + typeName(map.keyType), property.span) }
           } else if !sameType(map.keyType, primitive("string")) {
             typeError(state, "Cannot assign string to map key type " + typeName(map.keyType), property.span)
           }
@@ -245,7 +245,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
   for property of expression.properties {
     if property.value != none {
       property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, expectedValue))
-      if expectedValue != none && !isAssignable(property.resolvedType!, expectedValue!) {
+      if expectedValue != none && !isAssignableWithInterfaces(state.result, property.resolvedType!, expectedValue!) {
         typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(expectedValue!), property.span)
       }
     }
@@ -276,7 +276,7 @@ function checkClassObject(state: CheckerState, expression: ObjectLiteral, scope:
         }
         fieldType := memberType(state, class_, property.name, property.span)
         decorateObjectProperty(state, property, scope, optionalResolvedType(fieldType))
-        if !isAssignable(property.resolvedType!, fieldType) { typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(fieldType), property.span) }
+        if !isAssignableWithInterfaces(state.result, property.resolvedType!, fieldType) { typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(fieldType), property.span) }
         if structural && field!.const_ {
           if property.value == none || field!.defaultValue == none || !sameFixedFieldValue(property.value!, field!.defaultValue!) {
             typeError(state, "Field '" + property.name + "' must match its literal-valued declaration", property.span)

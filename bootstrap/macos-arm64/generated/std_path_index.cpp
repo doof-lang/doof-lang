@@ -195,25 +195,4 @@ int32_t lastDotIndex(const std::string& path) {
     }
     return -1;
 }
-doof::Result<std::string, std::string> _homeDirectory() {
-    return ::doof_path::homeDirectory();
-}
-std::string _tempDirectory() {
-    return ::doof_path::tempDirectory();
-}
-doof::Result<std::string, std::string> _dataDirectory(const std::optional<std::string>& appId) {
-    return ::doof_path::dataDirectory(appId);
-}
-doof::Result<std::string, std::string> _cacheDirectory(const std::optional<std::string>& appId) {
-    return ::doof_path::cacheDirectory(appId);
-}
-doof::Result<std::string, std::string> _currentWorkingDirectory() {
-    return ::doof_path::currentWorkingDirectory();
-}
-doof::Result<std::string, std::string> _absolute(const std::string& path) {
-    return ::doof_path::absolute(path);
-}
-doof::Result<std::string, std::string> _resourcesDirectory() {
-    return ::doof_path::resourcesDirectory();
-}
 }

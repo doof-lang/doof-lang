@@ -873,7 +873,4 @@ void Lexer::readOperatorOrPunctuation() {
     diagnostic(((std::string("Unexpected character: '") + doof::to_string(ch)) + std::string("'")), this->line, this->column);
     advance();
 }
-char32_t charFromUtf8(const std::string& value) {
-    return ::doof::char_from_utf8(value);
-}
 }

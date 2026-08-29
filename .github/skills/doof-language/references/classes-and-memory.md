@@ -201,6 +201,9 @@ Rules:
 
 - Interfaces are structural.
 - Classes satisfy them automatically when structure matches.
+- Generic class and interface arguments are substituted before structure is compared.
+- Interface method parameters match exactly; implementation returns may be narrower when assignable to the required return type.
+- An unresolved inferred field cannot establish structural conformance.
 - Structs do not satisfy interfaces in v1.
 - `implements` is optional and mainly useful for documentation and early validation.
 - Interface statics are checked structurally against class statics and are invoked from interface values with `::`.

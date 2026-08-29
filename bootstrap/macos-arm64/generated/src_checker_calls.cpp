@@ -59,6 +59,9 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
     }
     const auto calleeType = ::app_src_checker_expressions_::checkExpression(state, expression->callee, scope, std::monostate{});
     (expression->resolvedFunction = ::app_src_checker_generics_::functionDeclarationForCallee(expression->callee, calleeType, state->result));
+    if (!doof::is_null(expression->resolvedFunction)) {
+        (expression->resolvedFunctionModule = ::app_src_checker_generics_::functionModuleForCallee(expression->callee, state->info->path));
+    }
     if (std::visit([](auto&& _obj) { return _obj->kind; }, calleeType) == std::string("never")) {
         const auto& _iterable_2 = expression->args;
         for (const auto& argument : *_iterable_2) {
@@ -101,14 +104,14 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                 for (const auto& typeParam : *_iterable_6) {
                     std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> inferredType = std::monostate{};
                     for (int32_t i = 0; i < static_cast<int32_t>((expression->args)->size()); ++i) {
-                        const auto parameterIndex = (doof::is_null(doof::array_at(expression->args, i, "src/checker-calls", 112)->name) ? i : ::app_src_checker_symbols_::functionParameterIndex(resolvedFunction->params, doof::unwrap_optional(doof::array_at(expression->args, i, "src/checker-calls", 112)->name)));
+                        const auto parameterIndex = (doof::is_null(doof::array_at(expression->args, i, "src/checker-calls", 115)->name) ? i : ::app_src_checker_symbols_::functionParameterIndex(resolvedFunction->params, doof::unwrap_optional(doof::array_at(expression->args, i, "src/checker-calls", 115)->name)));
                         if ((parameterIndex < 0) || (parameterIndex >= static_cast<int32_t>((resolvedFunction->params)->size()))) {
                             continue;
                         }
-                        const auto parameterType = doof::array_at(resolvedFunction->params, parameterIndex, "src/checker-calls", 114)->type_;
+                        const auto parameterType = doof::array_at(resolvedFunction->params, parameterIndex, "src/checker-calls", 117)->type_;
                         auto inferenceExpected = genericInferenceExpected(parameterType, resolvedFunction->typeParams);
                         {
-                            auto _case_subject = doof::array_at(expression->args, i, "src/checker-calls", 118)->value;
+                            auto _case_subject = doof::array_at(expression->args, i, "src/checker-calls", 121)->value;
                             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::LambdaExpression>>(_case_subject)) {
                                 (inferenceExpected = doof::optional_value(parameterType));
                         }
@@ -120,7 +123,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                         else {
                         }
                         }
-                        const auto actual = ::app_src_checker_expressions_::checkExpression(state, doof::array_at(expression->args, i, "src/checker-calls", 123)->value, scope, inferenceExpected);
+                        const auto actual = ::app_src_checker_expressions_::checkExpression(state, doof::array_at(expression->args, i, "src/checker-calls", 126)->value, scope, inferenceExpected);
                         const auto candidate = ::app_src_checker_generics_::inferTypeArgument(parameterType, actual, typeParam);
                         if (!doof::is_null(candidate)) {
                             auto candidateIsSelf = false;
@@ -151,8 +154,8 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                             if (doof::is_null(inferredType) || (inferredIsSelf && !candidateIsSelf)) {
                                 (inferredType = candidate);
                             } else if (::app_src_checker_types_::sameType(doof::unwrap_optional(inferredType), doof::unwrap_optional(candidate))) {
-                            } else if (::app_src_checker_types_::isAssignable(doof::unwrap_optional(candidate), doof::unwrap_optional(inferredType))) {
-                            } else if (::app_src_checker_types_::isAssignable(doof::unwrap_optional(inferredType), doof::unwrap_optional(candidate))) {
+                            } else if (::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, doof::unwrap_optional(candidate), doof::unwrap_optional(inferredType))) {
+                            } else if (::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, doof::unwrap_optional(inferredType), doof::unwrap_optional(candidate))) {
                                 (inferredType = candidate);
                             } else {
                                 (complete = false);
@@ -210,9 +213,9 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                         ::app_src_checker_common_::typeError(state, ((std::string("Duplicate named argument '") + doof::unwrap_optional(argument->name)) + std::string("'")), argument->span);
                     }
                     used->push_back(doof::unwrap_optional(argument->name));
-                    const auto expected = doof::array_at(effectiveFunction->params, index, "src/checker-calls", 172)->type_;
+                    const auto expected = doof::array_at(effectiveFunction->params, index, "src/checker-calls", 175)->type_;
                     const auto actual = ::app_src_checker_expressions_::checkExpression(state, argument->value, scope, [&]() -> std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> { if (genericInferenceFailed) { return std::monostate{}; } return ::app_src_checker_symbols_::optionalResolvedType(expected); }());
-                    if (!genericInferenceFailed && !::app_src_checker_types_::isAssignable(actual, expected)) {
+                    if (!genericInferenceFailed && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, actual, expected)) {
                         ::app_src_checker_common_::typeError(state, (((((std::string("Argument '") + doof::unwrap_optional(argument->name)) + std::string("' has type ")) + ::app_src_checker_types_::typeName(actual)) + std::string("; expected ")) + ::app_src_checker_types_::typeName(expected)), argument->span);
                     }
                 }
@@ -235,14 +238,14 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     ::app_src_checker_common_::typeError(state, (((std::string("Expected ") + range) + std::string(" argument(s) but got ")) + doof::to_string(static_cast<int32_t>((expression->args)->size()))), expression->span);
                 }
                 for (int32_t i = 0; i < static_cast<int32_t>((expression->args)->size()); ++i) {
-                    const auto expected = ((i < static_cast<int32_t>((effectiveFunction->params)->size())) ? doof::array_at(effectiveFunction->params, i, "src/checker-calls", 189)->type_ : ::app_src_checker_types_::unknownType());
+                    const auto expected = ((i < static_cast<int32_t>((effectiveFunction->params)->size())) ? doof::array_at(effectiveFunction->params, i, "src/checker-calls", 192)->type_ : ::app_src_checker_types_::unknownType());
                     std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> argumentExpected = [&]() -> std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> { if (genericInferenceFailed) { return std::monostate{}; } return doof::optional_value(expected); }();
                     if (::app_src_checker_symbols_::isBuiltinPrintlnCall(expression->callee)) {
                         (argumentExpected = std::monostate{});
                     }
-                    const auto actual = ::app_src_checker_expressions_::checkExpression(state, doof::array_at(expression->args, i, "src/checker-calls", 192)->value, scope, argumentExpected);
-                    if (!genericInferenceFailed && !::app_src_checker_types_::isAssignable(actual, expected)) {
-                        ::app_src_checker_common_::typeError(state, (((((std::string("Argument ") + doof::to_string((i + 1))) + std::string(" has type ")) + ::app_src_checker_types_::typeName(actual)) + std::string("; expected ")) + ::app_src_checker_types_::typeName(expected)), doof::array_at(expression->args, i, "src/checker-calls", 193)->span);
+                    const auto actual = ::app_src_checker_expressions_::checkExpression(state, doof::array_at(expression->args, i, "src/checker-calls", 195)->value, scope, argumentExpected);
+                    if (!genericInferenceFailed && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, actual, expected)) {
+                        ::app_src_checker_common_::typeError(state, (((((std::string("Argument ") + doof::to_string((i + 1))) + std::string(" has type ")) + ::app_src_checker_types_::typeName(actual)) + std::string("; expected ")) + ::app_src_checker_types_::typeName(expected)), doof::array_at(expression->args, i, "src/checker-calls", 196)->span);
                     }
                 }
             }
@@ -454,12 +457,12 @@ std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::Pr
     for (const auto& typeParam : *_iterable_36) {
         std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> candidate = std::monostate{};
         for (int32_t index = 0; index < static_cast<int32_t>((expression->args)->size()); ++index) {
-            const auto parameterIndex = (doof::is_null(doof::array_at(expression->args, index, "src/checker-calls", 344)->name) ? index : ::app_src_checker_symbols_::functionParameterIndex(patterns, doof::unwrap_optional(doof::array_at(expression->args, index, "src/checker-calls", 344)->name)));
+            const auto parameterIndex = (doof::is_null(doof::array_at(expression->args, index, "src/checker-calls", 347)->name) ? index : ::app_src_checker_symbols_::functionParameterIndex(patterns, doof::unwrap_optional(doof::array_at(expression->args, index, "src/checker-calls", 347)->name)));
             if ((parameterIndex < 0) || (parameterIndex >= static_cast<int32_t>((patterns)->size()))) {
                 continue;
             }
-            const auto actual = ::app_src_checker_expressions_::checkExpression(state, doof::array_at(expression->args, index, "src/checker-calls", 346)->value, scope, ::app_src_checker_symbols_::optionalResolvedType(doof::array_at(patterns, parameterIndex, "src/checker-calls", 346)->type_));
-            const auto next = ::app_src_checker_generics_::inferTypeArgument(doof::array_at(patterns, parameterIndex, "src/checker-calls", 347)->type_, actual, typeParam);
+            const auto actual = ::app_src_checker_expressions_::checkExpression(state, doof::array_at(expression->args, index, "src/checker-calls", 349)->value, scope, ::app_src_checker_symbols_::optionalResolvedType(doof::array_at(patterns, parameterIndex, "src/checker-calls", 349)->type_));
+            const auto next = ::app_src_checker_generics_::inferTypeArgument(doof::array_at(patterns, parameterIndex, "src/checker-calls", 350)->type_, actual, typeParam);
             if (!doof::is_null(next)) {
                 (candidate = next);
             }
@@ -493,11 +496,11 @@ void validatePositionalConstructorArguments(const std::shared_ptr<::app_src_chec
     for (int32_t i = 0; i < static_cast<int32_t>((expression->args)->size()); ++i) {
         std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> expected = std::monostate{};
         if (i < static_cast<int32_t>((params)->size())) {
-            (expected = doof::optional_value(doof::array_at(params, i, "src/checker-calls", 373)->type_));
+            (expected = doof::optional_value(doof::array_at(params, i, "src/checker-calls", 376)->type_));
         }
-        const auto actual = ::app_src_checker_expressions_::checkExpression(state, doof::array_at(expression->args, i, "src/checker-calls", 374)->value, scope, expected);
-        if ((!doof::is_null(expected)) && !::app_src_checker_types_::isAssignable(actual, doof::unwrap_optional(expected))) {
-            ::app_src_checker_common_::typeError(state, (((((std::string("Argument ") + doof::to_string((i + 1))) + std::string(" has type ")) + ::app_src_checker_types_::typeName(actual)) + std::string("; expected ")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(expected))), doof::array_at(expression->args, i, "src/checker-calls", 376)->span);
+        const auto actual = ::app_src_checker_expressions_::checkExpression(state, doof::array_at(expression->args, i, "src/checker-calls", 377)->value, scope, expected);
+        if ((!doof::is_null(expected)) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, actual, doof::unwrap_optional(expected))) {
+            ::app_src_checker_common_::typeError(state, (((((std::string("Argument ") + doof::to_string((i + 1))) + std::string(" has type ")) + ::app_src_checker_types_::typeName(actual)) + std::string("; expected ")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(expected))), doof::array_at(expression->args, i, "src/checker-calls", 379)->span);
         }
     }
 }
@@ -531,9 +534,9 @@ void validateConstructorCallArguments(const std::shared_ptr<::app_src_checker_st
             ::app_src_checker_common_::typeError(state, ((std::string("Duplicate named argument '") + doof::unwrap_optional(argument->name)) + std::string("'")), argument->span);
         }
         used->push_back(doof::unwrap_optional(argument->name));
-        const auto expected = doof::array_at(params, index, "src/checker-calls", 401)->type_;
+        const auto expected = doof::array_at(params, index, "src/checker-calls", 404)->type_;
         const auto actual = ::app_src_checker_expressions_::checkExpression(state, argument->value, scope, ::app_src_checker_symbols_::optionalResolvedType(expected));
-        if (!::app_src_checker_types_::isAssignable(actual, expected)) {
+        if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, actual, expected)) {
             ::app_src_checker_common_::typeError(state, (((((std::string("Argument '") + doof::unwrap_optional(argument->name)) + std::string("' has type ")) + ::app_src_checker_types_::typeName(actual)) + std::string("; expected ")) + ::app_src_checker_types_::typeName(expected)), argument->span);
         }
     }
@@ -553,7 +556,7 @@ void validateFieldConstructorVisibility(const std::shared_ptr<::app_src_checker_
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
             const auto& owner = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
             for (int32_t index = 0; index < static_cast<int32_t>((expression->args)->size()); ++index) {
-                const auto argument = doof::array_at(expression->args, index, "src/checker-calls", 417);
+                const auto argument = doof::array_at(expression->args, index, "src/checker-calls", 420);
                 std::shared_ptr<::app_src_ast_::ClassField> field = nullptr;
                 auto fieldName = [&]() -> std::string { auto _coalesce_48 = argument->name; if (doof::is_null(_coalesce_48)) return std::string(""); return doof::unwrap_optional(_coalesce_48); }();
                 if (!doof::is_null(argument->name)) {
@@ -635,8 +638,8 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
     const auto lambdaScope = std::make_shared<::app_src_semantic_::Scope>(scope, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Binding>>>(std::vector<std::shared_ptr<::app_src_semantic_::Binding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>>(std::vector<std::shared_ptr<::app_src_semantic_::ResolvedTypeConstraint>>{}), std::monostate{}, std::monostate{}, std::string(""), false, false, std::monostate{}, false, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}), false);
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>> params = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>>(std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>{});
     for (int32_t i = 0; i < static_cast<int32_t>((expression->params)->size()); ++i) {
-        const auto parameter = doof::array_at(expression->params, i, "src/checker-calls", 495);
-        const auto parameterType = (doof::is_null(parameter->type_) ? (((!doof::is_null(expectedFunction)) && (i < static_cast<int32_t>((expectedFunction->params)->size()))) ? doof::array_at(expectedFunction->params, i, "src/checker-calls", 496)->type_ : ::app_src_checker_types_::unknownType()) : ::app_src_checker_resolution_::resolveType(state, doof::unwrap_optional(parameter->type_), doof::unwrap_optional(state->info), lambdaScope));
+        const auto parameter = doof::array_at(expression->params, i, "src/checker-calls", 498);
+        const auto parameterType = (doof::is_null(parameter->type_) ? (((!doof::is_null(expectedFunction)) && (i < static_cast<int32_t>((expectedFunction->params)->size()))) ? doof::array_at(expectedFunction->params, i, "src/checker-calls", 499)->type_ : ::app_src_checker_types_::unknownType()) : ::app_src_checker_resolution_::resolveType(state, doof::unwrap_optional(parameter->type_), doof::unwrap_optional(state->info), lambdaScope));
         (parameter->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(parameterType));
         params->push_back(std::make_shared<::app_src_semantic_::FunctionParamType>(parameter->name, parameterType, (!doof::is_null(parameter->defaultValue))));
         if ((parameter->name != std::string("_")) && !::app_src_checker_symbols_::declare(lambdaScope, std::make_shared<::app_src_semantic_::Binding>(parameter->name, std::string("parameter"), parameterType, false, ::app_src_checker_validation_::checkerSemanticSpan(parameter->span), state->info->path, nullptr, std::string(""), std::string(""), std::string("")))) {
@@ -800,7 +803,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                         }
                         continue;
                     }
-                    const auto parameterType = doof::array_at(function_->params, parameterIndex, "src/checker-calls", 614)->type_;
+                    const auto parameterType = doof::array_at(function_->params, parameterIndex, "src/checker-calls", 617)->type_;
                     if (!doof::is_null(property->value)) {
                         (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_expressions_::checkExpression(state, doof::unwrap_optional(property->value), scope, ::app_src_checker_symbols_::optionalResolvedType(parameterType))));
                     } else {
@@ -813,7 +816,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                             (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(binding->type_));
                         }
                     }
-                    if (!::app_src_checker_types_::isAssignable(doof::unwrap_optional(property->resolvedType), parameterType)) {
+                    if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, doof::unwrap_optional(property->resolvedType), parameterType)) {
                         ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(doof::unwrap_optional(property->resolvedType))) + std::string(" to ")) + ::app_src_checker_types_::typeName(parameterType)), property->span);
                     }
                 }
@@ -877,7 +880,7 @@ void checkConstructionFields(const std::shared_ptr<::app_src_checker_state_::Che
                 (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(binding->type_));
             }
         }
-        if (!::app_src_checker_types_::isAssignable(doof::unwrap_optional(property->resolvedType), expected)) {
+        if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, doof::unwrap_optional(property->resolvedType), expected)) {
             ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(doof::unwrap_optional(property->resolvedType))) + std::string(" to ")) + ::app_src_checker_types_::typeName(expected)), property->span);
         }
     }

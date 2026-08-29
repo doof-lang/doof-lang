@@ -107,43 +107,4 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::File
     const auto resolved = doof::success_value(_try_value_18);
     return ::doof_fs::readDir(resolved);
 }
-bool exists(const std::string& path) {
-    return ::doof_fs::exists(path);
-}
-doof::Result<std::string, ::std_::fs::types::IoError> readText(const std::string& path) {
-    return ::doof_fs::readText(path);
-}
-doof::Result<void, ::std_::fs::types::IoError> mkdir(const std::string& path) {
-    return ::doof_fs::mkdir(path);
-}
-bool isDirectory(const std::string& path) {
-    return ::doof_fs::isDirectory(path);
-}
-doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readDir(const std::string& path) {
-    return ::doof_fs::readDir(path);
-}
-doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlob(const std::string& path) {
-    return ::doof_fs::readBlob(path);
-}
-doof::Result<void, ::std_::fs::types::IoError> writeText(const std::string& path, const std::string& content) {
-    return ::doof_fs::writeText(path, content);
-}
-doof::Result<void, ::std_::fs::types::IoError> rename(const std::string& sourcePath, const std::string& destPath) {
-    return ::doof_fs::rename(sourcePath, destPath);
-}
-doof::Result<void, ::std_::fs::types::IoError> remove(const std::string& path) {
-    return ::doof_fs::remove(path);
-}
-doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& data) {
-    return ::doof_fs::writeBlob(path, data);
-}
-doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(const std::string& path) {
-    return ::doof_fs::metadata(path);
-}
-doof::Result<void, ::std_::fs::types::IoError> copyPermissions(const std::string& sourcePath, const std::string& destPath) {
-    return ::doof_fs::copyPermissions(sourcePath, destPath);
-}
-bool isFile(const std::string& path) {
-    return ::doof_fs::isFile(path);
-}
 }

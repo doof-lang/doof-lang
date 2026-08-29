@@ -16,6 +16,17 @@ function emit(source: string): ModuleEmission {
   panic("entry module was not emitted")
 }
 
+function emitSources(sources: SourceFile[], entry: string): ModuleEmission[] {
+  analysis := createAnalyzer(sources).analyze(entry)
+  Assert.equal(analysis.diagnostics.length, 0)
+  checker := createChecker(analysis, entry)
+  for i of 0..<analysis.modules.length {
+    module := analysis.modules[analysis.modules.length - 1 - i]
+    Assert.equal(hasErrorDiagnostics(checker.check(module.path).diagnostics), false)
+  }
+  return emitModuleGraph(analysis, entry).modules
+}
+
 export function testDiscoversGenericCallsInsideAsExpressions(): none {
   result := emit(
     "function identity<T>(value: T): T => value\n" +
@@ -48,4 +59,31 @@ export function testUsesCheckerConformanceForConcreteInterfaceVariants(): none {
   )
 
   Assert.stringContains(result.header, "using Box__int = std::variant<std::shared_ptr<IntBox>>;")
+}
+
+export function testMonomorphizesNamespaceGenericCallsInTheirDefiningModule(): none {
+  modules := emitSources([
+    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction main(): int => tools.identity<int>(1)" },
+    SourceFile { path: "/tools.do", source: "export function identity<T>(value: T): T => value" },
+  ], "/main.do")
+  let main: ModuleEmission | none = none
+  let tools: ModuleEmission | none = none
+  for module of modules {
+    if module.modulePath == "/main.do" { main = module }
+    if module.modulePath == "/tools.do" { tools = module }
+  }
+  Assert.equal(main != none, true)
+  Assert.equal(tools != none, true)
+  Assert.stringContains(main!.source, "::app_tools_::identity__int(1)")
+  Assert.stringContains(tools!.source, "identity__int")
+}
+
+export function testIncludesGenericClassesInConcreteInterfaceVariants(): none {
+  result := emit(
+    "interface Reader<T> { read(): T }\n" +
+    "class Box<T> { value: T\nread(): T => value }\n" +
+    "function read(reader: Reader<int>): int => reader.read()\n" +
+    "function main(): int => read(Box<int> { value: 7 })",
+  )
+  Assert.stringContains(result.header, "using Reader__int = std::variant<std::shared_ptr<Box__int>>;")
 }

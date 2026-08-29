@@ -7,11 +7,17 @@ namespace std_::fs::types { enum class IoError; }
 namespace std_::fs::types { struct FileInfo; }
 namespace std_::fs::types { enum class EntryKind; }
 
+namespace std_::json::index {
+}
+
 namespace std_::blob::index {
 }
 
 namespace std_::fs::types {
     struct FileInfo;
+}
+
+namespace std_::fs::index {
 }
 
 namespace std_::time::duration {
@@ -501,11 +507,6 @@ namespace app_src_package_acquisition_ {
 
 #include "std/json/native_json.hpp"
 
-namespace std_::json::index {
-    doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text);
-    std::string formatJsonValue(const doof::JsonValue& value);
-}
-
 namespace doof_blob { using Endian = ::std_::blob::types::Endian; }
 namespace doof_blob { using TextEncoding = ::std_::blob::types::TextEncoding; }
 namespace doof_blob { using EncodingError = ::std_::blob::types::EncodingError; }
@@ -533,22 +534,6 @@ namespace doof_fs { using EntryKind = ::std_::fs::types::EntryKind; }
 using EntryKind = ::std_::fs::types::EntryKind;
 using FileInfo = ::std_::fs::types::FileInfo;
 #include "native_fs.hpp"
-
-namespace std_::fs::index {
-    bool exists(const std::string& path);
-    doof::Result<std::string, ::std_::fs::types::IoError> readText(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> mkdir(const std::string& path);
-    bool isDirectory(const std::string& path);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readDir(const std::string& path);
-    doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlob(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> writeText(const std::string& path, const std::string& content);
-    doof::Result<void, ::std_::fs::types::IoError> rename(const std::string& sourcePath, const std::string& destPath);
-    doof::Result<void, ::std_::fs::types::IoError> remove(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& data);
-    doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> copyPermissions(const std::string& sourcePath, const std::string& destPath);
-    bool isFile(const std::string& path);
-}
 
 namespace std_::os::index {
     struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {

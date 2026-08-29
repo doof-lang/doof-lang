@@ -378,6 +378,9 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject)) {
             const auto& call = std::get<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject);
             validateExpression(call->callee, module, diagnostics);
+            if ((!doof::is_null(call->resolvedFunction)) && (call->resolvedFunctionModule == std::string(""))) {
+                addValidationError(module, call->span, std::string("Resolved call target has no defining module"), diagnostics);
+            }
             const auto& _iterable_36 = call->typeArgs;
             for (const auto& argument : *_iterable_36) {
                 validateTypeAnnotation(argument, module, diagnostics);

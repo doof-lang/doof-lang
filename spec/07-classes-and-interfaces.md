@@ -780,6 +780,17 @@ render(Circle { x: 0.0, y: 0.0, radius: 5.0 })  // ✅ OK
 
 At compile time, interface types resolve to concrete union types of all matching classes.
 
+Matching substitutes concrete generic arguments on both sides. For example,
+`Box<int>` can satisfy `Reader<int>` when its fields and methods match after
+substituting `T` with `int`; it need not explicitly declare `implements`.
+Method parameter types must match exactly. Method return types are covariant:
+the implementation return type must be assignable to the interface return
+type. The same rules apply to generic and non-generic interfaces.
+
+An inferred class field is considered only once its type has been resolved.
+If its type cannot be resolved, it cannot establish structural conformance and
+the compiler reports the resulting type mismatch rather than assuming a type.
+
 ### Optional Explicit Implementation
 
 ```javascript

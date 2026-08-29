@@ -45,10 +45,6 @@ inline std::optional<NativeBuildMode> NativeBuildMode_fromValue(int32_t value) {
 inline std::ostream& operator<<(std::ostream& output, NativeBuildMode value) { return output << NativeBuildMode_name(value); }
 }
 
-namespace app_src_native_build_ {
-    using NativeCompileTaskBatch = std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>;
-}
-
 namespace app_src_emitter_module_ {
     struct ModuleEmission : public std::enable_shared_from_this<ModuleEmission> {
     std::string modulePath;
@@ -115,7 +111,6 @@ namespace std_::crypto::index {
 
 namespace app_src_native_build_ {
     bool isMsvcCompiler(const std::string& compiler);
-    std::shared_ptr<std::vector<std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>>> batchNativeCompileTasks(const std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>>& tasks, int32_t maximumWorkers);
     std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, NativeBuildMode mode, const std::string& platform, const std::shared_ptr<std::vector<std::string>>& wasmExportNames, bool wasm, bool wasmCommand);
     std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, NativeBuildMode mode);
     std::string msvcPchHeaderSource();

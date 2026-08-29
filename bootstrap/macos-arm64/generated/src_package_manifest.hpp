@@ -1,5 +1,8 @@
 #pragma once
 #include "doof_runtime.hpp"
+namespace std_::json::index {
+}
+
 namespace app_src_macos_app_ {
     struct MacOSAppResource;
     struct MacOSEmbeddedLibrary;
@@ -187,11 +190,6 @@ namespace app_src_package_manifest_ {
 
 #include "std/json/native_json.hpp"
 
-namespace std_::json::index {
-    doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text);
-    std::string formatJsonValue(const doof::JsonValue& value);
-}
-
 namespace std_::path::index {
     std::string join(const std::shared_ptr<std::vector<std::string>>& parts);
 }
@@ -211,7 +209,6 @@ namespace app_src_package_manifest_ {
     doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>>, std::string> parseExternalDependencyCommands(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& manifestPath, const std::string& fieldPath);
     bool isSupportedExternalArchiveUrl(const std::string& url);
     bool isHexString(const std::string& value, int32_t length);
-    std::shared_ptr<NativeBuildPlan> mergeNativeBuildPlans(const std::shared_ptr<std::vector<std::shared_ptr<NativeBuildPlan>>>& plans);
     doof::Result<std::shared_ptr<NativeBuildPlan>, std::string> parseManifestNativeBuild(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory, const std::string& platform, const std::string& target);
     doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std::string> parseManifestResources(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory);
     doof::Result<std::string, std::string> parseManifestTarget(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath);

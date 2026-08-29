@@ -26,7 +26,7 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
+  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   neverType, noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
   substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType,
@@ -42,8 +42,8 @@ import { checkExpression } from "./checker-expressions"
 import { resolveType, memberType, validateTypeArgumentConstraints } from "./checker-resolution"
 import { finish, typeError } from "./checker-common"
 import { decorateAnnotationWithResolved, optionalResolvedType, functionParameterIndex, containsString, hasObjectProperty, methodSignature, declare, lookup, isBuiltinPrintlnCall, symbolFor, valueSymbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
-import { inferTypeArgument, functionDeclarationForCallee, constructorForClass, insideConstructorFactory } from "./checker-generics"
-import { classModuleFor } from "./checker-interfaces"
+import { inferTypeArgument, functionDeclarationForCallee, functionModuleForCallee, constructorForClass, insideConstructorFactory } from "./checker-generics"
+import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
 export function checkCall(state: CheckerState, expression: CallExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
@@ -78,6 +78,9 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
   }
   calleeType := checkExpression(state, expression.callee, scope, none)
   expression.resolvedFunction = functionDeclarationForCallee(expression.callee, calleeType, state.result)
+  if expression.resolvedFunction != none {
+    expression.resolvedFunctionModule = functionModuleForCallee(expression.callee, state.info!.path)
+  }
   if calleeType.kind == "never" {
     for argument of expression.args { checkExpression(state, argument.value, scope, none) }
     return finish(state, expression, neverType())
@@ -130,8 +133,8 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
               if candidateIsSelf && inferredType != none { continue }
               if inferredType == none || (inferredIsSelf && !candidateIsSelf) { inferredType = candidate }
               else if sameType(inferredType!, candidate!) { }
-              else if isAssignable(candidate!, inferredType!) { }
-              else if isAssignable(inferredType!, candidate!) { inferredType = candidate }
+              else if isAssignableWithInterfaces(state.result, candidate!, inferredType!) { }
+              else if isAssignableWithInterfaces(state.result, inferredType!, candidate!) { inferredType = candidate }
               else { complete = false }
             }
           }
@@ -171,7 +174,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           used.push(argument.name!)
           expected := effectiveFunction.params[index].type_
           actual := checkExpression(state, argument.value, scope, if genericInferenceFailed then none else optionalResolvedType(expected))
-          if !genericInferenceFailed && !isAssignable(actual, expected) { typeError(state, "Argument '" + argument.name! + "' has type " + typeName(actual) + "; expected " + typeName(expected), argument.span) }
+          if !genericInferenceFailed && !isAssignableWithInterfaces(state.result, actual, expected) { typeError(state, "Argument '" + argument.name! + "' has type " + typeName(actual) + "; expected " + typeName(expected), argument.span) }
         }
         for parameter of effectiveFunction.params {
           if !parameter.hasDefault && !containsString(used, parameter.name) {
@@ -190,7 +193,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           let argumentExpected: ResolvedType | none = if genericInferenceFailed then none else expected
           if isBuiltinPrintlnCall(expression.callee) { argumentExpected = none }
           actual := checkExpression(state, expression.args[i].value, scope, argumentExpected)
-          if !genericInferenceFailed && !isAssignable(actual, expected) { typeError(state, "Argument " + string(i + 1) + " has type " + typeName(actual) + "; expected " + typeName(expected), expression.args[i].span) }
+          if !genericInferenceFailed && !isAssignableWithInterfaces(state.result, actual, expected) { typeError(state, "Argument " + string(i + 1) + " has type " + typeName(actual) + "; expected " + typeName(expected), expression.args[i].span) }
         }
       }
       validateActorMethodBoundary(state, expression, effectiveFunction)
@@ -372,7 +375,7 @@ export function validatePositionalConstructorArguments(state: CheckerState, expr
     let expected: ResolvedType | none = none
     if i < params.length { expected = params[i].type_ }
     actual := checkExpression(state, expression.args[i].value, scope, expected)
-    if expected != none && !isAssignable(actual, expected!) {
+    if expected != none && !isAssignableWithInterfaces(state.result, actual, expected!) {
       typeError(state, "Argument " + string(i + 1) + " has type " + typeName(actual) + "; expected " + typeName(expected!), expression.args[i].span)
     }
   }
@@ -400,7 +403,7 @@ function validateConstructorCallArguments(state: CheckerState, expression: CallE
     used.push(argument.name!)
     expected := params[index].type_
     actual := checkExpression(state, argument.value, scope, optionalResolvedType(expected))
-    if !isAssignable(actual, expected) { typeError(state, "Argument '" + argument.name! + "' has type " + typeName(actual) + "; expected " + typeName(expected), argument.span) }
+    if !isAssignableWithInterfaces(state.result, actual, expected) { typeError(state, "Argument '" + argument.name! + "' has type " + typeName(actual) + "; expected " + typeName(expected), argument.span) }
   }
   for parameter of params {
     if !parameter.hasDefault && !containsString(used, parameter.name) {
@@ -619,7 +622,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
             if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
             else { property.resolvedBinding = binding; property.resolvedType = optionalResolvedType(binding!.type_) }
           }
-          if !isAssignable(property.resolvedType!, parameterType) {
+          if !isAssignableWithInterfaces(state.result, property.resolvedType!, parameterType) {
             typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(parameterType), property.span)
           }
         }
@@ -667,7 +670,7 @@ function checkConstructionFields(state: CheckerState, expression: ConstructExpre
       if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
       else { property.resolvedBinding = binding; property.resolvedType = optionalResolvedType(binding!.type_) }
     }
-    if !isAssignable(property.resolvedType!, expected) {
+    if !isAssignableWithInterfaces(state.result, property.resolvedType!, expected) {
       typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(expected), property.span)
     }
   }

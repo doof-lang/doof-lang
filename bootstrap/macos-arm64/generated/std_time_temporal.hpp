@@ -15,6 +15,9 @@ namespace std_::time::duration {
     struct Duration;
 }
 
+namespace std_::parse::index {
+}
+
 namespace std_::time::temporal {
     struct Instant;
     struct Date;
@@ -345,10 +348,6 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
 namespace doof_parse { using ParsingError = ::std_::parse::types::ParsingError; }
 #include "native_parse.hpp"
 
-namespace std_::parse::index {
-    doof::Result<int32_t, ::std_::parse::types::ParsingError> parseInt(const std::string& value);
-}
-
 namespace doof_time { using Instant = ::std_::time::temporal::Instant; }
 namespace doof_time { using DateTime = ::std_::time::temporal::DateTime; }
 namespace doof_time { using TimeZone = ::std_::time::temporal::TimeZone; }
@@ -361,35 +360,6 @@ namespace doof_time { using Duration = ::std_::time::duration::Duration; }
 #include "doof_time.hpp"
 
 namespace std_::time::temporal {
-    int64_t _systemNanosEpoch();
-    doof::Result<std::shared_ptr<Instant>, std::string> _parseInstant(const std::string& s);
-    std::shared_ptr<DateTime> _instantToDateTime(int64_t nanos);
-    std::shared_ptr<ZonedDateTime> _instantToZonedDateTime(int64_t nanos, const std::shared_ptr<TimeZone>& zone);
-    std::string _formatInstant(int64_t nanos);
-    doof::Result<std::shared_ptr<Date>, std::string> _validateDate(int32_t year, int32_t month, int32_t day);
-    std::shared_ptr<Date> _systemDateUTC();
-    std::shared_ptr<Date> _systemDateInZone(const std::shared_ptr<TimeZone>& zone);
-    doof::Result<std::shared_ptr<Date>, std::string> _parseDate(const std::string& s);
-    DayOfWeek _dateToDayOfWeek(int32_t year, int32_t month, int32_t day);
-    int32_t _dateToDayOfYear(int32_t year, int32_t month, int32_t day);
-    bool _isLeapYear(int32_t year);
-    int32_t _daysInMonth(int32_t year, int32_t month);
-    std::shared_ptr<Date> _dateAddDays(int32_t year, int32_t month, int32_t day, int32_t n);
-    std::shared_ptr<Date> _dateAddMonths(int32_t year, int32_t month, int32_t day, int32_t n);
-    std::shared_ptr<Date> _dateAddYears(int32_t year, int32_t month, int32_t day, int32_t n);
-    int32_t _dateDiff(int32_t y1, int32_t m1, int32_t d1, int32_t y2, int32_t m2, int32_t d2);
-    doof::Result<std::shared_ptr<Time>, std::string> _validateTime(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond);
-    doof::Result<std::shared_ptr<Time>, std::string> _parseTime(const std::string& s);
-    std::shared_ptr<Time> _timeAddNanos(int32_t hour, int32_t minute, int32_t second, int32_t nanosecond, int64_t nanos);
-    doof::Result<std::shared_ptr<DateTime>, std::string> _parseDateTime(const std::string& s);
-    std::shared_ptr<DateTime> _dateTimePlusNanos(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time, int64_t nanos);
-    std::shared_ptr<Instant> _dateTimeToInstant(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time);
-    std::shared_ptr<Instant> _dateTimeToInstantInZone(const std::shared_ptr<Date>& date, const std::shared_ptr<Time>& time, const std::shared_ptr<TimeZone>& zone);
-    std::shared_ptr<ZonedDateTime> _dateTimeAtZone(const std::shared_ptr<DateTime>& dateTime, const std::shared_ptr<TimeZone>& zone);
-    doof::Result<std::shared_ptr<TimeZone>, std::string> _lookupTimeZone(const std::string& id);
-    std::shared_ptr<TimeZone> _systemTimeZone();
-    int32_t _zoneOffsetAt(const std::string& id, int64_t epochSeconds);
-    bool _zoneDSTAt(const std::string& id, int64_t epochSeconds);
     std::string httpWeekdayName(DayOfWeek day);
     std::string httpMonthName(int32_t month);
     std::optional<int32_t> httpMonthNumber(const std::string& text);

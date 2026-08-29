@@ -2311,11 +2311,12 @@ namespace app_src_ast_ {
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs;
     std::shared_ptr<FunctionDeclaration> resolvedFunction;
+    std::string resolvedFunctionModule;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
     std::shared_ptr<ClassDeclaration> resolvedClass;
     doof_header_type_3 resolvedType;
     SourceSpan span;
-    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
+    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::string resolvedFunctionModule, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedFunctionModule(resolvedFunctionModule), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
 };
     struct ArrayLiteral : public std::enable_shared_from_this<ArrayLiteral> {
     std::string kind;
@@ -2998,19 +2999,6 @@ using FileInfo = ::std_::fs::types::FileInfo;
 #include "native_fs.hpp"
 
 namespace std_::fs::index {
-    bool exists(const std::string& path);
-    doof::Result<std::string, ::std_::fs::types::IoError> readText(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> mkdir(const std::string& path);
-    bool isDirectory(const std::string& path);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readDir(const std::string& path);
-    doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlob(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> writeText(const std::string& path, const std::string& content);
-    doof::Result<void, ::std_::fs::types::IoError> rename(const std::string& sourcePath, const std::string& destPath);
-    doof::Result<void, ::std_::fs::types::IoError> remove(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& data);
-    doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> copyPermissions(const std::string& sourcePath, const std::string& destPath);
-    bool isFile(const std::string& path);
     doof::Result<std::string, ::std_::fs::types::IoError> readTextResource(const std::string& path);
 }
 
@@ -3193,7 +3181,6 @@ namespace doof { using Instant = ::std_::time::temporal::Instant; }
 #include "doof_runtime.hpp"
 
 namespace app_src_driver_ {
-    void printFlushed(const std::string& value);
     ::app_src_native_build_driver_::NativeBuildOutputMode nativeBuildOutputModeForCommand(const std::string& command);
     int32_t runProfileTarget(const std::shared_ptr<::app_src_cli_::CliRequest>& request, const std::string& targetPath, const std::string& binaryPath, const std::string& symbolsPath, const std::string& packageRoot, const std::string& buildDirectory, const std::string& traceName, bool consoleTarget);
     std::string hostPlatform();

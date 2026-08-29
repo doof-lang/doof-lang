@@ -1,5 +1,8 @@
 #pragma once
 #include "doof_runtime.hpp"
+namespace std_::json::index {
+}
+
 namespace app_src_resource_state_ {
     struct MaterializedResource;
     struct ResourceState;
@@ -28,11 +31,6 @@ namespace app_src_resource_state_ {
 }
 
 #include "std/json/native_json.hpp"
-
-namespace std_::json::index {
-    doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text);
-    std::string formatJsonValue(const doof::JsonValue& value);
-}
 
 namespace app_src_resource_state_ {
     std::shared_ptr<ResourceState> parseResourceState(const std::string& source);

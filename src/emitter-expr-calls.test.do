@@ -21,3 +21,14 @@ export function testCoercesStructuralInterfaceMethodReturnsToDeclaredType(): non
     "std::visit([&](auto&& _obj) -> double { return _obj->width(); }, value)",
   )
 }
+
+export function testEmitsNamespaceGenericCallsAgainstResolvedOwner(): none {
+  result := compile([
+    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction main(): int => tools.identity<int>(1)" },
+    SourceFile { path: "/tools.do", source: "export function identity<T>(value: T): T => value" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  let mainSource = ""
+  for module of result.emission!.modules { if module.modulePath == "/main.do" { mainSource = module.source } }
+  Assert.stringContains(mainSource, "::app_tools_::identity__int(1)")
+}

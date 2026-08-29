@@ -439,7 +439,7 @@ void checkCasePatterns(const std::shared_ptr<::app_src_checker_state_::CheckerSt
                 }
                 }
                 (type_->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(resolved));
-                if (!typesOverlap(subjectType, resolved)) {
+                if (!typesOverlap(state, subjectType, resolved)) {
                     ::app_src_checker_common_::typeError(state, ((((std::string("Case type pattern \"") + ::app_src_checker_types_::typeName(resolved)) + std::string("\" cannot match subject type \"")) + ::app_src_checker_types_::typeName(subjectType)) + std::string("\"")), type_->span);
                 }
                 if (type_->name != std::string("_")) {
@@ -449,7 +449,7 @@ void checkCasePatterns(const std::shared_ptr<::app_src_checker_state_::CheckerSt
         else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ValuePattern>>(_case_subject)) {
                 const auto& value = std::get<std::shared_ptr<::app_src_ast_::ValuePattern>>(_case_subject);
                 const auto valueType = checkExpression(state, value->value, scope, ::app_src_checker_symbols_::optionalResolvedType(subjectType));
-                if (!typesOverlap(subjectType, valueType)) {
+                if (!typesOverlap(state, subjectType, valueType)) {
                     ::app_src_checker_common_::typeError(state, ((((std::string("Case value pattern of type \"") + ::app_src_checker_types_::typeName(valueType)) + std::string("\" cannot match subject type \"")) + ::app_src_checker_types_::typeName(subjectType)) + std::string("\"")), value->span);
                 }
         }
@@ -957,7 +957,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     (expectedArgument = ::app_src_checker_symbols_::optionalResolvedType(doof::array_at(params, i, "src/checker-expressions", 669)->type_));
                 }
                 const auto actual = checkExpression(state, doof::array_at(actorCreation->args, i, "src/checker-expressions", 670), scope, expectedArgument);
-                if ((!doof::is_null(expectedArgument)) && !::app_src_checker_types_::isAssignable(actual, doof::unwrap_optional(expectedArgument))) {
+                if ((!doof::is_null(expectedArgument)) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, actual, doof::unwrap_optional(expectedArgument))) {
                     ::app_src_checker_common_::typeError(state, (((((std::string("Actor constructor argument ") + doof::to_string((i + 1))) + std::string(" has type ")) + ::app_src_checker_types_::typeName(actual)) + std::string("; expected ")) + ::app_src_checker_types_::typeName(doof::unwrap_optional(expectedArgument))), std::visit([](auto&& _obj) { return _obj->span; }, doof::array_at(actorCreation->args, i, "src/checker-expressions", 672)));
                 }
                 const auto violation = ::app_src_checker_actor_boundary_::findActorBoundaryViolation(state->result, actual);
@@ -1352,7 +1352,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             ::app_src_checker_common_::typeError(state, (std::string("Operator '\?\?' requires a nullable or Result left operand, got ") + ::app_src_checker_types_::typeName(left)), std::visit([](auto&& _obj) { return _obj->span; }, expression->left));
         }
         const auto expectedFallback = fallibleValueType(left);
-        if (((!doof::is_null(expectedFallback)) && !::app_src_checker_types_::isAssignable(right, doof::unwrap_optional(expectedFallback))) && !::app_src_checker_types_::isAssignable(right, left)) {
+        if (((!doof::is_null(expectedFallback)) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, right, doof::unwrap_optional(expectedFallback))) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, right, left)) {
             ::app_src_checker_common_::typeError(state, (((std::string("Cannot use ") + ::app_src_checker_types_::typeName(right)) + std::string(" as fallback for ")) + ::app_src_checker_types_::typeName(left)), std::visit([](auto&& _obj) { return _obj->span; }, expression->right));
         }
         return ::app_src_checker_common_::finish(state, doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(expression), coalescedType(state, left, right));
@@ -1367,7 +1367,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
     }
     if ((operator_ == std::string("==")) || (operator_ == std::string("!="))) {
         validateNoneComparison(state, operator_, left, right, expression->span);
-        if (((std::visit([](auto&& _obj) { return _obj->kind; }, left) != std::string("none")) && (std::visit([](auto&& _obj) { return _obj->kind; }, right) != std::string("none"))) && !typesOverlap(left, right)) {
+        if (((std::visit([](auto&& _obj) { return _obj->kind; }, left) != std::string("none")) && (std::visit([](auto&& _obj) { return _obj->kind; }, right) != std::string("none"))) && !typesOverlap(state, left, right)) {
             ::app_src_checker_common_::typeError(state, (((((std::string("Operator '") + operator_) + std::string("' is not defined for ")) + ::app_src_checker_types_::typeName(left)) + std::string(" and ")) + ::app_src_checker_types_::typeName(right)), expression->span);
         }
         return ::app_src_checker_common_::finish(state, doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(expression), ::app_src_checker_types_::primitive(std::string("bool")));
@@ -1689,7 +1689,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                 ::app_src_checker_common_::typeError(state, ((std::string("Unknown assignment target '") + identifier->name) + std::string("'")), identifier->span);
             } else {
                 ::app_src_checker_common_::validateAssignmentBinding(state, doof::unwrap_optional(target), identifier->span);
-                if ((expression->operator_ == std::string("=")) && !::app_src_checker_types_::isAssignable(value, target->type_)) {
+                if ((expression->operator_ == std::string("=")) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, value, target->type_)) {
                     ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(value)) + std::string(" to ")) + ::app_src_checker_types_::typeName(target->type_)), expression->span);
                 }
             }
@@ -1705,20 +1705,20 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                     if (array->readonly_) {
                         ::app_src_checker_common_::typeError(state, std::string("Cannot assign through readonly array"), expression->span);
                     }
-                    if ((expression->operator_ == std::string("=")) && !::app_src_checker_types_::isAssignable(value, array->elementType)) {
+                    if ((expression->operator_ == std::string("=")) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, value, array->elementType)) {
                         ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(value)) + std::string(" to ")) + ::app_src_checker_types_::typeName(array->elementType)), expression->span);
                     }
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
                     const auto& map = std::get<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject);
                     const auto key = checkExpression(state, index->index, scope, ::app_src_checker_symbols_::optionalResolvedType(map->keyType));
-                    if (!::app_src_checker_types_::isAssignable(key, map->keyType)) {
+                    if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, key, map->keyType)) {
                         ::app_src_checker_common_::typeError(state, (((std::string("Cannot use ") + ::app_src_checker_types_::typeName(key)) + std::string(" as map key ")) + ::app_src_checker_types_::typeName(map->keyType)), std::visit([](auto&& _obj) { return _obj->span; }, index->index));
                     }
                     if (map->readonly_) {
                         ::app_src_checker_common_::typeError(state, std::string("Cannot assign through readonly map"), expression->span);
                     }
-                    if ((expression->operator_ == std::string("=")) && !::app_src_checker_types_::isAssignable(value, map->valueType)) {
+                    if ((expression->operator_ == std::string("=")) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, value, map->valueType)) {
                         ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(value)) + std::string(" to ")) + ::app_src_checker_types_::typeName(map->valueType)), expression->span);
                     }
             }
@@ -1735,7 +1735,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             if (!doof::is_null(fieldBinding)) {
                 ::app_src_checker_common_::validateAssignmentBinding(state, doof::unwrap_optional(fieldBinding), member->span);
             }
-            if ((expression->operator_ == std::string("=")) && !::app_src_checker_types_::isAssignable(value, targetType)) {
+            if ((expression->operator_ == std::string("=")) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, value, targetType)) {
                 ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(value)) + std::string(" to ")) + ::app_src_checker_types_::typeName(targetType)), expression->span);
             }
     }
@@ -1761,12 +1761,12 @@ void validateAssignmentOperator(const std::shared_ptr<::app_src_checker_state_::
             auto _case_subject = target;
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject)) {
                 const auto& result = std::get<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject);
-                if (!::app_src_checker_types_::isAssignable(value, target) && !::app_src_checker_types_::isAssignable(value, result->valueType)) {
+                if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, value, target) && !::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, value, result->valueType)) {
                     ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(value)) + std::string(" through \?\?= to ")) + ::app_src_checker_types_::typeName(target)), span);
                 }
         }
         else {
-                if (!::app_src_checker_types_::isAssignable(value, target)) {
+                if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, value, target)) {
                     ::app_src_checker_common_::typeError(state, (((std::string("Cannot assign ") + ::app_src_checker_types_::typeName(value)) + std::string(" through \?\?= to ")) + ::app_src_checker_types_::typeName(target)), span);
                 }
         }
@@ -1775,7 +1775,7 @@ void validateAssignmentOperator(const std::shared_ptr<::app_src_checker_state_::
     }
     const auto base = doof::string_substring(operator_, 0, (static_cast<int32_t>(operator_.size()) - 1));
     const auto result = binaryOperatorType(state, base, target, value, span);
-    if (!::app_src_checker_types_::isAssignable(result, target)) {
+    if (!::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, result, target)) {
         ::app_src_checker_common_::typeError(state, (((((std::string("Operator '") + operator_) + std::string("' produces ")) + ::app_src_checker_types_::typeName(result)) + std::string(", which cannot be assigned to ")) + ::app_src_checker_types_::typeName(target)), span);
     }
 }
@@ -1899,7 +1899,7 @@ bool orderedTypes(const std::variant<std::shared_ptr<::app_src_semantic_::Primit
     }
     return false;
 }
-bool typesOverlap(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& left, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& right) {
+bool typesOverlap(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& left, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& right) {
     if ((std::visit([](auto&& _obj) { return _obj->kind; }, left) == std::string("unknown")) || (std::visit([](auto&& _obj) { return _obj->kind; }, right) == std::string("unknown"))) {
         return true;
     }
@@ -1909,7 +1909,7 @@ bool typesOverlap(const std::variant<std::shared_ptr<::app_src_semantic_::Primit
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
             const auto& _iterable_104 = union_->types;
             for (const auto& member : *_iterable_104) {
-                if (typesOverlap(member, right)) {
+                if (typesOverlap(state, member, right)) {
                     return true;
                 }
             }
@@ -1924,7 +1924,7 @@ bool typesOverlap(const std::variant<std::shared_ptr<::app_src_semantic_::Primit
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
             const auto& _iterable_106 = union_->types;
             for (const auto& member : *_iterable_106) {
-                if (typesOverlap(left, member)) {
+                if (typesOverlap(state, left, member)) {
                     return true;
                 }
             }
@@ -1933,14 +1933,14 @@ bool typesOverlap(const std::variant<std::shared_ptr<::app_src_semantic_::Primit
     else {
     }
     }
-    return ((::app_src_checker_types_::isAssignable(left, right) || ::app_src_checker_types_::isAssignable(right, left)) || (::app_src_checker_types_::isNumeric(left) && ::app_src_checker_types_::isNumeric(right)));
+    return ((::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, left, right) || ::app_src_checker_interfaces_::isAssignableWithInterfaces(state->result, right, left)) || (::app_src_checker_types_::isNumeric(left) && ::app_src_checker_types_::isNumeric(right)));
 }
 void validateCaseRangeBound(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::variant<std::monostate, std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>& bound, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& subjectType, const std::shared_ptr<::app_src_semantic_::Scope>& scope, ::app_src_ast_::SourceSpan span) {
     if (doof::is_null(bound)) {
         return;
     }
     const auto boundType = checkExpression(state, doof::unwrap_optional(bound), scope, ::app_src_checker_symbols_::optionalResolvedType(subjectType));
-    if ((!isInteger(subjectType) || !isInteger(boundType)) || !typesOverlap(subjectType, boundType)) {
+    if ((!isInteger(subjectType) || !isInteger(boundType)) || !typesOverlap(state, subjectType, boundType)) {
         ::app_src_checker_common_::typeError(state, ((((std::string("Case range bound of type \"") + ::app_src_checker_types_::typeName(boundType)) + std::string("\" cannot match subject type \"")) + ::app_src_checker_types_::typeName(subjectType)) + std::string("\"")), span);
     }
 }

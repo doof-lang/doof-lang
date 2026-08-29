@@ -137,18 +137,6 @@ std::tuple<std::shared_ptr<ChannelSender__union_std___http__websocket_WebSocketS
     const auto native = ::doof_event::NativeChannel::createChannel(capacity, actualHighWater, actualLowWater, keepsAlive);
     return std::make_tuple(std::make_shared<ChannelSender__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_>(native), std::make_shared<ChannelReceiver__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_>(native));
 }
-void _runMainEventLoop() {
-    ::doof_event::runMainEventLoop();
-}
-int32_t _drainMainEventLoop() {
-    return ::doof_event::drainMainEventLoop();
-}
-void _setMainEventWakeHandler(const doof::callback<void()>& handler) {
-    ::doof_event::setMainEventWakeCallback(handler);
-}
-void _clearMainEventWakeHandler() {
-    ::doof_event::clearMainEventWakeHandler();
-}
 int32_t _trySendChannelMessage__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(const std::shared_ptr<::doof_event::NativeChannel>& channel, std::variant<std::shared_ptr<::std_::http::websocket::WebSocketOpen>, std::shared_ptr<::std_::http::websocket::WebSocketText>, std::shared_ptr<::std_::http::websocket::WebSocketBinary>, std::shared_ptr<::std_::http::websocket::WebSocketWritable>, std::shared_ptr<::std_::http::websocket::WebSocketClose>, std::shared_ptr<::std_::http::websocket::WebSocketError>> value, bool hasKey, const std::string& key) {
     return ::doof_event::trySendChannelMessage(channel, value, hasKey, key);
 }

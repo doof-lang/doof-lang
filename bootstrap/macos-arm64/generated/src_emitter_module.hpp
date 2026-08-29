@@ -638,7 +638,6 @@ namespace app_src_emitter_module_ {
     ModuleGraphEmission(std::shared_ptr<std::vector<std::shared_ptr<ModuleEmission>>> modules, std::shared_ptr<std::vector<std::shared_ptr<CoverageModuleMetadata>>> coverageModules, std::string wasmSupportSource, std::shared_ptr<std::vector<std::string>> wasmExportNames) : modules(modules), coverageModules(coverageModules), wasmSupportSource(wasmSupportSource), wasmExportNames(wasmExportNames) {}
 };
     struct CxxModuleEmitter : public std::enable_shared_from_this<CxxModuleEmitter> {
-    std::string moduleName;
     std::string headerNameOverride;
     std::string sourceNameOverride;
     std::string namespaceNameOverride;
@@ -653,10 +652,8 @@ namespace app_src_emitter_module_ {
     int32_t coverageModuleId;
     std::shared_ptr<std::vector<std::string>> initializationModuleNamespaces;
     std::shared_ptr<::app_src_json_semantics_::JsonEligibilityCache> jsonEligibility;
-    std::shared_ptr<std::vector<std::string>> jsonSerializationKeys;
-    std::shared_ptr<std::vector<std::string>> jsonDeserializationKeys;
     std::shared_ptr<doof::ordered_map<std::string, std::string>> sourcePaths;
-    CxxModuleEmitter(std::string moduleName, std::string headerNameOverride, std::string sourceNameOverride, std::string namespaceNameOverride, std::string modulePath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> namespaceImports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> imports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>> moduleSurfaces, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>> worldviewModules, std::shared_ptr<std::vector<std::string>> worldviewInterfaceKeys, std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan> instantiations, int32_t coverageModuleId, std::shared_ptr<std::vector<std::string>> initializationModuleNamespaces, std::shared_ptr<::app_src_json_semantics_::JsonEligibilityCache> jsonEligibility, std::shared_ptr<std::vector<std::string>> jsonSerializationKeys, std::shared_ptr<std::vector<std::string>> jsonDeserializationKeys, std::shared_ptr<doof::ordered_map<std::string, std::string>> sourcePaths) : moduleName(moduleName), headerNameOverride(headerNameOverride), sourceNameOverride(sourceNameOverride), namespaceNameOverride(namespaceNameOverride), modulePath(modulePath), allPrograms(allPrograms), namespaceImports(namespaceImports), imports(imports), moduleSurfaces(moduleSurfaces), worldviewModules(worldviewModules), worldviewInterfaceKeys(worldviewInterfaceKeys), instantiations(instantiations), coverageModuleId(coverageModuleId), initializationModuleNamespaces(initializationModuleNamespaces), jsonEligibility(jsonEligibility), jsonSerializationKeys(jsonSerializationKeys), jsonDeserializationKeys(jsonDeserializationKeys), sourcePaths(sourcePaths) {}
+    CxxModuleEmitter(std::string headerNameOverride, std::string sourceNameOverride, std::string namespaceNameOverride, std::string modulePath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> namespaceImports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> imports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>> moduleSurfaces, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_worldview_::WorldviewModule>>> worldviewModules, std::shared_ptr<std::vector<std::string>> worldviewInterfaceKeys, std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan> instantiations, int32_t coverageModuleId, std::shared_ptr<std::vector<std::string>> initializationModuleNamespaces, std::shared_ptr<::app_src_json_semantics_::JsonEligibilityCache> jsonEligibility, std::shared_ptr<doof::ordered_map<std::string, std::string>> sourcePaths) : headerNameOverride(headerNameOverride), sourceNameOverride(sourceNameOverride), namespaceNameOverride(namespaceNameOverride), modulePath(modulePath), allPrograms(allPrograms), namespaceImports(namespaceImports), imports(imports), moduleSurfaces(moduleSurfaces), worldviewModules(worldviewModules), worldviewInterfaceKeys(worldviewInterfaceKeys), instantiations(instantiations), coverageModuleId(coverageModuleId), initializationModuleNamespaces(initializationModuleNamespaces), jsonEligibility(jsonEligibility), sourcePaths(sourcePaths) {}
     std::shared_ptr<ModuleEmission> emit(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& entryMode);
     std::shared_ptr<ModuleEmission> emitPlanned(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_emitter_header_::HeaderPlan>& plan, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_header_::HeaderSection>>>& sections, const std::string& entryMode);
 };
@@ -875,11 +872,12 @@ namespace app_src_ast_ {
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs;
     std::shared_ptr<FunctionDeclaration> resolvedFunction;
+    std::string resolvedFunctionModule;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
     std::shared_ptr<ClassDeclaration> resolvedClass;
     doof_header_type_3 resolvedType;
     SourceSpan span;
-    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
+    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::string resolvedFunctionModule, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedFunctionModule(resolvedFunctionModule), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
 };
     struct ArrayLiteral : public std::enable_shared_from_this<ArrayLiteral> {
     std::string kind;
@@ -1442,7 +1440,6 @@ namespace app_src_emitter_context_ {
     SourceLocationSpanOverride(::app_src_ast_::SourceSpan span) : span(span) {}
 };
     std::string generatedLineDirective();
-    std::shared_ptr<EmitContext> createEmitContext(const std::shared_ptr<::app_src_ast_::Program>& program);
     std::shared_ptr<EmitContext> createEmitContextForModule(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& modulePath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& allPrograms);
 }
 
@@ -1530,7 +1527,6 @@ namespace app_src_emitter_module_ {
     bool isCoverageEligible(const std::string& modulePath);
     std::shared_ptr<std::vector<int32_t>> sortedCoverageLines(const std::shared_ptr<std::vector<int32_t>>& lines);
     void configureInstantiationRegistry(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& plan);
-    void configureJsonDemandRegistry(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<std::vector<std::string>>& serializationKeys, const std::shared_ptr<std::vector<std::string>>& deserializationKeys);
     void addConcreteHeaderDeclarations(const std::shared_ptr<::app_src_emitter_header_::HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan>& instantiations, const std::shared_ptr<::app_src_ast_::Program>& program, const std::shared_ptr<std::vector<std::string>>& interfaceKeys);
     bool programDeclares(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& name);
     std::string headerDeclarationName(const doof_header_type_11& statement);
@@ -1550,7 +1546,6 @@ namespace app_src_emitter_module_ {
     std::shared_ptr<std::vector<std::string>> planModuleInitializationOrder(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& entry, const std::string& entryMode);
     void visitInitializationModule(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path, const std::string& entry, const std::string& entryMode, const std::shared_ptr<std::vector<std::string>>& visiting, const std::shared_ptr<std::vector<std::string>>& visited, const std::shared_ptr<std::vector<std::string>>& order);
     std::shared_ptr<std::vector<std::string>> moduleInitializationNamespaces(const std::shared_ptr<std::vector<std::string>>& paths);
-    std::shared_ptr<ModuleEmission> emitModule(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& moduleName);
     std::string emitSourceStatement(const doof_header_type_11& statement, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string emitModuleStorage(const doof_header_type_13& declaration, const doof_header_type_14& value, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     doof_header_type_12 moduleValueType(const doof_header_type_13& declaration);

@@ -165,6 +165,15 @@ export function functionDeclarationForCallee(callee: Expression, calleeType: Res
       }
     }
     member: MemberExpression -> {
+      if member.resolvedNamespaceSymbol != none {
+        declaration := declarationFor(result, member.resolvedNamespaceSymbol!)
+        if declaration != none {
+          case declaration! {
+            fn: FunctionDeclaration -> { return fn }
+            _ -> { }
+          }
+        }
+      }
       objectType := member.object.resolvedType
       if objectType != none {
         case objectType! {
@@ -212,6 +221,30 @@ export function functionDeclarationForCallee(callee: Expression, calleeType: Res
     _ -> { }
   }
   return none
+}
+
+export function functionModuleForCallee(callee: Expression, fallback: string): string {
+  case callee {
+    identifier: Identifier -> {
+      if identifier.resolvedBinding != none {
+        if identifier.resolvedBinding!.symbol != none { return identifier.resolvedBinding!.symbol!.module }
+        if identifier.resolvedBinding!.module != "" { return identifier.resolvedBinding!.module }
+      }
+    }
+    member: MemberExpression -> {
+      if member.resolvedNamespaceSymbol != none { return member.resolvedNamespaceSymbol!.module }
+      if member.object.resolvedType != none {
+        case member.object.resolvedType! {
+          class_: ClassType -> { return class_.symbol.module }
+          actor: ActorType -> { return actor.innerClass.symbol.module }
+          interface_: InterfaceType -> { return interface_.symbol.module }
+          _ -> { }
+        }
+      }
+    }
+    _ -> { }
+  }
+  return fallback
 }
 
 export function constructorForClass(class_: ClassType, result: AnalysisResult): FunctionDeclaration | none {

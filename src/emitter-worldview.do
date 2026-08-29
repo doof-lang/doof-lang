@@ -10,9 +10,7 @@ import {
 } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { InstantiationPlan, interfaceInstantiationKey } from "./emitter-monomorphize"
-import {
-  collectWorldviewBlockExpressions, collectWorldviewNestedExpressions, collectWorldviewStatementExpressions,
-} from "./emitter-worldview-walk"
+import { collectBlockExpressions, collectNestedExpressions, collectStatementExpressions } from "./ast-walk"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, PromiseType,
   ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType,
@@ -66,7 +64,7 @@ export function planWorldview(
   for statement of root!.program.statements {
     collectStatementSurface(statement, rootPath, index, false)
     let expressions: Expression[] = []
-    collectWorldviewStatementExpressions(statement, expressions)
+    collectStatementExpressions(statement, expressions)
     for expression of expressions { collectExpressionTree(expression, rootPath, index) }
   }
   // The root header owns all of its declarations, including every native
@@ -199,7 +197,7 @@ function collectExpressionTree(
       }
       _ -> { }
     }
-    collectWorldviewNestedExpressions(current, expressions)
+    collectNestedExpressions(current, expressions)
   }
 }
 
@@ -424,7 +422,7 @@ function collectFunctionBody(
 ): none {
   let expressions: Expression[] = []
   case fn.body {
-    block: Block -> { collectWorldviewBlockExpressions(block, expressions) }
+    block: Block -> { collectBlockExpressions(block, expressions) }
     expression: Expression -> { expressions.push(expression) }
   }
   for expression of expressions { collectExpressionTree(expression, rootPath, index) }

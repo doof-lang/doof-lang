@@ -587,11 +587,12 @@ namespace app_src_ast_ {
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs;
     std::shared_ptr<FunctionDeclaration> resolvedFunction;
+    std::string resolvedFunctionModule;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
     std::shared_ptr<ClassDeclaration> resolvedClass;
     doof_header_type_3 resolvedType;
     SourceSpan span;
-    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
+    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::string resolvedFunctionModule, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedFunctionModule(resolvedFunctionModule), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
 };
     struct ArrayLiteral : public std::enable_shared_from_this<ArrayLiteral> {
     std::string kind;
@@ -1145,9 +1146,9 @@ namespace app_src_ast_ {
 }
 
 namespace app_src_checker_types_ {
-    doof_header_type_9 noneType();
     doof_header_type_9 substituteTypeParams(const doof_header_type_9& type_, const std::shared_ptr<std::vector<std::string>>& names, const std::shared_ptr<std::vector<doof_header_type_9>>& arguments);
     std::shared_ptr<::app_src_semantic_::ClassType> classType(const std::string& name, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::shared_ptr<std::vector<doof_header_type_9>>& typeArgs);
+    std::shared_ptr<::app_src_semantic_::InterfaceType> interfaceType(const std::string& name, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::shared_ptr<std::vector<doof_header_type_9>>& typeArgs);
     std::string typeName(const doof_header_type_9& resolvedType);
     bool sameType(const doof_header_type_9& left, const doof_header_type_9& right);
     bool isAssignable(const doof_header_type_9& value, const doof_header_type_9& target);
@@ -1169,10 +1170,15 @@ namespace app_src_checker_interfaces_ {
     void registerConcreteInterfaceImplementations(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::InterfaceType>& interface_);
     bool concreteTypes(const std::shared_ptr<std::vector<doof_header_type_11>>& types);
     bool classSatisfiesConcreteInterface(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::shared_ptr<::app_src_semantic_::ClassType>& classType_, const std::shared_ptr<::app_src_semantic_::InterfaceType>& interfaceType_);
+    bool classSatisfiesConcreteInterfaceSeen(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::shared_ptr<::app_src_semantic_::ClassType>& classType_, const std::shared_ptr<::app_src_semantic_::InterfaceType>& interfaceType_, const std::shared_ptr<std::vector<std::string>>& seen);
     bool classSatisfiesInterface(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::Symbol>& classSymbol, const std::shared_ptr<::app_src_semantic_::Symbol>& interfaceSymbol);
-    bool sameConcreteMethodType(const doof_header_type_11& actual, const doof_header_type_11& expected);
+    bool isAssignableWithInterfaces(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const doof_header_type_11& value, const doof_header_type_11& target);
+    bool isAssignableWithInterfacesSeen(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const doof_header_type_11& value, const doof_header_type_11& target, const std::shared_ptr<std::vector<std::string>>& seen);
+    bool compatibleConcreteMethodType(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const doof_header_type_11& actual, const doof_header_type_11& expected, const std::shared_ptr<std::vector<std::string>>& seen);
+    std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> resolvedClassFieldType(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_ast_::ClassField>& field, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::shared_ptr<std::vector<std::string>>& typeParams);
+    std::string concreteInterfacePairKey(const std::shared_ptr<::app_src_semantic_::ClassType>& class_, const std::shared_ptr<::app_src_semantic_::InterfaceType>& interface_);
+    bool containsString(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);
     std::shared_ptr<::app_src_ast_::ClassField> findClassField(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ClassField>>>& fields, const std::string& name);
     std::shared_ptr<::app_src_ast_::FunctionDeclaration> findClassMethod(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>>& methods, const std::string& name, bool static_);
-    bool sameFunctionSignature(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& classMethod, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& interfaceMethod, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::Symbol>& classSymbol, const std::shared_ptr<::app_src_semantic_::Symbol>& interfaceSymbol);
     std::shared_ptr<::app_src_analyzer_::ModuleInfo> classModuleFor(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol);
 }

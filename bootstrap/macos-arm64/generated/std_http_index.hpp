@@ -941,11 +941,6 @@ namespace std_::http::index {
 
 #include "std/json/native_json.hpp"
 
-namespace std_::json::index {
-    doof::Result<doof::JsonValue, std::string> parseJsonValue(const std::string& text);
-    std::string formatJsonValue(const doof::JsonValue& value);
-}
-
 namespace doof_blob { using Endian = ::std_::blob::types::Endian; }
 namespace doof_blob { using TextEncoding = ::std_::blob::types::TextEncoding; }
 namespace doof_blob { using EncodingError = ::std_::blob::types::EncodingError; }
@@ -992,19 +987,6 @@ using FileInfo = ::std_::fs::types::FileInfo;
 #include "native_fs.hpp"
 
 namespace std_::fs::index {
-    bool exists(const std::string& path);
-    doof::Result<std::string, ::std_::fs::types::IoError> readText(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> mkdir(const std::string& path);
-    bool isDirectory(const std::string& path);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>>, ::std_::fs::types::IoError> readDir(const std::string& path);
-    doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBlob(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> writeText(const std::string& path, const std::string& content);
-    doof::Result<void, ::std_::fs::types::IoError> rename(const std::string& sourcePath, const std::string& destPath);
-    doof::Result<void, ::std_::fs::types::IoError> remove(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& data);
-    doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(const std::string& path);
-    doof::Result<void, ::std_::fs::types::IoError> copyPermissions(const std::string& sourcePath, const std::string& destPath);
-    bool isFile(const std::string& path);
     struct BlockReadStream : public std::enable_shared_from_this<BlockReadStream> {
     std::shared_ptr<::NativeBlobReadStream> native;
     std::shared_ptr<std::vector<uint8_t>> currentValue;
@@ -1025,10 +1007,6 @@ namespace doof_event { using Duration = ::std_::time::duration::Duration; }
 #include "native_event.hpp"
 
 namespace std_::event::index {
-    void _runMainEventLoop();
-    int32_t _drainMainEventLoop();
-    void _setMainEventWakeHandler(const doof::callback<void()>& handler);
-    void _clearMainEventWakeHandler();
     int32_t _trySendChannelMessage__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(const std::shared_ptr<::doof_event::NativeChannel>& channel, doof_header_type_1 value, bool hasKey, const std::string& key);
     void _registerChannelReceiverMessage__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(const std::shared_ptr<::doof_event::NativeChannel>& channel, const doof::callback<void(doof_header_type_2)>& handler);
     void _registerChannelReceiverMessage__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(const std::shared_ptr<::doof_event::NativeChannel>& channel, const doof::callback<void(doof_header_type_1)>& handler);
@@ -1118,10 +1096,6 @@ using Duration = ::std_::time::duration::Duration;
 #include "native_os.hpp"
 
 namespace std_::os::index {
-    doof::Result<std::string, std::string> _env(const std::string& name);
-    int32_t _pid();
-    std::string _platform();
-    std::string _architecture();
     struct ExecOptions : public std::enable_shared_from_this<ExecOptions> {
     std::optional<std::string> cwd;
     std::shared_ptr<doof::ordered_map<std::string, std::string>> env;

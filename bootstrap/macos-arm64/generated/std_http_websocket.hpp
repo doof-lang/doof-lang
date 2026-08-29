@@ -400,10 +400,6 @@ namespace doof_event { using Duration = ::std_::time::duration::Duration; }
 #include "native_event.hpp"
 
 namespace std_::event::index {
-    void _runMainEventLoop();
-    int32_t _drainMainEventLoop();
-    void _setMainEventWakeHandler(const doof::callback<void()>& handler);
-    void _clearMainEventWakeHandler();
     int32_t _trySendChannelMessage__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(const std::shared_ptr<::doof_event::NativeChannel>& channel, doof_header_type_1 value, bool hasKey, const std::string& key);
     void _registerChannelReceiverMessage__union_std___http__websocket_WebSocketSendText__std___http__websocket_WebSocketSendBinary__std___http__websocket_WebSocketPing__std___http__websocket_WebSocketCloseCommand_(const std::shared_ptr<::doof_event::NativeChannel>& channel, const doof::callback<void(doof_header_type_2)>& handler);
     void _registerChannelReceiverMessage__union_std___http__websocket_WebSocketOpen__std___http__websocket_WebSocketText__std___http__websocket_WebSocketBinary__std___http__websocket_WebSocketWritable__std___http__websocket_WebSocketClose__std___http__websocket_WebSocketError_(const std::shared_ptr<::doof_event::NativeChannel>& channel, const doof::callback<void(doof_header_type_1)>& handler);
