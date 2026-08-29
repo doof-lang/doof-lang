@@ -29,7 +29,6 @@ export class WorldviewPlan {
 }
 
 class WorldviewSelection {
-  path: string
   statements: Statement[] = []
 }
 
@@ -45,7 +44,6 @@ export class WorldviewGraphIndex {
 class WorldviewIndex {
   graph: WorldviewGraphIndex
   selections: Map<string, WorldviewSelection> = {}
-  selectionOrder: WorldviewSelection[] = []
   selectedKeys: Set<string> = []
   interfaceKeys: string[] = []
   interfaceKeySet: Set<string> = []
@@ -488,9 +486,8 @@ function findSymbol(index: WorldviewIndex, modulePath: string, name: string): Sy
 function selectionFor(index: WorldviewIndex, path: string): WorldviewSelection {
   existing := findSelection(index, path)
   if existing != none { return existing! }
-  selection := WorldviewSelection { path }
+  selection := WorldviewSelection {}
   index.selections.set(path, selection)
-  index.selectionOrder.push(selection)
   return selection
 }
 

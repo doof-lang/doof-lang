@@ -99,3 +99,17 @@ export function testPreservesNonPathNativeBuildOptions(): none {
   Assert.equal(project.nativeBuild.defines[0], "PATH_NATIVE=1")
   Assert.equal(project.nativeBuild.compilerFlags[0], "-Wconversion")
 }
+
+export function testDeduplicatesNativeOptionsAcrossReachedPackages(): none {
+  first := packageInput("/vendor/alpha", "/cache/alpha")
+  first.manifest.nativeBuild.frameworks.push("CoreFoundation")
+  second := packageInput("/vendor/beta", "/cache/beta")
+  second.manifest.nativeBuild.frameworks.push("CoreFoundation")
+  second.manifest.nativeBuild.frameworks.push("Foundation")
+
+  project := planProjectEmission(ModuleGraphEmission {}, [first, second])
+
+  Assert.equal(project.nativeBuild.frameworks.length, 2)
+  Assert.equal(project.nativeBuild.frameworks[0], "CoreFoundation")
+  Assert.equal(project.nativeBuild.frameworks[1], "Foundation")
+}

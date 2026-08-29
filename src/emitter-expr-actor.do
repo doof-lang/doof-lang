@@ -1,7 +1,7 @@
 // Actor, Promise, async-call, and retirement lowering.
 
 import { ActorCreationExpression, AsyncExpression, Block, CallExpression, ClassDeclaration, ExportDeclaration, Expression, FunctionDeclaration, MemberExpression, RetireExpression, Statement } from "./ast"
-import { ActorType, FunctionType, PromiseType, ResolvedType, NoneType } from "./semantic"
+import { ActorType, FunctionType, PromiseType, ResolvedType } from "./semantic"
 import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"

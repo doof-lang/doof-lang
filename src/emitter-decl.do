@@ -14,7 +14,7 @@ import {
 import { EmitContext, recordCoverageLine, sourceLineDirective } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
-import { borrowParameterType, emitClassInnerType, emitContextReturnType, emitContextType, emitParameterType, emitReturnType, emitType, specializeEmitType } from "./emitter-types"
+import { borrowParameterType, emitClassInnerType, emitContextReturnType, emitContextType, emitParameterType, emitReturnType, specializeEmitType } from "./emitter-types"
 import { scanCapturedMutablesInBlock, scanCapturedMutablesInExpression } from "./emitter-expr-lambda"
 import { moduleNamespace } from "./emitter-names"
 import { MethodInstantiation } from "./emitter-monomorphize"

@@ -10,7 +10,7 @@ import {
   IntLiteral, LongLiteral, ReadonlyDeclaration, Statement, TryStatement, TypeAliasDeclaration,
 } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { createEmitContext, createEmitContextForModule, EmitContext, EmitModuleSurface, generatedLineDirective } from "./emitter-context"
+import { createEmitContextForModule, EmitContext, EmitModuleSurface, generatedLineDirective } from "./emitter-context"
 import { emitClassDeclaration, emitClassDestructorDefinition, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitModuleValueStorage, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions } from "./emitter-decl"
 import { emitGeneratedJsonMethods, emitInterfaceJsonDefinition } from "./emitter-json"
 import { emitMetadataDefinition } from "./emitter-metadata"
@@ -19,7 +19,7 @@ import { emitContextType } from "./emitter-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { HeaderPlan, HeaderSection, planHeader, renderProjectedHeader, reserveHeaderNamespaceName } from "./emitter-header"
 import { indexWorldviewGraph, planWorldview, WorldviewModule } from "./emitter-worldview"
-import { buildInstantiationPlan, classInstantiationKey, ClassInstantiation, FunctionInstantiation, InstantiationPlan, MethodInstantiation } from "./emitter-monomorphize"
+import { buildInstantiationPlan, classInstantiationKey, InstantiationPlan, MethodInstantiation } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
 import { sha256HexString } from "std/crypto"
 import { JsonEligibilityCache } from "./json-semantics"
@@ -87,8 +87,7 @@ export class ModuleGraphEmission {
   let wasmExportNames: string[] = []
 }
 
-export class CxxModuleEmitter {
-  moduleName: string
+class CxxModuleEmitter {
   headerNameOverride: string = ""
   sourceNameOverride: string = ""
   namespaceNameOverride: string = ""
@@ -103,18 +102,15 @@ export class CxxModuleEmitter {
   coverageModuleId: int = -1
   initializationModuleNamespaces: string[] = []
   jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}
-  jsonSerializationKeys: string[] = []
-  jsonDeserializationKeys: string[] = []
   sourcePaths: Map<string, string> = {}
 
   emit(program: Program, entryMode: string = "executable"): ModuleEmission {
-    context := if modulePath == "" then createEmitContext(program) else createEmitContextForModule(program, modulePath, allPrograms)
+    context := createEmitContextForModule(program, modulePath, allPrograms)
     context.namespaceImports = namespaceImports
     context.sourcePath = sourcePathFor(sourcePaths, context.modulePath)
     context.imports = imports
     context.moduleSurfaces = moduleSurfaces
     context.jsonEligibility = jsonEligibility
-    configureJsonDemandRegistry(context, jsonSerializationKeys, jsonDeserializationKeys)
     if coverageModuleId >= 0 {
       context.coverageEnabled = true
       context.coverageModuleId = coverageModuleId
@@ -130,14 +126,13 @@ export class CxxModuleEmitter {
       sectionContext.sourcePath = sourcePathFor(sourcePaths, view.path)
       sectionContext.moduleSurfaces = moduleSurfaces
       sectionContext.jsonEligibility = jsonEligibility
-      configureJsonDemandRegistry(sectionContext, jsonSerializationKeys, jsonDeserializationKeys)
       if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
       sectionPlan := planHeader(view.program, sectionContext, if instantiations == none then [] else instantiations!.methods)
       if instantiations != none {
         addConcreteHeaderDeclarations(sectionPlan, sectionContext, instantiations!, view.program, worldviewInterfaceKeys)
       }
       sectionNamespace := if view.path == modulePath
-        then if namespaceNameOverride != "" then namespaceNameOverride else if modulePath == "" then moduleName + "_" else moduleNamespace(view.path)
+        then namespaceNameOverride
         else moduleNamespace(view.path)
       sections.push(HeaderSection { namespaceName: sectionNamespace, plan: sectionPlan })
       if view.path == modulePath { plan = sectionPlan }
@@ -148,9 +143,9 @@ export class CxxModuleEmitter {
   }
 
   private emitPlanned(programs: Program[], context: EmitContext, plan: HeaderPlan, sections: HeaderSection[], entryMode: string): ModuleEmission {
-    headerName := if headerNameOverride == "" then moduleName + ".hpp" else headerNameOverride
-    sourceName := if sourceNameOverride == "" then moduleName + ".cpp" else sourceNameOverride
-    namespaceName := if namespaceNameOverride == "" then moduleName + "_" else namespaceNameOverride
+    headerName := headerNameOverride
+    sourceName := sourceNameOverride
+    namespaceName := namespaceNameOverride
     header := renderProjectedHeader(sections)
     sourceBuilder := StringBuilder()
     sourceBuilder.append("#include \"" + headerName + "\"\n\n")
@@ -392,7 +387,6 @@ export function emitModuleGraph(
       continue
     }
     emitter := CxxModuleEmitter {
-      moduleName: module.namespaceName,
       headerNameOverride: module.headerName,
       sourceNameOverride: module.sourceName,
       namespaceNameOverride: module.namespaceName,
@@ -544,11 +538,6 @@ function configureInstantiationRegistry(context: EmitContext, plan: Instantiatio
   }
   for key of plan.jsonSerializationKeys { context.jsonSerializationKeys.push(key) }
   for key of plan.jsonDeserializationKeys { context.jsonDeserializationKeys.push(key) }
-}
-
-function configureJsonDemandRegistry(context: EmitContext, serializationKeys: string[], deserializationKeys: string[]): none {
-  for key of serializationKeys { context.jsonSerializationKeys.push(key) }
-  for key of deserializationKeys { context.jsonDeserializationKeys.push(key) }
 }
 
 function addConcreteHeaderDeclarations(
@@ -804,10 +793,6 @@ function moduleInitializationNamespaces(paths: string[]): string[] {
   let result: string[] = []
   for path of paths { result.push(moduleNamespace(path)) }
   return result
-}
-
-export function emitModule(program: Program, moduleName: string = "main"): ModuleEmission {
-  return CxxModuleEmitter { moduleName }.emit(program, "executable")
 }
 
 function emitSourceStatement(statement: Statement, context: EmitContext): string {

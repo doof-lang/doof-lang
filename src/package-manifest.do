@@ -440,13 +440,6 @@ function isHexString(value: string, length: int): bool {
   return true
 }
 
-/** Merges normalized package plans while preserving first-seen ordering. */
-export function mergeNativeBuildPlans(plans: NativeBuildPlan[]): NativeBuildPlan {
-  merged := NativeBuildPlan {}
-  for plan of plans { appendNativeBuild(merged, plan) }
-  return merged
-}
-
 function parseManifestNativeBuild(
   root: JsonObject,
   manifestPath: string,

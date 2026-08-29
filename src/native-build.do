@@ -32,9 +32,6 @@ export class NativeBuildSupportFile {
   readonly content: string
 }
 
-/** One immutable serial work queue assigned to a native compiler actor. */
-export type NativeCompileTaskBatch = readonly NativeCompileTask[]
-
 /** A complete native compiler invocation for one emitted executable. */
 export class NativeCompilePlan {
   compiler: string
@@ -53,21 +50,6 @@ export function isMsvcCompiler(compiler: string): bool {
   for index of 0..<normalized.length { if normalized[index] == '/' { slash = index } }
   name := if slash < 0 then normalized else normalized.substring(slash + 1, normalized.length)
   return name == "cl" || name == "cl.exe"
-}
-
-/** Distributes object tasks across a bounded set of serial worker batches. */
-export function batchNativeCompileTasks(
-  tasks: NativeCompileTask[],
-  maximumWorkers: int = 4,
-): readonly NativeCompileTaskBatch[] {
-  if tasks.length == 0 || maximumWorkers <= 0 { return [] }
-  workerCount := if tasks.length < maximumWorkers then tasks.length else maximumWorkers
-  let batches: NativeCompileTask[][] = []
-  while batches.length < workerCount { batches.push([]) }
-  for index of 0..<tasks.length { batches[index % workerCount].push(tasks[index]) }
-  let readonlyBatches: NativeCompileTaskBatch[] = []
-  for batch of batches { readonlyBatches.push(batch.drainToReadonly()) }
-  return readonlyBatches.drainToReadonly()
 }
 
 /**

@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 import {
   NATIVE_BUILD_STATE_VERSION, NativeBuildState, NativeInputSignature, NativeTaskState,
-  findNativeTaskState, parseMakeDependencies, parseMsvcDependencies, parseNativeBuildState, renderNativeBuildState,
+  parseMakeDependencies, parseMsvcDependencies, parseNativeBuildState, renderNativeBuildState,
 } from "./native-build-state"
 
 export function testParsesMakeDependenciesWithContinuationsAndEscapedSpaces(): none {
@@ -38,10 +38,10 @@ export function testRoundTripsVersionedNativeBuildState(): none {
   }
   parsed := parseNativeBuildState(renderNativeBuildState(state))
   Assert.equal(parsed != none, true)
-  task := findNativeTaskState(parsed!, "object:main")
-  Assert.equal(task != none, true)
-  Assert.equal(task!.inputs[0].signature, "def")
-  Assert.equal(task!.inputs[0].size, 12L)
+  Assert.equal(parsed!.tasks.length, 1)
+  Assert.equal(parsed!.tasks[0].id, "object:main")
+  Assert.equal(parsed!.tasks[0].inputs[0].signature, "def")
+  Assert.equal(parsed!.tasks[0].inputs[0].size, 12L)
   Assert.equal(parsed!.version, NATIVE_BUILD_STATE_VERSION)
   Assert.equal(parseNativeBuildState("{\"version\":999}"), none)
   Assert.equal(parseNativeBuildState("not json"), none)

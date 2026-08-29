@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 
 import { ModuleEmission } from "./emitter-module"
-import { NativeBuildMode, NativeCompileTask, NativeCompileTaskBatch, batchNativeCompileTasks, isMsvcCompiler, msvcPchHeaderSource, planNativeCompile } from "./native-build"
+import { NativeBuildMode, NativeCompileTask, isMsvcCompiler, msvcPchHeaderSource, planNativeCompile } from "./native-build"
 import { NativeBuildPlan } from "./package-manifest"
 
 export function testPlansGeneratedAndManifestNativeSources(): none {
@@ -283,33 +283,6 @@ export function testDoesNotApplyCxxPrecompiledHeaderToObjectiveCxxSources(): non
   Assert.equal(objectiveCxxTask.sourcePath, "/tmp/generated/std/http/native_http_client_apple.mm")
   Assert.equal(objectiveCxxTask.arguments.contains("-include-pch"), false)
   Assert.equal(objectiveCxxTask.arguments.contains("/tmp/generated/doof_runtime.hpp.pch"), false)
-}
-
-export function testBatchesCompileTasksAcrossAtMostFourWorkers(): none {
-  let tasks: NativeCompileTask[] = []
-  for index of 0..<19 {
-    tasks.push(NativeCompileTask {
-      id: "source-" + string(index),
-      compiler: "clang++",
-      sourcePath: "/tmp/source-" + string(index) + ".cpp",
-      outputPath: "/tmp/source-" + string(index) + ".o",
-    })
-  }
-
-  batches := batchNativeCompileTasks(tasks)
-  readonly frozenBatches: readonly NativeCompileTaskBatch[] = batches
-  Assert.equal(batches.length, 4)
-  Assert.equal(batches[0].length, 5)
-  Assert.equal(batches[1].length, 5)
-  Assert.equal(batches[2].length, 5)
-  Assert.equal(batches[3].length, 4)
-  let assigned = 0
-  for batch of batches { assigned = assigned + batch.length }
-  Assert.equal(assigned, 19)
-
-  small := batchNativeCompileTasks([tasks[0], tasks[1], tasks[2]])
-  Assert.equal(small.length, 3)
-  Assert.equal(batchNativeCompileTasks([]).length, 0)
 }
 
 export function testUsesStableObjectPathsAndDependencyFiles(): none {

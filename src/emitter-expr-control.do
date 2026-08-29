@@ -1,6 +1,6 @@
 // Conditional and pattern-based expression lowering.
 
-import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, NamedType, RangePattern, TypePattern, ValuePattern, WildcardPattern, YieldBlockExpression } from "./ast"
+import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, RangePattern, TypePattern, ValuePattern, WildcardPattern, YieldBlockExpression } from "./ast"
 import { ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitCaseTypePattern } from "./emitter-case-pattern"

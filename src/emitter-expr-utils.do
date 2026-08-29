@@ -4,7 +4,7 @@
 // expression dispatcher and its focused lowering modules stay small.
 
 import { Expression, Identifier, ObjectProperty } from "./ast"
-import { InterfaceType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, Symbol, UnionResolvedType } from "./semantic"
+import { InterfaceType, NoneType, ResolvedType, ResultResolvedType, Symbol, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { moduleNamespace } from "./emitter-names"

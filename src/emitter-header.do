@@ -9,7 +9,7 @@ import {
   ImmutableBinding, LetDeclaration, Program, ReadonlyDeclaration, Statement, TypeAliasDeclaration,
 } from "./ast"
 import { EmitContext, EmitModuleSurface } from "./emitter-context"
-import { emitClassDeclaration, emitDescriptionComment, emitFunctionDeclaration, emitFunctionDefinition, emitInterfaceAlias } from "./emitter-decl"
+import { emitClassDeclaration, emitDescriptionComment, emitFunctionDeclaration, emitInterfaceAlias } from "./emitter-decl"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitInterfaceJsonDeclaration } from "./emitter-json"
 import { emitContextType, emitType } from "./emitter-types"

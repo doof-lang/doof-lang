@@ -7,7 +7,7 @@
 import {
   Block, Expression, ExpressionStatement, IfStatement, LetDeclaration, ImmutableBinding,
   ReadonlyDeclaration, ConstDeclaration, ReturnStatement, Statement,
-  WhileStatement, CaseStatement, NamedType, RangePattern, TypePattern, ValuePattern, WildcardPattern,
+  WhileStatement, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern,
   Identifier, BreakStatement, ContinueStatement, DestructuringStatement, ForOfStatement, ForStatement, BinaryExpression,
   TryStatement, WithStatement, YieldStatement, YieldBlockAssignmentStatement,
   MockImportDirective, ClassDeclaration, ExportDeclaration,

@@ -36,3 +36,16 @@ export function testDiscoversGenericCallsInsideCasePatterns(): none {
   Assert.stringContains(result.source, "_case_subject >= identity__int(0)")
   Assert.stringContains(result.source, "_case_subject <= identity__int(2)")
 }
+
+export function testUsesCheckerConformanceForConcreteInterfaceVariants(): none {
+  result := emit(
+    "interface Box<T> { readonly value: T\nread(): T }\n" +
+    "class HiddenBox { readonly value: int\nprivate read(): int => value }\n" +
+    "class MutableBox { value: int\nread(): int => value }\n" +
+    "class IntBox { readonly value: int\nread(): int => value }\n" +
+    "function read(box: Box<int>): int => box.read()\n" +
+    "function main(): int => read(IntBox { value: 7 })",
+  )
+
+  Assert.stringContains(result.header, "using Box__int = std::variant<std::shared_ptr<IntBox>>;")
+}

@@ -40,11 +40,6 @@ export function renderNativeBuildState(state: NativeBuildState): string {
   return formatJsonValue(state.toJsonObject()) + "\n"
 }
 
-export function findNativeTaskState(state: NativeBuildState, id: string): NativeTaskState | none {
-  for task of state.tasks { if task.id == id { return task } }
-  return none
-}
-
 /** Parses the portable subset of Make dependency files emitted by GCC/Clang. */
 export function parseMakeDependencies(source: string): string[] {
   flattened := source.replaceAll("\\\r\n", " ").replaceAll("\\\n", " ")

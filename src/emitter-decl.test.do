@@ -1,21 +1,19 @@
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
+import { compile } from "./compiler"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { emitFunctionDeclaration } from "./emitter-decl"
-import { emitModule, ModuleEmission } from "./emitter-module"
-import { FunctionDeclaration, Program } from "./ast"
+import { ModuleEmission } from "./emitter-module"
+import { FunctionDeclaration } from "./ast"
 import { SourceFile } from "./semantic"
 
 function emit(source: string): ModuleEmission {
-  analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
-  Assert.equal(analysis.diagnostics.length, 0)
-  checked := createChecker(analysis, "/main.do").check("/main.do")
-  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
-  let program: Program | none = none
-  for module of analysis.modules { if module.path == "/main.do" { program = module.program } }
-  Assert.isTrue(program != none)
-  return emitModule(program!, "main")
+  compilation := compile([SourceFile { path: "/main.do", source }], "/main.do")
+  Assert.equal(hasErrorDiagnostics(compilation.diagnostics), false)
+  graph := compilation.emission else { panic("source graph was not emitted") }
+  for module of graph.modules { if module.modulePath == "/main.do" { return module } }
+  panic("entry module was not emitted")
 }
 
 export function testBorrowsImmutableReferenceAndVariantParameters(): none {

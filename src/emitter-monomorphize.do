@@ -8,14 +8,15 @@
 
 import {
   ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression, CaseExpression, CasePattern, CaseStatement,
-  ClassDeclaration, ClassField, ConstDeclaration, ConstructExpression, DestructuringStatement, ExportDeclaration, Expression,
+  ClassDeclaration, ConstDeclaration, ConstructExpression, DestructuringStatement, ExportDeclaration, Expression,
   ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, Identifier, IfExpression, IfStatement,
-  ImmutableBinding, IndexExpression, InterfaceDeclaration, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, Program,
+  ImmutableBinding, IndexExpression, InterfaceDeclaration, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral,
   RangePattern, ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral, TypePattern, UnaryExpression, ValuePattern,
   WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression,
 } from "./ast"
-import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { isAssignable, sameType, substituteTypeParams, typeName } from "./checker-types"
+import { AnalysisResult } from "./analyzer"
+import { sameType, substituteTypeParams, typeName } from "./checker-types"
+import { classSatisfiesConcreteInterface } from "./checker-interfaces"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SetResolvedType,
   StreamResolvedType, TupleResolvedType, TypeParameterType, TypeSubstitution, UnionResolvedType, WeakResolvedType,
@@ -247,7 +248,7 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
     call: CallExpression -> {
       collectExpression(call.callee, modulePath, analysis, plan, names, arguments)
       for argument of call.args { collectExpression(argument.value, modulePath, analysis, plan, names, arguments) }
-      if call.resolvedFunction != none && (call.resolvedFunction!.typeParams.length > 0 || call.resolvedFunction!.native_) {
+      if call.resolvedFunction != none && call.resolvedFunction!.typeParams.length > 0 {
         let concreteArgs: ResolvedType[] = []
         for argument of call.resolvedGenericTypeArgs { concreteArgs.push(specialize(argument, names, arguments)) }
         if !containsTypeParameters(concreteArgs) {
@@ -599,46 +600,17 @@ function classImplementsConcreteInterface(class_: ClassDeclaration, classArgs: R
     }
   }
   declaration := interfaceDeclaration(analysis, interface_.modulePath, interface_.name)
-  if declaration == none { return false }
-  for required of declaration!.fields {
-    actual := classField(class_, required.name)
-    if actual == none || actual!.resolvedType == none || required.resolvedType == none { return false }
-    actualType := specialize(actual!.resolvedType!, class_.typeParams, classArgs)
-    requiredType := specialize(required.resolvedType!, declaration!.typeParams, interface_.substitution.arguments)
-    if !isAssignable(actualType, requiredType) { return false }
-  }
-  for required of declaration!.methods {
-    actual := classMethod(class_, required.name)
-    if actual == none || actual!.resolvedType == none || required.resolvedType == none { return false }
-    actualType := specialize(actual!.resolvedType!, class_.typeParams, classArgs)
-    requiredType := specialize(required.resolvedType!, declaration!.typeParams, interface_.substitution.arguments)
-    if !sameConcreteMethodType(actualType, requiredType) { return false }
-  }
-  return true
-}
-
-function classField(class_: ClassDeclaration, name: string): ClassField | none {
-  for field of class_.fields { for fieldName of field.names { if fieldName == name { return field } } }
-  return none
-}
-
-function sameConcreteMethodType(actual: ResolvedType, expected: ResolvedType): bool {
-  case actual {
-    actualFunction: FunctionType -> {
-      case expected {
-        expectedFunction: FunctionType -> {
-          if actualFunction.params.length != expectedFunction.params.length { return false }
-          for index of 0..<actualFunction.params.length {
-            if !sameType(actualFunction.params[index].type_, expectedFunction.params[index].type_) { return false }
-          }
-          return sameType(actualFunction.returnType, expectedFunction.returnType)
-        }
-        _ -> { return false }
-      }
-    }
-    _ -> { return sameType(actual, expected) }
-  }
-  return false
+  if declaration == none || declaration!.resolvedSymbol == none || class_.resolvedSymbol == none { return false }
+  return classSatisfiesConcreteInterface(
+    analysis,
+    class_,
+    ClassType { name: class_.name, symbol: class_.resolvedSymbol!, typeArgs: classArgs },
+    InterfaceType {
+      name: interface_.name,
+      symbol: declaration!.resolvedSymbol!,
+      typeArgs: interface_.substitution.arguments,
+    },
+  )
 }
 
 function classMethod(class_: ClassDeclaration, name: string): FunctionDeclaration | none {

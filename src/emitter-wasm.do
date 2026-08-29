@@ -4,7 +4,7 @@
 // function accepts one JSON object string and returns an allocated JSON
 // envelope. Hosts release returned text through doof_free.
 
-import { ClassDeclaration, ExportDeclaration, FunctionDeclaration, Parameter, Program, Statement } from "./ast"
+import { ClassDeclaration, ExportDeclaration, FunctionDeclaration, Parameter, Program } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { createEmitContextForModule, EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"

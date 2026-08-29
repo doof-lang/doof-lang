@@ -1,5 +1,5 @@
 import { Assert } from "std/assert"
-import { NativeBuildPlan, mergeNativeBuildPlans, parsePackageManifest } from "./package-manifest"
+import { NativeBuildPlan, parsePackageManifest } from "./package-manifest"
 
 export function testParsesExternalArchiveAndGitDependencies(): none {
   manifest := try! parsePackageManifest(
@@ -171,19 +171,15 @@ export function testSelectsWasmNativeFragmentForWasmTargets(): none {
   Assert.equal(manifest.nativeBuild.defines.contains("LINUX"), false)
 }
 
-export function testDeduplicatesManifestAndMergedNativeInputs(): none {
+export function testDeduplicatesManifestNativeInputs(): none {
   first := try! parsePackageManifest(
     "{\"build\":{\"native\":{\"frameworks\":[\"CoreFoundation\",\"CoreFoundation\"]}}}",
     "/one/doof.json",
     "/one",
     "macos",
   )
-  second := NativeBuildPlan { frameworks: ["CoreFoundation", "Foundation"] }
-
-  merged := mergeNativeBuildPlans([first.nativeBuild, second])
-  Assert.equal(merged.frameworks.length, 2)
-  Assert.equal(merged.frameworks[0], "CoreFoundation")
-  Assert.equal(merged.frameworks[1], "Foundation")
+  Assert.equal(first.nativeBuild.frameworks.length, 1)
+  Assert.equal(first.nativeBuild.frameworks[0], "CoreFoundation")
 }
 
 export function testRejectsInvalidNativeStringArrays(): none {

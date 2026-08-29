@@ -7,11 +7,7 @@
 import { Program, SourceSpan } from "./ast"
 import { JsonEligibilityCache } from "./json-semantics"
 import {
-  ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, ImportBinding,
-  InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NamespaceBinding, NoneType,
-  PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType,
-  SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType, TypeParameterType,
-  TypeSubstitution, UnionResolvedType, UnknownType, WeakResolvedType,
+  ImportBinding, NamespaceBinding, ResolvedType, Symbol, TypeSubstitution,
 } from "./semantic"
 
 export class EmitModuleSurface {
@@ -90,18 +86,10 @@ export function isCapturedMutable(context: EmitContext, name: string): bool {
   return false
 }
 
-export function createEmitContext(program: Program): EmitContext {
-  return createEmitContextForPrograms([program])
-}
-
-export function createEmitContextForPrograms(programs: Program[]): EmitContext {
-  return EmitContext { allPrograms: programs }
-}
-
 export function createEmitContextForModule(program: Program, modulePath: string, allPrograms: Program[] = []): EmitContext {
   let programs = allPrograms
   if programs.length == 0 { programs = [program] }
-  context := createEmitContextForPrograms(programs)
+  context := EmitContext { allPrograms: programs }
   context.modulePath = modulePath
   context.sourcePath = modulePath
   return context

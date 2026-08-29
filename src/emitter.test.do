@@ -6,7 +6,7 @@ import { compile } from "./compiler"
 import { AnalysisResult } from "./analyzer"
 import { ClassDeclaration, ConstructExpression, ImmutableBinding, Program } from "./ast"
 import { SourceFile } from "./semantic"
-import { ModuleEmission, emitModule, emitModuleGraph, ModuleGraphPlan, planModuleGraph } from "./emitter-module"
+import { ModuleEmission, emitModuleGraph, ModuleGraphPlan, planModuleGraph } from "./emitter-module"
 import { InstantiationPlan } from "./emitter-monomorphize"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, JsonEligibilityCache } from "./json-semantics"
 import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
@@ -22,10 +22,6 @@ function emitSources(sources: SourceFile[], entry: string): ModuleEmission {
   graph := compilation.emission else { panic("source graph was not emitted") }
   for module of graph.modules { if module.modulePath == entry { return module } }
   panic("entry module was not emitted")
-}
-
-function emitMonomorphized(source: string): ModuleEmission {
-  return emit(source)
 }
 
 export function testCachesJsonEligibilityAcrossProjectedHeaders(): none {
@@ -212,7 +208,7 @@ export function testEmitsCheckedWeakUnionAccess(): none {
 }
 
 export function testEmitsReflectableTypeParameterMetadataAccess(): none {
-  result := emitMonomorphized("class Tool { function run(input: string): string => input }\nfunction describe<T: Reflectable>(tool: T): string => T.metadata.name\nfunction main(): int { println(describe<Tool>(Tool {}))\nreturn 0 }")
+  result := emit("class Tool { function run(input: string): string => input }\nfunction describe<T: Reflectable>(tool: T): string => T.metadata.name\nfunction main(): int { println(describe<Tool>(Tool {}))\nreturn 0 }")
   Assert.stringContains(result.source, "doof::metadata_for_type<std::shared_ptr<Tool>>().name")
   Assert.stringContains(result.header, "static const doof::ClassMetadata<Tool> _metadata")
 }
@@ -546,7 +542,7 @@ export function testConstructionPanicsWhenConstructorAttachmentIsMissing(): none
     _ -> { panic("expected an immutable binding") }
   }
 
-  result := catchPanic(=> emitModule(program, "main"))
+  result := catchPanic(=> emitModuleGraph(analysis, "/main.do"))
   case result {
     failure: Failure<string> -> { Assert.equal(failure.error.contains("has no resolved constructor"), true) }
     _ -> { panic("expected missing constructor metadata to panic") }
@@ -568,7 +564,7 @@ export function testConstructionPanicsWhenRequiredFieldIsMissing(): none {
     _ -> { panic("expected an immutable binding") }
   }
 
-  result := catchPanic(=> emitModule(program, "main"))
+  result := catchPanic(=> emitModuleGraph(analysis, "/main.do"))
   case result {
     failure: Failure<string> -> { Assert.equal(failure.error.contains("is missing required field 'value'"), true) }
     _ -> { panic("expected missing required field to panic") }
@@ -597,7 +593,7 @@ export function testEmitsNamedDoofConstructionThroughStaticConstructor(): none {
 }
 
 export function testSpecializesGenericResultCasePatterns(): none {
-  result := emitMonomorphized("function failed<T, E>(result: Result<T, E>): bool => case result { _: Success -> false, _: Failure -> true }\nfunction main(): bool => failed<int, string>(Failure { error: \"no\" })")
+  result := emit("function failed<T, E>(result: Result<T, E>): bool => case result { _: Success -> false, _: Failure -> true }\nfunction main(): bool => failed<int, string>(Failure { error: \"no\" })")
   Assert.equal(result.source.contains("doof::Success<int32_t>"), true)
   Assert.equal(result.source.contains("doof::Failure<std::string>"), true)
   Assert.equal(result.source.contains("doof::Success<T>"), false)
@@ -639,7 +635,7 @@ export function testEmitsAsyncValueBlocksWithDecoratedCaptures(): none {
   Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
   isolation := validateIsolationEffects(analysis)
   Assert.equal(hasErrorDiagnostics(isolation), false)
-  result := emitModule(findProgram(analysis, "/main.do")!, "main")
+  result := emitModuleGraph(analysis, "/main.do").modules[0]
   Assert.stringContains(result.header, "doof::Promise<std::shared_ptr<std::vector<int32_t>>> run")
   Assert.stringContains(result.source, "doof::submit_async<std::shared_ptr<std::vector<int32_t>>>([input, offset]()")
   Assert.stringContains(result.source, "return values;")
@@ -656,7 +652,7 @@ export function testEmitsNoneAsyncBlocksAsVoidTasks(): none {
   checked := createChecker(analysis, "/main.do").check("/main.do")
   Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
   Assert.equal(hasErrorDiagnostics(validateIsolationEffects(analysis)), false)
-  result := emitModule(findProgram(analysis, "/main.do")!, "main")
+  result := emitModuleGraph(analysis, "/main.do").modules[0]
   Assert.stringContains(result.source, "doof::submit_async<void>([]() -> void")
   Assert.stringContains(result.source, "return;")
 }
@@ -670,10 +666,10 @@ export function testEmitsIsolatedAsyncFunctionCalls(): none {
 }
 
 export function testTryBangPanicIncludesOriginAndStringFailure(): none {
-  result := emitMonomorphized("function load(): Result<int, string> => Failure { error: \"disk failed\" }\nfunction main(): int => try! load()")
+  result := emit("function load(): Result<int, string> => Failure { error: \"disk failed\" }\nfunction main(): int => try! load()")
   Assert.stringContains(result.source, "doof::panic_at(\"main\", 2, std::string(\"try! failed\") + std::string(\": \") + doof::failure_error(_try_value))")
 
-  enumFailure := emitMonomorphized("enum Problem { Broken }\nfunction load(): Result<int, Problem> => Failure { error: Problem.Broken }\nfunction main(): int => try! load()")
+  enumFailure := emit("enum Problem { Broken }\nfunction load(): Result<int, Problem> => Failure { error: Problem.Broken }\nfunction main(): int => try! load()")
   Assert.stringContains(enumFailure.source, "doof::panic_at(\"main\", 3, std::string(\"try! failed\"))")
 }
 
@@ -703,7 +699,7 @@ export function testKeepsDoofDefaultsOutOfHeadersAndMaterializesCalls(): none {
 }
 
 export function testEmitsGenericMethodsAndDestructorsAfterCallableDeclarations(): none {
-  result := emitMonomorphized(
+  result := emit(
     "function helper(): int => 7\n" +
     "class GenericCaller { call<T>(value: T): int => helper() }\n" +
     "class Cleanup { destructor { helper() } }\n" +
@@ -717,7 +713,7 @@ export function testEmitsGenericMethodsAndDestructorsAfterCallableDeclarations()
 }
 
 export function testActorCallsUseConcreteGenericReturnTypes(): none {
-  result := emitMonomorphized("class Sender<T> { readonly value: T }\nclass Receiver<T> { readonly value: T }\nclass Worker { function open(): Tuple<Sender<int>, Receiver<int> > => (Sender { value: 1 }, Receiver { value: 2 }) }\nfunction main(): int { worker := Actor<Worker>()\n(sender, receiver) := worker.open()\nretired := retire worker\nreturn sender.value + receiver.value }")
+  result := emit("class Sender<T> { readonly value: T }\nclass Receiver<T> { readonly value: T }\nclass Worker { function open(): Tuple<Sender<int>, Receiver<int> > => (Sender { value: 1 }, Receiver { value: 2 }) }\nfunction main(): int { worker := Actor<Worker>()\n(sender, receiver) := worker.open()\nretired := retire worker\nreturn sender.value + receiver.value }")
   Assert.equal(result.source.contains("call_sync<std::tuple<std::shared_ptr<Sender__int>, std::shared_ptr<Receiver__int>>>"), true)
   Assert.equal(result.source.contains("Sender<int32_t>"), false)
   Assert.equal(result.source.contains("Receiver<int32_t>"), false)
@@ -1039,7 +1035,7 @@ export function testEmitsArrayCallbackMembers(): none {
 }
 
 export function testEmitsReadonlyArrayAndGenericNamedCall(): none {
-  result := emitMonomorphized("function create<T>(value: T, count: int = 1): T => value\nfunction main(): string { values := readonly [1, 2]\nreturn create<string>{ value: \"ok\" } }")
+  result := emit("function create<T>(value: T, count: int = 1): T => value\nfunction main(): string { values := readonly [1, 2]\nreturn create<string>{ value: \"ok\" } }")
   Assert.equal(result.header.contains("create__string"), true)
   Assert.equal(result.header.contains("T create("), false)
   Assert.equal(result.source.contains("create__string(std::string(\"ok\"), 1)"), true)
@@ -1047,7 +1043,7 @@ export function testEmitsReadonlyArrayAndGenericNamedCall(): none {
 }
 
 export function testEmitsGenericTupleDestructuring(): none {
-  result := emitMonomorphized("function pair<T>(value: T): Tuple<T, T> => (value, value)\nfunction main(): int { (first, second) := pair<int>(1)\nreturn first + second }")
+  result := emit("function pair<T>(value: T): Tuple<T, T> => (value, value)\nfunction main(): int { (first, second) := pair<int>(1)\nreturn first + second }")
   Assert.equal(result.source.contains("pair__int(1)"), true)
   Assert.equal(result.source.contains("std::get<0>(_destructure_"), true)
   Assert.equal(result.source.contains("std::get<1>(_destructure_"), true)
@@ -1275,13 +1271,13 @@ export function testKeepsAutomaticJsonDemandDirectionSpecificAndTransitive(): no
 }
 
 export function testDiscoversJsonDemandThroughGenericSpecialization(): none {
-  result := emitMonomorphized("class Config { name: string }\nfunction decode<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value)\nfunction main(): int { config := decode<Config>({ name: \"ok\" }) else { return 0 }\nreturn config.name.length }")
+  result := emit("class Config { name: string }\nfunction decode<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value)\nfunction main(): int { config := decode<Config>({ name: \"ok\" }) else { return 0 }\nreturn config.name.length }")
   Assert.stringContains(result.source, "Config::fromJsonValue")
   Assert.stringNotContains(result.source, "Config::toJsonObject")
 }
 
 export function testDiscoversJsonDemandThroughGenericMethodTemplate(): none {
-  result := emitMonomorphized("class Config { name: string }\nclass Decoder { function decode<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value) }\nfunction main(): int { config := Decoder {}.decode<Config>({ name: \"ok\" }) else { return 0 }\nreturn config.name.length }")
+  result := emit("class Config { name: string }\nclass Decoder { function decode<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value) }\nfunction main(): int { config := Decoder {}.decode<Config>({ name: \"ok\" }) else { return 0 }\nreturn config.name.length }")
   Assert.stringContains(result.source, "Config::fromJsonValue")
   Assert.stringNotContains(result.source, "Config::toJsonObject")
 }
@@ -1701,7 +1697,7 @@ export function testEmitsByteCastBuiltin(): none {
 }
 
 export function testEmitsConcreteGenericMethodCalls(): none {
-  result := emitMonomorphized("class Assert { static equal<T>(actual: T, expected: T): void {} }\nfunction compare(value: string | null): void { Assert.equal(value, \"ok\") }")
+  result := emit("class Assert { static equal<T>(actual: T, expected: T): void {} }\nfunction compare(value: string | null): void { Assert.equal(value, \"ok\") }")
   Assert.stringContains(result.source, "Assert::equal__")
   Assert.equal(result.source.contains("value, std::string(\"ok\"))"), true)
   Assert.stringNotContains(result.source, "Assert::equal<std::optional<std::string>>")
@@ -1865,9 +1861,14 @@ export function testEmitsNonGenericNativeFunctionNameAcrossModules(): none {
   Assert.equal(hasErrorDiagnostics(checker.check("/std/path/path.test.do").diagnostics), false)
   graph := emitModuleGraph(analysis, "/std/path/path.test.do")
   let source = ""
-  for module of graph.modules { if module.modulePath == "/std/path/path.test.do" { source = module.source } }
+  let nativeModuleSource = ""
+  for module of graph.modules {
+    if module.modulePath == "/std/path/path.test.do" { source = module.source }
+    if module.modulePath == "/std/path/index.do" { nativeModuleSource = module.source }
+  }
   Assert.stringContains(source, "::doof_path::setCurrentWorkingDirectory(path)")
   Assert.equal(source.contains("::app_std_path_index_::setCurrentWorkingDirectory(path)"), false)
+  Assert.stringNotContains(nativeModuleSource, "setCurrentWorkingDirectory(")
 }
 
 export function testEmitsContextualResultAndClassObjectLiterals(): none {

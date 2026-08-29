@@ -1,6 +1,6 @@
 // Structured reflection metadata, JSON Schema, and JSON invocation lowering.
 
-import { ClassDeclaration, ClassField, EnumDeclaration, ExportDeclaration, FunctionDeclaration, Program, Statement } from "./ast"
+import { ClassDeclaration, EnumDeclaration, ExportDeclaration, FunctionDeclaration, Statement } from "./ast"
 import {
   ArrayResolvedType, ClassType, EnumType, FunctionType, JsonValueResolvedType, NoneType, PrimitiveType,
   ResolvedType, ResultResolvedType, TupleResolvedType, UnionResolvedType,

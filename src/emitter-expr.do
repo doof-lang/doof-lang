@@ -13,7 +13,7 @@ import { emitArray, emitChar, emitNoneLiteral, emitObject, emitString, emitTuple
 import { emitCaseExpression, emitCatchExpression, emitDotShorthand, emitIfExpression, emitYieldBlockExpression } from "./emitter-expr-control"
 import { emitLambdaExpression } from "./emitter-expr-lambda"
 import { decoratedExpressionType, emitNullableVariantPromotion, needsNullableVariantPromotion, needsVariantPromotion } from "./emitter-expr-utils"
-import { emitClassInnerType, emitType } from "./emitter-types"
+import { emitType } from "./emitter-types"
 import { emitActorCreation, emitAsyncExpression, emitRetireActor } from "./emitter-expr-actor"
 import { moduleDiagnosticPath } from "./emitter-names"
 
