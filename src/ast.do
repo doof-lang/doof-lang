@@ -222,6 +222,9 @@ export class ObjectProperty {
   key: Expression | none = none
   value: Expression | none
   let resolvedType: ResolvedType | none = none
+  // Shorthand properties have no Identifier expression to decorate, so retain
+  // their lexical binding here for downstream semantic consumers.
+  let resolvedBinding: Binding | none = none
   span: SourceSpan
 }
 

@@ -14,7 +14,7 @@ import {
   Statement, StringLiteral, ThisExpression, TryStatement, DestructuringStatement, TupleLiteral, UnaryExpression,
   WhileStatement, WithStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression,
 } from "./ast"
-import { FunctionType, ResolvedType, ResultResolvedType, NoneType } from "./semantic"
+import { Binding, FunctionType, ResolvedType, ResultResolvedType, NoneType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
@@ -336,6 +336,7 @@ function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyE
       for property of object.properties {
         if property.key != none { collectExpressionCaptures(property.key!, bodyStart, bodyEnd, result, mutableOnly) }
         if property.value != none { collectExpressionCaptures(property.value!, bodyStart, bodyEnd, result, mutableOnly) }
+        else if property.key == none && property.resolvedBinding != none { collectBindingCapture(property.name, property.resolvedBinding!, bodyStart, bodyEnd, result, mutableOnly) }
       }
       if object.spread != none { collectExpressionCaptures(object.spread!, bodyStart, bodyEnd, result, mutableOnly) }
     }
@@ -357,7 +358,12 @@ function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyE
           bodyExpression: Expression -> { collectExpressionCaptures(bodyExpression, bodyStart, bodyEnd, result, mutableOnly) }
         }
       } }
-    construct: ConstructExpression -> { for property of construct.args { if property.value != none { collectExpressionCaptures(property.value!, bodyStart, bodyEnd, result, mutableOnly) } } }
+    construct: ConstructExpression -> {
+      for property of construct.args {
+        if property.value != none { collectExpressionCaptures(property.value!, bodyStart, bodyEnd, result, mutableOnly) }
+        else if property.resolvedBinding != none { collectBindingCapture(property.name, property.resolvedBinding!, bodyStart, bodyEnd, result, mutableOnly) }
+      }
+    }
     async_: AsyncExpression -> {
       case async_.expression {
         block: Block -> { collectBlockCaptures(block, bodyStart, bodyEnd, result, mutableOnly) }
@@ -374,7 +380,10 @@ function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyE
 
 function collectIdentifierCapture(identifier: Identifier, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
   if identifier.resolvedBinding == none { return }
-  binding := identifier.resolvedBinding!
+  collectBindingCapture(identifier.name, identifier.resolvedBinding!, bodyStart, bodyEnd, result, mutableOnly)
+}
+
+function collectBindingCapture(name: string, binding: Binding, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
   if binding.kind == "field" {
     if !mutableOnly { addUnique(result, "this") }
     return
@@ -391,7 +400,7 @@ function collectIdentifierCapture(identifier: Identifier, bodyStart: int, bodyEn
   bindingStart := binding.span.start.offset
   if bindingStart >= bodyStart && bindingStart <= bodyEnd { return }
   if mutableOnly && !binding.mutable { return }
-  addUnique(result, cppIdentifier(identifier.name))
+  addUnique(result, cppIdentifier(name))
 }
 
 function addUnique(values: string[], value: string): none {

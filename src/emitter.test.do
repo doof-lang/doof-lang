@@ -228,6 +228,28 @@ export function testLambdaCaptureExcludesItsOwnTypedParameters(): none {
   Assert.equal(result.source.contains("[prefix, path]"), false)
 }
 
+export function testNestedTryBangLambdaCapturesShorthandConstructionBindings(): none {
+  result := emit(
+    "class Box { value: int }\n" +
+    "class Draw { pipeline: Box\nvertices: Box }\n" +
+    "function useDraw(draw: Draw): Result<none, string> => Success()\n" +
+    "function invoke(callback: (): none): none { callback() }\n" +
+    "function main(): none { pipeline := Box { value: 1 }\nvertices := Box { value: 2 }\n" +
+    "invoke((): none => { invoke((): none => { try! useDraw(Draw { pipeline, vertices }) }) }) }",
+  )
+  Assert.stringContains(result.source, "doof::callback<void()>([pipeline, vertices]() -> void")
+}
+
+export function testBoxesMutableCapturedThroughShorthandConstruction(): none {
+  result := emit(
+    "class Box { value: int }\nclass Draw { box: Box }\n" +
+    "function make(): (): Draw { let box = Box { value: 1 }\nreturn (): Draw => Draw { box } }",
+  )
+  Assert.stringContains(result.source, "auto box = std::make_shared<std::shared_ptr<Box>>")
+  Assert.stringContains(result.source, "doof::callback<std::shared_ptr<Draw>()>([box]() -> std::shared_ptr<Draw>")
+  Assert.stringContains(result.source, "std::make_shared<Draw>((*box))")
+}
+
 export function testSynthesizesDistinctCppNamesForDiscardTargets(): none {
   result := emit(
     "class Guard {}\n" +

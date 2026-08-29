@@ -1,5 +1,22 @@
 # Standard Application, Scripting, and Apple Platform APIs
 
+## `std/dom`
+
+```doof
+import { button, div, input, canvas, domDocument } from "std/dom"
+```
+
+For browser-Wasm applications, typed-tag constructors create live DOM elements
+immediately. Place known handles with `appendTo`, `insertBefore`, `insertAfter`,
+`replace`, and `unmount`; mutate them with fluent setters. String children are
+always text nodes. Form controls expose typed properties and snapshot events;
+callbacks may call `preventDefault` and propagation controls.
+
+`canvas` exposes retained 2D and WebGL 2 contexts. WebGL shaders/programs,
+buffers, textures, and matrices use opaque typed handles; compilation/linking
+is fallible. The browser host must load the package's `doof-dom.js` adapter and
+invoke exported Wasm entry points through it.
+
 ## `std/apple-intelligence`
 
 ```doof

@@ -2,7 +2,7 @@
 
 import { CallArgument, CallExpression, ClassDeclaration, ConstructExpression, Expression, FunctionDeclaration, Identifier, MemberExpression, ObjectProperty, SourceSpan, ThisExpression } from "./ast"
 import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, Symbol, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
-import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
+import { EmitContext, isCapturedMutable, SourceLocationSpanOverride } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { decoratedExpressionType, emittedSymbolName, emitExpectedExpression, emitNullableVariantPromotion, exprModuleNamespaceFor, findProperty, needsNullableVariantPromotion, needsVariantPromotion, optionalExpectedType, variantVisitValue } from "./emitter-expr-utils"
@@ -705,7 +705,12 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
       property := findProperty(expression.args, name)
       let value = ""
       if property != none {
-        if property!.value == none { value = cppIdentifier(name) }
+        if property!.value == none {
+          value = cppIdentifier(name)
+          if property!.resolvedBinding != none && property!.resolvedBinding!.mutable && isCapturedMutable(context, name) {
+            value = "(*" + value + ")"
+          }
+        }
         else {
           case property!.value! {
             _: ThisExpression -> {

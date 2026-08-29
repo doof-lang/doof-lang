@@ -97,7 +97,7 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
               else {
                 binding := lookup(scope, property.name)
                 if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span) }
-                else { propertyType = binding!.type_ }
+                else { property.resolvedBinding = binding; propertyType = binding!.type_ }
               }
               property.resolvedType = optionalResolvedType(propertyType)
               valueType = joinTypes(valueType, propertyType)
@@ -198,7 +198,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
           } else {
             binding := lookup(scope, property.name)
             if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
-            else { property.resolvedType = optionalResolvedType(binding!.type_) }
+            else { property.resolvedBinding = binding; property.resolvedType = optionalResolvedType(binding!.type_) }
           }
           if propertyExpected != none && !isAssignable(property.resolvedType!, propertyExpected!) {
             typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(propertyExpected!), property.span)
@@ -371,7 +371,7 @@ function decorateObjectProperty(state: CheckerState, property: ObjectProperty, s
   else {
     binding := lookup(scope, property.name)
     if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
-    else { property.resolvedType = optionalResolvedType(binding!.type_) }
+    else { property.resolvedBinding = binding; property.resolvedType = optionalResolvedType(binding!.type_) }
   }
 }
 

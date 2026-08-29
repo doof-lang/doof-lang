@@ -1,8 +1,8 @@
 ---
 name: doof-language
-description: Write, read, and reason about Doof programming language code. Doof is a statically-typed language with familiar curly-brace syntax that transpiles to C++. Use when writing .do files, designing Doof APIs, implementing Doof classes/functions, writing .test.do files, using assert or the doof test runner, handling errors with Result types, or working with Doof's module system, pattern matching, concurrency, or JSON serialization.
+description: Write, read, and reason about Doof programming language code. Doof is a statically-typed language with familiar curly-brace syntax that transpiles to C++. Use when writing .do files, using Doof standard-library packages imported from std/, designing APIs, implementing classes/functions, writing .test.do files, using assert or the doof test runner, handling Result types, or working with modules, pattern matching, concurrency, or JSON serialization.
 metadata:
-    version: "1.9"
+    version: "2.0"
     languageVersion: "0.1"
 ---
 
@@ -24,6 +24,14 @@ Use this base file as the entry point. Load only the reference file that matches
 - Fields are shallow immutable by default; use `let` for reassignable fields and `readonly` for deep immutability.
 - Prefer `readonly` for deeply immutable values and `:=` for immutable bindings with mutable interiors. `const` is deprecated and remains accepted temporarily with a warning.
 - Prefer `std/<name>` packages before inventing utility modules.
+- Standard packages need no `doof.json` dependency entry. Use the release's
+  pinned catalog unless intentionally developing the stdlib with
+  `DOOF_STDLIB_ROOT`.
+- Treat streams as lazy, single-pass values. Keep their backing resource (for
+  example a file, statement, or database connection) alive until consumption
+  finishes.
+- Reuse stateful handles such as `HttpClient`, compiled `Regex`, prepared SQL
+  statements, and `StringBuilder` when the surrounding operation benefits.
 
 ## Quick Syntax
 
@@ -71,14 +79,15 @@ Load the narrowest matching file for the task.
 | JSON serialization, generated metadata, schema/invoke behavior | [references/json-and-metadata.md](./references/json-and-metadata.md) |
 | `isolated`, `async`, `Promise<T>`, `Actor<T>` | [references/concurrency.md](./references/concurrency.md) |
 | Stdlib package index and package selection | [references/stdlib-overview.md](./references/stdlib-overview.md) |
+| Common end-to-end stdlib recipes and package combinations | [references/stdlib-cookbook.md](./references/stdlib-cookbook.md) |
 | Assertions, test file structure, runner commands, mocks | [references/stdlib-assert-and-testing.md](./references/stdlib-assert-and-testing.md) |
-| `std/blob`, `std/fs`, `std/json`, `std/path`, `std/stream`, `std/url`, `std/event` | [references/stdlib-data-and-io.md](./references/stdlib-data-and-io.md) |
+| `std/blob`, `std/csv`, `std/fs`, `std/json`, `std/path`, `std/stream`, `std/string`, `std/url`, `std/xml`, `std/event` | [references/stdlib-data-and-io.md](./references/stdlib-data-and-io.md) |
 | `std/archive`, `std/gzip`, `std/zstd`, `std/image` | [references/stdlib-compression-and-media.md](./references/stdlib-compression-and-media.md) |
 | `std/http`, `std/http-server`, `std/http-router` | [references/stdlib-networking.md](./references/stdlib-networking.md) |
-| `std/cli`, `std/crypto`, `std/log`, `std/math`, `std/os`, `std/random` | [references/stdlib-crypto-and-os.md](./references/stdlib-crypto-and-os.md) |
+| `std/cli`, `std/console`, `std/crypto`, `std/log`, `std/math`, `std/os`, `std/parse`, `std/random` | [references/stdlib-crypto-and-os.md](./references/stdlib-crypto-and-os.md) |
 | `std/regex`, `std/time` | [references/stdlib-regex-and-time.md](./references/stdlib-regex-and-time.md) |
 | `std/sqlite`, `std/postgres` | [references/stdlib-databases.md](./references/stdlib-databases.md) |
-| `std/apple-intelligence`, `std/game`, `std/js`, `std/multiplayer`, `std/ts`, `std/webshell` | [references/stdlib-application-and-platform.md](./references/stdlib-application-and-platform.md) |
+| `std/apple-intelligence`, `std/dom`, `std/game`, `std/js`, `std/multiplayer`, `std/ts`, `std/webshell` | [references/stdlib-application-and-platform.md](./references/stdlib-application-and-platform.md) |
 
 ## Repo Anchors
 
@@ -93,3 +102,7 @@ Load the narrowest matching file for the task.
 - Fixing type errors around unions, nullability, collections, or `JsonValue`: load [references/type-system.md](./references/type-system.md) and [references/error-handling.md](./references/error-handling.md).
 - Working on imports, packages, or C++ bridge code: load [references/modules-and-interop.md](./references/modules-and-interop.md).
 - Writing tests or mocks: load [references/stdlib-assert-and-testing.md](./references/stdlib-assert-and-testing.md).
+- Building a CLI, data pipeline, web service, database task, or other workflow
+  that combines packages: start with
+  [references/stdlib-cookbook.md](./references/stdlib-cookbook.md), then load
+  only the package-family reference needed for exact behavior.

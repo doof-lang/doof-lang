@@ -16,6 +16,32 @@ under `_`. Decode that object with a configuration class's
 Parsing supports long/short options, `--name=value`, attached short values,
 `--no-name`, and `--`. Errors contain both an actionable message and usage.
 
+## `std/console`
+
+```doof
+import { ConsoleError, prompt, choose } from "std/console"
+```
+
+`prompt(message)` writes and flushes a prompt, then returns one input line
+without its newline; an empty line is valid. `choose(message, options)` renders
+one-based numbered options, retries invalid numeric input, and returns a
+zero-based index. Both are synchronous native-terminal operations returning
+`Result<..., ConsoleError>`. EOF is `end-of-input`; an empty option list is
+`invalid-options`. Use `chooseWith` with a supplied reader for deterministic
+tests.
+
+## `std/parse`
+
+```doof
+import { parseBool, parseByte, parseInt, parseLong, parseFloat, parseDouble, ParsingError } from "std/parse"
+```
+
+These locale-independent parsers consume the complete input and never trim
+whitespace. Integers use decimal syntax; booleans accept only `"true"` and
+`"false"`. Failures distinguish empty input, invalid format, overflow, and
+underflow. Floating parsers accept the platform C runtime's scientific and
+non-finite spellings.
+
 ## `std/crypto`
 
 ```doof

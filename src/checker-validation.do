@@ -266,6 +266,9 @@ export function validateExpression(expression: Expression, module: string, diagn
       for property of construct.args {
         validateResolved(property.resolvedType, property.span, module, "constructor property", diagnostics)
         if property.value != none { validateExpression(property.value!, module, diagnostics) }
+        else if construct.type_ != "Success" && construct.type_ != "Failure" && property.resolvedBinding == none {
+          addValidationError(module, property.span, "Constructor shorthand property '" + property.name + "' has no resolved binding", diagnostics)
+        }
       }
     }
     async_: AsyncExpression -> {

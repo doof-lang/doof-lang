@@ -617,7 +617,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
           } else {
             binding := lookup(scope, property.name)
             if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
-            else { property.resolvedType = optionalResolvedType(binding!.type_) }
+            else { property.resolvedBinding = binding; property.resolvedType = optionalResolvedType(binding!.type_) }
           }
           if !isAssignable(property.resolvedType!, parameterType) {
             typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(parameterType), property.span)
@@ -655,7 +655,7 @@ function checkConstructionFields(state: CheckerState, expression: ConstructExpre
       else {
         binding := lookup(scope, property.name)
         if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
-        else { property.resolvedType = optionalResolvedType(binding!.type_) }
+        else { property.resolvedBinding = binding; property.resolvedType = optionalResolvedType(binding!.type_) }
       }
       continue
     }
@@ -665,7 +665,7 @@ function checkConstructionFields(state: CheckerState, expression: ConstructExpre
     } else {
       binding := lookup(scope, property.name)
       if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
-      else { property.resolvedType = optionalResolvedType(binding!.type_) }
+      else { property.resolvedBinding = binding; property.resolvedType = optionalResolvedType(binding!.type_) }
     }
     if !isAssignable(property.resolvedType!, expected) {
       typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(expected), property.span)

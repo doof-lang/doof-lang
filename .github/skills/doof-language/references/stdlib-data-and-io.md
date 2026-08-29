@@ -1,5 +1,18 @@
 # Standard Data, Filesystem, Stream, URL, and Event APIs
 
+## `std/string`
+
+```doof
+import { StringBuilder, join, splitLines } from "std/string"
+```
+
+Use `StringBuilder` for incremental text construction. `append`, `appendLine`,
+`reserve`, `length`, and `clear` mutate the builder; `drainToString()` transfers
+the accumulated value out and leaves the builder reusable. Lengths and
+capacities are UTF-8 byte counts. `join` inserts a separator only between
+values. `splitLines` recognizes LF, CRLF, and lone CR, preserves interior empty
+lines, and omits an extra line after a final terminator.
+
 ## `std/blob`
 
 ```doof
@@ -51,6 +64,33 @@ import { parseJsonValue, parseJsonObject, formatJsonValue } from "std/json"
 
 Integral numbers become `int` or `long` when representable; fractional and
 exponent forms become `double`. Parse errors include line and column.
+
+## `std/csv`
+
+```doof
+import { CsvDocument, CsvRow, CsvError, parseCsv, stringifyCsv } from "std/csv"
+```
+
+`parseCsv(text, delimiter?)` and `stringifyCsv(document, delimiter?,
+lineEnding?)` return `Result`. Parsing supports LF, CRLF, lone CR, quoted fields,
+embedded line endings, and doubled quotes. It is intentionally strict about
+quotes and reports a zero-based UTF-8 byte index plus one-based line and column.
+An empty input has no rows; a blank record has one empty field. Serialization
+defaults to comma and CRLF and quotes only when required.
+
+## `std/xml`
+
+```doof
+import { XmlDocument, XmlElement, XmlNode, XmlError, parseXml, stringifyXml } from "std/xml"
+```
+
+The small XML model supports declarations, elements, ordered attributes, mixed
+content, comments, CDATA, self-closing elements, and the five predefined
+entities. `XmlElement.attribute(name)` is checked, `childElements()` filters
+nodes, and `textContent()` recursively combines text and CDATA. The strict
+parser does not implement DOCTYPE, custom/numeric entities, processing
+instructions, or namespace URI resolution. Serialization validates names,
+comments, and CDATA and escapes text and attributes.
 
 ## `std/path`
 
