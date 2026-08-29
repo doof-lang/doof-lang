@@ -1073,8 +1073,9 @@ namespace app_src_ast_ {
     doof_header_type_5 key;
     doof_header_type_5 value;
     doof_header_type_3 resolvedType;
+    std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding;
     SourceSpan span;
-    ObjectProperty(std::string name, doof_header_type_5 key, doof_header_type_5 value, doof_header_type_3 resolvedType, SourceSpan span) : name(name), key(key), value(value), resolvedType(resolvedType), span(span) {}
+    ObjectProperty(std::string name, doof_header_type_5 key, doof_header_type_5 value, doof_header_type_3 resolvedType, std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding, SourceSpan span) : name(name), key(key), value(value), resolvedType(resolvedType), resolvedBinding(resolvedBinding), span(span) {}
 };
     struct ObjectLiteral : public std::enable_shared_from_this<ObjectLiteral> {
     std::string kind;

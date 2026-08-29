@@ -809,6 +809,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                             ::app_src_checker_common_::typeError(state, ((std::string("Unknown shorthand property '") + property->name) + std::string("'")), property->span);
                             (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::unknownType()));
                         } else {
+                            (property->resolvedBinding = binding);
                             (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(binding->type_));
                         }
                     }
@@ -857,6 +858,7 @@ void checkConstructionFields(const std::shared_ptr<::app_src_checker_state_::Che
                     ::app_src_checker_common_::typeError(state, ((std::string("Unknown shorthand property '") + property->name) + std::string("'")), property->span);
                     (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::unknownType()));
                 } else {
+                    (property->resolvedBinding = binding);
                     (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(binding->type_));
                 }
             }
@@ -871,6 +873,7 @@ void checkConstructionFields(const std::shared_ptr<::app_src_checker_state_::Che
                 ::app_src_checker_common_::typeError(state, ((std::string("Unknown shorthand property '") + property->name) + std::string("'")), property->span);
                 (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::unknownType()));
             } else {
+                (property->resolvedBinding = binding);
                 (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(binding->type_));
             }
         }

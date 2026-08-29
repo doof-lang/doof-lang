@@ -1116,6 +1116,9 @@ std::string emitConstruct(const std::shared_ptr<::app_src_ast_::ConstructExpress
             if (!doof::is_null(property)) {
                 if (doof::is_null(property->value)) {
                     (value = ::app_src_emitter_expr_::cppIdentifier(name));
+                    if (((!doof::is_null(property->resolvedBinding)) && property->resolvedBinding->mutable_) && ::app_src_emitter_context_::isCapturedMutable(context, name)) {
+                        (value = ((std::string("(*") + value) + std::string(")")));
+                    }
                 } else {
                     {
                         auto _case_subject = doof::unwrap_optional(property->value);
@@ -1175,8 +1178,8 @@ std::string emitConstructorFactoryCall(const std::shared_ptr<::app_src_semantic_
         if (i > 0) {
             (result = (result + std::string(", ")));
         }
-        const auto parameter = doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 743);
-        const auto argument = [&]() -> std::shared_ptr<::app_src_ast_::CallArgument> { if (named) { return callArgumentNamedFromArgs(args, parameter->name); } return [&]() -> std::shared_ptr<::app_src_ast_::CallArgument> { if ((i < static_cast<int32_t>((args)->size()))) { return doof::array_at(args, i, "src/emitter-expr-calls", 744); } return nullptr; }(); }();
+        const auto parameter = doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 748);
+        const auto argument = [&]() -> std::shared_ptr<::app_src_ast_::CallArgument> { if (named) { return callArgumentNamedFromArgs(args, parameter->name); } return [&]() -> std::shared_ptr<::app_src_ast_::CallArgument> { if ((i < static_cast<int32_t>((args)->size()))) { return doof::array_at(args, i, "src/emitter-expr-calls", 749); } return nullptr; }(); }();
         if (!doof::is_null(argument)) {
             (result = (result + ::app_src_emitter_expr_::emitExpression(argument->value, context, parameter->resolvedType)));
         } else {
@@ -1208,7 +1211,7 @@ std::string emitNamedConstructorFactoryCall(const std::shared_ptr<::app_src_sema
         if (i > 0) {
             (result = (result + std::string(", ")));
         }
-        const auto parameter = doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 766);
+        const auto parameter = doof::array_at(constructorMethod->params, i, "src/emitter-expr-calls", 771);
         const auto property = ::app_src_emitter_expr_utils_::findProperty(expression->args, parameter->name);
         if (!doof::is_null(property)) {
             if (doof::is_null(property->value)) {
@@ -1233,16 +1236,16 @@ std::string emitDefaultExpression(const std::variant<std::shared_ptr<::app_src_a
 }
 std::string concreteFunctionName(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& key) {
     for (int32_t i = 0; i < static_cast<int32_t>((context->concreteFunctionKeys)->size()); ++i) {
-        if (doof::array_at(context->concreteFunctionKeys, i, "src/emitter-expr-calls", 788) == key) {
-            return doof::array_at(context->concreteFunctionNames, i, "src/emitter-expr-calls", 788);
+        if (doof::array_at(context->concreteFunctionKeys, i, "src/emitter-expr-calls", 793) == key) {
+            return doof::array_at(context->concreteFunctionNames, i, "src/emitter-expr-calls", 793);
         }
     }
     return std::string("");
 }
 std::string concreteMethodNameFor(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& key) {
     for (int32_t i = 0; i < static_cast<int32_t>((context->concreteMethodKeys)->size()); ++i) {
-        if (doof::array_at(context->concreteMethodKeys, i, "src/emitter-expr-calls", 795) == key) {
-            return doof::array_at(context->concreteMethodNames, i, "src/emitter-expr-calls", 795);
+        if (doof::array_at(context->concreteMethodKeys, i, "src/emitter-expr-calls", 800) == key) {
+            return doof::array_at(context->concreteMethodNames, i, "src/emitter-expr-calls", 800);
         }
     }
     return std::string("");
@@ -1258,8 +1261,8 @@ std::string concreteClassName(const std::shared_ptr<::app_src_semantic_::ClassTy
     }
     const auto key = ::app_src_emitter_monomorphize_::classInstantiationKey(class_->symbol->module, class_->name, typeArgs);
     for (int32_t i = 0; i < static_cast<int32_t>((context->concreteClassKeys)->size()); ++i) {
-        if (doof::array_at(context->concreteClassKeys, i, "src/emitter-expr-calls", 806) == key) {
-            const auto name = doof::array_at(context->concreteClassNames, i, "src/emitter-expr-calls", 807);
+        if (doof::array_at(context->concreteClassKeys, i, "src/emitter-expr-calls", 811) == key) {
+            const auto name = doof::array_at(context->concreteClassNames, i, "src/emitter-expr-calls", 812);
             if ((class_->symbol->module != std::string("")) && (class_->symbol->module != context->modulePath)) {
                 return (((std::string("::") + ::app_src_emitter_expr_utils_::exprModuleNamespaceFor(class_->symbol->module)) + std::string("::")) + name);
             }

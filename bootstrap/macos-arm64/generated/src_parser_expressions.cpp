@@ -702,7 +702,7 @@ std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_
                     (value = doof::optional_value(parser->parseExpression()));
                 }
             }
-            properties->push_back(std::make_shared<::app_src_ast_::ObjectProperty>(name, key, value, std::monostate{}, parser->span(propertyStart)));
+            properties->push_back(std::make_shared<::app_src_ast_::ObjectProperty>(name, key, value, std::monostate{}, nullptr, parser->span(propertyStart)));
         }
         if (!parser->match(::app_src_lexer_::TokenType::Comma)) {
             break;
@@ -724,7 +724,7 @@ std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_
         if (parser->match(::app_src_lexer_::TokenType::Colon)) {
             (value = doof::optional_value(parser->parseExpression()));
         }
-        properties->push_back(std::make_shared<::app_src_ast_::ObjectProperty>(propertyName, std::monostate{}, value, std::monostate{}, parser->span(propertyStart)));
+        properties->push_back(std::make_shared<::app_src_ast_::ObjectProperty>(propertyName, std::monostate{}, value, std::monostate{}, nullptr, parser->span(propertyStart)));
         if (!parser->match(::app_src_lexer_::TokenType::Comma)) {
             break;
         }

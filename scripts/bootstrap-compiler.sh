@@ -40,6 +40,7 @@ collect_sources() {
       case "$(basename "$source")" in
         *_windows.c|*_windows.cc|*_windows.cpp|*_windows.m|*_windows.mm|\
         *_linux.c|*_linux.cc|*_linux.cpp|*_linux.m|*_linux.mm|\
+        *_curl.c|*_curl.cc|*_curl.cpp|*_curl.m|*_curl.mm|\
         *_ios.c|*_ios.cc|*_ios.cpp|*_ios.m|*_ios.mm)
           continue
           ;;

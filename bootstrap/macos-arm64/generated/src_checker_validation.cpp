@@ -522,6 +522,8 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
                 validateResolved(property->resolvedType, property->span, module, std::string("constructor property"), diagnostics);
                 if (!doof::is_null(property->value)) {
                     validateExpression(doof::unwrap_optional(property->value), module, diagnostics);
+                } else if (((construct->type_ != std::string("Success")) && (construct->type_ != std::string("Failure"))) && doof::is_null(property->resolvedBinding)) {
+                    addValidationError(module, property->span, ((std::string("Constructor shorthand property '") + property->name) + std::string("' has no resolved binding")), diagnostics);
                 }
             }
     }

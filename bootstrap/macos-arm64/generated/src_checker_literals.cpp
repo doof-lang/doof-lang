@@ -89,6 +89,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                                 if (doof::is_null(binding)) {
                                     ::app_src_checker_common_::typeError(state, ((std::string("Unknown shorthand property '") + property->name) + std::string("'")), property->span);
                                 } else {
+                                    (property->resolvedBinding = binding);
                                     (propertyType = binding->type_);
                                 }
                             }
@@ -254,6 +255,7 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
                             ::app_src_checker_common_::typeError(state, ((std::string("Unknown shorthand property '") + property->name) + std::string("'")), property->span);
                             (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::unknownType()));
                         } else {
+                            (property->resolvedBinding = binding);
                             (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(binding->type_));
                         }
                     }
@@ -511,6 +513,7 @@ void decorateObjectProperty(const std::shared_ptr<::app_src_checker_state_::Chec
             ::app_src_checker_common_::typeError(state, ((std::string("Unknown shorthand property '") + property->name) + std::string("'")), property->span);
             (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(::app_src_checker_types_::unknownType()));
         } else {
+            (property->resolvedBinding = binding);
             (property->resolvedType = ::app_src_checker_symbols_::optionalResolvedType(binding->type_));
         }
     }

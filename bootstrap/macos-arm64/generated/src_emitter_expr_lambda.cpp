@@ -663,6 +663,8 @@ void collectExpressionCaptures(const std::variant<std::shared_ptr<::app_src_ast_
                 }
                 if (!doof::is_null(property->value)) {
                     collectExpressionCaptures(doof::unwrap_optional(property->value), bodyStart, bodyEnd, result, mutableOnly);
+                } else if (doof::is_null(property->key) && (!doof::is_null(property->resolvedBinding))) {
+                    collectBindingCapture(property->name, doof::unwrap_optional(property->resolvedBinding), bodyStart, bodyEnd, result, mutableOnly);
                 }
             }
             if (!doof::is_null(object->spread)) {
@@ -727,6 +729,8 @@ void collectExpressionCaptures(const std::variant<std::shared_ptr<::app_src_ast_
             for (const auto& property : *_iterable_56) {
                 if (!doof::is_null(property->value)) {
                     collectExpressionCaptures(doof::unwrap_optional(property->value), bodyStart, bodyEnd, result, mutableOnly);
+                } else if (!doof::is_null(property->resolvedBinding)) {
+                    collectBindingCapture(property->name, doof::unwrap_optional(property->resolvedBinding), bodyStart, bodyEnd, result, mutableOnly);
                 }
             }
     }
@@ -771,7 +775,9 @@ void collectIdentifierCapture(const std::shared_ptr<::app_src_ast_::Identifier>&
     if (doof::is_null(identifier->resolvedBinding)) {
         return;
     }
-    const auto binding = doof::unwrap_optional(identifier->resolvedBinding);
+    collectBindingCapture(identifier->name, doof::unwrap_optional(identifier->resolvedBinding), bodyStart, bodyEnd, result, mutableOnly);
+}
+void collectBindingCapture(const std::string& name, const std::shared_ptr<::app_src_semantic_::Binding>& binding, int32_t bodyStart, int32_t bodyEnd, const std::shared_ptr<std::vector<std::string>>& result, bool mutableOnly) {
     if (binding->kind == std::string("field")) {
         if (!mutableOnly) {
             addUnique(result, std::string("this"));
@@ -797,7 +803,7 @@ void collectIdentifierCapture(const std::shared_ptr<::app_src_ast_::Identifier>&
     if (mutableOnly && !binding->mutable_) {
         return;
     }
-    addUnique(result, ::app_src_emitter_expr_::cppIdentifier(identifier->name));
+    addUnique(result, ::app_src_emitter_expr_::cppIdentifier(name));
 }
 void addUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
     const auto& _iterable_60 = values;

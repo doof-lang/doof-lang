@@ -5,6 +5,7 @@ repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 script="$repo_root/scripts/refresh-bootstrap.sh"
 canonicalizer="$repo_root/scripts/canonicalize-bootstrap-snapshot.sh"
 platform_source_preserver="$repo_root/scripts/preserve-bootstrap-platform-sources.sh"
+bootstrap_compiler="$repo_root/scripts/bootstrap-compiler.sh"
 test_root=$(mktemp -d "${TMPDIR:-/tmp}/doof-refresh-bootstrap-test.XXXXXX")
 
 finish() {
@@ -17,6 +18,13 @@ trap finish EXIT HUP INT TERM
 sh -n "$script"
 sh -n "$canonicalizer"
 sh -n "$platform_source_preserver"
+bootstrap_sources="$test_root/bootstrap-sources"
+"$bootstrap_compiler" --list-sources > "$bootstrap_sources"
+grep -q '/native_http_client_apple\.mm$' "$bootstrap_sources"
+if grep -q '/native_http_client_curl\.cpp$' "$bootstrap_sources"; then
+  echo "Expected the macOS bootstrap compiler to exclude the libcurl transport." >&2
+  exit 1
+fi
 "$script" --help > "$test_root/help"
 grep -q '^usage: .*refresh-bootstrap.sh \[--help\]$' "$test_root/help"
 grep -q 'DOOF_REFRESH_MAX_GENERATIONS' "$test_root/help"
