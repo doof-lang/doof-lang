@@ -671,6 +671,7 @@ namespace std_::fs::index {
     doof::Result<void, ::std_::fs::types::IoError> remove(const std::string& path);
     doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path, const std::shared_ptr<std::vector<uint8_t>>& data);
     doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(const std::string& path);
+    doof::Result<void, ::std_::fs::types::IoError> copyPermissions(const std::string& sourcePath, const std::string& destPath);
     bool isFile(const std::string& path);
     struct BlockReadStream : public std::enable_shared_from_this<BlockReadStream> {
     std::shared_ptr<::NativeBlobReadStream> native;

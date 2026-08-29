@@ -140,6 +140,9 @@ doof::Result<void, ::std_::fs::types::IoError> writeBlob(const std::string& path
 doof::Result<std::shared_ptr<::std_::fs::types::FileInfo>, ::std_::fs::types::IoError> metadata(const std::string& path) {
     return ::doof_fs::metadata(path);
 }
+doof::Result<void, ::std_::fs::types::IoError> copyPermissions(const std::string& sourcePath, const std::string& destPath) {
+    return ::doof_fs::copyPermissions(sourcePath, destPath);
+}
 bool isFile(const std::string& path) {
     return ::doof_fs::isFile(path);
 }

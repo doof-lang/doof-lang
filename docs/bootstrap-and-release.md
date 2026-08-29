@@ -3,9 +3,11 @@
 The repository is bootstrapped from a reviewed generated-C++ snapshot rather
 than another compiler implementation or a committed executable.
 
-`./build.sh` performs three compiler generations:
+`./build.sh` selects the macOS or Linux stage-0 driver from the host and then
+performs three compiler generations:
 
-1. Apple Clang compiles `bootstrap/macos-arm64/generated/` into stage 0.
+1. The host C++ toolchain compiles `bootstrap/macos-arm64/generated/` into
+   stage 0. Apple Clang is the supported path; the Linux driver is experimental.
 2. Stage 0 compiles the current Doof sources into B5.
 3. B5 compiles the same graph into B6.
 
@@ -54,14 +56,12 @@ MSVC build plan from an x64 developer environment. Both paths create their
 MSVC runtime/Windows precompiled header below the ignored build directory; the
 reviewed bootstrap snapshot remains source-only.
 
-`./scripts/test-bootstrap-alpine.sh` is an experimental portability gate for
-the checked-in stage-0 source graph. It builds an Alpine image with Apple's
-`container` CLI, mounts the repository read-only, selects neutral and `_linux`
-sources, compiles and links them against musl in temporary container storage,
-and smoke-tests the resulting compiler executable. It does not
-run B5/B6, publish an artifact, or add Linux to the supported clean-bootstrap
-hosts. `DOOF_ALPINE_VERSION` overrides the pinned Alpine base image for matrix
-testing, and `DOOF_ALPINE_MEMORY` overrides the 4 GB container memory limit.
+`./scripts/bootstrap-compiler-linux.sh` is an experimental portability path
+for the checked-in stage-0 source graph. It selects neutral and `_linux`
+sources and builds a Linux stage-0 compiler, but it does not run B5/B6,
+publish an artifact, or add Linux to the supported clean-bootstrap hosts. A
+snapshot containing the curl HTTP backend also requires `pkg-config` and the
+host libcurl development package.
 
 ## Cross-platform snapshot
 

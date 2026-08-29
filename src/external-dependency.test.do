@@ -3,7 +3,7 @@ import { BlobReader } from "std/blob"
 import { sha256Hex } from "std/crypto"
 import { exists, isDirectory, mkdir, readBlob, readDir, readText, remove, writeText } from "std/fs"
 import { parseJsonValue } from "std/json"
-import { ExecOptions, run } from "std/os"
+import { ExecOptions, platform, run } from "std/os"
 import { join } from "std/path"
 import { ExternalDependencyTarget, acquirePackageExternalDependencies, applyExternalDependencySubstitutions } from "./external-dependency"
 import { ExternalDependency, ExternalDependencyCommand, PackageManifest } from "./package-manifest"
@@ -49,6 +49,10 @@ export function testAcquiresArchiveRunsCommandsAndReusesSentinels(): none {
   try! mkdir(sourceRoot)
   try! mkdir(archiveRoot)
   try! writeText(testPath(archiveRoot, "hello.h"), "first")
+  if platform() != "windows" {
+    executable := try! run("chmod", ["0751", testPath(archiveRoot, "hello.h")], ExecOptions { withStdin: false })
+    Assert.equal(executable.exitCode, 0)
+  }
   archivePath := testPath(root, "hello.tar.gz")
   archived := try! run("tar", ["-czf", archivePath, "-C", sourceRoot, "hello-1"], ExecOptions { withStdin: false })
   Assert.equal(archived.exitCode, 0)
@@ -79,6 +83,10 @@ export function testAcquiresArchiveRunsCommandsAndReusesSentinels(): none {
   destination := testPath(root, "vendor/hello")
   Assert.equal(try! readText(testPath(destination, "hello.h")), "first")
   Assert.equal(try! readText(testPath(destination, "built-linux.h")), "first")
+  if platform() != "windows" {
+    executable := try! run("test", ["-x", testPath(destination, "hello.h")], ExecOptions { withStdin: false })
+    Assert.equal(executable.exitCode, 0)
+  }
   Assert.equal(exists(testPath(destination, ".doof-external.json")), true)
   Assert.equal(exists(testPath(destination, ".doof-external-native-linux.json")), true)
   sourceMarker := try! (try! parseJsonValue(try! readText(testPath(destination, ".doof-external.json")))) as JsonObject

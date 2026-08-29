@@ -22,6 +22,14 @@ expect_failure() {
   fi
 }
 
+file_mode() {
+  if [ "$(uname -s)" = "Darwin" ]; then
+    stat -f '%Lp' "$1"
+  else
+    stat -c '%a' "$1"
+  fi
+}
+
 expect_failure "$repo_root/install.sh" --prefix ""
 expect_failure "$repo_root/install.sh" --prefix relative
 expect_failure "$repo_root/install.sh" --prefix /
@@ -31,10 +39,10 @@ prefix="$test_root/prefix"
 "$helper" "$artifact_root" "$prefix"
 
 test -x "$prefix/libexec/doof/doof"
-test "$(stat -f '%Lp' "$prefix/libexec/doof/doof")" = "755"
-test "$(stat -f '%Lp' "$prefix/libexec/doof/doof_runtime.h")" = "644"
-test "$(stat -f '%Lp' "$prefix/libexec/doof/doof_wasm_test_runner_apple.swift")" = "644"
-test "$(stat -f '%Lp' "$prefix/libexec/doof/std-catalog.json")" = "644"
+test "$(file_mode "$prefix/libexec/doof/doof")" = "755"
+test "$(file_mode "$prefix/libexec/doof/doof_runtime.h")" = "644"
+test "$(file_mode "$prefix/libexec/doof/doof_wasm_test_runner_apple.swift")" = "644"
+test "$(file_mode "$prefix/libexec/doof/std-catalog.json")" = "644"
 test -L "$prefix/bin/doof"
 test "$(readlink "$prefix/bin/doof")" = "../libexec/doof/doof"
 test -L "$prefix/bin/doof_runtime.h"

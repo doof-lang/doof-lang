@@ -10,6 +10,8 @@ fi
 
 DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/dist/doof" test "$repo_root/src"
 
+sh "$repo_root/scripts/build.test.sh"
+
 "$repo_root/scripts/runtime-scheduler.test.sh"
 
 "$repo_root/scripts/refresh-bootstrap.test.sh"

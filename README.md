@@ -24,11 +24,13 @@ On Windows, run `scripts/bootstrap-compiler.ps1` and subsequent `doof build`
 commands from an MSVC x64 developer environment. Native builds default to
 `cl.exe` and `link.exe` and produce `.exe` outputs.
 
-The build compiles the checked-in generated C++ stage 0, rebuilds the compiler
-twice, compares the B5 and B6 generated sources byte-for-byte, and publishes
-the verified compiler as `dist/doof`. Stage-0 sources compile in parallel using
-the available CPU count; set `DOOF_BUILD_JOBS` to a positive integer to override
-the number of compiler jobs.
+On macOS and Linux, the build selects the host stage-0 driver, compiles the
+checked-in generated C++ snapshot, rebuilds the compiler twice, compares the
+B5 and B6 generated sources byte-for-byte, and publishes the verified compiler
+as `dist/doof`. Stage-0 sources compile in parallel using the available CPU
+count; set `DOOF_BUILD_JOBS` to a positive integer to override the number of
+compiler jobs. The Linux path remains experimental until its shared snapshot
+and release gate are verified on a clean host.
 
 ## Compiler commands
 
@@ -57,7 +59,7 @@ contracts.
 ./build.sh                         # bootstrap and fixed-point verification
 ./scripts/refresh-bootstrap.sh     # regenerate and verify the bootstrap snapshot
 ./scripts/test.sh                  # compiler unit/component tests
-./scripts/test-bootstrap-alpine.sh # experimental Alpine stage-0 compile smoke test
+./scripts/bootstrap-compiler-linux.sh # experimental Linux stage-0 compile
 ./scripts/release.sh               # full release acceptance gate
 ./scripts/update-std-catalog.sh    # regenerate the exact std package catalog
 ./install.sh                       # build, test, and sudo-install the compiler
@@ -72,14 +74,10 @@ in the bundle. Use `./install.sh --prefix /absolute/path` to select a different
 prefix. Existing compiler files or symlinks are replaced; an existing
 directory at any managed path is left untouched and reported as an error.
 
-The Alpine smoke test uses Apple's `container` CLI to mount the repository
-read-only, compile and link the checked-in bootstrap snapshot against musl in
-temporary container storage, then run the resulting compiler's help command.
-Start the container service with `container system start` before running it.
-This is an experimental portability test, not a supported
-clean-bootstrap host or part of the release gate. Override its pinned base with
-`DOOF_ALPINE_VERSION` when testing another Alpine release, or its 4 GB
-container memory limit with `DOOF_ALPINE_MEMORY`.
+The Linux stage-0 driver selects neutral and `_linux` sources from the shared
+bootstrap graph. It is an experimental portability path, not yet a supported
+clean-bootstrap host or part of the release gate. On Ubuntu, install a C++17
+toolchain, `pkg-config`, and the libcurl development package before building.
 
 Language behavior is defined by the [language specification](spec/01-overview.md).
 Compiler contributors should start with the [documentation map](docs/README.md),

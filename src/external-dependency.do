@@ -6,7 +6,7 @@
 import { ExternalDependency, ExternalDependencyCommand, PackageManifest } from "./package-manifest"
 import { BlobReader } from "std/blob"
 import { sha256Hex, sha256HexString } from "std/crypto"
-import { exists, isDirectory, mkdir, readBlob, readDir, readText, remove, rename, writeBlob, writeText } from "std/fs"
+import { copyPermissions, exists, isDirectory, mkdir, readBlob, readDir, readText, remove, rename, writeBlob, writeText } from "std/fs"
 import { createClient, get } from "std/http"
 import { formatJsonValue, parseJsonValue } from "std/json"
 import { ExecOptions, platform, run } from "std/os"
@@ -51,11 +51,21 @@ function copyExternalPath(sourcePath: string, destinationPath: string): Result<n
     for entry of entries {
       try copyExternalPath(externalPath(sourcePath, entry.name), externalPath(destinationPath, entry.name))
     }
+    if platform() != "windows" {
+      _ := copyPermissions(sourcePath, destinationPath) else error {
+        return Failure("Could not copy permissions from " + sourcePath + " to " + destinationPath)
+      }
+    }
     return Success()
   }
   try ensureExternalDirectory(dirname(destinationPath))
   blob := readBlob(sourcePath) else error { return Failure("Could not read " + sourcePath) }
   _ := writeBlob(destinationPath, blob) else error { return Failure("Could not write " + destinationPath) }
+  if platform() != "windows" {
+    _ := copyPermissions(sourcePath, destinationPath) else error {
+      return Failure("Could not copy permissions from " + sourcePath + " to " + destinationPath)
+    }
+  }
   return Success()
 }
 

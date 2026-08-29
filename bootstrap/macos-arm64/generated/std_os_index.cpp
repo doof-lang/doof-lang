@@ -119,7 +119,7 @@ doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& co
     auto _case_subject = proc->runToCompletion();
     if (std::holds_alternative<doof::Success<std::shared_ptr<::NativeRunResult>>>(_case_subject)) {
         const auto& s = std::get<doof::Success<std::shared_ptr<::NativeRunResult>>>(_case_subject);
-        return doof::Success<std::shared_ptr<ExecResult>>{ std::make_shared<ExecResult>(s.value->exitCode(), s.value->stdout(), s.value->stderr(), s.value->stdoutTruncated(), s.value->stderrTruncated()) };
+        return doof::Success<std::shared_ptr<ExecResult>>{ std::make_shared<ExecResult>(s.value->exitCode(), s.value->standardOutput(), s.value->standardError(), s.value->stdoutTruncated(), s.value->stderrTruncated()) };
     }
     if (std::holds_alternative<doof::Failure<std::string>>(_case_subject)) {
         const auto& f = std::get<doof::Failure<std::string>>(_case_subject);

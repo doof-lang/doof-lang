@@ -34,9 +34,25 @@ if [ ! -d "$stdlib_root" ]; then
   exit 1
 fi
 
+host_system=$(uname -s)
+case "$host_system" in
+  Darwin)
+    bootstrap_driver="$repo_root/scripts/bootstrap-compiler.sh"
+    stage0="$repo_root/build/bootstrap-stage0/doof"
+    ;;
+  Linux)
+    bootstrap_driver="$repo_root/scripts/bootstrap-compiler-linux.sh"
+    stage0="$repo_root/build/bootstrap-stage0-linux/doof"
+    ;;
+  *)
+    echo "Unsupported build host: $host_system" >&2
+    echo "Use macOS arm64, Linux, or scripts/bootstrap-compiler.ps1 on Windows." >&2
+    exit 1
+    ;;
+esac
+
 run_step "Compile the checked-in bootstrap snapshot" \
-  "$repo_root/scripts/bootstrap-compiler.sh"
-stage0="$repo_root/build/bootstrap-stage0/doof"
+  "$bootstrap_driver"
 
 rm -rf "$b5_root" "$b6_root" "$repo_root/dist"
 mkdir -p "$b5_root" "$b6_root" "$repo_root/dist"

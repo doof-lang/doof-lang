@@ -4,6 +4,7 @@ set -eu
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 script="$repo_root/scripts/refresh-bootstrap.sh"
 canonicalizer="$repo_root/scripts/canonicalize-bootstrap-snapshot.sh"
+platform_source_preserver="$repo_root/scripts/preserve-bootstrap-platform-sources.sh"
 test_root=$(mktemp -d "${TMPDIR:-/tmp}/doof-refresh-bootstrap-test.XXXXXX")
 
 finish() {
@@ -15,10 +16,12 @@ trap finish EXIT HUP INT TERM
 
 sh -n "$script"
 sh -n "$canonicalizer"
+sh -n "$platform_source_preserver"
 "$script" --help > "$test_root/help"
 grep -q '^usage: .*refresh-bootstrap.sh \[--help\]$' "$test_root/help"
 grep -q 'DOOF_REFRESH_MAX_GENERATIONS' "$test_root/help"
 grep -q 'DOOF_REFRESH_SEED_COMPILER' "$test_root/help"
+grep -q -- "--exclude='.doof-build/\*\*\*'" "$script"
 
 if "$script" --unknown > "$test_root/unknown" 2>&1; then
   echo "Expected refresh-bootstrap.sh to reject an unknown option." >&2
@@ -64,6 +67,21 @@ grep -q '^#include "module.hpp"$' "$fixture_root/nested/module.cpp"
 grep -q '^int answer() { return 42; }$' "$fixture_root/nested/module.cpp"
 grep -q '^#pragma once$' "$fixture_root/nested/module.hpp"
 grep -q '^#line 9 "documentation-example"$' "$fixture_root/notes.txt"
+
+platform_snapshot="$test_root/platform-snapshot"
+platform_candidate="$test_root/platform-candidate"
+mkdir -p "$platform_snapshot/std/http" "$platform_candidate/std/http"
+printf '%s\n' apple > "$platform_snapshot/std/http/native_http_client_apple.mm"
+printf '%s\n' curl > "$platform_snapshot/std/http/native_http_client_curl.cpp"
+printf '%s\n' windows > "$platform_snapshot/std/http/native_http_client_windows.cpp"
+printf '%s\n' neutral > "$platform_snapshot/std/http/native_http_client.cpp"
+printf '%s\n' generated-curl > "$platform_candidate/std/http/native_http_client_curl.cpp"
+
+sh "$platform_source_preserver" "$platform_snapshot" "$platform_candidate"
+grep -q '^apple$' "$platform_candidate/std/http/native_http_client_apple.mm"
+grep -q '^generated-curl$' "$platform_candidate/std/http/native_http_client_curl.cpp"
+grep -q '^windows$' "$platform_candidate/std/http/native_http_client_windows.cpp"
+test ! -e "$platform_candidate/std/http/native_http_client.cpp"
 
 if "$canonicalizer" "$test_root/missing-snapshot" > "$test_root/canonicalizer-error" 2>&1; then
   echo "Expected bootstrap canonicalization to reject a missing snapshot root." >&2

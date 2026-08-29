@@ -20,6 +20,10 @@ maps each acquired package to a logical module prefix before source resolution.
 Root resolutions and dependency policy constrain transitive package/native
 inputs.
 
+External archive dependencies preserve their extracted POSIX permission bits
+when the compiler materializes the stripped payload tree. Windows acquisition
+uses the platform's normal created-file permissions.
+
 `resources` copies explicit package files beside a command-line executable or
 into an application bundle. `build.native` declares include paths, source
 files, libraries, frameworks, pkg-config packages, compiler/linker flags, and

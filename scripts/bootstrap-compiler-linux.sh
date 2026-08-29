@@ -59,12 +59,6 @@ if ! command -v "$cxx" >/dev/null 2>&1; then
   echo "C++ compiler not found: $cxx" >&2
   exit 1
 fi
-force_include=${DOOF_BOOTSTRAP_FORCE_INCLUDE:-}
-if [ -n "$force_include" ] && [ ! -f "$force_include" ]; then
-  echo "Bootstrap force-include file not found: $force_include" >&2
-  exit 1
-fi
-
 rm -rf "$output_root"
 mkdir -p "$object_root"
 
@@ -75,6 +69,19 @@ find "$snapshot_root" -type f \( -name '*.h' -o -name '*.hpp' -o -name '*.hh' \)
   | while IFS= read -r directory; do printf '%s\n' "-I$directory"; done \
   >> "$include_response"
 collect_sources > "$source_list"
+
+curl_link_flags=""
+if grep -q '/native_http_client_curl\.cpp$' "$source_list"; then
+  if ! command -v pkg-config >/dev/null 2>&1 || ! pkg-config --exists libcurl; then
+    echo "Linux bootstrap requires pkg-config metadata for libcurl." >&2
+    echo "Install pkg-config and the libcurl development package." >&2
+    exit 1
+  fi
+  for flag in $(pkg-config --cflags libcurl); do
+    printf '%s\n' "$flag" >> "$include_response"
+  done
+  curl_link_flags=$(pkg-config --libs libcurl)
+fi
 
 if [ ! -s "$source_list" ]; then
   echo "Bootstrap snapshot contains no compilable Linux sources." >&2
@@ -99,17 +106,11 @@ done < "$source_list" \
   | xargs -0 -n 2 -P "$jobs" sh -c '
       compiler=$1
       includes=$2
-      force_include=$3
-      source=$4
-      object=$5
-      if [ -n "$force_include" ]; then
-        set -- -include "$force_include"
-      else
-        set --
-      fi
+      source=$3
+      object=$4
       "$compiler" -std=c++17 -O2 -DNDEBUG -pthread \
-        "$@" @"$includes" -c "$source" -o "$object" && printf "."
-    ' sh "$cxx" "$include_response" "$force_include"
+        @"$includes" -c "$source" -o "$object" && printf "."
+    ' sh "$cxx" "$include_response"
 printf '\n'
 
 find "$object_root" -type f -name '*.o' | LC_ALL=C sort > "$object_response"
@@ -123,7 +124,7 @@ echo "  Linking $object_count bootstrap objects..."
 # DOOF_BOOTSTRAP_LINK_FLAGS is intentionally shell-split so callers can supply
 # a conventional list such as "-lbsd -ldl" for their libc/toolchain.
 # shellcheck disable=SC2086
-"$cxx" -std=c++17 -O2 -DNDEBUG -pthread @"$object_response" ${DOOF_BOOTSTRAP_LINK_FLAGS:-} -o "$output_root/doof"
+"$cxx" -std=c++17 -O2 -DNDEBUG -pthread @"$object_response" $curl_link_flags ${DOOF_BOOTSTRAP_LINK_FLAGS:-} -o "$output_root/doof"
 
 cp "$repo_root/runtime/doof_runtime.h" "$output_root/doof_runtime.h"
 cp "$repo_root/runtime/doof_wasm_test_runner_apple.swift" "$output_root/doof_wasm_test_runner_apple.swift"

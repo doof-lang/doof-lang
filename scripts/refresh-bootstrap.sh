@@ -6,6 +6,7 @@ stdlib_root=${DOOF_STDLIB_ROOT:-"$repo_root/../doof-stdlib"}
 refresh_root="$repo_root/build/bootstrap-refresh"
 max_generations=${DOOF_REFRESH_MAX_GENERATIONS:-6}
 seed_compiler=${DOOF_REFRESH_SEED_COMPILER:-}
+platform_source_preserver="$repo_root/scripts/preserve-bootstrap-platform-sources.sh"
 
 usage() {
   echo "usage: $0 [--help]"
@@ -136,6 +137,7 @@ mkdir -p "$candidate_root" "$snapshot_backup"
 
 rsync -a \
   --exclude='.doof-cache/***' \
+  --exclude='.doof-build/***' \
   --exclude='.doof-objects/***' \
   --exclude='.reckon/***' \
   --exclude='/doof_runtime.h' \
@@ -147,19 +149,9 @@ rsync -a \
   "$fixed_root/" "$candidate_root/"
 
 # A host build emits only its selected target-native sources. Preserve foreign
-# host alternatives already reviewed into the shared cross-platform snapshot.
-find "$snapshot_root" -type f | LC_ALL=C sort | while IFS= read -r source; do
-  case "$(basename "$source")" in
-    *_windows.c|*_windows.cc|*_windows.cpp|*_windows.h|*_windows.hh|*_windows.hpp|*_windows.m|*_windows.mm|\
-    *_linux.c|*_linux.cc|*_linux.cpp|*_linux.h|*_linux.hh|*_linux.hpp|*_linux.m|*_linux.mm)
-      relative_path=${source#"$snapshot_root/"}
-      if [ ! -f "$candidate_root/$relative_path" ]; then
-        mkdir -p "$(dirname -- "$candidate_root/$relative_path")"
-        cp "$source" "$candidate_root/$relative_path"
-      fi
-      ;;
-  esac
-done
+# alternatives already reviewed into the shared cross-platform snapshot.
+sh "$platform_source_preserver" "$snapshot_root" "$candidate_root"
+find "$candidate_root" -depth -type d -empty -delete
 
 # Keep source-location mappings in ordinary compiler output, but omit them from
 # the reviewed trust root. Source line changes should not create bootstrap
