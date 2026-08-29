@@ -42,3 +42,39 @@ export function testAutomaticMutableBindingsStillUseSharedCaptureStorage(): none
   Assert.stringContains(source, "doof::callback<int32_t()>([count]() -> int32_t")
   Assert.stringContains(source, "(*count) += 1")
 }
+
+export function testClassLambdaRetainsCapturedThis(): none {
+  result := compile([SourceFile {
+    path: "/retained-this.do",
+    source:
+      "class Receiver {\n" +
+      "  value: int = 1\n" +
+      "  handler(): (): int => (): int => this.value\n" +
+      "}\n",
+  }], "/retained-this.do")
+
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "[this, _doof_captured_self = this->shared_from_this()]() -> int32_t")
+}
+
+export function testStructLambdaKeepsValueTypeThisCapture(): none {
+  result := compile([SourceFile {
+    path: "/struct-this.do",
+    source:
+      "struct Receiver {\n" +
+      "  value: int\n" +
+      "  read(handler: (): int): int => handler() + value\n" +
+      "  apply(): int => read((): int => this.value)\n" +
+      "}\n",
+  }], "/struct-this.do")
+
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::callback<int32_t()>([this]() -> int32_t")
+  Assert.stringNotContains(source, "_doof_captured_self")
+}

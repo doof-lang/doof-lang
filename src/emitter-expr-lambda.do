@@ -43,7 +43,17 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
     captures = ""
     for i of 0..<captureNames.length {
       if i > 0 { captures = captures + ", " }
-      captures = captures + captureNames[i]
+      capture := captureNames[i]
+      // A retained callback must keep its enclosing class alive. Capturing
+      // C++ `this` alone leaves a dangling pointer after the last external
+      // shared_ptr is released (notably when a Wasm export returns before a
+      // host callback runs). Keep the ordinary `this` spelling for body
+      // emission and pair it with an owning init-capture.
+      if capture == "this" && context.currentClass != "" && !context.currentClassStruct {
+        captures = captures + "this, _doof_captured_self = this->shared_from_this()"
+      } else {
+        captures = captures + capture
+      }
     }
   }
 

@@ -262,12 +262,12 @@ export function testSynthesizesDistinctCppNamesForDiscardTargets(): none {
 
 export function testLambdaCapturesExplicitThis(): none {
   result := emit("class Receiver { values: int[] = []\nfunction make(): (value: int): void { return (value: int): void => this.values.push(value) } }")
-  Assert.equal(result.source.contains("[this](int32_t value)"), true)
+  Assert.equal(result.source.contains("[this, _doof_captured_self = this->shared_from_this()](int32_t value)"), true)
 }
 
 export function testLambdaCapturesThisForImplicitMethodCalls(): none {
   result := emit("class Receiver { handle(value: int): void {}\nmake(): (value: int): void => (value: int): void => handle(value) }")
-  Assert.equal(result.source.contains("[this](int32_t value)"), true)
+  Assert.equal(result.source.contains("[this, _doof_captured_self = this->shared_from_this()](int32_t value)"), true)
   Assert.equal(result.source.contains("return handle(value)"), true)
 }
 

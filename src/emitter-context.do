@@ -31,6 +31,7 @@ export class EmitContext {
   let jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}
   let currentClass: string = ""
   let currentClassNative: bool = false
+  let currentClassStruct: bool = false
   let currentFunctionStatic: bool = false
   let currentReturnErrorType: string = ""
   let currentFunctionName: string = ""

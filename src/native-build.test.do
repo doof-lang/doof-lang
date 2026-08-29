@@ -333,6 +333,8 @@ export function testPlansStandaloneEmscriptenWasmLink(): none {
   Assert.equal(plan.precompiledHeaderTask, none)
   Assert.equal(plan.compileTasks[0].arguments.contains("-Oz"), true)
   Assert.equal(plan.compileTasks[0].arguments.contains("-flto"), true)
+  Assert.equal(plan.compileTasks[0].arguments.contains("-fwasm-exceptions"), true)
+  Assert.equal(plan.linkArguments.contains("-fwasm-exceptions"), true)
   Assert.equal(plan.linkArguments.contains("-sSTANDALONE_WASM=1"), true)
   Assert.equal(plan.linkArguments.contains("--no-entry"), true)
   Assert.equal(plan.linkArguments.contains("-sEXPORTED_FUNCTIONS=[\"_malloc\",\"_free\",\"_doof_free\",\"_doof_initialize\",\"_doof_export_add\"]"), true)

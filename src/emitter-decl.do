@@ -339,12 +339,14 @@ export function emitClassMethodDefinition(owner: ClassDeclaration, method: Funct
   if method.bodyless || (method.typeParams.length > 0 && context.substitution == none) { return "" }
   previous := context.currentClass
   previousNative := context.currentClassNative
+  previousStruct := context.currentClassStruct
   previousReturnErrorType := context.currentReturnErrorType
   previousFunctionName := context.currentFunctionName
   previousFunctionStatic := context.currentFunctionStatic
   previousCapturedMutables := context.capturedMutables
   context.currentClass = owner.name
   context.currentClassNative = owner.native_
+  context.currentClassStruct = owner.struct_
   context.currentFunctionName = method.name
   context.currentFunctionStatic = method.static_
   context.capturedMutables = []
@@ -373,6 +375,7 @@ export function emitClassMethodDefinition(owner: ClassDeclaration, method: Funct
   }
   context.currentClass = previous
   context.currentClassNative = previousNative
+  context.currentClassStruct = previousStruct
   context.currentReturnErrorType = previousReturnErrorType
   context.currentFunctionName = previousFunctionName
   context.currentFunctionStatic = previousFunctionStatic
@@ -385,11 +388,14 @@ export function emitClassDestructorDefinition(owner: ClassDeclaration, context: 
   ownerName := if emittedOwnerName == "" then owner.name else emittedOwnerName
   previous := context.currentClass
   previousNative := context.currentClassNative
+  previousStruct := context.currentClassStruct
   context.currentClass = owner.name
   context.currentClassNative = false
+  context.currentClassStruct = owner.struct_
   result := ownerName + "::~" + ownerName + "() {\n" + emitBlock(owner.destructor_!, 1, context) + "}\n"
   context.currentClass = previous
   context.currentClassNative = previousNative
+  context.currentClassStruct = previousStruct
   return result
 }
 

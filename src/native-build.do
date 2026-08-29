@@ -99,7 +99,10 @@ export function planNativeCompile(
   if wasm {
     compileArguments.push("-Oz")
     compileArguments.push("-flto")
-    if wasmCommand { compileArguments.push("-fwasm-exceptions") }
+    // Doof panic/catch and the generated Wasm export error boundary use C++
+    // exceptions. Enable the native Wasm exception model for every target,
+    // not only command-style test executables.
+    compileArguments.push("-fwasm-exceptions")
   }
   for define of native.defines { compileArguments.push("-D" + define) }
   compileArguments.push("-I")
@@ -219,9 +222,8 @@ export function planNativeCompile(
     linkArguments.push("-sMALLOC=emmalloc")
     linkArguments.push("-sSTANDALONE_WASM=1")
     linkArguments.push("-sFILESYSTEM=0")
-    if wasmCommand {
-      linkArguments.push("-fwasm-exceptions")
-    } else {
+    linkArguments.push("-fwasm-exceptions")
+    if !wasmCommand {
       linkArguments.push("--no-entry")
       linkArguments.push("-sEXPORTED_FUNCTIONS=" + wasmExportList(wasmExportNames))
     }
