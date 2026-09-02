@@ -362,8 +362,29 @@ class Pixel {
 }
 
 println(formatJsonValue(Pixel { x: 10, y: 20, color: Color.Green }.toJsonObject()))
-// {"x":10,"y":20,"color":"Green"}
+// {"x":10,"y":20,"color":1}
 ```
+
+Enum JSON is always its backing value, never its declared name:
+
+```doof
+enum Status { Pending, Ready = 7, Done }
+enum WireStatus { Pending = "pending", Ready = "ready" }
+
+Status.Pending.toJsonValue()       // JSON integer 0
+Status.Ready.toJsonValue()         // JSON integer 7
+WireStatus.Ready.toJsonValue()     // JSON string "ready"
+
+Status.fromJsonValue(7)            // Success(Status.Ready)
+WireStatus.fromJsonValue("ready")  // Success(WireStatus.Ready)
+```
+
+The scalar JSON type must match the enum backing kind exactly. Lenient decoding
+does not coerce enum strings to integers or enum integers to strings. Unknown
+values report the containing field/index/map path, enum type, received value,
+and the valid backing values. This rule applies identically to direct enum
+decoding, nullable fields, arrays, tuples, string-keyed maps, and generic
+`T.fromJsonValue(...)` calls where `T: JsonSerializable`.
 
 Examples in this chapter that call `formatJsonValue(...)` assume:
 

@@ -23,17 +23,17 @@ doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const s
     collectExportedFunctions(doof::unwrap_optional(info), exports);
     std::shared_ptr<std::vector<std::string>> names = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("doof_initialize")});
     std::shared_ptr<std::vector<std::string>> functionNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_3 = exports;
-    for (const auto& fn : *_iterable_3) {
+    const auto& _iterable_6 = exports;
+    for (const auto& fn : *_iterable_6) {
         if (fn->name == std::string("main")) {
             continue;
         }
-        auto _try_value_4 = validateWasmFunction(fn, result);
-        if (doof::is_failure(_try_value_4)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_4))};
+        auto _try_value_2 = validateWasmFunction(fn, result);
+        if (doof::is_failure(_try_value_2)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_2))};
         addWasmJsonDemands(fn, result, jsonPlan);
         const auto name = (std::string("doof_export_") + ::app_src_emitter_expr_::cppIdentifier(fn->name));
-        const auto& _iterable_6 = functionNames;
-        for (const auto& existing : *_iterable_6) {
+        const auto& _iterable_4 = functionNames;
+        for (const auto& existing : *_iterable_4) {
             if (existing == name) {
                 return doof::Failure<std::string>{ (((std::string("WebAssembly export name collision for ") + fn->name) + std::string(" at ")) + name) };
             }
@@ -299,11 +299,11 @@ std::string emitParameter(const std::shared_ptr<::app_src_ast_::Parameter>& para
     auto source = ((((std::string("        auto ") + iterator) + std::string(" = __params->find(\"")) + parameter->name) + std::string("\");\n"));
     if (!doof::is_null(parameter->defaultValue)) {
         (source = (((((((((((source + std::string("        ")) + ::app_src_emitter_types_::emitContextType(type_, context)) + std::string(" ")) + name) + std::string(";\n        if (")) + iterator) + std::string(" == __params->end()) { ")) + name) + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(parameter->defaultValue), context, doof::optional_value(type_))) + std::string("; } else {\n")));
-        (source = (((((((source + std::string("            if (!(")) + ::app_src_emitter_json_::emitJsonTypeCheck((iterator + std::string("->second")), type_)) + std::string(")) return __doof_wasm_failure_message(400, \"Parameter ")) + parameter->name) + std::string(" expected ")) + ::app_src_emitter_json_::jsonTypeName(type_)) + std::string("\");\n")));
+        (source = (((((((source + std::string("            if (!(")) + ::app_src_emitter_json_::emitJsonTypeCheck((iterator + std::string("->second")), type_, context)) + std::string(")) return __doof_wasm_failure_message(400, \"Parameter ")) + parameter->name) + std::string(" expected ")) + ::app_src_emitter_json_::jsonTypeName(type_, context)) + std::string("\");\n")));
         return (((((source + std::string("            ")) + name) + std::string(" = ")) + ::app_src_emitter_json_::emitJsonRead((iterator + std::string("->second")), type_, context)) + std::string(";\n        }\n"));
     }
     (source = (((((source + std::string("        if (")) + iterator) + std::string(" == __params->end()) return __doof_wasm_failure_message(400, \"Missing required parameter \\\"")) + parameter->name) + std::string("\\\"\");\n")));
-    (source = (((((((source + std::string("        if (!(")) + ::app_src_emitter_json_::emitJsonTypeCheck((iterator + std::string("->second")), type_)) + std::string(")) return __doof_wasm_failure_message(400, \"Parameter ")) + parameter->name) + std::string(" expected ")) + ::app_src_emitter_json_::jsonTypeName(type_)) + std::string("\");\n")));
+    (source = (((((((source + std::string("        if (!(")) + ::app_src_emitter_json_::emitJsonTypeCheck((iterator + std::string("->second")), type_, context)) + std::string(")) return __doof_wasm_failure_message(400, \"Parameter ")) + parameter->name) + std::string(" expected ")) + ::app_src_emitter_json_::jsonTypeName(type_, context)) + std::string("\");\n")));
     return (((((source + std::string("        auto ")) + name) + std::string(" = ")) + ::app_src_emitter_json_::emitJsonRead((iterator + std::string("->second")), type_, context)) + std::string(";\n"));
 }
 std::shared_ptr<::app_src_analyzer_::ModuleInfo> findModule(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::string& path) {

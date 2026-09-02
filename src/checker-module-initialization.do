@@ -114,6 +114,7 @@ function literalTree(state: CheckerState, expression: Expression): bool {
     }
     construct: ConstructExpression -> {
       if construct.resolvedClass == none || construct.resolvedClass!.native_ || construct.resolvedConstructor != none { return false }
+      if construct.spread != none && !literalTree(state, construct.spread!) { return false }
       for argument of construct.args { if !literalProperty(state, argument) { return false } }
       return literalClassDefaults(state, construct.resolvedClass!, construct.args)
     }

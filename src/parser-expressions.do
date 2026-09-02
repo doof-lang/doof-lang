@@ -28,7 +28,15 @@ function parseAssignment(parser: Parser): Expression {
   return left
 }
 
-function parseNullCoalescing(parser: Parser): Expression { return parseBinaryLevel(parser, 0) }
+function parseNullCoalescing(parser: Parser): Expression {
+  left := parseLogicalOr(parser)
+  if !parser.match(TokenType.QuestionQuestion) { return left }
+  right := parseNullCoalescing(parser)
+  return BinaryExpression {
+    kind: "binary-expression", operator: "??", left, right,
+    span: SourceSpan { start: left.span.start, end: right.span.end },
+  }
+}
 function parseLogicalOr(parser: Parser): Expression { return parseBinaryLevel(parser, 1) }
 function parseLogicalAnd(parser: Parser): Expression { return parseBinaryLevel(parser, 2) }
 function parseBitwiseOr(parser: Parser): Expression { return parseBinaryLevel(parser, 3) }
@@ -47,8 +55,8 @@ function parseShift(parser: Parser): Expression {
   return left
 }
 
-export function parseAdditive(parser: Parser): Expression { return parseBinaryLevel(parser, 9) }
-function parseMultiplicative(parser: Parser): Expression { return parseBinaryLevel(parser, 10) }
+export function parseAdditive(parser: Parser): Expression { return parseBinaryLevel(parser, 8) }
+function parseMultiplicative(parser: Parser): Expression { return parseBinaryLevel(parser, 9) }
 
 function parseRange(parser: Parser): Expression {
   let left = parseAdditive(parser)
@@ -70,7 +78,6 @@ function parseExponentiation(parser: Parser): Expression {
 }
 
 function parseBinaryLevel(parser: Parser, level: int): Expression {
-  if level == 0 { return parseBinaryLoop(parser, parseLogicalOr(parser), [TokenType.QuestionQuestion], 0) }
   if level == 1 { return parseBinaryLoop(parser, parseLogicalAnd(parser), [TokenType.PipePipe], 1) }
   if level == 2 { return parseBinaryLoop(parser, parseBitwiseOr(parser), [TokenType.AmpersandAmpersand], 2) }
   if level == 3 { return parseBinaryLoop(parser, parseBitwiseXor(parser), [TokenType.Pipe], 3) }
@@ -78,17 +85,19 @@ function parseBinaryLevel(parser: Parser, level: int): Expression {
   if level == 5 { return parseBinaryLoop(parser, parseEquality(parser), [TokenType.Ampersand], 5) }
   if level == 6 { return parseBinaryLoop(parser, parseComparison(parser), [TokenType.EqualEqual, TokenType.BangEqual], 6) }
   if level == 7 { return parseBinaryLoop(parser, parseShift(parser), [TokenType.Less, TokenType.LessEqual, TokenType.Greater, TokenType.GreaterEqual], 7) }
-  if level == 8 { return parseBinaryLoop(parser, parseAdditive(parser), [TokenType.LessLess, TokenType.GreaterGreater, TokenType.GreaterGreaterGreater], 8) }
-  if level == 9 { return parseBinaryLoop(parser, parseMultiplicative(parser), [TokenType.Plus, TokenType.Minus], 9) }
-  return parseBinaryLoop(parser, parseExponentiation(parser), [TokenType.Star, TokenType.Slash, TokenType.Backslash, TokenType.Percent], 10)
+  if level == 8 { return parseBinaryLoop(parser, parseMultiplicative(parser), [TokenType.Plus, TokenType.Minus], 8) }
+  return parseBinaryLoop(parser, parseExponentiation(parser), [TokenType.Star, TokenType.Slash, TokenType.Backslash, TokenType.Percent], 9)
 }
 
 function parseBinaryLoop(parser: Parser, initial: Expression, kinds: TokenType[], level: int): Expression {
   let left = initial
   while contains(kinds, parser.current().kind) {
-    if parser.inTagAttribute && (parser.check(TokenType.Greater) || (parser.check(TokenType.Slash) && parser.peek(1).kind == TokenType.Greater)) { break }
+    if parser.inTagAttribute && parser.tagAttributeDelimiterDepth == 0
+        && (parser.check(TokenType.Greater) || (parser.check(TokenType.Slash) && parser.peek(1).kind == TokenType.Greater)) {
+      break
+    }
     operator := operatorText(parser, parser.advance())
-    right := if level == 0 then parseLogicalOr(parser) else if level == 1 then parseLogicalAnd(parser) else if level == 2 then parseBitwiseOr(parser) else if level == 3 then parseBitwiseXor(parser) else if level == 4 then parseBitwiseAnd(parser) else if level == 5 then parseEquality(parser) else if level == 6 then parseComparison(parser) else if level == 7 then parseShift(parser) else if level == 8 then parseAdditive(parser) else if level == 9 then parseMultiplicative(parser) else parseExponentiation(parser)
+    right := if level == 1 then parseLogicalAnd(parser) else if level == 2 then parseBitwiseOr(parser) else if level == 3 then parseBitwiseXor(parser) else if level == 4 then parseBitwiseAnd(parser) else if level == 5 then parseEquality(parser) else if level == 6 then parseComparison(parser) else if level == 7 then parseShift(parser) else if level == 8 then parseMultiplicative(parser) else parseExponentiation(parser)
     left = BinaryExpression { kind: "binary-expression", operator, left, right, span: SourceSpan { start: left.span.start, end: right.span.end } }
   }
   return left
@@ -162,7 +171,7 @@ function parseAs(parser: Parser): Expression {
     targetType := parser.parseTypeAnnotation()
     expression = AsExpression {
       kind: "as-expression", expression, targetType,
-      span: SourceSpan { start, end: parser.location() },
+      span: SourceSpan { start, end: targetType.span.end },
     }
   }
   return expression
@@ -196,14 +205,14 @@ isolated function parsePostfix(parser: Parser): Expression {
       force := parser.check(TokenType.BangDot)
       parser.advance()
       property := parser.text(parser.expect(TokenType.Identifier, "Expected member name"))
-      expression = MemberExpression { kind: "member-expression", object: expression, property, optional, force, span: SourceSpan { start: expression.span.start, end: parser.location() } }
+      expression = MemberExpression { kind: "member-expression", object: expression, property, optional, force, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
       typeArgs = []
     } else if (parser.check(TokenType.LeftBracket) || parser.check(TokenType.QuestionBracket)) && parser.sameLineAsPrevious() {
       optional := parser.check(TokenType.QuestionBracket)
       parser.advance()
       index := parser.parseExpression()
       parser.expect(TokenType.RightBracket)
-      expression = IndexExpression { kind: "index-expression", object: expression, index, optional, span: SourceSpan { start: expression.span.start, end: parser.location() } }
+      expression = IndexExpression { kind: "index-expression", object: expression, index, optional, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
     } else if parser.check(TokenType.LeftParen) && parser.sameLineAsPrevious() {
       expression = parseCall(parser, expression, typeArgs)
       typeArgs = []
@@ -212,7 +221,7 @@ isolated function parsePostfix(parser: Parser): Expression {
       typeArgs = []
     } else if parser.check(TokenType.Bang) && parser.sameLineAsPrevious() {
       parser.advance()
-      expression = UnaryExpression { kind: "non-null-assertion", operator: "!", operand: expression, prefix: false, span: SourceSpan { start: expression.span.start, end: parser.location() } }
+      expression = UnaryExpression { kind: "non-null-assertion", operator: "!", operand: expression, prefix: false, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
     } else {
       break
     }
@@ -230,7 +239,7 @@ function parseCall(parser: Parser, callee: Expression, typeArgs: TypeAnnotation[
     if !parser.match(TokenType.Comma) { break }
   }
   parser.expect(TokenType.RightParen)
-  return CallExpression { kind: "call-expression", callee, args, typeArgs, span: SourceSpan { start: callee.span.start, end: parser.location() } }
+  return CallExpression { kind: "call-expression", callee, args, typeArgs, span: SourceSpan { start: callee.span.start, end: parser.previousEnd() } }
 }
 
 function parseNamedCall(parser: Parser, callee: Expression, typeArgs: TypeAnnotation[] = []): Expression {
@@ -245,7 +254,7 @@ function parseNamedCall(parser: Parser, callee: Expression, typeArgs: TypeAnnota
     if !parser.match(TokenType.Comma) { break }
   }
   parser.expect(TokenType.RightBrace)
-  return CallExpression { kind: "call-expression", callee, args, typeArgs, span: SourceSpan { start: callee.span.start, end: parser.location() } }
+  return CallExpression { kind: "call-expression", callee, args, typeArgs, span: SourceSpan { start: callee.span.start, end: parser.previousEnd() } }
 }
 
 isolated function parsePrimary(parser: Parser): Expression {
@@ -302,6 +311,7 @@ isolated function parsePrimary(parser: Parser): Expression {
   }
   if parser.check(TokenType.Identifier) {
     name := parser.text(parser.advance())
+    identifierSpan := parser.span(start)
     if name == "Actor" && parser.check(TokenType.Less) {
       parser.advance()
       className := parser.text(parser.expect(TokenType.Identifier, "Expected actor class name"))
@@ -318,7 +328,7 @@ isolated function parsePrimary(parser: Parser): Expression {
     if parser.check(TokenType.Dot) {
       parser.advance()
       property := parser.text(parser.expect(TokenType.Identifier, "Expected member name"))
-      return MemberExpression { kind: "member-expression", object: Identifier { kind: "identifier", name, span: parser.span(start) }, property, optional: false, force: false, span: parser.span(start) }
+      return MemberExpression { kind: "member-expression", object: Identifier { kind: "identifier", name, span: identifierSpan }, property, optional: false, force: false, span: parser.span(start) }
     }
     let typeArgs: TypeAnnotation[] = []
     if startsWithUppercase(name) && parser.check(TokenType.Less) && looksLikeGenericTypeArguments(parser) {
@@ -348,7 +358,7 @@ function parseTagCall(parser: Parser): Expression {
   while parser.match(TokenType.Dot) {
     memberName := parser.text(parser.expect(TokenType.Identifier, "Expected member name in tag"))
     closingName = closingName + "." + memberName
-    callee = MemberExpression { kind: "member-expression", object: callee, property: memberName, optional: false, force: false, span: SourceSpan { start: calleeStart, end: parser.location() } }
+    callee = MemberExpression { kind: "member-expression", object: callee, property: memberName, optional: false, force: false, span: SourceSpan { start: calleeStart, end: parser.previousEnd() } }
   }
 
   let typeArgs: TypeAnnotation[] = []
@@ -362,9 +372,13 @@ function parseTagCall(parser: Parser): Expression {
     attributeNames.push(name)
     let value: Expression = NoneLiteral { kind: "none-literal", span: parser.locationSpan() }
     if parser.check(TokenType.Arrow) {
+      previousInTagAttribute := parser.inTagAttribute
+      previousTagAttributeDelimiterDepth := parser.tagAttributeDelimiterDepth
       parser.inTagAttribute = true
+      parser.tagAttributeDelimiterDepth = 0
       value = parser.parseExpression()
-      parser.inTagAttribute = false
+      parser.inTagAttribute = previousInTagAttribute
+      parser.tagAttributeDelimiterDepth = previousTagAttributeDelimiterDepth
     } else {
       parser.expect(TokenType.Equal, "Expected '=' or '=>' after tag attribute '" + name + "'")
       value = parseTagAttributeValue(parser, name)
@@ -406,7 +420,7 @@ function parseTagCall(parser: Parser): Expression {
 
   if children.length > 0 {
     if stringArrayContains(attributeNames, "children") { parser.fail("Tag cannot use both a 'children' attribute and nested content") }
-    childrenValue := ArrayLiteral { kind: "array-literal", elements: children, readonly_: false, span: SourceSpan { start: closeStart, end: parser.location() } }
+    childrenValue := ArrayLiteral { kind: "array-literal", elements: children, readonly_: false, span: SourceSpan { start: closeStart, end: parser.previousEnd() } }
     args.push(CallArgument { name: "children", value: childrenValue, span: childrenValue.span })
   }
   return CallExpression { kind: "call-expression", callee, args, typeArgs, span: parser.span(start) }
@@ -526,7 +540,6 @@ function parseParenExpression(parser: Parser): Expression {
   parser.expect(TokenType.LeftParen)
   if parser.check(TokenType.RightParen) {
     parser.advance()
-    if parser.check(TokenType.Arrow) || parser.check(TokenType.Colon) { return finishLambda(parser, [], start) }
     return TupleLiteral { kind: "tuple-literal", elements: [], span: parser.span(start) }
   }
   first := parser.parseExpression()
@@ -537,7 +550,6 @@ function parseParenExpression(parser: Parser): Expression {
       if !parser.match(TokenType.Comma) { break }
     }
     parser.expect(TokenType.RightParen)
-    if parser.check(TokenType.Arrow) || parser.check(TokenType.Colon) { return finishLambda(parser, [], start) }
     return TupleLiteral { kind: "tuple-literal", elements, span: parser.span(start) }
   }
   parser.expect(TokenType.RightParen)
@@ -625,7 +637,7 @@ function parseObjectLiteral(parser: Parser): Expression {
         key = parser.parseExpression()
         parser.expect(TokenType.Colon, "Expected ':' after map key")
         value = parser.parseExpression()
-      } else if isBareMapKeyToken(parser.peek(0).kind) && parser.peek(1).kind == TokenType.Colon {
+      } else if looksLikeExpressionMapKey(parser) {
         key = parser.parseExpression()
         parser.expect(TokenType.Colon, "Expected ':' after map key")
         value = parser.parseExpression()
@@ -641,24 +653,40 @@ function parseObjectLiteral(parser: Parser): Expression {
   return ObjectLiteral { kind: "object-literal", properties, spread, span: parser.span(start) }
 }
 
-function isBareMapKeyToken(kind: TokenType): bool {
-  return kind == TokenType.IntLiteral
-      || kind == TokenType.LongLiteral
+function looksLikeExpressionMapKey(parser: Parser): bool {
+  kind := parser.peek(0).kind
+  if (kind == TokenType.IntLiteral || kind == TokenType.LongLiteral
+      || kind == TokenType.FloatLiteral || kind == TokenType.DoubleLiteral
+      || kind == TokenType.CharLiteral || kind == TokenType.True || kind == TokenType.False)
+      && parser.peek(1).kind == TokenType.Colon {
+    return true
+  }
+  if kind == TokenType.Minus && isNumericLiteralToken(parser.peek(1).kind) && parser.peek(2).kind == TokenType.Colon {
+    return true
+  }
+  return kind == TokenType.Identifier && parser.peek(1).kind == TokenType.Dot
+      && parser.peek(2).kind == TokenType.Identifier && parser.peek(3).kind == TokenType.Colon
 }
 
 function parseConstruction(parser: Parser, start: AstLocation, name: string, typeArgs: TypeAnnotation[]): Expression {
   parser.expect(TokenType.LeftBrace)
   let properties: ObjectProperty[] = []
+  let spread: Expression | none = none
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
-    propertyStart := parser.location()
-    propertyName := parser.text(parser.expect(TokenType.Identifier))
-    let value: Expression | none = none
-    if parser.match(TokenType.Colon) { value = parser.parseExpression() }
-    properties.push(ObjectProperty { name: propertyName, value, span: parser.span(propertyStart) })
+    if parser.match(TokenType.Ellipsis) {
+      if spread != none { parser.fail("Named construction supports only one field spread") }
+      spread = parser.parseExpression()
+    } else {
+      propertyStart := parser.location()
+      propertyName := parser.text(parser.expect(TokenType.Identifier))
+      let value: Expression | none = none
+      if parser.match(TokenType.Colon) { value = parser.parseExpression() }
+      properties.push(ObjectProperty { name: propertyName, value, span: parser.span(propertyStart) })
+    }
     if !parser.match(TokenType.Comma) { break }
   }
   parser.expect(TokenType.RightBrace)
-  return ConstructExpression { kind: "construct-expression", type_: name, typeArgs, args: properties, named: true, span: parser.span(start) }
+  return ConstructExpression { kind: "construct-expression", type_: name, typeArgs, args: properties, spread, named: true, span: parser.span(start) }
 }
 
 // Uppercase identifiers can also name constants at the end of a control-flow

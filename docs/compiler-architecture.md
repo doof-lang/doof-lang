@@ -59,6 +59,7 @@ the row from left to right.
 | Source identity and diagnostics | token/AST spans in `lexer.do` and `ast.do`; diagnostic records in `semantic.do` | analyzer and focused checker module attach semantic spans | `driver.do` formats bounded diagnostic output |
 | Modules and names | `resolver.do` resolves logical paths; `analyzer.do` owns imports, exports, symbols, and defining-module identity | `checker-symbols.do` resolves lexical, named-import, and namespace-member bindings | `emitter-names.do` derives stable C++ identity; the worldview planner projects referenced declarations into each module header |
 | Types and assignability | resolved type records in `semantic.do`; shared operations in `checker-types.do` | focused checker modules decorate annotations and expressions | `emitter-types.do` chooses representation; expression/declaration emitters require decorations |
+| Enums | variant syntax and resolved backing slots in `ast.do` | `checker-statements.do` selects integer/string backing kind, resolves values, and validates uniqueness; `checker-resolution.do` exposes the typed API | `emitter-header.do` emits identity/lookups/formatting, `emitter-types.do` selects optional nullable carriers, and JSON/metadata emitters consume the checked backing values |
 | Calls and dispatch | declarations and symbols from analysis | `checker-calls.do`, `checker-generics.do`, and `checker-interfaces.do` choose targets, defining modules, and substitutions | `emitter-expr-calls.do` lowers the recorded target without resolving callee syntax again |
 | Control flow and narrowing | statement/expression/pattern AST in parser modules | `checker-statements.do` and `checker-expressions.do` determine continuation, exhaustiveness, and narrowed bindings | `emitter-stmt.do`, `emitter-expr-control.do`, and `emitter-case-pattern.do` lower those decisions |
 | Generics | type parameters in AST and resolved types | checker infers/substitutes concrete arguments | `emitter-monomorphize.do` discovers a fixed point; emitters output concrete forms for every Doof-owned generic, including methods, while runtime/native-owned C++ templates remain external |
@@ -67,7 +68,7 @@ the row from left to right.
 | Actors and isolation | actor/promise types and actor syntax | `checker-actor-boundary.do`, `checker-actor-lifecycle.do`, and `checker-isolation.do` own call boundaries, retirement diagnostics, and graph-wide effects | `emitter-expr-actor.do` and lambda/call emitters lower checked operations; the bounded runtime scheduler executes isolated function calls, async blocks, and serial actor messages |
 | Closures and mutable capture | lambda/binding AST and checker bindings | checker establishes callable types and retains lexical bindings on identifier and shorthand-property nodes | `emitter-expr-lambda.do` finds escaping captures, including uses nested in shorthand construction, and boxes mutable storage |
 | Module initialization | top-level checked declarations/statements and compiler entry mode | `checker-module-initialization.do` validates construction-only expressions and direct storage | `emitter-module.do`, `emitter-header.do`, and `emitter-decl.do` emit direct storage and graph-ordered execution |
-| Packages and reproducible inputs | manifests/catalog in `package-manifest.do` and `std-catalog.do` | `dependency-policy.do` selects exact reached inputs | acquisition modules materialize; `provenance.do` records; `emitter-project.do` collates |
+| Packages and standard inputs | local-path manifests in `package-manifest.do`; authoritative bundled stdlib index in `stdlib-bundle.do` | the driver registers reached local and standard packages | bundle materialization and std-only preparation feed `emitter-project.do` |
 | Incremental native builds | normalized native plan and emitted modules | `native-build.do` creates stable tasks; `pkg-config.do` normalizes flags | `native-build-driver.do` fingerprints arguments/dependencies, persists content fingerprints plus metadata, and runs dirty work |
 | Incremental frontend/emission | resolver probes, source hashes, configuration, and transitive module dependencies | `frontend-cache.do` persists pointer-free exact state; `emitter-module.do` fingerprints module inputs plus the global lowering plan | `driver.do` skips exact graph hits and retains matching generated files without changing timestamps |
 | Incremental executable resources | root-package resource declarations and recursive source trees | `resource-state.do` persists source/output metadata for copied files | `driver.do` skips unchanged blob reads and synchronizes edited, added, removed, or externally changed outputs before launch |
@@ -89,6 +90,13 @@ Unknown types, unresolved bindings, missing substitutions, missing
 control-flow facts, or unresolved dispatch targets suppress emission. A panic
 in the emitter is reserved for violation of this internal contract, not for a
 user program error.
+
+Enum backing kind and resolved values are part of this decorated-AST contract.
+Emitters never infer them again from initializer syntax. Internal identity stays
+a C++ `enum class`; string-backed enums use declaration ordinals internally,
+while generated helpers expose the checked string backing values. A nullable
+single enum is represented as `std::optional<Enum>` consistently across type,
+expression, statement, JSON, metadata, and Wasm lowering.
 
 Declarative module values use direct typed C++ storage. Safe scalar constants
 retain C++ constant initialization; constructed values are assigned by one
@@ -118,8 +126,8 @@ The compiler core accepts `SourceFile` values and returns diagnostics and
 generated text. Pure planners then describe packages, project files, native
 tasks, app bundles, and run invocations. Environment-facing modules are:
 
-- `package-acquisition.do` and `external-dependency.do` for network/disk input
-  acquisition;
+- `stdlib-bundle.do` and `stdlib-preparation.do` for offline standard-package
+  materialization and bounded target preparation;
 - `native-build-driver.do` for compiler/linker subprocesses and incremental
   build state;
 - Apple `*-driver.do` and `ios-device.do` modules for platform tools;

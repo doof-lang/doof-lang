@@ -25,7 +25,7 @@ Use this base file as the entry point. Load only the reference file that matches
 - Prefer `readonly` for deeply immutable values and `:=` for immutable bindings with mutable interiors. `const` is deprecated and remains accepted temporarily with a warning.
 - Prefer `std/<name>` packages before inventing utility modules.
 - Standard packages need no `doof.json` dependency entry. Use the release's
-  pinned catalog unless intentionally developing the stdlib with
+  bundled standard library unless intentionally developing the stdlib with
   `DOOF_STDLIB_ROOT`.
 - Treat streams as lazy, single-pass values. Keep their backing resource (for
   example a file, statement, or database connection) alive until consumption

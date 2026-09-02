@@ -13,7 +13,7 @@ std::shared_ptr<::app_src_ast_::Program> Parser::parse() {
     (this->errorLine = 0);
     (this->errorColumn = 0);
     (this->errorOffset = 0);
-    const auto lexer = std::make_shared<::app_src_lexer_::Lexer>(source, 0, 1, 1, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), std::make_shared<std::vector<::app_src_lexer_::LexerDiagnostic>>(std::vector<::app_src_lexer_::LexerDiagnostic>{}), std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::string("code"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), 0);
+    const auto lexer = std::make_shared<::app_src_lexer_::Lexer>(source, 0, 1, 1, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), std::make_shared<std::vector<::app_src_lexer_::LexerDiagnostic>>(std::vector<::app_src_lexer_::LexerDiagnostic>{}), std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::string("code"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), 0, 0);
     (this->tokens = lexer->tokenize());
     (this->pos = 0);
     auto start = location();
@@ -38,6 +38,13 @@ bool Parser::atEnd() {
 }
 ::app_src_lexer_::Token Parser::advance() {
     auto token = current();
+    if (this->inTagAttribute) {
+        if (((token.kind == ::app_src_lexer_::TokenType::LeftParen) || (token.kind == ::app_src_lexer_::TokenType::LeftBracket)) || (token.kind == ::app_src_lexer_::TokenType::LeftBrace)) {
+            (this->tagAttributeDelimiterDepth = (this->tagAttributeDelimiterDepth + 1));
+        } else if (((token.kind == ::app_src_lexer_::TokenType::RightParen) || (token.kind == ::app_src_lexer_::TokenType::RightBracket)) || (token.kind == ::app_src_lexer_::TokenType::RightBrace)) {
+            (this->tagAttributeDelimiterDepth = (this->tagAttributeDelimiterDepth - 1));
+        }
+    }
     if (!atEnd()) {
         (this->pos = (this->pos + 1));
     }
@@ -110,26 +117,29 @@ std::string Parser::currentText() {
     return ::app_src_ast_::AstLocation{token.line, token.column, token.offset};
 }
 ::app_src_ast_::SourceSpan Parser::span(::app_src_ast_::AstLocation start) {
-    auto previous = ((this->pos > 0) ? doof::array_at(this->tokens, (this->pos - 1), "src/parser", 120) : current());
-    return ::app_src_ast_::SourceSpan{start, ::app_src_ast_::AstLocation{previous.line, (previous.column + previous.length), (previous.offset + previous.length)}};
+    return ::app_src_ast_::SourceSpan{start, previousEnd()};
+}
+::app_src_ast_::AstLocation Parser::previousEnd() {
+    auto previous = ((this->pos > 0) ? doof::array_at(this->tokens, (this->pos - 1), "src/parser", 131) : current());
+    return ::app_src_ast_::AstLocation{previous.line, (previous.column + previous.length), (previous.offset + previous.length)};
 }
 bool Parser::sameLineAsPrevious() {
     if (this->pos == 0) {
         return false;
     }
-    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 133).line == current().line);
+    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 141).line == current().line);
 }
 bool Parser::previousIs(::app_src_lexer_::TokenType kind) {
     if (this->pos == 0) {
         return false;
     }
-    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 138).kind == kind);
+    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 146).kind == kind);
 }
 bool Parser::immediatelyAfterPrevious() {
     if (this->pos == 0) {
         return false;
     }
-    auto previous = doof::array_at(this->tokens, (this->pos - 1), "src/parser", 143);
+    auto previous = doof::array_at(this->tokens, (this->pos - 1), "src/parser", 151);
     return ((previous.offset + previous.length) == current().offset);
 }
 void Parser::consumeSemicolon() {
@@ -187,9 +197,6 @@ bool Parser::looksLikePattern(::app_src_lexer_::TokenType separator) {
 std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> Parser::parseDestructuring(const std::string& shape, const std::string& bindingKind, ::app_src_lexer_::TokenType separator) {
     return ::app_src_parser_statements_::parseDestructuring(this->shared_from_this(), shape, bindingKind, separator);
 }
-std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> Parser::parseTryStatement() {
-    return ::app_src_parser_statements_::parseTryStatement(this->shared_from_this());
-}
 std::variant<std::monostate, std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> Parser::parseOptionalType() {
     return ::app_src_parser_types_::parseOptionalType(this->shared_from_this());
 }
@@ -206,6 +213,6 @@ std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_
     return ::app_src_parser_expressions_::parseUnary(this->shared_from_this());
 }
 std::shared_ptr<::app_src_ast_::Program> parse(const std::string& source) {
-    return std::make_shared<Parser>(source, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), 0, false, false, std::string(""), 0, 0, 0)->parse();
+    return std::make_shared<Parser>(source, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), 0, false, false, 0, std::string(""), 0, 0, 0)->parse();
 }
 }

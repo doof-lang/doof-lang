@@ -95,10 +95,10 @@ void collectStatementExpressions(const std::variant<std::shared_ptr<::app_src_as
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CaseStatement>>(_case_subject)) {
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseStatement>>(_case_subject);
             result->push_back(case_->subject);
-            const auto& _iterable_8 = case_->arms;
-            for (const auto& arm : *_iterable_8) {
-                const auto& _iterable_10 = arm->patterns;
-                for (const auto& pattern : *_iterable_10) {
+            const auto& _iterable_10 = case_->arms;
+            for (const auto& arm : *_iterable_10) {
+                const auto& _iterable_8 = arm->patterns;
+                for (const auto& pattern : *_iterable_8) {
                     {
                         auto _case_subject = pattern;
                         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ValuePattern>>(_case_subject)) {
@@ -280,10 +280,10 @@ void collectNestedExpressions(const std::variant<std::shared_ptr<::app_src_ast_:
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject)) {
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject);
             result->push_back(case_->subject);
-            const auto& _iterable_24 = case_->arms;
-            for (const auto& arm : *_iterable_24) {
-                const auto& _iterable_26 = arm->patterns;
-                for (const auto& pattern : *_iterable_26) {
+            const auto& _iterable_26 = case_->arms;
+            for (const auto& arm : *_iterable_26) {
+                const auto& _iterable_24 = arm->patterns;
+                for (const auto& pattern : *_iterable_24) {
                     {
                         auto _case_subject = pattern;
                         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ValuePattern>>(_case_subject)) {
@@ -351,6 +351,9 @@ void collectNestedExpressions(const std::variant<std::shared_ptr<::app_src_ast_:
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject)) {
             const auto& construct = std::get<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject);
+            if (!doof::is_null(construct->spread)) {
+                result->push_back(doof::unwrap_optional(construct->spread));
+            }
             const auto& _iterable_30 = construct->args;
             for (const auto& property : *_iterable_30) {
                 if (!doof::is_null(property->value)) {

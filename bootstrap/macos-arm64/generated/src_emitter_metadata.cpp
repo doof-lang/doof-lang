@@ -61,13 +61,13 @@ std::string emitMethodReflection(const std::shared_ptr<::app_src_ast_::ClassDecl
         if (!doof::is_null(parameter->defaultValue)) {
             (result = (((((result + std::string("                ")) + ::app_src_emitter_types_::emitContextType(type_, context)) + std::string(" ")) + safeName) + std::string(";\n")));
             (result = (((((((result + std::string("                if (auto ")) + iterator) + std::string(" = _p->find(\"")) + escapeCpp(parameter->name)) + std::string("\"); ")) + iterator) + std::string(" != _p->end()) {\n")));
-            (result = (result + emitParameterValidation(parameter->name, (iterator + std::string("->second")), type_, std::string("                    "))));
+            (result = (result + emitParameterValidation(parameter->name, (iterator + std::string("->second")), type_, context, std::string("                    "))));
             (result = (((((result + std::string("                    ")) + safeName) + std::string(" = ")) + ::app_src_emitter_json_::emitJsonRead((iterator + std::string("->second")), type_, context)) + std::string(";\n")));
             (result = (((((result + std::string("                } else { ")) + safeName) + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(parameter->defaultValue), context, doof::optional_value(type_))) + std::string("; }\n")));
         } else {
             (result = (((((result + std::string("                auto ")) + iterator) + std::string(" = _p->find(\"")) + escapeCpp(parameter->name)) + std::string("\");\n")));
             (result = (((((result + std::string("                if (")) + iterator) + std::string(" == _p->end()) { return ")) + metadataFailure(400, ((std::string("std::string(\"Missing required parameter \\\"") + escapeCpp(parameter->name)) + std::string("\\\"\")")))) + std::string("; }\n")));
-            (result = (result + emitParameterValidation(parameter->name, (iterator + std::string("->second")), type_, std::string("                "))));
+            (result = (result + emitParameterValidation(parameter->name, (iterator + std::string("->second")), type_, context, std::string("                "))));
             (result = (((((result + std::string("                auto ")) + safeName) + std::string(" = ")) + ::app_src_emitter_json_::emitJsonRead((iterator + std::string("->second")), type_, context)) + std::string(";\n")));
         }
     }
@@ -110,8 +110,8 @@ std::string emitMethodReflection(const std::shared_ptr<::app_src_ast_::ClassDecl
     }
     return (result + std::string("            }\n        }"));
 }
-std::string emitParameterValidation(const std::string& name, const std::string& value, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::string& indent) {
-    return (((((indent + std::string("if (!(")) + ::app_src_emitter_json_::emitJsonTypeCheck(value, type_)) + std::string(")) { return ")) + metadataFailure(400, ((((((std::string("std::string(\"Parameter \\\"") + escapeCpp(name)) + std::string("\\\" expected ")) + ::app_src_emitter_json_::jsonTypeName(type_)) + std::string(" but got \") + doof::json_type_name(")) + value) + std::string(")")))) + std::string("; }\n"));
+std::string emitParameterValidation(const std::string& name, const std::string& value, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& indent) {
+    return (((((indent + std::string("if (!(")) + ::app_src_emitter_json_::emitJsonTypeCheck(value, type_, context)) + std::string(")) { return ")) + metadataFailure(400, ((((((std::string("std::string(\"Parameter \\\"") + escapeCpp(name)) + std::string("\\\" expected ")) + ::app_src_emitter_json_::jsonTypeName(type_, context)) + std::string(" but got \") + doof::json_type_name(")) + value) + std::string(")")))) + std::string("; }\n"));
 }
 std::string metadataFailure(int32_t code, const std::string& message) {
     return ((((std::string("doof::Failure<doof::JsonValue>{doof::json_error(") + doof::to_string(code)) + std::string(", ")) + message) + std::string(")}"));
@@ -224,19 +224,25 @@ std::shared_ptr<std::vector<std::string>> emitTypeSchemaEntries(const std::varia
             const auto& enum_ = std::get<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject);
             std::shared_ptr<std::vector<std::string>> values = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
             const auto declaration = findEnum(context, enum_->symbol->module, enum_->name);
+            auto backingKind = std::string("int");
             if (!doof::is_null(declaration)) {
-                const auto& _iterable_13 = declaration->variants;
-                for (const auto& variant : *_iterable_13) {
-                    values->push_back(jsonString(variant->name));
+                (backingKind = declaration->backingKind);
+                const auto& _iterable_15 = declaration->variants;
+                for (const auto& variant : *_iterable_15) {
+                    if (backingKind == std::string("string")) {
+                        values->push_back(jsonString([&]() -> std::string { auto _coalesce_12 = variant->resolvedStringValue; if (doof::is_null(_coalesce_12)) return std::string(""); return doof::unwrap_optional(_coalesce_12); }()));
+                    } else {
+                        values->push_back(jsonInt([&]() -> int32_t { auto _coalesce_13 = variant->resolvedIntValue; if (doof::is_null(_coalesce_13)) return 0; return doof::unwrap_optional(_coalesce_13); }()));
+                    }
                 }
             }
-            return std::make_shared<std::vector<std::string>>(std::vector<std::string>{jsonEntry(std::string("enum"), jsonArray(values))});
+            return std::make_shared<std::vector<std::string>>(std::vector<std::string>{jsonEntry(std::string("type"), jsonString(((backingKind == std::string("string")) ? std::string("string") : std::string("integer")))), jsonEntry(std::string("enum"), jsonArray(values))});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
             std::shared_ptr<std::vector<std::string>> members = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-            const auto& _iterable_15 = union_->types;
-            for (const auto& member : *_iterable_15) {
+            const auto& _iterable_17 = union_->types;
+            for (const auto& member : *_iterable_17) {
                 members->push_back(emitTypeSchema(member, context));
             }
             return std::make_shared<std::vector<std::string>>(std::vector<std::string>{jsonEntry(std::string("anyOf"), jsonArray(members))});
@@ -250,8 +256,8 @@ std::shared_ptr<std::vector<std::string>> emitTypeSchemaEntries(const std::varia
 }
 std::string emitDefinitions(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>>& methods, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>> classes = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>>(std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>{});
-    const auto& _iterable_17 = methods;
-    for (const auto& method : *_iterable_17) {
+    const auto& _iterable_21 = methods;
+    for (const auto& method : *_iterable_21) {
         const auto& _iterable_19 = method->params;
         for (const auto& parameter : *_iterable_19) {
             collectSchemaClasses(doof::unwrap_optional(parameter->resolvedType), context, classes);
@@ -262,8 +268,8 @@ std::string emitDefinitions(const std::shared_ptr<std::vector<std::shared_ptr<::
         return std::string("");
     }
     std::shared_ptr<std::vector<std::string>> entries = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_21 = classes;
-    for (const auto& class_ : *_iterable_21) {
+    const auto& _iterable_23 = classes;
+    for (const auto& class_ : *_iterable_23) {
         entries->push_back(jsonEntry(class_->name, emitClassSchema(class_, context)));
     }
     return jsonObject(entries);
@@ -278,8 +284,8 @@ void collectSchemaClasses(const std::variant<std::shared_ptr<::app_src_semantic_
                 return;
             }
             classes->push_back(doof::unwrap_optional(declaration));
-            const auto& _iterable_23 = declaration->fields;
-            for (const auto& field : *_iterable_23) {
+            const auto& _iterable_25 = declaration->fields;
+            for (const auto& field : *_iterable_25) {
                 if (!field->static_) {
                     collectSchemaClasses(doof::unwrap_optional(field->resolvedType), context, classes);
                 }
@@ -291,15 +297,15 @@ void collectSchemaClasses(const std::variant<std::shared_ptr<::app_src_semantic_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_25 = tuple->elements;
-            for (const auto& element : *_iterable_25) {
+            const auto& _iterable_27 = tuple->elements;
+            for (const auto& element : *_iterable_27) {
                 collectSchemaClasses(element, context, classes);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_27 = union_->types;
-            for (const auto& member : *_iterable_27) {
+            const auto& _iterable_29 = union_->types;
+            for (const auto& member : *_iterable_29) {
                 collectSchemaClasses(member, context, classes);
             }
     }
@@ -310,16 +316,16 @@ void collectSchemaClasses(const std::variant<std::shared_ptr<::app_src_semantic_
 std::string emitClassSchema(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     std::shared_ptr<std::vector<std::string>> properties = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<std::string>> required = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_29 = owner->fields;
-    for (const auto& field : *_iterable_29) {
+    const auto& _iterable_32 = owner->fields;
+    for (const auto& field : *_iterable_32) {
         if (field->static_ || field->private_) {
             continue;
         }
         for (int32_t index = 0; index < static_cast<int32_t>((field->names)->size()); ++index) {
-            const auto description = ((index < static_cast<int32_t>((field->descriptions)->size())) ? doof::array_at(field->descriptions, index, "src/emitter-metadata", 223) : std::string(""));
-            properties->push_back(jsonEntry(doof::array_at(field->names, index, "src/emitter-metadata", 224), emitTypeSchemaWithDescription(doof::unwrap_optional(field->resolvedType), description, context)));
+            const auto description = ((index < static_cast<int32_t>((field->descriptions)->size())) ? doof::array_at(field->descriptions, index, "src/emitter-metadata", 230) : std::string(""));
+            properties->push_back(jsonEntry(doof::array_at(field->names, index, "src/emitter-metadata", 231), emitTypeSchemaWithDescription(doof::unwrap_optional(field->resolvedType), description, context)));
             if (doof::is_null(field->defaultValue)) {
-                required->push_back(jsonString(doof::array_at(field->names, index, "src/emitter-metadata", 225)));
+                required->push_back(jsonString(doof::array_at(field->names, index, "src/emitter-metadata", 232)));
             }
         }
     }
@@ -333,8 +339,8 @@ std::string emitClassSchema(const std::shared_ptr<::app_src_ast_::ClassDeclarati
     return jsonObject(entries);
 }
 std::shared_ptr<::app_src_ast_::ClassDeclaration> findClass(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& modulePath, const std::string& name) {
-    const auto& _iterable_32 = context->allPrograms;
-    for (const auto& program : *_iterable_32) {
+    const auto& _iterable_36 = context->allPrograms;
+    for (const auto& program : *_iterable_36) {
         const auto& _iterable_34 = program->statements;
         for (const auto& statement : *_iterable_34) {
             const auto declaration = statementClass(statement);
@@ -346,8 +352,8 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> findClass(const std::shared_pt
     return nullptr;
 }
 std::shared_ptr<::app_src_ast_::EnumDeclaration> findEnum(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& modulePath, const std::string& name) {
-    const auto& _iterable_36 = context->allPrograms;
-    for (const auto& program : *_iterable_36) {
+    const auto& _iterable_40 = context->allPrograms;
+    for (const auto& program : *_iterable_40) {
         const auto& _iterable_38 = program->statements;
         for (const auto& statement : *_iterable_38) {
             {
@@ -398,8 +404,8 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> statementClass(const std::vari
     return nullptr;
 }
 bool containsClass(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ClassDeclaration>>>& classes, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& candidate) {
-    const auto& _iterable_40 = classes;
-    for (const auto& class_ : *_iterable_40) {
+    const auto& _iterable_42 = classes;
+    for (const auto& class_ : *_iterable_42) {
         if ((class_->resolvedSymbol->module == candidate->resolvedSymbol->module) && (class_->name == candidate->name)) {
             return true;
         }
@@ -423,8 +429,8 @@ std::string jsonObject(const std::shared_ptr<std::vector<std::string>>& entries)
 }
 std::string joinStrings(const std::shared_ptr<std::vector<std::string>>& values) {
     auto result = std::string("");
-    const auto& _iterable_42 = values;
-    for (const auto& value : *_iterable_42) {
+    const auto& _iterable_44 = values;
+    for (const auto& value : *_iterable_44) {
         if (result != std::string("")) {
             (result = (result + std::string(", ")));
         }

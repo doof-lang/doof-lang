@@ -82,10 +82,10 @@ std::string emitCaseExpression(const std::shared_ptr<::app_src_ast_::CaseExpress
     auto output = ((std::string("[&]() -> ") + ::app_src_emitter_types_::emitType(doof::unwrap_optional(resultType), context->modulePath)) + std::string(" {\n"));
     (output = (((output + std::string("    auto _case_subject = ")) + ::app_src_emitter_expr_::emitExpression(expression->subject, context, std::monostate{})) + std::string(";\n")));
     const auto subjectResult = caseSubjectResultType(expression->subject);
-    const auto& _iterable_2 = expression->arms;
-    for (const auto& arm : *_iterable_2) {
-        const auto& _iterable_4 = arm->patterns;
-        for (const auto& pattern : *_iterable_4) {
+    const auto& _iterable_4 = expression->arms;
+    for (const auto& arm : *_iterable_4) {
+        const auto& _iterable_2 = arm->patterns;
+        for (const auto& pattern : *_iterable_2) {
             auto condition = std::string("true");
             auto binding = std::string("");
             {

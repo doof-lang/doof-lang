@@ -11,16 +11,16 @@ std::shared_ptr<ActorBoundaryViolation> findActorBoundaryViolation(const std::sh
 }
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateDeepReadonlyFields(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{});
-    const auto& _iterable_2 = result->modules;
-    for (const auto& module : *_iterable_2) {
-        const auto& _iterable_4 = module->program->statements;
-        for (const auto& raw : *_iterable_4) {
+    const auto& _iterable_8 = result->modules;
+    for (const auto& module : *_iterable_8) {
+        const auto& _iterable_6 = module->program->statements;
+        for (const auto& raw : *_iterable_6) {
             {
                 auto _case_subject = unwrapExport(raw);
                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
                     const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-                    const auto& _iterable_6 = class_->fields;
-                    for (const auto& field : *_iterable_6) {
+                    const auto& _iterable_2 = class_->fields;
+                    for (const auto& field : *_iterable_2) {
                         if (!field->readonly_ || doof::is_null(field->resolvedType)) {
                             continue;
                         }
@@ -34,8 +34,8 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> v
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
                     const auto& interface_ = std::get<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject);
-                    const auto& _iterable_8 = interface_->fields;
-                    for (const auto& field : *_iterable_8) {
+                    const auto& _iterable_4 = interface_->fields;
+                    for (const auto& field : *_iterable_4) {
                         if (!field->readonly_ || doof::is_null(field->resolvedType)) {
                             continue;
                         }

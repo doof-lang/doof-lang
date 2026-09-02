@@ -58,6 +58,9 @@ export class EmitContext {
   // declarations are heap-boxed and every identifier use dereferences the box.
   let capturedMutables: string[] = []
   let tryCounter: int = 0
+  loopLabels: string[] = []
+  loopBreakTargets: string[] = []
+  loopContinueTargets: string[] = []
   // Native entry scripts lower direct bindings into private deferred storage.
   let scriptEntry: bool = false
   let tryPanics: bool = false

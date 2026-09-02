@@ -3,8 +3,19 @@ set -eu
 
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 stdlib_root=${DOOF_STDLIB_ROOT:-"$repo_root/../doof-stdlib"}
+release_build=false
+case "${1:-}" in
+  --release) release_build=true ;;
+  "") ;;
+  *) echo "usage: ./build.sh [--release]" >&2; exit 2 ;;
+esac
+if [ "$#" -gt 1 ]; then
+  echo "usage: ./build.sh [--release]" >&2
+  exit 2
+fi
 b5_root="$repo_root/build/b5"
 b6_root="$repo_root/build/b6"
+stdlib_bundle="$repo_root/build/doof-stdlib.tar"
 step_number=0
 step_name="startup checks"
 
@@ -22,10 +33,10 @@ run_step() {
   step_name=$1
   shift
   started_at=$(date +%s)
-  echo "[$step_number/5] $step_name"
+  echo "[$step_number/6] $step_name"
   "$@"
   elapsed=$(( $(date +%s) - started_at ))
-  echo "[$step_number/5] Done: $step_name (${elapsed}s)"
+  echo "[$step_number/6] Done: $step_name (${elapsed}s)"
 }
 
 if [ ! -d "$stdlib_root" ]; then
@@ -39,10 +50,12 @@ case "$host_system" in
   Darwin)
     bootstrap_driver="$repo_root/scripts/bootstrap-compiler.sh"
     stage0="$repo_root/build/bootstrap-stage0/doof"
+    stdlib_bundle_targets="ios-device,ios-simulator,macos,wasm"
     ;;
   Linux)
     bootstrap_driver="$repo_root/scripts/bootstrap-compiler-linux.sh"
     stage0="$repo_root/build/bootstrap-stage0-linux/doof"
+    stdlib_bundle_targets="linux,wasm"
     ;;
   *)
     echo "Unsupported build host: $host_system" >&2
@@ -72,12 +85,24 @@ run_step "Build B6 with B5" build_b6
 run_step "Verify the B5/B6 fixed point" \
   "$repo_root/scripts/compare-generated.sh" "$b5_root" "$b6_root"
 
+build_final_stdlib_bundle() {
+  rm -f "$stdlib_bundle"
+  rm -rf "$repo_root/build/stdlib-bundle-tool"
+  DOOF_STDLIB_ROOT="$stdlib_root" "$b6_root/doof" run "$repo_root/tools/stdlib-bundle.do" \
+    -o "$repo_root/build/stdlib-bundle-tool" -- \
+    "$stdlib_root" "$stdlib_bundle" "$stdlib_bundle_targets"
+  test -f "$stdlib_bundle"
+}
+run_step "Build the final stdlib resource with B6" build_final_stdlib_bundle
+
 publish_optimized() {
   release_root="$repo_root/build/compiler-release"
   DOOF_STDLIB_ROOT="$stdlib_root" "$b6_root/doof" package "$repo_root" \
     -o "$release_root" --distdir "$repo_root/dist"
   test -x "$repo_root/dist/doof"
+  cp "$stdlib_bundle" "$repo_root/dist/doof-stdlib.tar"
 }
 run_step "Build and publish the optimized compiler to dist/" publish_optimized
 
 echo "Verified compiler: $repo_root/dist/doof"
+echo "Bundled standard library: $repo_root/dist/doof-stdlib.tar"

@@ -154,7 +154,7 @@ function decodeEscapeCharacter(escaped: char): string {
   if escaped == '\'' { return "'" }
   if escaped == '`' { return "`" }
   if escaped == '$' { return "$" }
-  if escaped == '0' { return "\0" }
+  if escaped == '0' { return string('\0') }
   return string(escaped)
 }
 
@@ -273,6 +273,7 @@ export class Lexer {
   tagModeStack: string[] = []
   tagExpressionDepths: int[] = []
   let tagGenericDepth = 0
+  let tagAttributeDelimiterDepth = 0
 
   tokenize(): Token[] {
     // Reserve a conservative token estimate before the scan. Doof arrays map
@@ -309,18 +310,19 @@ export class Lexer {
           beginTagExpression()
           continue
         }
-        if tagMode == "opening-tag" && peek() == '<' {
+        if tagMode == "opening-tag" && tagAttributeDelimiterDepth == 0 && peek() == '<' {
           tagGenericDepth = tagGenericDepth + 1
           emit(TokenType.Less, line, column, pos, 1)
           continue
         }
-        if peek() == '>' && tagGenericDepth > 0 {
+        if peek() == '>' && tagAttributeDelimiterDepth == 0 && tagGenericDepth > 0 {
           tagGenericDepth = tagGenericDepth - 1
           emit(TokenType.Greater, line, column, pos, 1)
           continue
         }
-        if peek() == '>' {
+        if peek() == '>' && tagAttributeDelimiterDepth == 0 {
           emit(TokenType.Greater, line, column, pos, 1)
+          tagAttributeDelimiterDepth = 0
           if tagMode == "closing-tag" {
             tagMode = try! tagModeStack.pop()
           } else if tokens.length >= 2 && tokens[tokens.length - 2].kind == TokenType.Slash {
@@ -329,6 +331,13 @@ export class Lexer {
             tagMode = "children"
           }
           continue
+        }
+        if tagMode == "opening-tag" {
+          if peek() == '(' || peek() == '[' {
+            tagAttributeDelimiterDepth = tagAttributeDelimiterDepth + 1
+          } else if (peek() == ')' || peek() == ']') && tagAttributeDelimiterDepth > 0 {
+            tagAttributeDelimiterDepth = tagAttributeDelimiterDepth - 1
+          }
         }
       }
 
@@ -390,6 +399,7 @@ export class Lexer {
     emit(TokenType.TagOpen, line, column, pos, 1)
     tagMode = "opening-tag"
     tagGenericDepth = 0
+    tagAttributeDelimiterDepth = 0
   }
 
   private beginTagExpression(): none {

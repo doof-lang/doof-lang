@@ -95,6 +95,9 @@ std::string emitAs(const std::shared_ptr<::app_src_ast_::AsExpression>& expressi
                             else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
                                     return ((((((((std::string("[&]() -> ") + resultCpp) + std::string(" { auto _as_value = ")) + source) + std::string("; if (_as_value.has_value()) return ")) + success) + std::string("{_as_value.value()}; return ")) + failure) + std::string("{\"Nullable narrowing failed\"}; }()"));
                             }
+                            else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject)) {
+                                    return ((((((((std::string("[&]() -> ") + resultCpp) + std::string(" { auto _as_value = ")) + source) + std::string("; if (_as_value.has_value()) return ")) + success) + std::string("{_as_value.value()}; return ")) + failure) + std::string("{\"Nullable narrowing failed\"}; }()"));
+                            }
                             else {
                             }
                             }
@@ -329,6 +332,16 @@ std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& ex
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject)) {
                 const auto& result = std::get<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject);
                 const auto valueType = ::app_src_emitter_types_::emitType(result->valueType, context->modulePath);
+                if (expression->operator_ == std::string("try\?")) {
+                    const auto expressionType = ::app_src_emitter_expr_utils_::requireExpressionType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(expression), std::string("try\? expression"));
+                    const auto expressionCpp = ::app_src_emitter_types_::emitType(expressionType, context->modulePath);
+                    auto successValue = std::string("std::move(doof::success_value(_try_value))");
+                    if (::app_src_emitter_expr_utils_::needsNullableVariantPromotion(doof::optional_value(result->valueType), doof::optional_value(expressionType))) {
+                        (successValue = ::app_src_emitter_expr_utils_::emitNullableVariantPromotion(successValue, doof::optional_value(result->valueType), doof::optional_value(expressionType), context->modulePath));
+                    }
+                    const auto noneValue = ::app_src_emitter_expr_literals_::emitNoneLiteral(doof::optional_value(expressionType), context);
+                    return ((((((((std::string("[&]() -> ") + expressionCpp) + std::string(" { auto _try_value = ")) + operand) + std::string("; if (doof::is_failure(_try_value)) return ")) + noneValue) + std::string("; return ")) + successValue) + std::string("; }()"));
+                }
                 auto failureMessage = ((std::string("std::string(\"") + expression->operator_) + std::string(" failed\")"));
                 {
                     auto _case_subject = result->errorType;
@@ -350,9 +363,6 @@ std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& ex
                 }
                 else {
                 }
-                }
-                if (expression->operator_ == std::string("try\?")) {
-                    return ((((std::string("[&]() -> std::optional<") + valueType) + std::string("> { ")) + body) + std::string("return std::move(doof::success_value(_try_value)); }()"));
                 }
                 return ((((std::string("[&]() -> ") + valueType) + std::string(" { ")) + body) + std::string("return std::move(doof::success_value(_try_value)); }()"));
         }
@@ -403,7 +413,7 @@ std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& ex
                                     }
                                 }
                                 if (static_cast<int32_t>((nonNullMembers)->size()) == 1) {
-                                    return ((((std::string("std::get<") + ::app_src_emitter_types_::emitType(doof::array_at(nonNullMembers, 0, "src/emitter-expr-ops", 317), context->modulePath)) + std::string(">(")) + operand) + std::string(")"));
+                                    return ((((std::string("std::get<") + ::app_src_emitter_types_::emitType(doof::array_at(nonNullMembers, 0, "src/emitter-expr-ops", 327), context->modulePath)) + std::string(">(")) + operand) + std::string(")"));
                                 }
                             }
                     }
@@ -431,7 +441,7 @@ std::string emitUnary(const std::shared_ptr<::app_src_ast_::UnaryExpression>& ex
                             }
                         }
                         if (static_cast<int32_t>((nonNullMembers)->size()) == 1) {
-                            return ((((std::string("std::get<") + ::app_src_emitter_types_::emitType(doof::array_at(nonNullMembers, 0, "src/emitter-expr-ops", 332), context->modulePath)) + std::string(">(")) + operand) + std::string(")"));
+                            return ((((std::string("std::get<") + ::app_src_emitter_types_::emitType(doof::array_at(nonNullMembers, 0, "src/emitter-expr-ops", 342), context->modulePath)) + std::string(">(")) + operand) + std::string(")"));
                         }
                     }
                     if (::app_src_emitter_expr_utils_::isNullableVariantType(operandType)) {
@@ -458,7 +468,7 @@ std::string emitBinary(const std::shared_ptr<::app_src_ast_::BinaryExpression>& 
             for (const auto& part : *_iterable_18) {
                 (value = (value + part));
             }
-            return ((std::string("std::string(") + ::app_src_emitter_expr_literals_::quote(value)) + std::string(")"));
+            return ::app_src_emitter_expr_literals_::emitStringConstant(value);
         }
     }
     if (expression->operator_ == std::string("..")) {
@@ -538,6 +548,26 @@ std::string emitMember(const std::shared_ptr<::app_src_ast_::MemberExpression>& 
         }
         else {
         }
+        }
+        if (expression->force) {
+            const auto inner = ::app_src_emitter_types_::naturalNullableUnionMember(doof::unwrap_optional(objectType));
+            if (!doof::is_null(inner)) {
+                {
+                    auto _case_subject = doof::unwrap_optional(inner);
+                    if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject)) {
+                        const auto& enum_ = std::get<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject);
+                        const auto unwrapped = ((std::string("doof::unwrap_optional(") + object) + std::string(")"));
+                        if (expression->property == std::string("value")) {
+                            return (((::app_src_emitter_types_::emitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(enum_), context->modulePath) + std::string("_value(")) + unwrapped) + std::string(")"));
+                        }
+                        if (expression->property == std::string("name")) {
+                            return (((::app_src_emitter_types_::emitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(enum_), context->modulePath) + std::string("_name(")) + unwrapped) + std::string(")"));
+                        }
+                }
+                else {
+                }
+                }
+            }
         }
     }
     {
@@ -658,9 +688,6 @@ std::string emitMember(const std::shared_ptr<::app_src_ast_::MemberExpression>& 
     if (expression->property == std::string("push")) {
         return (object + std::string("->push_back"));
     }
-    if ((expression->property == std::string("value")) && doof::string_contains(object, std::string("::"))) {
-        return ((std::string("static_cast<int32_t>(") + object) + std::string(")"));
-    }
     (objectType = ::app_src_emitter_expr_utils_::decoratedExpressionType(expression->object));
     if (!doof::is_null(objectType)) {
         {
@@ -728,7 +755,7 @@ std::string emitMember(const std::shared_ptr<::app_src_ast_::MemberExpression>& 
         else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject)) {
                 const auto& enum_ = std::get<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject);
                 if (expression->property == std::string("value")) {
-                    return ((std::string("static_cast<int32_t>(") + object) + std::string(")"));
+                    return (((::app_src_emitter_types_::emitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(enum_), context->modulePath) + std::string("_value(")) + object) + std::string(")"));
                 }
                 if (expression->property == std::string("name")) {
                     return (((::app_src_emitter_types_::emitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(enum_), context->modulePath) + std::string("_name(")) + object) + std::string(")"));

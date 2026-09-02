@@ -1,43 +1,51 @@
 #pragma once
 #include "doof_runtime.hpp"
 namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
 namespace std_::blob::types { enum class Endian; }
 namespace std_::blob::types { enum class TextEncoding; }
 namespace std_::blob::types { enum class EncodingError; }
 namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
 namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
 namespace std_::fs::types { enum class IoError; }
 namespace std_::fs::types { struct FileInfo; }
 namespace std_::fs::types { enum class EntryKind; }
-namespace std_::http::index { struct BodyChunkStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
-namespace std_::stream::index { struct DecodedLineStream; }
-namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
-namespace std_::os::index { struct ExecStdoutStream; }
-namespace std_::os::index { struct ExecStderrStream; }
-namespace std_::stream::index { struct DecodedLineStream; }
-namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
-namespace std_::os::index { struct ExecStdoutStream; }
-namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
 namespace std_::fs::index { struct BlockReadStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
+namespace std_::stream::index { struct DecodedLineStream; }
+namespace std_::fs::index { struct BlockReadStream; }
+namespace std_::os::index { struct ExecStdoutStream; }
+namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
 namespace std_::os::index { enum class ProcessGroupMode; }
 namespace std_::os::index { struct ExecOptions; }
@@ -45,12 +53,36 @@ namespace std_::os::index { struct Exec; }
 namespace std_::os::index { struct ExecResult; }
 namespace std_::time::duration { struct Duration; }
 namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
 namespace std_::stream::index { struct DecodedLineStream; }
+namespace std_::gzip::index { struct GzipStream; }
 namespace std_::fs::index { struct BlockReadStream; }
-namespace std_::http::index { struct BodyChunkStream; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
+namespace std_::stream::index { struct DecodedLineStream; }
+namespace std_::fs::index { struct BlockReadStream; }
+namespace std_::os::index { struct ExecStdoutStream; }
+namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
+namespace std_::stream::index { struct DecodedLineStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
+namespace std_::fs::index { struct BlockReadStream; }
+namespace std_::os::index { struct ExecStdoutStream; }
+namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::stream::index { struct DecodedLineStream; }
+namespace std_::fs::index { struct BlockReadStream; }
+namespace std_::os::index { struct ExecStdoutStream; }
+namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
 
 namespace std_::fs::types {
     struct FileInfo;
@@ -73,16 +105,25 @@ namespace std_::time::temporal {
     struct ZonedDateTime;
 }
 
-namespace std_::http::index {
-    struct BodyChunkStream;
-}
-
 namespace std_::os::index {
     struct ExecOptions;
     struct ExecStdoutStream;
     struct ExecStderrStream;
     struct Exec;
     struct ExecResult;
+}
+
+namespace std_::gzip::index {
+    struct GzipStream;
+}
+
+namespace std_::archive::tar_writer {
+    struct TarChunk;
+    struct TarChunkStream;
+}
+
+namespace std_::zstd::index {
+    struct ZstdCompressStream;
 }
 
 namespace std_::stream::index {
@@ -99,19 +140,26 @@ inline const char* Endian_name(Endian value) {
     case Endian::BigEndian: return "BigEndian";
     case Endian::LittleEndian: return "LittleEndian";
   }
-  return "";
+  doof::panic(std::string("Invalid Endian enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<Endian> Endian_fromName(std::string_view value) {
   if (value == "BigEndian") return Endian::BigEndian;
   if (value == "LittleEndian") return Endian::LittleEndian;
   return std::nullopt;
 }
+inline int32_t Endian_value(Endian value) { return static_cast<int32_t>(value); }
 inline std::optional<Endian> Endian_fromValue(int32_t value) {
-  switch (static_cast<Endian>(value)) {
-    case Endian::BigEndian: return Endian::BigEndian;
-    case Endian::LittleEndian: return Endian::LittleEndian;
-    default: return std::nullopt;
-  }
+  if (value == 0) return Endian::BigEndian;
+  if (value == 1) return Endian::LittleEndian;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<Endian>> Endian_values() { return std::make_shared<std::vector<Endian>>(std::initializer_list<Endian>{Endian::BigEndian, Endian::LittleEndian}); }
+inline doof::JsonValue Endian_toJsonValue(Endian value) { return doof::json_value(Endian_value(value)); }
+inline doof::Result<Endian, std::string> Endian_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum Endian, got ") + doof::json_type_name(value)};
+  auto resolved = Endian_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum Endian: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1"};
+  return doof::Success<Endian>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, Endian value) { return output << Endian_name(value); }
     enum class TextEncoding {
@@ -133,7 +181,7 @@ inline const char* TextEncoding_name(TextEncoding value) {
     case TextEncoding::CP437: return "CP437";
     case TextEncoding::Ascii: return "Ascii";
   }
-  return "";
+  doof::panic(std::string("Invalid TextEncoding enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<TextEncoding> TextEncoding_fromName(std::string_view value) {
   if (value == "Utf8") return TextEncoding::Utf8;
@@ -145,17 +193,24 @@ inline std::optional<TextEncoding> TextEncoding_fromName(std::string_view value)
   if (value == "Ascii") return TextEncoding::Ascii;
   return std::nullopt;
 }
+inline int32_t TextEncoding_value(TextEncoding value) { return static_cast<int32_t>(value); }
 inline std::optional<TextEncoding> TextEncoding_fromValue(int32_t value) {
-  switch (static_cast<TextEncoding>(value)) {
-    case TextEncoding::Utf8: return TextEncoding::Utf8;
-    case TextEncoding::Utf16LE: return TextEncoding::Utf16LE;
-    case TextEncoding::Utf16BE: return TextEncoding::Utf16BE;
-    case TextEncoding::Latin1: return TextEncoding::Latin1;
-    case TextEncoding::Windows1252: return TextEncoding::Windows1252;
-    case TextEncoding::CP437: return TextEncoding::CP437;
-    case TextEncoding::Ascii: return TextEncoding::Ascii;
-    default: return std::nullopt;
-  }
+  if (value == 0) return TextEncoding::Utf8;
+  if (value == 1) return TextEncoding::Utf16LE;
+  if (value == 2) return TextEncoding::Utf16BE;
+  if (value == 3) return TextEncoding::Latin1;
+  if (value == 4) return TextEncoding::Windows1252;
+  if (value == 5) return TextEncoding::CP437;
+  if (value == 6) return TextEncoding::Ascii;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<TextEncoding>> TextEncoding_values() { return std::make_shared<std::vector<TextEncoding>>(std::initializer_list<TextEncoding>{TextEncoding::Utf8, TextEncoding::Utf16LE, TextEncoding::Utf16BE, TextEncoding::Latin1, TextEncoding::Windows1252, TextEncoding::CP437, TextEncoding::Ascii}); }
+inline doof::JsonValue TextEncoding_toJsonValue(TextEncoding value) { return doof::json_value(TextEncoding_value(value)); }
+inline doof::Result<TextEncoding, std::string> TextEncoding_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum TextEncoding, got ") + doof::json_type_name(value)};
+  auto resolved = TextEncoding_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum TextEncoding: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6"};
+  return doof::Success<TextEncoding>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, TextEncoding value) { return output << TextEncoding_name(value); }
     enum class EncodingError {
@@ -169,7 +224,7 @@ inline const char* EncodingError_name(EncodingError value) {
     case EncodingError::UnrepresentableCharacter: return "UnrepresentableCharacter";
     case EncodingError::OutputTooLarge: return "OutputTooLarge";
   }
-  return "";
+  doof::panic(std::string("Invalid EncodingError enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<EncodingError> EncodingError_fromName(std::string_view value) {
   if (value == "InvalidData") return EncodingError::InvalidData;
@@ -177,13 +232,20 @@ inline std::optional<EncodingError> EncodingError_fromName(std::string_view valu
   if (value == "OutputTooLarge") return EncodingError::OutputTooLarge;
   return std::nullopt;
 }
+inline int32_t EncodingError_value(EncodingError value) { return static_cast<int32_t>(value); }
 inline std::optional<EncodingError> EncodingError_fromValue(int32_t value) {
-  switch (static_cast<EncodingError>(value)) {
-    case EncodingError::InvalidData: return EncodingError::InvalidData;
-    case EncodingError::UnrepresentableCharacter: return EncodingError::UnrepresentableCharacter;
-    case EncodingError::OutputTooLarge: return EncodingError::OutputTooLarge;
-    default: return std::nullopt;
-  }
+  if (value == 0) return EncodingError::InvalidData;
+  if (value == 1) return EncodingError::UnrepresentableCharacter;
+  if (value == 2) return EncodingError::OutputTooLarge;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<EncodingError>> EncodingError_values() { return std::make_shared<std::vector<EncodingError>>(std::initializer_list<EncodingError>{EncodingError::InvalidData, EncodingError::UnrepresentableCharacter, EncodingError::OutputTooLarge}); }
+inline doof::JsonValue EncodingError_toJsonValue(EncodingError value) { return doof::json_value(EncodingError_value(value)); }
+inline doof::Result<EncodingError, std::string> EncodingError_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum EncodingError, got ") + doof::json_type_name(value)};
+  auto resolved = EncodingError_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum EncodingError: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2"};
+  return doof::Success<EncodingError>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, EncodingError value) { return output << EncodingError_name(value); }
 }
@@ -202,7 +264,7 @@ inline const char* EntryKind_name(EntryKind value) {
     case EntryKind::Symlink: return "Symlink";
     case EntryKind::Other: return "Other";
   }
-  return "";
+  doof::panic(std::string("Invalid EntryKind enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<EntryKind> EntryKind_fromName(std::string_view value) {
   if (value == "File") return EntryKind::File;
@@ -211,14 +273,21 @@ inline std::optional<EntryKind> EntryKind_fromName(std::string_view value) {
   if (value == "Other") return EntryKind::Other;
   return std::nullopt;
 }
+inline int32_t EntryKind_value(EntryKind value) { return static_cast<int32_t>(value); }
 inline std::optional<EntryKind> EntryKind_fromValue(int32_t value) {
-  switch (static_cast<EntryKind>(value)) {
-    case EntryKind::File: return EntryKind::File;
-    case EntryKind::Directory: return EntryKind::Directory;
-    case EntryKind::Symlink: return EntryKind::Symlink;
-    case EntryKind::Other: return EntryKind::Other;
-    default: return std::nullopt;
-  }
+  if (value == 0) return EntryKind::File;
+  if (value == 1) return EntryKind::Directory;
+  if (value == 2) return EntryKind::Symlink;
+  if (value == 3) return EntryKind::Other;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<EntryKind>> EntryKind_values() { return std::make_shared<std::vector<EntryKind>>(std::initializer_list<EntryKind>{EntryKind::File, EntryKind::Directory, EntryKind::Symlink, EntryKind::Other}); }
+inline doof::JsonValue EntryKind_toJsonValue(EntryKind value) { return doof::json_value(EntryKind_value(value)); }
+inline doof::Result<EntryKind, std::string> EntryKind_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum EntryKind, got ") + doof::json_type_name(value)};
+  auto resolved = EntryKind_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum EntryKind: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3"};
+  return doof::Success<EntryKind>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, EntryKind value) { return output << EntryKind_name(value); }
     enum class IoError {
@@ -244,7 +313,7 @@ inline const char* IoError_name(IoError value) {
     case IoError::Other: return "Other";
     case IoError::Unsupported: return "Unsupported";
   }
-  return "";
+  doof::panic(std::string("Invalid IoError enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "NotFound") return IoError::NotFound;
@@ -258,19 +327,26 @@ inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "Unsupported") return IoError::Unsupported;
   return std::nullopt;
 }
+inline int32_t IoError_value(IoError value) { return static_cast<int32_t>(value); }
 inline std::optional<IoError> IoError_fromValue(int32_t value) {
-  switch (static_cast<IoError>(value)) {
-    case IoError::NotFound: return IoError::NotFound;
-    case IoError::PermissionDenied: return IoError::PermissionDenied;
-    case IoError::AlreadyExists: return IoError::AlreadyExists;
-    case IoError::IsDirectory: return IoError::IsDirectory;
-    case IoError::NotDirectory: return IoError::NotDirectory;
-    case IoError::InvalidPath: return IoError::InvalidPath;
-    case IoError::Interrupted: return IoError::Interrupted;
-    case IoError::Other: return IoError::Other;
-    case IoError::Unsupported: return IoError::Unsupported;
-    default: return std::nullopt;
-  }
+  if (value == 0) return IoError::NotFound;
+  if (value == 1) return IoError::PermissionDenied;
+  if (value == 2) return IoError::AlreadyExists;
+  if (value == 3) return IoError::IsDirectory;
+  if (value == 4) return IoError::NotDirectory;
+  if (value == 5) return IoError::InvalidPath;
+  if (value == 6) return IoError::Interrupted;
+  if (value == 7) return IoError::Other;
+  if (value == 8) return IoError::Unsupported;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<IoError>> IoError_values() { return std::make_shared<std::vector<IoError>>(std::initializer_list<IoError>{IoError::NotFound, IoError::PermissionDenied, IoError::AlreadyExists, IoError::IsDirectory, IoError::NotDirectory, IoError::InvalidPath, IoError::Interrupted, IoError::Other, IoError::Unsupported}); }
+inline doof::JsonValue IoError_toJsonValue(IoError value) { return doof::json_value(IoError_value(value)); }
+inline doof::Result<IoError, std::string> IoError_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum IoError, got ") + doof::json_type_name(value)};
+  auto resolved = IoError_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum IoError: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6, 7, 8"};
+  return doof::Success<IoError>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, IoError value) { return output << IoError_name(value); }
 }
@@ -295,7 +371,7 @@ inline const char* DayOfWeek_name(DayOfWeek value) {
     case DayOfWeek::Saturday: return "Saturday";
     case DayOfWeek::Sunday: return "Sunday";
   }
-  return "";
+  doof::panic(std::string("Invalid DayOfWeek enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<DayOfWeek> DayOfWeek_fromName(std::string_view value) {
   if (value == "Monday") return DayOfWeek::Monday;
@@ -307,90 +383,114 @@ inline std::optional<DayOfWeek> DayOfWeek_fromName(std::string_view value) {
   if (value == "Sunday") return DayOfWeek::Sunday;
   return std::nullopt;
 }
+inline int32_t DayOfWeek_value(DayOfWeek value) { return static_cast<int32_t>(value); }
 inline std::optional<DayOfWeek> DayOfWeek_fromValue(int32_t value) {
-  switch (static_cast<DayOfWeek>(value)) {
-    case DayOfWeek::Monday: return DayOfWeek::Monday;
-    case DayOfWeek::Tuesday: return DayOfWeek::Tuesday;
-    case DayOfWeek::Wednesday: return DayOfWeek::Wednesday;
-    case DayOfWeek::Thursday: return DayOfWeek::Thursday;
-    case DayOfWeek::Friday: return DayOfWeek::Friday;
-    case DayOfWeek::Saturday: return DayOfWeek::Saturday;
-    case DayOfWeek::Sunday: return DayOfWeek::Sunday;
-    default: return std::nullopt;
-  }
+  if (value == 1) return DayOfWeek::Monday;
+  if (value == 2) return DayOfWeek::Tuesday;
+  if (value == 3) return DayOfWeek::Wednesday;
+  if (value == 4) return DayOfWeek::Thursday;
+  if (value == 5) return DayOfWeek::Friday;
+  if (value == 6) return DayOfWeek::Saturday;
+  if (value == 7) return DayOfWeek::Sunday;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<DayOfWeek>> DayOfWeek_values() { return std::make_shared<std::vector<DayOfWeek>>(std::initializer_list<DayOfWeek>{DayOfWeek::Monday, DayOfWeek::Tuesday, DayOfWeek::Wednesday, DayOfWeek::Thursday, DayOfWeek::Friday, DayOfWeek::Saturday, DayOfWeek::Sunday}); }
+inline doof::JsonValue DayOfWeek_toJsonValue(DayOfWeek value) { return doof::json_value(DayOfWeek_value(value)); }
+inline doof::Result<DayOfWeek, std::string> DayOfWeek_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum DayOfWeek, got ") + doof::json_type_name(value)};
+  auto resolved = DayOfWeek_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum DayOfWeek: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 1, 2, 3, 4, 5, 6, 7"};
+  return doof::Success<DayOfWeek>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, DayOfWeek value) { return output << DayOfWeek_name(value); }
 }
 
 namespace std_::os::index {
     enum class ProcessGroupMode {
-    Isolated,
-    Inherited
+    Isolated = 0,
+    Inherited = 1
 };
 inline const char* ProcessGroupMode_name(ProcessGroupMode value) {
   switch (value) {
     case ProcessGroupMode::Isolated: return "Isolated";
     case ProcessGroupMode::Inherited: return "Inherited";
   }
-  return "";
+  doof::panic(std::string("Invalid ProcessGroupMode enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<ProcessGroupMode> ProcessGroupMode_fromName(std::string_view value) {
   if (value == "Isolated") return ProcessGroupMode::Isolated;
   if (value == "Inherited") return ProcessGroupMode::Inherited;
   return std::nullopt;
 }
+inline int32_t ProcessGroupMode_value(ProcessGroupMode value) { return static_cast<int32_t>(value); }
 inline std::optional<ProcessGroupMode> ProcessGroupMode_fromValue(int32_t value) {
-  switch (static_cast<ProcessGroupMode>(value)) {
-    case ProcessGroupMode::Isolated: return ProcessGroupMode::Isolated;
-    case ProcessGroupMode::Inherited: return ProcessGroupMode::Inherited;
-    default: return std::nullopt;
-  }
+  if (value == 0) return ProcessGroupMode::Isolated;
+  if (value == 1) return ProcessGroupMode::Inherited;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<ProcessGroupMode>> ProcessGroupMode_values() { return std::make_shared<std::vector<ProcessGroupMode>>(std::initializer_list<ProcessGroupMode>{ProcessGroupMode::Isolated, ProcessGroupMode::Inherited}); }
+inline doof::JsonValue ProcessGroupMode_toJsonValue(ProcessGroupMode value) { return doof::json_value(ProcessGroupMode_value(value)); }
+inline doof::Result<ProcessGroupMode, std::string> ProcessGroupMode_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum ProcessGroupMode, got ") + doof::json_type_name(value)};
+  auto resolved = ProcessGroupMode_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum ProcessGroupMode: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1"};
+  return doof::Success<ProcessGroupMode>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, ProcessGroupMode value) { return output << ProcessGroupMode_name(value); }
 }
 
 namespace std_::blob::types {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
 }
 
 namespace std_::blob::index {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
 }
 
 namespace std_::fs::types {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
 }
 
 namespace std_::fs::index {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
 }
 
 namespace std_::time::duration {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
 }
 
 namespace std_::time::temporal {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
-    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
-}
-
-namespace std_::http::index {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
 }
 
 namespace std_::os::index {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<ExecStdoutStream>, std::shared_ptr<ExecStderrStream>>;
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<ExecStdoutStream>, std::shared_ptr<ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
+    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
+}
+
+namespace std_::gzip::index {
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
+    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
+}
+
+namespace std_::archive::tar_writer {
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
+    using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
+}
+
+namespace std_::zstd::index {
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<ZstdCompressStream>>;
     using Stream__string = std::variant<std::shared_ptr<::std_::stream::index::DecodedLineStream>>;
 }
 
 namespace std_::stream::index {
-    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::http::index::BodyChunkStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>>;
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
     using Stream__string = std::variant<std::shared_ptr<DecodedLineStream>>;
 }
 
@@ -566,16 +666,6 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
 };
 }
 
-namespace std_::http::index {
-    struct BodyChunkStream : public std::enable_shared_from_this<BodyChunkStream> {
-    std::shared_ptr<std::vector<uint8_t>> chunk;
-    bool consumed;
-    BodyChunkStream(std::shared_ptr<std::vector<uint8_t>> chunk, bool consumed) : chunk(chunk), consumed(consumed) {}
-    bool next();
-    std::shared_ptr<std::vector<uint8_t>> value();
-};
-}
-
 namespace std_::os::index {
     struct ExecResult : public std::enable_shared_from_this<ExecResult> {
     int32_t exitCode;
@@ -584,6 +674,21 @@ namespace std_::os::index {
     bool stdoutTruncated;
     bool stderrTruncated;
     ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated, bool stderrTruncated) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
+};
+}
+
+namespace std_::archive::tar_writer {
+    struct TarChunk : public std::enable_shared_from_this<TarChunk> {
+    std::shared_ptr<std::vector<uint8_t>> data;
+    TarChunk(std::shared_ptr<std::vector<uint8_t>> data) : data(data) {}
+};
+    struct TarChunkStream : public std::enable_shared_from_this<TarChunkStream> {
+    std::shared_ptr<std::vector<std::shared_ptr<TarChunk>>> chunks;
+    int32_t index;
+    std::shared_ptr<std::vector<uint8_t>> currentValue;
+    TarChunkStream(std::shared_ptr<std::vector<std::shared_ptr<TarChunk>>> chunks, int32_t index, std::shared_ptr<std::vector<uint8_t>> currentValue) : chunks(chunks), index(index), currentValue(currentValue) {}
+    bool next();
+    std::shared_ptr<std::vector<uint8_t>> value();
 };
 }
 
@@ -674,6 +779,43 @@ namespace std_::os::index {
     doof::Result<void, std::string> terminate(int32_t signal);
     bool stdoutOpen();
     bool stderrOpen();
+};
+}
+
+namespace doof_gzip { using GzipStream = ::std_::gzip::index::GzipStream; }
+#include "native_gzip.hpp"
+
+namespace std_::gzip::index {
+    struct GzipStream : public std::enable_shared_from_this<GzipStream> {
+    Stream__readonly_array_byte source;
+    std::shared_ptr<::doof_gzip::NativeGzipEncoder> native;
+    std::shared_ptr<std::vector<uint8_t>> currentValue;
+    bool sourceDone;
+    bool finished;
+    GzipStream(Stream__readonly_array_byte source, std::shared_ptr<::doof_gzip::NativeGzipEncoder> native, std::shared_ptr<std::vector<uint8_t>> currentValue, bool sourceDone, bool finished) : source(source), native(native), currentValue(currentValue), sourceDone(sourceDone), finished(finished) {}
+    static std::shared_ptr<GzipStream> constructor(const Stream__readonly_array_byte& source);
+    bool next();
+    std::shared_ptr<std::vector<uint8_t>> value();
+};
+}
+
+namespace doof_zstd { using ZstdCompressStream = ::std_::zstd::index::ZstdCompressStream; }
+#include "native_zstd.hpp"
+
+namespace std_::zstd::index {
+    struct ZstdCompressStream : public std::enable_shared_from_this<ZstdCompressStream> {
+    Stream__readonly_array_byte source;
+    int32_t level;
+    std::shared_ptr<::doof_zstd::NativeZstdEncoder> native;
+    std::shared_ptr<std::vector<uint8_t>> currentValue;
+    bool sourceDone;
+    bool finished;
+    std::optional<std::string> failed;
+    ZstdCompressStream(Stream__readonly_array_byte source, int32_t level, std::shared_ptr<::doof_zstd::NativeZstdEncoder> native, std::shared_ptr<std::vector<uint8_t>> currentValue, bool sourceDone, bool finished, std::optional<std::string> failed) : source(source), level(level), native(native), currentValue(currentValue), sourceDone(sourceDone), finished(finished), failed(failed) {}
+    static std::shared_ptr<ZstdCompressStream> constructor(const Stream__readonly_array_byte& source, int32_t level);
+    static std::shared_ptr<ZstdCompressStream> withLevel(const Stream__readonly_array_byte& source, int32_t level);
+    bool next();
+    std::shared_ptr<std::vector<uint8_t>> value();
 };
 }
 

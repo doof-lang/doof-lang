@@ -19,12 +19,11 @@ import {
   parseCaseExpression as parseCaseExpressionImpl,
   looksLikePattern as looksLikePatternImpl,
   parseDestructuring as parseDestructuringImpl,
-  parseTryStatement as parseTryStatementImpl,
 } from "./parser-statements"
 import { parseOptionalType as parseOptionalTypeImpl, parseTypeAnnotation as parseTypeAnnotationImpl } from "./parser-types"
 import { parseExpression as parseExpressionImpl, parseAdditive as parseAdditiveImpl, parseUnary as parseUnaryImpl } from "./parser-expressions"
 import {
-  Program, Block, ClassDeclaration, FunctionDeclaration, NamedType,
+  Program, Block, FunctionDeclaration,
   Statement, Expression, TypeAnnotation, AstLocation, SourceSpan,
 } from "./ast"
 
@@ -34,6 +33,7 @@ export class Parser {
   let pos: int = 0
   let inForIterable: bool = false
   let inTagAttribute: bool = false
+  let tagAttributeDelimiterDepth: int = 0
   let errorMessage: string = ""
   let errorLine: int = 0
   let errorColumn: int = 0
@@ -67,6 +67,13 @@ export class Parser {
 
   advance(): Token {
     token := current()
+    if inTagAttribute {
+      if token.kind == TokenType.LeftParen || token.kind == TokenType.LeftBracket || token.kind == TokenType.LeftBrace {
+        tagAttributeDelimiterDepth = tagAttributeDelimiterDepth + 1
+      } else if token.kind == TokenType.RightParen || token.kind == TokenType.RightBracket || token.kind == TokenType.RightBrace {
+        tagAttributeDelimiterDepth = tagAttributeDelimiterDepth - 1
+      }
+    }
     if !atEnd() { pos = pos + 1 }
     return token
   }
@@ -117,14 +124,15 @@ export class Parser {
   }
 
   span(start: AstLocation): SourceSpan {
+    return SourceSpan { start, end: previousEnd() }
+  }
+
+  previousEnd(): AstLocation {
     previous := if pos > 0 then tokens[pos - 1] else current()
-    return SourceSpan {
-      start,
-      end: AstLocation {
-        line: previous.line,
-        column: previous.column + previous.length,
-        offset: previous.offset + previous.length,
-      },
+    return AstLocation {
+      line: previous.line,
+      column: previous.column + previous.length,
+      offset: previous.offset + previous.length,
     }
   }
 
@@ -173,7 +181,6 @@ export class Parser {
   parseDestructuring(shape: string, bindingKind: string, separator: TokenType): Statement {
     return parseDestructuringImpl(this, shape, bindingKind, separator)
   }
-  parseTryStatement(): Statement { return parseTryStatementImpl(this) }
 
   parseOptionalType(): TypeAnnotation | none { return parseOptionalTypeImpl(this) }
   parseTypeAnnotation(): TypeAnnotation { return parseTypeAnnotationImpl(this) }

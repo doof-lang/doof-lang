@@ -22,8 +22,8 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
         }
         }
     }
-    const auto& _iterable_4 = program->statements;
-    for (const auto& statement : *_iterable_4) {
+    const auto& _iterable_6 = program->statements;
+    for (const auto& statement : *_iterable_6) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
@@ -37,8 +37,8 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
                 if (!doof::is_null(list->source)) {
                     continue;
                 }
-                const auto& _iterable_6 = list->specifiers;
-                for (const auto& specifier : *_iterable_6) {
+                const auto& _iterable_4 = list->specifiers;
+                for (const auto& specifier : *_iterable_4) {
                     const auto exportedName = (doof::is_null(specifier->alias) ? specifier->name : doof::unwrap_optional(specifier->alias));
                     if (!doof::string_startsWith(exportedName, std::string("test"))) {
                         continue;
@@ -58,15 +58,15 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
 std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsForCompilation(const std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>>& tests) {
     const auto shared = std::make_shared<TestCompilationGroup>(std::string("shared"), std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{}));
     std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> mocked = std::make_shared<std::vector<std::shared_ptr<TestCompilationGroup>>>(std::vector<std::shared_ptr<TestCompilationGroup>>{});
-    const auto& _iterable_8 = tests;
-    for (const auto& test : *_iterable_8) {
+    const auto& _iterable_10 = tests;
+    for (const auto& test : *_iterable_10) {
         if (!test->usesMocks) {
             shared->tests->push_back(test);
             continue;
         }
         std::shared_ptr<TestCompilationGroup> group = nullptr;
-        const auto& _iterable_10 = mocked;
-        for (const auto& existing : *_iterable_10) {
+        const auto& _iterable_8 = mocked;
+        for (const auto& existing : *_iterable_8) {
             if ((static_cast<int32_t>((existing->tests)->size()) > 0) && (doof::array_at(existing->tests, 0, "src/test-runner", 97)->modulePath == test->modulePath)) {
                 (group = existing);
                 break;
@@ -149,8 +149,8 @@ std::string formatParseFailure(const std::string& modulePath, const std::string&
     return (((((header + std::string("\n")) + doof::array_at(lines, (line - 1), "src/test-runner", 174)) + std::string("\n")) + doof::string_repeat(std::string(" "), (caretColumn - 1))) + std::string("^"));
 }
 void mergeCoverageOutput(const std::string& output, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::CoverageModuleMetadata>>>& modules, const std::shared_ptr<std::vector<std::shared_ptr<std::vector<int32_t>>>>& hitsByModule) {
-    const auto& _iterable_18 = doof::string_split(output, std::string("\n"));
-    for (const auto& line : *_iterable_18) {
+    const auto& _iterable_19 = doof::string_split(output, std::string("\n"));
+    for (const auto& line : *_iterable_19) {
         const auto trimmed = doof::string_trim(line);
         if (!doof::string_startsWith(trimmed, std::string("__COV__ "))) {
             continue;
@@ -200,8 +200,8 @@ std::shared_ptr<CoverageReport> buildCoverageReport(const std::shared_ptr<std::v
             (hits = doof::array_at(hitsByModule, index, "src/test-runner", 222));
         }
         const auto file = std::make_shared<CoverageFileReport>(testDisplayPath(rootDirectory, module->modulePath), 0, static_cast<int32_t>((module->instrumentedLines)->size()), 0, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
-        const auto& _iterable_24 = module->instrumentedLines;
-        for (const auto& line : *_iterable_24) {
+        const auto& _iterable_23 = module->instrumentedLines;
+        for (const auto& line : *_iterable_23) {
             if (containsLine(hits, line)) {
                 file->hitLines->push_back(line);
                 (file->covered += 1);

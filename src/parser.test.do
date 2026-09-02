@@ -2,17 +2,29 @@ import { Assert } from "std/assert"
 import { Parser, parse } from "./parser"
 import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
 import {
-  IntLiteral, LongLiteral, DoubleLiteral, BinaryExpression, CallExpression,
-  MemberExpression, FunctionDeclaration, ClassDeclaration, ArrayLiteral, Block,
+  IntLiteral, LongLiteral, DoubleLiteral, BinaryExpression, CallExpression, Identifier,
+  MemberExpression, IndexExpression, UnaryExpression, FunctionDeclaration, ClassDeclaration, ArrayLiteral, Block,
   IfStatement, ExpressionStatement, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding, LetDeclaration, TryStatement,
-  StringLiteral, CharLiteral, LambdaExpression, AsyncExpression, RetireExpression, AsExpression,
+  StringLiteral, CharLiteral, LambdaExpression, TupleLiteral, AsyncExpression, RetireExpression, AsExpression, ConstructExpression,
   ActorCreationExpression, CaseExpression, EnumDeclaration, InterfaceDeclaration, NamedType, NoneLiteral, ObjectLiteral, RangePattern, TypeAliasDeclaration, UnionType, ValuePattern, YieldStatement,
-  MockImportDirective, WeakType, CatchExpression, YieldBlockExpression, YieldBlockAssignmentStatement, DestructuringStatement, DotShorthand, ForOfStatement, WithStatement,
+  MockImportDirective, WeakType, CatchExpression, YieldBlockExpression, YieldBlockAssignmentStatement, DestructuringStatement, DotShorthand, ForOfStatement, WhileStatement, BreakStatement, ContinueStatement, WithStatement,
 } from "./ast"
 import type { Statement, Expression } from "./ast"
 
 function first(source: string): Statement {
   return parse(source).statements[0]
+}
+
+function firstExpression(source: string): Expression {
+  case first(source) {
+    statement: ExpressionStatement -> { return statement.expression }
+    _ -> { panic("expected expression statement") }
+  }
+}
+
+function assertExpressionOffsets(expression: Expression, start: int, end: int): none {
+  Assert.equal(expression.span.start.offset, start)
+  Assert.equal(expression.span.end.offset, end)
 }
 
 export function testParsesUnicodeCharacterLiteralsAsCodePoints(): none {
@@ -381,6 +393,52 @@ export function testPreservesOperatorPrecedence(): none {
   }
 }
 
+export function testParsesNullCoalescingRightAssociatively(): none {
+  case first("cache ?? disk ?? fallback") {
+    statement: ExpressionStatement -> { case statement.expression {
+      outer: BinaryExpression -> {
+        Assert.equal(outer.operator, "??")
+        case outer.right {
+          inner: BinaryExpression -> { Assert.equal(inner.operator, "??") }
+          _ -> { panic("expected right-associated fallback") }
+        }
+      }
+      _ -> { panic("expected coalescing expression") }
+    } }
+    _ -> { panic("expected expression statement") }
+  }
+}
+
+export function testPreservesShiftPrecedenceWithoutGenericBinaryLevel(): none {
+  case first("1 + 2 << 3 + 4") {
+    statement: ExpressionStatement -> { case statement.expression {
+      shift: BinaryExpression -> {
+        Assert.equal(shift.operator, "<<")
+        case shift.left { left: BinaryExpression -> { Assert.equal(left.operator, "+") } _ -> { panic("expected additive left operand") } }
+        case shift.right { right: BinaryExpression -> { Assert.equal(right.operator, "+") } _ -> { panic("expected additive right operand") } }
+      }
+      _ -> { panic("expected shift expression") }
+    } }
+    _ -> { panic("expected expression statement") }
+  }
+}
+
+export function testDistinguishesTupleLiteralsFromParenthesizedLambdas(): none {
+  program := parse("empty := ()\ntuple := (1, 2)\nlambda := () => 1")
+  case program.statements[0] { binding: ImmutableBinding -> { case binding.value {
+    tuple: TupleLiteral -> { Assert.equal(tuple.elements.length, 0) }
+    _ -> { panic("expected empty tuple") }
+  } } _ -> { panic("expected empty tuple binding") } }
+  case program.statements[1] { binding: ImmutableBinding -> { case binding.value {
+    tuple: TupleLiteral -> { Assert.equal(tuple.elements.length, 2) }
+    _ -> { panic("expected tuple") }
+  } } _ -> { panic("expected tuple binding") } }
+  case program.statements[2] { binding: ImmutableBinding -> { case binding.value {
+    lambda: LambdaExpression -> { Assert.equal(lambda.params.length, 0) }
+    _ -> { panic("expected parameterless lambda") }
+  } } _ -> { panic("expected lambda binding") } }
+}
+
 export function testParsesPostfixCallsAndMembers(): none {
   case first("items.map(=> it * 2).length") {
     statement: ExpressionStatement -> {
@@ -533,6 +591,18 @@ export function testParsesTypedTagCallsAndNormalizesChildren(): none {
     } }
     _ -> { panic("expected button tag binding") }
   }
+}
+
+export function testParsesGreaterComparisonsInsideDelimitedTagShorthandAttributes(): none {
+  parse("button := <Button onClick=>{ if files.length > 0 { show() } }/>")
+}
+
+export function testParsesGreaterComparisonsInsideParenthesizedTagShorthandAttributes(): none {
+  parse("badge := <Badge visible=>(count > 0)/>")
+}
+
+export function testParsesGreaterComparisonsInsideArrayTagShorthandAttributes(): none {
+  parse("list := <List values=>[count > 0]/>")
 }
 
 export function testDiagnosesMalformedTypedTags(): none {
@@ -724,6 +794,23 @@ export function testParsesTryValueDeclarations(): none {
   }
 }
 
+export function testParsesTypedTryBinding(): none {
+  program := parse("try value: long := load()")
+  case program.statements[0] {
+    try_: TryStatement -> { case try_.binding {
+      binding: ImmutableBinding -> {
+        Assert.equal(binding.name, "value")
+        case binding.type_! {
+          type_: NamedType -> { Assert.equal(type_.name, "long") }
+          _ -> { panic("expected named try binding type") }
+        }
+      }
+      _ -> { panic("expected typed immutable try binding") }
+    } }
+    _ -> { panic("expected try statement") }
+  }
+}
+
 export function testParsesMultipleValuePatternsAsAlternatives(): none {
   program := parse(`result := case ext {
     ".html" | ".htm" -> "text/html",
@@ -888,6 +975,51 @@ export function testTracksSourceSpans(): none {
   Assert.equal(program.statements[0].span.end.offset, 14)
 }
 
+export function testKeepsPostfixExpressionSpansTightAcrossTrailingTrivia(): none {
+  case firstExpression("root.member   ;") {
+    member: MemberExpression -> {
+      assertExpressionOffsets(member, 0, 11)
+      assertExpressionOffsets(member.object, 0, 4)
+    }
+    _ -> { panic("expected member expression") }
+  }
+  case firstExpression("call(1)   ;") {
+    call: CallExpression -> { assertExpressionOffsets(call, 0, 7) }
+    _ -> { panic("expected call expression") }
+  }
+  case firstExpression("items[0]   ;") {
+    index: IndexExpression -> { assertExpressionOffsets(index, 0, 8) }
+    _ -> { panic("expected index expression") }
+  }
+  case firstExpression("value!   ;") {
+    assertion: UnaryExpression -> { assertExpressionOffsets(assertion, 0, 6) }
+    _ -> { panic("expected non-null assertion") }
+  }
+  case firstExpression("value as string   ;") {
+    narrowing: AsExpression -> { assertExpressionOffsets(narrowing, 0, 15) }
+    _ -> { panic("expected as expression") }
+  }
+  case firstExpression("value as int[]   ;") {
+    narrowing: AsExpression -> { assertExpressionOffsets(narrowing, 0, 14) }
+    _ -> { panic("expected array as expression") }
+  }
+  case firstExpression("render{ value: 1 }   ;") {
+    call: CallExpression -> { assertExpressionOffsets(call, 0, 18) }
+    _ -> { panic("expected named call expression") }
+  }
+}
+
+export function testTracksMultilineCallExpressionEndLocation(): none {
+  case firstExpression("call(\n  1\n)   ;") {
+    call: CallExpression -> {
+      assertExpressionOffsets(call, 0, 11)
+      Assert.equal(call.span.end.line, 3)
+      Assert.equal(call.span.end.column, 2)
+    }
+    _ -> { panic("expected call expression") }
+  }
+}
+
 export function testParsesQuotedStringMapKeys(): none {
   case first("options := { \"DOOF_STDLIB_ROOT\": absolutePath(\"../doof-stdlib\") }") {
     binding: ImmutableBinding -> {
@@ -946,6 +1078,65 @@ export function testParsesIntegerMapKeys(): none {
         _ -> { panic("expected integer-keyed map literal") }
       }
     }
+    _ -> { panic("expected immutable binding") }
+  }
+}
+
+export function testParsesAllExpressionMapKeyForms(): none {
+  program := parse("enum Color { Red }\nchars: Map<char, int> := { 'x': 1 }\nbools: Map<bool, int> := { true: 1, false: 0 }\ncolors: Map<Color, int> := { Color.Red: 1 }\nfloats: Map<double, int> := { -1.5: 1 }")
+  case program.statements[1] {
+    binding: ImmutableBinding -> { case binding.value {
+      object: ObjectLiteral -> { case object.properties[0].key! {
+        _: CharLiteral -> { }
+        _ -> { panic("expected character map key") }
+      } }
+      _ -> { panic("expected character-keyed map literal") }
+    } }
+    _ -> { panic("expected character map binding") }
+  }
+  case program.statements[2] {
+    binding: ImmutableBinding -> { case binding.value {
+      object: ObjectLiteral -> {
+        Assert.equal(object.properties.length, 2)
+        Assert.equal(object.properties[0].key!.kind, "bool-literal")
+        Assert.equal(object.properties[1].key!.kind, "bool-literal")
+      }
+      _ -> { panic("expected bool-keyed map literal") }
+    } }
+    _ -> { panic("expected bool map binding") }
+  }
+  case program.statements[3] {
+    binding: ImmutableBinding -> { case binding.value {
+      object: ObjectLiteral -> { case object.properties[0].key! {
+        member: MemberExpression -> { Assert.equal(member.property, "Red") }
+        _ -> { panic("expected explicit enum map key") }
+      } }
+      _ -> { panic("expected enum-keyed map literal") }
+    } }
+    _ -> { panic("expected enum map binding") }
+  }
+  case program.statements[4] {
+    binding: ImmutableBinding -> { case binding.value {
+      object: ObjectLiteral -> { Assert.equal(object.properties[0].key!.kind, "unary-expression") }
+      _ -> { panic("expected floating-keyed map literal") }
+    } }
+    _ -> { panic("expected floating map binding") }
+  }
+}
+
+export function testParsesNamedConstructionFieldSpread(): none {
+  case first("extended := ExtendedConfig { ...base, port: 9000 }") {
+    binding: ImmutableBinding -> { case binding.value {
+      construct: ConstructExpression -> {
+        Assert.equal(construct.args.length, 1)
+        Assert.equal(construct.args[0].name, "port")
+        case construct.spread! {
+          identifier: Identifier -> { Assert.equal(identifier.name, "base") }
+          _ -> { panic("expected construction spread expression") }
+        }
+      }
+      _ -> { panic("expected named construction") }
+    } }
     _ -> { panic("expected immutable binding") }
   }
 }
@@ -1040,6 +1231,36 @@ export function testRetainsStructuredParseFailureLocation(): none {
 
 export function testParsesMemberComparisonInWhile(): none {
   parse("function f(): void { while index < raw.length { return } }")
+}
+
+export function testParsesLabeledLoopsAndExits(): none {
+  program := parse("function run(items: int[]): none { outer: while true { inner: for item of items { if item == 0 { continue outer }\nbreak inner }\nbreak outer } }")
+  case program.statements[0] {
+    fn: FunctionDeclaration -> { case fn.body {
+      body: Block -> { case body.statements[0] {
+        outer: WhileStatement -> {
+          Assert.equal(outer.label, "outer")
+          case outer.body.statements[0] {
+            inner: ForOfStatement -> {
+              Assert.equal(inner.label, "inner")
+              case inner.body.statements[1] {
+                break_: BreakStatement -> { Assert.equal(break_.label, "inner") }
+                _ -> { panic("expected labeled break") }
+              }
+            }
+            _ -> { panic("expected labeled for-of") }
+          }
+          case outer.body.statements[1] {
+            break_: BreakStatement -> { Assert.equal(break_.label, "outer") }
+            _ -> { panic("expected outer labeled break") }
+          }
+        }
+        _ -> { panic("expected labeled while") }
+      } }
+      _ -> { panic("expected function body") }
+    } }
+    _ -> { panic("expected function") }
+  }
 }
 
 export function testDoesNotParseUppercaseConditionOperandAsConstruction(): none {

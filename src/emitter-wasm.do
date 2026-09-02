@@ -229,11 +229,11 @@ function emitParameter(parameter: Parameter, context: EmitContext): string {
   let source = "        auto " + iterator + " = __params->find(\"" + parameter.name + "\");\n"
   if parameter.defaultValue != none {
     source = source + "        " + emitContextType(type_, context) + " " + name + ";\n        if (" + iterator + " == __params->end()) { " + name + " = " + emitExpression(parameter.defaultValue!, context, type_) + "; } else {\n"
-    source = source + "            if (!(" + emitJsonTypeCheck(iterator + "->second", type_) + ")) return __doof_wasm_failure_message(400, \"Parameter " + parameter.name + " expected " + jsonTypeName(type_) + "\");\n"
+    source = source + "            if (!(" + emitJsonTypeCheck(iterator + "->second", type_, context) + ")) return __doof_wasm_failure_message(400, \"Parameter " + parameter.name + " expected " + jsonTypeName(type_, context) + "\");\n"
     return source + "            " + name + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n        }\n"
   }
   source = source + "        if (" + iterator + " == __params->end()) return __doof_wasm_failure_message(400, \"Missing required parameter \\\"" + parameter.name + "\\\"\");\n"
-  source = source + "        if (!(" + emitJsonTypeCheck(iterator + "->second", type_) + ")) return __doof_wasm_failure_message(400, \"Parameter " + parameter.name + " expected " + jsonTypeName(type_) + "\");\n"
+  source = source + "        if (!(" + emitJsonTypeCheck(iterator + "->second", type_, context) + ")) return __doof_wasm_failure_message(400, \"Parameter " + parameter.name + " expected " + jsonTypeName(type_, context) + "\");\n"
   return source + "        auto " + name + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n"
 }
 

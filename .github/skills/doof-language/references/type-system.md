@@ -241,9 +241,24 @@ HttpStatus.OK.value
 Direction.values()
 Direction.fromName("North")
 HttpStatus.fromValue(200)
+Direction.North.toJsonValue()
+Direction.fromJsonValue(0)
 ```
 
-Dot-shorthand works when the target type is known.
+Every variant has a descriptive name and a unique backing value. Fully
+implicit enums use integer ordinals starting at zero; integer enums may mix
+implicit values and explicit compile-time integer constants. String enums
+require an explicit, non-interpolated string literal on every variant and may
+not mix backing kinds. `values()` is declaration-ordered.
+
+`.name`, interpolation, `string(enum)`, printing, and formatting inside
+collections/results use the declared name. `.value`, JSON, and JSON Schema use
+the backing value. All enums support equality; only integer-backed enums
+support ordering.
+
+`Enum | none` has a natural optional carrier. Declaration-`else`, postfix `!`,
+`as`, and `??` narrow it to a plain enum suitable for arguments, assignments,
+fields, and returns. Dot-shorthand works when the target type is known.
 
 ## Collections
 

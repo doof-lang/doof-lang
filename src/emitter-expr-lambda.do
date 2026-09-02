@@ -247,7 +247,10 @@ function scanExpressionForLambdas(expression: Expression, result: string[]): non
           bodyExpression: Expression -> { scanExpressionForLambdas(bodyExpression, result) }
         }
       } }
-    construct: ConstructExpression -> { for property of construct.args { if property.value != none { scanExpressionForLambdas(property.value!, result) } } }
+    construct: ConstructExpression -> {
+      if construct.spread != none { scanExpressionForLambdas(construct.spread!, result) }
+      for property of construct.args { if property.value != none { scanExpressionForLambdas(property.value!, result) } }
+    }
     async_: AsyncExpression -> {
       case async_.expression {
         block: Block -> { scanBlockForLambdas(block, result) }
@@ -369,6 +372,7 @@ function collectExpressionCaptures(expression: Expression, bodyStart: int, bodyE
         }
       } }
     construct: ConstructExpression -> {
+      if construct.spread != none { collectExpressionCaptures(construct.spread!, bodyStart, bodyEnd, result, mutableOnly) }
       for property of construct.args {
         if property.value != none { collectExpressionCaptures(property.value!, bodyStart, bodyEnd, result, mutableOnly) }
         else if property.resolvedBinding != none { collectBindingCapture(property.name, property.resolvedBinding!, bodyStart, bodyEnd, result, mutableOnly) }

@@ -51,7 +51,7 @@ modules own the following decisions:
 | `checker-types.do` | Resolved-type construction, comparison, assignability, substitution, and display |
 | `checker-resolution.do` | Type annotations, members, indexing, callable fields, and type-argument constraints |
 | `checker-common.do` | State-aware diagnostics, expression type decoration, and centralized assignment-binding validation |
-| `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, and control-flow continuation |
+| `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, enum backing-value resolution, and control-flow continuation |
 | `checker-expressions.do` | Expression dispatch, operators, narrowing, assignment, and case expressions |
 | `checker-calls.do` | Calls, positional/named construction, lambdas, generic calls, and actor-call boundaries |
 | `checker-literals.do` | Contextual array and object literal inference |
@@ -83,7 +83,7 @@ emitter or individual expression branch.
 | `emitter-monomorphize.do` | Fixed-point discovery of concrete generic instantiations and direction-specific generated-JSON demand |
 | `emitter-worldview.do` | Consumer-projected declaration closure from checked symbol/type uses |
 | `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, and header/source pairing |
-| `emitter-header.do` | Multi-namespace worldview declaration ordering and rendering |
+| `emitter-header.do` | Multi-namespace worldview declaration ordering, enum identity/helper generation, and rendering |
 | `string-builder.do` | Runtime-backed append-only construction for large generated text |
 | `emitter-decl.do` | Functions, classes, top-level declarations, signatures, and definitions |
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering |
@@ -96,9 +96,9 @@ emitter or individual expression branch.
 | `emitter-expr-actor.do` | Actors, promises, async calls, and retirement |
 | `emitter-expr-utils.do` | Decorated-type requirements and contextual/variant promotion helpers |
 | `emitter-case-pattern.do` | Type-pattern lowering shared by statement and expression cases |
-| `emitter-types.do` | C++ representation choices for resolved Doof types |
-| `emitter-json.do` | Demand-gated generated JSON reads, writes, and interface dispatch |
-| `emitter-metadata.do` | Reflection metadata, JSON Schema, and JSON invocation |
+| `emitter-types.do` | C++ representation choices for resolved Doof types, including natural nullable enum carriers |
+| `emitter-json.do` | Demand-gated generated JSON reads, writes, enum backing values, paths, and interface dispatch |
+| `emitter-metadata.do` | Reflection metadata, backing-value JSON Schema, and JSON invocation |
 | `emitter-wasm.do` | JSON-over-C-ABI WebAssembly wrapper generation |
 | `emitter-project.do` | Generated project shape and reached-package native input collation |
 
@@ -121,12 +121,9 @@ threads or reconstruct scheduling policy.
 | `cli.do` | Pure command-line parsing and request model |
 | `project.do` | Requested entry, manifest discovery, and project settings |
 | `package-manifest.do` | `doof.json` validation and normalized package/native models |
-| `std-catalog.do` | Immutable standard-package catalog parsing and canonical URLs |
+| `stdlib-bundle.do` | Seekable archive validation and reached-package materialization |
 | `module-acquisition.do` | Logical module prefix → acquired disk root mapping |
-| `package-acquisition.do` | Workspace-local exact Git package acquisition |
-| `dependency-policy.do` | Root-owned conflict selection and transitive input policy |
-| `external-dependency.do` | External archive/Git acquisition, sentinels, and build commands |
-| `provenance.do` | Deterministic reached-input and native-build provenance |
+| `stdlib-preparation.do` | Bounded preparation commands for reached standard packages |
 | `pkg-config.do` | Pure interpretation of bounded `pkg-config` results |
 | `native-build.do` | Pure GCC-compatible/MSVC support-file, PCH, compile, and link task planning |
 | `native-build-state.do` | Versioned incremental state plus Make/MSVC dependency parsing |
@@ -148,8 +145,8 @@ Other maintained inputs:
 
 - `runtime/doof_runtime.h` — canonical generated-program runtime
 - `runtime/doof_wasm_test_runner_apple.swift` — bounded JavaScriptCore/WASI host for Wasm test commands
-- `resources/std-catalog.json` — embedded exact standard-package catalog
-- `tools/update-std-catalog.do` — catalog maintenance tool
+- `tools/stdlib-bundle.do` — deterministic curated stdlib bundle builder and strict release verifier
+- `build/doof-stdlib.tar` — generated compiler resource, published beside `doof`
 - `tests/release-fixtures/` — native and platform acceptance packages
 - `bootstrap/macos-arm64/generated/` — shared generated stage-0 trust root in its legacy location; host build scripts own target-native source selection
 

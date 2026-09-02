@@ -120,6 +120,58 @@ function jsonResult(): int {
   return 92
 }
 
+enum ValueState { Pending, Ready = 7, Done }
+enum WireState { Pending = "pending", Ready = "ready" }
+
+class EnumPayload {
+  state: ValueState
+  wire: WireState
+  optional: ValueState | none = none
+  states: ValueState[]
+  pair: Tuple<WireState, ValueState>
+  byName: Map<string, WireState>
+}
+
+function decodeJson<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value)
+
+function maybeValueState(present: bool): ValueState | none {
+  if present { return ValueState.Ready }
+  return none
+}
+
+function acceptValueState(value: ValueState): int => value.value
+
+function enumResult(): int {
+  if ValueState.Pending.value != 0 || ValueState.Ready.value != 7 || ValueState.Done.value != 8 { return 90 }
+  if WireState.Ready.value != "ready" || string(WireState.Ready) != "Ready" { return 91 }
+  if ValueState.fromName("Ready")!.value != 7 || ValueState.fromValue(8)!.name != "Done" { return 92 }
+  if ValueState.values()[1] != ValueState.Ready { return 93 }
+  direct := ValueState.Ready.toJsonValue() as int else { return 94 }
+  if direct != 7 || (try! decodeJson<WireState>("ready")) != WireState.Ready { return 95 }
+  resolved := maybeValueState(true) else { return 96 }
+  if acceptValueState(resolved) != 7 { return 97 }
+  payload := EnumPayload.fromJsonValue({
+    state: 7,
+    wire: "ready",
+    states: [0, 8],
+    pair: ["pending", 7],
+    byName: { current: "ready" }
+  }) else { return 98 }
+  if payload.state != ValueState.Ready || payload.states[1] != ValueState.Done { return 99 }
+  encoded := payload.toJsonObject()
+  encodedState := encoded["state"] as int else { return 100 }
+  if encodedState != 7 { return 101 }
+  _ := EnumPayload.fromJsonValue({ state: 7, wire: "ready", states: [0, 99], pair: ["pending", 7], byName: {} }) else error {
+    if !error.contains("Field \"states\"") || !error.contains("[1]") || !error.contains("enum ValueState") || !error.contains("0, 7, 8") { return 102 }
+    _ := ValueState.fromJsonValue("7", true) else kindError {
+      if kindError.contains("Expected integer for enum ValueState") { return 7 }
+      return 103
+    }
+    return 104
+  }
+  return 105
+}
+
 function metadataResult(): int {
   metadata := Calculator.metadata
   if metadata.name != "Calculator" || metadata.description != "A calculator." { return 90 }
@@ -218,5 +270,6 @@ function main(): int {
   if queuedActorResult() != 560 { return 11 }
   if queuedAsyncResult() != 496 { return 12 }
   if crossModulePromiseResult() != 42 { return 13 }
+  if enumResult() != 7 { return 14 }
   return 0
 }

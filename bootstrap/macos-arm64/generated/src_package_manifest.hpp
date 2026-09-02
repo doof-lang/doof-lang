@@ -20,12 +20,8 @@ namespace app_src_ios_app_ {
 namespace app_src_package_manifest_ {
     struct NativeBuildPlan;
     struct PackageResource;
-    struct ExternalDependencyCopyFile;
-    struct ExternalDependencyCommand;
-    struct ExternalDependency;
+    struct StdlibPreparationCommand;
     struct PackageDependency;
-    struct DependencyResolution;
-    struct DependencyPolicy;
     struct PackageManifest;
 }
 
@@ -112,60 +108,17 @@ namespace app_src_package_manifest_ {
     std::string destination;
     PackageResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
 };
-    struct ExternalDependencyCopyFile : public std::enable_shared_from_this<ExternalDependencyCopyFile> {
-    std::string source;
-    std::string destination;
-    ExternalDependencyCopyFile(std::string source, std::string destination) : source(source), destination(destination) {}
-};
-    struct ExternalDependencyCommand : public std::enable_shared_from_this<ExternalDependencyCommand> {
+    struct StdlibPreparationCommand : public std::enable_shared_from_this<StdlibPreparationCommand> {
     std::string program;
     std::shared_ptr<std::vector<std::string>> args;
     std::shared_ptr<doof::ordered_map<std::string, std::string>> env;
     std::string workingDirectory;
-    ExternalDependencyCommand(std::string program, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, std::string workingDirectory) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
-};
-    struct ExternalDependency : public std::enable_shared_from_this<ExternalDependency> {
-    std::string name;
-    std::string kind;
-    std::string url;
-    std::string destination;
-    std::string sha256;
-    int32_t stripComponents;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles;
-    std::string ref;
-    std::string commit;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands;
-    ExternalDependency(std::string name, std::string kind, std::string url, std::string destination, std::string sha256, int32_t stripComponents, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles, std::string ref, std::string commit, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands) : name(name), kind(kind), url(url), destination(destination), sha256(sha256), stripComponents(stripComponents), copyFiles(copyFiles), ref(ref), commit(commit), commands(commands) {}
+    StdlibPreparationCommand(std::string program, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, std::string workingDirectory) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
 };
     struct PackageDependency : public std::enable_shared_from_this<PackageDependency> {
     std::string name;
     std::string path;
-    std::string url;
-    std::string ref;
-    std::string commit;
-    PackageDependency(std::string name, std::string path, std::string url, std::string ref, std::string commit) : name(name), path(path), url(url), ref(ref), commit(commit) {}
-};
-    struct DependencyResolution : public std::enable_shared_from_this<DependencyResolution> {
-    std::string name;
-    std::string kind;
-    std::string url;
-    std::string ref;
-    std::string commit;
-    std::string sha256;
-    DependencyResolution(std::string name, std::string kind, std::string url, std::string ref, std::string commit, std::string sha256) : name(name), kind(kind), url(url), ref(ref), commit(commit), sha256(sha256) {}
-};
-    struct DependencyPolicy : public std::enable_shared_from_this<DependencyPolicy> {
-    bool hasPackageSourceAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedPackageSources;
-    bool hasExternalSourceAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedExternalSources;
-    bool hasLinkLibraryAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedLinkLibraries;
-    bool hasFrameworkAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedFrameworks;
-    bool hasPkgConfigAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages;
-    DependencyPolicy(bool hasPackageSourceAllowlist, std::shared_ptr<std::vector<std::string>> allowedPackageSources, bool hasExternalSourceAllowlist, std::shared_ptr<std::vector<std::string>> allowedExternalSources, bool hasLinkLibraryAllowlist, std::shared_ptr<std::vector<std::string>> allowedLinkLibraries, bool hasFrameworkAllowlist, std::shared_ptr<std::vector<std::string>> allowedFrameworks, bool hasPkgConfigAllowlist, std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages) : hasPackageSourceAllowlist(hasPackageSourceAllowlist), allowedPackageSources(allowedPackageSources), hasExternalSourceAllowlist(hasExternalSourceAllowlist), allowedExternalSources(allowedExternalSources), hasLinkLibraryAllowlist(hasLinkLibraryAllowlist), allowedLinkLibraries(allowedLinkLibraries), hasFrameworkAllowlist(hasFrameworkAllowlist), allowedFrameworks(allowedFrameworks), hasPkgConfigAllowlist(hasPkgConfigAllowlist), allowedPkgConfigPackages(allowedPkgConfigPackages) {}
+    PackageDependency(std::string name, std::string path) : name(name), path(path) {}
 };
     struct PackageManifest : public std::enable_shared_from_this<PackageManifest> {
     std::string name;
@@ -174,17 +127,14 @@ namespace app_src_package_manifest_ {
     std::string rootDirectory;
     std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources;
     std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies;
-    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions;
-    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions;
-    std::shared_ptr<DependencyPolicy> policy;
+    std::shared_ptr<std::vector<std::shared_ptr<StdlibPreparationCommand>>> stdlibPreparation;
     std::shared_ptr<NativeBuildPlan> nativeBuild;
     std::string target;
     std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp;
     std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp;
     std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig;
     std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig;
-    PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions, std::shared_ptr<DependencyPolicy> policy, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), externalDependencies(externalDependencies), packageResolutions(packageResolutions), externalResolutions(externalResolutions), policy(policy), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
+    PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<StdlibPreparationCommand>>> stdlibPreparation, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), stdlibPreparation(stdlibPreparation), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
 };
 }
 
@@ -200,15 +150,9 @@ namespace app_src_package_manifest_ {
     bool manifestJsonHas(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name);
     doof::Result<std::shared_ptr<PackageManifest>, std::string> parsePackageManifest(const std::string& source, const std::string& manifestPath, const std::string& rootDirectory, const std::string& platform, const std::string& targetOverride);
     doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>>, std::string> parsePackageDependencies(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>>, std::string> parseResolutions(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& section);
-    doof::Result<std::shared_ptr<DependencyPolicy>, std::string> parseDependencyPolicy(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath);
-    doof::Result<void, std::string> appendPolicyStrings(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name, const std::string& manifestPath, const std::string& fieldPath);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>>, std::string> parseExternalDependencies(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory);
+    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<StdlibPreparationCommand>>>, std::string> parseStdlibPreparation(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath);
     doof::Result<std::string, std::string> requiredManifestString(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name, const std::string& manifestPath, const std::string& fieldPath);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>>, std::string> parseExternalDependencyCopyFiles(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& manifestPath, const std::string& fieldPath);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>>, std::string> parseExternalDependencyCommands(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& manifestPath, const std::string& fieldPath);
-    bool isSupportedExternalArchiveUrl(const std::string& url);
-    bool isHexString(const std::string& value, int32_t length);
+    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<StdlibPreparationCommand>>>, std::string> parsePreparationCommands(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& object, const std::string& name, const std::string& manifestPath, const std::string& fieldPath);
     doof::Result<std::shared_ptr<NativeBuildPlan>, std::string> parseManifestNativeBuild(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory, const std::string& platform, const std::string& target);
     doof::Result<std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>>, std::string> parseManifestResources(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath, const std::string& rootDirectory);
     doof::Result<std::string, std::string> parseManifestTarget(const std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>>& root, const std::string& manifestPath);

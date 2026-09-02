@@ -76,7 +76,16 @@ export function validateStatement(statement: Statement, module: string, diagnost
       }
       for method of interface_.methods { validateFunction(method, module, diagnostics) }
     }
-    enum_: EnumDeclaration -> { for variant of enum_.variants { if variant.value != none { validateExpression(variant.value!, module, diagnostics) } } }
+    enum_: EnumDeclaration -> {
+      for variant of enum_.variants {
+        if variant.value != none { validateExpression(variant.value!, module, diagnostics) }
+        if enum_.backingKind == "string" {
+          if variant.resolvedStringValue == none { addValidationError(module, variant.span, "Enum variant '" + enum_.name + "." + variant.name + "' has no resolved string backing value", diagnostics) }
+        } else if variant.resolvedIntValue == none {
+          addValidationError(module, variant.span, "Enum variant '" + enum_.name + "." + variant.name + "' has no resolved integer backing value", diagnostics)
+        }
+      }
+    }
     alias: TypeAliasDeclaration -> {
       validateTypeParameterConstraints(alias.typeParamConstraints, module, diagnostics)
       validateTypeAnnotation(alias.type_, module, diagnostics)
@@ -252,6 +261,10 @@ export function validateExpression(expression: Expression, module: string, diagn
     yieldBlock: YieldBlockExpression -> { validateBlock(yieldBlock.body, module, diagnostics) }
     catch_: CatchExpression -> { validateBlock(catch_.body, module, diagnostics) }
     construct: ConstructExpression -> {
+      if construct.spread != none {
+        validateExpression(construct.spread!, module, diagnostics)
+        validateResolved(construct.resolvedSpreadType, construct.spread!.span, module, "construction spread", diagnostics)
+      }
       if construct.type_ != "Success" && construct.type_ != "Failure" {
         validateResolved(construct.resolvedConstructedType, construct.span, module, "constructed type", diagnostics)
         if construct.resolvedClass == none { addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved class", diagnostics) }

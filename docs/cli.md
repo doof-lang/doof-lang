@@ -44,8 +44,8 @@ but does not natively launch files through POSIX shebangs.
 `check` parses, resolves, analyzes, and type-checks the reached source graph.
 `emit` also writes split C++ headers/sources and required runtime/native inputs.
 `build` compiles and links those inputs. `run` builds and launches the result
-from its package root. `package` creates an optimized release artifact and
-records provenance. `test` discovers and runs exported test functions.
+from its package root. `package` creates an optimized release artifact. `test`
+discovers and runs exported test functions.
 
 `profile` is a macOS-only Time Profiler workflow for native console
 executables and macOS application bundles. It uses a separate
@@ -138,6 +138,13 @@ The compiler supports native executables, macOS applications, iOS simulator
 and device applications, and WebAssembly libraries. Platform signing and target
 options are read from `doof.json`; command-line overrides take precedence.
 
-Every command honors `DOOF_STDLIB_ROOT` as an explicit mutable standard-library
-checkout. The override is required for compiler development until clean remote
-standard-package acquisition is part of the supported bootstrap contract.
+Every command honors `DOOF_STDLIB_ROOT` as an explicit, global mutable
+standard-library checkout. When it is unset, `std/*` imports come only from the
+`doof-stdlib.tar` resource adjacent to the compiler. Reached packages are
+verified and materialized independently below
+`.doof/packages/stdlib-bundles/<bundle-digest>/<target-key>/`; standard imports
+never fall back to Git or the network. The target key includes the native
+target configuration because vendored build commands may create target-local
+state. Each bundle declares its supported native targets, and releases omit
+vendor inputs that none of those targets use. Missing, target-incompatible,
+incomplete, or corrupt bundles are reported as source diagnostics.

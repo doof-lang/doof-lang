@@ -119,8 +119,8 @@ void collectResourceFiles(const std::string& path, const std::string& baseDirect
 }
 void materializeMacOSResources(const std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>& config, const std::string& resourcesDirectory) {
     std::shared_ptr<std::vector<std::string>> destinations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_10 = config->resources;
-    for (const auto& resource : *_iterable_10) {
+    const auto& _iterable_12 = config->resources;
+    for (const auto& resource : *_iterable_12) {
         std::shared_ptr<std::vector<std::string>> files = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
         auto baseDirectory = globBaseDirectory(resource->sourcePath);
         if (doof::string_contains(resource->sourcePath, std::string("*"))) {
@@ -138,8 +138,8 @@ void materializeMacOSResources(const std::shared_ptr<::app_src_macos_app_::MacOS
             doof::panic((std::string("No files matched resource pattern: ") + resource->sourcePath));
         }
         const auto prefix = (doof::string_endsWith(baseDirectory, std::string("/")) ? baseDirectory : (baseDirectory + std::string("/")));
-        const auto& _iterable_12 = files;
-        for (const auto& sourcePath : *_iterable_12) {
+        const auto& _iterable_10 = files;
+        for (const auto& sourcePath : *_iterable_10) {
             const auto relative = (doof::string_startsWith(sourcePath, prefix) ? doof::string_substring(sourcePath, static_cast<int32_t>(prefix.size()), static_cast<int32_t>(sourcePath.size())) : fileName(sourcePath));
             const auto destinationRoot = ((resource->destination == std::string("")) ? resourcesDirectory : outputPath(resourcesDirectory, resource->destination));
             const auto destinationPath = outputPath(destinationRoot, relative);
@@ -166,8 +166,8 @@ doof::Result<void, std::string> generateMacOSIcon(const std::string& iconPath, c
     const auto sizes = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{16, 32, 32, 64, 128, 256, 256, 512, 512, 1024});
     const auto names = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("icon_16x16.png"), std::string("icon_16x16@2x.png"), std::string("icon_32x32.png"), std::string("icon_32x32@2x.png"), std::string("icon_128x128.png"), std::string("icon_128x128@2x.png"), std::string("icon_256x256.png"), std::string("icon_256x256@2x.png"), std::string("icon_512x512.png"), std::string("icon_512x512@2x.png")});
     for (int32_t index = 0; index < static_cast<int32_t>((sizes)->size()); ++index) {
-        auto _try_value_14 = runRequiredCommand(std::string("sips"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-z"), doof::to_string(doof::array_at(sizes, index, "src/macos-app-driver", 152)), doof::to_string(doof::array_at(sizes, index, "src/macos-app-driver", 152)), iconPath, std::string("--out"), outputPath(iconset, doof::array_at(names, index, "src/macos-app-driver", 152))}), std::string("macOS icon resize"));
-        if (doof::is_failure(_try_value_14)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_14))};
+        auto _try_value_13 = runRequiredCommand(std::string("sips"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-z"), doof::to_string(doof::array_at(sizes, index, "src/macos-app-driver", 152)), doof::to_string(doof::array_at(sizes, index, "src/macos-app-driver", 152)), iconPath, std::string("--out"), outputPath(iconset, doof::array_at(names, index, "src/macos-app-driver", 152))}), std::string("macOS icon resize"));
+        if (doof::is_failure(_try_value_13)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_13))};
     }
     const auto result = runRequiredCommand(std::string("iconutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-c"), std::string("icns"), iconset, std::string("-o"), destinationPath}), std::string("macOS icon generation"));
     removeTree(iconset);
@@ -184,11 +184,11 @@ doof::Result<std::string, std::string> commandText(const std::string& command, c
 }
 doof::Result<std::string, std::string> resolveEmbeddedLibrary(const std::string& name, const std::shared_ptr<std::vector<std::string>>& libraryPaths, const std::string& buildDirectory) {
     const auto candidates = std::make_shared<std::vector<std::string>>(std::vector<std::string>{((std::string("lib") + name) + std::string(".dylib")), (name + std::string(".dylib")), ((std::string("lib") + name) + std::string(".so")), (name + std::string(".so")), (name + std::string(".framework"))});
-    const auto& _iterable_16 = libraryPaths;
-    for (const auto& libraryPath : *_iterable_16) {
+    const auto& _iterable_18 = libraryPaths;
+    for (const auto& libraryPath : *_iterable_18) {
         const auto resolvedRoot = (doof::string_startsWith(libraryPath, std::string("/")) ? libraryPath : outputPath(buildDirectory, libraryPath));
-        const auto& _iterable_18 = candidates;
-        for (const auto& candidate : *_iterable_18) {
+        const auto& _iterable_16 = candidates;
+        for (const auto& candidate : *_iterable_16) {
             const auto candidatePath = outputPath(resolvedRoot, candidate);
             if (::doof_fs::exists(candidatePath)) {
                 return doof::Success<std::string>{ candidatePath };
@@ -325,8 +325,8 @@ doof::Result<void, std::string> rewriteEmbeddedDependencies(const std::string& c
     auto _try_value_33 = machODependencies(codePath);
     if (doof::is_failure(_try_value_33)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_33))};
     const auto dependencies = doof::success_value(_try_value_33);
-    const auto& _iterable_35 = dependencies;
-    for (const auto& dependency : *_iterable_35) {
+    const auto& _iterable_36 = dependencies;
+    for (const auto& dependency : *_iterable_36) {
         if (isSystemMachODependency(dependency)) {
             continue;
         }
@@ -335,8 +335,8 @@ doof::Result<void, std::string> rewriteEmbeddedDependencies(const std::string& c
             return doof::Failure<std::string>{ ((((std::string("Mach-O file ") + codePath) + std::string(" references non-system dependency ")) + dependency) + std::string(", which is not listed in embeddedLibraries")) };
         }
         if (dependency != target->bundleReference) {
-            auto _try_value_36 = runRequiredCommand(std::string("install_name_tool"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-change"), dependency, target->bundleReference, codePath}), std::string("rewriting embedded library dependency"));
-            if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_36))};
+            auto _try_value_34 = runRequiredCommand(std::string("install_name_tool"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-change"), dependency, target->bundleReference, codePath}), std::string("rewriting embedded library dependency"));
+            if (doof::is_failure(_try_value_34)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_34))};
         }
     }
     return doof::Success<void>{};
@@ -358,18 +358,18 @@ doof::Result<void, std::string> embedMacOSLibraries(const std::string& executabl
     ensureDirectory(frameworksDirectory);
     std::shared_ptr<std::vector<std::shared_ptr<EmbeddedCode>>> embedded = std::make_shared<std::vector<std::shared_ptr<EmbeddedCode>>>(std::vector<std::shared_ptr<EmbeddedCode>>{});
     std::shared_ptr<std::vector<std::string>> destinations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_39 = config->embeddedLibraries;
-    for (const auto& entry : *_iterable_39) {
+    const auto& _iterable_42 = config->embeddedLibraries;
+    for (const auto& entry : *_iterable_42) {
         auto sourcePath = entry->path;
         if (sourcePath == std::string("")) {
-            auto _try_value_40 = resolveEmbeddedLibrary(entry->library, libraryPaths, buildDirectory);
-            if (doof::is_failure(_try_value_40)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_40))};
-            const auto resolvedSourcePath = doof::success_value(_try_value_40);
+            auto _try_value_38 = resolveEmbeddedLibrary(entry->library, libraryPaths, buildDirectory);
+            if (doof::is_failure(_try_value_38)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_38))};
+            const auto resolvedSourcePath = doof::success_value(_try_value_38);
             (sourcePath = resolvedSourcePath);
         }
-        auto _try_value_41 = planEmbeddedCode(sourcePath, frameworksDirectory);
-        if (doof::is_failure(_try_value_41)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_41))};
-        const auto code = doof::success_value(_try_value_41);
+        auto _try_value_39 = planEmbeddedCode(sourcePath, frameworksDirectory);
+        if (doof::is_failure(_try_value_39)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_39))};
+        const auto code = doof::success_value(_try_value_39);
         if (doof::array_contains(destinations, code->bundledRoot, "", 0)) {
             return doof::Failure<std::string>{ (std::string("Duplicate embedded library destination: ") + code->bundledRoot) };
         }
@@ -377,21 +377,21 @@ doof::Result<void, std::string> embedMacOSLibraries(const std::string& executabl
         removeTree(code->bundledRoot);
         copyPath(code->sourcePath, code->bundledRoot);
         if (!::doof_fs::isDirectory(code->bundledRoot)) {
-            auto _try_value_42 = runRequiredCommand(std::string("chmod"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("+x"), code->bundledRoot}), std::string("marking embedded library executable"));
-            if (doof::is_failure(_try_value_42)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_42))};
+            auto _try_value_40 = runRequiredCommand(std::string("chmod"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("+x"), code->bundledRoot}), std::string("marking embedded library executable"));
+            if (doof::is_failure(_try_value_40)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_40))};
         }
         embedded->push_back(code);
     }
     auto _try_value_43 = rewriteEmbeddedDependencies(executablePath, embedded);
     if (doof::is_failure(_try_value_43)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_43))};
-    const auto& _iterable_45 = embedded;
-    for (const auto& code : *_iterable_45) {
-        auto _try_value_46 = rewriteEmbeddedDependencies(code->bundledPath, embedded);
+    const auto& _iterable_48 = embedded;
+    for (const auto& code : *_iterable_48) {
+        auto _try_value_44 = rewriteEmbeddedDependencies(code->bundledPath, embedded);
+        if (doof::is_failure(_try_value_44)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_44))};
+        auto _try_value_45 = runRequiredCommand(std::string("install_name_tool"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-id"), code->bundleReference, code->bundledPath}), std::string("setting embedded library install name"));
+        if (doof::is_failure(_try_value_45)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_45))};
+        auto _try_value_46 = ensureMachORPath(code->bundledPath, std::string("@loader_path"));
         if (doof::is_failure(_try_value_46)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_46))};
-        auto _try_value_47 = runRequiredCommand(std::string("install_name_tool"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-id"), code->bundleReference, code->bundledPath}), std::string("setting embedded library install name"));
-        if (doof::is_failure(_try_value_47)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_47))};
-        auto _try_value_48 = ensureMachORPath(code->bundledPath, std::string("@loader_path"));
-        if (doof::is_failure(_try_value_48)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_48))};
     }
     auto _try_value_49 = ensureMachORPath(executablePath, std::string("@executable_path/../Frameworks"));
     if (doof::is_failure(_try_value_49)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_49))};
@@ -441,10 +441,10 @@ doof::Result<std::string, std::string> assembleMacOSApp(const std::string& build
     if (doof::is_failure(_try_value_54)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_54))};
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     collectNestedMacOSCode(outputPath(contentsDirectory, std::string("Frameworks")), nested);
-    const auto& _iterable_56 = nested;
-    for (const auto& path : *_iterable_56) {
-        auto _try_value_57 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(path, std::string("-"), std::string("ad-hoc"), std::string("")), std::string("ad-hoc signing nested macOS code"));
-        if (doof::is_failure(_try_value_57)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_57))};
+    const auto& _iterable_57 = nested;
+    for (const auto& path : *_iterable_57) {
+        auto _try_value_55 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(path, std::string("-"), std::string("ad-hoc"), std::string("")), std::string("ad-hoc signing nested macOS code"));
+        if (doof::is_failure(_try_value_55)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_55))};
     }
     auto _try_value_58 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(appPath, std::string("-"), std::string("ad-hoc"), std::string("")), std::string("ad-hoc signing macOS app"));
     if (doof::is_failure(_try_value_58)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_58))};
@@ -461,8 +461,8 @@ doof::Result<std::string, std::string> developerIdIdentity(const std::string& co
     const auto commandOutput = ::doof_blob::NativeBlobReader::constructor(result->output, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((result->output)->size())));
     std::shared_ptr<std::vector<std::string>> identities = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto marker = std::string("\"Developer ID Application:");
-    const auto& _iterable_60 = doof::string_split(commandOutput, std::string("\n"));
-    for (const auto& line : *_iterable_60) {
+    const auto& _iterable_61 = doof::string_split(commandOutput, std::string("\n"));
+    for (const auto& line : *_iterable_61) {
         auto start = -1;
         for (int32_t index = 0; index < ((static_cast<int32_t>(line.size()) - static_cast<int32_t>(marker.size())) + 1); ++index) {
             if (doof::string_substring(line, index, (index + static_cast<int32_t>(marker.size()))) == marker) {
@@ -528,10 +528,10 @@ doof::Result<void, std::string> signAndArchiveMacOSApp(const std::string& appPat
     collectNestedMacOSCode(outputPath(appPath, std::string("Contents/Frameworks")), nested);
     collectNestedMacOSCode(outputPath(appPath, std::string("Contents/PlugIns")), nested);
     collectNestedMacOSCode(outputPath(appPath, std::string("Contents/XPCServices")), nested);
-    const auto& _iterable_66 = nested;
-    for (const auto& path : *_iterable_66) {
-        auto _try_value_67 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(path, identity, config->signing, std::string("")), std::string("signing nested macOS code"));
-        if (doof::is_failure(_try_value_67)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_67))};
+    const auto& _iterable_67 = nested;
+    for (const auto& path : *_iterable_67) {
+        auto _try_value_65 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(path, identity, config->signing, std::string("")), std::string("signing nested macOS code"));
+        if (doof::is_failure(_try_value_65)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_65))};
     }
     auto _try_value_68 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(appPath, identity, config->signing, entitlementsPath), std::string("signing macOS app"));
     if (doof::is_failure(_try_value_68)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_68))};

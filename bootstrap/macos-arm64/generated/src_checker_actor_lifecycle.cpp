@@ -10,13 +10,13 @@ void reportRetiredActorUses(const std::variant<std::shared_ptr<::app_src_ast_::C
     }
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Identifier>>> identifiers = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Identifier>>>(std::vector<std::shared_ptr<::app_src_ast_::Identifier>>{});
     collectStatementIdentifiers(statement, identifiers);
-    const auto& _iterable_2 = identifiers;
-    for (const auto& identifier : *_iterable_2) {
+    const auto& _iterable_4 = identifiers;
+    for (const auto& identifier : *_iterable_4) {
         if (doof::is_null(identifier->resolvedBinding)) {
             continue;
         }
-        const auto& _iterable_4 = retired;
-        for (const auto& binding : *_iterable_4) {
+        const auto& _iterable_2 = retired;
+        for (const auto& binding : *_iterable_2) {
             if (sameBinding(doof::unwrap_optional(identifier->resolvedBinding), binding)) {
                 diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), ((std::string("Cannot use actor binding \"") + identifier->name) + std::string("\" after it has been retired")), semanticSpan(identifier->span), module, std::string("")));
             }

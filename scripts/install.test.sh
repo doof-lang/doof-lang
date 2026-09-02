@@ -35,6 +35,22 @@ expect_failure "$repo_root/install.sh" --prefix relative
 expect_failure "$repo_root/install.sh" --prefix /
 expect_failure "$repo_root/install.sh" --prefix
 
+install_fixture="$test_root/install-fixture"
+mkdir -p "$install_fixture/scripts"
+cp "$repo_root/install.sh" "$install_fixture/install.sh"
+printf '%s\n' '#!/bin/sh' 'exit 7' > "$install_fixture/build.sh"
+printf '%s\n' '#!/bin/sh' 'exit 0' > "$install_fixture/scripts/test.sh"
+chmod +x "$install_fixture/build.sh" "$install_fixture/scripts/test.sh"
+expect_failure "$install_fixture/install.sh" --prefix "$test_root/build-failure-prefix"
+grep -q 'build failed; nothing was installed under' "$test_root/failure-output"
+test ! -e "$test_root/build-failure-prefix"
+
+printf '%s\n' '#!/bin/sh' 'exit 0' > "$install_fixture/build.sh"
+printf '%s\n' '#!/bin/sh' 'exit 9' > "$install_fixture/scripts/test.sh"
+expect_failure "$install_fixture/install.sh" --prefix "$test_root/test-failure-prefix"
+grep -q 'verification failed; nothing was installed under' "$test_root/failure-output"
+test ! -e "$test_root/test-failure-prefix"
+
 prefix="$test_root/prefix"
 "$helper" "$artifact_root" "$prefix"
 
@@ -42,15 +58,15 @@ test -x "$prefix/libexec/doof/doof"
 test "$(file_mode "$prefix/libexec/doof/doof")" = "755"
 test "$(file_mode "$prefix/libexec/doof/doof_runtime.h")" = "644"
 test "$(file_mode "$prefix/libexec/doof/doof_wasm_test_runner_apple.swift")" = "644"
-test "$(file_mode "$prefix/libexec/doof/std-catalog.json")" = "644"
+test "$(file_mode "$prefix/libexec/doof/doof-stdlib.tar")" = "644"
 test -L "$prefix/bin/doof"
 test "$(readlink "$prefix/bin/doof")" = "../libexec/doof/doof"
 test -L "$prefix/bin/doof_runtime.h"
 test "$(readlink "$prefix/bin/doof_runtime.h")" = "../libexec/doof/doof_runtime.h"
 test -L "$prefix/bin/doof_wasm_test_runner_apple.swift"
 test "$(readlink "$prefix/bin/doof_wasm_test_runner_apple.swift")" = "../libexec/doof/doof_wasm_test_runner_apple.swift"
-test -L "$prefix/bin/std-catalog.json"
-test "$(readlink "$prefix/bin/std-catalog.json")" = "../libexec/doof/std-catalog.json"
+test -L "$prefix/bin/doof-stdlib.tar"
+test "$(readlink "$prefix/bin/doof-stdlib.tar")" = "../libexec/doof/doof-stdlib.tar"
 
 unlink "$prefix/bin/doof"
 touch "$prefix/bin/doof"
@@ -70,7 +86,7 @@ emit_root="$test_root/emitted"
 mkdir -p "$work_root"
 (
   cd "$work_root"
-  DOOF_STDLIB_ROOT="$stdlib_root" "$prefix/bin/doof" emit "$fixture" -o "$emit_root"
+  env -u DOOF_STDLIB_ROOT "$prefix/bin/doof" emit "$fixture" -o "$emit_root"
 )
 cmp "$artifact_root/doof_runtime.h" "$emit_root/doof_runtime.hpp"
 

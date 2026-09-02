@@ -141,7 +141,13 @@ callback's parameter names and types:
 <Button onClick=>println("clicked")/>
 <Button onClick=>println(event.name)/>
 <Button onClick=>{ recordClick(); refresh() }/>
+<Button onClick=>{ if pending.length > 0 { submit() } }/>
 ```
+
+Inside a delimited shorthand attribute expression, including a lambda block,
+parenthesized expression, or array literal, `>` is an ordinary operator. At the
+top level of an unbraced shorthand attribute expression, `>` closes the tag;
+wrap a greater-than comparison in parentheses when it is the expression body.
 
 Content in a paired tag is passed as a contextually typed array to the ordinary
 parameter or field named `children`. Nested tags and `{expression}` each add one

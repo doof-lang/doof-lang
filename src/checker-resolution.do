@@ -475,8 +475,18 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
       return unknownType()
     }
     enum_: EnumType -> {
+      declaration := declarationFor(state.result, enum_.symbol)
+      let backingType: ResolvedType = primitive("int")
+      if declaration != none {
+        case declaration! {
+          enumDeclaration: EnumDeclaration -> { if enumDeclaration.backingKind == "string" { backingType = primitive("string") } }
+          _ -> { }
+        }
+      }
       if property == "name" { return primitive("string") }
-      if property == "value" { return primitive("int") }
+      if property == "value" { return backingType }
+      if property == "toJsonValue" { return functionType([], jsonValueType()) }
+      if property == "values" { return functionType([], arrayType(enum_, true)) }
       if property == "fromName" {
         return functionType(
           [FunctionParamType { name: "value", type_: primitive("string"), hasDefault: false }],
@@ -485,11 +495,16 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
       }
       if property == "fromValue" {
         return functionType(
-          [FunctionParamType { name: "value", type_: primitive("int"), hasDefault: false }],
+          [FunctionParamType { name: "value", type_: backingType, hasDefault: false }],
           unionType([enum_, noneType()]),
         )
       }
-      declaration := declarationFor(state.result, enum_.symbol)
+      if property == "fromJsonValue" {
+        return functionType([
+          FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
+          FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
+        ], resultType(enum_, primitive("string")))
+      }
       if declaration != none {
         case declaration! {
           enumDeclaration: EnumDeclaration -> {

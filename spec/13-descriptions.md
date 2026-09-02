@@ -232,7 +232,8 @@ If a method returns `Result<S, F>`, then `outputSchema` describes `S`, not the `
 | `T[]` | `{ "type": "array", "items": { ... } }` |
 | `(T, U)` | `{ "type": "array", "prefixItems": [...] }` |
 | `T \| U` | `{ "anyOf": [...] }` |
-| `enum E` | `{ "enum": ["A", "B", ...] }` |
+| integer-backed `enum E` | `{ "type": "integer", "enum": [0, 1, ...] }` |
+| string-backed `enum E` | `{ "type": "string", "enum": ["wire-a", "wire-b", ...] }` |
 | Class or struct type | `{ "$ref": "#/$defs/TypeName" }` |
 
 When a method parameter or return type references another class or struct, that type's schema is lifted into a top-level `$defs` string on the metadata object (accessible via the internal `defs` field in the generated C++).

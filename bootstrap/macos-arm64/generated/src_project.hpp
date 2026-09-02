@@ -24,12 +24,8 @@ namespace app_src_ios_app_ {
 namespace app_src_package_manifest_ {
     struct NativeBuildPlan;
     struct PackageResource;
-    struct ExternalDependencyCopyFile;
-    struct ExternalDependencyCommand;
-    struct ExternalDependency;
+    struct StdlibPreparationCommand;
     struct PackageDependency;
-    struct DependencyResolution;
-    struct DependencyPolicy;
     struct PackageManifest;
 }
 
@@ -71,7 +67,7 @@ inline const char* EntryKind_name(EntryKind value) {
     case EntryKind::Symlink: return "Symlink";
     case EntryKind::Other: return "Other";
   }
-  return "";
+  doof::panic(std::string("Invalid EntryKind enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<EntryKind> EntryKind_fromName(std::string_view value) {
   if (value == "File") return EntryKind::File;
@@ -80,14 +76,21 @@ inline std::optional<EntryKind> EntryKind_fromName(std::string_view value) {
   if (value == "Other") return EntryKind::Other;
   return std::nullopt;
 }
+inline int32_t EntryKind_value(EntryKind value) { return static_cast<int32_t>(value); }
 inline std::optional<EntryKind> EntryKind_fromValue(int32_t value) {
-  switch (static_cast<EntryKind>(value)) {
-    case EntryKind::File: return EntryKind::File;
-    case EntryKind::Directory: return EntryKind::Directory;
-    case EntryKind::Symlink: return EntryKind::Symlink;
-    case EntryKind::Other: return EntryKind::Other;
-    default: return std::nullopt;
-  }
+  if (value == 0) return EntryKind::File;
+  if (value == 1) return EntryKind::Directory;
+  if (value == 2) return EntryKind::Symlink;
+  if (value == 3) return EntryKind::Other;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<EntryKind>> EntryKind_values() { return std::make_shared<std::vector<EntryKind>>(std::initializer_list<EntryKind>{EntryKind::File, EntryKind::Directory, EntryKind::Symlink, EntryKind::Other}); }
+inline doof::JsonValue EntryKind_toJsonValue(EntryKind value) { return doof::json_value(EntryKind_value(value)); }
+inline doof::Result<EntryKind, std::string> EntryKind_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum EntryKind, got ") + doof::json_type_name(value)};
+  auto resolved = EntryKind_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum EntryKind: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3"};
+  return doof::Success<EntryKind>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, EntryKind value) { return output << EntryKind_name(value); }
     enum class IoError {
@@ -113,7 +116,7 @@ inline const char* IoError_name(IoError value) {
     case IoError::Other: return "Other";
     case IoError::Unsupported: return "Unsupported";
   }
-  return "";
+  doof::panic(std::string("Invalid IoError enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "NotFound") return IoError::NotFound;
@@ -127,19 +130,26 @@ inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "Unsupported") return IoError::Unsupported;
   return std::nullopt;
 }
+inline int32_t IoError_value(IoError value) { return static_cast<int32_t>(value); }
 inline std::optional<IoError> IoError_fromValue(int32_t value) {
-  switch (static_cast<IoError>(value)) {
-    case IoError::NotFound: return IoError::NotFound;
-    case IoError::PermissionDenied: return IoError::PermissionDenied;
-    case IoError::AlreadyExists: return IoError::AlreadyExists;
-    case IoError::IsDirectory: return IoError::IsDirectory;
-    case IoError::NotDirectory: return IoError::NotDirectory;
-    case IoError::InvalidPath: return IoError::InvalidPath;
-    case IoError::Interrupted: return IoError::Interrupted;
-    case IoError::Other: return IoError::Other;
-    case IoError::Unsupported: return IoError::Unsupported;
-    default: return std::nullopt;
-  }
+  if (value == 0) return IoError::NotFound;
+  if (value == 1) return IoError::PermissionDenied;
+  if (value == 2) return IoError::AlreadyExists;
+  if (value == 3) return IoError::IsDirectory;
+  if (value == 4) return IoError::NotDirectory;
+  if (value == 5) return IoError::InvalidPath;
+  if (value == 6) return IoError::Interrupted;
+  if (value == 7) return IoError::Other;
+  if (value == 8) return IoError::Unsupported;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<IoError>> IoError_values() { return std::make_shared<std::vector<IoError>>(std::initializer_list<IoError>{IoError::NotFound, IoError::PermissionDenied, IoError::AlreadyExists, IoError::IsDirectory, IoError::NotDirectory, IoError::InvalidPath, IoError::Interrupted, IoError::Other, IoError::Unsupported}); }
+inline doof::JsonValue IoError_toJsonValue(IoError value) { return doof::json_value(IoError_value(value)); }
+inline doof::Result<IoError, std::string> IoError_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum IoError, got ") + doof::json_type_name(value)};
+  auto resolved = IoError_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum IoError: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6, 7, 8"};
+  return doof::Success<IoError>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, IoError value) { return output << IoError_name(value); }
 }
@@ -164,7 +174,7 @@ inline const char* DayOfWeek_name(DayOfWeek value) {
     case DayOfWeek::Saturday: return "Saturday";
     case DayOfWeek::Sunday: return "Sunday";
   }
-  return "";
+  doof::panic(std::string("Invalid DayOfWeek enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<DayOfWeek> DayOfWeek_fromName(std::string_view value) {
   if (value == "Monday") return DayOfWeek::Monday;
@@ -176,17 +186,24 @@ inline std::optional<DayOfWeek> DayOfWeek_fromName(std::string_view value) {
   if (value == "Sunday") return DayOfWeek::Sunday;
   return std::nullopt;
 }
+inline int32_t DayOfWeek_value(DayOfWeek value) { return static_cast<int32_t>(value); }
 inline std::optional<DayOfWeek> DayOfWeek_fromValue(int32_t value) {
-  switch (static_cast<DayOfWeek>(value)) {
-    case DayOfWeek::Monday: return DayOfWeek::Monday;
-    case DayOfWeek::Tuesday: return DayOfWeek::Tuesday;
-    case DayOfWeek::Wednesday: return DayOfWeek::Wednesday;
-    case DayOfWeek::Thursday: return DayOfWeek::Thursday;
-    case DayOfWeek::Friday: return DayOfWeek::Friday;
-    case DayOfWeek::Saturday: return DayOfWeek::Saturday;
-    case DayOfWeek::Sunday: return DayOfWeek::Sunday;
-    default: return std::nullopt;
-  }
+  if (value == 1) return DayOfWeek::Monday;
+  if (value == 2) return DayOfWeek::Tuesday;
+  if (value == 3) return DayOfWeek::Wednesday;
+  if (value == 4) return DayOfWeek::Thursday;
+  if (value == 5) return DayOfWeek::Friday;
+  if (value == 6) return DayOfWeek::Saturday;
+  if (value == 7) return DayOfWeek::Sunday;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<DayOfWeek>> DayOfWeek_values() { return std::make_shared<std::vector<DayOfWeek>>(std::initializer_list<DayOfWeek>{DayOfWeek::Monday, DayOfWeek::Tuesday, DayOfWeek::Wednesday, DayOfWeek::Thursday, DayOfWeek::Friday, DayOfWeek::Saturday, DayOfWeek::Sunday}); }
+inline doof::JsonValue DayOfWeek_toJsonValue(DayOfWeek value) { return doof::json_value(DayOfWeek_value(value)); }
+inline doof::Result<DayOfWeek, std::string> DayOfWeek_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum DayOfWeek, got ") + doof::json_type_name(value)};
+  auto resolved = DayOfWeek_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum DayOfWeek: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 1, 2, 3, 4, 5, 6, 7"};
+  return doof::Success<DayOfWeek>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, DayOfWeek value) { return output << DayOfWeek_name(value); }
 }
@@ -274,60 +291,17 @@ namespace app_src_package_manifest_ {
     std::string destination;
     PackageResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
 };
-    struct ExternalDependencyCopyFile : public std::enable_shared_from_this<ExternalDependencyCopyFile> {
-    std::string source;
-    std::string destination;
-    ExternalDependencyCopyFile(std::string source, std::string destination) : source(source), destination(destination) {}
-};
-    struct ExternalDependencyCommand : public std::enable_shared_from_this<ExternalDependencyCommand> {
+    struct StdlibPreparationCommand : public std::enable_shared_from_this<StdlibPreparationCommand> {
     std::string program;
     std::shared_ptr<std::vector<std::string>> args;
     std::shared_ptr<doof::ordered_map<std::string, std::string>> env;
     std::string workingDirectory;
-    ExternalDependencyCommand(std::string program, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, std::string workingDirectory) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
-};
-    struct ExternalDependency : public std::enable_shared_from_this<ExternalDependency> {
-    std::string name;
-    std::string kind;
-    std::string url;
-    std::string destination;
-    std::string sha256;
-    int32_t stripComponents;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles;
-    std::string ref;
-    std::string commit;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands;
-    ExternalDependency(std::string name, std::string kind, std::string url, std::string destination, std::string sha256, int32_t stripComponents, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles, std::string ref, std::string commit, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands) : name(name), kind(kind), url(url), destination(destination), sha256(sha256), stripComponents(stripComponents), copyFiles(copyFiles), ref(ref), commit(commit), commands(commands) {}
+    StdlibPreparationCommand(std::string program, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, std::string workingDirectory) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
 };
     struct PackageDependency : public std::enable_shared_from_this<PackageDependency> {
     std::string name;
     std::string path;
-    std::string url;
-    std::string ref;
-    std::string commit;
-    PackageDependency(std::string name, std::string path, std::string url, std::string ref, std::string commit) : name(name), path(path), url(url), ref(ref), commit(commit) {}
-};
-    struct DependencyResolution : public std::enable_shared_from_this<DependencyResolution> {
-    std::string name;
-    std::string kind;
-    std::string url;
-    std::string ref;
-    std::string commit;
-    std::string sha256;
-    DependencyResolution(std::string name, std::string kind, std::string url, std::string ref, std::string commit, std::string sha256) : name(name), kind(kind), url(url), ref(ref), commit(commit), sha256(sha256) {}
-};
-    struct DependencyPolicy : public std::enable_shared_from_this<DependencyPolicy> {
-    bool hasPackageSourceAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedPackageSources;
-    bool hasExternalSourceAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedExternalSources;
-    bool hasLinkLibraryAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedLinkLibraries;
-    bool hasFrameworkAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedFrameworks;
-    bool hasPkgConfigAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages;
-    DependencyPolicy(bool hasPackageSourceAllowlist, std::shared_ptr<std::vector<std::string>> allowedPackageSources, bool hasExternalSourceAllowlist, std::shared_ptr<std::vector<std::string>> allowedExternalSources, bool hasLinkLibraryAllowlist, std::shared_ptr<std::vector<std::string>> allowedLinkLibraries, bool hasFrameworkAllowlist, std::shared_ptr<std::vector<std::string>> allowedFrameworks, bool hasPkgConfigAllowlist, std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages) : hasPackageSourceAllowlist(hasPackageSourceAllowlist), allowedPackageSources(allowedPackageSources), hasExternalSourceAllowlist(hasExternalSourceAllowlist), allowedExternalSources(allowedExternalSources), hasLinkLibraryAllowlist(hasLinkLibraryAllowlist), allowedLinkLibraries(allowedLinkLibraries), hasFrameworkAllowlist(hasFrameworkAllowlist), allowedFrameworks(allowedFrameworks), hasPkgConfigAllowlist(hasPkgConfigAllowlist), allowedPkgConfigPackages(allowedPkgConfigPackages) {}
+    PackageDependency(std::string name, std::string path) : name(name), path(path) {}
 };
     struct PackageManifest : public std::enable_shared_from_this<PackageManifest> {
     std::string name;
@@ -336,17 +310,14 @@ namespace app_src_package_manifest_ {
     std::string rootDirectory;
     std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources;
     std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies;
-    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions;
-    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions;
-    std::shared_ptr<DependencyPolicy> policy;
+    std::shared_ptr<std::vector<std::shared_ptr<StdlibPreparationCommand>>> stdlibPreparation;
     std::shared_ptr<NativeBuildPlan> nativeBuild;
     std::string target;
     std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp;
     std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp;
     std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig;
     std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig;
-    PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions, std::shared_ptr<DependencyPolicy> policy, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), externalDependencies(externalDependencies), packageResolutions(packageResolutions), externalResolutions(externalResolutions), policy(policy), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
+    PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<StdlibPreparationCommand>>> stdlibPreparation, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), stdlibPreparation(stdlibPreparation), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
 };
 }
 
@@ -533,14 +504,13 @@ namespace app_src_project_ {
     bool explicitEntry;
     std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources;
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependency>>> externalDependencies;
     std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild;
     std::string target;
     std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp;
     std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp;
     std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig;
     std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig;
-    ProjectSpec(std::string rootDirectory, std::string manifestPath, std::string name, std::string entry, std::string buildDirectory, bool hasManifest, bool explicitEntry, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependency>>> externalDependencies, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : rootDirectory(rootDirectory), manifestPath(manifestPath), name(name), entry(entry), buildDirectory(buildDirectory), hasManifest(hasManifest), explicitEntry(explicitEntry), manifest(manifest), resources(resources), externalDependencies(externalDependencies), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
+    ProjectSpec(std::string rootDirectory, std::string manifestPath, std::string name, std::string entry, std::string buildDirectory, bool hasManifest, bool explicitEntry, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : rootDirectory(rootDirectory), manifestPath(manifestPath), name(name), entry(entry), buildDirectory(buildDirectory), hasManifest(hasManifest), explicitEntry(explicitEntry), manifest(manifest), resources(resources), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
 };
 }
 

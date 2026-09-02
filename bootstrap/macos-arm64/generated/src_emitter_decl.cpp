@@ -42,7 +42,7 @@ std::string emitFunctionSignature(const std::shared_ptr<::app_src_ast_::Function
         if (i > 0) {
             (result = (result + std::string(", ")));
         }
-        const auto parameterType = [&]() -> std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> { auto _coalesce_6 = doof::array_at(fn->params, i, "src/emitter-decl", 41)->resolvedType; if (doof::is_null(_coalesce_6)) return doof::array_at(functionType->params, i, "src/emitter-decl", 41)->type_; return doof::unwrap_optional(_coalesce_6); }();
+        const auto parameterType = [&]() -> std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> { auto _coalesce_5 = doof::array_at(fn->params, i, "src/emitter-decl", 41)->resolvedType; if (doof::is_null(_coalesce_5)) return doof::array_at(functionType->params, i, "src/emitter-decl", 41)->type_; return doof::unwrap_optional(_coalesce_5); }();
         const auto parameterText = (doof::is_null(context) ? ::app_src_emitter_types_::emitParameterType(parameterType, modulePath) : ::app_src_emitter_types_::borrowParameterType(parameterType, ::app_src_emitter_types_::emitContextType(parameterType, doof::unwrap_optional(context))));
         ensureKnown(parameterType, ((fn->name + std::string(" parameter ")) + doof::array_at(fn->params, i, "src/emitter-decl", 45)->name));
         (result = (((result + parameterText) + std::string(" ")) + ::app_src_emitter_expr_::cppIdentifier(doof::array_at(fn->params, i, "src/emitter-decl", 46)->name)));
@@ -266,8 +266,8 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
     const auto className = ((emittedName == std::string("")) ? decl->name : emittedName);
     auto inheritance = (decl->struct_ ? std::string("") : ((std::string(" : public std::enable_shared_from_this<") + className) + std::string(">")));
     auto result = ((((emitDescriptionComment(decl->description, std::string("")) + std::string("struct ")) + className) + inheritance) + std::string(" {\n"));
-    const auto& _iterable_14 = decl->fields;
-    for (const auto& field : *_iterable_14) {
+    const auto& _iterable_15 = decl->fields;
+    for (const auto& field : *_iterable_15) {
         for (int32_t index = 0; index < static_cast<int32_t>((field->names)->size()); ++index) {
             const auto name = doof::array_at(field->names, index, "src/emitter-decl", 188);
             const auto description = ((index < static_cast<int32_t>((field->descriptions)->size())) ? doof::array_at(field->descriptions, index, "src/emitter-decl", 189) : std::string(""));
@@ -286,13 +286,13 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
     if (hasInstanceFields(decl)) {
         (result = (((result + std::string("    ")) + className) + std::string("(")));
         auto firstParameter = true;
-        const auto& _iterable_17 = decl->fields;
-        for (const auto& field : *_iterable_17) {
+        const auto& _iterable_19 = decl->fields;
+        for (const auto& field : *_iterable_19) {
             if (field->static_ || field->const_) {
                 continue;
             }
-            const auto& _iterable_19 = field->names;
-            for (const auto& name : *_iterable_19) {
+            const auto& _iterable_17 = field->names;
+            for (const auto& name : *_iterable_17) {
                 if (!firstParameter) {
                     (result = (result + std::string(", ")));
                 }
@@ -304,13 +304,13 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
         }
         (result = (result + std::string(") : ")));
         auto firstInitializer = true;
-        const auto& _iterable_21 = decl->fields;
-        for (const auto& field : *_iterable_21) {
+        const auto& _iterable_23 = decl->fields;
+        for (const auto& field : *_iterable_23) {
             if (field->static_ || field->const_) {
                 continue;
             }
-            const auto& _iterable_23 = field->names;
-            for (const auto& name : *_iterable_23) {
+            const auto& _iterable_21 = field->names;
+            for (const auto& name : *_iterable_21) {
                 if (!firstInitializer) {
                     (result = (result + std::string(", ")));
                 }
@@ -325,11 +325,11 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
     } else if (!decl->struct_) {
         (result = (((result + std::string("    ")) + className) + std::string("() {}\n")));
     }
-    const auto& _iterable_25 = decl->methods;
-    for (const auto& method : *_iterable_25) {
+    const auto& _iterable_27 = decl->methods;
+    for (const auto& method : *_iterable_27) {
         if (static_cast<int32_t>((method->typeParams)->size()) > 0) {
-            const auto& _iterable_27 = concreteMethods;
-            for (const auto& instantiation : *_iterable_27) {
+            const auto& _iterable_25 = concreteMethods;
+            for (const auto& instantiation : *_iterable_25) {
                 if (instantiation->declaration->name != method->name) {
                     continue;
                 }
@@ -401,13 +401,13 @@ std::string emitStaticClassFieldDefinitions(const std::shared_ptr<::app_src_ast_
     }
     const auto ownerName = ((emittedOwnerName == std::string("")) ? owner->name : emittedOwnerName);
     auto result = std::string("");
-    const auto& _iterable_31 = owner->fields;
-    for (const auto& field : *_iterable_31) {
+    const auto& _iterable_33 = owner->fields;
+    for (const auto& field : *_iterable_33) {
         if (!field->static_ || doof::is_null(field->defaultValue)) {
             continue;
         }
-        const auto& _iterable_33 = field->names;
-        for (const auto& name : *_iterable_33) {
+        const auto& _iterable_31 = field->names;
+        for (const auto& name : *_iterable_31) {
             const auto resolvedType = fieldTypeForEmission(field);
             (result = ((((((result + fieldTypeTextForEmission(field, resolvedType, context)) + std::string(" ")) + ownerName) + std::string("::")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(";\n")));
         }
@@ -463,12 +463,14 @@ std::string emitClassMethodDefinition(const std::shared_ptr<::app_src_ast_::Clas
     }
     const auto previous = context->currentClass;
     const auto previousNative = context->currentClassNative;
+    const auto previousStruct = context->currentClassStruct;
     const auto previousReturnErrorType = context->currentReturnErrorType;
     const auto previousFunctionName = context->currentFunctionName;
     const auto previousFunctionStatic = context->currentFunctionStatic;
     const auto previousCapturedMutables = context->capturedMutables;
     (context->currentClass = owner->name);
     (context->currentClassNative = owner->native_);
+    (context->currentClassStruct = owner->struct_);
     (context->currentFunctionName = method->name);
     (context->currentFunctionStatic = method->static_);
     (context->capturedMutables = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
@@ -519,6 +521,7 @@ std::string emitClassMethodDefinition(const std::shared_ptr<::app_src_ast_::Clas
     }
     (context->currentClass = previous);
     (context->currentClassNative = previousNative);
+    (context->currentClassStruct = previousStruct);
     (context->currentReturnErrorType = previousReturnErrorType);
     (context->currentFunctionName = previousFunctionName);
     (context->currentFunctionStatic = previousFunctionStatic);
@@ -532,11 +535,14 @@ std::string emitClassDestructorDefinition(const std::shared_ptr<::app_src_ast_::
     const auto ownerName = ((emittedOwnerName == std::string("")) ? owner->name : emittedOwnerName);
     const auto previous = context->currentClass;
     const auto previousNative = context->currentClassNative;
+    const auto previousStruct = context->currentClassStruct;
     (context->currentClass = owner->name);
     (context->currentClassNative = false);
+    (context->currentClassStruct = owner->struct_);
     const auto result = (((((ownerName + std::string("::~")) + ownerName) + std::string("() {\n")) + ::app_src_emitter_stmt_::emitBlock(doof::unwrap_optional(owner->destructor_), 1, context)) + std::string("}\n"));
     (context->currentClass = previous);
     (context->currentClassNative = previousNative);
+    (context->currentClassStruct = previousStruct);
     return result;
 }
 std::string emitExpressionCoverageMark(const std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {

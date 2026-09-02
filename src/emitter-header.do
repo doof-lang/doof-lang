@@ -11,6 +11,7 @@ import {
 import { EmitContext, EmitModuleSurface } from "./emitter-context"
 import { emitClassDeclaration, emitDescriptionComment, emitFunctionDeclaration, emitInterfaceAlias } from "./emitter-decl"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { quote } from "./emitter-expr-literals"
 import { emitInterfaceJsonDeclaration } from "./emitter-json"
 import { emitContextType, emitType } from "./emitter-types"
 import {
@@ -633,7 +634,8 @@ function emitEnumDeclaration(declaration: EnumDeclaration, context: EmitContext)
   for i of 0..<declaration.variants.length {
     variant := declaration.variants[i]
     result = result + emitDescriptionComment(variant.description, "    ") + "    " + variant.name
-    if variant.value != none { result = result + " = " + emitExpression(variant.value!, context) }
+    if declaration.backingKind == "string" { result = result + " = " + string(i) }
+    else if variant.resolvedIntValue != none { result = result + " = " + string(variant.resolvedIntValue!) }
     if i + 1 < declaration.variants.length { result = result + "," }
     result = result + "\n"
   }
@@ -643,18 +645,46 @@ function emitEnumDeclaration(declaration: EnumDeclaration, context: EmitContext)
   for variant of declaration.variants {
     result = result + "    case " + declaration.name + "::" + variant.name + ": return \"" + variant.name + "\";\n"
   }
-  result = result + "  }\n  return \"\";\n}\n"
+  result = result + "  }\n  doof::panic(std::string(\"Invalid " + declaration.name + " enum value: \") + doof::to_string(static_cast<int32_t>(value)));\n}\n"
   result = result + "inline std::optional<" + declaration.name + "> " + declaration.name + "_fromName(std::string_view value) {\n"
   for variant of declaration.variants {
     result = result + "  if (value == \"" + variant.name + "\") return " + declaration.name + "::" + variant.name + ";\n"
   }
   result = result + "  return std::nullopt;\n}\n"
-  result = result + "inline std::optional<" + declaration.name + "> " + declaration.name + "_fromValue(int32_t value) {\n"
-  result = result + "  switch (static_cast<" + declaration.name + ">(value)) {\n"
-  for variant of declaration.variants {
-    result = result + "    case " + declaration.name + "::" + variant.name + ": return " + declaration.name + "::" + variant.name + ";\n"
+  if declaration.backingKind == "string" {
+    result = result + "inline std::string " + declaration.name + "_value(" + declaration.name + " value) {\n  switch (value) {\n"
+    for variant of declaration.variants { result = result + "    case " + declaration.name + "::" + variant.name + ": return " + quote(variant.resolvedStringValue ?? "") + ";\n" }
+    result = result + "  }\n  doof::panic(std::string(\"Invalid " + declaration.name + " enum value: \") + doof::to_string(static_cast<int32_t>(value)));\n}\n"
+    result = result + "inline std::optional<" + declaration.name + "> " + declaration.name + "_fromValue(std::string_view value) {\n"
+    for variant of declaration.variants { result = result + "  if (value == " + quote(variant.resolvedStringValue ?? "") + ") return " + declaration.name + "::" + variant.name + ";\n" }
+    result = result + "  return std::nullopt;\n}\n"
+  } else {
+    result = result + "inline int32_t " + declaration.name + "_value(" + declaration.name + " value) { return static_cast<int32_t>(value); }\n"
+    result = result + "inline std::optional<" + declaration.name + "> " + declaration.name + "_fromValue(int32_t value) {\n"
+    for variant of declaration.variants { result = result + "  if (value == " + string(variant.resolvedIntValue ?? 0) + ") return " + declaration.name + "::" + variant.name + ";\n" }
+    result = result + "  return std::nullopt;\n}\n"
   }
-  result = result + "    default: return std::nullopt;\n  }\n}\n"
+  result = result + "inline std::shared_ptr<std::vector<" + declaration.name + ">> " + declaration.name + "_values() { return std::make_shared<std::vector<" + declaration.name + ">>(std::initializer_list<" + declaration.name + ">{"
+  for i of 0..<declaration.variants.length {
+    if i > 0 { result = result + ", " }
+    result = result + declaration.name + "::" + declaration.variants[i].name
+  }
+  result = result + "}); }\n"
+  valueRead := if declaration.backingKind == "string" then "doof::json_as_string(value)" else "doof::json_as_int(value)"
+  typeCheck := if declaration.backingKind == "string" then "doof::json_is_string(value)" else "doof::json_is_integer(value)"
+  expectedType := if declaration.backingKind == "string" then "string" else "integer"
+  result = result + "inline doof::JsonValue " + declaration.name + "_toJsonValue(" + declaration.name + " value) { return doof::json_value(" + declaration.name + "_value(value)); }\n"
+  result = result + "inline doof::Result<" + declaration.name + ", std::string> " + declaration.name + "_fromJsonValue(const doof::JsonValue& value, bool) {\n"
+  result = result + "  if (!(" + typeCheck + ")) return doof::Failure<std::string>{std::string(\"Expected " + expectedType + " for enum " + declaration.name + ", got \") + doof::json_type_name(value)};\n"
+  result = result + "  auto resolved = " + declaration.name + "_fromValue(" + valueRead + ");\n"
+  let validValues = ""
+  for i of 0..<declaration.variants.length {
+    if i > 0 { validValues = validValues + ", " }
+    if declaration.backingKind == "string" { validValues = validValues + "\"" + (declaration.variants[i].resolvedStringValue ?? "") + "\"" }
+    else { validValues = validValues + string(declaration.variants[i].resolvedIntValue ?? 0) }
+  }
+  result = result + "  if (!resolved.has_value()) return doof::Failure<std::string>{std::string(\"Unknown backing value for enum " + declaration.name + ": \") + doof::to_string(" + valueRead + ") + " + quote("; expected one of " + validValues) + "};\n"
+  result = result + "  return doof::Success<" + declaration.name + ">{resolved.value()};\n}\n"
   return result + "inline std::ostream& operator<<(std::ostream& output, " + declaration.name + " value) { return output << " + declaration.name + "_name(value); }\n"
 }
 

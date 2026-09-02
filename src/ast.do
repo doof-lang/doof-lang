@@ -273,6 +273,9 @@ export class ConstructExpression {
   type_: string
   typeArgs: TypeAnnotation[]
   let args: ObjectProperty[]
+  spread: Expression | none = none
+  spreadFields: string[] = []
+  let resolvedSpreadType: ResolvedType | none = none
   named: bool
   let resolvedClass: ClassDeclaration | none = none
   let resolvedConstructor: FunctionDeclaration | none = none
@@ -699,6 +702,8 @@ export class EnumDeclaration {
   name: string
   description: string = ""
   variants: EnumVariant[]
+  /** Backing/wire scalar selected during checking: "int" or "string". */
+  let backingKind: string = "int"
   exported: bool
   span: SourceSpan
 }
@@ -708,6 +713,8 @@ export class EnumVariant {
   name: string
   description: string = ""
   value: Expression | none
+  let resolvedIntValue: int | none = none
+  let resolvedStringValue: string | none = none
   span: SourceSpan
 }
 

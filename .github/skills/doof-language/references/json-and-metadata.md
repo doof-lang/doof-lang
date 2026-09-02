@@ -38,9 +38,8 @@ Rules:
 | Class or struct instances | object (recursive) |
 | `T[]` | array |
 | `Tuple<T1, T2>` | array |
-| Enums (opaque) | string (member name) |
-| Enums (string) | string (value) |
-| Enums (int) | number (value) |
+| Enums (implicit or int-backed) | integer backing value |
+| Enums (string-backed) | string backing value |
 | `T | none` | value or JSON `null` |
 
 **Not serializable:** function types, `weak` references, `Actor<T>`,
@@ -67,7 +66,12 @@ user := decode<User>{ json: payload }
 ```
 
 `JsonSerializable` is constraint-only, not a normal value type. Concrete
-instantiations must use JSON-serializable classes or structs.
+instantiations may use eligible JSON-serializable classes, structs, or enums.
+
+Enums also expose `.toJsonValue()` and static `.fromJsonValue(...)` directly.
+Enum decoding requires the exact scalar kind even in lenient mode; lenient mode
+does not coerce enum values. Unknown values report the enum, received backing
+value, valid values, and any containing field/index/map path.
 
 Rules:
 - Fields without defaults are **required**
@@ -174,5 +178,6 @@ or structs that are eligible for metadata and automatic JSON generation.
 | `T[]` | `{ "type": "array", "items": { ... } }` |
 | `(T, U)` | `{ "type": "array", "prefixItems": [...] }` |
 | `T \| U` | `{ "anyOf": [...] }` |
-| `enum E` | `{ "enum": ["A", "B", ...] }` |
+| integer-backed `enum E` | `{ "type": "integer", "enum": [0, 1, ...] }` |
+| string-backed `enum E` | `{ "type": "string", "enum": ["wire-a", "wire-b", ...] }` |
 | Class or struct type | `{ "$ref": "#/$defs/TypeName" }` |

@@ -619,11 +619,15 @@ non-JSON-serializable despite using the union representation.
 
 ## Enum Types
 
-Enums define a **closed set of named values** — a type-safe alternative to magic numbers or string constants.
+Enums define a **closed set of named values**. Every variant has two distinct
+representations: its declared name is the descriptive, human-facing identity,
+while its backing value is the machine-facing identity used by wire formats.
 
 ### Simple Enums
 
-When no values are assigned, variants are opaque identifiers with no underlying representation exposed to the programmer:
+When no values are assigned, variants receive integer ordinals beginning at
+zero. Reordering such an enum changes its backing values, so persistent
+protocols should prefer explicit values:
 
 ```javascript
 enum Color { Red, Green, Blue }
@@ -635,6 +639,9 @@ enum Direction {
     West
 }
 ```
+
+Here `Color.Red.value == 0`, `Color.Green.value == 1`, and
+`Color.Blue.value == 2`.
 
 ### Integer-Valued Enums
 
@@ -678,6 +685,40 @@ let dir = Direction.North       // Direction
 let status = HttpStatus.OK      // HttpStatus
 let level = LogLevel.Debug      // LogLevel
 ```
+
+Every enum provides this intrinsic API:
+
+```doof
+direction.name                 // string: "North"
+direction.value                // int or string, matching the enum backing kind
+direction.toJsonValue()        // JsonValue containing direction.value
+
+Direction.values()             // readonly Direction[], declaration order
+Direction.fromName("North")    // Direction | none
+Direction.fromValue(1)         // Direction | none
+Direction.fromJsonValue(1)     // Result<Direction, string>
+```
+
+Names and backing values must each be unique. Integer enums may mix implicit
+ordinals with explicit compile-time integer constants; an implicit variant is
+one greater than the preceding resolved value. String enums require a unique,
+non-interpolated string literal for every variant and cannot mix string and
+integer backing values.
+
+Formatting is always name-backed: interpolation, `string(value)`, `print`,
+`println`, and formatting within collections or results render the declared
+name. `.value` is the explicit route to the backing value. JSON serialization
+and schema generation are value-backed.
+
+All enums support equality. Integer-backed enums support ordering by backing
+value; string-backed enums deliberately do not support ordering. `values()` is
+always declaration-ordered, independently of backing values.
+
+`E | none` uses the ordinary optional representation. Narrowing it with
+declaration-`else`, postfix `!`, `as`, or `??` produces a plain `E`, including
+when the value is passed to a parameter or returned from another function.
+An enum value supplied by native code that does not name a declared variant is
+a native contract violation and panics when its name or value mapping is used.
 
 ### Shorthand Enum References
 

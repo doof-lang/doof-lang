@@ -4,8 +4,7 @@
   "license": "ISC",
   "resources": [
     { "from": "runtime/doof_runtime.h", "to": "." },
-    { "from": "runtime/doof_wasm_test_runner_apple.swift", "to": "." },
-    { "from": "resources/std-catalog.json", "to": "." }
+    { "from": "runtime/doof_wasm_test_runner_apple.swift", "to": "." }
   ],
   "dependencies": {},
   "build": {

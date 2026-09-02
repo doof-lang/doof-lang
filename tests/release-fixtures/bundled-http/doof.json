@@ -1,0 +1,4 @@
+{
+  "name": "doof-release-bundled-http",
+  "build": { "entry": "main.do" }
+}

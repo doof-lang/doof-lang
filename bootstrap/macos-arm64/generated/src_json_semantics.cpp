@@ -22,8 +22,8 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
     if (static_cast<int32_t>((implementations)->size()) == 0) {
         return nullptr;
     }
-    const auto& _iterable_4 = doof::array_at(implementations, 0, "src/json-semantics", 44)->fields;
-    for (const auto& candidate : *_iterable_4) {
+    const auto& _iterable_6 = doof::array_at(implementations, 0, "src/json-semantics", 44)->fields;
+    for (const auto& candidate : *_iterable_6) {
         if (((candidate->static_ || !candidate->const_) || (static_cast<int32_t>((candidate->names)->size()) != 1)) || doof::is_null(candidate->defaultValue)) {
             continue;
         }
@@ -32,8 +32,8 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject)) {
                 const auto& firstValue = std::get<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject);
                 const auto discriminator = std::make_shared<JsonDiscriminator>(doof::array_at(candidate->names, 0, "src/json-semantics", 48), std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{}));
-                const auto& _iterable_6 = implementations;
-                for (const auto& implementation : *_iterable_6) {
+                const auto& _iterable_4 = implementations;
+                for (const auto& implementation : *_iterable_4) {
                     const auto matching = fixedStringField(implementation, discriminator->fieldName);
                     if (doof::is_null(matching) || discriminatorHasValue(discriminator, matching.value())) {
                         (discriminator->entries = std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{}));
@@ -52,14 +52,14 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
     return nullptr;
 }
 std::optional<std::string> fixedStringField(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::string& name) {
-    const auto& _iterable_8 = owner->fields;
-    for (const auto& field : *_iterable_8) {
+    const auto& _iterable_10 = owner->fields;
+    for (const auto& field : *_iterable_10) {
         if ((field->static_ || !field->const_) || doof::is_null(field->defaultValue)) {
             continue;
         }
         auto matches = false;
-        const auto& _iterable_10 = field->names;
-        for (const auto& fieldName : *_iterable_10) {
+        const auto& _iterable_8 = field->names;
+        for (const auto& fieldName : *_iterable_8) {
             if (fieldName == name) {
                 (matches = true);
             }
@@ -624,10 +624,10 @@ std::string jsonOwnerKey(const std::shared_ptr<::app_src_ast_::ClassDeclaration>
     return ((module + std::string("::")) + owner->name);
 }
 std::shared_ptr<::app_src_ast_::ClassDeclaration> findJsonClassDeclaration(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& programs, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol) {
-    const auto& _iterable_34 = programs;
-    for (const auto& program : *_iterable_34) {
-        const auto& _iterable_36 = program->statements;
-        for (const auto& statement : *_iterable_36) {
+    const auto& _iterable_36 = programs;
+    for (const auto& program : *_iterable_36) {
+        const auto& _iterable_34 = program->statements;
+        for (const auto& statement : *_iterable_34) {
             const auto declaration = jsonClassDeclaration(statement);
             if (doof::is_null(declaration) || doof::is_null(declaration->resolvedSymbol)) {
                 continue;

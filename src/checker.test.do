@@ -117,6 +117,15 @@ export function testRejectsInvalidOperatorOperandDomains(): none {
   assertRejected("function main(): none { let count = 1\ncount += \"two\" }")
 }
 
+export function testChecksRightAssociativeResultCoalescingChains(): none {
+  result := checked(
+    "function cache(): Result<string, string> => Failure { error: \"cache miss\" }\n" +
+    "function disk(): Result<string, string> => Success { value: \"disk\" }\n" +
+    "function choose(): string => cache() ?? disk() ?? \"fallback\""
+  )
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testRejectsLoopExitsAndCallerOutsideTheirContexts(): none {
   assertRejected("function main(): none { break }")
   assertRejected("function main(): none { continue }")
@@ -175,6 +184,19 @@ export function testRejectsInvalidNamedConstructionShapes(): none {
 
   valid := checked("class Point { x: int\ny: int = 2\nkind: \"point\" }\npoint := Point { x: 1 }")
   Assert.equal(valid.diagnostics.length, 0)
+}
+
+export function testChecksNamedConstructionFieldSpreadAndOverrides(): none {
+  valid := checked("class BaseConfig { host: string\nport: int }\nclass ExtendedConfig { host: string\nport: int\ntimeout: int }\nfunction extend(base: BaseConfig): ExtendedConfig => ExtendedConfig { ...base, port: 9000, timeout: 30 }")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  missing := checked("class BaseConfig { port: int }\nclass ExtendedConfig { host: string\nport: int }\nfunction extend(base: BaseConfig): ExtendedConfig => ExtendedConfig { ...base }")
+  Assert.equal(missing.diagnostics.length, 1)
+  Assert.stringContains(missing.diagnostics[0].message, "Missing required field 'host'")
+
+  mismatch := checked("class BaseConfig { host: int }\nclass ExtendedConfig { host: string }\nfunction extend(base: BaseConfig): ExtendedConfig => ExtendedConfig { ...base }")
+  Assert.equal(mismatch.diagnostics.length, 1)
+  Assert.stringContains(mismatch.diagnostics[0].message, "Cannot assign spread field int to string")
 }
 
 export function testRejectsReadonlyCollectionMutators(): none {
@@ -1855,6 +1877,19 @@ export function testChecksStatementsAfterBreakableLoop(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testChecksLabeledLoopTargets(): none {
+  valid := checked("function run(items: int[]): none { outer: while true { inner: for item of items { if item == 0 { continue outer }\nbreak inner }\nbreak outer } }")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  missing := checked("function run(): none { while true { break missing } }")
+  Assert.equal(missing.diagnostics.length, 1)
+  Assert.stringContains(missing.diagnostics[0].message, "Unknown loop label 'missing'")
+
+  duplicate := checked("function run(): none { same: while true { same: for i of 0..<1 { break same } } }")
+  Assert.equal(duplicate.diagnostics.length, 1)
+  Assert.stringContains(duplicate.diagnostics[0].message, "Loop label 'same' is already active")
+}
+
 export function testResolvesImplicitClassMethodCalls(): none {
   result := checked("class Box { function value(): int => 7\nfunction read(): int { answer := value()\nreturn answer } }")
   Assert.equal(result.diagnostics.length, 0)
@@ -1951,6 +1986,15 @@ export function testChecksNativeResultMethodsThroughTryBindings(): none {
 export function testChecksTryValueDeclarations(): none {
   result := checked("function load(): Result<int, string> => Success { value: 1 }\nfunction run(): Result<int, string> { try const first = load()\ntry readonly second = load()\ntry let third = load()\nthird = third + first\nreturn Success { value: third + second } }")
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testChecksTypedTryBindings(): none {
+  valid := checked("function load(): Result<int, string> => Success { value: 1 }\nfunction run(): Result<long, string> { try value: long := load()\nreturn Success { value } }")
+  Assert.equal(valid.diagnostics.length, 0)
+
+  invalid := checked("function load(): Result<int, string> => Success { value: 1 }\nfunction run(): Result<string, string> { try value: string := load()\nreturn Success { value } }")
+  Assert.equal(invalid.diagnostics.length, 1)
+  Assert.stringContains(invalid.diagnostics[0].message, "Cannot assign int to string")
 }
 
 export function testChecksExplicitAndStructuralInterfaceImplementations(): none {
@@ -2209,6 +2253,15 @@ export function testChecksAndInfersIntegerMapKeys(): none {
     binding: ImmutableBinding -> { Assert.equal(typeName(binding.resolvedType ?? unknownType()), "Map<int, string>") }
     _ -> { panic("expected an immutable binding") }
   }
+}
+
+export function testChecksAllSupportedMapKeyFormsAndRejectsFloatingKeys(): none {
+  supported := checked("enum Color { Red, Blue }\nfunction run(): none { strings: Map<string, int> := { \"red\": 1 }\nints: Map<int, int> := { -1: 1 }\nlongs: Map<long, int> := { 1L: 1 }\nchars: Map<char, int> := { 'r': 1 }\nbools: Map<bool, int> := { true: 1, false: 0 }\ncolors: Map<Color, int> := { Color.Red: 1, .Blue: 2 } }")
+  Assert.equal(supported.diagnostics.length, 0)
+
+  floating := checked("values: Map := { 1.5: \"one\" }")
+  Assert.equal(floating.diagnostics.length, 1)
+  Assert.stringContains(floating.diagnostics[0].message, "Map key type \"double\" is not supported")
 }
 
 export function testRejectsInvalidOmittedCollectionInferenceSites(): none {
@@ -2492,6 +2545,57 @@ export function testRequiresCompileTimeIntegerEnumValues(): none {
   divideByZero := checked("enum Invalid { Value = 1 \\ 0 }")
   Assert.isTrue(divideByZero.diagnostics.length > 0)
   Assert.stringContains(divideByZero.diagnostics[0].message, "compile-time int constant")
+}
+
+export function testChecksValueBackedEnumApisAndStringEnums(): none {
+  result := checked(
+    "enum State { Pending, Ready = 7, Done }\n" +
+    "enum WireState { Pending = \"pending\", Ready = \"ready\" }\n" +
+    "function stateValue(): int => State.Ready.value\n" +
+    "function wireValue(): string => WireState.Ready.value\n" +
+    "function states(): readonly State[] => State.values()\n" +
+    "function byName(): State | none => State.fromName(\"Ready\")\n" +
+    "function byValue(): WireState | none => WireState.fromValue(\"ready\")\n" +
+    "function encode(value: State): JsonValue => value.toJsonValue()\n" +
+    "function decode<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value)\n" +
+    "function decoded(value: JsonValue): Result<State, string> => decode<State>(value)"
+  )
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testRejectsInvalidStringEnumShapesAndOwnership(): none {
+  missing := checked("enum Wire { One = \"one\", Two }")
+  Assert.isTrue(missing.diagnostics.length > 0)
+  Assert.stringContains(missing.diagnostics[0].message, "requires an explicit string value")
+
+  mixed := checked("enum Wire { One = \"one\", Two = 2 }")
+  Assert.isTrue(mixed.diagnostics.length > 0)
+
+  duplicate := checked("enum Wire { One = \"same\", Two = \"same\" }")
+  Assert.isTrue(duplicate.diagnostics.length > 0)
+  Assert.stringContains(duplicate.diagnostics[0].message, "duplicates the value")
+
+  ownership := checked(
+    "enum State { Ready }\n" +
+    "function badTypeName(): string => State.name\n" +
+    "function badValueLookup(value: State): State | none => value.fromValue(0)\n" +
+    "function badVariant(value: State): State => value.Ready"
+  )
+  Assert.equal(ownership.diagnostics.length, 3)
+
+  ordering := checked("enum Wire { A = \"a\", B = \"b\" }\nfunction before(): bool => Wire.A < Wire.B")
+  Assert.equal(ordering.diagnostics.length, 1)
+  Assert.stringContains(ordering.diagnostics[0].message, "is not defined")
+}
+
+export function testNarrowsNullableEnumFunctionResultsWithDeclarationElse(): none {
+  result := checked(
+    "enum MoreMonstersOutcome { Continue, Stop }\n" +
+    "function outcomeAfterTurn(): MoreMonstersOutcome | none => MoreMonstersOutcome.Continue\n" +
+    "function showOutcome(value: MoreMonstersOutcome): none {}\n" +
+    "function run(): none { outcome := outcomeAfterTurn() else { return }\nshowOutcome(outcome) }"
+  )
+  Assert.equal(result.diagnostics.length, 0)
 }
 
 export function testRejectsWeakScalarTargets(): none {

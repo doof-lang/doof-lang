@@ -11,7 +11,7 @@ import {
   UnaryExpression, Identifier, LetDeclaration, LambdaExpression, CallExpression,
   CallArgument, AstLocation, SourceSpan, YieldBlockExpression, YieldBlockAssignmentStatement,
 } from "./ast"
-import type { Statement, Expression, TypeAnnotation } from "./ast"
+import type { Statement, Expression } from "./ast"
 
 export isolated function parseStatement(parser: Parser): Statement {
   if parser.check(TokenType.Mock) { return parser.parseMockImport() }
@@ -40,8 +40,16 @@ export isolated function parseStatement(parser: Parser): Statement {
   if parser.check(TokenType.Try) { return parseTryStatement(parser) }
   if parser.check(TokenType.If) { return parseIfStatement(parser) }
   if parser.check(TokenType.Case) { return parseCaseStatement(parser) }
-  if parser.check(TokenType.While) { return parseWhile(parser, none) }
-  if parser.check(TokenType.For) { return parseFor(parser, none) }
+  if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.Colon
+      && (parser.peek(2).kind == TokenType.While || parser.peek(2).kind == TokenType.For) {
+    loopStart := parser.location()
+    label := parser.text(parser.advance())
+    parser.expect(TokenType.Colon)
+    if parser.check(TokenType.While) { return parseWhile(parser, label, loopStart) }
+    return parseFor(parser, label, loopStart)
+  }
+  if parser.check(TokenType.While) { return parseWhile(parser, none, parser.location()) }
+  if parser.check(TokenType.For) { return parseFor(parser, none, parser.location()) }
   if parser.check(TokenType.With) { return parseWith(parser) }
   if parser.check(TokenType.Break) { return parseBreak(parser) }
   if parser.check(TokenType.Continue) { return parseContinue(parser) }
@@ -219,8 +227,7 @@ function parseCasePattern(parser: Parser): CasePattern {
   return ValuePattern { kind: "value-pattern", value, span: parser.span(start) }
 }
 
-function parseWhile(parser: Parser, label: string | none): Statement {
-  start := parser.location()
+function parseWhile(parser: Parser, label: string | none, start: AstLocation): Statement {
   parser.expect(TokenType.While)
   condition := parser.parseExpression()
   body := parseBlock(parser)
@@ -229,8 +236,7 @@ function parseWhile(parser: Parser, label: string | none): Statement {
   return WhileStatement { kind: "while-statement", condition, body, label, then_, span: parser.span(start) }
 }
 
-function parseFor(parser: Parser, label: string | none): Statement {
-  start := parser.location()
+function parseFor(parser: Parser, label: string | none, start: AstLocation): Statement {
   parser.expect(TokenType.For)
   if discardableBindingToken(parser.current().kind) && (parser.peek(1).kind == TokenType.Of || parser.peek(1).kind == TokenType.Comma) {
     let bindings: string[] = [parseDiscardableBindingName(parser, "Expected loop binding name or '_'")]
@@ -491,6 +497,12 @@ export isolated function parseTryStatement(parser: Parser): Statement {
   if parser.check(TokenType.LeftBrace) {
     if looksLikePattern(parser, TokenType.ColonEqual) { return wrapTryDestructuring(parser, start, "named", "immutable", TokenType.ColonEqual) }
     if looksLikePattern(parser, TokenType.Equal) { return wrapTryDestructuring(parser, start, "named", "assignment", TokenType.Equal) }
+  }
+  if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.Colon && looksLikeTypedImmutableBinding(parser) {
+    case parseTypedImmutableBinding(parser) {
+      binding: ImmutableBinding -> { return TryStatement { kind: "try-statement", binding, span: parser.span(start) } }
+      _ -> { parser.fail("Expected typed declaration after try") }
+    }
   }
   if parser.check(TokenType.Identifier) && parser.peek(1).kind == TokenType.ColonEqual {
     name := parser.text(parser.advance())

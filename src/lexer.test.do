@@ -96,6 +96,14 @@ export function testStringEscapeDecodingPreservesUnicodeBytes(): none {
   Assert.equal(tokenValue(tokens[0], source), accent + "\r\n" + face)
 }
 
+export function testStringEscapeDecodingPreservesEmbeddedNul(): none {
+  source := "\"a\\07\""
+  tokens := Lexer { source }.tokenize()
+  decoded := tokenValue(tokens[0], source)
+  Assert.equal(decoded, "a" + string('\0') + "7")
+  Assert.equal(decoded.length, 3)
+}
+
 export function testShebangIsIgnoredAtSourceStart(): none {
   source := "#!/usr/bin/env doof\nfunction main(): none {}"
   lexer := Lexer { source }
@@ -170,6 +178,20 @@ export function testLexesTypedTagsWithRawTextAndLambdaAttributes(): none {
   }
   Assert.equal(textCount, 3)
   Assert.equal(arrowCount, 1)
+}
+
+export function testLexesComparisonsInsideDelimitedTagShorthandAttributes(): none {
+  greater := types("<Badge visible=>(count > 0)/>")
+  assertTypes(greater, [TokenType.TagOpen, TokenType.Identifier, TokenType.Identifier,
+    TokenType.Arrow, TokenType.LeftParen, TokenType.Identifier, TokenType.Greater,
+    TokenType.IntLiteral, TokenType.RightParen, TokenType.Slash, TokenType.Greater,
+    TokenType.EndOfFile])
+
+  less := types("<Badge visible=>(count < 10)/>")
+  assertTypes(less, [TokenType.TagOpen, TokenType.Identifier, TokenType.Identifier,
+    TokenType.Arrow, TokenType.LeftParen, TokenType.Identifier, TokenType.Less,
+    TokenType.IntLiteral, TokenType.RightParen, TokenType.Slash, TokenType.Greater,
+    TokenType.EndOfFile])
 }
 
 export function testMultipleInterpolations(): none {

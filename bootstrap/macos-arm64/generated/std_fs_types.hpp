@@ -37,7 +37,7 @@ inline const char* DayOfWeek_name(DayOfWeek value) {
     case DayOfWeek::Saturday: return "Saturday";
     case DayOfWeek::Sunday: return "Sunday";
   }
-  return "";
+  doof::panic(std::string("Invalid DayOfWeek enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<DayOfWeek> DayOfWeek_fromName(std::string_view value) {
   if (value == "Monday") return DayOfWeek::Monday;
@@ -49,17 +49,24 @@ inline std::optional<DayOfWeek> DayOfWeek_fromName(std::string_view value) {
   if (value == "Sunday") return DayOfWeek::Sunday;
   return std::nullopt;
 }
+inline int32_t DayOfWeek_value(DayOfWeek value) { return static_cast<int32_t>(value); }
 inline std::optional<DayOfWeek> DayOfWeek_fromValue(int32_t value) {
-  switch (static_cast<DayOfWeek>(value)) {
-    case DayOfWeek::Monday: return DayOfWeek::Monday;
-    case DayOfWeek::Tuesday: return DayOfWeek::Tuesday;
-    case DayOfWeek::Wednesday: return DayOfWeek::Wednesday;
-    case DayOfWeek::Thursday: return DayOfWeek::Thursday;
-    case DayOfWeek::Friday: return DayOfWeek::Friday;
-    case DayOfWeek::Saturday: return DayOfWeek::Saturday;
-    case DayOfWeek::Sunday: return DayOfWeek::Sunday;
-    default: return std::nullopt;
-  }
+  if (value == 1) return DayOfWeek::Monday;
+  if (value == 2) return DayOfWeek::Tuesday;
+  if (value == 3) return DayOfWeek::Wednesday;
+  if (value == 4) return DayOfWeek::Thursday;
+  if (value == 5) return DayOfWeek::Friday;
+  if (value == 6) return DayOfWeek::Saturday;
+  if (value == 7) return DayOfWeek::Sunday;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<DayOfWeek>> DayOfWeek_values() { return std::make_shared<std::vector<DayOfWeek>>(std::initializer_list<DayOfWeek>{DayOfWeek::Monday, DayOfWeek::Tuesday, DayOfWeek::Wednesday, DayOfWeek::Thursday, DayOfWeek::Friday, DayOfWeek::Saturday, DayOfWeek::Sunday}); }
+inline doof::JsonValue DayOfWeek_toJsonValue(DayOfWeek value) { return doof::json_value(DayOfWeek_value(value)); }
+inline doof::Result<DayOfWeek, std::string> DayOfWeek_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum DayOfWeek, got ") + doof::json_type_name(value)};
+  auto resolved = DayOfWeek_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum DayOfWeek: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 1, 2, 3, 4, 5, 6, 7"};
+  return doof::Success<DayOfWeek>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, DayOfWeek value) { return output << DayOfWeek_name(value); }
 }
@@ -78,7 +85,7 @@ inline const char* EntryKind_name(EntryKind value) {
     case EntryKind::Symlink: return "Symlink";
     case EntryKind::Other: return "Other";
   }
-  return "";
+  doof::panic(std::string("Invalid EntryKind enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<EntryKind> EntryKind_fromName(std::string_view value) {
   if (value == "File") return EntryKind::File;
@@ -87,14 +94,21 @@ inline std::optional<EntryKind> EntryKind_fromName(std::string_view value) {
   if (value == "Other") return EntryKind::Other;
   return std::nullopt;
 }
+inline int32_t EntryKind_value(EntryKind value) { return static_cast<int32_t>(value); }
 inline std::optional<EntryKind> EntryKind_fromValue(int32_t value) {
-  switch (static_cast<EntryKind>(value)) {
-    case EntryKind::File: return EntryKind::File;
-    case EntryKind::Directory: return EntryKind::Directory;
-    case EntryKind::Symlink: return EntryKind::Symlink;
-    case EntryKind::Other: return EntryKind::Other;
-    default: return std::nullopt;
-  }
+  if (value == 0) return EntryKind::File;
+  if (value == 1) return EntryKind::Directory;
+  if (value == 2) return EntryKind::Symlink;
+  if (value == 3) return EntryKind::Other;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<EntryKind>> EntryKind_values() { return std::make_shared<std::vector<EntryKind>>(std::initializer_list<EntryKind>{EntryKind::File, EntryKind::Directory, EntryKind::Symlink, EntryKind::Other}); }
+inline doof::JsonValue EntryKind_toJsonValue(EntryKind value) { return doof::json_value(EntryKind_value(value)); }
+inline doof::Result<EntryKind, std::string> EntryKind_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum EntryKind, got ") + doof::json_type_name(value)};
+  auto resolved = EntryKind_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum EntryKind: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3"};
+  return doof::Success<EntryKind>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, EntryKind value) { return output << EntryKind_name(value); }
     enum class IoError {
@@ -120,7 +134,7 @@ inline const char* IoError_name(IoError value) {
     case IoError::Other: return "Other";
     case IoError::Unsupported: return "Unsupported";
   }
-  return "";
+  doof::panic(std::string("Invalid IoError enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "NotFound") return IoError::NotFound;
@@ -134,19 +148,26 @@ inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "Unsupported") return IoError::Unsupported;
   return std::nullopt;
 }
+inline int32_t IoError_value(IoError value) { return static_cast<int32_t>(value); }
 inline std::optional<IoError> IoError_fromValue(int32_t value) {
-  switch (static_cast<IoError>(value)) {
-    case IoError::NotFound: return IoError::NotFound;
-    case IoError::PermissionDenied: return IoError::PermissionDenied;
-    case IoError::AlreadyExists: return IoError::AlreadyExists;
-    case IoError::IsDirectory: return IoError::IsDirectory;
-    case IoError::NotDirectory: return IoError::NotDirectory;
-    case IoError::InvalidPath: return IoError::InvalidPath;
-    case IoError::Interrupted: return IoError::Interrupted;
-    case IoError::Other: return IoError::Other;
-    case IoError::Unsupported: return IoError::Unsupported;
-    default: return std::nullopt;
-  }
+  if (value == 0) return IoError::NotFound;
+  if (value == 1) return IoError::PermissionDenied;
+  if (value == 2) return IoError::AlreadyExists;
+  if (value == 3) return IoError::IsDirectory;
+  if (value == 4) return IoError::NotDirectory;
+  if (value == 5) return IoError::InvalidPath;
+  if (value == 6) return IoError::Interrupted;
+  if (value == 7) return IoError::Other;
+  if (value == 8) return IoError::Unsupported;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<IoError>> IoError_values() { return std::make_shared<std::vector<IoError>>(std::initializer_list<IoError>{IoError::NotFound, IoError::PermissionDenied, IoError::AlreadyExists, IoError::IsDirectory, IoError::NotDirectory, IoError::InvalidPath, IoError::Interrupted, IoError::Other, IoError::Unsupported}); }
+inline doof::JsonValue IoError_toJsonValue(IoError value) { return doof::json_value(IoError_value(value)); }
+inline doof::Result<IoError, std::string> IoError_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum IoError, got ") + doof::json_type_name(value)};
+  auto resolved = IoError_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum IoError: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6, 7, 8"};
+  return doof::Success<IoError>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, IoError value) { return output << IoError_name(value); }
 }

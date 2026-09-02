@@ -32,7 +32,7 @@ if [ ! -x "$artifact_root/doof" ]; then
   echo "install-artifacts.sh: missing executable compiler: $artifact_root/doof" >&2
   exit 1
 fi
-for resource in doof_runtime.h doof_wasm_test_runner_apple.swift std-catalog.json; do
+for resource in doof_runtime.h doof_wasm_test_runner_apple.swift doof-stdlib.tar; do
   if [ ! -f "$artifact_root/$resource" ]; then
     echo "install-artifacts.sh: missing compiler resource: $artifact_root/$resource" >&2
     exit 1
@@ -47,11 +47,11 @@ for managed_path in \
   "$bundle_root/doof" \
   "$bundle_root/doof_runtime.h" \
   "$bundle_root/doof_wasm_test_runner_apple.swift" \
-  "$bundle_root/std-catalog.json" \
+  "$bundle_root/doof-stdlib.tar" \
   "$bin_root/doof" \
   "$bin_root/doof_runtime.h" \
   "$bin_root/doof_wasm_test_runner_apple.swift" \
-  "$bin_root/std-catalog.json"
+  "$bin_root/doof-stdlib.tar"
 do
   if [ -d "$managed_path" ]; then
     echo "install-artifacts.sh: cannot replace directory at $managed_path" >&2
@@ -63,8 +63,8 @@ install -d "$bundle_root" "$bin_root"
 install -m 0755 "$artifact_root/doof" "$bundle_root/doof"
 install -m 0644 "$artifact_root/doof_runtime.h" "$bundle_root/doof_runtime.h"
 install -m 0644 "$artifact_root/doof_wasm_test_runner_apple.swift" "$bundle_root/doof_wasm_test_runner_apple.swift"
-install -m 0644 "$artifact_root/std-catalog.json" "$bundle_root/std-catalog.json"
+install -m 0644 "$artifact_root/doof-stdlib.tar" "$bundle_root/doof-stdlib.tar"
 ln -sfn ../libexec/doof/doof "$command_path"
 ln -sfn ../libexec/doof/doof_runtime.h "$bin_root/doof_runtime.h"
 ln -sfn ../libexec/doof/doof_wasm_test_runner_apple.swift "$bin_root/doof_wasm_test_runner_apple.swift"
-ln -sfn ../libexec/doof/std-catalog.json "$bin_root/std-catalog.json"
+ln -sfn ../libexec/doof/doof-stdlib.tar "$bin_root/doof-stdlib.tar"

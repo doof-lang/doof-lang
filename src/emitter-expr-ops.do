@@ -4,8 +4,8 @@ import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Ident
 import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
-import { quote } from "./emitter-expr-literals"
-import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
+import { emitNoneLiteral, emitStringConstant, quote } from "./emitter-expr-literals"
+import { decoratedExpressionType, emittedSymbolName, emitNullableVariantPromotion, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, needsNullableVariantPromotion, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
 import { emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, sameType } from "./checker-types"
@@ -74,6 +74,9 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
                   return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value) return " + success + "{_as_value}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
                 }
                 _: PrimitiveType -> {
+                  return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
+                }
+                _: EnumType -> {
                   return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (_as_value.has_value()) return " + success + "{_as_value.value()}; return " + failure + "{\"Nullable narrowing failed\"}; }()"
                 }
                 _ -> { }
@@ -266,6 +269,16 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
     case operandType {
       result: ResultResolvedType -> {
         valueType := emitType(result.valueType, context.modulePath)
+        if expression.operator == "try?" {
+          expressionType := requireExpressionType(expression, "try? expression")
+          expressionCpp := emitType(expressionType, context.modulePath)
+          let successValue = "std::move(doof::success_value(_try_value))"
+          if needsNullableVariantPromotion(result.valueType, expressionType) {
+            successValue = emitNullableVariantPromotion(successValue, result.valueType, expressionType, context.modulePath)
+          }
+          noneValue := emitNoneLiteral(expressionType, context)
+          return "[&]() -> " + expressionCpp + " { auto _try_value = " + operand + "; if (doof::is_failure(_try_value)) return " + noneValue + "; return " + successValue + "; }()"
+        }
         let failureMessage = "std::string(\"" + expression.operator + " failed\")"
         case result.errorType {
           primitive: PrimitiveType -> {
@@ -280,9 +293,6 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
         case result.valueType {
           _: NoneType -> { return "[&]() -> void { " + body + " }()" }
           _ -> { }
-        }
-        if expression.operator == "try?" {
-          return "[&]() -> std::optional<" + valueType + "> { " + body + "return std::move(doof::success_value(_try_value)); }()"
         }
         return "[&]() -> " + valueType + " { " + body + "return std::move(doof::success_value(_try_value)); }()"
       }
@@ -351,7 +361,7 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
     if appendConstantStringParts(expression, literalParts) {
       let value = ""
       for part of literalParts { value = value + part }
-      return "std::string(" + quote(value) + ")"
+      return emitStringConstant(value)
     }
   }
   if expression.operator == ".." {
@@ -417,6 +427,19 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
         if expression.optional || expression.force { return emitWeakFieldAccess(expression, object, context) }
       }
       _ -> { }
+    }
+    if expression.force {
+      inner := naturalNullableUnionMember(objectType!)
+      if inner != none {
+        case inner! {
+          enum_: EnumType -> {
+            unwrapped := "doof::unwrap_optional(" + object + ")"
+            if expression.property == "value" { return emitType(enum_, context.modulePath) + "_value(" + unwrapped + ")" }
+            if expression.property == "name" { return emitType(enum_, context.modulePath) + "_name(" + unwrapped + ")" }
+          }
+          _ -> { }
+        }
+      }
     }
   }
   case expression.object {
@@ -502,7 +525,6 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(expression.property) + "; }, " + variantVisitValue(object, staticObjectType!) + ")"
   }
   if expression.property == "push" { return object + "->push_back" }
-  if expression.property == "value" && object.contains("::") { return "static_cast<int32_t>(" + object + ")" }
   objectType = decoratedExpressionType(expression.object)
   if objectType != none {
     case objectType! {
@@ -528,7 +550,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       _: ClassMetadataResolvedType -> { return object + "." + cppIdentifier(expression.property) }
       _: MethodReflectionResolvedType -> { return object + "." + cppIdentifier(expression.property) }
       enum_: EnumType -> {
-        if expression.property == "value" { return "static_cast<int32_t>(" + object + ")" }
+        if expression.property == "value" { return emitType(enum_, context.modulePath) + "_value(" + object + ")" }
         if expression.property == "name" { return emitType(enum_, context.modulePath) + "_name(" + object + ")" }
         return object + "::" + cppIdentifier(expression.property)
       }

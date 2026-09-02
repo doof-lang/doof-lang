@@ -75,7 +75,7 @@ doof::Result<std::shared_ptr<Instant>, std::string> Instant::parseHttpDate(const
     if (((((((doof::string_substring(s, 3, 5) != std::string(", ")) || (doof::string_at(s, 7, "", 0) != U'\u0020')) || (doof::string_at(s, 11, "", 0) != U'\u0020')) || (doof::string_at(s, 16, "", 0) != U'\u0020')) || (doof::string_at(s, 19, "", 0) != U'\u003A')) || (doof::string_at(s, 22, "", 0) != U'\u003A')) || (doof::string_slice(s, 25) != std::string(" GMT"))) {
         return doof::Failure<std::string>{ std::string("HTTP date must use IMF-fixdate format") };
     }
-    auto _binding_value_1 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 5, 7)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 74, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
+    auto _binding_value_1 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 5, 7)); if (doof::is_failure(_try_value)) return std::nullopt; return std::move(doof::success_value(_try_value)); }();
     if (doof::is_null(_binding_value_1)) {
         const auto& day = _binding_value_1;
         return doof::Failure<std::string>{ std::string("HTTP date day is invalid") };
@@ -87,25 +87,25 @@ doof::Result<std::shared_ptr<Instant>, std::string> Instant::parseHttpDate(const
         return doof::Failure<std::string>{ std::string("HTTP date month is invalid") };
     }
     const auto month = doof::unwrap_optional(_binding_value_2);
-    auto _binding_value_3 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 12, 16)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 80, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
+    auto _binding_value_3 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 12, 16)); if (doof::is_failure(_try_value)) return std::nullopt; return std::move(doof::success_value(_try_value)); }();
     if (doof::is_null(_binding_value_3)) {
         const auto& year = _binding_value_3;
         return doof::Failure<std::string>{ std::string("HTTP date year is invalid") };
     }
     const auto year = doof::unwrap_optional(_binding_value_3);
-    auto _binding_value_4 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 17, 19)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 83, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
+    auto _binding_value_4 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 17, 19)); if (doof::is_failure(_try_value)) return std::nullopt; return std::move(doof::success_value(_try_value)); }();
     if (doof::is_null(_binding_value_4)) {
         const auto& hour = _binding_value_4;
         return doof::Failure<std::string>{ std::string("HTTP date hour is invalid") };
     }
     const auto hour = doof::unwrap_optional(_binding_value_4);
-    auto _binding_value_5 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 20, 22)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 86, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
+    auto _binding_value_5 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 20, 22)); if (doof::is_failure(_try_value)) return std::nullopt; return std::move(doof::success_value(_try_value)); }();
     if (doof::is_null(_binding_value_5)) {
         const auto& minute = _binding_value_5;
         return doof::Failure<std::string>{ std::string("HTTP date minute is invalid") };
     }
     const auto minute = doof::unwrap_optional(_binding_value_5);
-    auto _binding_value_6 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 23, 25)); if (doof::is_failure(_try_value)) doof::panic_at("temporal", 89, std::string("try? failed")); return std::move(doof::success_value(_try_value)); }();
+    auto _binding_value_6 = [&]() -> std::optional<int32_t> { auto _try_value = ::doof_parse::parseInt(doof::string_substring(s, 23, 25)); if (doof::is_failure(_try_value)) return std::nullopt; return std::move(doof::success_value(_try_value)); }();
     if (doof::is_null(_binding_value_6)) {
         const auto& second = _binding_value_6;
         return doof::Failure<std::string>{ std::string("HTTP date second is invalid") };
@@ -411,40 +411,40 @@ std::string httpWeekdayName(DayOfWeek day) {
 std::string httpMonthName(int32_t month) {
     return [&]() -> std::string {
     auto _case_subject = month;
-    if (_case_subject == static_cast<int32_t>(Month::January)) {
+    if (_case_subject == Month_value(Month::January)) {
         return std::string("Jan");
     }
-    if (_case_subject == static_cast<int32_t>(Month::February)) {
+    if (_case_subject == Month_value(Month::February)) {
         return std::string("Feb");
     }
-    if (_case_subject == static_cast<int32_t>(Month::March)) {
+    if (_case_subject == Month_value(Month::March)) {
         return std::string("Mar");
     }
-    if (_case_subject == static_cast<int32_t>(Month::April)) {
+    if (_case_subject == Month_value(Month::April)) {
         return std::string("Apr");
     }
-    if (_case_subject == static_cast<int32_t>(Month::May)) {
+    if (_case_subject == Month_value(Month::May)) {
         return std::string("May");
     }
-    if (_case_subject == static_cast<int32_t>(Month::June)) {
+    if (_case_subject == Month_value(Month::June)) {
         return std::string("Jun");
     }
-    if (_case_subject == static_cast<int32_t>(Month::July)) {
+    if (_case_subject == Month_value(Month::July)) {
         return std::string("Jul");
     }
-    if (_case_subject == static_cast<int32_t>(Month::August)) {
+    if (_case_subject == Month_value(Month::August)) {
         return std::string("Aug");
     }
-    if (_case_subject == static_cast<int32_t>(Month::September)) {
+    if (_case_subject == Month_value(Month::September)) {
         return std::string("Sep");
     }
-    if (_case_subject == static_cast<int32_t>(Month::October)) {
+    if (_case_subject == Month_value(Month::October)) {
         return std::string("Oct");
     }
-    if (_case_subject == static_cast<int32_t>(Month::November)) {
+    if (_case_subject == Month_value(Month::November)) {
         return std::string("Nov");
     }
-    if (_case_subject == static_cast<int32_t>(Month::December)) {
+    if (_case_subject == Month_value(Month::December)) {
         return std::string("Dec");
     }
     if (true) {
@@ -457,40 +457,40 @@ std::optional<int32_t> httpMonthNumber(const std::string& text) {
     return [&]() -> std::optional<int32_t> {
     auto _case_subject = text;
     if (_case_subject == std::string("Jan")) {
-        return static_cast<int32_t>(Month::January);
+        return Month_value(Month::January);
     }
     if (_case_subject == std::string("Feb")) {
-        return static_cast<int32_t>(Month::February);
+        return Month_value(Month::February);
     }
     if (_case_subject == std::string("Mar")) {
-        return static_cast<int32_t>(Month::March);
+        return Month_value(Month::March);
     }
     if (_case_subject == std::string("Apr")) {
-        return static_cast<int32_t>(Month::April);
+        return Month_value(Month::April);
     }
     if (_case_subject == std::string("May")) {
-        return static_cast<int32_t>(Month::May);
+        return Month_value(Month::May);
     }
     if (_case_subject == std::string("Jun")) {
-        return static_cast<int32_t>(Month::June);
+        return Month_value(Month::June);
     }
     if (_case_subject == std::string("Jul")) {
-        return static_cast<int32_t>(Month::July);
+        return Month_value(Month::July);
     }
     if (_case_subject == std::string("Aug")) {
-        return static_cast<int32_t>(Month::August);
+        return Month_value(Month::August);
     }
     if (_case_subject == std::string("Sep")) {
-        return static_cast<int32_t>(Month::September);
+        return Month_value(Month::September);
     }
     if (_case_subject == std::string("Oct")) {
-        return static_cast<int32_t>(Month::October);
+        return Month_value(Month::October);
     }
     if (_case_subject == std::string("Nov")) {
-        return static_cast<int32_t>(Month::November);
+        return Month_value(Month::November);
     }
     if (_case_subject == std::string("Dec")) {
-        return static_cast<int32_t>(Month::December);
+        return Month_value(Month::December);
     }
     if (true) {
         return std::nullopt;

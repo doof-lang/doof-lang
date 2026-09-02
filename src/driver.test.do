@@ -2,7 +2,7 @@ import { Assert } from "std/assert"
 import {
   driverRootLogicalPath, driverRootLogicalPrefix, frontendEmissionCacheSupported, materializeGeneratedText,
   nativeBuildOutputModeForCommand, nativeBuildOutputName, parseDependencyManifestForTarget,
-  synchronizeExecutableResources,
+  stdlibPackageNameForLogicalPath, synchronizeExecutableResources,
 } from "./driver"
 import { NativeBuildOutputMode } from "./native-build-driver"
 import { PackageResource } from "./package-manifest"
@@ -27,6 +27,12 @@ export function testCanonicalizesStandardPackageRoots(): none {
     ),
     "/std/path/build/.doof-tests/path_test_do/__doof_tests__.do",
   )
+}
+
+export function testMapsStandardImportProbeShapesToCatalogPackages(): none {
+  Assert.equal(stdlibPackageNameForLogicalPath("/std/fs.do"), "std/fs")
+  Assert.equal(stdlibPackageNameForLogicalPath("/std/fs/index.do"), "std/fs")
+  Assert.equal(stdlibPackageNameForLogicalPath("/std/not-a-package.do"), "std/not-a-package")
 }
 
 export function testKeepsOrdinaryPackageRootsPathBased(): none {

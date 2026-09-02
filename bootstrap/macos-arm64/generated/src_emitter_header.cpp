@@ -5,6 +5,7 @@ using namespace ::app_src_ast_;
 using namespace ::app_src_emitter_context_;
 using namespace ::app_src_emitter_decl_;
 using namespace ::app_src_emitter_expr_;
+using namespace ::app_src_emitter_expr_literals_;
 using namespace ::app_src_emitter_json_;
 using namespace ::app_src_emitter_types_;
 using namespace ::app_src_semantic_;
@@ -26,19 +27,19 @@ std::shared_ptr<HeaderPlan> planHeader(const std::shared_ptr<::app_src_ast_::Pro
     return plan;
 }
 void collectNativeModuleTypeAliases(const std::string& modulePath, const std::string& namespace_, const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    const auto& _iterable_6 = context->moduleSurfaces;
-    for (const auto& surface : *_iterable_6) {
+    const auto& _iterable_10 = context->moduleSurfaces;
+    for (const auto& surface : *_iterable_10) {
         if (surface->path != modulePath) {
             continue;
         }
-        const auto& _iterable_8 = surface->exports;
-        for (const auto& symbol : *_iterable_8) {
+        const auto& _iterable_6 = surface->exports;
+        for (const auto& symbol : *_iterable_6) {
             if (isNativeAliasType(symbol) && !surfaceTypeIsGeneric(surface, symbol->name)) {
                 addNativeSymbolAlias(symbol, namespace_, plan);
             }
         }
-        const auto& _iterable_10 = surface->imports;
-        for (const auto& imported : *_iterable_10) {
+        const auto& _iterable_8 = surface->imports;
+        for (const auto& imported : *_iterable_8) {
             if (((!doof::is_null(imported->symbol)) && isNativeAliasType(doof::unwrap_optional(imported->symbol))) && !surfaceSymbolIsGeneric(context, doof::unwrap_optional(imported->symbol))) {
                 addNativeSymbolAlias(doof::unwrap_optional(imported->symbol), namespace_, plan);
             }
@@ -412,10 +413,10 @@ std::string renderProjectedHeader(const std::shared_ptr<std::vector<std::shared_
     result->append(std::string("#pragma once\n"));
     result->append(std::string("#include \"doof_runtime.hpp\"\n"));
     auto emittedForward = false;
-    const auto& _iterable_46 = sections;
-    for (const auto& section : *_iterable_46) {
-        const auto& _iterable_48 = section->plan->typeOnlyForwardDeclarations;
-        for (const auto& declaration : *_iterable_48) {
+    const auto& _iterable_48 = sections;
+    for (const auto& section : *_iterable_48) {
+        const auto& _iterable_46 = section->plan->typeOnlyForwardDeclarations;
+        for (const auto& declaration : *_iterable_46) {
             result->append(declaration);
             (emittedForward = true);
         }
@@ -423,87 +424,87 @@ std::string renderProjectedHeader(const std::shared_ptr<std::vector<std::shared_
     if (emittedForward) {
         result->append(std::string("\n"));
     }
-    const auto& _iterable_50 = sections;
-    for (const auto& section : *_iterable_50) {
+    const auto& _iterable_54 = sections;
+    for (const auto& section : *_iterable_54) {
         if (((static_cast<int32_t>((section->plan->classForwardDeclarations)->size()) == 0) && (static_cast<int32_t>((section->plan->earlyModuleValueDeclarations)->size()) == 0)) && headerPlanEmitsNamespaceContent(section->plan)) {
             continue;
         }
         result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
-        const auto& _iterable_52 = section->plan->classForwardDeclarations;
-        for (const auto& declaration : *_iterable_52) {
+        const auto& _iterable_50 = section->plan->classForwardDeclarations;
+        for (const auto& declaration : *_iterable_50) {
             result->append((std::string("    ") + declaration));
         }
-        const auto& _iterable_54 = section->plan->earlyModuleValueDeclarations;
-        for (const auto& declaration : *_iterable_54) {
+        const auto& _iterable_52 = section->plan->earlyModuleValueDeclarations;
+        for (const auto& declaration : *_iterable_52) {
             result->append((std::string("    ") + declaration));
         }
         result->append(std::string("}\n\n"));
     }
-    const auto& _iterable_56 = sections;
-    for (const auto& section : *_iterable_56) {
+    const auto& _iterable_58 = sections;
+    for (const auto& section : *_iterable_58) {
         if (static_cast<int32_t>((section->plan->ephemeralTypeAliases)->size()) > 0) {
             result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
-            const auto& _iterable_58 = section->plan->ephemeralTypeAliases;
-            for (const auto& alias : *_iterable_58) {
+            const auto& _iterable_56 = section->plan->ephemeralTypeAliases;
+            for (const auto& alias : *_iterable_56) {
                 result->append((std::string("    ") + alias));
             }
             result->append(std::string("}\n\n"));
         }
     }
-    const auto& _iterable_60 = sections;
-    for (const auto& section : *_iterable_60) {
+    const auto& _iterable_62 = sections;
+    for (const auto& section : *_iterable_62) {
         if (static_cast<int32_t>((section->plan->enumDefinitions)->size()) > 0) {
             result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
-            const auto& _iterable_62 = section->plan->enumDefinitions;
-            for (const auto& definition : *_iterable_62) {
+            const auto& _iterable_60 = section->plan->enumDefinitions;
+            for (const auto& definition : *_iterable_60) {
                 result->append((std::string("    ") + definition));
             }
             result->append(std::string("}\n\n"));
         }
     }
-    const auto& _iterable_64 = sections;
-    for (const auto& section : *_iterable_64) {
+    const auto& _iterable_66 = sections;
+    for (const auto& section : *_iterable_66) {
         if (static_cast<int32_t>((section->plan->interfaceAliases)->size()) > 0) {
             result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
-            const auto& _iterable_66 = section->plan->interfaceAliases;
-            for (const auto& alias : *_iterable_66) {
+            const auto& _iterable_64 = section->plan->interfaceAliases;
+            for (const auto& alias : *_iterable_64) {
                 result->append((std::string("    ") + alias));
             }
             result->append(std::string("}\n\n"));
         }
     }
-    const auto& _iterable_68 = sections;
-    for (const auto& section : *_iterable_68) {
+    const auto& _iterable_70 = sections;
+    for (const auto& section : *_iterable_70) {
         if (static_cast<int32_t>((section->plan->earlyTypeAliases)->size()) > 0) {
             result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
-            const auto& _iterable_70 = section->plan->earlyTypeAliases;
-            for (const auto& alias : *_iterable_70) {
+            const auto& _iterable_68 = section->plan->earlyTypeAliases;
+            for (const auto& alias : *_iterable_68) {
                 result->append((std::string("    ") + alias));
             }
             result->append(std::string("}\n\n"));
         }
     }
-    const auto& _iterable_72 = sections;
-    for (const auto& section : *_iterable_72) {
+    const auto& _iterable_74 = sections;
+    for (const auto& section : *_iterable_74) {
         if (static_cast<int32_t>((section->plan->earlyClassDefinitions)->size()) > 0) {
             result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
-            const auto& _iterable_74 = section->plan->earlyClassDefinitions;
-            for (const auto& definition : *_iterable_74) {
+            const auto& _iterable_72 = section->plan->earlyClassDefinitions;
+            for (const auto& definition : *_iterable_72) {
                 result->append((std::string("    ") + definition));
             }
             result->append(std::string("}\n\n"));
         }
     }
-    const auto& _iterable_76 = sections;
-    for (const auto& section : *_iterable_76) {
+    const auto& _iterable_80 = sections;
+    for (const auto& section : *_iterable_80) {
         auto emittedNative = false;
-        const auto& _iterable_78 = section->plan->nativeAliases;
-        for (const auto& alias : *_iterable_78) {
+        const auto& _iterable_76 = section->plan->nativeAliases;
+        for (const auto& alias : *_iterable_76) {
             result->append(alias);
             (emittedNative = true);
         }
-        const auto& _iterable_80 = section->plan->nativeIncludes;
-        for (const auto& include : *_iterable_80) {
+        const auto& _iterable_78 = section->plan->nativeIncludes;
+        for (const auto& include : *_iterable_78) {
             if (doof::string_startsWith(include, std::string("<"))) {
                 result->append(((std::string("#include ") + include) + std::string("\n")));
             } else {
@@ -622,8 +623,8 @@ void reserveHeaderNamespaceName(const std::shared_ptr<HeaderPlan>& plan, const s
 }
 std::string preferredHeaderTypeAlias(const std::shared_ptr<HeaderPlan>& plan, const std::string& spelling) {
     for (int32_t index = 0; index < static_cast<int32_t>((plan->preferredTypeAliasSpellings)->size()); ++index) {
-        if (doof::array_at(plan->preferredTypeAliasSpellings, index, "src/emitter-header", 491) == spelling) {
-            return doof::array_at(plan->preferredTypeAliasNames, index, "src/emitter-header", 491);
+        if (doof::array_at(plan->preferredTypeAliasSpellings, index, "src/emitter-header", 492) == spelling) {
+            return doof::array_at(plan->preferredTypeAliasNames, index, "src/emitter-header", 492);
         }
     }
     return std::string("");
@@ -654,9 +655,9 @@ void collectHeaderTypeUses(const std::shared_ptr<std::vector<std::string>>& valu
 int32_t matchingAngleEnd(const std::string& value, int32_t opening) {
     auto depth = 0;
     for (int32_t index = opening; index < static_cast<int32_t>(value.size()); ++index) {
-        if (doof::string_at(value, index, "src/emitter-header", 516) == U'\u003C') {
+        if (doof::string_at(value, index, "src/emitter-header", 517) == U'\u003C') {
             (depth += 1);
-        } else if (doof::string_at(value, index, "src/emitter-header", 517) == U'\u003E') {
+        } else if (doof::string_at(value, index, "src/emitter-header", 518) == U'\u003E') {
             (depth -= 1);
             if (depth == 0) {
                 return index;
@@ -672,13 +673,13 @@ bool referenceOnlyVariant(const std::string& spelling) {
     for (int32_t index = 0; index <= static_cast<int32_t>(inner.size()); ++index) {
         const auto atEnd = (index == static_cast<int32_t>(inner.size()));
         if (!atEnd) {
-            if (doof::string_at(inner, index, "src/emitter-header", 532) == U'\u003C') {
+            if (doof::string_at(inner, index, "src/emitter-header", 533) == U'\u003C') {
                 (depth += 1);
-            } else if (doof::string_at(inner, index, "src/emitter-header", 533) == U'\u003E') {
+            } else if (doof::string_at(inner, index, "src/emitter-header", 534) == U'\u003E') {
                 (depth -= 1);
             }
         }
-        if (atEnd || ((doof::string_at(inner, index, "src/emitter-header", 535) == U'\u002C') && (depth == 0))) {
+        if (atEnd || ((doof::string_at(inner, index, "src/emitter-header", 536) == U'\u002C') && (depth == 0))) {
             const auto member = doof::string_trim(doof::string_substring(inner, memberStart, index));
             if ((member != std::string("std::monostate")) && !(doof::string_startsWith(member, std::string("std::shared_ptr<")) && doof::string_endsWith(member, std::string(">")))) {
                 return false;
@@ -700,7 +701,7 @@ void addHeaderTypeUse(const std::shared_ptr<std::vector<std::shared_ptr<HeaderTy
 }
 void replaceHeaderTypeUses(const std::shared_ptr<std::vector<std::string>>& values, const std::string& spelling, const std::string& name) {
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
-        (doof::array_at(values, index, "src/emitter-header", 552) = doof::string_replaceAll(doof::array_at(values, index, "src/emitter-header", 552), spelling, name));
+        (doof::array_at(values, index, "src/emitter-header", 553) = doof::string_replaceAll(doof::array_at(values, index, "src/emitter-header", 553), spelling, name));
     }
 }
 void collectModuleValueDeclaration(const std::shared_ptr<HeaderPlan>& plan, const std::string& declaration, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
@@ -827,10 +828,12 @@ std::string nativeNamespace(const std::string& cppName) {
 std::string emitEnumDeclaration(const std::shared_ptr<::app_src_ast_::EnumDeclaration>& declaration, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     auto result = (((::app_src_emitter_decl_::emitDescriptionComment(declaration->description, std::string("")) + std::string("enum class ")) + declaration->name) + std::string(" {\n"));
     for (int32_t i = 0; i < static_cast<int32_t>((declaration->variants)->size()); ++i) {
-        const auto variant = doof::array_at(declaration->variants, i, "src/emitter-header", 634);
+        const auto variant = doof::array_at(declaration->variants, i, "src/emitter-header", 635);
         (result = (((result + ::app_src_emitter_decl_::emitDescriptionComment(variant->description, std::string("    "))) + std::string("    ")) + variant->name));
-        if (!doof::is_null(variant->value)) {
-            (result = ((result + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(variant->value), context, std::monostate{})));
+        if (declaration->backingKind == std::string("string")) {
+            (result = ((result + std::string(" = ")) + doof::to_string(i)));
+        } else if (!doof::is_null(variant->resolvedIntValue)) {
+            (result = ((result + std::string(" = ")) + doof::to_string(doof::unwrap_optional(variant->resolvedIntValue))));
         }
         if ((i + 1) < static_cast<int32_t>((declaration->variants)->size())) {
             (result = (result + std::string(",")));
@@ -844,20 +847,63 @@ std::string emitEnumDeclaration(const std::shared_ptr<::app_src_ast_::EnumDeclar
     for (const auto& variant : *_iterable_118) {
         (result = (((((((result + std::string("    case ")) + declaration->name) + std::string("::")) + variant->name) + std::string(": return \"")) + variant->name) + std::string("\";\n")));
     }
-    (result = (result + std::string("  }\n  return \"\";\n}\n")));
+    (result = (((result + std::string("  }\n  doof::panic(std::string(\"Invalid ")) + declaration->name) + std::string(" enum value: \") + doof::to_string(static_cast<int32_t>(value)));\n}\n")));
     (result = (((((result + std::string("inline std::optional<")) + declaration->name) + std::string("> ")) + declaration->name) + std::string("_fromName(std::string_view value) {\n")));
     const auto& _iterable_120 = declaration->variants;
     for (const auto& variant : *_iterable_120) {
         (result = (((((((result + std::string("  if (value == \"")) + variant->name) + std::string("\") return ")) + declaration->name) + std::string("::")) + variant->name) + std::string(";\n")));
     }
     (result = (result + std::string("  return std::nullopt;\n}\n")));
-    (result = (((((result + std::string("inline std::optional<")) + declaration->name) + std::string("> ")) + declaration->name) + std::string("_fromValue(int32_t value) {\n")));
-    (result = (((result + std::string("  switch (static_cast<")) + declaration->name) + std::string(">(value)) {\n")));
-    const auto& _iterable_122 = declaration->variants;
-    for (const auto& variant : *_iterable_122) {
-        (result = (((((((((result + std::string("    case ")) + declaration->name) + std::string("::")) + variant->name) + std::string(": return ")) + declaration->name) + std::string("::")) + variant->name) + std::string(";\n")));
+    if (declaration->backingKind == std::string("string")) {
+        (result = (((((result + std::string("inline std::string ")) + declaration->name) + std::string("_value(")) + declaration->name) + std::string(" value) {\n  switch (value) {\n")));
+        const auto& _iterable_123 = declaration->variants;
+        for (const auto& variant : *_iterable_123) {
+            (result = (((((((result + std::string("    case ")) + declaration->name) + std::string("::")) + variant->name) + std::string(": return ")) + ::app_src_emitter_expr_literals_::quote([&]() -> std::string { auto _coalesce_121 = variant->resolvedStringValue; if (doof::is_null(_coalesce_121)) return std::string(""); return doof::unwrap_optional(_coalesce_121); }())) + std::string(";\n")));
+        }
+        (result = (((result + std::string("  }\n  doof::panic(std::string(\"Invalid ")) + declaration->name) + std::string(" enum value: \") + doof::to_string(static_cast<int32_t>(value)));\n}\n")));
+        (result = (((((result + std::string("inline std::optional<")) + declaration->name) + std::string("> ")) + declaration->name) + std::string("_fromValue(std::string_view value) {\n")));
+        const auto& _iterable_126 = declaration->variants;
+        for (const auto& variant : *_iterable_126) {
+            (result = (((((((result + std::string("  if (value == ")) + ::app_src_emitter_expr_literals_::quote([&]() -> std::string { auto _coalesce_124 = variant->resolvedStringValue; if (doof::is_null(_coalesce_124)) return std::string(""); return doof::unwrap_optional(_coalesce_124); }())) + std::string(") return ")) + declaration->name) + std::string("::")) + variant->name) + std::string(";\n")));
+        }
+        (result = (result + std::string("  return std::nullopt;\n}\n")));
+    } else {
+        (result = (((((result + std::string("inline int32_t ")) + declaration->name) + std::string("_value(")) + declaration->name) + std::string(" value) { return static_cast<int32_t>(value); }\n")));
+        (result = (((((result + std::string("inline std::optional<")) + declaration->name) + std::string("> ")) + declaration->name) + std::string("_fromValue(int32_t value) {\n")));
+        const auto& _iterable_129 = declaration->variants;
+        for (const auto& variant : *_iterable_129) {
+            (result = (((((((result + std::string("  if (value == ")) + doof::to_string([&]() -> int32_t { auto _coalesce_127 = variant->resolvedIntValue; if (doof::is_null(_coalesce_127)) return 0; return doof::unwrap_optional(_coalesce_127); }())) + std::string(") return ")) + declaration->name) + std::string("::")) + variant->name) + std::string(";\n")));
+        }
+        (result = (result + std::string("  return std::nullopt;\n}\n")));
     }
-    (result = (result + std::string("    default: return std::nullopt;\n  }\n}\n")));
+    (result = (((((((((result + std::string("inline std::shared_ptr<std::vector<")) + declaration->name) + std::string(">> ")) + declaration->name) + std::string("_values() { return std::make_shared<std::vector<")) + declaration->name) + std::string(">>(std::initializer_list<")) + declaration->name) + std::string(">{")));
+    for (int32_t i = 0; i < static_cast<int32_t>((declaration->variants)->size()); ++i) {
+        if (i > 0) {
+            (result = (result + std::string(", ")));
+        }
+        (result = (((result + declaration->name) + std::string("::")) + doof::array_at(declaration->variants, i, "src/emitter-header", 670)->name));
+    }
+    (result = (result + std::string("}); }\n")));
+    const auto valueRead = ((declaration->backingKind == std::string("string")) ? std::string("doof::json_as_string(value)") : std::string("doof::json_as_int(value)"));
+    const auto typeCheck = ((declaration->backingKind == std::string("string")) ? std::string("doof::json_is_string(value)") : std::string("doof::json_is_integer(value)"));
+    const auto expectedType = ((declaration->backingKind == std::string("string")) ? std::string("string") : std::string("integer"));
+    (result = (((((((result + std::string("inline doof::JsonValue ")) + declaration->name) + std::string("_toJsonValue(")) + declaration->name) + std::string(" value) { return doof::json_value(")) + declaration->name) + std::string("_value(value)); }\n")));
+    (result = (((((result + std::string("inline doof::Result<")) + declaration->name) + std::string(", std::string> ")) + declaration->name) + std::string("_fromJsonValue(const doof::JsonValue& value, bool) {\n")));
+    (result = (((((((result + std::string("  if (!(")) + typeCheck) + std::string(")) return doof::Failure<std::string>{std::string(\"Expected ")) + expectedType) + std::string(" for enum ")) + declaration->name) + std::string(", got \") + doof::json_type_name(value)};\n")));
+    (result = (((((result + std::string("  auto resolved = ")) + declaration->name) + std::string("_fromValue(")) + valueRead) + std::string(");\n")));
+    auto validValues = std::string("");
+    for (int32_t i = 0; i < static_cast<int32_t>((declaration->variants)->size()); ++i) {
+        if (i > 0) {
+            (validValues = (validValues + std::string(", ")));
+        }
+        if (declaration->backingKind == std::string("string")) {
+            (validValues = (((validValues + std::string("\"")) + [&]() -> std::string { auto _coalesce_131 = doof::array_at(declaration->variants, i, "src/emitter-header", 683)->resolvedStringValue; if (doof::is_null(_coalesce_131)) return std::string(""); return doof::unwrap_optional(_coalesce_131); }()) + std::string("\"")));
+        } else {
+            (validValues = (validValues + doof::to_string([&]() -> int32_t { auto _coalesce_132 = doof::array_at(declaration->variants, i, "src/emitter-header", 684)->resolvedIntValue; if (doof::is_null(_coalesce_132)) return 0; return doof::unwrap_optional(_coalesce_132); }())));
+        }
+    }
+    (result = (((((((result + std::string("  if (!resolved.has_value()) return doof::Failure<std::string>{std::string(\"Unknown backing value for enum ")) + declaration->name) + std::string(": \") + doof::to_string(")) + valueRead) + std::string(") + ")) + ::app_src_emitter_expr_literals_::quote((std::string("; expected one of ") + validValues))) + std::string("};\n")));
+    (result = (((result + std::string("  return doof::Success<")) + declaration->name) + std::string(">{resolved.value()};\n}\n")));
     return (((((result + std::string("inline std::ostream& operator<<(std::ostream& output, ")) + declaration->name) + std::string(" value) { return output << ")) + declaration->name) + std::string("_name(value); }\n"));
 }
 std::string emitTypeAlias(const std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>& alias, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {

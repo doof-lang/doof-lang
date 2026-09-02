@@ -1,82 +1,48 @@
 import { Assert } from "std/assert"
 import { NativeBuildPlan, parsePackageManifest } from "./package-manifest"
 
-export function testParsesExternalArchiveAndGitDependencies(): none {
+export function testParsesLocalPackageDependenciesAndStdlibPreparation(): none {
   manifest := try! parsePackageManifest(
-    "{\"externalDependencies\":{\"curl\":{\"kind\":\"archive\",\"url\":\"https://example.com/curl.tar.xz\",\"sha256\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"destination\":\"vendor/curl\",\"stripComponents\":0,\"copyFiles\":[{\"from\":\"COPYING\",\"to\":\"LICENSE\"}],\"commands\":[{\"program\":\"sh\",\"args\":[\"\${packageRoot}/build.sh\",\"\${nativeTarget}\"],\"env\":{\"SDKROOT\":\"\${sdkPath}\"},\"workingDirectory\":\"build\"}]},\"quickjs\":{\"kind\":\"git\",\"url\":\"https://example.com/quickjs.git\",\"ref\":\"v1\",\"commit\":\"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\",\"destination\":\"vendor/quickjs\"}}}",
+    "{\"dependencies\":{\"local\":{\"path\":\"../local\"}},\"build\":{\"stdlib\":{\"prepare\":[{\"program\":\"sh\",\"args\":[\"\${packageRoot}/build.sh\",\"\${nativeTarget}\"],\"env\":{\"SDKROOT\":\"\${sdkPath}\"},\"workingDirectory\":\"vendor\"}]}}}",
     "/app/doof.json",
     "/app",
     "macos",
   )
 
-  Assert.equal(manifest.externalDependencies.length, 2)
-  Assert.equal(manifest.externalDependencies[0].name, "curl")
-  Assert.equal(manifest.externalDependencies[0].sha256, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-  Assert.equal(manifest.externalDependencies[0].stripComponents, 0)
-  Assert.equal(manifest.externalDependencies[0].copyFiles[0].destination, "LICENSE")
-  Assert.equal(manifest.externalDependencies[0].commands[0].args[1], "\${nativeTarget}")
-  Assert.equal(try! manifest.externalDependencies[0].commands[0].env.get("SDKROOT"), "\${sdkPath}")
-  Assert.equal(manifest.externalDependencies[1].kind, "git")
-  Assert.equal(manifest.externalDependencies[1].commit, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-}
-
-export function testParsesExactPackageDependencies(): none {
-  manifest := try! parsePackageManifest(
-    "{\"dependencies\":{\"local\":{\"path\":\"../local\"},\"remote\":{\"url\":\"https://example.com/remote.git\",\"ref\":\"v1.2.3\",\"commit\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}}}",
-    "/app/doof.json", "/app", "linux",
-  )
-
-  Assert.equal(manifest.dependencies.length, 2)
   Assert.equal(manifest.dependencies[0].path, "/local")
-  Assert.equal(manifest.dependencies[1].ref, "v1.2.3")
-  Assert.equal(manifest.dependencies[1].commit, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+  Assert.equal(manifest.stdlibPreparation[0].args[1], "\${nativeTarget}")
+  Assert.equal(try! manifest.stdlibPreparation[0].env.get("SDKROOT"), "\${sdkPath}")
 }
 
-export function testRejectsFloatingPackageDependencies(): none {
+export function testRejectsRemotePackageDependencies(): none {
   result := parsePackageManifest(
     "{\"dependencies\":{\"remote\":{\"url\":\"https://example.com/remote.git\",\"version\":\"1.2\"}}}",
     "/app/doof.json", "/app", "linux",
   )
   _ := result else error {
-    Assert.stringContains(error, "dependencies.remote.ref is required")
+    Assert.stringContains(error, "must use a local path")
     return
   }
   panic("expected floating package dependency failure")
 }
 
-export function testParsesRootResolutionsAndPolicy(): none {
-  manifest := try! parsePackageManifest(
-    "{\"resolutions\":{\"packages\":{\"remote\":{\"url\":\"https://example.com/remote.git\",\"ref\":\"v2\",\"commit\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\"}},\"externalDependencies\":{\"quickjs\":{\"kind\":\"archive\",\"url\":\"https://example.com/quickjs.tar.xz\",\"sha256\":\"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB\"}}},\"policy\":{\"allowedPackageSources\":[\"https://example.com/remote.git\"],\"allowedExternalSources\":[\"https://example.com/quickjs.tar.xz\"],\"native\":{\"allowedLinkLibraries\":[\"z\"],\"allowedFrameworks\":[\"Foundation\"],\"allowedPkgConfigPackages\":[\"libcurl\"]}}}",
-    "/app/doof.json", "/app", "macos",
-  )
-
-  Assert.equal(manifest.packageResolutions[0].commit, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-  Assert.equal(manifest.externalResolutions[0].sha256, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-  Assert.equal(manifest.policy.hasPackageSourceAllowlist, true)
-  Assert.equal(manifest.policy.allowedExternalSources[0], "https://example.com/quickjs.tar.xz")
-  Assert.equal(manifest.policy.allowedLinkLibraries[0], "z")
-  Assert.equal(manifest.policy.allowedFrameworks[0], "Foundation")
-  Assert.equal(manifest.policy.allowedPkgConfigPackages[0], "libcurl")
-}
-
-export function testRejectsInvalidExternalDependencyConfiguration(): none {
-  missingChecksum := parsePackageManifest(
+export function testRejectsRetiredDependencyFields(): none {
+  external := parsePackageManifest(
     "{\"externalDependencies\":{\"bad\":{\"kind\":\"archive\",\"url\":\"https://example.com/a.tar.gz\",\"destination\":\"vendor/a\"}}}",
     "/app/doof.json", "/app", "linux",
   )
-  _ := missingChecksum else error {
-    Assert.stringContains(error, "externalDependencies.bad.sha256 is required")
+  _ := external else error {
+    Assert.stringContains(error, "externalDependencies is no longer supported")
   }
-
-  escapingDestination := parsePackageManifest(
-    "{\"externalDependencies\":{\"bad\":{\"kind\":\"git\",\"url\":\"https://example.com/a.git\",\"ref\":\"main\",\"commit\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"destination\":\"../a\"}}}",
+  resolutions := parsePackageManifest(
+    "{\"resolutions\":{}}",
     "/app/doof.json", "/app", "linux",
   )
-  _ := escapingDestination else error {
-    Assert.stringContains(error, "externalDependencies.bad.destination must stay within the package root")
+  _ := resolutions else error {
+    Assert.stringContains(error, "resolutions is no longer supported")
     return
   }
-  panic("expected invalid external dependency failure")
+  panic("expected retired dependency field failure")
 }
 
 export function testParsesAndNormalizesExecutableResources(): none {

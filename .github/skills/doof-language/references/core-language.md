@@ -137,6 +137,7 @@ callbacks, and callable members:
 
 ```doof
 button := <Button id=1 label="Save" onClick=>println("clicked")/>
+guarded := <Button label="Submit" onClick=>{ if pending.length > 0 { submit() } }/>
 panel := <Panel title="Welcome">Hello {user.name}</Panel>
 ```
 
@@ -144,6 +145,9 @@ Scalar attributes may be bare; other values use `{expression}`. Paired content
 is normalized into a contextually typed array argument named `children`.
 Whitespace-only content is omitted. Tags have no DOM intrinsics, fragments,
 spread attributes, implicit booleans, entity decoding, or child flattening.
+Within delimiters such as a lambda block or parentheses, `>` is parsed as an
+operator. A top-level greater-than comparison in a shorthand attribute must be
+parenthesized so it is not mistaken for the tag terminator.
 
 `SourceLocation` is a builtin class for source attribution. Use `@caller` only in parameter or field defaults when you want the call or construction site:
 

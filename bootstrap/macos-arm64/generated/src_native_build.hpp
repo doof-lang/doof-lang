@@ -16,9 +16,9 @@ namespace app_src_native_build_ {
 
 namespace app_src_native_build_ {
     enum class NativeBuildMode {
-    Debug,
-    Release,
-    Profile
+    Debug = 0,
+    Release = 1,
+    Profile = 2
 };
 inline const char* NativeBuildMode_name(NativeBuildMode value) {
   switch (value) {
@@ -26,7 +26,7 @@ inline const char* NativeBuildMode_name(NativeBuildMode value) {
     case NativeBuildMode::Release: return "Release";
     case NativeBuildMode::Profile: return "Profile";
   }
-  return "";
+  doof::panic(std::string("Invalid NativeBuildMode enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<NativeBuildMode> NativeBuildMode_fromName(std::string_view value) {
   if (value == "Debug") return NativeBuildMode::Debug;
@@ -34,13 +34,20 @@ inline std::optional<NativeBuildMode> NativeBuildMode_fromName(std::string_view 
   if (value == "Profile") return NativeBuildMode::Profile;
   return std::nullopt;
 }
+inline int32_t NativeBuildMode_value(NativeBuildMode value) { return static_cast<int32_t>(value); }
 inline std::optional<NativeBuildMode> NativeBuildMode_fromValue(int32_t value) {
-  switch (static_cast<NativeBuildMode>(value)) {
-    case NativeBuildMode::Debug: return NativeBuildMode::Debug;
-    case NativeBuildMode::Release: return NativeBuildMode::Release;
-    case NativeBuildMode::Profile: return NativeBuildMode::Profile;
-    default: return std::nullopt;
-  }
+  if (value == 0) return NativeBuildMode::Debug;
+  if (value == 1) return NativeBuildMode::Release;
+  if (value == 2) return NativeBuildMode::Profile;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<NativeBuildMode>> NativeBuildMode_values() { return std::make_shared<std::vector<NativeBuildMode>>(std::initializer_list<NativeBuildMode>{NativeBuildMode::Debug, NativeBuildMode::Release, NativeBuildMode::Profile}); }
+inline doof::JsonValue NativeBuildMode_toJsonValue(NativeBuildMode value) { return doof::json_value(NativeBuildMode_value(value)); }
+inline doof::Result<NativeBuildMode, std::string> NativeBuildMode_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum NativeBuildMode, got ") + doof::json_type_name(value)};
+  auto resolved = NativeBuildMode_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum NativeBuildMode: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2"};
+  return doof::Success<NativeBuildMode>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, NativeBuildMode value) { return output << NativeBuildMode_name(value); }
 }

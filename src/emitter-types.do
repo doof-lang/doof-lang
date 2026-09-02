@@ -351,6 +351,7 @@ function emitUnionType(union_: UnionResolvedType, currentModulePath: string = ""
       _: SetResolvedType -> { return emitType(nonNone[0], currentModulePath) }
       _: WeakResolvedType -> { return emitType(nonNone[0], currentModulePath) }
       _: PrimitiveType -> { return "std::optional<" + emitType(nonNone[0], currentModulePath) + ">" }
+      _: EnumType -> { return "std::optional<" + emitType(nonNone[0], currentModulePath) + ">" }
       _ -> { }
     }
   }
@@ -415,6 +416,7 @@ function usesNaturalNullableMember(member: ResolvedType): bool {
     _: SetResolvedType -> { return true }
     _: WeakResolvedType -> { return true }
     _: PrimitiveType -> { return true }
+    _: EnumType -> { return true }
     _ -> { return false }
   }
   return false

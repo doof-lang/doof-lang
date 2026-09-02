@@ -1,7 +1,7 @@
 // Literal, array, object, tuple, and string expression lowering.
 
 import { ArrayLiteral, ObjectLiteral, StringLiteral, TupleLiteral } from "./ast"
-import { ArrayResolvedType, ClassType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emittedSymbolName, emitNullableVariantPromotion, exprModuleNamespaceFor, findProperty, needsNullableVariantPromotion } from "./emitter-expr-utils"
@@ -23,6 +23,7 @@ export function emitNoneLiteral(expected: ResolvedType | none, context: EmitCont
         for member of union_.types {
           case member {
             _: PrimitiveType -> { return "std::nullopt" }
+            _: EnumType -> { return "std::nullopt" }
             class_: ClassType -> {
               if class_.symbol.kind == "struct" { return "std::nullopt" }
               return "nullptr"
@@ -197,18 +198,31 @@ export function emitTuple(expression: TupleLiteral, context: EmitContext): strin
 }
 
 export function emitString(expression: StringLiteral, context: EmitContext): string {
-  if expression.interpolations.length == 0 { return "std::string(" + quote(expression.parts[0]) + ")" }
-  let result = "([&]() -> std::string { std::string _interpolation = " + quote(expression.parts[0]) + "; "
+  if expression.interpolations.length == 0 { return emitStringConstant(expression.parts[0]) }
+  let result = "([&]() -> std::string { std::string _interpolation = " + emitInterpolationPart(expression.parts[0]) + "; "
   for i of 0..<expression.interpolations.length {
     result = result + "_interpolation += doof::to_string(" + emitExpression(expression.interpolations[i], context) + "); "
     partIndex := i * 2 + 2
-    if partIndex < expression.parts.length { result = result + "_interpolation += " + quote(expression.parts[partIndex]) + "; " }
+    if partIndex < expression.parts.length { result = result + "_interpolation += " + emitInterpolationPart(expression.parts[partIndex]) + "; " }
   }
   return result + "return _interpolation; }())"
 }
 
+function emitInterpolationPart(value: string): string {
+  if value.contains(string('\0')) { return emitStringConstant(value) }
+  return quote(value)
+}
+
+export function emitStringConstant(value: string): string {
+  literal := quote(value)
+  nul := string('\0')
+  if value.contains(nul) { return "std::string(" + literal + ", " + string(value.length) + ")" }
+  return "std::string(" + literal + ")"
+}
+
 export function quote(value: string): string {
+  nul := string('\0')
   escaped := value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"").replaceAll("?", "\\?")
-    .replaceAll("\n", "\\n").replaceAll("\r", "\\r").replaceAll("\t", "\\t")
+    .replaceAll("\n", "\\n").replaceAll("\r", "\\r").replaceAll("\t", "\\t").replaceAll(nul, "\\000")
   return "\"" + escaped + "\""
 }

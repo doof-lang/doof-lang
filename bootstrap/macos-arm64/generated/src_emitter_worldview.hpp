@@ -765,13 +765,16 @@ namespace app_src_ast_ {
     std::string type_;
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args;
+    doof_header_type_5 spread;
+    std::shared_ptr<std::vector<std::string>> spreadFields;
+    doof_header_type_3 resolvedSpreadType;
     bool named;
     std::shared_ptr<ClassDeclaration> resolvedClass;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
     doof_header_type_3 resolvedConstructedType;
     doof_header_type_3 resolvedType;
     SourceSpan span;
-    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedConstructedType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
+    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, doof_header_type_5 spread, std::shared_ptr<std::vector<std::string>> spreadFields, doof_header_type_3 resolvedSpreadType, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedConstructedType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), spread(spread), spreadFields(spreadFields), resolvedSpreadType(resolvedSpreadType), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
 };
     struct DotShorthand : public std::enable_shared_from_this<DotShorthand> {
     std::string kind;
@@ -1173,17 +1176,20 @@ namespace app_src_ast_ {
     std::string name;
     std::string description;
     std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants;
+    std::string backingKind;
     bool exported;
     SourceSpan span;
-    EnumDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants, bool exported, SourceSpan span) : kind(kind), name(name), description(description), variants(variants), exported(exported), span(span) {}
+    EnumDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants, std::string backingKind, bool exported, SourceSpan span) : kind(kind), name(name), description(description), variants(variants), backingKind(backingKind), exported(exported), span(span) {}
 };
     struct EnumVariant : public std::enable_shared_from_this<EnumVariant> {
     std::string kind;
     std::string name;
     std::string description;
     doof_header_type_5 value;
+    std::optional<int32_t> resolvedIntValue;
+    std::optional<std::string> resolvedStringValue;
     SourceSpan span;
-    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_5 value, SourceSpan span) : kind(kind), name(name), description(description), value(value), span(span) {}
+    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_5 value, std::optional<int32_t> resolvedIntValue, std::optional<std::string> resolvedStringValue, SourceSpan span) : kind(kind), name(name), description(description), value(value), resolvedIntValue(resolvedIntValue), resolvedStringValue(resolvedStringValue), span(span) {}
 };
     struct TypeAliasDeclaration : public std::enable_shared_from_this<TypeAliasDeclaration> {
     std::string kind;

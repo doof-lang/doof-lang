@@ -1,12 +1,11 @@
 # Doof Standard Library Overview
 
 Standard packages use `std/<name>` import paths and need no `doof.json`
-dependency entry. Each compiler release embeds an immutable catalog containing
-the origin and exact commit of every package. `DOOF_STDLIB_ROOT` deliberately
-overrides that catalog with mutable local packages; package output warns about
-the override and provenance records it as mutable input.
+dependency entry. Each compiler release ships an indexed offline bundle that
+is authoritative for standard package availability. `DOOF_STDLIB_ROOT`
+deliberately overrides that bundle with local packages.
 
-Prefer the pinned catalog for application work. Set `DOOF_STDLIB_ROOT` only
+Prefer the installed bundle for application work. Set `DOOF_STDLIB_ROOT` only
 when testing local stdlib changes, and point it at the directory whose immediate
 children are package folders such as `fs/`, `http/`, and `time/`. In a stdlib
 checkout, README and `docs/API.md` files explain intent while exported

@@ -20,16 +20,32 @@ sh -n "$canonicalizer"
 sh -n "$platform_source_preserver"
 bootstrap_sources="$test_root/bootstrap-sources"
 "$bootstrap_compiler" --list-sources > "$bootstrap_sources"
-grep -q '/native_http_client_apple\.mm$' "$bootstrap_sources"
-if grep -q '/native_http_client_curl\.cpp$' "$bootstrap_sources"; then
-  echo "Expected the macOS bootstrap compiler to exclude the libcurl transport." >&2
+grep -q '^std/gzip/vendor/zlib/adler32\.c$' "$bootstrap_sources"
+grep -q '^src_driver\.cpp$' "$bootstrap_sources"
+if grep -Eq '_(linux|windows|ios|curl)\.(c|cc|cpp|m|mm)$' "$bootstrap_sources"; then
+  echo "Expected the macOS bootstrap compiler to exclude unsupported platform sources." >&2
   exit 1
 fi
+
+compile_tasks="$test_root/compile-tasks"
+"$bootstrap_compiler" --list-compile-tasks > "$compile_tasks"
+grep -q "^clang$(printf '\t')std/gzip/vendor/zlib/adler32\.c$" "$compile_tasks"
+grep -q "^clang++$(printf '\t')src_driver\.cpp$" "$compile_tasks"
+
+compiler_probes="$test_root/compiler-probes"
+"$bootstrap_compiler" --list-compile-tasks native.c generated.cpp platform.mm > "$compiler_probes"
+grep -q "^clang$(printf '\t')native\.c$" "$compiler_probes"
+grep -q "^clang++$(printf '\t')generated\.cpp$" "$compiler_probes"
+grep -q "^clang++$(printf '\t')platform\.mm$" "$compiler_probes"
 "$script" --help > "$test_root/help"
 grep -q '^usage: .*refresh-bootstrap.sh \[--help\]$' "$test_root/help"
 grep -q 'DOOF_REFRESH_MAX_GENERATIONS' "$test_root/help"
 grep -q 'DOOF_REFRESH_SEED_COMPILER' "$test_root/help"
+grep -q 'strict stdlib bundle preflight' "$test_root/help"
 grep -q -- "--exclude='.doof-build/\*\*\*'" "$script"
+grep -q '^echo "\[2/6\] Preflight the standard-library release inputs"$' "$script"
+grep -q '^  if \[ -f "\$preflight_bundle" \]; then$' "$script"
+grep -q 'prepared vendored sources and required licenses' "$script"
 
 if "$script" --unknown > "$test_root/unknown" 2>&1; then
   echo "Expected refresh-bootstrap.sh to reject an unknown option." >&2

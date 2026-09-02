@@ -12,18 +12,24 @@ object_root="$output_root/objects"
 include_response="$output_root/clang-includes.rsp"
 object_response="$output_root/clang-objects.rsp"
 source_list="$output_root/sources"
-list_sources=false
+mode=build
 
-if [ "${1:-}" = "--list-sources" ]; then
-  list_sources=true
-  shift
-fi
-if [ "$#" -ne 0 ]; then
-  echo "usage: $0 [--list-sources]" >&2
+case "${1:-}" in
+  --list-sources)
+    mode=list-sources
+    shift
+    ;;
+  --list-compile-tasks)
+    mode=list-compile-tasks
+    shift
+    ;;
+esac
+if [ "$mode" != "list-compile-tasks" ] && [ "$#" -ne 0 ]; then
+  echo "usage: $0 [--list-sources | --list-compile-tasks [source ...]]" >&2
   exit 2
 fi
 
-if [ "$list_sources" = false ] && { [ "$(uname -s)" != "Darwin" ] || [ "$(uname -m)" != "arm64" ]; }; then
+if [ "$mode" = build ] && { [ "$(uname -s)" != "Darwin" ] || [ "$(uname -m)" != "arm64" ]; }; then
   echo "The checked-in stage-0 snapshot supports macOS arm64 only." >&2
   exit 1
 fi
@@ -49,8 +55,27 @@ collect_sources() {
     done
 }
 
-if [ "$list_sources" = true ]; then
+compiler_for_source() {
+  case "$1" in
+    *.c|*.m) printf '%s\n' clang ;;
+    *) printf '%s\n' clang++ ;;
+  esac
+}
+
+if [ "$mode" = list-sources ]; then
   collect_sources | sed "s#^$snapshot_root/##"
+  exit 0
+fi
+if [ "$mode" = list-compile-tasks ]; then
+  if [ "$#" -gt 0 ]; then
+    for source in "$@"; do
+      printf '%s\t%s\n' "$(compiler_for_source "$source")" "$source"
+    done
+  else
+    collect_sources | while IFS= read -r source; do
+      printf '%s\t%s\n' "$(compiler_for_source "$source")" "${source#"$snapshot_root/"}"
+    done
+  fi
   exit 0
 fi
 
@@ -83,11 +108,16 @@ echo "  Compiling $source_count generated source files with $jobs parallel Apple
 index=0
 while IFS= read -r source; do
   index=$((index + 1))
-  printf '%s\0%s\0' "$source" "$object_root/$index.o"
+  printf '%s\0%s\0%s\0' "$source" "$object_root/$index.o" "$(compiler_for_source "$source")"
 done < "$source_list" \
-  | xargs -0 -n 2 -P "$jobs" sh -c '
-      xcrun clang++ -std=c++17 -O2 -DNDEBUG -pthread \
-        @"$1" -c "$2" -o "$3" && printf "."
+  | xargs -0 -n 3 -P "$jobs" sh -c '
+      if [ "$4" = "clang" ]; then
+        xcrun clang -O2 -DNDEBUG -pthread \
+          @"$1" -c "$2" -o "$3"
+      else
+        xcrun clang++ -std=c++17 -O2 -DNDEBUG -pthread \
+          @"$1" -c "$2" -o "$3"
+      fi && printf "."
     ' sh "$include_response"
 printf '\n'
 
@@ -107,5 +137,4 @@ xcrun clang++ \
 
 cp "$repo_root/runtime/doof_runtime.h" "$output_root/doof_runtime.h"
 cp "$repo_root/runtime/doof_wasm_test_runner_apple.swift" "$output_root/doof_wasm_test_runner_apple.swift"
-cp "$repo_root/resources/std-catalog.json" "$output_root/std-catalog.json"
 echo "  Stage-0 compiler is ready."

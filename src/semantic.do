@@ -237,6 +237,7 @@ export class Scope {
   capturesTryErrors: bool = false
   catchErrorTypes: ResolvedType[] = []
   tryPanics: bool = false
+  loopLabel: string | none = none
 }
 
 export class ResolvedTypeConstraint {

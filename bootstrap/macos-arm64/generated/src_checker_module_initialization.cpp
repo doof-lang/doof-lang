@@ -148,6 +148,9 @@ bool literalTree(const std::shared_ptr<::app_src_checker_state_::CheckerState>& 
             if ((doof::is_null(construct->resolvedClass) || construct->resolvedClass->native_) || (!doof::is_null(construct->resolvedConstructor))) {
                 return false;
             }
+            if ((!doof::is_null(construct->spread)) && !literalTree(state, doof::unwrap_optional(construct->spread))) {
+                return false;
+            }
             const auto& _iterable_10 = construct->args;
             for (const auto& argument : *_iterable_10) {
                 if (!literalProperty(state, argument)) {
@@ -277,8 +280,8 @@ bool literalProperty(const std::shared_ptr<::app_src_checker_state_::CheckerStat
 }
 bool literalPositionalClassDefaults(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, int32_t suppliedCount) {
     auto position = 0;
-    const auto& _iterable_14 = class_->fields;
-    for (const auto& field : *_iterable_14) {
+    const auto& _iterable_16 = class_->fields;
+    for (const auto& field : *_iterable_16) {
         if (field->static_) {
             continue;
         }
@@ -288,8 +291,8 @@ bool literalPositionalClassDefaults(const std::shared_ptr<::app_src_checker_stat
             }
             continue;
         }
-        const auto& _iterable_16 = field->names;
-        for (const auto& name : *_iterable_16) {
+        const auto& _iterable_14 = field->names;
+        for (const auto& name : *_iterable_14) {
             if (((position >= suppliedCount) && (!doof::is_null(field->defaultValue))) && !literalTree(state, doof::unwrap_optional(field->defaultValue))) {
                 return false;
             }
@@ -299,13 +302,13 @@ bool literalPositionalClassDefaults(const std::shared_ptr<::app_src_checker_stat
     return true;
 }
 bool literalClassDefaults(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::ObjectProperty>>>& supplied) {
-    const auto& _iterable_18 = class_->fields;
-    for (const auto& field : *_iterable_18) {
+    const auto& _iterable_20 = class_->fields;
+    for (const auto& field : *_iterable_20) {
         if (field->static_) {
             continue;
         }
-        const auto& _iterable_20 = field->names;
-        for (const auto& name : *_iterable_20) {
+        const auto& _iterable_18 = field->names;
+        for (const auto& name : *_iterable_18) {
             if (suppliedProperty(supplied, name)) {
                 continue;
             }

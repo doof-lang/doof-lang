@@ -10,8 +10,8 @@ goal is complete.
   a verified Linux refresh.
 - Compiler development requires a mutable stdlib checkout through
   `DOOF_STDLIB_ROOT` or `../doof-stdlib`.
-- External build handoff/provenance contracts are not yet complete for every
-  package and target combination.
+- Third-party source acquisition and vendoring are intentionally outside the
+  compiler; projects must prepare those inputs themselves.
 - Diagnostic behavior has focused tests but no exhaustive invalid-program
   compatibility corpus.
 - Some JSON union/interface cases, interface reflection, recorded mocks,

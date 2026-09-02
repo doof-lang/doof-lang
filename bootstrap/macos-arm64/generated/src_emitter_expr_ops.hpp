@@ -398,6 +398,7 @@ namespace app_src_emitter_context_ {
     std::shared_ptr<::app_src_json_semantics_::JsonEligibilityCache> jsonEligibility;
     std::string currentClass;
     bool currentClassNative;
+    bool currentClassStruct;
     bool currentFunctionStatic;
     std::string currentReturnErrorType;
     std::string currentFunctionName;
@@ -419,12 +420,15 @@ namespace app_src_emitter_context_ {
     std::shared_ptr<std::vector<std::string>> jsonDeserializationKeys;
     std::shared_ptr<std::vector<std::string>> capturedMutables;
     int32_t tryCounter;
+    std::shared_ptr<std::vector<std::string>> loopLabels;
+    std::shared_ptr<std::vector<std::string>> loopBreakTargets;
+    std::shared_ptr<std::vector<std::string>> loopContinueTargets;
     bool scriptEntry;
     bool tryPanics;
     bool coverageEnabled;
     int32_t coverageModuleId;
     std::shared_ptr<std::vector<int32_t>> coverageInstrumentedLines;
-    EmitContext(std::string modulePath, std::string sourcePath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> namespaceImports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> imports, std::shared_ptr<std::vector<std::shared_ptr<EmitModuleSurface>>> moduleSurfaces, std::shared_ptr<::app_src_json_semantics_::JsonEligibilityCache> jsonEligibility, std::string currentClass, bool currentClassNative, bool currentFunctionStatic, std::string currentReturnErrorType, std::string currentFunctionName, bool inValueYieldBlock, bool valueYieldReturnsVoid, std::string catchVarName, doof_header_type_9 catchResultType, std::shared_ptr<SourceLocationSpanOverride> sourceLocationSpanOverride, std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution, std::shared_ptr<std::vector<std::string>> concreteFunctionNames, std::shared_ptr<std::vector<std::string>> concreteFunctionKeys, std::shared_ptr<std::vector<std::string>> concreteClassNames, std::shared_ptr<std::vector<std::string>> concreteClassKeys, std::shared_ptr<std::vector<std::string>> concreteMethodNames, std::shared_ptr<std::vector<std::string>> concreteMethodKeys, std::shared_ptr<std::vector<std::string>> concreteInterfaceNames, std::shared_ptr<std::vector<std::string>> concreteInterfaceKeys, std::shared_ptr<std::vector<std::string>> jsonSerializationKeys, std::shared_ptr<std::vector<std::string>> jsonDeserializationKeys, std::shared_ptr<std::vector<std::string>> capturedMutables, int32_t tryCounter, bool scriptEntry, bool tryPanics, bool coverageEnabled, int32_t coverageModuleId, std::shared_ptr<std::vector<int32_t>> coverageInstrumentedLines) : modulePath(modulePath), sourcePath(sourcePath), allPrograms(allPrograms), namespaceImports(namespaceImports), imports(imports), moduleSurfaces(moduleSurfaces), jsonEligibility(jsonEligibility), currentClass(currentClass), currentClassNative(currentClassNative), currentFunctionStatic(currentFunctionStatic), currentReturnErrorType(currentReturnErrorType), currentFunctionName(currentFunctionName), inValueYieldBlock(inValueYieldBlock), valueYieldReturnsVoid(valueYieldReturnsVoid), catchVarName(catchVarName), catchResultType(catchResultType), sourceLocationSpanOverride(sourceLocationSpanOverride), substitution(substitution), concreteFunctionNames(concreteFunctionNames), concreteFunctionKeys(concreteFunctionKeys), concreteClassNames(concreteClassNames), concreteClassKeys(concreteClassKeys), concreteMethodNames(concreteMethodNames), concreteMethodKeys(concreteMethodKeys), concreteInterfaceNames(concreteInterfaceNames), concreteInterfaceKeys(concreteInterfaceKeys), jsonSerializationKeys(jsonSerializationKeys), jsonDeserializationKeys(jsonDeserializationKeys), capturedMutables(capturedMutables), tryCounter(tryCounter), scriptEntry(scriptEntry), tryPanics(tryPanics), coverageEnabled(coverageEnabled), coverageModuleId(coverageModuleId), coverageInstrumentedLines(coverageInstrumentedLines) {}
+    EmitContext(std::string modulePath, std::string sourcePath, std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allPrograms, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>> namespaceImports, std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>> imports, std::shared_ptr<std::vector<std::shared_ptr<EmitModuleSurface>>> moduleSurfaces, std::shared_ptr<::app_src_json_semantics_::JsonEligibilityCache> jsonEligibility, std::string currentClass, bool currentClassNative, bool currentClassStruct, bool currentFunctionStatic, std::string currentReturnErrorType, std::string currentFunctionName, bool inValueYieldBlock, bool valueYieldReturnsVoid, std::string catchVarName, doof_header_type_9 catchResultType, std::shared_ptr<SourceLocationSpanOverride> sourceLocationSpanOverride, std::shared_ptr<::app_src_semantic_::TypeSubstitution> substitution, std::shared_ptr<std::vector<std::string>> concreteFunctionNames, std::shared_ptr<std::vector<std::string>> concreteFunctionKeys, std::shared_ptr<std::vector<std::string>> concreteClassNames, std::shared_ptr<std::vector<std::string>> concreteClassKeys, std::shared_ptr<std::vector<std::string>> concreteMethodNames, std::shared_ptr<std::vector<std::string>> concreteMethodKeys, std::shared_ptr<std::vector<std::string>> concreteInterfaceNames, std::shared_ptr<std::vector<std::string>> concreteInterfaceKeys, std::shared_ptr<std::vector<std::string>> jsonSerializationKeys, std::shared_ptr<std::vector<std::string>> jsonDeserializationKeys, std::shared_ptr<std::vector<std::string>> capturedMutables, int32_t tryCounter, std::shared_ptr<std::vector<std::string>> loopLabels, std::shared_ptr<std::vector<std::string>> loopBreakTargets, std::shared_ptr<std::vector<std::string>> loopContinueTargets, bool scriptEntry, bool tryPanics, bool coverageEnabled, int32_t coverageModuleId, std::shared_ptr<std::vector<int32_t>> coverageInstrumentedLines) : modulePath(modulePath), sourcePath(sourcePath), allPrograms(allPrograms), namespaceImports(namespaceImports), imports(imports), moduleSurfaces(moduleSurfaces), jsonEligibility(jsonEligibility), currentClass(currentClass), currentClassNative(currentClassNative), currentClassStruct(currentClassStruct), currentFunctionStatic(currentFunctionStatic), currentReturnErrorType(currentReturnErrorType), currentFunctionName(currentFunctionName), inValueYieldBlock(inValueYieldBlock), valueYieldReturnsVoid(valueYieldReturnsVoid), catchVarName(catchVarName), catchResultType(catchResultType), sourceLocationSpanOverride(sourceLocationSpanOverride), substitution(substitution), concreteFunctionNames(concreteFunctionNames), concreteFunctionKeys(concreteFunctionKeys), concreteClassNames(concreteClassNames), concreteClassKeys(concreteClassKeys), concreteMethodNames(concreteMethodNames), concreteMethodKeys(concreteMethodKeys), concreteInterfaceNames(concreteInterfaceNames), concreteInterfaceKeys(concreteInterfaceKeys), jsonSerializationKeys(jsonSerializationKeys), jsonDeserializationKeys(jsonDeserializationKeys), capturedMutables(capturedMutables), tryCounter(tryCounter), loopLabels(loopLabels), loopBreakTargets(loopBreakTargets), loopContinueTargets(loopContinueTargets), scriptEntry(scriptEntry), tryPanics(tryPanics), coverageEnabled(coverageEnabled), coverageModuleId(coverageModuleId), coverageInstrumentedLines(coverageInstrumentedLines) {}
 };
 }
 
@@ -698,13 +702,16 @@ namespace app_src_ast_ {
     std::string type_;
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args;
+    doof_header_type_5 spread;
+    std::shared_ptr<std::vector<std::string>> spreadFields;
+    doof_header_type_3 resolvedSpreadType;
     bool named;
     std::shared_ptr<ClassDeclaration> resolvedClass;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
     doof_header_type_3 resolvedConstructedType;
     doof_header_type_3 resolvedType;
     SourceSpan span;
-    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedConstructedType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
+    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, doof_header_type_5 spread, std::shared_ptr<std::vector<std::string>> spreadFields, doof_header_type_3 resolvedSpreadType, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedConstructedType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), spread(spread), spreadFields(spreadFields), resolvedSpreadType(resolvedSpreadType), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
 };
     struct DotShorthand : public std::enable_shared_from_this<DotShorthand> {
     std::string kind;
@@ -1106,17 +1113,20 @@ namespace app_src_ast_ {
     std::string name;
     std::string description;
     std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants;
+    std::string backingKind;
     bool exported;
     SourceSpan span;
-    EnumDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants, bool exported, SourceSpan span) : kind(kind), name(name), description(description), variants(variants), exported(exported), span(span) {}
+    EnumDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants, std::string backingKind, bool exported, SourceSpan span) : kind(kind), name(name), description(description), variants(variants), backingKind(backingKind), exported(exported), span(span) {}
 };
     struct EnumVariant : public std::enable_shared_from_this<EnumVariant> {
     std::string kind;
     std::string name;
     std::string description;
     doof_header_type_5 value;
+    std::optional<int32_t> resolvedIntValue;
+    std::optional<std::string> resolvedStringValue;
     SourceSpan span;
-    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_5 value, SourceSpan span) : kind(kind), name(name), description(description), value(value), span(span) {}
+    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_5 value, std::optional<int32_t> resolvedIntValue, std::optional<std::string> resolvedStringValue, SourceSpan span) : kind(kind), name(name), description(description), value(value), resolvedIntValue(resolvedIntValue), resolvedStringValue(resolvedStringValue), span(span) {}
 };
     struct TypeAliasDeclaration : public std::enable_shared_from_this<TypeAliasDeclaration> {
     std::string kind;
@@ -1218,6 +1228,8 @@ namespace app_src_emitter_types_ {
 
 namespace app_src_emitter_expr_utils_ {
     doof_header_type_12 decoratedExpressionType(const doof_header_type_13& expression);
+    bool needsNullableVariantPromotion(const doof_header_type_12& source, const doof_header_type_12& expected);
+    std::string emitNullableVariantPromotion(const std::string& value, const doof_header_type_12& source, const doof_header_type_12& expected, const std::string& currentModulePath);
     bool isNullableVariantType(const doof_header_type_12& resolvedType);
     std::string variantVisitValue(const std::string& value, const doof_header_type_14& resolvedType);
     doof_header_type_14 requireExpressionType(const doof_header_type_13& expression, const std::string& description);
@@ -1227,6 +1239,8 @@ namespace app_src_emitter_expr_utils_ {
 }
 
 namespace app_src_emitter_expr_literals_ {
+    std::string emitNoneLiteral(const std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& expected, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    std::string emitStringConstant(const std::string& value);
     std::string quote(const std::string& value);
 }
 

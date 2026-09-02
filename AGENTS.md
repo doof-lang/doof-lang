@@ -34,6 +34,14 @@ Run `./scripts/test.sh` for normal changes and `./scripts/release.sh` before a
 release or bootstrap refresh. `./build.sh` must succeed from a clean checkout
 on the documented host without Node.js or the retired compiler.
 
+The release and bootstrap-refresh gates include macOS Wasm builds. They require
+`em++` and `xcrun swiftc`, and Emscripten must be able to write its toolchain
+cache (a Homebrew install normally uses a path below
+`/opt/homebrew/Cellar/emscripten/.../libexec/cache`). In a restricted sandbox,
+start `./scripts/release.sh` or `./scripts/refresh-bootstrap.sh` with permission
+to access that external cache; otherwise the gate can run for several minutes
+before failing when Emscripten cannot create a `*.json.lock` file.
+
 ### Test execution
 
 - Use `dist/doof test src --filter <exact-test-name>` for focused regression

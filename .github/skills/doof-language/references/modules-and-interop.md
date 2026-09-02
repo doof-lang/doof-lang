@@ -52,7 +52,9 @@ import { HttpClient } from "http"         // package
 
 File extensions optional (`.do` inferred).
 
-Remote package entries use exact `{ url, ref, commit }` coordinates. `ref` is descriptive; the compiler verifies the immutable commit. Root-only `resolutions` may select an exact winner for canonical-URL conflicts, and optional root policy allowlists constrain transitive origins and native link inputs. Local path dependencies and `DOOF_STDLIB_ROOT` are explicit mutable overrides accepted by every command, including `package`, and are recorded as mutable provenance.
+Package dependencies use local `{ path }` entries. Doof does not acquire remote
+packages or vendored sources. Standard packages come from the installed bundle,
+with `DOOF_STDLIB_ROOT` as the global development override.
 
 ## Scope Rules
 

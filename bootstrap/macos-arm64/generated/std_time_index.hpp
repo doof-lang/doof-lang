@@ -5,6 +5,10 @@ namespace std_::time::duration {
     struct Thread;
 }
 
+namespace std_::time::monotonic {
+    struct MonotonicInstant;
+}
+
 namespace std_::time::temporal {
     struct Instant;
     struct Date;
@@ -46,7 +50,7 @@ inline const char* DayOfWeek_name(DayOfWeek value) {
     case DayOfWeek::Saturday: return "Saturday";
     case DayOfWeek::Sunday: return "Sunday";
   }
-  return "";
+  doof::panic(std::string("Invalid DayOfWeek enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<DayOfWeek> DayOfWeek_fromName(std::string_view value) {
   if (value == "Monday") return DayOfWeek::Monday;
@@ -58,17 +62,24 @@ inline std::optional<DayOfWeek> DayOfWeek_fromName(std::string_view value) {
   if (value == "Sunday") return DayOfWeek::Sunday;
   return std::nullopt;
 }
+inline int32_t DayOfWeek_value(DayOfWeek value) { return static_cast<int32_t>(value); }
 inline std::optional<DayOfWeek> DayOfWeek_fromValue(int32_t value) {
-  switch (static_cast<DayOfWeek>(value)) {
-    case DayOfWeek::Monday: return DayOfWeek::Monday;
-    case DayOfWeek::Tuesday: return DayOfWeek::Tuesday;
-    case DayOfWeek::Wednesday: return DayOfWeek::Wednesday;
-    case DayOfWeek::Thursday: return DayOfWeek::Thursday;
-    case DayOfWeek::Friday: return DayOfWeek::Friday;
-    case DayOfWeek::Saturday: return DayOfWeek::Saturday;
-    case DayOfWeek::Sunday: return DayOfWeek::Sunday;
-    default: return std::nullopt;
-  }
+  if (value == 1) return DayOfWeek::Monday;
+  if (value == 2) return DayOfWeek::Tuesday;
+  if (value == 3) return DayOfWeek::Wednesday;
+  if (value == 4) return DayOfWeek::Thursday;
+  if (value == 5) return DayOfWeek::Friday;
+  if (value == 6) return DayOfWeek::Saturday;
+  if (value == 7) return DayOfWeek::Sunday;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<DayOfWeek>> DayOfWeek_values() { return std::make_shared<std::vector<DayOfWeek>>(std::initializer_list<DayOfWeek>{DayOfWeek::Monday, DayOfWeek::Tuesday, DayOfWeek::Wednesday, DayOfWeek::Thursday, DayOfWeek::Friday, DayOfWeek::Saturday, DayOfWeek::Sunday}); }
+inline doof::JsonValue DayOfWeek_toJsonValue(DayOfWeek value) { return doof::json_value(DayOfWeek_value(value)); }
+inline doof::Result<DayOfWeek, std::string> DayOfWeek_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum DayOfWeek, got ") + doof::json_type_name(value)};
+  auto resolved = DayOfWeek_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum DayOfWeek: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 1, 2, 3, 4, 5, 6, 7"};
+  return doof::Success<DayOfWeek>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, DayOfWeek value) { return output << DayOfWeek_name(value); }
     enum class Month {
@@ -100,7 +111,7 @@ inline const char* Month_name(Month value) {
     case Month::November: return "November";
     case Month::December: return "December";
   }
-  return "";
+  doof::panic(std::string("Invalid Month enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<Month> Month_fromName(std::string_view value) {
   if (value == "January") return Month::January;
@@ -117,22 +128,29 @@ inline std::optional<Month> Month_fromName(std::string_view value) {
   if (value == "December") return Month::December;
   return std::nullopt;
 }
+inline int32_t Month_value(Month value) { return static_cast<int32_t>(value); }
 inline std::optional<Month> Month_fromValue(int32_t value) {
-  switch (static_cast<Month>(value)) {
-    case Month::January: return Month::January;
-    case Month::February: return Month::February;
-    case Month::March: return Month::March;
-    case Month::April: return Month::April;
-    case Month::May: return Month::May;
-    case Month::June: return Month::June;
-    case Month::July: return Month::July;
-    case Month::August: return Month::August;
-    case Month::September: return Month::September;
-    case Month::October: return Month::October;
-    case Month::November: return Month::November;
-    case Month::December: return Month::December;
-    default: return std::nullopt;
-  }
+  if (value == 1) return Month::January;
+  if (value == 2) return Month::February;
+  if (value == 3) return Month::March;
+  if (value == 4) return Month::April;
+  if (value == 5) return Month::May;
+  if (value == 6) return Month::June;
+  if (value == 7) return Month::July;
+  if (value == 8) return Month::August;
+  if (value == 9) return Month::September;
+  if (value == 10) return Month::October;
+  if (value == 11) return Month::November;
+  if (value == 12) return Month::December;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<Month>> Month_values() { return std::make_shared<std::vector<Month>>(std::initializer_list<Month>{Month::January, Month::February, Month::March, Month::April, Month::May, Month::June, Month::July, Month::August, Month::September, Month::October, Month::November, Month::December}); }
+inline doof::JsonValue Month_toJsonValue(Month value) { return doof::json_value(Month_value(value)); }
+inline doof::Result<Month, std::string> Month_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum Month, got ") + doof::json_type_name(value)};
+  auto resolved = Month_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum Month: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"};
+  return doof::Success<Month>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, Month value) { return output << Month_name(value); }
 }
@@ -176,6 +194,23 @@ struct Duration : public std::enable_shared_from_this<Duration> {
 struct Thread : public std::enable_shared_from_this<Thread> {
     Thread() {}
     static void sleep(const std::shared_ptr<Duration>& duration);
+};
+}
+
+namespace std_::time::monotonic {
+    // A process-local time point from a monotonic clock.
+struct MonotonicInstant : public std::enable_shared_from_this<MonotonicInstant> {
+    int64_t ticksNanos;
+    MonotonicInstant(int64_t ticksNanos) : ticksNanos(ticksNanos) {}
+    static std::shared_ptr<MonotonicInstant> now();
+    std::shared_ptr<MonotonicInstant> plus(const std::shared_ptr<::std_::time::duration::Duration>& duration);
+    std::shared_ptr<MonotonicInstant> minus(const std::shared_ptr<::std_::time::duration::Duration>& duration);
+    std::shared_ptr<::std_::time::duration::Duration> durationUntil(const std::shared_ptr<MonotonicInstant>& other);
+    std::shared_ptr<::std_::time::duration::Duration> durationSince(const std::shared_ptr<MonotonicInstant>& other);
+    int32_t compareTo(const std::shared_ptr<MonotonicInstant>& other);
+    bool isBefore(const std::shared_ptr<MonotonicInstant>& other);
+    bool isAfter(const std::shared_ptr<MonotonicInstant>& other);
+    bool equals(const std::shared_ptr<MonotonicInstant>& other);
 };
 }
 
@@ -368,10 +403,10 @@ namespace std_::time::stopwatch {
     struct StopwatchSpan : public std::enable_shared_from_this<StopwatchSpan> {
     std::shared_ptr<Stopwatch> stopwatch;
     std::string name;
-    std::shared_ptr<::std_::time::temporal::Instant> startedAt;
+    std::shared_ptr<::std_::time::monotonic::MonotonicInstant> startedAt;
     bool finished;
     std::shared_ptr<::std_::time::duration::Duration> finishedDuration;
-    StopwatchSpan(std::shared_ptr<Stopwatch> stopwatch, std::string name, std::shared_ptr<::std_::time::temporal::Instant> startedAt, bool finished, std::shared_ptr<::std_::time::duration::Duration> finishedDuration) : stopwatch(stopwatch), name(name), startedAt(startedAt), finished(finished), finishedDuration(finishedDuration) {}
+    StopwatchSpan(std::shared_ptr<Stopwatch> stopwatch, std::string name, std::shared_ptr<::std_::time::monotonic::MonotonicInstant> startedAt, bool finished, std::shared_ptr<::std_::time::duration::Duration> finishedDuration) : stopwatch(stopwatch), name(name), startedAt(startedAt), finished(finished), finishedDuration(finishedDuration) {}
     std::shared_ptr<::std_::time::duration::Duration> finish();
     ~StopwatchSpan();
 };

@@ -34,7 +34,7 @@ std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_s
         auto start = std::visit([](auto&& _obj) { return _obj->span; }, result).start;
         parser->advance();
         parser->advance();
-        (result = doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(std::make_shared<::app_src_ast_::ArrayType>(std::string("array-type"), result, readonlyPrefix, std::monostate{}, ::app_src_ast_::SourceSpan{start, parser->location()})));
+        (result = doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(std::make_shared<::app_src_ast_::ArrayType>(std::string("array-type"), result, readonlyPrefix, std::monostate{}, ::app_src_ast_::SourceSpan{start, parser->previousEnd()})));
         (readonlyPrefix = false);
     }
     if (readonlyPrefix) {

@@ -223,10 +223,10 @@ doof::Result<std::string, std::string> selectSigningIdentity(const std::shared_p
     if (static_cast<int32_t>((profile->certFingerprints)->size()) == 0) {
         return doof::Failure<std::string>{ ((std::string("Provisioning profile \"") + profile->profilePath) + std::string("\" does not include DeveloperCertificates. Pass --ios-sign-identity.")) };
     }
-    const auto& _iterable_13 = identities;
-    for (const auto& identity : *_iterable_13) {
-        const auto& _iterable_15 = profile->certFingerprints;
-        for (const auto& fingerprint : *_iterable_15) {
+    const auto& _iterable_15 = identities;
+    for (const auto& identity : *_iterable_15) {
+        const auto& _iterable_13 = profile->certFingerprints;
+        for (const auto& fingerprint : *_iterable_13) {
             if (identity->fingerprint == fingerprint) {
                 return doof::Success<std::string>{ identity->name };
             }
@@ -476,21 +476,21 @@ doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisio
     }
     }
     for (int32_t index = 0; index < certificateCount; ++index) {
-        auto _binding_value_28 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), (std::string("DeveloperCertificates.") + doof::to_string(index)), std::string("raw"), std::string("-o"), std::string("-"), decodedPath}), std::string("reading provisioning profile certificate"));
-        if (doof::is_failure(_binding_value_28)) {
-            const auto& encoded = _binding_value_28;
+        auto _binding_value_27 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), (std::string("DeveloperCertificates.") + doof::to_string(index)), std::string("raw"), std::string("-o"), std::string("-"), decodedPath}), std::string("reading provisioning profile certificate"));
+        if (doof::is_failure(_binding_value_27)) {
+            const auto& encoded = _binding_value_27;
             continue;
         }
-        const auto encoded = doof::success_value(_binding_value_28);
+        const auto encoded = doof::success_value(_binding_value_27);
         if (encoded == std::string("")) {
             continue;
         }
-        auto _binding_value_29 = certificateFingerprint(encoded);
-        if (doof::is_failure(_binding_value_29)) {
-            const auto& fingerprint = _binding_value_29;
+        auto _binding_value_28 = certificateFingerprint(encoded);
+        if (doof::is_failure(_binding_value_28)) {
+            const auto& fingerprint = _binding_value_28;
             continue;
         }
-        const auto fingerprint = doof::success_value(_binding_value_29);
+        const auto fingerprint = doof::success_value(_binding_value_28);
         appendUnique(certFingerprints, fingerprint);
     }
     return doof::Success<std::shared_ptr<IOSProvisioningProfile>>{ std::make_shared<IOSProvisioningProfile>(profilePath, applicationIdentifier, certFingerprints, expirationEpochMs, provisionedDeviceCount, provisionsAllDevices, getTaskAllow) };
@@ -498,14 +498,14 @@ doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisio
 std::shared_ptr<std::vector<std::string>> collectProvisioningProfilePaths(const std::shared_ptr<std::vector<std::string>>& profileDirectories) {
     const auto directories = ((static_cast<int32_t>((profileDirectories)->size()) > 0) ? profileDirectories : std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("~/Library/Developer/Xcode/UserData/Provisioning Profiles"), std::string("~/Library/MobileDevice/Provisioning Profiles")}));
     std::shared_ptr<std::vector<std::string>> paths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_31 = directories;
-    for (const auto& directory : *_iterable_31) {
+    const auto& _iterable_33 = directories;
+    for (const auto& directory : *_iterable_33) {
         const auto expanded = resolveUserPath(directory);
         if (!::doof_fs::isDirectory(expanded)) {
             continue;
         }
-        const auto& _iterable_33 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(expanded); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 474, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
-        for (const auto& entry : *_iterable_33) {
+        const auto& _iterable_31 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(expanded); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 474, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
+        for (const auto& entry : *_iterable_31) {
             if (doof::string_endsWith(entry->name, std::string(".mobileprovision"))) {
                 appendUnique(paths, devicePath(expanded, entry->name));
             }
@@ -515,14 +515,14 @@ std::shared_ptr<std::vector<std::string>> collectProvisioningProfilePaths(const 
 }
 doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> autoResolveProvisioningProfile(const std::string& bundleId, const std::string& workDirectory, const std::shared_ptr<std::vector<std::string>>& profileDirectories) {
     std::shared_ptr<std::vector<std::shared_ptr<IOSProvisioningProfile>>> profiles = std::make_shared<std::vector<std::shared_ptr<IOSProvisioningProfile>>>(std::vector<std::shared_ptr<IOSProvisioningProfile>>{});
-    const auto& _iterable_35 = collectProvisioningProfilePaths(profileDirectories);
-    for (const auto& profilePath : *_iterable_35) {
-        auto _binding_value_36 = parseProvisioningProfile(profilePath, workDirectory);
-        if (doof::is_failure(_binding_value_36)) {
-            const auto& profile = _binding_value_36;
+    const auto& _iterable_36 = collectProvisioningProfilePaths(profileDirectories);
+    for (const auto& profilePath : *_iterable_36) {
+        auto _binding_value_34 = parseProvisioningProfile(profilePath, workDirectory);
+        if (doof::is_failure(_binding_value_34)) {
+            const auto& profile = _binding_value_34;
             continue;
         }
-        const auto profile = doof::success_value(_binding_value_36);
+        const auto profile = doof::success_value(_binding_value_34);
         profiles->push_back(profile);
     }
     return selectProvisioningProfile(bundleId, profiles, ::std_::time::temporal::Instant::now()->toEpochMillis());
@@ -634,11 +634,11 @@ doof::Result<void, std::string> signIOSDeviceApp(const std::string& appPath, con
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     collectNestedIOSCode(devicePath(appPath, std::string("Frameworks")), nested);
     collectNestedIOSCode(devicePath(appPath, std::string("PlugIns")), nested);
-    const auto& _iterable_49 = nested;
-    for (const auto& path : *_iterable_49) {
-        auto _try_value_50 = deviceCommandText(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(path, options->signIdentity, std::string("")), std::string("signing nested iOS code"));
-        if (doof::is_failure(_try_value_50)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_50))};
-        const auto nestedIgnored = doof::success_value(_try_value_50);
+    const auto& _iterable_50 = nested;
+    for (const auto& path : *_iterable_50) {
+        auto _try_value_48 = deviceCommandText(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(path, options->signIdentity, std::string("")), std::string("signing nested iOS code"));
+        if (doof::is_failure(_try_value_48)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_48))};
+        const auto nestedIgnored = doof::success_value(_try_value_48);
     }
     auto _try_value_51 = deviceCommandText(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(appPath, options->signIdentity, entitlementsPath), std::string("signing the iOS app"));
     if (doof::is_failure(_try_value_51)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_51))};

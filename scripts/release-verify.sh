@@ -15,9 +15,20 @@ run_binary() {
 }
 
 test -x "$compiler"
+test -f "$repo_root/dist/doof-stdlib.tar"
+tar -xOf "$repo_root/dist/doof-stdlib.tar" bundle-index.json | grep -q '"schemaVersion":4'
 rm -rf "$release_root"
 mkdir -p "$fixtures_root" "$verify_root" "$release_root/coverage"
 cp -R "$repo_root/tests/release-fixtures/." "$fixtures_root/"
+chmod +x "$fixtures_root/offline-bin/git"
+offline_path="$fixtures_root/offline-bin:$PATH"
+
+if PATH="$offline_path" env -u DOOF_STDLIB_ROOT "$compiler" check "$fixtures_root/unknown-stdlib" \
+  >"$release_root/unknown-stdlib-output" 2>&1; then
+  echo "Unknown bundled standard package unexpectedly resolved" >&2
+  exit 1
+fi
+grep -q "Unknown standard package std/not-a-package" "$release_root/unknown-stdlib-output"
 
 DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" test "$repo_root/src" \
   --coverage --coverage-output "$release_root/coverage/compiler.json"
@@ -25,6 +36,8 @@ DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" test "$repo_root/src" \
 runtime_fixture="$fixtures_root/runtime"
 native_fixture="$fixtures_root/native-interop"
 stdlib_fixture="$fixtures_root/stdlib"
+bundled_webp_fixture="$fixtures_root/bundled-webp"
+bundled_http_fixture="$fixtures_root/bundled-http"
 pkg_fixture="$fixtures_root/pkg-config"
 test_fixture="$fixtures_root/test-runner"
 local_fixture="$fixtures_root/local-dependency"
@@ -40,9 +53,17 @@ DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" emit "$runtime_fixture" -o "$verify_
 
 DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" build "$native_fixture" -o "$verify_root/native"
 run_binary "$release_root" "$verify_root/native/doof-release-native-interop"
+test ! -e "$verify_root/native/provenance.json"
 
-DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" build "$stdlib_fixture" -o "$verify_root/stdlib"
+PATH="$offline_path" env -u DOOF_STDLIB_ROOT "$compiler" build "$stdlib_fixture" -o "$verify_root/stdlib"
 run_binary "$release_root" "$verify_root/stdlib/doof-release-stdlib"
+test ! -e "$verify_root/stdlib/provenance.json"
+
+PATH="$offline_path" env -u DOOF_STDLIB_ROOT "$compiler" build "$bundled_webp_fixture" -o "$verify_root/bundled-webp"
+run_binary "$release_root" "$verify_root/bundled-webp/doof-release-bundled-webp"
+
+PATH="$offline_path" env -u DOOF_STDLIB_ROOT "$compiler" build "$bundled_http_fixture" -o "$verify_root/bundled-http"
+run_binary "$release_root" "$verify_root/bundled-http/doof-release-bundled-http"
 
 PKG_CONFIG_PATH="$pkg_fixture/pkgconfig" DOOF_STDLIB_ROOT="$stdlib_root" \
   "$compiler" build "$pkg_fixture" -o "$verify_root/pkg-config"

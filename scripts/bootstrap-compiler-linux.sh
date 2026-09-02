@@ -128,5 +128,4 @@ echo "  Linking $object_count bootstrap objects..."
 
 cp "$repo_root/runtime/doof_runtime.h" "$output_root/doof_runtime.h"
 cp "$repo_root/runtime/doof_wasm_test_runner_apple.swift" "$output_root/doof_wasm_test_runner_apple.swift"
-cp "$repo_root/resources/std-catalog.json" "$output_root/std-catalog.json"
 echo "  Linux stage-0 compiler is ready: $output_root/doof"

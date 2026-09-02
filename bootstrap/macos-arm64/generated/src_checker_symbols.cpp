@@ -108,8 +108,8 @@ void decorateAnnotationWithResolved(const std::variant<std::shared_ptr<::app_src
     }
 }
 bool blockContainsLoopExit(const std::shared_ptr<::app_src_ast_::Block>& block) {
-    const auto& _iterable_5 = block->statements;
-    for (const auto& statement : *_iterable_5) {
+    const auto& _iterable_9 = block->statements;
+    for (const auto& statement : *_iterable_9) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::BreakStatement>>(_case_subject)) {
@@ -120,8 +120,8 @@ bool blockContainsLoopExit(const std::shared_ptr<::app_src_ast_::Block>& block) 
                 if (blockContainsLoopExit(if_->body)) {
                     return true;
                 }
-                const auto& _iterable_7 = if_->elseIfs;
-                for (const auto& branch : *_iterable_7) {
+                const auto& _iterable_5 = if_->elseIfs;
+                for (const auto& branch : *_iterable_5) {
                     if (blockContainsLoopExit(branch->body)) {
                         return true;
                     }
@@ -132,8 +132,8 @@ bool blockContainsLoopExit(const std::shared_ptr<::app_src_ast_::Block>& block) 
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CaseStatement>>(_case_subject)) {
                 const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseStatement>>(_case_subject);
-                const auto& _iterable_9 = case_->arms;
-                for (const auto& arm : *_iterable_9) {
+                const auto& _iterable_7 = case_->arms;
+                for (const auto& arm : *_iterable_7) {
                     {
                         auto _case_subject = arm->body;
                         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
@@ -238,8 +238,8 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
     return symbolType(doof::unwrap_optional(symbol), doof::unwrap_optional(source), result);
 }
 std::shared_ptr<::app_src_semantic_::Symbol> namespaceMemberSymbol(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::string& namespaceName, const std::string& memberName, const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
-    const auto& _iterable_24 = info->namespaceImports;
-    for (const auto& imported : *_iterable_24) {
+    const auto& _iterable_26 = info->namespaceImports;
+    for (const auto& imported : *_iterable_26) {
         if (imported->localName != namespaceName) {
             continue;
         }
@@ -250,8 +250,8 @@ std::shared_ptr<::app_src_semantic_::Symbol> namespaceMemberSymbol(const std::sh
         if (doof::is_null(source)) {
             return nullptr;
         }
-        const auto& _iterable_26 = source->exports;
-        for (const auto& symbol : *_iterable_26) {
+        const auto& _iterable_24 = source->exports;
+        for (const auto& symbol : *_iterable_24) {
             if ((symbol->name == memberName) && isValueSymbol(symbol)) {
                 return symbol;
             }

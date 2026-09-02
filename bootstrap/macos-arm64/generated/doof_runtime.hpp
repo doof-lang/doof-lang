@@ -1214,6 +1214,11 @@ inline bool json_is_number(const JsonValue& value) {
         || std::holds_alternative<double>(json_storage(value));
 }
 
+inline bool json_is_integer(const JsonValue& value) {
+    return std::holds_alternative<int32_t>(json_storage(value)) ||
+           std::holds_alternative<int64_t>(json_storage(value));
+}
+
 inline bool json_is_string(const JsonValue& value) {
     return std::holds_alternative<std::string>(json_storage(value));
 }
@@ -1467,6 +1472,15 @@ public:
 private:
     std::string message_;
 };
+
+template <typename F>
+auto json_decode_at(const std::string& path, F&& decode) -> decltype(decode()) {
+    try {
+        return decode();
+    } catch (const JsonDecodeError& error) {
+        throw JsonDecodeError(path + ": " + error.message());
+    }
+}
 
 template <typename T>
 T json_decode_value(Result<T, std::string> result) {

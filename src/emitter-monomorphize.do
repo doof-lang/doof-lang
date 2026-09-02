@@ -317,7 +317,10 @@ function collectExpression(expression: Expression, modulePath: string, analysis:
         }
       }
     }
-    construct: ConstructExpression -> { for property of construct.args { if property.value != none { collectExpression(property.value!, modulePath, analysis, plan, names, arguments) } } }
+    construct: ConstructExpression -> {
+      if construct.spread != none { collectExpression(construct.spread!, modulePath, analysis, plan, names, arguments) }
+      for property of construct.args { if property.value != none { collectExpression(property.value!, modulePath, analysis, plan, names, arguments) } }
+    }
     async_: AsyncExpression -> {
       case async_.expression {
         block: Block -> { collectBlock(block, modulePath, analysis, plan, names, arguments) }

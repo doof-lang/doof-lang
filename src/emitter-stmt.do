@@ -72,8 +72,14 @@ export function emitStatement(statement: Statement, level: int = 1, context: Emi
         else cppIdentifier(assignment.name)
       return sourceMark + coverageMark + ind + target + " = " + emitExpression(assignment.value, context, assignment.resolvedType) + ";\n"
     }
-    _: BreakStatement -> { return sourceMark + coverageMark + ind + "break;\n" }
-    _: ContinueStatement -> { return sourceMark + coverageMark + ind + "continue;\n" }
+    break_: BreakStatement -> {
+      if break_.label != none { return sourceMark + coverageMark + ind + "goto " + loopTarget(context, break_.label!, true) + ";\n" }
+      return sourceMark + coverageMark + ind + "break;\n"
+    }
+    continue_: ContinueStatement -> {
+      if continue_.label != none { return sourceMark + coverageMark + ind + "goto " + loopTarget(context, continue_.label!, false) + ";\n" }
+      return sourceMark + coverageMark + ind + "continue;\n"
+    }
     block: Block -> { return emitBlock(block, level, context) }
     _ -> { panic("Unsupported statement in initial C++ emitter: " + statement.kind) }
   }
@@ -483,12 +489,19 @@ function emitIf(statement: IfStatement, level: int, context: EmitContext): strin
 
 function emitWhile(statement: WhileStatement, level: int, context: EmitContext): string {
   ind := indent(level)
+  loopId := beginLabeledLoop(statement.label, context)
+  body := emitLabeledLoopBody(statement.body, level + 1, loopId, context)
+  endLabeledLoop(loopId, context)
   return ind + "while (" + emitCondition(statement.condition, context) + ") {\n" +
-    emitBlock(statement.body, level + 1, context) + ind + "}\n"
+    body + ind + "}\n" + labeledBreakTarget(loopId, level)
 }
 
 function emitForOf(statement: ForOfStatement, level: int, context: EmitContext): string {
   ind := indent(level)
+  labeledLoopId := beginLabeledLoop(statement.label, context)
+  body := emitLabeledLoopBody(statement.body, level + 1, labeledLoopId, context)
+  endLabeledLoop(labeledLoopId, context)
+  breakTarget := labeledBreakTarget(labeledLoopId, level)
   context.tryCounter = context.tryCounter + 1
   loopId := context.tryCounter
   name := if statement.bindings.length == 0 then "_item" else discardableCppName(statement.bindings[0], loopId, 0)
@@ -497,7 +510,7 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
       if range.operator == "..<" || range.operator == ".." {
         endOperator := if range.operator == "..<" then " < " else " <= "
         return ind + "for (int32_t " + name + " = " + emitExpression(range.left, context) + "; " + name + endOperator + emitExpression(range.right, context) + "; ++" + name + ") {\n" +
-          emitBlock(statement.body, level + 1, context) + ind + "}\n"
+          body + ind + "}\n" + breakTarget
       }
     }
     _ -> { }
@@ -510,12 +523,12 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
     case statement.iterable.resolvedType! {
       _: RangeResolvedType -> {
         return iterableBinding + ind + "for (const auto& " + name + " : " + iterableName + ") {\n" +
-          emitBlock(statement.body, level + 1, context) + ind + "}\n"
+          body + ind + "}\n" + breakTarget
       }
       _: StreamResolvedType -> {
         return iterableBinding + ind + "while (std::visit([](auto&& _obj) { return _obj->next(); }, " + iterableName + ")) {\n" +
           ind + "    const auto " + name + " = std::visit([](auto&& _obj) { return _obj->value(); }, " + iterableName + ");\n" +
-          emitBlock(statement.body, level + 1, context) + ind + "}\n"
+          body + ind + "}\n" + breakTarget
       }
       _ -> { }
     }
@@ -527,10 +540,10 @@ function emitForOf(statement: ForOfStatement, level: int, context: EmitContext):
       names = names + discardableCppName(statement.bindings[i], loopId, i)
     }
     return iterableBinding + ind + "for (const auto& [" + names + "] : *" + iterableName + ") {\n" +
-      emitBlock(statement.body, level + 1, context) + ind + "}\n"
+      body + ind + "}\n" + breakTarget
   }
   return iterableBinding + ind + "for (const auto& " + name + " : *" + iterableName + ") {\n" +
-    emitBlock(statement.body, level + 1, context) + ind + "}\n"
+    body + ind + "}\n" + breakTarget
 }
 
 function discardableCppName(name: string, scopeId: int, position: int): string {
@@ -540,6 +553,9 @@ function discardableCppName(name: string, scopeId: int, position: int): string {
 
 function emitFor(statement: ForStatement, level: int, context: EmitContext): string {
   ind := indent(level)
+  loopId := beginLabeledLoop(statement.label, context)
+  body := emitLabeledLoopBody(statement.body, level + 1, loopId, context)
+  endLabeledLoop(loopId, context)
   let init = ""
   if statement.init != none {
     init = emitStatement(statement.init!, 0, context).trim()
@@ -553,7 +569,47 @@ function emitFor(statement: ForStatement, level: int, context: EmitContext): str
     update = update + emitExpression(statement.update[i], context)
   }
   return ind + "for (" + init + "; " + condition + "; " + update + ") {\n" +
-    emitBlock(statement.body, level + 1, context) + ind + "}\n"
+    body + ind + "}\n" + labeledBreakTarget(loopId, level)
+}
+
+function beginLabeledLoop(label: string | none, context: EmitContext): int {
+  if label == none { return -1 }
+  context.tryCounter = context.tryCounter + 1
+  loopId := context.tryCounter
+  context.loopLabels.push(label!)
+  context.loopBreakTargets.push("_doof_break_" + string(loopId))
+  context.loopContinueTargets.push("_doof_continue_" + string(loopId))
+  return loopId
+}
+
+function endLabeledLoop(loopId: int, context: EmitContext): none {
+  if loopId < 0 { return }
+  try! context.loopLabels.pop()
+  try! context.loopBreakTargets.pop()
+  try! context.loopContinueTargets.pop()
+}
+
+function emitLabeledLoopBody(body: Block, level: int, loopId: int, context: EmitContext): string {
+  if loopId < 0 { return emitBlock(body, level, context) }
+  ind := indent(level)
+  return ind + "{\n" + emitBlock(body, level + 1, context) + ind + "}\n" +
+    ind + "_doof_continue_" + string(loopId) + ":;\n"
+}
+
+function labeledBreakTarget(loopId: int, level: int): string {
+  if loopId < 0 { return "" }
+  return indent(level) + "_doof_break_" + string(loopId) + ":;\n"
+}
+
+function loopTarget(context: EmitContext, label: string, break_: bool): string {
+  let target = ""
+  for i of 0..<context.loopLabels.length {
+    if context.loopLabels[i] == label {
+      target = if break_ then context.loopBreakTargets[i] else context.loopContinueTargets[i]
+    }
+  }
+  if target == "" { panic("Unresolved loop label reached emission: " + label) }
+  return target
 }
 
 function indent(level: int): string {

@@ -26,13 +26,13 @@ std::string emitActorCreation(const std::shared_ptr<::app_src_ast_::ActorCreatio
                 doof::panic((std::string("Actor construction is missing class declaration ") + actor->innerClass->name));
             }
             auto argumentIndex = 0;
-            const auto& _iterable_2 = declaration->fields;
-            for (const auto& field : *_iterable_2) {
+            const auto& _iterable_4 = declaration->fields;
+            for (const auto& field : *_iterable_4) {
                 if (field->static_ || field->const_) {
                     continue;
                 }
-                const auto& _iterable_4 = field->names;
-                for (const auto& name : *_iterable_4) {
+                const auto& _iterable_2 = field->names;
+                for (const auto& name : *_iterable_2) {
                     if (args != std::string("")) {
                         (args = (args + std::string(", ")));
                     }
@@ -60,10 +60,10 @@ std::string emitActorCreation(const std::shared_ptr<::app_src_ast_::ActorCreatio
     return std::string("");
 }
 std::shared_ptr<::app_src_ast_::ClassDeclaration> actorClassDeclaration(const std::string& modulePath, const std::string& name, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    const auto& _iterable_6 = context->allPrograms;
-    for (const auto& program : *_iterable_6) {
-        const auto& _iterable_8 = program->statements;
-        for (const auto& statement : *_iterable_8) {
+    const auto& _iterable_8 = context->allPrograms;
+    for (const auto& program : *_iterable_8) {
+        const auto& _iterable_6 = program->statements;
+        for (const auto& statement : *_iterable_6) {
             const auto declaration = actorClassFromStatement(statement);
             if ((((!doof::is_null(declaration)) && (declaration->name == name)) && (!doof::is_null(declaration->resolvedSymbol))) && (declaration->resolvedSymbol->module == modulePath)) {
                 return declaration;

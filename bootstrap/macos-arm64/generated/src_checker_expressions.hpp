@@ -386,7 +386,8 @@ namespace app_src_semantic_ {
     bool capturesTryErrors;
     std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes;
     bool tryPanics;
-    Scope(std::shared_ptr<Scope> parent, std::shared_ptr<std::vector<std::shared_ptr<Binding>>> bindings, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::string>> typeParamConstraintNames, std::shared_ptr<std::vector<std::shared_ptr<ResolvedTypeConstraint>>> typeParamConstraints, doof_header_type_1 returnType, doof_header_type_1 thisType, std::string functionName, bool staticContext, bool inValueYieldBlock, doof_header_type_1 yieldType, bool capturesTryErrors, std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes, bool tryPanics) : parent(parent), bindings(bindings), typeParams(typeParams), typeParamConstraintNames(typeParamConstraintNames), typeParamConstraints(typeParamConstraints), returnType(returnType), thisType(thisType), functionName(functionName), staticContext(staticContext), inValueYieldBlock(inValueYieldBlock), yieldType(yieldType), capturesTryErrors(capturesTryErrors), catchErrorTypes(catchErrorTypes), tryPanics(tryPanics) {}
+    std::optional<std::string> loopLabel;
+    Scope(std::shared_ptr<Scope> parent, std::shared_ptr<std::vector<std::shared_ptr<Binding>>> bindings, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::string>> typeParamConstraintNames, std::shared_ptr<std::vector<std::shared_ptr<ResolvedTypeConstraint>>> typeParamConstraints, doof_header_type_1 returnType, doof_header_type_1 thisType, std::string functionName, bool staticContext, bool inValueYieldBlock, doof_header_type_1 yieldType, bool capturesTryErrors, std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes, bool tryPanics, std::optional<std::string> loopLabel) : parent(parent), bindings(bindings), typeParams(typeParams), typeParamConstraintNames(typeParamConstraintNames), typeParamConstraints(typeParamConstraints), returnType(returnType), thisType(thisType), functionName(functionName), staticContext(staticContext), inValueYieldBlock(inValueYieldBlock), yieldType(yieldType), capturesTryErrors(capturesTryErrors), catchErrorTypes(catchErrorTypes), tryPanics(tryPanics), loopLabel(loopLabel) {}
 };
     struct ResolvedTypeConstraint : public std::enable_shared_from_this<ResolvedTypeConstraint> {
     doof_header_type_1 type_;
@@ -729,13 +730,16 @@ namespace app_src_ast_ {
     std::string type_;
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args;
+    doof_header_type_5 spread;
+    std::shared_ptr<std::vector<std::string>> spreadFields;
+    doof_header_type_3 resolvedSpreadType;
     bool named;
     std::shared_ptr<ClassDeclaration> resolvedClass;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
     doof_header_type_3 resolvedConstructedType;
     doof_header_type_3 resolvedType;
     SourceSpan span;
-    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedConstructedType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
+    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, doof_header_type_5 spread, std::shared_ptr<std::vector<std::string>> spreadFields, doof_header_type_3 resolvedSpreadType, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedConstructedType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), spread(spread), spreadFields(spreadFields), resolvedSpreadType(resolvedSpreadType), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
 };
     struct DotShorthand : public std::enable_shared_from_this<DotShorthand> {
     std::string kind;
@@ -1137,17 +1141,20 @@ namespace app_src_ast_ {
     std::string name;
     std::string description;
     std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants;
+    std::string backingKind;
     bool exported;
     SourceSpan span;
-    EnumDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants, bool exported, SourceSpan span) : kind(kind), name(name), description(description), variants(variants), exported(exported), span(span) {}
+    EnumDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants, std::string backingKind, bool exported, SourceSpan span) : kind(kind), name(name), description(description), variants(variants), backingKind(backingKind), exported(exported), span(span) {}
 };
     struct EnumVariant : public std::enable_shared_from_this<EnumVariant> {
     std::string kind;
     std::string name;
     std::string description;
     doof_header_type_5 value;
+    std::optional<int32_t> resolvedIntValue;
+    std::optional<std::string> resolvedStringValue;
     SourceSpan span;
-    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_5 value, SourceSpan span) : kind(kind), name(name), description(description), value(value), span(span) {}
+    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_5 value, std::optional<int32_t> resolvedIntValue, std::optional<std::string> resolvedStringValue, SourceSpan span) : kind(kind), name(name), description(description), value(value), resolvedIntValue(resolvedIntValue), resolvedStringValue(resolvedStringValue), span(span) {}
 };
     struct TypeAliasDeclaration : public std::enable_shared_from_this<TypeAliasDeclaration> {
     std::string kind;
@@ -1336,6 +1343,7 @@ namespace app_src_checker_expressions_ {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::FunctionParamType>>> actorConstructorParameters(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_semantic_::ClassType>& inner);
     void validateActorFieldConstructorVisibility(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::ActorCreationExpression>& expression, const std::shared_ptr<::app_src_semantic_::ClassType>& inner);
     bool isNamedStaticReceiver(const doof_header_type_22& expression);
+    bool enumVariantMember(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const doof_header_type_19& receiver, const std::string& property);
     bool declaredInstanceMember(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const doof_header_type_19& receiver, const std::string& property);
     doof_header_type_19 checkDotShorthand(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::DotShorthand>& expression, const doof_header_type_20& expected);
     doof_header_type_19 checkIdentifier(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::Identifier>& identifier, const std::shared_ptr<::app_src_semantic_::Scope>& scope);
@@ -1361,7 +1369,7 @@ namespace app_src_checker_expressions_ {
     bool isNullableType(const doof_header_type_19& type_);
     bool isFallibleType(const doof_header_type_19& type_);
     doof_header_type_20 fallibleValueType(const doof_header_type_19& type_);
-    bool orderedTypes(const doof_header_type_19& left, const doof_header_type_19& right);
+    bool orderedTypes(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const doof_header_type_19& left, const doof_header_type_19& right);
     bool typesOverlap(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const doof_header_type_19& left, const doof_header_type_19& right);
     void validateCaseRangeBound(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::variant<std::monostate, std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>& bound, const doof_header_type_19& subjectType, const std::shared_ptr<::app_src_semantic_::Scope>& scope, ::app_src_ast_::SourceSpan span);
 }

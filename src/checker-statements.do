@@ -84,7 +84,8 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     while_: WhileStatement -> {
       conditionType := checkExpression(state, while_.condition, scope, none)
       requireBool(state, conditionType, while_.condition.span)
-      checkBlock(state, while_.body, scope, true)
+      loopScope := createLoopScope(state, scope, while_.label, while_.span)
+      checkBlock(state, while_.body, loopScope, true)
       if while_.then_ != none { checkBlock(state, while_.then_!, scope) }
       if conditionType.kind == "never" { return false }
       case while_.condition {
@@ -102,7 +103,8 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         requireBool(state, checkExpression(state, condition, scope, none), condition.span)
       }
       for update of for_.update { checkExpression(state, update, scope, none) }
-      checkBlock(state, for_.body, scope, true)
+      loopScope := createLoopScope(state, scope, for_.label, for_.span)
+      checkBlock(state, for_.body, loopScope, true)
       if for_.then_ != none { checkBlock(state, for_.then_!, scope) }
       return true
     }
@@ -138,7 +140,8 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
           for name of forOf.bindings { if name != "_" { declareUserBinding(state, bodyScope, Binding { name, kind: "for-binding", type_: element, mutable: false, span: checkerSemanticSpan(forOf.span), module: state.info!.path }, forOf.span) } }
         }
       }
-      checkBlock(state, forOf.body, bodyScope, true)
+      loopScope := createLoopScope(state, bodyScope, forOf.label, forOf.span)
+      checkBlock(state, forOf.body, loopScope, true)
       if forOf.then_ != none { checkBlock(state, forOf.then_!, scope) }
       return true
     }
@@ -221,17 +224,38 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     }
     try_: TryStatement -> { return checkTry(state, try_, scope) }
     continue_: ContinueStatement -> {
-      if !inLoop { typeError(state, "Continue is only valid inside a loop", continue_.span) }
+      if continue_.label != none {
+        if !hasActiveLoopLabel(scope, continue_.label!) { typeError(state, "Unknown loop label '" + continue_.label! + "'", continue_.span) }
+      } else if !inLoop { typeError(state, "Continue is only valid inside a loop", continue_.span) }
       return false
     }
     break_: BreakStatement -> {
-      if !inLoop { typeError(state, "Break is only valid inside a loop", break_.span) }
+      if break_.label != none {
+        if !hasActiveLoopLabel(scope, break_.label!) { typeError(state, "Unknown loop label '" + break_.label! + "'", break_.span) }
+      } else if !inLoop { typeError(state, "Break is only valid inside a loop", break_.span) }
       return false
     }
     block: Block -> { return checkBlock(state, block, scope, inLoop) }
     _ -> { return true }
   }
   return true
+}
+
+function createLoopScope(state: CheckerState, parent: Scope, label: string | none, span: SourceSpan): Scope {
+  if label != none && hasActiveLoopLabel(parent, label!) {
+    typeError(state, "Loop label '" + label! + "' is already active", span)
+  }
+  return Scope { parent, loopLabel: label }
+}
+
+function hasActiveLoopLabel(scope: Scope, label: string): bool {
+  let current: Scope | none = scope
+  while current != none {
+    if current!.loopLabel == label { return true }
+    if current!.functionName != "" { return false }
+    current = current!.parent
+  }
+  return false
 }
 
 export function checkValueDeclaration(state: CheckerState, declaration: Statement, scope: Scope, kind: string, mutable: bool, inLoop: bool = false): bool {
@@ -634,6 +658,47 @@ function validateTypeParameterShadowing(state: CheckerState, names: string[], ou
 
 export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Scope): none {
   let names: string[] = []
+  let stringBacked = false
+  for variant of enum_.variants {
+    if variant.value == none { continue }
+    case variant.value! {
+      literal: StringLiteral -> { if literal.interpolations.length == 0 { stringBacked = true } }
+      _ -> { }
+    }
+  }
+  enum_.backingKind = if stringBacked then "string" else "int"
+  if stringBacked {
+    let values: string[] = []
+    let valueNames: string[] = []
+    for variant of enum_.variants {
+      if containsString(names, variant.name) { typeError(state, "Variant \"" + variant.name + "\" is already declared in enum \"" + enum_.name + "\"", variant.span) }
+      else { names.push(variant.name) }
+      if variant.value == none {
+        typeError(state, "String enum variant \"" + variant.name + "\" requires an explicit string value", variant.span)
+        continue
+      }
+      checkExpression(state, variant.value!, scope, optionalResolvedType(primitive("string")))
+      let value: string | none = none
+      case variant.value! {
+        literal: StringLiteral -> { if literal.interpolations.length == 0 { value = literal.value } }
+        _ -> { }
+      }
+      if value == none {
+        typeError(state, "String enum variant \"" + variant.name + "\" value must be a non-interpolated string literal", variant.value!.span)
+        continue
+      }
+      for previous of 0..<values.length {
+        if values[previous] == value! {
+          typeError(state, "Enum variant \"" + variant.name + "\" duplicates the value of \"" + valueNames[previous] + "\"", variant.span)
+          break
+        }
+      }
+      values.push(value!)
+      valueNames.push(variant.name)
+      variant.resolvedStringValue = value
+    }
+    return
+  }
   let values: long[] = []
   let valueNames: string[] = []
   let nextValue = 0L
@@ -660,6 +725,7 @@ export function checkEnum(state: CheckerState, enum_: EnumDeclaration, scope: Sc
         }
         values.push(value!)
         valueNames.push(variant.name)
+        variant.resolvedIntValue = int(value!)
       }
       nextValue = value! + 1L
     }
@@ -786,9 +852,16 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
         }
         binding: ImmutableBinding -> {
           binding.value.resolvedType = optionalResolvedType(resultValue)
-          binding.resolvedType = optionalResolvedType(result.valueType)
+          let bindingType = result.valueType
+          if binding.type_ != none {
+            bindingType = resolveType(state, binding.type_!, state.info!, scope)
+            if !isAssignableWithInterfaces(state.result, result.valueType, bindingType) {
+              typeError(state, "Cannot assign " + typeName(result.valueType) + " to " + typeName(bindingType), binding.span)
+            }
+          }
+          binding.resolvedType = optionalResolvedType(bindingType)
           declareUserBinding(state, scope, Binding {
-            name: binding.name, kind: "immutable-binding", type_: result.valueType,
+            name: binding.name, kind: "immutable-binding", type_: bindingType,
             mutable: false, span: checkerSemanticSpan(binding.span), module: state.info!.path,
           }, binding.span)
         }

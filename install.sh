@@ -41,8 +41,14 @@ if [ "$prefix" = "/" ]; then
   exit 2
 fi
 
-DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/build.sh"
-DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/scripts/test.sh"
+if ! DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/build.sh"; then
+  echo "install.sh: build failed; nothing was installed under $prefix" >&2
+  exit 1
+fi
+if ! DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/scripts/test.sh"; then
+  echo "install.sh: verification failed; nothing was installed under $prefix" >&2
+  exit 1
+fi
 
 echo "Installing verified compiler under $prefix (sudo required)..."
 sudo "$repo_root/scripts/install-artifacts.sh" "$repo_root/dist" "$prefix"

@@ -49,6 +49,26 @@ import { checkerSemanticSpan } from "./checker-validation"
 export function checkCall(state: CheckerState, expression: CallExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   case expression.callee {
     identifier: Identifier -> {
+      if identifier.name == "string" && lookup(scope, identifier.name) == none {
+        if expression.args.length != 1 {
+          for argument of expression.args { checkExpression(state, argument.value, scope, none) }
+          typeError(state, "string expects exactly one argument", expression.span)
+          return finish(state, expression, primitive("string"))
+        }
+        actual := checkExpression(state, expression.args[0].value, scope, none)
+        let supported = false
+        case actual {
+          _: PrimitiveType -> { supported = true }
+          _: EnumType -> { supported = true }
+          _: UnknownType -> { supported = true }
+          _ -> { }
+        }
+        if !supported { typeError(state, "Argument 1 has type " + typeName(actual) + "; expected a primitive or enum", expression.args[0].span) }
+        fn := functionType([FunctionParamType { name: "value", type_: actual, hasDefault: false }], primitive("string"))
+        identifier.resolvedType = optionalResolvedType(fn)
+        identifier.resolvedBinding = Binding { name: "string", kind: "builtin", type_: fn, mutable: false, span: checkerSemanticSpan(identifier.span), module: state.info!.path }
+        return finish(state, expression, primitive("string"))
+      }
       if (identifier.name == "Success" || identifier.name == "Failure") && lookup(scope, identifier.name) == none {
         let expectedResult: ResultResolvedType | none = none
         if expected != none {
@@ -545,6 +565,10 @@ function contextualFunctionType(expected: ResolvedType | none): FunctionType | n
 
 export function checkConstruct(state: CheckerState, expression: ConstructExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   if expression.type_ == "Success" || expression.type_ == "Failure" {
+    if expression.spread != none {
+      expression.resolvedSpreadType = optionalResolvedType(checkExpression(state, expression.spread!, scope, none))
+      typeError(state, expression.type_ + " construction does not support field spread", expression.spread!.span)
+    }
     let expectedResult: ResultResolvedType | none = none
     if expected != none {
       case expected! {
@@ -597,6 +621,7 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
   }
   constructed := classType(expression.type_, symbol!, resolvedTypeArgs)
   expression.resolvedConstructedType = optionalResolvedType(constructed)
+  checkConstructionSpread(state, expression, scope)
   constructorMethod := constructorForClass(constructed, state.result)
   if constructorMethod != none && !insideConstructorFactory(scope, constructed) {
     expression.resolvedConstructor = constructorMethod
@@ -627,7 +652,13 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
           }
         }
         for parameter of function_.params {
-          if !parameter.hasDefault && !hasObjectProperty(expression.args, parameter.name) {
+          if hasObjectProperty(expression.args, parameter.name) { continue }
+          spreadType := constructionSpreadFieldType(state, expression, parameter.name)
+          if spreadType != none {
+            if !isAssignableWithInterfaces(state.result, spreadType!, parameter.type_) {
+              typeError(state, "Cannot assign spread field " + typeName(spreadType!) + " to " + typeName(parameter.type_), expression.spread!.span)
+            }
+          } else if !parameter.hasDefault {
             typeError(state, "Missing required argument '" + parameter.name + "'", expression.span)
           }
         }
@@ -675,11 +706,49 @@ function checkConstructionFields(state: CheckerState, expression: ConstructExpre
     }
   }
   for field of declaration.fields {
-    if field.static_ || field.const_ || field.defaultValue != none { continue }
+    if field.static_ || field.const_ { continue }
     for name of field.names {
-      if !containsString(used, name) { typeError(state, "Missing required field '" + name + "'", expression.span) }
+      if containsString(used, name) { continue }
+      spreadType := constructionSpreadFieldType(state, expression, name)
+      if spreadType == none {
+        if field.defaultValue == none { typeError(state, "Missing required field '" + name + "'", expression.span) }
+      }
+      else {
+        expected := memberType(state, constructed, name, expression.span)
+        if !isAssignableWithInterfaces(state.result, spreadType!, expected) {
+          typeError(state, "Cannot assign spread field " + typeName(spreadType!) + " to " + typeName(expected), expression.spread!.span)
+        }
+      }
     }
   }
+}
+
+function checkConstructionSpread(state: CheckerState, expression: ConstructExpression, scope: Scope): none {
+  if expression.spread == none { return }
+  spreadType := checkExpression(state, expression.spread!, scope, none)
+  expression.resolvedSpreadType = optionalResolvedType(spreadType)
+  case spreadType {
+    _: ClassType -> { }
+    _: InterfaceType -> { }
+    _: UnknownType -> { }
+    _ -> { typeError(state, "Field spread requires a class, struct, or interface value; got " + typeName(spreadType), expression.spread!.span) }
+  }
+}
+
+function constructionSpreadFieldType(state: CheckerState, expression: ConstructExpression, name: string): ResolvedType | none {
+  if expression.spread == none || expression.resolvedSpreadType == none { return none }
+  spreadType := expression.resolvedSpreadType!
+  let supported = false
+  case spreadType {
+    _: ClassType -> { supported = true }
+    _: InterfaceType -> { supported = true }
+    _ -> { }
+  }
+  if !supported { return none }
+  fieldType := memberType(state, spreadType, name, expression.spread!.span)
+  if fieldType.kind == "unknown" { return none }
+  if !containsString(expression.spreadFields, name) { expression.spreadFields.push(name) }
+  return fieldType
 }
 
 function constructionField(declaration: ClassDeclaration, name: string): ClassField | none {

@@ -3,7 +3,7 @@
 // Eligibility and lowering deliberately share one recursive surface so the
 // checker never advertises synthetic methods the emitter cannot define.
 
-import { ClassDeclaration, ClassField, IntLiteral, InterfaceDeclaration, NoneLiteral, StringLiteral } from "./ast"
+import { ClassDeclaration, ClassField, EnumDeclaration, ExportDeclaration, IntLiteral, InterfaceDeclaration, NoneLiteral, Statement, StringLiteral } from "./ast"
 import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -140,8 +140,9 @@ function emitJsonFieldRead(field: ClassField, name: string, context: EmitContext
   if field.defaultValue != none {
     result = result + "    std::optional<" + typeText + "> " + value + ";\n"
     result = result + "    if (auto " + iterator + " = _object->find(\"" + name + "\"); " + iterator + " != _object->end()) {\n"
-    result = result + emitJsonValidation(iterator + "->second", type_, name, failureType, 2)
-    result = result + "        " + value + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n"
+    result = result + emitJsonValidation(iterator + "->second", type_, name, context, failureType, 2)
+    read := emitJsonRead(iterator + "->second", type_, context)
+    result = result + "        " + value + " = doof::json_decode_at(\"Field \\\"" + name + "\\\"\", [&]() { return " + read + "; });\n"
     result = result + "    } else {\n"
     let defaultValue = emitExpression(field.defaultValue!, context, type_)
     // A nullable `null` default must engage optional<optional<T>> with an
@@ -155,18 +156,19 @@ function emitJsonFieldRead(field: ClassField, name: string, context: EmitContext
   }
   result = result + "    auto " + iterator + " = _object->find(\"" + name + "\");\n"
   result = result + "    if (" + iterator + " == _object->end()) { return " + failureType + "{\"Missing required field \\\"" + name + "\\\"\"}; }\n"
-  result = result + emitJsonValidation(iterator + "->second", type_, name, failureType, 1)
-  return result + "    auto " + value + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n"
+  result = result + emitJsonValidation(iterator + "->second", type_, name, context, failureType, 1)
+  read := emitJsonRead(iterator + "->second", type_, context)
+  return result + "    auto " + value + " = doof::json_decode_at(\"Field \\\"" + name + "\\\"\", [&]() { return " + read + "; });\n"
 }
 
-function emitJsonValidation(json: string, type_: ResolvedType, name: string, failureType: string, indent: int): string {
+function emitJsonValidation(json: string, type_: ResolvedType, name: string, context: EmitContext, failureType: string, indent: int): string {
   prefix := if indent == 2 then "            " else "        "
-  check := emitJsonTypeCheck(json, type_)
-  expected := jsonTypeName(type_)
+  check := emitJsonTypeCheck(json, type_, context)
+  expected := jsonTypeName(type_, context)
   return prefix + "if (!(" + check + ")) { return " + failureType + "{\"Field \\\"" + name + "\\\" expected " + expected + " but got \" + std::string(doof::json_type_name(" + json + "))}; }\n"
 }
 
-export function emitJsonTypeCheck(json: string, type_: ResolvedType): string {
+export function emitJsonTypeCheck(json: string, type_: ResolvedType, context: EmitContext | none = none): string {
   case type_ {
     primitive: PrimitiveType -> {
       if primitive.name == "bool" { return "(_lenient ? doof::json_is_lenient_boolean(" + json + ") : doof::json_is_boolean(" + json + "))" }
@@ -176,13 +178,16 @@ export function emitJsonTypeCheck(json: string, type_: ResolvedType): string {
     }
     _: JsonValueResolvedType -> { return "true" }
     _: ClassType -> { return "doof::json_is_object(" + json + ")" }
-    _: EnumType -> { return "doof::json_is_string(" + json + ")" }
+    enum_: EnumType -> {
+      if context != none && enumBackingKind(enum_, context!) == "string" { return "doof::json_is_string(" + json + ")" }
+      return "doof::json_is_integer(" + json + ")"
+    }
     _: ArrayResolvedType -> { return "doof::json_is_array(" + json + ")" }
     tuple: TupleResolvedType -> { return "doof::json_is_array(" + json + ") && doof::json_as_array(" + json + ")->size() == " + string(tuple.elements.length) }
     _: MapResolvedType -> { return "doof::json_is_object(" + json + ")" }
     union_: UnionResolvedType -> {
       inner := nullableJsonMember(union_)!
-      return "doof::json_is_null(" + json + ") || " + emitJsonTypeCheck(json, inner)
+      return "doof::json_is_null(" + json + ") || " + emitJsonTypeCheck(json, inner, context)
     }
     _ -> { return "false" }
   }
@@ -197,25 +202,25 @@ export function emitJsonRead(json: string, type_: ResolvedType, context: EmitCon
       return "doof::json_decode_value(" + emitClassInnerType(class_, context.modulePath) + "::fromJsonValue(" + json + ", _lenient))"
     }
     enum_: EnumType -> {
-      return "doof::json_decode_optional(" + emitContextType(enum_, context) + "_fromName(doof::json_as_string(" + json + ")), std::string(\"Unknown enum value: \") + doof::json_as_string(" + json + "))"
+      return "doof::json_decode_value(" + emitContextType(enum_, context) + "_fromJsonValue(" + json + ", false))"
     }
     array: ArrayResolvedType -> {
       elementType := emitContextType(array.elementType, context)
       elementValue := emitJsonRead("_element", array.elementType, context)
-      return "[&]() { const auto* _array = doof::json_as_array(" + json + "); auto _values = std::make_shared<std::vector<" + elementType + ">>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(" + elementValue + "); } return _values; }()"
+      return "[&]() { const auto* _array = doof::json_as_array(" + json + "); auto _values = std::make_shared<std::vector<" + elementType + ">>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string(\"[\") + doof::to_string(_index) + \"]\", [&]() { return " + elementValue + "; })); } return _values; }()"
     }
     tuple: TupleResolvedType -> {
       let elements = ""
       for i of 0..<tuple.elements.length {
         if i > 0 { elements = elements + ", " }
-        elements = elements + emitJsonRead("(*_tuple)[" + string(i) + "]", tuple.elements[i], context)
+        elements = elements + "doof::json_decode_at(\"[" + string(i) + "]\", [&]() { return " + emitJsonRead("(*_tuple)[" + string(i) + "]", tuple.elements[i], context) + "; })"
       }
       return "[&]() { const auto* _tuple = doof::json_as_array(" + json + "); return std::make_tuple(" + elements + "); }()"
     }
     map: MapResolvedType -> {
       valueType := emitContextType(map.valueType, context)
       entryValue := emitJsonRead("_entry.second", map.valueType, context)
-      return "[&]() { const auto* _object_value = doof::json_as_object(" + json + "); auto _values = std::make_shared<doof::ordered_map<std::string, " + valueType + ">>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = " + entryValue + "; } return _values; }()"
+      return "[&]() { const auto* _object_value = doof::json_as_object(" + json + "); auto _values = std::make_shared<doof::ordered_map<std::string, " + valueType + ">>(); for (const auto& _entry : *_object_value) { (*_values)[_entry.first] = doof::json_decode_at(std::string(\".\") + _entry.first, [&]() { return " + entryValue + "; }); } return _values; }()"
     }
     union_: UnionResolvedType -> {
       inner := nullableJsonMember(union_)!
@@ -254,7 +259,7 @@ function emitPrimitiveJsonRead(json: string, name: string): string {
   return "(_lenient ? doof::json_as_string_lenient(" + json + ") : doof::json_as_string(" + json + "))"
 }
 
-export function jsonTypeName(type_: ResolvedType): string {
+export function jsonTypeName(type_: ResolvedType, context: EmitContext | none = none): string {
   case type_ {
     primitive: PrimitiveType -> {
       if primitive.name == "bool" { return "boolean" }
@@ -263,11 +268,14 @@ export function jsonTypeName(type_: ResolvedType): string {
     }
     _: JsonValueResolvedType -> { return "json" }
     _: ClassType -> { return "object" }
-    _: EnumType -> { return "string" }
+    enum_: EnumType -> {
+      if context != none && enumBackingKind(enum_, context!) == "string" { return "string" }
+      return "integer"
+    }
     _: ArrayResolvedType -> { return "array" }
     _: TupleResolvedType -> { return "array" }
     _: MapResolvedType -> { return "object" }
-    union_: UnionResolvedType -> { return jsonTypeName(nullableJsonMember(union_)!) + " or null" }
+    union_: UnionResolvedType -> { return jsonTypeName(nullableJsonMember(union_)!, context) + " or null" }
     _ -> { return "value" }
   }
   return "value"
@@ -287,7 +295,7 @@ export function emitJsonField(value: string, resolvedType: ResolvedType, context
       return "doof::json_value(" + value + "->toJsonObject())"
     }
     enum_: EnumType -> {
-      return "doof::json_value(" + emitContextType(enum_, context) + "_name(" + value + "))"
+      return emitContextType(enum_, context) + "_toJsonValue(" + value + ")"
     }
     union_: UnionResolvedType -> {
       inner := nullableJsonMember(union_)!
@@ -326,6 +334,36 @@ export function emitJsonField(value: string, resolvedType: ResolvedType, context
     _ -> { return "doof::json_value(nullptr)" }
   }
   return "doof::json_value(nullptr)"
+}
+
+function enumBackingKind(enum_: EnumType, context: EmitContext): string {
+  declaration := findEnumDeclaration(context, enum_.symbol.module, enum_.name)
+  if declaration == none { return "int" }
+  return declaration!.backingKind
+}
+
+function findEnumDeclaration(context: EmitContext, modulePath: string, name: string): EnumDeclaration | none {
+  for program of context.allPrograms {
+    for statement of program.statements {
+      declaration := enumStatementDeclaration(statement)
+      if declaration != none && declaration!.name == name { return declaration }
+    }
+  }
+  return none
+}
+
+function enumStatementDeclaration(statement: Statement): EnumDeclaration | none {
+  case statement {
+    enum_: EnumDeclaration -> { return enum_ }
+    export_: ExportDeclaration -> {
+      case export_.declaration {
+        enum_: EnumDeclaration -> { return enum_ }
+        _ -> { }
+      }
+    }
+    _ -> { }
+  }
+  return none
 }
 
 function jsonResultValueType(owner: ClassDeclaration): string {

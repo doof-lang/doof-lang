@@ -1,7 +1,7 @@
 // Declaration and import/export parsing for the Doof parser.
 
 import type { Parser } from "./parser"
-import { Token, TokenType } from "./lexer"
+import { TokenType } from "./lexer"
 import {
   Block, NamedType, Parameter, ClassField,
   InterfaceField, EnumVariant, ExportSpecifier, AstLocation,
@@ -38,7 +38,7 @@ export function parseExport(parser: Parser): Statement {
   if parser.check(TokenType.Interface) { return parseInterface(parser, true) }
   if parser.check(TokenType.Enum) { return parseEnum(parser, true) }
   if parser.check(TokenType.Type) { return parseTypeAlias(parser, true) }
-  if parser.check(TokenType.Identifier) || parser.check(TokenType.LeftBrace) {
+  if parser.check(TokenType.LeftBrace) {
     parser.expect(TokenType.LeftBrace)
     let specifiers: ExportSpecifier[] = []
     while !parser.check(TokenType.RightBrace) && !parser.atEnd() {

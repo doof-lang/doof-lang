@@ -77,11 +77,11 @@ doof::Result<void, ::std_::fs::types::IoError> writeBlobStream(const std::string
     auto _try_value_8 = ::NativeFileWriteStream::open(path);
     if (doof::is_failure(_try_value_8)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_8))};
     const auto writer = doof::success_value(_try_value_8);
-    const auto& _iterable_10 = chunks;
-    while (std::visit([](auto&& _obj) { return _obj->next(); }, _iterable_10)) {
-        const auto chunk = std::visit([](auto&& _obj) { return _obj->value(); }, _iterable_10);
-        auto _try_value_11 = writer->writeBlob(chunk);
-        if (doof::is_failure(_try_value_11)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_11))};
+    const auto& _iterable_11 = chunks;
+    while (std::visit([](auto&& _obj) { return _obj->next(); }, _iterable_11)) {
+        const auto chunk = std::visit([](auto&& _obj) { return _obj->value(); }, _iterable_11);
+        auto _try_value_9 = writer->writeBlob(chunk);
+        if (doof::is_failure(_try_value_9)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_9))};
     }
     auto _try_value_12 = writer->close();
     if (doof::is_failure(_try_value_12)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_12))};
@@ -91,11 +91,11 @@ doof::Result<void, ::std_::fs::types::IoError> writeLineStream(const std::string
     auto _try_value_13 = ::NativeFileWriteStream::open(path);
     if (doof::is_failure(_try_value_13)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_13))};
     const auto writer = doof::success_value(_try_value_13);
-    const auto& _iterable_15 = lines;
-    while (std::visit([](auto&& _obj) { return _obj->next(); }, _iterable_15)) {
-        const auto line = std::visit([](auto&& _obj) { return _obj->value(); }, _iterable_15);
-        auto _try_value_16 = writer->writeLine(line);
-        if (doof::is_failure(_try_value_16)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_16))};
+    const auto& _iterable_16 = lines;
+    while (std::visit([](auto&& _obj) { return _obj->next(); }, _iterable_16)) {
+        const auto line = std::visit([](auto&& _obj) { return _obj->value(); }, _iterable_16);
+        auto _try_value_14 = writer->writeLine(line);
+        if (doof::is_failure(_try_value_14)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_14))};
     }
     auto _try_value_17 = writer->close();
     if (doof::is_failure(_try_value_17)) return doof::Failure<::std_::fs::types::IoError>{doof::variant_promote<::std_::fs::types::IoError>(doof::failure_error(_try_value_17))};

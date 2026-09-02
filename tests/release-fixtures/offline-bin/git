@@ -1,0 +1,3 @@
+#!/bin/sh
+echo "git is disabled for bundled-stdlib release verification" >&2
+exit 97

@@ -15,6 +15,7 @@ package-family references. Imports from `std/<name>` do not belong in
 - SQLite typed rows
 - Bounded child processes
 - Streaming compression
+- Selective reads from large archive bundles
 - Time and timezone values
 - Boundary-focused tests
 
@@ -399,6 +400,50 @@ try! writeBlobStream("archive.bin.gz", GzipStream(chunks))
 
 Use matching formats: `std/archive` handles ZIP and raw deflate,
 `std/gzip` handles gzip framing, and `std/zstd` handles Zstandard frames.
+
+## Read one payload from a large archive bundle
+
+Use a plain outer TAR when large independently compressed artifacts need direct
+access. `scanTarFile` reads TAR headers and PAX metadata while seeking over
+ordinary payloads; `readTarEntry` then reads only the selected byte range.
+
+```doof
+import { readTarEntry, scanTarFile } from "std/archive"
+import { zstdDecompress } from "std/zstd"
+
+entries := try! scanTarFile("stdlib.tar")
+for entry of entries {
+  if entry.name == "modules/archive.tar.zst" {
+    compressed := try! readTarEntry("stdlib.tar", entry)
+    moduleTar := try! zstdDecompress(compressed)
+    // Pass moduleTar to readTarBlob when the inner artifact is itself a TAR.
+  }
+}
+```
+
+Keep the outer TAR uncompressed so its recorded payload offsets remain
+seekable. The file must not change between scanning and reading. For remote
+bundles, publish an equivalent offset/size index and use HTTP range requests;
+`scanTarFile` operates on local files.
+
+ZIP provides a self-indexing alternative. `scanZipFile` reads its embedded
+central directory, and `readZipEntry` loads, decompresses, and CRC-checks only
+the selected member. Store already-compressed `.tar.zst` members with
+`ZipCompression.Store` when building the ZIP.
+
+```doof
+import { readZipEntry, scanZipFile } from "std/archive"
+
+entries := try! scanZipFile("stdlib.zip")
+for entry of entries {
+  if entry.name == "modules/archive.tar.zst" {
+    compressed := try! readZipEntry("stdlib.zip", entry)
+  }
+}
+```
+
+The source archive must remain unchanged between either scan API and its
+matching selective-read call.
 
 ## Treat time values by meaning
 

@@ -12,7 +12,8 @@ usage() {
   echo "usage: $0 [--help]"
   echo
   echo "Build to a verified fixed point, refresh the source-only bootstrap snapshot,"
-  echo "and run the complete release gate before and after the snapshot update."
+  echo "and run the complete release gate before and after the snapshot update. A"
+  echo "strict stdlib bundle preflight runs before the compiler generations."
   echo
   echo "environment:"
   echo "  DOOF_STDLIB_ROOT              standard-library package root"
@@ -82,10 +83,10 @@ if [ -n "$seed_compiler" ]; then
     echo "DOOF_REFRESH_SEED_COMPILER is not executable: $seed_compiler" >&2
     exit 1
   fi
-  echo "[1/5] Use the explicit self-hosting transition seed"
+  echo "[1/6] Use the explicit self-hosting transition seed"
   stage_compiler="$seed_compiler"
 else
-  echo "[1/5] Compile the checked-in bootstrap snapshot"
+  echo "[1/6] Compile the checked-in bootstrap snapshot"
   "$repo_root/scripts/bootstrap-compiler.sh"
   stage_compiler="$repo_root/build/bootstrap-stage0/doof"
   test -x "$stage_compiler"
@@ -94,7 +95,26 @@ fi
 rm -rf "$refresh_root"
 mkdir -p "$refresh_root"
 
-echo "[2/5] Advance compiler generations to a fixed point"
+stdlib_bundle="$repo_root/build/doof-stdlib.tar"
+preflight_bundle="$refresh_root/preflight-doof-stdlib.tar"
+
+echo "[2/6] Preflight the standard-library release inputs"
+preflight_ok=false
+if DOOF_STDLIB_ROOT="$stdlib_root" "$stage_compiler" run "$repo_root/tools/stdlib-bundle.do" \
+  -o "$refresh_root/stdlib-preflight-tool" -- \
+  "$stdlib_root" "$preflight_bundle" "ios-device,ios-simulator,macos,wasm"; then
+  if [ -f "$preflight_bundle" ]; then
+    preflight_ok=true
+  fi
+fi
+if [ "$preflight_ok" != true ]; then
+  echo "Standard-library preflight failed before compiler generations." >&2
+  echo "Ensure every standard package has its prepared vendored sources and required licenses." >&2
+  exit 1
+fi
+rm -f "$preflight_bundle"
+
+echo "[3/6] Advance compiler generations to a fixed point"
 generation=1
 previous_root=""
 fixed_root=""
@@ -122,16 +142,21 @@ if [ -z "$fixed_root" ]; then
   exit 1
 fi
 
-echo "[3/5] Verify the fixed-point compiler before changing the trust root"
+echo "[4/6] Verify the fixed-point compiler before changing the trust root"
 rm -rf "$repo_root/dist"
 mkdir -p "$repo_root/dist"
 cp "$fixed_root/doof" "$repo_root/dist/doof"
 cp "$repo_root/runtime/doof_runtime.h" "$repo_root/dist/doof_runtime.h"
 cp "$repo_root/runtime/doof_wasm_test_runner_apple.swift" "$repo_root/dist/doof_wasm_test_runner_apple.swift"
-cp "$repo_root/resources/std-catalog.json" "$repo_root/dist/std-catalog.json"
+rm -f "$stdlib_bundle"
+rm -rf "$repo_root/build/stdlib-bundle-tool"
+DOOF_STDLIB_ROOT="$stdlib_root" "$fixed_root/doof" run "$repo_root/tools/stdlib-bundle.do" \
+  -o "$repo_root/build/stdlib-bundle-tool" -- \
+  "$stdlib_root" "$stdlib_bundle" "ios-device,ios-simulator,macos,wasm"
+cp "$stdlib_bundle" "$repo_root/dist/doof-stdlib.tar"
 DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/scripts/release-verify.sh"
 
-echo "[4/5] Refresh the source-only bootstrap snapshot"
+echo "[5/6] Refresh the source-only bootstrap snapshot"
 candidate_root="$refresh_root/candidate-snapshot"
 mkdir -p "$candidate_root" "$snapshot_backup"
 
@@ -140,6 +165,7 @@ rsync -a \
   --exclude='.doof-build/***' \
   --exclude='.doof-objects/***' \
   --exclude='.reckon/***' \
+  --exclude='/std/*/vendor/***' \
   --exclude='/doof_runtime.h' \
   --include='*/' \
   --include='*.c' --include='*.cc' --include='*.cpp' \
@@ -147,6 +173,27 @@ rsync -a \
   --include='*.m' --include='*.mm' \
   --exclude='*' \
   "$fixed_root/" "$candidate_root/"
+
+# Include only vendored native inputs that the verified compiler actually
+# compiled or included. Native include paths may cover a whole curated source
+# tree, but the bootstrap trust root must not absorb upstream examples, tests,
+# or platform-specific contrib sources merely because they share that tree.
+find "$fixed_root/.doof-objects/native" -type f -name '*.o.d' -exec sed -e 's/\\$//' -e '1s/^[^:]*://' {} + | \
+  tr ' ' '\n' | while IFS= read -r dependency; do
+    case "$dependency" in
+      "$fixed_root"/std/*/vendor/*)
+        dependency_dir=$(CDPATH= cd -- "$(dirname -- "$dependency")" && pwd -P)
+        dependency="$dependency_dir/$(basename -- "$dependency")"
+        relative_path=${dependency#"$fixed_root/"}
+        case "$relative_path" in
+          *.c|*.cc|*.cpp|*.h|*.hh|*.hpp|*.m|*.mm)
+            mkdir -p "$(dirname -- "$candidate_root/$relative_path")"
+            cp "$dependency" "$candidate_root/$relative_path"
+            ;;
+        esac
+        ;;
+    esac
+  done
 
 # A host build emits only its selected target-native sources. Preserve foreign
 # alternatives already reviewed into the shared cross-platform snapshot.
@@ -183,7 +230,7 @@ rollback_snapshot=true
 rsync -a --delete "$candidate_root/" "$snapshot_root/"
 echo "  Refreshed $source_count source artifacts."
 
-echo "[5/5] Run the release gate from the refreshed snapshot"
+echo "[6/6] Run the release gate from the refreshed snapshot"
 DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/scripts/release.sh"
 rollback_snapshot=false
 

@@ -57,13 +57,13 @@ function emitMethodReflection(owner: ClassDeclaration, method: FunctionDeclarati
     if parameter.defaultValue != none {
       result = result + "                " + emitContextType(type_, context) + " " + safeName + ";\n"
       result = result + "                if (auto " + iterator + " = _p->find(\"" + escapeCpp(parameter.name) + "\"); " + iterator + " != _p->end()) {\n"
-      result = result + emitParameterValidation(parameter.name, iterator + "->second", type_, "                    ")
+      result = result + emitParameterValidation(parameter.name, iterator + "->second", type_, context, "                    ")
       result = result + "                    " + safeName + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n"
       result = result + "                } else { " + safeName + " = " + emitExpression(parameter.defaultValue!, context, type_) + "; }\n"
     } else {
       result = result + "                auto " + iterator + " = _p->find(\"" + escapeCpp(parameter.name) + "\");\n"
       result = result + "                if (" + iterator + " == _p->end()) { return " + metadataFailure(400, "std::string(\"Missing required parameter \\\"" + escapeCpp(parameter.name) + "\\\"\")") + "; }\n"
-      result = result + emitParameterValidation(parameter.name, iterator + "->second", type_, "                ")
+      result = result + emitParameterValidation(parameter.name, iterator + "->second", type_, context, "                ")
       result = result + "                auto " + safeName + " = " + emitJsonRead(iterator + "->second", type_, context) + ";\n"
     }
   }
@@ -102,8 +102,8 @@ function emitMethodReflection(owner: ClassDeclaration, method: FunctionDeclarati
   return result + "            }\n        }"
 }
 
-function emitParameterValidation(name: string, value: string, type_: ResolvedType, indent: string): string {
-  return indent + "if (!(" + emitJsonTypeCheck(value, type_) + ")) { return " + metadataFailure(400, "std::string(\"Parameter \\\"" + escapeCpp(name) + "\\\" expected " + jsonTypeName(type_) + " but got \") + doof::json_type_name(" + value + ")") + "; }\n"
+function emitParameterValidation(name: string, value: string, type_: ResolvedType, context: EmitContext, indent: string): string {
+  return indent + "if (!(" + emitJsonTypeCheck(value, type_, context) + ")) { return " + metadataFailure(400, "std::string(\"Parameter \\\"" + escapeCpp(name) + "\\\" expected " + jsonTypeName(type_, context) + " but got \") + doof::json_type_name(" + value + ")") + "; }\n"
 }
 
 function metadataFailure(code: int, message: string): string {
@@ -174,8 +174,15 @@ function emitTypeSchemaEntries(type_: ResolvedType, context: EmitContext): strin
     enum_: EnumType -> {
       let values: string[] = []
       declaration := findEnum(context, enum_.symbol.module, enum_.name)
-      if declaration != none { for variant of declaration!.variants { values.push(jsonString(variant.name)) } }
-      return [jsonEntry("enum", jsonArray(values))]
+      let backingKind = "int"
+      if declaration != none {
+        backingKind = declaration!.backingKind
+        for variant of declaration!.variants {
+          if backingKind == "string" { values.push(jsonString(variant.resolvedStringValue ?? "")) }
+          else { values.push(jsonInt(variant.resolvedIntValue ?? 0)) }
+        }
+      }
+      return [jsonEntry("type", jsonString(if backingKind == "string" then "string" else "integer")), jsonEntry("enum", jsonArray(values))]
     }
     union_: UnionResolvedType -> {
       let members: string[] = []

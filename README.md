@@ -32,6 +32,12 @@ count; set `DOOF_BUILD_JOBS` to a positive integer to override the number of
 compiler jobs. The Linux path remains experimental until its shared snapshot
 and release gate are verified on a clean host.
 
+The published compiler includes `dist/doof-stdlib.tar`. With
+`DOOF_STDLIB_ROOT` unset, standard imports are resolved offline from that
+adjacent bundle and reached packages are materialized lazily. Setting the
+environment variable remains the global mutable override used for compiler and
+stdlib development.
+
 ## Compiler commands
 
 ```sh
@@ -61,7 +67,6 @@ contracts.
 ./scripts/test.sh                  # compiler unit/component tests
 ./scripts/bootstrap-compiler-linux.sh # experimental Linux stage-0 compile
 ./scripts/release.sh               # full release acceptance gate
-./scripts/update-std-catalog.sh    # regenerate the exact std package catalog
 ./install.sh                       # build, test, and sudo-install the compiler
 ```
 
@@ -77,7 +82,7 @@ directory at any managed path is left untouched and reported as an error.
 The Linux stage-0 driver selects neutral and `_linux` sources from the shared
 bootstrap graph. It is an experimental portability path, not yet a supported
 clean-bootstrap host or part of the release gate. On Ubuntu, install a C++17
-toolchain, `pkg-config`, and the libcurl development package before building.
+toolchain and `pkg-config` before building.
 
 Language behavior is defined by the [language specification](spec/01-overview.md).
 Compiler contributors should start with the [documentation map](docs/README.md),

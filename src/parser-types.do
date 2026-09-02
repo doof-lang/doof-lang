@@ -31,7 +31,7 @@ function parseTypeMember(parser: Parser): TypeAnnotation {
     start := result.span.start
     parser.advance()
     parser.advance()
-    result = ArrayType { kind: "array-type", elementType: result, readonly_: readonlyPrefix, span: SourceSpan { start, end: parser.location() } }
+    result = ArrayType { kind: "array-type", elementType: result, readonly_: readonlyPrefix, span: SourceSpan { start, end: parser.previousEnd() } }
     readonlyPrefix = false
   }
   if readonlyPrefix {

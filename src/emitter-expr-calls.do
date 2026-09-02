@@ -6,8 +6,7 @@ import { EmitContext, isCapturedMutable, SourceLocationSpanOverride } from "./em
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { decoratedExpressionType, emittedSymbolName, emitExpectedExpression, emitNullableVariantPromotion, exprModuleNamespaceFor, findProperty, needsNullableVariantPromotion, needsVariantPromotion, optionalExpectedType, variantVisitValue } from "./emitter-expr-utils"
-import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, usesVariantRepresentation } from "./emitter-types"
-import { specializeEmitType } from "./emitter-types"
+import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
 
@@ -158,7 +157,14 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   }
   case expression.callee {
     member: MemberExpression -> {
-      arrayObjectType := decoratedExpressionType(member.object)
+      let arrayObjectType = decoratedExpressionType(member.object)
+      if arrayObjectType != none {
+        arrayObjectType = specializeEmitType(arrayObjectType!, context)
+        if member.force {
+          forcedType := naturalNullableUnionMember(arrayObjectType!)
+          if forcedType != none { arrayObjectType = forcedType }
+        }
+      }
       let nominalReceiver = false
       if arrayObjectType != none {
         case arrayObjectType! {
@@ -221,6 +227,21 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
             if member.property == "fromName" || member.property == "fromValue" {
               args := if expression.args.length == 0 then "" else emitExpression(expression.args[0].value, context)
               return emitContextType(enum_, context) + "_" + member.property + "(" + args + ")"
+            }
+            if member.property == "values" { return emitContextType(enum_, context) + "_values()" }
+            if member.property == "toJsonValue" {
+              let receiver = emitExpression(member.object, context)
+              if member.force { receiver = "doof::unwrap_optional(" + receiver + ")" }
+              return emitContextType(enum_, context) + "_toJsonValue(" + receiver + ")"
+            }
+            if member.property == "fromJsonValue" {
+              let args = ""
+              for i of 0..<expression.args.length {
+                if i > 0 { args = args + ", " }
+                args = args + emitExpression(expression.args[i].value, context)
+              }
+              if expression.args.length == 1 { args = args + ", false" }
+              return emitContextType(enum_, context) + "_fromJsonValue(" + args + ")"
             }
           }
           _ -> { }
@@ -679,6 +700,7 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
     if constructorMethod == none { panic("Construction of '" + expression.type_ + "' has unexpected constructor metadata") }
     return emitNamedConstructorFactoryCall(owner!, expression.resolvedConstructor!, expression, context)
   }
+  spreadName := constructionSpreadTemporary(expression, context)
   let cppName = expression.type_
   let native = class_!.native_
   let structValue = false
@@ -722,7 +744,8 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
             _ -> { value = emitExpectedExpression(property!.value!, context, field.resolvedType) }
           }
         }
-      } else if field.defaultValue != none { value = emitDefaultExpression(field.defaultValue!, context, field.resolvedType, expression.span) }
+      } else if hasSpreadField(expression, name) { value = emitConstructionSpreadField(expression, spreadName, name, context) }
+      else if field.defaultValue != none { value = emitDefaultExpression(field.defaultValue!, context, field.resolvedType, expression.span) }
       else { panic("Construction of '" + expression.type_ + "' is missing required field '" + name + "'") }
       // Shorthand fields have no expression node, so they cannot pass their
       // expected type through emitExpression's central promotion path.
@@ -731,9 +754,9 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
       values = values + value
     }
   }
-  if native { return "std::make_shared<" + cppName + ">(" + values + ")" }
-  if structValue { return cppName + "{" + values + "}" }
-  return "std::make_shared<" + cppName + ">(" + values + ")"
+  let result = "std::make_shared<" + cppName + ">(" + values + ")"
+  if structValue { result = cppName + "{" + values + "}" }
+  return wrapConstructionSpread(expression, spreadName, result, context)
 }
 
 function emitConstructorFactoryCall(owner: ClassType, constructorMethod: FunctionDeclaration, args: CallArgument[], context: EmitContext, callSiteSpan: SourceSpan): string {
@@ -765,6 +788,7 @@ function emitNamedConstructorFactoryCall(owner: ClassType, constructorMethod: Fu
   let cppName = if owner.symbol.native_ then "::" + (if owner.symbol.nativeCppName == "" then owner.symbol.name else owner.symbol.nativeCppName) else if owner.symbol.module != "" && owner.symbol.module != context.modulePath then "::" + exprModuleNamespaceFor(owner.symbol.module) + "::" + emittedSymbolName(owner.symbol) else emittedSymbolName(owner.symbol)
   concrete := concreteClassName(owner, context)
   if concrete != "" { cppName = concrete }
+  spreadName := constructionSpreadTemporary(expression, context)
   let result = cppName + "::constructor("
   for i of 0..<constructorMethod.params.length {
     if i > 0 { result = result + ", " }
@@ -773,11 +797,41 @@ function emitNamedConstructorFactoryCall(owner: ClassType, constructorMethod: Fu
     if property != none {
       if property!.value == none { result = result + cppIdentifier(property!.name) }
       else { result = result + emitExpression(property!.value!, context, parameter.resolvedType) }
+    } else if hasSpreadField(expression, parameter.name) {
+      result = result + emitConstructionSpreadField(expression, spreadName, parameter.name, context)
     } else if parameter.defaultValue != none {
       result = result + emitDefaultExpression(parameter.defaultValue!, context, parameter.resolvedType, expression.span)
     } else { panic("Constructor " + owner.name + " is missing argument " + parameter.name) }
   }
-  return result + ")"
+  return wrapConstructionSpread(expression, spreadName, result + ")", context)
+}
+
+function constructionSpreadTemporary(expression: ConstructExpression, context: EmitContext): string {
+  if expression.spread == none { return "" }
+  context.tryCounter = context.tryCounter + 1
+  return "_construct_spread_" + string(context.tryCounter)
+}
+
+function hasSpreadField(expression: ConstructExpression, name: string): bool {
+  for field of expression.spreadFields { if field == name { return true } }
+  return false
+}
+
+function emitConstructionSpreadField(expression: ConstructExpression, temporary: string, name: string, context: EmitContext): string {
+  if expression.resolvedSpreadType == none { panic("Construction spread has no resolved type") }
+  case expression.resolvedSpreadType! {
+    class_: ClassType -> {
+      accessor := if class_.symbol.kind == "struct" then "." else "->"
+      return temporary + accessor + cppIdentifier(name)
+    }
+    _: InterfaceType -> { return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(name) + "; }, " + temporary + ")" }
+    _ -> { panic("Construction spread has unsupported resolved type") }
+  }
+}
+
+function wrapConstructionSpread(expression: ConstructExpression, temporary: string, result: string, context: EmitContext): string {
+  if expression.spread == none { return result }
+  return "[&]() { const auto& " + temporary + " = " + emitExpression(expression.spread!, context, expression.resolvedSpreadType) + "; return " + result + "; }()"
 }
 
 function emitDefaultExpression(expression: Expression, context: EmitContext, expected: ResolvedType | none, callSiteSpan: SourceSpan): string {

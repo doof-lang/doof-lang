@@ -6,7 +6,7 @@ import {
 } from "./frontend-cache"
 
 export function testFrontendSemanticAbiInvalidatesPreValidationCaches(): none {
-  Assert.equal(FRONTEND_SEMANTIC_ABI, 10)
+  Assert.equal(FRONTEND_SEMANTIC_ABI, 13)
 }
 
 export function testFrontendCacheStateRoundTrips(): none {

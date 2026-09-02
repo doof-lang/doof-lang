@@ -2,7 +2,7 @@
 
 namespace std_::time::stopwatch {
 using namespace ::std_::time::duration;
-using namespace ::std_::time::temporal;
+using namespace ::std_::time::monotonic;
 
 
 
@@ -51,7 +51,7 @@ void TimerBucket::insertSorted(int64_t nanos) {
 }
 
 std::shared_ptr<StopwatchSpan> Stopwatch::measure(const std::string& name) {
-    return std::make_shared<StopwatchSpan>(std::shared_ptr<Stopwatch>(this, [](Stopwatch*) {}), name, ::std_::time::temporal::Instant::now(), false, nullptr);
+    return std::make_shared<StopwatchSpan>(std::shared_ptr<Stopwatch>(this, [](Stopwatch*) {}), name, ::std_::time::monotonic::MonotonicInstant::now(), false, nullptr);
 }
 int32_t Stopwatch::count(const std::string& name) {
     auto _binding_value_1 = bucketFor(name);
@@ -134,7 +134,7 @@ std::shared_ptr<::std_::time::duration::Duration> StopwatchSpan::finish() {
     if (this->finished) {
         return doof::unwrap_optional(this->finishedDuration);
     }
-    auto elapsed = this->startedAt->durationUntil(::std_::time::temporal::Instant::now());
+    auto elapsed = this->startedAt->durationUntil(::std_::time::monotonic::MonotonicInstant::now());
     this->stopwatch->record(this->name, elapsed);
     (this->finished = true);
     (this->finishedDuration = elapsed);

@@ -380,13 +380,13 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                     }
                 }
             }
-            const auto& _iterable_20 = classDeclaration->fields;
-            for (const auto& field : *_iterable_20) {
+            const auto& _iterable_22 = classDeclaration->fields;
+            for (const auto& field : *_iterable_22) {
                 if (field->static_ || (!structural && field->const_)) {
                     continue;
                 }
-                const auto& _iterable_22 = field->names;
-                for (const auto& name : *_iterable_22) {
+                const auto& _iterable_20 = field->names;
+                for (const auto& name : *_iterable_20) {
                     const auto required = (field->const_ || doof::is_null(field->defaultValue));
                     if (required && !::app_src_checker_symbols_::hasObjectProperty(expression->properties, name)) {
                         ::app_src_checker_common_::typeError(state, ((std::string("Missing required field '") + name) + std::string("'")), expression->span);
@@ -482,13 +482,13 @@ bool objectShapeMatchesClass(const std::shared_ptr<::app_src_checker_state_::Che
                     return false;
                 }
             }
-            const auto& _iterable_32 = classDeclaration->fields;
-            for (const auto& field : *_iterable_32) {
+            const auto& _iterable_34 = classDeclaration->fields;
+            for (const auto& field : *_iterable_34) {
                 if (field->static_) {
                     continue;
                 }
-                const auto& _iterable_34 = field->names;
-                for (const auto& name : *_iterable_34) {
+                const auto& _iterable_32 = field->names;
+                for (const auto& name : *_iterable_32) {
                     if ((field->const_ || doof::is_null(field->defaultValue)) && !::app_src_checker_symbols_::hasObjectProperty(expression->properties, name)) {
                         return false;
                     }

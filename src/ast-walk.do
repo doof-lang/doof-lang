@@ -144,6 +144,7 @@ export function collectNestedExpressions(expression: Expression, result: Express
     retire_: RetireExpression -> { result.push(retire_.actor) }
     actor: ActorCreationExpression -> { for argument of actor.args { result.push(argument) } }
     construct: ConstructExpression -> {
+      if construct.spread != none { result.push(construct.spread!) }
       for property of construct.args { if property.value != none { result.push(property.value!) } }
     }
     as_: AsExpression -> { result.push(as_.expression) }

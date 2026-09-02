@@ -65,10 +65,31 @@ export function testEmitsTypedTagsThroughNamedCallAndConstructorPaths(): none {
   Assert.stringContains(result.source, "std::string(\"hello\")")
 }
 
+export function testEmitsNamedConstructionFieldSpreadOnceWithOverrides(): none {
+  result := emit("class BaseConfig { host: string\nport: int }\nclass ExtendedConfig { host: string\nport: int\ntimeout: int }\nfunction extend(base: BaseConfig): ExtendedConfig => ExtendedConfig { ...base, port: 9000, timeout: 30 }")
+  Assert.stringContains(result.source, "const auto& _construct_spread_")
+  Assert.stringContains(result.source, "_construct_spread_")
+  Assert.stringContains(result.source, "->host")
+  Assert.stringContains(result.source, ", 9000, 30)")
+}
+
 export function testEscapesQuestionMarksInCppStringLiteralsToAvoidTrigraphs(): none {
   result := emit("function main(): string => \"Operator '??=' remains readable\"")
   Assert.stringContains(result.source, "std::string(\"Operator '\\?\\?=' remains readable\")")
   Assert.stringNotContains(result.source, "Operator '??='")
+}
+
+export function testPreservesEmbeddedNulInStringConstants(): none {
+  result := emit(
+    "function literal(): string => \"a\\07\"\n" +
+    "function folded(): string => \"left\\0\" + \"right\"\n" +
+    "function interpolated(value: int): string => \"before\\0\${value}after\\0end\"",
+  )
+  Assert.stringContains(result.source, "std::string(\"a\\0007\", 3)")
+  Assert.stringContains(result.source, "std::string(\"left\\000right\", 10)")
+  Assert.stringContains(result.source, "std::string _interpolation = std::string(\"before\\000\", 7)")
+  Assert.stringContains(result.source, "_interpolation += std::string(\"after\\000end\", 9)")
+  Assert.equal(result.source.contains(string('\0')), false)
 }
 
 export function testOmitsEmptyNamespaceBlocksFromHeaders(): none {
@@ -673,6 +694,27 @@ export function testTryBangPanicIncludesOriginAndStringFailure(): none {
   Assert.stringContains(enumFailure.source, "doof::panic_at(\"main\", 3, std::string(\"try! failed\"))")
 }
 
+export function testTryQuestionReturnsNoneOnFailureWithoutPanicking(): none {
+  result := emit("function main(): string | none { values: Map<string, string> := {}\nreturn try? values.get(\"missing\") }")
+  Assert.stringContains(result.source, "if (doof::is_failure(_try_value)) return std::nullopt;")
+  Assert.stringContains(result.source, "return std::move(doof::success_value(_try_value));")
+  Assert.stringNotContains(result.source, "try? failed")
+  Assert.stringNotContains(result.source, "std::optional<std::optional<std::string>>")
+}
+
+export function testTryQuestionFlattensNullableSuccessPayload(): none {
+  result := emit("function maybe(): Result<string | none, string> => Success { value: none }\nfunction main(): string | none => try? maybe()")
+  Assert.stringContains(result.source, "[&]() -> std::optional<std::string>")
+  Assert.stringContains(result.source, "if (doof::is_failure(_try_value)) return std::nullopt;")
+  Assert.stringNotContains(result.source, "std::optional<std::optional<std::string>>")
+}
+
+export function testTryQuestionPromotesUnionSuccessIntoNullableUnion(): none {
+  result := emit("function maybe(flag: bool): Result<int | string, string> => if flag then Success { value: 1 } else Success { value: \"present\" }\nfunction main(): int | string | none => try? maybe(true)")
+  Assert.stringContains(result.source, "doof::optional_value(std::move(doof::success_value(_try_value)))")
+  Assert.stringContains(result.source, "if (doof::is_failure(_try_value)) return std::monostate{};")
+}
+
 export function testActorCreationUsesTrailingFieldDefaults(): none {
   result := emit("class Worker { values: int[] = []\nlimit: int = 4 }\nfunction create(): Actor<Worker> => Actor<Worker>()")
   Assert.equal(result.header.contains("Worker(std::shared_ptr<std::vector<int32_t>> values, int32_t limit)"), true)
@@ -840,9 +882,10 @@ export function testUnwrapsNullableEnumFieldsToTheirEnumValue(): none {
     "function checkField(state: State): bool => isVictory(state.pending!)\n" +
     "function checkLocal(pending: Outcome | none): bool => isVictory(pending!)",
   )
-  Assert.stringContains(result.source, "isVictory(std::get<Outcome>(state->pending))")
-  Assert.stringContains(result.source, "isVictory(std::get<Outcome>(pending))")
-  Assert.equal(result.source.contains("isVictory(doof::unwrap_optional(state->pending))"), false)
+  Assert.stringContains(result.header, "std::optional<Outcome>")
+  Assert.stringContains(result.source, "isVictory(doof::unwrap_optional(state->pending))")
+  Assert.stringContains(result.source, "isVictory(doof::unwrap_optional(pending))")
+  Assert.stringNotContains(result.header, "std::variant<std::monostate, Outcome>")
 }
 
 export function testTreatsCompilerAstSpellingsAsOrdinaryNominalTypes(): none {
@@ -1291,12 +1334,80 @@ export function testEngagesOuterPresenceForNullableJsonDefaults(): none {
 
 export function testEmitsRecursiveAutomaticJsonTypes(): none {
   result := emit("enum Kind { One, Two }\nclass Point { x: double\ny: double }\nclass Payload { kind: Kind\nids: int[]\npoints: Point[]\nselected: Point | null = null }\nfunction encode(value: Payload): JsonObject => value.toJsonObject()\nfunction decode(value: JsonValue): Result<Payload, string> => Payload.fromJsonValue(value)")
-  Assert.equal(result.header.contains("Kind_fromName"), true)
+  Assert.equal(result.header.contains("Kind_fromValue"), true)
+  Assert.stringContains(result.source, "Kind_toJsonValue(this->kind)")
+  Assert.stringContains(result.source, "Kind_fromJsonValue")
   Assert.equal(result.source.contains("this->kind"), true)
   Assert.equal(result.source.contains("for (const auto& _element : *this->ids)"), true)
   Assert.equal(result.source.contains("Point::fromJsonValue"), true)
   Assert.stringContains(result.source, "doof::json_decode_value(Point::fromJsonValue")
   Assert.stringContains(result.source, "catch (const doof::JsonDecodeError& _error)")
+}
+
+export function testEmitsValueBackedEnumHelpersAndDirectJson(): none {
+  result := emit(
+    "enum State { Pending, Ready = 7, Done }\n" +
+    "enum WireState { Pending = \"pending\", Ready = \"ready\" }\n" +
+    "function render(value: State): string => string(value) + value.name\n" +
+    "function stateValue(): int => State.Ready.value\n" +
+    "function wireValue(): string => WireState.Ready.value\n" +
+    "function states(): readonly State[] => State.values()\n" +
+    "function forcedName(): string => State.fromValue(7)!.name\n" +
+    "function forcedValue(): int => State.fromName(\"Ready\")!.value\n" +
+    "function encode(value: WireState): JsonValue => value.toJsonValue()\n" +
+    "function decode(value: JsonValue): Result<WireState, string> => WireState.fromJsonValue(value)"
+  )
+  Assert.stringContains(result.header, "Pending = 0")
+  Assert.stringContains(result.header, "Ready = 7")
+  Assert.stringContains(result.header, "Done = 8")
+  Assert.stringContains(result.header, "inline std::string WireState_value")
+  Assert.stringContains(result.header, "case WireState::Ready: return \"ready\"")
+  Assert.stringContains(result.header, "State_values()")
+  Assert.stringContains(result.header, "State_toJsonValue")
+  Assert.stringContains(result.source, "WireState_toJsonValue(value)")
+  Assert.stringContains(result.source, "State_value(State::Ready)")
+  Assert.stringContains(result.source, "WireState_value(WireState::Ready)")
+  Assert.stringContains(result.source, "State_name(doof::unwrap_optional(State_fromValue(7)))")
+  Assert.stringContains(result.source, "State_value(doof::unwrap_optional(State_fromName")
+  Assert.stringContains(result.source, "WireState_fromJsonValue(value, false)")
+  Assert.stringContains(result.source, "doof::to_string(value)")
+}
+
+export function testEmitsNullableEnumDeclarationElseAsPlainEnum(): none {
+  result := emit(
+    "enum MoreMonstersOutcome { Continue, Stop }\n" +
+    "function outcomeAfterTurn(): MoreMonstersOutcome | none => MoreMonstersOutcome.Continue\n" +
+    "function showOutcome(value: MoreMonstersOutcome): none {}\n" +
+    "function run(): none { outcome := outcomeAfterTurn() else { return }\nshowOutcome(outcome) }"
+  )
+  Assert.stringContains(result.header, "std::optional<MoreMonstersOutcome> outcomeAfterTurn")
+  Assert.stringContains(result.source, "doof::unwrap_optional(_binding_value_")
+  Assert.stringContains(result.source, "showOutcome(outcome)")
+  Assert.stringNotContains(result.header, "std::variant<std::monostate, MoreMonstersOutcome>")
+}
+
+export function testEmitsNullableEnumsThroughAllOrdinaryCarrierFlows(): none {
+  result := emit(
+    "enum Outcome { Continue, Stop }\n" +
+    "class Holder { current: Outcome | none = none }\n" +
+    "function maybe(): Outcome | none => Outcome.Continue\n" +
+    "function accept(value: Outcome): Outcome => value\n" +
+    "function parameter(value: Outcome | none): Outcome => value ?? Outcome.Stop\n" +
+    "function postfix(value: Outcome | none): Outcome => value!\n" +
+    "function encodeForced(value: Outcome | none): JsonValue => value!.toJsonValue()\n" +
+    "function cast(value: Outcome | none): Outcome { resolved := value as Outcome else { return Outcome.Stop }\nreturn resolved }\n" +
+    "function assign(value: Outcome): Outcome | none { let result: Outcome | none = none\nresult = value\nreturn result }\n" +
+    "function field(holder: Holder): Outcome { resolved := holder.current else { return Outcome.Stop }\nreturn accept(resolved) }\n" +
+    "function decode(value: JsonValue): Result<Holder, string> => Holder.fromJsonValue(value)"
+  )
+  Assert.stringContains(result.header, "std::optional<Outcome> current")
+  Assert.stringContains(result.header, "std::optional<Outcome> maybe")
+  Assert.stringContains(result.header, "parameter(const std::optional<Outcome>& value)")
+  Assert.stringContains(result.source, "doof::unwrap_optional(value)")
+  Assert.stringContains(result.source, "Outcome_toJsonValue(doof::unwrap_optional(value))")
+  Assert.stringContains(result.source, "doof::unwrap_optional(_binding_value_")
+  Assert.stringContains(result.source, "std::optional<Outcome>{doof::json_decode_value(Outcome_fromJsonValue")
+  Assert.stringNotContains(result.header, "std::variant<std::monostate, Outcome>")
 }
 
 export function testEmitsUnicodeCharJsonConversionAndValidation(): none {
@@ -1356,6 +1467,22 @@ export function testEmitsDescriptionsMetadataSchemasAndInvoke(): none {
   Assert.equal(result.source.contains("doof::Success<doof::JsonValue>"), true)
   Assert.equal(result.source.contains("Tool::_metadata"), true)
   Assert.equal(result.source.contains("metadata.invoke"), true)
+}
+
+export function testEmitsEnumMetadataSchemasFromBackingValues(): none {
+  result := emit(
+    "enum State { Pending, Ready = 7, Done }\n" +
+    "enum WireState { Pending = \"pending\", Ready = \"ready\" }\n" +
+    "class Tool { function change(state: State, wire: WireState): State => state }\n" +
+    "function metadata(): string => Tool.metadata.name"
+  )
+  Assert.stringContains(result.source, "{\"type\", doof::json_value(\"integer\")}")
+  Assert.stringContains(result.source, "doof::json_value(static_cast<int32_t>(0))")
+  Assert.stringContains(result.source, "doof::json_value(static_cast<int32_t>(7))")
+  Assert.stringContains(result.source, "doof::json_value(static_cast<int32_t>(8))")
+  Assert.stringContains(result.source, "{\"type\", doof::json_value(\"string\")}")
+  Assert.stringContains(result.source, "doof::json_value(\"pending\")")
+  Assert.stringContains(result.source, "doof::json_value(\"ready\")")
 }
 
 export function testEmitsDirectionalJsonDependenciesForMetadataInvoke(): none {
@@ -1580,6 +1707,14 @@ export function testEmitsAssignmentsAndArrayLoops(): none {
   Assert.stringContains(result.source, "doof::array_at(values, 0, \"main\", 2) = 4")
   Assert.equal(result.source.contains("const auto& _iterable_"), true)
   Assert.equal(result.source.contains("for (const auto& item : *_iterable_"), true)
+}
+
+export function testEmitsLabeledBreakAndContinueTargets(): none {
+  result := emit("function main(): int { let total = 0\nouter: for i of 0..<3 { inner: while true { if i == 1 { continue outer }\ntotal = total + i\nbreak inner }\nif total > 2 { break outer } }\nreturn total }")
+  Assert.stringContains(result.source, "goto _doof_continue_")
+  Assert.stringContains(result.source, "goto _doof_break_")
+  Assert.stringContains(result.source, "_doof_continue_")
+  Assert.stringContains(result.source, "_doof_break_")
 }
 
 export function testKeepsComputedForOfCollectionAlive(): none {

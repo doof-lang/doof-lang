@@ -21,27 +21,27 @@ doof::Result<std::shared_ptr<MaterializedResource>, std::string> MaterializedRes
     auto _iterator_sourcePath = _object->find("sourcePath");
     if (_iterator_sourcePath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"sourcePath\""}; }
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_sourcePath->second) : doof::json_is_string(_iterator_sourcePath->second)))) { return doof::Failure<std::string>{"Field \"sourcePath\" expected string but got " + std::string(doof::json_type_name(_iterator_sourcePath->second))}; }
-    auto _field_sourcePath = (_lenient ? doof::json_as_string_lenient(_iterator_sourcePath->second) : doof::json_as_string(_iterator_sourcePath->second));
+    auto _field_sourcePath = doof::json_decode_at("Field \"sourcePath\"", [&]() { return (_lenient ? doof::json_as_string_lenient(_iterator_sourcePath->second) : doof::json_as_string(_iterator_sourcePath->second)); });
     auto _iterator_outputPath = _object->find("outputPath");
     if (_iterator_outputPath == _object->end()) { return doof::Failure<std::string>{"Missing required field \"outputPath\""}; }
         if (!((_lenient ? doof::json_is_lenient_string(_iterator_outputPath->second) : doof::json_is_string(_iterator_outputPath->second)))) { return doof::Failure<std::string>{"Field \"outputPath\" expected string but got " + std::string(doof::json_type_name(_iterator_outputPath->second))}; }
-    auto _field_outputPath = (_lenient ? doof::json_as_string_lenient(_iterator_outputPath->second) : doof::json_as_string(_iterator_outputPath->second));
+    auto _field_outputPath = doof::json_decode_at("Field \"outputPath\"", [&]() { return (_lenient ? doof::json_as_string_lenient(_iterator_outputPath->second) : doof::json_as_string(_iterator_outputPath->second)); });
     auto _iterator_sourceSize = _object->find("sourceSize");
     if (_iterator_sourceSize == _object->end()) { return doof::Failure<std::string>{"Missing required field \"sourceSize\""}; }
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_sourceSize->second) : doof::json_is_number(_iterator_sourceSize->second)))) { return doof::Failure<std::string>{"Field \"sourceSize\" expected number but got " + std::string(doof::json_type_name(_iterator_sourceSize->second))}; }
-    auto _field_sourceSize = (_lenient ? doof::json_as_long_lenient(_iterator_sourceSize->second) : doof::json_as_long(_iterator_sourceSize->second));
+    auto _field_sourceSize = doof::json_decode_at("Field \"sourceSize\"", [&]() { return (_lenient ? doof::json_as_long_lenient(_iterator_sourceSize->second) : doof::json_as_long(_iterator_sourceSize->second)); });
     auto _iterator_sourceModifiedNanos = _object->find("sourceModifiedNanos");
     if (_iterator_sourceModifiedNanos == _object->end()) { return doof::Failure<std::string>{"Missing required field \"sourceModifiedNanos\""}; }
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_sourceModifiedNanos->second) : doof::json_is_number(_iterator_sourceModifiedNanos->second)))) { return doof::Failure<std::string>{"Field \"sourceModifiedNanos\" expected number but got " + std::string(doof::json_type_name(_iterator_sourceModifiedNanos->second))}; }
-    auto _field_sourceModifiedNanos = (_lenient ? doof::json_as_long_lenient(_iterator_sourceModifiedNanos->second) : doof::json_as_long(_iterator_sourceModifiedNanos->second));
+    auto _field_sourceModifiedNanos = doof::json_decode_at("Field \"sourceModifiedNanos\"", [&]() { return (_lenient ? doof::json_as_long_lenient(_iterator_sourceModifiedNanos->second) : doof::json_as_long(_iterator_sourceModifiedNanos->second)); });
     auto _iterator_outputSize = _object->find("outputSize");
     if (_iterator_outputSize == _object->end()) { return doof::Failure<std::string>{"Missing required field \"outputSize\""}; }
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_outputSize->second) : doof::json_is_number(_iterator_outputSize->second)))) { return doof::Failure<std::string>{"Field \"outputSize\" expected number but got " + std::string(doof::json_type_name(_iterator_outputSize->second))}; }
-    auto _field_outputSize = (_lenient ? doof::json_as_long_lenient(_iterator_outputSize->second) : doof::json_as_long(_iterator_outputSize->second));
+    auto _field_outputSize = doof::json_decode_at("Field \"outputSize\"", [&]() { return (_lenient ? doof::json_as_long_lenient(_iterator_outputSize->second) : doof::json_as_long(_iterator_outputSize->second)); });
     auto _iterator_outputModifiedNanos = _object->find("outputModifiedNanos");
     if (_iterator_outputModifiedNanos == _object->end()) { return doof::Failure<std::string>{"Missing required field \"outputModifiedNanos\""}; }
         if (!((_lenient ? doof::json_is_lenient_number(_iterator_outputModifiedNanos->second) : doof::json_is_number(_iterator_outputModifiedNanos->second)))) { return doof::Failure<std::string>{"Field \"outputModifiedNanos\" expected number but got " + std::string(doof::json_type_name(_iterator_outputModifiedNanos->second))}; }
-    auto _field_outputModifiedNanos = (_lenient ? doof::json_as_long_lenient(_iterator_outputModifiedNanos->second) : doof::json_as_long(_iterator_outputModifiedNanos->second));
+    auto _field_outputModifiedNanos = doof::json_decode_at("Field \"outputModifiedNanos\"", [&]() { return (_lenient ? doof::json_as_long_lenient(_iterator_outputModifiedNanos->second) : doof::json_as_long(_iterator_outputModifiedNanos->second)); });
         return doof::Success<std::shared_ptr<MaterializedResource>>{std::make_shared<MaterializedResource>(_field_sourcePath, _field_outputPath, _field_sourceSize, _field_sourceModifiedNanos, _field_outputSize, _field_outputModifiedNanos)};
     } catch (const doof::JsonDecodeError& _error) {
         return doof::Failure<std::string>{_error.message()};
@@ -61,14 +61,14 @@ doof::Result<std::shared_ptr<ResourceState>, std::string> ResourceState::fromJso
     std::optional<int32_t> _field_version;
     if (auto _iterator_version = _object->find("version"); _iterator_version != _object->end()) {
             if (!((_lenient ? doof::json_is_lenient_number(_iterator_version->second) : doof::json_is_number(_iterator_version->second)))) { return doof::Failure<std::string>{"Field \"version\" expected number but got " + std::string(doof::json_type_name(_iterator_version->second))}; }
-        _field_version = (_lenient ? doof::json_as_int_lenient(_iterator_version->second) : doof::json_as_int(_iterator_version->second));
+        _field_version = doof::json_decode_at("Field \"version\"", [&]() { return (_lenient ? doof::json_as_int_lenient(_iterator_version->second) : doof::json_as_int(_iterator_version->second)); });
     } else {
         _field_version = 1;
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>>> _field_files;
     if (auto _iterator_files = _object->find("files"); _iterator_files != _object->end()) {
             if (!(doof::json_is_array(_iterator_files->second))) { return doof::Failure<std::string>{"Field \"files\" expected array but got " + std::string(doof::json_type_name(_iterator_files->second))}; }
-        _field_files = [&]() { const auto* _array = doof::json_as_array(_iterator_files->second); auto _values = std::make_shared<std::vector<std::shared_ptr<MaterializedResource>>>(); _values->reserve(_array->size()); for (const auto& _element : *_array) { _values->push_back(doof::json_decode_value(MaterializedResource::fromJsonValue(_element, _lenient))); } return _values; }();
+        _field_files = doof::json_decode_at("Field \"files\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_files->second); auto _values = std::make_shared<std::vector<std::shared_ptr<MaterializedResource>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(MaterializedResource::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
     } else {
         _field_files = std::make_shared<std::vector<std::shared_ptr<MaterializedResource>>>(std::vector<std::shared_ptr<MaterializedResource>>{});
     }

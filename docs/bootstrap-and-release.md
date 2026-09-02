@@ -12,10 +12,11 @@ performs three compiler generations:
 3. B5 compiles the same graph into B6.
 
 The gate compares every generated C/C++/Objective-C++ header and source from B5
-and B6 byte-for-byte. After a match, B6 packages the same compiler sources with
-the optimized release graph and publishes that executable and its explicit
-resources to `dist/`. B5 and B6 remain ordinary development builds because the
-fixed-point decision concerns their generated source, not their native flags.
+and B6 byte-for-byte. After a match, B6 regenerates the deterministic
+`doof-stdlib.tar`, packages the same compiler sources with the optimized release
+graph, and publishes that executable and its explicit resources to `dist/`.
+B5 and B6 remain ordinary development builds because the fixed-point decision
+concerns their generated source, not their native flags.
 
 Bootstrap snapshots are source-only and must not contain binaries, objects,
 PCH files, build databases, absolute developer paths, or emitted C++ `#line`
@@ -43,9 +44,38 @@ source graphs to match, verifies that fixed-point compiler before changing the
 snapshot, and reruns the complete gate from the refreshed stage 0. The seed is
 therefore a transition input, never the refreshed trust root by itself.
 
-`./scripts/release.sh` adds compiler coverage and CLI/native/resource/package
-fixtures, plus macOS framework and iOS simulator acceptance checks. Release
-artifacts and all mutable state remain below ignored `build/` and `dist/`.
+Before advancing compiler generations, the refresh builds and validates the
+stdlib bundle. Missing prepared vendor inputs or required licenses fail before
+the expensive fixed-point work.
+
+`./scripts/release.sh` invokes `./build.sh --release`. It adds compiler coverage and
+CLI/native/resource/package fixtures, bundled offline standard-library, WebP,
+and target-native HTTP acceptance, plus macOS framework and iOS simulator checks. Ordinary
+`./build.sh` produces an unverified but content-addressed development bundle so
+local stdlib work remains usable. Release artifacts and all mutable state
+remain below ignored `build/` and `dist/`.
+
+The outer archive is an uncompressed seekable tar whose package manifests,
+individual modules, and package-native trees are independent `tar.zst`
+members. Its authoritative index records package names, member hashes, bundle
+identity, and mandatory vendored license paths. Curation intentionally removes
+obvious project-only and generated build state without attempting source-level
+dependency closure. In particular, the image package retains libwebp's complete
+`dsp`, `enc`, `dec`, `utils`, `webp`, and `sharpyuv` trees and omits only the
+independent `demux` and `mux` components. The authenticated bundle index also
+records the release's supported native targets. Apple and Windows bundles omit
+vendored curl because those HTTP backends use URLSession and WinHTTP; Linux
+bundles retain curl for the Linux HTTP backend.
+
+On macOS, the release gate also compiles and runs the Wasm test fixtures. The
+host therefore needs `em++` and `xcrun swiftc`. Emscripten writes cache entries
+and lock files inside its installation cache; for a Homebrew installation this
+is normally below
+`/opt/homebrew/Cellar/emscripten/<version>/libexec/cache`. Sandboxed automation
+must be granted write access to that external toolchain cache before starting
+`./scripts/release.sh` or `./scripts/refresh-bootstrap.sh`. Without it, the
+native portions of the gate may finish before the Wasm link fails with a
+`PermissionError` while creating a `symbol_lists/*.json.lock` file.
 
 Supported clean-bootstrap hosts are macOS arm64 with Xcode Command Line Tools
 and Windows x64 with the MSVC C++ workload. `DOOF_STDLIB_ROOT` or adjacent
@@ -91,9 +121,9 @@ not leak into one another.
 Run `./install.sh` to build through the B5/B6 fixed point, run the compiler
 suite, and install the verified artifacts. No privileged command runs until
 both verification steps pass. The default layout keeps `doof`,
-`doof_runtime.h`, and `std-catalog.json` together in
+`doof_runtime.h` and `doof-stdlib.tar` together in
 `/usr/local/libexec/doof`, with `/usr/local/bin/doof` as a relative symlink to
-the bundled executable. Relative links for both resources are also placed in
+the bundled executable. Relative resource links are also placed in
 `/usr/local/bin`, because macOS console executables resolve packaged resources
 from the launch directory even when the executable itself is a symlink.
 

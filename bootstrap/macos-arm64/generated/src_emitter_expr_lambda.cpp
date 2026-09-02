@@ -40,7 +40,12 @@ std::string emitLambdaExpression(const std::shared_ptr<::app_src_ast_::LambdaExp
             if (i > 0) {
                 (captures = (captures + std::string(", ")));
             }
-            (captures = (captures + doof::array_at(captureNames, i, "src/emitter-expr-lambda", 46)));
+            const auto capture = doof::array_at(captureNames, i, "src/emitter-expr-lambda", 46);
+            if (((capture == std::string("this")) && (context->currentClass != std::string(""))) && !context->currentClassStruct) {
+                (captures = (captures + std::string("this, _doof_captured_self = this->shared_from_this()")));
+            } else {
+                (captures = (captures + capture));
+            }
         }
     }
     const auto previousReturnErrorType = context->currentReturnErrorType;
@@ -121,11 +126,11 @@ std::shared_ptr<std::vector<std::string>> lambdaCaptureNames(const std::shared_p
     }
     }
     std::shared_ptr<std::vector<std::string>> captures = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_4 = result;
-    for (const auto& name : *_iterable_4) {
+    const auto& _iterable_6 = result;
+    for (const auto& name : *_iterable_6) {
         auto parameter = false;
-        const auto& _iterable_6 = expression->params;
-        for (const auto& item : *_iterable_6) {
+        const auto& _iterable_4 = expression->params;
+        for (const auto& item : *_iterable_4) {
             if (::app_src_emitter_expr_::cppIdentifier(item->name) == name) {
                 (parameter = true);
             }
@@ -404,6 +409,9 @@ void scanExpressionForLambdas(const std::variant<std::shared_ptr<::app_src_ast_:
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject)) {
             const auto& construct = std::get<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject);
+            if (!doof::is_null(construct->spread)) {
+                scanExpressionForLambdas(doof::unwrap_optional(construct->spread), result);
+            }
             const auto& _iterable_30 = construct->args;
             for (const auto& property : *_iterable_30) {
                 if (!doof::is_null(property->value)) {
@@ -725,6 +733,9 @@ void collectExpressionCaptures(const std::variant<std::shared_ptr<::app_src_ast_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject)) {
             const auto& construct = std::get<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject);
+            if (!doof::is_null(construct->spread)) {
+                collectExpressionCaptures(doof::unwrap_optional(construct->spread), bodyStart, bodyEnd, result, mutableOnly);
+            }
             const auto& _iterable_56 = construct->args;
             for (const auto& property : *_iterable_56) {
                 if (!doof::is_null(property->value)) {

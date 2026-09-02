@@ -487,6 +487,21 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       if member.resolvedStaticOwner == none && isNamedStaticReceiver(member.object) && declaredInstanceMember(state, objectType, member.property) {
         typeError(state, "Instance member '" + member.property + "' cannot be accessed through a class", member.span)
       }
+      case objectType {
+        _: EnumType -> {
+          namedReceiver := isNamedStaticReceiver(member.object)
+          staticMember := member.property == "values" || member.property == "fromName" || member.property == "fromValue" || member.property == "fromJsonValue"
+          if namedReceiver && (member.property == "name" || member.property == "value" || member.property == "toJsonValue") {
+            typeError(state, "Instance member '" + member.property + "' cannot be accessed through an enum type", member.span)
+          } else if !namedReceiver && staticMember {
+            typeError(state, "Static enum member '" + member.property + "' cannot be accessed through a value", member.span)
+          }
+          if !namedReceiver && enumVariantMember(state, objectType, member.property) {
+            typeError(state, "Enum variant '" + member.property + "' cannot be accessed through a value", member.span)
+          }
+        }
+        _ -> { }
+      }
       member.resolvedCallableField = callableField(state, objectType, member.property)
       if weakReceiver != none {
         case memberValue {
@@ -770,10 +785,26 @@ function isNamedStaticReceiver(expression: Expression): bool {
     identifier: Identifier -> {
       if identifier.resolvedBinding == none { return false }
       binding := identifier.resolvedBinding!
-      if binding.kind == "class" || binding.kind == "struct" || binding.kind == "interface" { return true }
+      if binding.kind == "class" || binding.kind == "struct" || binding.kind == "interface" || binding.kind == "enum" { return true }
       if binding.kind == "import" && binding.symbol != none {
         kind := binding.symbol!.kind
-        return kind == "class" || kind == "struct" || kind == "interface"
+        return kind == "class" || kind == "struct" || kind == "interface" || kind == "enum"
+      }
+    }
+    _ -> { }
+  }
+  return false
+}
+
+function enumVariantMember(state: CheckerState, receiver: ResolvedType, property: string): bool {
+  case receiver {
+    enum_: EnumType -> {
+      declaration := declarationFor(state.result, enum_.symbol)
+      if declaration != none {
+        case declaration! {
+          owner: EnumDeclaration -> { for variant of owner.variants { if variant.name == property { return true } } }
+          _ -> { }
+        }
       }
     }
     _ -> { }
@@ -991,7 +1022,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
     return finish(state, expression, primitive("bool"))
   }
   if operator == "<" || operator == "<=" || operator == ">" || operator == ">=" {
-    if !orderedTypes(left, right) { typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span) }
+    if !orderedTypes(state, left, right) { typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span) }
     return finish(state, expression, primitive("bool"))
   }
   if operator == "+" && typeName(left) == "string" && (typeName(right) == "string" || typeName(right) == "char" || typeName(right) == "unknown") { return finish(state, expression, primitive("string")) }
@@ -1306,13 +1337,22 @@ function fallibleValueType(type_: ResolvedType): ResolvedType | none {
   return none
 }
 
-function orderedTypes(left: ResolvedType, right: ResolvedType): bool {
+function orderedTypes(state: CheckerState, left: ResolvedType, right: ResolvedType): bool {
   if left.kind == "unknown" || right.kind == "unknown" { return true }
   if isNumeric(left) && isNumeric(right) { return true }
   if sameType(left, right) {
     case left {
       primitive_: PrimitiveType -> { return primitive_.name == "string" || primitive_.name == "char" }
-      _: EnumType -> { return true }
+      enum_: EnumType -> {
+        declaration := declarationFor(state.result, enum_.symbol)
+        if declaration != none {
+          case declaration! {
+            owner: EnumDeclaration -> { return owner.backingKind == "int" }
+            _ -> { }
+          }
+        }
+        return true
+      }
       _: TypeParameterType -> { return true }
       _ -> { }
     }

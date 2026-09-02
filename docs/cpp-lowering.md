@@ -22,6 +22,15 @@ functions, methods, classes, interfaces, and native adapters to a fixed point.
 Builtin calls and builtin type namespaces are selected from resolved binding
 kinds rather than identifier spelling. Contextual dot shorthand is validated
 against a declared enum variant or static class member before lowering.
+
+Enum declarations remain C++ `enum class` identities. Integer-backed enums use
+their checked backing integers as enumerator values. String-backed enums use
+declaration ordinals internally and generated typed name/value lookup helpers;
+wire serialization never exposes those internal ordinals. Formatting calls the
+name helper, while JSON and JSON Schema consume checked backing values. A
+single `Enum | none` lowers uniformly to `std::optional<Enum>` so all ordinary
+narrowing forms yield `Enum`, not a residual optional variant.
+
 Renamed nominal imports emit from resolved symbol identity. Shared members on
 union values and construction-time union promotion are driven by decorated
 source and target types; compiler source declaration names have no special

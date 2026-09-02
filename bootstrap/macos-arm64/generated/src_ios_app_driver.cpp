@@ -169,8 +169,8 @@ void collectResourceFiles(const std::string& path, const std::string& baseDirect
 }
 doof::Result<void, std::string> copyIOSResources(const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& appPath) {
     std::shared_ptr<std::vector<std::string>> destinations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_16 = config->resources;
-    for (const auto& resource : *_iterable_16) {
+    const auto& _iterable_18 = config->resources;
+    for (const auto& resource : *_iterable_18) {
         std::shared_ptr<std::vector<std::string>> files = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
         auto baseDirectory = globBaseDirectory(resource->sourcePath);
         if (doof::string_contains(resource->sourcePath, std::string("*"))) {
@@ -188,8 +188,8 @@ doof::Result<void, std::string> copyIOSResources(const std::shared_ptr<::app_src
             return doof::Failure<std::string>{ (std::string("No files matched resource pattern: ") + resource->sourcePath) };
         }
         const auto prefix = (doof::string_endsWith(baseDirectory, std::string("/")) ? baseDirectory : (baseDirectory + std::string("/")));
-        const auto& _iterable_18 = files;
-        for (const auto& sourcePath : *_iterable_18) {
+        const auto& _iterable_16 = files;
+        for (const auto& sourcePath : *_iterable_16) {
             const auto relative = (doof::string_startsWith(sourcePath, prefix) ? doof::string_substring(sourcePath, static_cast<int32_t>(prefix.size()), static_cast<int32_t>(sourcePath.size())) : fileName(sourcePath));
             const auto destinationRoot = ((resource->destination == std::string("")) ? appPath : outputPath(appPath, resource->destination));
             const auto destination = outputPath(destinationRoot, relative);
@@ -215,8 +215,8 @@ doof::Result<void, std::string> compileIOSIcon(const std::shared_ptr<::app_src_i
     const auto sizes = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{40, 60, 58, 87, 80, 120, 120, 180, 20, 40, 29, 58, 40, 80, 76, 152, 167, 1024});
     for (int32_t index = 0; index < static_cast<int32_t>((names)->size()); ++index) {
         const auto size = doof::to_string(doof::array_at(sizes, index, "src/ios-app-driver", 198));
-        auto _try_value_20 = runRequiredCommand(std::string("sips"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-z"), size, size, config->iconPath, std::string("--out"), outputPath(iconSetPath, doof::array_at(names, index, "src/ios-app-driver", 200))}), std::string("resizing the iOS app icon"));
-        if (doof::is_failure(_try_value_20)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_20))};
+        auto _try_value_19 = runRequiredCommand(std::string("sips"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-z"), size, size, config->iconPath, std::string("--out"), outputPath(iconSetPath, doof::array_at(names, index, "src/ios-app-driver", 200))}), std::string("resizing the iOS app icon"));
+        if (doof::is_failure(_try_value_19)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_19))};
     }
     const auto partialPlistPath = outputPath(buildDirectory, std::string(".doof-ios-icon-info.plist"));
     const auto platformName = ((destination == std::string("device")) ? std::string("iphoneos") : std::string("iphonesimulator"));
@@ -327,25 +327,25 @@ doof::Result<void, std::string> signAndArchiveIOSApp(const std::string& appPath,
     }
     }
     for (int32_t index = 0; index < keychainGroupCount; ++index) {
-        auto _binding_value_36 = commandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), (std::string("keychain-access-groups.") + doof::to_string(index)), std::string("raw"), std::string("-o"), std::string("-"), entitlementsPath}), std::string("reading keychain access group"));
-        if (doof::is_failure(_binding_value_36)) {
-            const auto& group = _binding_value_36;
+        auto _binding_value_35 = commandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), (std::string("keychain-access-groups.") + doof::to_string(index)), std::string("raw"), std::string("-o"), std::string("-"), entitlementsPath}), std::string("reading keychain access group"));
+        if (doof::is_failure(_binding_value_35)) {
+            const auto& group = _binding_value_35;
             continue;
         }
-        const auto group = doof::success_value(_binding_value_36);
+        const auto group = doof::success_value(_binding_value_35);
         if (doof::string_contains(group, std::string("*"))) {
-            auto _try_value_37 = runRequiredCommand(std::string("/usr/libexec/PlistBuddy"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-c"), (((std::string("Set :keychain-access-groups:") + doof::to_string(index)) + std::string(" ")) + exactApplicationIdentifier), entitlementsPath}), std::string("expanding a keychain access group entitlement"));
-            if (doof::is_failure(_try_value_37)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_37))};
+            auto _try_value_36 = runRequiredCommand(std::string("/usr/libexec/PlistBuddy"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-c"), (((std::string("Set :keychain-access-groups:") + doof::to_string(index)) + std::string(" ")) + exactApplicationIdentifier), entitlementsPath}), std::string("expanding a keychain access group entitlement"));
+            if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_36))};
         }
     }
     copyPath(config->provisioningProfilePath, outputPath(appPath, std::string("embedded.mobileprovision")));
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     collectNestedCode(outputPath(appPath, std::string("Frameworks")), nested);
     collectNestedCode(outputPath(appPath, std::string("PlugIns")), nested);
-    const auto& _iterable_39 = nested;
-    for (const auto& path : *_iterable_39) {
-        auto _try_value_40 = runRequiredCommand(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(path, identity, std::string("")), std::string("signing nested iOS code"));
-        if (doof::is_failure(_try_value_40)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_40))};
+    const auto& _iterable_40 = nested;
+    for (const auto& path : *_iterable_40) {
+        auto _try_value_38 = runRequiredCommand(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(path, identity, std::string("")), std::string("signing nested iOS code"));
+        if (doof::is_failure(_try_value_38)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_38))};
     }
     auto _try_value_41 = runRequiredCommand(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(appPath, identity, entitlementsPath), std::string("signing the iOS app"));
     if (doof::is_failure(_try_value_41)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_41))};

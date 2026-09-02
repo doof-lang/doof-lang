@@ -51,7 +51,7 @@ void ModuleAnalyzer::queueModuleParse(const std::string& path, const std::option
     const auto modulePath = path;
     const auto mockRootPath = inheritedMockRootPath;
     pending->push_back(doof::submit_async<std::shared_ptr<ModuleParseResult>>([sourceText, modulePath, physicalPath, mockRootPath]() -> std::shared_ptr<ModuleParseResult> {
-    const auto parser = std::make_shared<::app_src_parser_::Parser>(sourceText, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), 0, false, false, std::string(""), 0, 0, 0);
+    const auto parser = std::make_shared<::app_src_parser_::Parser>(sourceText, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), 0, false, false, 0, std::string(""), 0, 0, 0);
     const auto parsed = [&]() -> doof::Result<std::shared_ptr<::app_src_ast_::Program>, std::string> { try { return doof::Success<std::shared_ptr<::app_src_ast_::Program>>{doof::callback<std::shared_ptr<::app_src_ast_::Program>()>([parser]() -> std::shared_ptr<::app_src_ast_::Program> { return parser->parse(); }).call()}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }();
     auto _binding_value_5 = parsed;
     if (doof::is_failure(_binding_value_5)) {
@@ -251,8 +251,8 @@ std::shared_ptr<::app_src_semantic_::Symbol> ModuleAnalyzer::exportedSymbol(cons
     return std::make_shared<::app_src_semantic_::Symbol>(symbol->kind, exportedName, symbol->module, true, ((symbol->originalName == std::string("")) ? symbol->name : symbol->originalName), symbol->native_, symbol->nativeHeader, symbol->nativeCppName, symbol->implementations, symbol->implementedInterfaceTypes, symbol->typeParams, symbol->streamElementTypes);
 }
 void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
-    const auto& _iterable_16 = info->program->statements;
-    for (const auto& statement : *_iterable_16) {
+    const auto& _iterable_18 = info->program->statements;
+    for (const auto& statement : *_iterable_18) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject)) {
@@ -263,8 +263,8 @@ void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
                     continue;
                 }
                 const auto source = resolveModule(sourcePath);
-                const auto& _iterable_18 = import_->specifiers;
-                for (const auto& specifier : *_iterable_18) {
+                const auto& _iterable_16 = import_->specifiers;
+                for (const auto& specifier : *_iterable_16) {
                     {
                         auto _case_subject = specifier;
                         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedImport>>(_case_subject)) {
@@ -304,8 +304,8 @@ void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
     }
 }
 void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info) {
-    const auto& _iterable_20 = info->program->statements;
-    for (const auto& statement : *_iterable_20) {
+    const auto& _iterable_24 = info->program->statements;
+    for (const auto& statement : *_iterable_24) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExportList>>(_case_subject)) {
@@ -314,8 +314,8 @@ void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info)
                     const auto sourcePath = resolveImportPath(info, doof::unwrap_optional(list->source));
                     const auto source = resolveModule(sourcePath);
                     info->reExports->push_back(sourcePath);
-                    const auto& _iterable_22 = list->specifiers;
-                    for (const auto& specifier : *_iterable_22) {
+                    const auto& _iterable_20 = list->specifiers;
+                    for (const auto& specifier : *_iterable_20) {
                         std::shared_ptr<::app_src_semantic_::Symbol> exported = nullptr;
                         if (!doof::is_null(source)) {
                             (exported = findExport(doof::unwrap_optional(source), specifier->name));
@@ -331,8 +331,8 @@ void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info)
                     }
                     continue;
                 }
-                const auto& _iterable_24 = list->specifiers;
-                for (const auto& specifier : *_iterable_24) {
+                const auto& _iterable_22 = list->specifiers;
+                for (const auto& specifier : *_iterable_22) {
                     const auto local = findSymbol(info, specifier->name);
                     if (!doof::is_null(local)) {
                         const auto exportedName = (doof::is_null(specifier->alias) ? specifier->name : doof::unwrap_optional(specifier->alias));
@@ -544,13 +544,13 @@ std::string ModuleAnalyzer::resolveImportPath(const std::shared_ptr<ModuleInfo>&
     return this->resolver->resolve(doof::unwrap_optional(info->mockRootPath), replacement.value());
 }
 std::optional<std::string> ModuleAnalyzer::findMockReplacement(const std::shared_ptr<ModuleInfo>& root, const std::string& sourcePath, const std::string& dependencySpecifier) {
-    const auto& _iterable_58 = root->mockImportDirectives;
-    for (const auto& directive : *_iterable_58) {
+    const auto& _iterable_60 = root->mockImportDirectives;
+    for (const auto& directive : *_iterable_60) {
         if (this->resolver->resolve(root->path, directive->sourcePattern) != sourcePath) {
             continue;
         }
-        const auto& _iterable_60 = directive->mappings;
-        for (const auto& mapping : *_iterable_60) {
+        const auto& _iterable_58 = directive->mappings;
+        for (const auto& mapping : *_iterable_58) {
             if (mapping->dependency == dependencySpecifier) {
                 return mapping->replacement;
             }
@@ -590,10 +590,10 @@ void ModuleAnalyzer::validateMockImportDirectives(const std::shared_ptr<ModuleIn
         }
         }
     }
-    const auto& _iterable_68 = info->mockImportDirectives;
-    for (const auto& directive : *_iterable_68) {
-        const auto& _iterable_70 = directive->mappings;
-        for (const auto& mapping : *_iterable_70) {
+    const auto& _iterable_70 = info->mockImportDirectives;
+    for (const auto& directive : *_iterable_70) {
+        const auto& _iterable_68 = directive->mappings;
+        for (const auto& mapping : *_iterable_68) {
             if (mapping->dependency == mapping->replacement) {
                 addError(info, ((std::string("mock import cannot substitute \"") + mapping->dependency) + std::string("\" with itself")), mapping->span);
             }

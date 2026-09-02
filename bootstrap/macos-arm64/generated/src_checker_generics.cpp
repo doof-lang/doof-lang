@@ -417,10 +417,10 @@ std::shared_ptr<::app_src_ast_::ClassDeclaration> staticMemberOwner(const std::v
                                 return classDeclaration;
                             }
                         }
-                        const auto& _iterable_12 = classDeclaration->fields;
-                        for (const auto& field : *_iterable_12) {
-                            const auto& _iterable_14 = field->names;
-                            for (const auto& name : *_iterable_14) {
+                        const auto& _iterable_14 = classDeclaration->fields;
+                        for (const auto& field : *_iterable_14) {
+                            const auto& _iterable_12 = field->names;
+                            for (const auto& name : *_iterable_12) {
                                 if ((name == property) && field->static_) {
                                     return classDeclaration;
                                 }

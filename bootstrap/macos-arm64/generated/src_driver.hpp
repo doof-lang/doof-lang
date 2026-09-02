@@ -8,9 +8,6 @@ namespace std_::fs::types { struct FileInfo; }
 namespace std_::fs::types { enum class EntryKind; }
 namespace app_src_compiler_ { struct Compilation; }
 namespace app_src_cli_ { struct CliRequest; }
-namespace app_src_external_dependency_ { struct ExternalDependencyTarget; }
-namespace app_src_dependency_policy_ { struct ReachedPackageInput; }
-namespace app_src_dependency_policy_ { struct ResolvedExternalInput; }
 namespace app_src_emitter_project_ { struct NativePackageInput; }
 namespace app_src_emitter_project_ { struct ProjectEmission; }
 namespace app_src_emitter_names_ { struct ModuleNamespaceMapping; }
@@ -24,12 +21,9 @@ namespace app_src_frontend_cache_ { struct FrontendSourceProbe; }
 namespace app_src_module_acquisition_ { struct ModuleAcquisition; }
 namespace app_src_native_build_driver_ { enum class NativeBuildOutputMode; }
 namespace app_src_native_build_ { enum class NativeBuildMode; }
-namespace app_src_package_manifest_ { struct ExternalDependency; }
 namespace app_src_package_manifest_ { struct NativeBuildPlan; }
-namespace app_src_package_manifest_ { struct PackageDependency; }
 namespace app_src_package_manifest_ { struct PackageManifest; }
 namespace app_src_package_manifest_ { struct PackageResource; }
-namespace app_src_package_acquisition_ { struct ExactPackageSource; }
 namespace app_src_parser_ { struct Parser; }
 namespace app_src_resource_state_ { struct MaterializedResource; }
 namespace app_src_resource_state_ { struct ResourceState; }
@@ -37,7 +31,8 @@ namespace app_src_semantic_ { struct Diagnostic; }
 namespace app_src_semantic_ { struct SemanticLocation; }
 namespace app_src_semantic_ { struct SemanticSpan; }
 namespace app_src_semantic_ { struct SourceFile; }
-namespace app_src_std_catalog_ { struct StdCatalog; }
+namespace app_src_stdlib_bundle_ { struct StdlibBundleProvider; }
+namespace app_src_stdlib_preparation_ { struct StdlibPreparationTarget; }
 namespace app_src_emitter_module_ { struct CoverageModuleMetadata; }
 namespace app_src_test_runner_ { struct CoverageReport; }
 namespace app_src_test_runner_ { struct DiscoveredTest; }
@@ -218,49 +213,9 @@ namespace app_src_ios_app_ {
 namespace app_src_package_manifest_ {
     struct NativeBuildPlan;
     struct PackageResource;
-    struct ExternalDependencyCopyFile;
-    struct ExternalDependencyCommand;
-    struct ExternalDependency;
+    struct StdlibPreparationCommand;
     struct PackageDependency;
-    struct DependencyResolution;
-    struct DependencyPolicy;
     struct PackageManifest;
-}
-
-namespace std_::fs::types {
-    struct FileInfo;
-}
-
-namespace std_::os::index {
-    struct ExecOptions;
-    struct ExecResult;
-}
-
-namespace app_src_external_dependency_ {
-    struct ExternalDependencyTarget;
-}
-
-namespace std_::time::duration {
-    struct Duration;
-}
-
-namespace std_::time::temporal {
-    struct Instant;
-    struct Date;
-    struct Time;
-    struct DateTime;
-    struct TimeZone;
-    struct ZonedDateTime;
-}
-
-namespace app_src_std_catalog_ {
-    struct StdCatalogPackage;
-    struct StdCatalog;
-}
-
-namespace app_src_dependency_policy_ {
-    struct ReachedPackageInput;
-    struct ResolvedExternalInput;
 }
 
 namespace app_src_emitter_project_ {
@@ -282,9 +237,26 @@ namespace app_src_module_acquisition_ {
     struct ModuleAcquisition;
 }
 
-namespace app_src_package_acquisition_ {
-    struct ExactPackageSource;
-    struct AcquiredPackage;
+namespace std_::fs::types {
+    struct FileInfo;
+}
+
+namespace std_::os::index {
+    struct ExecOptions;
+    struct ExecResult;
+}
+
+namespace std_::time::duration {
+    struct Duration;
+}
+
+namespace std_::time::temporal {
+    struct Instant;
+    struct Date;
+    struct Time;
+    struct DateTime;
+    struct TimeZone;
+    struct ZonedDateTime;
 }
 
 namespace app_src_ios_device_ {
@@ -302,6 +274,22 @@ namespace app_src_run_command_ {
 namespace app_src_resource_state_ {
     struct MaterializedResource;
     struct ResourceState;
+}
+
+namespace app_src_stdlib_bundle_ {
+    struct StdlibBundleMember;
+    struct StdlibBundleLicenseFile;
+    struct StdlibBundleIndex;
+    struct StdlibBundleProvider;
+    struct MaterializedStdlibPackage;
+}
+
+namespace std_::archive::types {
+    struct TarEntry;
+}
+
+namespace app_src_stdlib_preparation_ {
+    struct StdlibPreparationTarget;
 }
 
 namespace app_src_test_runner_ {
@@ -323,7 +311,6 @@ namespace app_src_driver_ {
     struct TestProcessWorker;
     struct DriverSourceRoot;
     struct DriverReachedPackage;
-    struct DriverAcquiredSource;
     struct DriverSourceState;
     extern int32_t MAX_PRINTED_DIAGNOSTICS;
     extern int64_t MAX_NATIVE_COMPILER_OUTPUT_BYTES;
@@ -360,19 +347,26 @@ inline const char* Endian_name(Endian value) {
     case Endian::BigEndian: return "BigEndian";
     case Endian::LittleEndian: return "LittleEndian";
   }
-  return "";
+  doof::panic(std::string("Invalid Endian enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<Endian> Endian_fromName(std::string_view value) {
   if (value == "BigEndian") return Endian::BigEndian;
   if (value == "LittleEndian") return Endian::LittleEndian;
   return std::nullopt;
 }
+inline int32_t Endian_value(Endian value) { return static_cast<int32_t>(value); }
 inline std::optional<Endian> Endian_fromValue(int32_t value) {
-  switch (static_cast<Endian>(value)) {
-    case Endian::BigEndian: return Endian::BigEndian;
-    case Endian::LittleEndian: return Endian::LittleEndian;
-    default: return std::nullopt;
-  }
+  if (value == 0) return Endian::BigEndian;
+  if (value == 1) return Endian::LittleEndian;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<Endian>> Endian_values() { return std::make_shared<std::vector<Endian>>(std::initializer_list<Endian>{Endian::BigEndian, Endian::LittleEndian}); }
+inline doof::JsonValue Endian_toJsonValue(Endian value) { return doof::json_value(Endian_value(value)); }
+inline doof::Result<Endian, std::string> Endian_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum Endian, got ") + doof::json_type_name(value)};
+  auto resolved = Endian_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum Endian: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1"};
+  return doof::Success<Endian>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, Endian value) { return output << Endian_name(value); }
     enum class TextEncoding {
@@ -394,7 +388,7 @@ inline const char* TextEncoding_name(TextEncoding value) {
     case TextEncoding::CP437: return "CP437";
     case TextEncoding::Ascii: return "Ascii";
   }
-  return "";
+  doof::panic(std::string("Invalid TextEncoding enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<TextEncoding> TextEncoding_fromName(std::string_view value) {
   if (value == "Utf8") return TextEncoding::Utf8;
@@ -406,17 +400,24 @@ inline std::optional<TextEncoding> TextEncoding_fromName(std::string_view value)
   if (value == "Ascii") return TextEncoding::Ascii;
   return std::nullopt;
 }
+inline int32_t TextEncoding_value(TextEncoding value) { return static_cast<int32_t>(value); }
 inline std::optional<TextEncoding> TextEncoding_fromValue(int32_t value) {
-  switch (static_cast<TextEncoding>(value)) {
-    case TextEncoding::Utf8: return TextEncoding::Utf8;
-    case TextEncoding::Utf16LE: return TextEncoding::Utf16LE;
-    case TextEncoding::Utf16BE: return TextEncoding::Utf16BE;
-    case TextEncoding::Latin1: return TextEncoding::Latin1;
-    case TextEncoding::Windows1252: return TextEncoding::Windows1252;
-    case TextEncoding::CP437: return TextEncoding::CP437;
-    case TextEncoding::Ascii: return TextEncoding::Ascii;
-    default: return std::nullopt;
-  }
+  if (value == 0) return TextEncoding::Utf8;
+  if (value == 1) return TextEncoding::Utf16LE;
+  if (value == 2) return TextEncoding::Utf16BE;
+  if (value == 3) return TextEncoding::Latin1;
+  if (value == 4) return TextEncoding::Windows1252;
+  if (value == 5) return TextEncoding::CP437;
+  if (value == 6) return TextEncoding::Ascii;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<TextEncoding>> TextEncoding_values() { return std::make_shared<std::vector<TextEncoding>>(std::initializer_list<TextEncoding>{TextEncoding::Utf8, TextEncoding::Utf16LE, TextEncoding::Utf16BE, TextEncoding::Latin1, TextEncoding::Windows1252, TextEncoding::CP437, TextEncoding::Ascii}); }
+inline doof::JsonValue TextEncoding_toJsonValue(TextEncoding value) { return doof::json_value(TextEncoding_value(value)); }
+inline doof::Result<TextEncoding, std::string> TextEncoding_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum TextEncoding, got ") + doof::json_type_name(value)};
+  auto resolved = TextEncoding_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum TextEncoding: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6"};
+  return doof::Success<TextEncoding>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, TextEncoding value) { return output << TextEncoding_name(value); }
     enum class EncodingError {
@@ -430,7 +431,7 @@ inline const char* EncodingError_name(EncodingError value) {
     case EncodingError::UnrepresentableCharacter: return "UnrepresentableCharacter";
     case EncodingError::OutputTooLarge: return "OutputTooLarge";
   }
-  return "";
+  doof::panic(std::string("Invalid EncodingError enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<EncodingError> EncodingError_fromName(std::string_view value) {
   if (value == "InvalidData") return EncodingError::InvalidData;
@@ -438,136 +439,143 @@ inline std::optional<EncodingError> EncodingError_fromName(std::string_view valu
   if (value == "OutputTooLarge") return EncodingError::OutputTooLarge;
   return std::nullopt;
 }
+inline int32_t EncodingError_value(EncodingError value) { return static_cast<int32_t>(value); }
 inline std::optional<EncodingError> EncodingError_fromValue(int32_t value) {
-  switch (static_cast<EncodingError>(value)) {
-    case EncodingError::InvalidData: return EncodingError::InvalidData;
-    case EncodingError::UnrepresentableCharacter: return EncodingError::UnrepresentableCharacter;
-    case EncodingError::OutputTooLarge: return EncodingError::OutputTooLarge;
-    default: return std::nullopt;
-  }
+  if (value == 0) return EncodingError::InvalidData;
+  if (value == 1) return EncodingError::UnrepresentableCharacter;
+  if (value == 2) return EncodingError::OutputTooLarge;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<EncodingError>> EncodingError_values() { return std::make_shared<std::vector<EncodingError>>(std::initializer_list<EncodingError>{EncodingError::InvalidData, EncodingError::UnrepresentableCharacter, EncodingError::OutputTooLarge}); }
+inline doof::JsonValue EncodingError_toJsonValue(EncodingError value) { return doof::json_value(EncodingError_value(value)); }
+inline doof::Result<EncodingError, std::string> EncodingError_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum EncodingError, got ") + doof::json_type_name(value)};
+  auto resolved = EncodingError_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum EncodingError: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2"};
+  return doof::Success<EncodingError>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, EncodingError value) { return output << EncodingError_name(value); }
 }
 
 namespace app_src_lexer_ {
     enum class TokenType {
-    IntLiteral,
-    LongLiteral,
-    FloatLiteral,
-    DoubleLiteral,
-    StringLiteral,
-    CharLiteral,
-    TemplateLiteralStart,
-    TemplateLiteralMiddle,
-    TemplateLiteralEnd,
-    Identifier,
-    CallerIntrinsic,
-    Const,
-    Readonly,
-    Let,
-    Function,
-    Return,
-    Yield,
-    If,
-    Else,
-    Then,
-    While,
-    For,
-    Of,
-    Break,
-    Continue,
-    Case,
-    Class,
-    Struct,
-    Interface,
-    Implements,
-    Enum,
-    Type,
-    Import,
-    Export,
-    From,
-    As,
-    True,
-    False,
-    None,
-    Null,
-    Void,
-    Try,
-    Catch,
-    Static,
-    This,
-    Weak,
-    Destructor,
-    Async,
-    Retire,
-    Isolated,
-    Private,
-    With,
-    Mock,
-    Plus,
-    Minus,
-    Star,
-    Slash,
-    Backslash,
-    Percent,
-    StarStar,
-    Ampersand,
-    Pipe,
-    Caret,
-    Tilde,
-    LessLess,
-    GreaterGreater,
-    GreaterGreaterGreater,
-    AmpersandAmpersand,
-    PipePipe,
-    Bang,
-    QuestionQuestion,
-    EqualEqual,
-    BangEqual,
-    Less,
-    LessEqual,
-    Greater,
-    GreaterEqual,
-    Equal,
-    ColonEqual,
-    LeftArrow,
-    PlusEqual,
-    MinusEqual,
-    StarEqual,
-    SlashEqual,
-    BackslashEqual,
-    PercentEqual,
-    StarStarEqual,
-    AmpersandEqual,
-    PipeEqual,
-    CaretEqual,
-    LessLessEqual,
-    GreaterGreaterEqual,
-    QuestionQuestionEqual,
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
-    LeftBracket,
-    RightBracket,
-    Dot,
-    DotDot,
-    DotDotLess,
-    Comma,
-    Colon,
-    DoubleColon,
-    Semicolon,
-    RightArrow,
-    Arrow,
-    QuestionDot,
-    BangDot,
-    QuestionBracket,
-    Underscore,
-    DollarBrace,
-    TagOpen,
-    TagText,
-    Ellipsis,
-    EndOfFile
+    IntLiteral = 0,
+    LongLiteral = 1,
+    FloatLiteral = 2,
+    DoubleLiteral = 3,
+    StringLiteral = 4,
+    CharLiteral = 5,
+    TemplateLiteralStart = 6,
+    TemplateLiteralMiddle = 7,
+    TemplateLiteralEnd = 8,
+    Identifier = 9,
+    CallerIntrinsic = 10,
+    Const = 11,
+    Readonly = 12,
+    Let = 13,
+    Function = 14,
+    Return = 15,
+    Yield = 16,
+    If = 17,
+    Else = 18,
+    Then = 19,
+    While = 20,
+    For = 21,
+    Of = 22,
+    Break = 23,
+    Continue = 24,
+    Case = 25,
+    Class = 26,
+    Struct = 27,
+    Interface = 28,
+    Implements = 29,
+    Enum = 30,
+    Type = 31,
+    Import = 32,
+    Export = 33,
+    From = 34,
+    As = 35,
+    True = 36,
+    False = 37,
+    None = 38,
+    Null = 39,
+    Void = 40,
+    Try = 41,
+    Catch = 42,
+    Static = 43,
+    This = 44,
+    Weak = 45,
+    Destructor = 46,
+    Async = 47,
+    Retire = 48,
+    Isolated = 49,
+    Private = 50,
+    With = 51,
+    Mock = 52,
+    Plus = 53,
+    Minus = 54,
+    Star = 55,
+    Slash = 56,
+    Backslash = 57,
+    Percent = 58,
+    StarStar = 59,
+    Ampersand = 60,
+    Pipe = 61,
+    Caret = 62,
+    Tilde = 63,
+    LessLess = 64,
+    GreaterGreater = 65,
+    GreaterGreaterGreater = 66,
+    AmpersandAmpersand = 67,
+    PipePipe = 68,
+    Bang = 69,
+    QuestionQuestion = 70,
+    EqualEqual = 71,
+    BangEqual = 72,
+    Less = 73,
+    LessEqual = 74,
+    Greater = 75,
+    GreaterEqual = 76,
+    Equal = 77,
+    ColonEqual = 78,
+    LeftArrow = 79,
+    PlusEqual = 80,
+    MinusEqual = 81,
+    StarEqual = 82,
+    SlashEqual = 83,
+    BackslashEqual = 84,
+    PercentEqual = 85,
+    StarStarEqual = 86,
+    AmpersandEqual = 87,
+    PipeEqual = 88,
+    CaretEqual = 89,
+    LessLessEqual = 90,
+    GreaterGreaterEqual = 91,
+    QuestionQuestionEqual = 92,
+    LeftParen = 93,
+    RightParen = 94,
+    LeftBrace = 95,
+    RightBrace = 96,
+    LeftBracket = 97,
+    RightBracket = 98,
+    Dot = 99,
+    DotDot = 100,
+    DotDotLess = 101,
+    Comma = 102,
+    Colon = 103,
+    DoubleColon = 104,
+    Semicolon = 105,
+    RightArrow = 106,
+    Arrow = 107,
+    QuestionDot = 108,
+    BangDot = 109,
+    QuestionBracket = 110,
+    Underscore = 111,
+    DollarBrace = 112,
+    TagOpen = 113,
+    TagText = 114,
+    Ellipsis = 115,
+    EndOfFile = 116
 };
 inline const char* TokenType_name(TokenType value) {
   switch (value) {
@@ -689,7 +697,7 @@ inline const char* TokenType_name(TokenType value) {
     case TokenType::Ellipsis: return "Ellipsis";
     case TokenType::EndOfFile: return "EndOfFile";
   }
-  return "";
+  doof::panic(std::string("Invalid TokenType enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<TokenType> TokenType_fromName(std::string_view value) {
   if (value == "IntLiteral") return TokenType::IntLiteral;
@@ -811,129 +819,174 @@ inline std::optional<TokenType> TokenType_fromName(std::string_view value) {
   if (value == "EndOfFile") return TokenType::EndOfFile;
   return std::nullopt;
 }
+inline int32_t TokenType_value(TokenType value) { return static_cast<int32_t>(value); }
 inline std::optional<TokenType> TokenType_fromValue(int32_t value) {
-  switch (static_cast<TokenType>(value)) {
-    case TokenType::IntLiteral: return TokenType::IntLiteral;
-    case TokenType::LongLiteral: return TokenType::LongLiteral;
-    case TokenType::FloatLiteral: return TokenType::FloatLiteral;
-    case TokenType::DoubleLiteral: return TokenType::DoubleLiteral;
-    case TokenType::StringLiteral: return TokenType::StringLiteral;
-    case TokenType::CharLiteral: return TokenType::CharLiteral;
-    case TokenType::TemplateLiteralStart: return TokenType::TemplateLiteralStart;
-    case TokenType::TemplateLiteralMiddle: return TokenType::TemplateLiteralMiddle;
-    case TokenType::TemplateLiteralEnd: return TokenType::TemplateLiteralEnd;
-    case TokenType::Identifier: return TokenType::Identifier;
-    case TokenType::CallerIntrinsic: return TokenType::CallerIntrinsic;
-    case TokenType::Const: return TokenType::Const;
-    case TokenType::Readonly: return TokenType::Readonly;
-    case TokenType::Let: return TokenType::Let;
-    case TokenType::Function: return TokenType::Function;
-    case TokenType::Return: return TokenType::Return;
-    case TokenType::Yield: return TokenType::Yield;
-    case TokenType::If: return TokenType::If;
-    case TokenType::Else: return TokenType::Else;
-    case TokenType::Then: return TokenType::Then;
-    case TokenType::While: return TokenType::While;
-    case TokenType::For: return TokenType::For;
-    case TokenType::Of: return TokenType::Of;
-    case TokenType::Break: return TokenType::Break;
-    case TokenType::Continue: return TokenType::Continue;
-    case TokenType::Case: return TokenType::Case;
-    case TokenType::Class: return TokenType::Class;
-    case TokenType::Struct: return TokenType::Struct;
-    case TokenType::Interface: return TokenType::Interface;
-    case TokenType::Implements: return TokenType::Implements;
-    case TokenType::Enum: return TokenType::Enum;
-    case TokenType::Type: return TokenType::Type;
-    case TokenType::Import: return TokenType::Import;
-    case TokenType::Export: return TokenType::Export;
-    case TokenType::From: return TokenType::From;
-    case TokenType::As: return TokenType::As;
-    case TokenType::True: return TokenType::True;
-    case TokenType::False: return TokenType::False;
-    case TokenType::None: return TokenType::None;
-    case TokenType::Null: return TokenType::Null;
-    case TokenType::Void: return TokenType::Void;
-    case TokenType::Try: return TokenType::Try;
-    case TokenType::Catch: return TokenType::Catch;
-    case TokenType::Static: return TokenType::Static;
-    case TokenType::This: return TokenType::This;
-    case TokenType::Weak: return TokenType::Weak;
-    case TokenType::Destructor: return TokenType::Destructor;
-    case TokenType::Async: return TokenType::Async;
-    case TokenType::Retire: return TokenType::Retire;
-    case TokenType::Isolated: return TokenType::Isolated;
-    case TokenType::Private: return TokenType::Private;
-    case TokenType::With: return TokenType::With;
-    case TokenType::Mock: return TokenType::Mock;
-    case TokenType::Plus: return TokenType::Plus;
-    case TokenType::Minus: return TokenType::Minus;
-    case TokenType::Star: return TokenType::Star;
-    case TokenType::Slash: return TokenType::Slash;
-    case TokenType::Backslash: return TokenType::Backslash;
-    case TokenType::Percent: return TokenType::Percent;
-    case TokenType::StarStar: return TokenType::StarStar;
-    case TokenType::Ampersand: return TokenType::Ampersand;
-    case TokenType::Pipe: return TokenType::Pipe;
-    case TokenType::Caret: return TokenType::Caret;
-    case TokenType::Tilde: return TokenType::Tilde;
-    case TokenType::LessLess: return TokenType::LessLess;
-    case TokenType::GreaterGreater: return TokenType::GreaterGreater;
-    case TokenType::GreaterGreaterGreater: return TokenType::GreaterGreaterGreater;
-    case TokenType::AmpersandAmpersand: return TokenType::AmpersandAmpersand;
-    case TokenType::PipePipe: return TokenType::PipePipe;
-    case TokenType::Bang: return TokenType::Bang;
-    case TokenType::QuestionQuestion: return TokenType::QuestionQuestion;
-    case TokenType::EqualEqual: return TokenType::EqualEqual;
-    case TokenType::BangEqual: return TokenType::BangEqual;
-    case TokenType::Less: return TokenType::Less;
-    case TokenType::LessEqual: return TokenType::LessEqual;
-    case TokenType::Greater: return TokenType::Greater;
-    case TokenType::GreaterEqual: return TokenType::GreaterEqual;
-    case TokenType::Equal: return TokenType::Equal;
-    case TokenType::ColonEqual: return TokenType::ColonEqual;
-    case TokenType::LeftArrow: return TokenType::LeftArrow;
-    case TokenType::PlusEqual: return TokenType::PlusEqual;
-    case TokenType::MinusEqual: return TokenType::MinusEqual;
-    case TokenType::StarEqual: return TokenType::StarEqual;
-    case TokenType::SlashEqual: return TokenType::SlashEqual;
-    case TokenType::BackslashEqual: return TokenType::BackslashEqual;
-    case TokenType::PercentEqual: return TokenType::PercentEqual;
-    case TokenType::StarStarEqual: return TokenType::StarStarEqual;
-    case TokenType::AmpersandEqual: return TokenType::AmpersandEqual;
-    case TokenType::PipeEqual: return TokenType::PipeEqual;
-    case TokenType::CaretEqual: return TokenType::CaretEqual;
-    case TokenType::LessLessEqual: return TokenType::LessLessEqual;
-    case TokenType::GreaterGreaterEqual: return TokenType::GreaterGreaterEqual;
-    case TokenType::QuestionQuestionEqual: return TokenType::QuestionQuestionEqual;
-    case TokenType::LeftParen: return TokenType::LeftParen;
-    case TokenType::RightParen: return TokenType::RightParen;
-    case TokenType::LeftBrace: return TokenType::LeftBrace;
-    case TokenType::RightBrace: return TokenType::RightBrace;
-    case TokenType::LeftBracket: return TokenType::LeftBracket;
-    case TokenType::RightBracket: return TokenType::RightBracket;
-    case TokenType::Dot: return TokenType::Dot;
-    case TokenType::DotDot: return TokenType::DotDot;
-    case TokenType::DotDotLess: return TokenType::DotDotLess;
-    case TokenType::Comma: return TokenType::Comma;
-    case TokenType::Colon: return TokenType::Colon;
-    case TokenType::DoubleColon: return TokenType::DoubleColon;
-    case TokenType::Semicolon: return TokenType::Semicolon;
-    case TokenType::RightArrow: return TokenType::RightArrow;
-    case TokenType::Arrow: return TokenType::Arrow;
-    case TokenType::QuestionDot: return TokenType::QuestionDot;
-    case TokenType::BangDot: return TokenType::BangDot;
-    case TokenType::QuestionBracket: return TokenType::QuestionBracket;
-    case TokenType::Underscore: return TokenType::Underscore;
-    case TokenType::DollarBrace: return TokenType::DollarBrace;
-    case TokenType::TagOpen: return TokenType::TagOpen;
-    case TokenType::TagText: return TokenType::TagText;
-    case TokenType::Ellipsis: return TokenType::Ellipsis;
-    case TokenType::EndOfFile: return TokenType::EndOfFile;
-    default: return std::nullopt;
-  }
+  if (value == 0) return TokenType::IntLiteral;
+  if (value == 1) return TokenType::LongLiteral;
+  if (value == 2) return TokenType::FloatLiteral;
+  if (value == 3) return TokenType::DoubleLiteral;
+  if (value == 4) return TokenType::StringLiteral;
+  if (value == 5) return TokenType::CharLiteral;
+  if (value == 6) return TokenType::TemplateLiteralStart;
+  if (value == 7) return TokenType::TemplateLiteralMiddle;
+  if (value == 8) return TokenType::TemplateLiteralEnd;
+  if (value == 9) return TokenType::Identifier;
+  if (value == 10) return TokenType::CallerIntrinsic;
+  if (value == 11) return TokenType::Const;
+  if (value == 12) return TokenType::Readonly;
+  if (value == 13) return TokenType::Let;
+  if (value == 14) return TokenType::Function;
+  if (value == 15) return TokenType::Return;
+  if (value == 16) return TokenType::Yield;
+  if (value == 17) return TokenType::If;
+  if (value == 18) return TokenType::Else;
+  if (value == 19) return TokenType::Then;
+  if (value == 20) return TokenType::While;
+  if (value == 21) return TokenType::For;
+  if (value == 22) return TokenType::Of;
+  if (value == 23) return TokenType::Break;
+  if (value == 24) return TokenType::Continue;
+  if (value == 25) return TokenType::Case;
+  if (value == 26) return TokenType::Class;
+  if (value == 27) return TokenType::Struct;
+  if (value == 28) return TokenType::Interface;
+  if (value == 29) return TokenType::Implements;
+  if (value == 30) return TokenType::Enum;
+  if (value == 31) return TokenType::Type;
+  if (value == 32) return TokenType::Import;
+  if (value == 33) return TokenType::Export;
+  if (value == 34) return TokenType::From;
+  if (value == 35) return TokenType::As;
+  if (value == 36) return TokenType::True;
+  if (value == 37) return TokenType::False;
+  if (value == 38) return TokenType::None;
+  if (value == 39) return TokenType::Null;
+  if (value == 40) return TokenType::Void;
+  if (value == 41) return TokenType::Try;
+  if (value == 42) return TokenType::Catch;
+  if (value == 43) return TokenType::Static;
+  if (value == 44) return TokenType::This;
+  if (value == 45) return TokenType::Weak;
+  if (value == 46) return TokenType::Destructor;
+  if (value == 47) return TokenType::Async;
+  if (value == 48) return TokenType::Retire;
+  if (value == 49) return TokenType::Isolated;
+  if (value == 50) return TokenType::Private;
+  if (value == 51) return TokenType::With;
+  if (value == 52) return TokenType::Mock;
+  if (value == 53) return TokenType::Plus;
+  if (value == 54) return TokenType::Minus;
+  if (value == 55) return TokenType::Star;
+  if (value == 56) return TokenType::Slash;
+  if (value == 57) return TokenType::Backslash;
+  if (value == 58) return TokenType::Percent;
+  if (value == 59) return TokenType::StarStar;
+  if (value == 60) return TokenType::Ampersand;
+  if (value == 61) return TokenType::Pipe;
+  if (value == 62) return TokenType::Caret;
+  if (value == 63) return TokenType::Tilde;
+  if (value == 64) return TokenType::LessLess;
+  if (value == 65) return TokenType::GreaterGreater;
+  if (value == 66) return TokenType::GreaterGreaterGreater;
+  if (value == 67) return TokenType::AmpersandAmpersand;
+  if (value == 68) return TokenType::PipePipe;
+  if (value == 69) return TokenType::Bang;
+  if (value == 70) return TokenType::QuestionQuestion;
+  if (value == 71) return TokenType::EqualEqual;
+  if (value == 72) return TokenType::BangEqual;
+  if (value == 73) return TokenType::Less;
+  if (value == 74) return TokenType::LessEqual;
+  if (value == 75) return TokenType::Greater;
+  if (value == 76) return TokenType::GreaterEqual;
+  if (value == 77) return TokenType::Equal;
+  if (value == 78) return TokenType::ColonEqual;
+  if (value == 79) return TokenType::LeftArrow;
+  if (value == 80) return TokenType::PlusEqual;
+  if (value == 81) return TokenType::MinusEqual;
+  if (value == 82) return TokenType::StarEqual;
+  if (value == 83) return TokenType::SlashEqual;
+  if (value == 84) return TokenType::BackslashEqual;
+  if (value == 85) return TokenType::PercentEqual;
+  if (value == 86) return TokenType::StarStarEqual;
+  if (value == 87) return TokenType::AmpersandEqual;
+  if (value == 88) return TokenType::PipeEqual;
+  if (value == 89) return TokenType::CaretEqual;
+  if (value == 90) return TokenType::LessLessEqual;
+  if (value == 91) return TokenType::GreaterGreaterEqual;
+  if (value == 92) return TokenType::QuestionQuestionEqual;
+  if (value == 93) return TokenType::LeftParen;
+  if (value == 94) return TokenType::RightParen;
+  if (value == 95) return TokenType::LeftBrace;
+  if (value == 96) return TokenType::RightBrace;
+  if (value == 97) return TokenType::LeftBracket;
+  if (value == 98) return TokenType::RightBracket;
+  if (value == 99) return TokenType::Dot;
+  if (value == 100) return TokenType::DotDot;
+  if (value == 101) return TokenType::DotDotLess;
+  if (value == 102) return TokenType::Comma;
+  if (value == 103) return TokenType::Colon;
+  if (value == 104) return TokenType::DoubleColon;
+  if (value == 105) return TokenType::Semicolon;
+  if (value == 106) return TokenType::RightArrow;
+  if (value == 107) return TokenType::Arrow;
+  if (value == 108) return TokenType::QuestionDot;
+  if (value == 109) return TokenType::BangDot;
+  if (value == 110) return TokenType::QuestionBracket;
+  if (value == 111) return TokenType::Underscore;
+  if (value == 112) return TokenType::DollarBrace;
+  if (value == 113) return TokenType::TagOpen;
+  if (value == 114) return TokenType::TagText;
+  if (value == 115) return TokenType::Ellipsis;
+  if (value == 116) return TokenType::EndOfFile;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<TokenType>> TokenType_values() { return std::make_shared<std::vector<TokenType>>(std::initializer_list<TokenType>{TokenType::IntLiteral, TokenType::LongLiteral, TokenType::FloatLiteral, TokenType::DoubleLiteral, TokenType::StringLiteral, TokenType::CharLiteral, TokenType::TemplateLiteralStart, TokenType::TemplateLiteralMiddle, TokenType::TemplateLiteralEnd, TokenType::Identifier, TokenType::CallerIntrinsic, TokenType::Const, TokenType::Readonly, TokenType::Let, TokenType::Function, TokenType::Return, TokenType::Yield, TokenType::If, TokenType::Else, TokenType::Then, TokenType::While, TokenType::For, TokenType::Of, TokenType::Break, TokenType::Continue, TokenType::Case, TokenType::Class, TokenType::Struct, TokenType::Interface, TokenType::Implements, TokenType::Enum, TokenType::Type, TokenType::Import, TokenType::Export, TokenType::From, TokenType::As, TokenType::True, TokenType::False, TokenType::None, TokenType::Null, TokenType::Void, TokenType::Try, TokenType::Catch, TokenType::Static, TokenType::This, TokenType::Weak, TokenType::Destructor, TokenType::Async, TokenType::Retire, TokenType::Isolated, TokenType::Private, TokenType::With, TokenType::Mock, TokenType::Plus, TokenType::Minus, TokenType::Star, TokenType::Slash, TokenType::Backslash, TokenType::Percent, TokenType::StarStar, TokenType::Ampersand, TokenType::Pipe, TokenType::Caret, TokenType::Tilde, TokenType::LessLess, TokenType::GreaterGreater, TokenType::GreaterGreaterGreater, TokenType::AmpersandAmpersand, TokenType::PipePipe, TokenType::Bang, TokenType::QuestionQuestion, TokenType::EqualEqual, TokenType::BangEqual, TokenType::Less, TokenType::LessEqual, TokenType::Greater, TokenType::GreaterEqual, TokenType::Equal, TokenType::ColonEqual, TokenType::LeftArrow, TokenType::PlusEqual, TokenType::MinusEqual, TokenType::StarEqual, TokenType::SlashEqual, TokenType::BackslashEqual, TokenType::PercentEqual, TokenType::StarStarEqual, TokenType::AmpersandEqual, TokenType::PipeEqual, TokenType::CaretEqual, TokenType::LessLessEqual, TokenType::GreaterGreaterEqual, TokenType::QuestionQuestionEqual, TokenType::LeftParen, TokenType::RightParen, TokenType::LeftBrace, TokenType::RightBrace, TokenType::LeftBracket, TokenType::RightBracket, TokenType::Dot, TokenType::DotDot, TokenType::DotDotLess, TokenType::Comma, TokenType::Colon, TokenType::DoubleColon, TokenType::Semicolon, TokenType::RightArrow, TokenType::Arrow, TokenType::QuestionDot, TokenType::BangDot, TokenType::QuestionBracket, TokenType::Underscore, TokenType::DollarBrace, TokenType::TagOpen, TokenType::TagText, TokenType::Ellipsis, TokenType::EndOfFile}); }
+inline doof::JsonValue TokenType_toJsonValue(TokenType value) { return doof::json_value(TokenType_value(value)); }
+inline doof::Result<TokenType, std::string> TokenType_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum TokenType, got ") + doof::json_type_name(value)};
+  auto resolved = TokenType_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum TokenType: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116"};
+  return doof::Success<TokenType>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, TokenType value) { return output << TokenType_name(value); }
+}
+
+namespace app_src_native_build_ {
+    enum class NativeBuildMode {
+    Debug = 0,
+    Release = 1,
+    Profile = 2
+};
+inline const char* NativeBuildMode_name(NativeBuildMode value) {
+  switch (value) {
+    case NativeBuildMode::Debug: return "Debug";
+    case NativeBuildMode::Release: return "Release";
+    case NativeBuildMode::Profile: return "Profile";
+  }
+  doof::panic(std::string("Invalid NativeBuildMode enum value: ") + doof::to_string(static_cast<int32_t>(value)));
+}
+inline std::optional<NativeBuildMode> NativeBuildMode_fromName(std::string_view value) {
+  if (value == "Debug") return NativeBuildMode::Debug;
+  if (value == "Release") return NativeBuildMode::Release;
+  if (value == "Profile") return NativeBuildMode::Profile;
+  return std::nullopt;
+}
+inline int32_t NativeBuildMode_value(NativeBuildMode value) { return static_cast<int32_t>(value); }
+inline std::optional<NativeBuildMode> NativeBuildMode_fromValue(int32_t value) {
+  if (value == 0) return NativeBuildMode::Debug;
+  if (value == 1) return NativeBuildMode::Release;
+  if (value == 2) return NativeBuildMode::Profile;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<NativeBuildMode>> NativeBuildMode_values() { return std::make_shared<std::vector<NativeBuildMode>>(std::initializer_list<NativeBuildMode>{NativeBuildMode::Debug, NativeBuildMode::Release, NativeBuildMode::Profile}); }
+inline doof::JsonValue NativeBuildMode_toJsonValue(NativeBuildMode value) { return doof::json_value(NativeBuildMode_value(value)); }
+inline doof::Result<NativeBuildMode, std::string> NativeBuildMode_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum NativeBuildMode, got ") + doof::json_type_name(value)};
+  auto resolved = NativeBuildMode_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum NativeBuildMode: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2"};
+  return doof::Success<NativeBuildMode>{resolved.value()};
+}
+inline std::ostream& operator<<(std::ostream& output, NativeBuildMode value) { return output << NativeBuildMode_name(value); }
 }
 
 namespace std_::fs::types {
@@ -950,7 +1003,7 @@ inline const char* EntryKind_name(EntryKind value) {
     case EntryKind::Symlink: return "Symlink";
     case EntryKind::Other: return "Other";
   }
-  return "";
+  doof::panic(std::string("Invalid EntryKind enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<EntryKind> EntryKind_fromName(std::string_view value) {
   if (value == "File") return EntryKind::File;
@@ -959,14 +1012,21 @@ inline std::optional<EntryKind> EntryKind_fromName(std::string_view value) {
   if (value == "Other") return EntryKind::Other;
   return std::nullopt;
 }
+inline int32_t EntryKind_value(EntryKind value) { return static_cast<int32_t>(value); }
 inline std::optional<EntryKind> EntryKind_fromValue(int32_t value) {
-  switch (static_cast<EntryKind>(value)) {
-    case EntryKind::File: return EntryKind::File;
-    case EntryKind::Directory: return EntryKind::Directory;
-    case EntryKind::Symlink: return EntryKind::Symlink;
-    case EntryKind::Other: return EntryKind::Other;
-    default: return std::nullopt;
-  }
+  if (value == 0) return EntryKind::File;
+  if (value == 1) return EntryKind::Directory;
+  if (value == 2) return EntryKind::Symlink;
+  if (value == 3) return EntryKind::Other;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<EntryKind>> EntryKind_values() { return std::make_shared<std::vector<EntryKind>>(std::initializer_list<EntryKind>{EntryKind::File, EntryKind::Directory, EntryKind::Symlink, EntryKind::Other}); }
+inline doof::JsonValue EntryKind_toJsonValue(EntryKind value) { return doof::json_value(EntryKind_value(value)); }
+inline doof::Result<EntryKind, std::string> EntryKind_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum EntryKind, got ") + doof::json_type_name(value)};
+  auto resolved = EntryKind_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum EntryKind: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3"};
+  return doof::Success<EntryKind>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, EntryKind value) { return output << EntryKind_name(value); }
     enum class IoError {
@@ -992,7 +1052,7 @@ inline const char* IoError_name(IoError value) {
     case IoError::Other: return "Other";
     case IoError::Unsupported: return "Unsupported";
   }
-  return "";
+  doof::panic(std::string("Invalid IoError enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "NotFound") return IoError::NotFound;
@@ -1006,48 +1066,96 @@ inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "Unsupported") return IoError::Unsupported;
   return std::nullopt;
 }
+inline int32_t IoError_value(IoError value) { return static_cast<int32_t>(value); }
 inline std::optional<IoError> IoError_fromValue(int32_t value) {
-  switch (static_cast<IoError>(value)) {
-    case IoError::NotFound: return IoError::NotFound;
-    case IoError::PermissionDenied: return IoError::PermissionDenied;
-    case IoError::AlreadyExists: return IoError::AlreadyExists;
-    case IoError::IsDirectory: return IoError::IsDirectory;
-    case IoError::NotDirectory: return IoError::NotDirectory;
-    case IoError::InvalidPath: return IoError::InvalidPath;
-    case IoError::Interrupted: return IoError::Interrupted;
-    case IoError::Other: return IoError::Other;
-    case IoError::Unsupported: return IoError::Unsupported;
-    default: return std::nullopt;
-  }
+  if (value == 0) return IoError::NotFound;
+  if (value == 1) return IoError::PermissionDenied;
+  if (value == 2) return IoError::AlreadyExists;
+  if (value == 3) return IoError::IsDirectory;
+  if (value == 4) return IoError::NotDirectory;
+  if (value == 5) return IoError::InvalidPath;
+  if (value == 6) return IoError::Interrupted;
+  if (value == 7) return IoError::Other;
+  if (value == 8) return IoError::Unsupported;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<IoError>> IoError_values() { return std::make_shared<std::vector<IoError>>(std::initializer_list<IoError>{IoError::NotFound, IoError::PermissionDenied, IoError::AlreadyExists, IoError::IsDirectory, IoError::NotDirectory, IoError::InvalidPath, IoError::Interrupted, IoError::Other, IoError::Unsupported}); }
+inline doof::JsonValue IoError_toJsonValue(IoError value) { return doof::json_value(IoError_value(value)); }
+inline doof::Result<IoError, std::string> IoError_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum IoError, got ") + doof::json_type_name(value)};
+  auto resolved = IoError_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum IoError: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6, 7, 8"};
+  return doof::Success<IoError>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, IoError value) { return output << IoError_name(value); }
 }
 
 namespace std_::os::index {
     enum class ProcessGroupMode {
-    Isolated,
-    Inherited
+    Isolated = 0,
+    Inherited = 1
 };
 inline const char* ProcessGroupMode_name(ProcessGroupMode value) {
   switch (value) {
     case ProcessGroupMode::Isolated: return "Isolated";
     case ProcessGroupMode::Inherited: return "Inherited";
   }
-  return "";
+  doof::panic(std::string("Invalid ProcessGroupMode enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<ProcessGroupMode> ProcessGroupMode_fromName(std::string_view value) {
   if (value == "Isolated") return ProcessGroupMode::Isolated;
   if (value == "Inherited") return ProcessGroupMode::Inherited;
   return std::nullopt;
 }
+inline int32_t ProcessGroupMode_value(ProcessGroupMode value) { return static_cast<int32_t>(value); }
 inline std::optional<ProcessGroupMode> ProcessGroupMode_fromValue(int32_t value) {
-  switch (static_cast<ProcessGroupMode>(value)) {
-    case ProcessGroupMode::Isolated: return ProcessGroupMode::Isolated;
-    case ProcessGroupMode::Inherited: return ProcessGroupMode::Inherited;
-    default: return std::nullopt;
-  }
+  if (value == 0) return ProcessGroupMode::Isolated;
+  if (value == 1) return ProcessGroupMode::Inherited;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<ProcessGroupMode>> ProcessGroupMode_values() { return std::make_shared<std::vector<ProcessGroupMode>>(std::initializer_list<ProcessGroupMode>{ProcessGroupMode::Isolated, ProcessGroupMode::Inherited}); }
+inline doof::JsonValue ProcessGroupMode_toJsonValue(ProcessGroupMode value) { return doof::json_value(ProcessGroupMode_value(value)); }
+inline doof::Result<ProcessGroupMode, std::string> ProcessGroupMode_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum ProcessGroupMode, got ") + doof::json_type_name(value)};
+  auto resolved = ProcessGroupMode_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum ProcessGroupMode: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1"};
+  return doof::Success<ProcessGroupMode>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, ProcessGroupMode value) { return output << ProcessGroupMode_name(value); }
+}
+
+namespace app_src_native_build_driver_ {
+    enum class NativeBuildOutputMode {
+    Silent = 0,
+    Progress = 1
+};
+inline const char* NativeBuildOutputMode_name(NativeBuildOutputMode value) {
+  switch (value) {
+    case NativeBuildOutputMode::Silent: return "Silent";
+    case NativeBuildOutputMode::Progress: return "Progress";
+  }
+  doof::panic(std::string("Invalid NativeBuildOutputMode enum value: ") + doof::to_string(static_cast<int32_t>(value)));
+}
+inline std::optional<NativeBuildOutputMode> NativeBuildOutputMode_fromName(std::string_view value) {
+  if (value == "Silent") return NativeBuildOutputMode::Silent;
+  if (value == "Progress") return NativeBuildOutputMode::Progress;
+  return std::nullopt;
+}
+inline int32_t NativeBuildOutputMode_value(NativeBuildOutputMode value) { return static_cast<int32_t>(value); }
+inline std::optional<NativeBuildOutputMode> NativeBuildOutputMode_fromValue(int32_t value) {
+  if (value == 0) return NativeBuildOutputMode::Silent;
+  if (value == 1) return NativeBuildOutputMode::Progress;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<NativeBuildOutputMode>> NativeBuildOutputMode_values() { return std::make_shared<std::vector<NativeBuildOutputMode>>(std::initializer_list<NativeBuildOutputMode>{NativeBuildOutputMode::Silent, NativeBuildOutputMode::Progress}); }
+inline doof::JsonValue NativeBuildOutputMode_toJsonValue(NativeBuildOutputMode value) { return doof::json_value(NativeBuildOutputMode_value(value)); }
+inline doof::Result<NativeBuildOutputMode, std::string> NativeBuildOutputMode_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum NativeBuildOutputMode, got ") + doof::json_type_name(value)};
+  auto resolved = NativeBuildOutputMode_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum NativeBuildOutputMode: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1"};
+  return doof::Success<NativeBuildOutputMode>{resolved.value()};
+}
+inline std::ostream& operator<<(std::ostream& output, NativeBuildOutputMode value) { return output << NativeBuildOutputMode_name(value); }
 }
 
 namespace std_::time::temporal {
@@ -1070,7 +1178,7 @@ inline const char* DayOfWeek_name(DayOfWeek value) {
     case DayOfWeek::Saturday: return "Saturday";
     case DayOfWeek::Sunday: return "Sunday";
   }
-  return "";
+  doof::panic(std::string("Invalid DayOfWeek enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
 inline std::optional<DayOfWeek> DayOfWeek_fromName(std::string_view value) {
   if (value == "Monday") return DayOfWeek::Monday;
@@ -1082,77 +1190,64 @@ inline std::optional<DayOfWeek> DayOfWeek_fromName(std::string_view value) {
   if (value == "Sunday") return DayOfWeek::Sunday;
   return std::nullopt;
 }
+inline int32_t DayOfWeek_value(DayOfWeek value) { return static_cast<int32_t>(value); }
 inline std::optional<DayOfWeek> DayOfWeek_fromValue(int32_t value) {
-  switch (static_cast<DayOfWeek>(value)) {
-    case DayOfWeek::Monday: return DayOfWeek::Monday;
-    case DayOfWeek::Tuesday: return DayOfWeek::Tuesday;
-    case DayOfWeek::Wednesday: return DayOfWeek::Wednesday;
-    case DayOfWeek::Thursday: return DayOfWeek::Thursday;
-    case DayOfWeek::Friday: return DayOfWeek::Friday;
-    case DayOfWeek::Saturday: return DayOfWeek::Saturday;
-    case DayOfWeek::Sunday: return DayOfWeek::Sunday;
-    default: return std::nullopt;
-  }
+  if (value == 1) return DayOfWeek::Monday;
+  if (value == 2) return DayOfWeek::Tuesday;
+  if (value == 3) return DayOfWeek::Wednesday;
+  if (value == 4) return DayOfWeek::Thursday;
+  if (value == 5) return DayOfWeek::Friday;
+  if (value == 6) return DayOfWeek::Saturday;
+  if (value == 7) return DayOfWeek::Sunday;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<DayOfWeek>> DayOfWeek_values() { return std::make_shared<std::vector<DayOfWeek>>(std::initializer_list<DayOfWeek>{DayOfWeek::Monday, DayOfWeek::Tuesday, DayOfWeek::Wednesday, DayOfWeek::Thursday, DayOfWeek::Friday, DayOfWeek::Saturday, DayOfWeek::Sunday}); }
+inline doof::JsonValue DayOfWeek_toJsonValue(DayOfWeek value) { return doof::json_value(DayOfWeek_value(value)); }
+inline doof::Result<DayOfWeek, std::string> DayOfWeek_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum DayOfWeek, got ") + doof::json_type_name(value)};
+  auto resolved = DayOfWeek_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum DayOfWeek: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 1, 2, 3, 4, 5, 6, 7"};
+  return doof::Success<DayOfWeek>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, DayOfWeek value) { return output << DayOfWeek_name(value); }
 }
 
-namespace app_src_native_build_ {
-    enum class NativeBuildMode {
-    Debug,
-    Release,
-    Profile
+namespace std_::archive::types {
+    enum class TarEntryKind {
+    File = 0,
+    Directory = 1,
+    SymbolicLink = 2
 };
-inline const char* NativeBuildMode_name(NativeBuildMode value) {
+inline const char* TarEntryKind_name(TarEntryKind value) {
   switch (value) {
-    case NativeBuildMode::Debug: return "Debug";
-    case NativeBuildMode::Release: return "Release";
-    case NativeBuildMode::Profile: return "Profile";
+    case TarEntryKind::File: return "File";
+    case TarEntryKind::Directory: return "Directory";
+    case TarEntryKind::SymbolicLink: return "SymbolicLink";
   }
-  return "";
+  doof::panic(std::string("Invalid TarEntryKind enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
-inline std::optional<NativeBuildMode> NativeBuildMode_fromName(std::string_view value) {
-  if (value == "Debug") return NativeBuildMode::Debug;
-  if (value == "Release") return NativeBuildMode::Release;
-  if (value == "Profile") return NativeBuildMode::Profile;
+inline std::optional<TarEntryKind> TarEntryKind_fromName(std::string_view value) {
+  if (value == "File") return TarEntryKind::File;
+  if (value == "Directory") return TarEntryKind::Directory;
+  if (value == "SymbolicLink") return TarEntryKind::SymbolicLink;
   return std::nullopt;
 }
-inline std::optional<NativeBuildMode> NativeBuildMode_fromValue(int32_t value) {
-  switch (static_cast<NativeBuildMode>(value)) {
-    case NativeBuildMode::Debug: return NativeBuildMode::Debug;
-    case NativeBuildMode::Release: return NativeBuildMode::Release;
-    case NativeBuildMode::Profile: return NativeBuildMode::Profile;
-    default: return std::nullopt;
-  }
-}
-inline std::ostream& operator<<(std::ostream& output, NativeBuildMode value) { return output << NativeBuildMode_name(value); }
-}
-
-namespace app_src_native_build_driver_ {
-    enum class NativeBuildOutputMode {
-    Silent,
-    Progress
-};
-inline const char* NativeBuildOutputMode_name(NativeBuildOutputMode value) {
-  switch (value) {
-    case NativeBuildOutputMode::Silent: return "Silent";
-    case NativeBuildOutputMode::Progress: return "Progress";
-  }
-  return "";
-}
-inline std::optional<NativeBuildOutputMode> NativeBuildOutputMode_fromName(std::string_view value) {
-  if (value == "Silent") return NativeBuildOutputMode::Silent;
-  if (value == "Progress") return NativeBuildOutputMode::Progress;
+inline int32_t TarEntryKind_value(TarEntryKind value) { return static_cast<int32_t>(value); }
+inline std::optional<TarEntryKind> TarEntryKind_fromValue(int32_t value) {
+  if (value == 0) return TarEntryKind::File;
+  if (value == 1) return TarEntryKind::Directory;
+  if (value == 2) return TarEntryKind::SymbolicLink;
   return std::nullopt;
 }
-inline std::optional<NativeBuildOutputMode> NativeBuildOutputMode_fromValue(int32_t value) {
-  switch (static_cast<NativeBuildOutputMode>(value)) {
-    case NativeBuildOutputMode::Silent: return NativeBuildOutputMode::Silent;
-    case NativeBuildOutputMode::Progress: return NativeBuildOutputMode::Progress;
-    default: return std::nullopt;
-  }
+inline std::shared_ptr<std::vector<TarEntryKind>> TarEntryKind_values() { return std::make_shared<std::vector<TarEntryKind>>(std::initializer_list<TarEntryKind>{TarEntryKind::File, TarEntryKind::Directory, TarEntryKind::SymbolicLink}); }
+inline doof::JsonValue TarEntryKind_toJsonValue(TarEntryKind value) { return doof::json_value(TarEntryKind_value(value)); }
+inline doof::Result<TarEntryKind, std::string> TarEntryKind_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum TarEntryKind, got ") + doof::json_type_name(value)};
+  auto resolved = TarEntryKind_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum TarEntryKind: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2"};
+  return doof::Success<TarEntryKind>{resolved.value()};
 }
-inline std::ostream& operator<<(std::ostream& output, NativeBuildOutputMode value) { return output << NativeBuildOutputMode_name(value); }
+inline std::ostream& operator<<(std::ostream& output, TarEntryKind value) { return output << TarEntryKind_name(value); }
 }
 
 namespace app_src_semantic_ {
@@ -1515,60 +1610,17 @@ namespace app_src_package_manifest_ {
     std::string destination;
     PackageResource(std::string sourcePath, std::string destination) : sourcePath(sourcePath), destination(destination) {}
 };
-    struct ExternalDependencyCopyFile : public std::enable_shared_from_this<ExternalDependencyCopyFile> {
-    std::string source;
-    std::string destination;
-    ExternalDependencyCopyFile(std::string source, std::string destination) : source(source), destination(destination) {}
-};
-    struct ExternalDependencyCommand : public std::enable_shared_from_this<ExternalDependencyCommand> {
+    struct StdlibPreparationCommand : public std::enable_shared_from_this<StdlibPreparationCommand> {
     std::string program;
     std::shared_ptr<std::vector<std::string>> args;
     std::shared_ptr<doof::ordered_map<std::string, std::string>> env;
     std::string workingDirectory;
-    ExternalDependencyCommand(std::string program, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, std::string workingDirectory) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
-};
-    struct ExternalDependency : public std::enable_shared_from_this<ExternalDependency> {
-    std::string name;
-    std::string kind;
-    std::string url;
-    std::string destination;
-    std::string sha256;
-    int32_t stripComponents;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles;
-    std::string ref;
-    std::string commit;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands;
-    ExternalDependency(std::string name, std::string kind, std::string url, std::string destination, std::string sha256, int32_t stripComponents, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCopyFile>>> copyFiles, std::string ref, std::string commit, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependencyCommand>>> commands) : name(name), kind(kind), url(url), destination(destination), sha256(sha256), stripComponents(stripComponents), copyFiles(copyFiles), ref(ref), commit(commit), commands(commands) {}
+    StdlibPreparationCommand(std::string program, std::shared_ptr<std::vector<std::string>> args, std::shared_ptr<doof::ordered_map<std::string, std::string>> env, std::string workingDirectory) : program(program), args(args), env(env), workingDirectory(workingDirectory) {}
 };
     struct PackageDependency : public std::enable_shared_from_this<PackageDependency> {
     std::string name;
     std::string path;
-    std::string url;
-    std::string ref;
-    std::string commit;
-    PackageDependency(std::string name, std::string path, std::string url, std::string ref, std::string commit) : name(name), path(path), url(url), ref(ref), commit(commit) {}
-};
-    struct DependencyResolution : public std::enable_shared_from_this<DependencyResolution> {
-    std::string name;
-    std::string kind;
-    std::string url;
-    std::string ref;
-    std::string commit;
-    std::string sha256;
-    DependencyResolution(std::string name, std::string kind, std::string url, std::string ref, std::string commit, std::string sha256) : name(name), kind(kind), url(url), ref(ref), commit(commit), sha256(sha256) {}
-};
-    struct DependencyPolicy : public std::enable_shared_from_this<DependencyPolicy> {
-    bool hasPackageSourceAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedPackageSources;
-    bool hasExternalSourceAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedExternalSources;
-    bool hasLinkLibraryAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedLinkLibraries;
-    bool hasFrameworkAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedFrameworks;
-    bool hasPkgConfigAllowlist;
-    std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages;
-    DependencyPolicy(bool hasPackageSourceAllowlist, std::shared_ptr<std::vector<std::string>> allowedPackageSources, bool hasExternalSourceAllowlist, std::shared_ptr<std::vector<std::string>> allowedExternalSources, bool hasLinkLibraryAllowlist, std::shared_ptr<std::vector<std::string>> allowedLinkLibraries, bool hasFrameworkAllowlist, std::shared_ptr<std::vector<std::string>> allowedFrameworks, bool hasPkgConfigAllowlist, std::shared_ptr<std::vector<std::string>> allowedPkgConfigPackages) : hasPackageSourceAllowlist(hasPackageSourceAllowlist), allowedPackageSources(allowedPackageSources), hasExternalSourceAllowlist(hasExternalSourceAllowlist), allowedExternalSources(allowedExternalSources), hasLinkLibraryAllowlist(hasLinkLibraryAllowlist), allowedLinkLibraries(allowedLinkLibraries), hasFrameworkAllowlist(hasFrameworkAllowlist), allowedFrameworks(allowedFrameworks), hasPkgConfigAllowlist(hasPkgConfigAllowlist), allowedPkgConfigPackages(allowedPkgConfigPackages) {}
+    PackageDependency(std::string name, std::string path) : name(name), path(path) {}
 };
     struct PackageManifest : public std::enable_shared_from_this<PackageManifest> {
     std::string name;
@@ -1577,17 +1629,86 @@ namespace app_src_package_manifest_ {
     std::string rootDirectory;
     std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources;
     std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies;
-    std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies;
-    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions;
-    std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions;
-    std::shared_ptr<DependencyPolicy> policy;
+    std::shared_ptr<std::vector<std::shared_ptr<StdlibPreparationCommand>>> stdlibPreparation;
     std::shared_ptr<NativeBuildPlan> nativeBuild;
     std::string target;
     std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp;
     std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp;
     std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig;
     std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig;
-    PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<ExternalDependency>>> externalDependencies, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> packageResolutions, std::shared_ptr<std::vector<std::shared_ptr<DependencyResolution>>> externalResolutions, std::shared_ptr<DependencyPolicy> policy, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), externalDependencies(externalDependencies), packageResolutions(packageResolutions), externalResolutions(externalResolutions), policy(policy), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
+    PackageManifest(std::string name, std::string version, std::string manifestPath, std::string rootDirectory, std::shared_ptr<std::vector<std::shared_ptr<PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<PackageDependency>>> dependencies, std::shared_ptr<std::vector<std::shared_ptr<StdlibPreparationCommand>>> stdlibPreparation, std::shared_ptr<NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : name(name), version(version), manifestPath(manifestPath), rootDirectory(rootDirectory), resources(resources), dependencies(dependencies), stdlibPreparation(stdlibPreparation), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
+};
+}
+
+namespace app_src_emitter_project_ {
+    struct NativePackageInput : public std::enable_shared_from_this<NativePackageInput> {
+    std::string logicalPrefix;
+    std::string outputRoot;
+    std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest;
+    NativePackageInput(std::string logicalPrefix, std::string outputRoot, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest) : logicalPrefix(logicalPrefix), outputRoot(outputRoot), manifest(manifest) {}
+};
+    struct ProjectNativeCopy : public std::enable_shared_from_this<ProjectNativeCopy> {
+    std::string sourcePath;
+    std::string relativePath;
+    ProjectNativeCopy(std::string sourcePath, std::string relativePath) : sourcePath(sourcePath), relativePath(relativePath) {}
+};
+    struct ProjectSupportFile : public std::enable_shared_from_this<ProjectSupportFile> {
+    std::string relativePath;
+    std::string content;
+    ProjectSupportFile(std::string relativePath, std::string content) : relativePath(relativePath), content(content) {}
+};
+    struct ProjectEmission : public std::enable_shared_from_this<ProjectEmission> {
+    std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules;
+    std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>> supportFiles;
+    std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>> nativeCopies;
+    std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild;
+    std::shared_ptr<std::vector<std::string>> wasmExportNames;
+    ProjectEmission(std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules, std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>> supportFiles, std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>> nativeCopies, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::shared_ptr<std::vector<std::string>> wasmExportNames) : modules(modules), supportFiles(supportFiles), nativeCopies(nativeCopies), nativeBuild(nativeBuild), wasmExportNames(wasmExportNames) {}
+};
+}
+
+namespace app_src_frontend_cache_ {
+    struct FrontendSourceProbe : public std::enable_shared_from_this<FrontendSourceProbe> {
+    std::string logicalPath;
+    std::string sourceHash;
+    bool missing;
+    FrontendSourceProbe(std::string logicalPath, std::string sourceHash, bool missing) : logicalPath(logicalPath), sourceHash(sourceHash), missing(missing) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<FrontendSourceProbe>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
+};
+    struct FrontendFileInput : public std::enable_shared_from_this<FrontendFileInput> {
+    std::string path;
+    std::string sourceHash;
+    FrontendFileInput(std::string path, std::string sourceHash) : path(path), sourceHash(sourceHash) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<FrontendFileInput>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
+};
+    struct FrontendModuleOutput : public std::enable_shared_from_this<FrontendModuleOutput> {
+    std::string modulePath;
+    std::string headerName;
+    std::string sourceName;
+    std::string fingerprint;
+    FrontendModuleOutput(std::string modulePath, std::string headerName, std::string sourceName, std::string fingerprint) : modulePath(modulePath), headerName(headerName), sourceName(sourceName), fingerprint(fingerprint) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<FrontendModuleOutput>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
+};
+    struct FrontendCacheState : public std::enable_shared_from_this<FrontendCacheState> {
+    int32_t version;
+    std::string configurationFingerprint;
+    std::shared_ptr<std::vector<std::shared_ptr<FrontendSourceProbe>>> probes;
+    std::shared_ptr<std::vector<std::shared_ptr<FrontendFileInput>>> fileInputs;
+    std::shared_ptr<std::vector<std::shared_ptr<FrontendModuleOutput>>> modules;
+    FrontendCacheState(int32_t version, std::string configurationFingerprint, std::shared_ptr<std::vector<std::shared_ptr<FrontendSourceProbe>>> probes, std::shared_ptr<std::vector<std::shared_ptr<FrontendFileInput>>> fileInputs, std::shared_ptr<std::vector<std::shared_ptr<FrontendModuleOutput>>> modules) : version(version), configurationFingerprint(configurationFingerprint), probes(probes), fileInputs(fileInputs), modules(modules) {}
+    doof::JsonObject toJsonObject() const;
+    static doof::Result<std::shared_ptr<FrontendCacheState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
+};
+}
+
+namespace app_src_module_acquisition_ {
+    struct ModuleAcquisition : public std::enable_shared_from_this<ModuleAcquisition> {
+    std::string logicalPrefix;
+    std::string diskRoot;
+    ModuleAcquisition(std::string logicalPrefix, std::string diskRoot) : logicalPrefix(logicalPrefix), diskRoot(diskRoot) {}
 };
 }
 
@@ -1599,17 +1720,6 @@ namespace std_::os::index {
     bool stdoutTruncated;
     bool stderrTruncated;
     ExecResult(int32_t exitCode, std::shared_ptr<std::vector<uint8_t>> stdout_, std::shared_ptr<std::vector<uint8_t>> stderr_, bool stdoutTruncated, bool stderrTruncated) : exitCode(exitCode), stdout_(stdout_), stderr_(stderr_), stdoutTruncated(stdoutTruncated), stderrTruncated(stderrTruncated) {}
-};
-}
-
-namespace app_src_external_dependency_ {
-    struct ExternalDependencyTarget : public std::enable_shared_from_this<ExternalDependencyTarget> {
-    std::string nativeTarget;
-    std::string sdkPath;
-    std::string targetTriple;
-    std::string configureHost;
-    int32_t jobs;
-    ExternalDependencyTarget(std::string nativeTarget, std::string sdkPath, std::string targetTriple, std::string configureHost, int32_t jobs) : nativeTarget(nativeTarget), sdkPath(sdkPath), targetTriple(targetTriple), configureHost(configureHost), jobs(jobs) {}
 };
 }
 
@@ -1785,141 +1895,6 @@ struct ZonedDateTime : public std::enable_shared_from_this<ZonedDateTime> {
 };
 }
 
-namespace app_src_std_catalog_ {
-    struct StdCatalogPackage : public std::enable_shared_from_this<StdCatalogPackage> {
-    std::string name;
-    std::string url;
-    std::string ref;
-    std::string version;
-    std::string commit;
-    StdCatalogPackage(std::string name, std::string url, std::string ref, std::string version, std::string commit) : name(name), url(url), ref(ref), version(version), commit(commit) {}
-};
-    struct StdCatalog : public std::enable_shared_from_this<StdCatalog> {
-    int32_t schemaVersion;
-    std::string compilerVersion;
-    std::string digest;
-    std::shared_ptr<std::vector<std::shared_ptr<StdCatalogPackage>>> packages;
-    StdCatalog(int32_t schemaVersion, std::string compilerVersion, std::string digest, std::shared_ptr<std::vector<std::shared_ptr<StdCatalogPackage>>> packages) : schemaVersion(schemaVersion), compilerVersion(compilerVersion), digest(digest), packages(packages) {}
-};
-}
-
-namespace app_src_dependency_policy_ {
-    struct ReachedPackageInput : public std::enable_shared_from_this<ReachedPackageInput> {
-    std::string logicalPrefix;
-    std::string introducedBy;
-    std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest;
-    std::string sourceKind;
-    std::string sourceUrl;
-    std::string sourceRef;
-    std::string sourceCommit;
-    std::string requestedUrl;
-    std::string requestedRef;
-    std::string requestedCommit;
-    bool mutable_;
-    ReachedPackageInput(std::string logicalPrefix, std::string introducedBy, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::string sourceKind, std::string sourceUrl, std::string sourceRef, std::string sourceCommit, std::string requestedUrl, std::string requestedRef, std::string requestedCommit, bool mutable_) : logicalPrefix(logicalPrefix), introducedBy(introducedBy), manifest(manifest), sourceKind(sourceKind), sourceUrl(sourceUrl), sourceRef(sourceRef), sourceCommit(sourceCommit), requestedUrl(requestedUrl), requestedRef(requestedRef), requestedCommit(requestedCommit), mutable_(mutable_) {}
-};
-    struct ResolvedExternalInput : public std::enable_shared_from_this<ResolvedExternalInput> {
-    std::shared_ptr<ReachedPackageInput> owner;
-    std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency;
-    std::string selectedKind;
-    std::string selectedUrl;
-    std::string selectedRef;
-    std::string selectedCommit;
-    std::string selectedSha256;
-    bool overridden;
-    ResolvedExternalInput(std::shared_ptr<ReachedPackageInput> owner, std::shared_ptr<::app_src_package_manifest_::ExternalDependency> dependency, std::string selectedKind, std::string selectedUrl, std::string selectedRef, std::string selectedCommit, std::string selectedSha256, bool overridden) : owner(owner), dependency(dependency), selectedKind(selectedKind), selectedUrl(selectedUrl), selectedRef(selectedRef), selectedCommit(selectedCommit), selectedSha256(selectedSha256), overridden(overridden) {}
-};
-}
-
-namespace app_src_emitter_project_ {
-    struct NativePackageInput : public std::enable_shared_from_this<NativePackageInput> {
-    std::string logicalPrefix;
-    std::string outputRoot;
-    std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest;
-    NativePackageInput(std::string logicalPrefix, std::string outputRoot, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest) : logicalPrefix(logicalPrefix), outputRoot(outputRoot), manifest(manifest) {}
-};
-    struct ProjectNativeCopy : public std::enable_shared_from_this<ProjectNativeCopy> {
-    std::string sourcePath;
-    std::string relativePath;
-    ProjectNativeCopy(std::string sourcePath, std::string relativePath) : sourcePath(sourcePath), relativePath(relativePath) {}
-};
-    struct ProjectSupportFile : public std::enable_shared_from_this<ProjectSupportFile> {
-    std::string relativePath;
-    std::string content;
-    ProjectSupportFile(std::string relativePath, std::string content) : relativePath(relativePath), content(content) {}
-};
-    struct ProjectEmission : public std::enable_shared_from_this<ProjectEmission> {
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules;
-    std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>> supportFiles;
-    std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>> nativeCopies;
-    std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild;
-    std::shared_ptr<std::vector<std::string>> wasmExportNames;
-    ProjectEmission(std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>> modules, std::shared_ptr<std::vector<std::shared_ptr<ProjectSupportFile>>> supportFiles, std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>> nativeCopies, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::shared_ptr<std::vector<std::string>> wasmExportNames) : modules(modules), supportFiles(supportFiles), nativeCopies(nativeCopies), nativeBuild(nativeBuild), wasmExportNames(wasmExportNames) {}
-};
-}
-
-namespace app_src_frontend_cache_ {
-    struct FrontendSourceProbe : public std::enable_shared_from_this<FrontendSourceProbe> {
-    std::string logicalPath;
-    std::string sourceHash;
-    bool missing;
-    FrontendSourceProbe(std::string logicalPath, std::string sourceHash, bool missing) : logicalPath(logicalPath), sourceHash(sourceHash), missing(missing) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FrontendSourceProbe>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
-};
-    struct FrontendFileInput : public std::enable_shared_from_this<FrontendFileInput> {
-    std::string path;
-    std::string sourceHash;
-    FrontendFileInput(std::string path, std::string sourceHash) : path(path), sourceHash(sourceHash) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FrontendFileInput>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
-};
-    struct FrontendModuleOutput : public std::enable_shared_from_this<FrontendModuleOutput> {
-    std::string modulePath;
-    std::string headerName;
-    std::string sourceName;
-    std::string fingerprint;
-    FrontendModuleOutput(std::string modulePath, std::string headerName, std::string sourceName, std::string fingerprint) : modulePath(modulePath), headerName(headerName), sourceName(sourceName), fingerprint(fingerprint) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FrontendModuleOutput>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
-};
-    struct FrontendCacheState : public std::enable_shared_from_this<FrontendCacheState> {
-    int32_t version;
-    std::string configurationFingerprint;
-    std::shared_ptr<std::vector<std::shared_ptr<FrontendSourceProbe>>> probes;
-    std::shared_ptr<std::vector<std::shared_ptr<FrontendFileInput>>> fileInputs;
-    std::shared_ptr<std::vector<std::shared_ptr<FrontendModuleOutput>>> modules;
-    FrontendCacheState(int32_t version, std::string configurationFingerprint, std::shared_ptr<std::vector<std::shared_ptr<FrontendSourceProbe>>> probes, std::shared_ptr<std::vector<std::shared_ptr<FrontendFileInput>>> fileInputs, std::shared_ptr<std::vector<std::shared_ptr<FrontendModuleOutput>>> modules) : version(version), configurationFingerprint(configurationFingerprint), probes(probes), fileInputs(fileInputs), modules(modules) {}
-    doof::JsonObject toJsonObject() const;
-    static doof::Result<std::shared_ptr<FrontendCacheState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
-};
-}
-
-namespace app_src_module_acquisition_ {
-    struct ModuleAcquisition : public std::enable_shared_from_this<ModuleAcquisition> {
-    std::string logicalPrefix;
-    std::string diskRoot;
-    ModuleAcquisition(std::string logicalPrefix, std::string diskRoot) : logicalPrefix(logicalPrefix), diskRoot(diskRoot) {}
-};
-}
-
-namespace app_src_package_acquisition_ {
-    struct ExactPackageSource : public std::enable_shared_from_this<ExactPackageSource> {
-    std::string name;
-    std::string expectedManifestName;
-    std::string url;
-    std::string ref;
-    std::string commit;
-    ExactPackageSource(std::string name, std::string expectedManifestName, std::string url, std::string ref, std::string commit) : name(name), expectedManifestName(expectedManifestName), url(url), ref(ref), commit(commit) {}
-};
-    struct AcquiredPackage : public std::enable_shared_from_this<AcquiredPackage> {
-    std::shared_ptr<ExactPackageSource> source;
-    std::string rootDirectory;
-    bool mutable_;
-    AcquiredPackage(std::shared_ptr<ExactPackageSource> source, std::string rootDirectory, bool mutable_) : source(source), rootDirectory(rootDirectory), mutable_(mutable_) {}
-};
-}
-
 namespace app_src_ios_device_ {
     struct IOSDeviceSigningOptions : public std::enable_shared_from_this<IOSDeviceSigningOptions> {
     std::string signIdentity;
@@ -1939,14 +1914,13 @@ namespace app_src_project_ {
     bool explicitEntry;
     std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources;
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependency>>> externalDependencies;
     std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild;
     std::string target;
     std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp;
     std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp;
     std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig;
     std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig;
-    ProjectSpec(std::string rootDirectory, std::string manifestPath, std::string name, std::string entry, std::string buildDirectory, bool hasManifest, bool explicitEntry, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::ExternalDependency>>> externalDependencies, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : rootDirectory(rootDirectory), manifestPath(manifestPath), name(name), entry(entry), buildDirectory(buildDirectory), hasManifest(hasManifest), explicitEntry(explicitEntry), manifest(manifest), resources(resources), externalDependencies(externalDependencies), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
+    ProjectSpec(std::string rootDirectory, std::string manifestPath, std::string name, std::string entry, std::string buildDirectory, bool hasManifest, bool explicitEntry, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::PackageResource>>> resources, std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan> nativeBuild, std::string target, std::shared_ptr<::app_src_macos_app_::MacOSAppConfig> macosApp, std::shared_ptr<::app_src_ios_app_::IOSAppConfig> iosApp, std::shared_ptr<::app_src_macos_app_::MacOSPackageConfig> packageConfig, std::shared_ptr<::app_src_ios_app_::IOSPackageConfig> iosPackageConfig) : rootDirectory(rootDirectory), manifestPath(manifestPath), name(name), entry(entry), buildDirectory(buildDirectory), hasManifest(hasManifest), explicitEntry(explicitEntry), manifest(manifest), resources(resources), nativeBuild(nativeBuild), target(target), macosApp(macosApp), iosApp(iosApp), packageConfig(packageConfig), iosPackageConfig(iosPackageConfig) {}
 };
 }
 
@@ -1977,6 +1951,61 @@ namespace app_src_resource_state_ {
     ResourceState(int32_t version, std::shared_ptr<std::vector<std::shared_ptr<MaterializedResource>>> files) : version(version), files(files) {}
     doof::JsonObject toJsonObject() const;
     static doof::Result<std::shared_ptr<ResourceState>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
+};
+}
+
+namespace app_src_stdlib_bundle_ {
+    struct StdlibBundleMember : public std::enable_shared_from_this<StdlibBundleMember> {
+    std::string kind;
+    std::string packageName;
+    std::string path;
+    std::string member;
+    int64_t sourceBytes;
+    int64_t compressedBytes;
+    std::string sha256;
+    StdlibBundleMember(std::string kind, std::string packageName, std::string path, std::string member, int64_t sourceBytes, int64_t compressedBytes, std::string sha256) : kind(kind), packageName(packageName), path(path), member(member), sourceBytes(sourceBytes), compressedBytes(compressedBytes), sha256(sha256) {}
+    static doof::Result<std::shared_ptr<StdlibBundleMember>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
+};
+    struct StdlibBundleLicenseFile : public std::enable_shared_from_this<StdlibBundleLicenseFile> {
+    std::string packageName;
+    std::string path;
+    std::string member;
+    StdlibBundleLicenseFile(std::string packageName, std::string path, std::string member) : packageName(packageName), path(path), member(member) {}
+    static doof::Result<std::shared_ptr<StdlibBundleLicenseFile>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
+};
+    struct StdlibBundleIndex : public std::enable_shared_from_this<StdlibBundleIndex> {
+    int32_t schemaVersion;
+    std::string format;
+    std::string bundleDigest;
+    int32_t zstdLevel;
+    std::shared_ptr<std::vector<std::string>> targets;
+    std::shared_ptr<std::vector<std::string>> packages;
+    std::shared_ptr<std::vector<std::shared_ptr<StdlibBundleMember>>> members;
+    std::shared_ptr<std::vector<std::shared_ptr<StdlibBundleLicenseFile>>> licenseFiles;
+    StdlibBundleIndex(int32_t schemaVersion, std::string format, std::string bundleDigest, int32_t zstdLevel, std::shared_ptr<std::vector<std::string>> targets, std::shared_ptr<std::vector<std::string>> packages, std::shared_ptr<std::vector<std::shared_ptr<StdlibBundleMember>>> members, std::shared_ptr<std::vector<std::shared_ptr<StdlibBundleLicenseFile>>> licenseFiles) : schemaVersion(schemaVersion), format(format), bundleDigest(bundleDigest), zstdLevel(zstdLevel), targets(targets), packages(packages), members(members), licenseFiles(licenseFiles) {}
+    static doof::Result<std::shared_ptr<StdlibBundleIndex>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);
+};
+    struct StdlibBundleProvider : public std::enable_shared_from_this<StdlibBundleProvider> {
+    std::string path;
+    std::shared_ptr<StdlibBundleIndex> index;
+    std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types::TarEntry>>> archiveEntries;
+    StdlibBundleProvider(std::string path, std::shared_ptr<StdlibBundleIndex> index, std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types::TarEntry>>> archiveEntries) : path(path), index(index), archiveEntries(archiveEntries) {}
+};
+    struct MaterializedStdlibPackage : public std::enable_shared_from_this<MaterializedStdlibPackage> {
+    std::string rootDirectory;
+    std::string bundleDigest;
+    MaterializedStdlibPackage(std::string rootDirectory, std::string bundleDigest) : rootDirectory(rootDirectory), bundleDigest(bundleDigest) {}
+};
+}
+
+namespace app_src_stdlib_preparation_ {
+    struct StdlibPreparationTarget : public std::enable_shared_from_this<StdlibPreparationTarget> {
+    std::string nativeTarget;
+    std::string sdkPath;
+    std::string targetTriple;
+    std::string configureHost;
+    int32_t jobs;
+    StdlibPreparationTarget(std::string nativeTarget, std::string sdkPath, std::string targetTriple, std::string configureHost, int32_t jobs) : nativeTarget(nativeTarget), sdkPath(sdkPath), targetTriple(targetTriple), configureHost(configureHost), jobs(jobs) {}
 };
 }
 
@@ -2059,42 +2088,19 @@ namespace app_src_driver_ {
     struct DriverReachedPackage : public std::enable_shared_from_this<DriverReachedPackage> {
     std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquisition;
     std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest;
-    std::string introducedBy;
-    std::string sourceKind;
-    std::string sourceUrl;
-    std::string sourceRef;
-    std::string sourceCommit;
-    std::string requestedUrl;
-    std::string requestedRef;
-    std::string requestedCommit;
-    bool mutable_;
-    DriverReachedPackage(std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquisition, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest, std::string introducedBy, std::string sourceKind, std::string sourceUrl, std::string sourceRef, std::string sourceCommit, std::string requestedUrl, std::string requestedRef, std::string requestedCommit, bool mutable_) : acquisition(acquisition), manifest(manifest), introducedBy(introducedBy), sourceKind(sourceKind), sourceUrl(sourceUrl), sourceRef(sourceRef), sourceCommit(sourceCommit), requestedUrl(requestedUrl), requestedRef(requestedRef), requestedCommit(requestedCommit), mutable_(mutable_) {}
-};
-    struct DriverAcquiredSource : public std::enable_shared_from_this<DriverAcquiredSource> {
-    std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquisition;
-    std::string introducedBy;
-    std::string sourceKind;
-    std::string sourceUrl;
-    std::string sourceRef;
-    std::string sourceCommit;
-    std::string requestedUrl;
-    std::string requestedRef;
-    std::string requestedCommit;
-    bool mutable_;
-    DriverAcquiredSource(std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquisition, std::string introducedBy, std::string sourceKind, std::string sourceUrl, std::string sourceRef, std::string sourceCommit, std::string requestedUrl, std::string requestedRef, std::string requestedCommit, bool mutable_) : acquisition(acquisition), introducedBy(introducedBy), sourceKind(sourceKind), sourceUrl(sourceUrl), sourceRef(sourceRef), sourceCommit(sourceCommit), requestedUrl(requestedUrl), requestedRef(requestedRef), requestedCommit(requestedCommit), mutable_(mutable_) {}
+    DriverReachedPackage(std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquisition, std::shared_ptr<::app_src_package_manifest_::PackageManifest> manifest) : acquisition(acquisition), manifest(manifest) {}
 };
     struct DriverSourceState : public std::enable_shared_from_this<DriverSourceState> {
     std::shared_ptr<std::vector<std::shared_ptr<DriverSourceRoot>>> localRoots;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>>> acquisitions;
-    std::shared_ptr<std::vector<std::shared_ptr<DriverAcquiredSource>>> acquiredSources;
     std::shared_ptr<std::vector<std::shared_ptr<DriverReachedPackage>>> reachedPackages;
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>> namespaceMappings;
     std::string nativePlatform;
-    std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget> externalTarget;
+    std::shared_ptr<::app_src_stdlib_preparation_::StdlibPreparationTarget> preparationTarget;
     std::shared_ptr<::app_src_package_manifest_::PackageManifest> rootManifest;
-    std::shared_ptr<::app_src_std_catalog_::StdCatalog> stdCatalog;
+    std::shared_ptr<::app_src_stdlib_bundle_::StdlibBundleProvider> stdlibBundle;
     std::string packageAcquisitionRoot;
-    DriverSourceState(std::shared_ptr<std::vector<std::shared_ptr<DriverSourceRoot>>> localRoots, std::shared_ptr<std::vector<std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>>> acquisitions, std::shared_ptr<std::vector<std::shared_ptr<DriverAcquiredSource>>> acquiredSources, std::shared_ptr<std::vector<std::shared_ptr<DriverReachedPackage>>> reachedPackages, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>> namespaceMappings, std::string nativePlatform, std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget> externalTarget, std::shared_ptr<::app_src_package_manifest_::PackageManifest> rootManifest, std::shared_ptr<::app_src_std_catalog_::StdCatalog> stdCatalog, std::string packageAcquisitionRoot) : localRoots(localRoots), acquisitions(acquisitions), acquiredSources(acquiredSources), reachedPackages(reachedPackages), namespaceMappings(namespaceMappings), nativePlatform(nativePlatform), externalTarget(externalTarget), rootManifest(rootManifest), stdCatalog(stdCatalog), packageAcquisitionRoot(packageAcquisitionRoot) {}
+    DriverSourceState(std::shared_ptr<std::vector<std::shared_ptr<DriverSourceRoot>>> localRoots, std::shared_ptr<std::vector<std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>>> acquisitions, std::shared_ptr<std::vector<std::shared_ptr<DriverReachedPackage>>> reachedPackages, std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>> namespaceMappings, std::string nativePlatform, std::shared_ptr<::app_src_stdlib_preparation_::StdlibPreparationTarget> preparationTarget, std::shared_ptr<::app_src_package_manifest_::PackageManifest> rootManifest, std::shared_ptr<::app_src_stdlib_bundle_::StdlibBundleProvider> stdlibBundle, std::string packageAcquisitionRoot) : localRoots(localRoots), acquisitions(acquisitions), reachedPackages(reachedPackages), namespaceMappings(namespaceMappings), nativePlatform(nativePlatform), preparationTarget(preparationTarget), rootManifest(rootManifest), stdlibBundle(stdlibBundle), packageAcquisitionRoot(packageAcquisitionRoot) {}
 };
 }
 
@@ -2376,13 +2382,16 @@ namespace app_src_ast_ {
     std::string type_;
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args;
+    doof_header_type_5 spread;
+    std::shared_ptr<std::vector<std::string>> spreadFields;
+    doof_header_type_3 resolvedSpreadType;
     bool named;
     std::shared_ptr<ClassDeclaration> resolvedClass;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
     doof_header_type_3 resolvedConstructedType;
     doof_header_type_3 resolvedType;
     SourceSpan span;
-    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedConstructedType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
+    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, doof_header_type_5 spread, std::shared_ptr<std::vector<std::string>> spreadFields, doof_header_type_3 resolvedSpreadType, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedConstructedType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), spread(spread), spreadFields(spreadFields), resolvedSpreadType(resolvedSpreadType), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
 };
     struct DotShorthand : public std::enable_shared_from_this<DotShorthand> {
     std::string kind;
@@ -2784,17 +2793,20 @@ namespace app_src_ast_ {
     std::string name;
     std::string description;
     std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants;
+    std::string backingKind;
     bool exported;
     SourceSpan span;
-    EnumDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants, bool exported, SourceSpan span) : kind(kind), name(name), description(description), variants(variants), exported(exported), span(span) {}
+    EnumDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::shared_ptr<EnumVariant>>> variants, std::string backingKind, bool exported, SourceSpan span) : kind(kind), name(name), description(description), variants(variants), backingKind(backingKind), exported(exported), span(span) {}
 };
     struct EnumVariant : public std::enable_shared_from_this<EnumVariant> {
     std::string kind;
     std::string name;
     std::string description;
     doof_header_type_5 value;
+    std::optional<int32_t> resolvedIntValue;
+    std::optional<std::string> resolvedStringValue;
     SourceSpan span;
-    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_5 value, SourceSpan span) : kind(kind), name(name), description(description), value(value), span(span) {}
+    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_5 value, std::optional<int32_t> resolvedIntValue, std::optional<std::string> resolvedStringValue, SourceSpan span) : kind(kind), name(name), description(description), value(value), resolvedIntValue(resolvedIntValue), resolvedStringValue(resolvedStringValue), span(span) {}
 };
     struct TypeAliasDeclaration : public std::enable_shared_from_this<TypeAliasDeclaration> {
     std::string kind;
@@ -2909,11 +2921,12 @@ namespace app_src_parser_ {
     int32_t pos;
     bool inForIterable;
     bool inTagAttribute;
+    int32_t tagAttributeDelimiterDepth;
     std::string errorMessage;
     int32_t errorLine;
     int32_t errorColumn;
     int32_t errorOffset;
-    Parser(std::string source, std::shared_ptr<std::vector<::app_src_lexer_::Token>> tokens, int32_t pos, bool inForIterable, bool inTagAttribute, std::string errorMessage, int32_t errorLine, int32_t errorColumn, int32_t errorOffset) : source(source), tokens(tokens), pos(pos), inForIterable(inForIterable), inTagAttribute(inTagAttribute), errorMessage(errorMessage), errorLine(errorLine), errorColumn(errorColumn), errorOffset(errorOffset) {}
+    Parser(std::string source, std::shared_ptr<std::vector<::app_src_lexer_::Token>> tokens, int32_t pos, bool inForIterable, bool inTagAttribute, int32_t tagAttributeDelimiterDepth, std::string errorMessage, int32_t errorLine, int32_t errorColumn, int32_t errorOffset) : source(source), tokens(tokens), pos(pos), inForIterable(inForIterable), inTagAttribute(inTagAttribute), tagAttributeDelimiterDepth(tagAttributeDelimiterDepth), errorMessage(errorMessage), errorLine(errorLine), errorColumn(errorColumn), errorOffset(errorOffset) {}
     std::shared_ptr<::app_src_ast_::Program> parse();
     ::app_src_lexer_::Token current();
     ::app_src_lexer_::Token peek(int32_t offset);
@@ -2928,6 +2941,7 @@ namespace app_src_parser_ {
     std::string currentText();
     ::app_src_ast_::AstLocation location();
     ::app_src_ast_::SourceSpan span(::app_src_ast_::AstLocation start);
+    ::app_src_ast_::AstLocation previousEnd();
     bool sameLineAsPrevious();
     bool previousIs(::app_src_lexer_::TokenType kind);
     bool immediatelyAfterPrevious();
@@ -2949,7 +2963,6 @@ namespace app_src_parser_ {
     doof_header_type_10 parseCaseExpression();
     bool looksLikePattern(::app_src_lexer_::TokenType separator);
     doof_header_type_9 parseDestructuring(const std::string& shape, const std::string& bindingKind, ::app_src_lexer_::TokenType separator);
-    doof_header_type_9 parseTryStatement();
     std::variant<std::monostate, std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseOptionalType();
     std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseTypeAnnotation();
     doof_header_type_10 parseExpression();
@@ -2965,6 +2978,7 @@ namespace app_src_cli_ {
 
 namespace std_::path::index {
     doof::Result<std::string, std::string> absolute(const std::string& path);
+    doof::Result<std::string, std::string> resourcePath(const std::string& path);
 }
 
 namespace app_src_macos_app_ {
@@ -2978,6 +2992,26 @@ namespace app_src_ios_app_ {
 
 namespace app_src_package_manifest_ {
     doof::Result<std::shared_ptr<PackageManifest>, std::string> parsePackageManifest(const std::string& source, const std::string& manifestPath, const std::string& rootDirectory, const std::string& platform, const std::string& targetOverride);
+}
+
+namespace app_src_emitter_project_ {
+    std::shared_ptr<ProjectEmission> planProjectEmission(const std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission>& graph, const std::shared_ptr<std::vector<std::shared_ptr<NativePackageInput>>>& packages);
+}
+
+namespace app_src_frontend_cache_ {
+    std::shared_ptr<FrontendCacheState> parseFrontendCacheState(const std::string& source);
+    std::string renderFrontendCacheState(const std::shared_ptr<FrontendCacheState>& state);
+}
+
+namespace app_src_module_acquisition_ {
+    std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions);
+    std::optional<std::string> acquiredModuleDiskPath(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions);
+    std::string acquiredManifestPath(const std::shared_ptr<ModuleAcquisition>& acquisition);
+}
+
+namespace app_src_progress_ {
+    std::string renderProgressBar(int32_t completed, int32_t total, int32_t width);
+    int32_t boundedWorkerCount(int32_t itemCount, int32_t maximumWorkers);
 }
 
 namespace std_::fs::types {
@@ -3020,50 +3054,8 @@ namespace std_::os::index {
     doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& command, const std::shared_ptr<std::vector<std::string>>& args, const std::shared_ptr<ExecOptions>& options);
 }
 
-namespace app_src_external_dependency_ {
-    doof::Result<void, std::string> acquirePackageExternalDependencies(const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& manifest, const std::shared_ptr<ExternalDependencyTarget>& target);
-}
-
-namespace app_src_std_catalog_ {
-    std::string canonicalDependencyUrl(const std::string& value);
-    doof::Result<std::shared_ptr<StdCatalog>, std::string> parseStdCatalog(const std::string& source);
-    std::shared_ptr<StdCatalogPackage> stdCatalogPackage(const std::shared_ptr<StdCatalog>& catalog, const std::string& name);
-}
-
-namespace app_src_dependency_policy_ {
-    bool hasMutableStdPackageInputs(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages);
-    std::shared_ptr<::app_src_package_manifest_::PackageDependency> selectedPackageSource(const std::shared_ptr<::app_src_package_manifest_::PackageDependency>& dependency, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_package_manifest_::DependencyResolution>>>& resolutions);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>, std::string> resolveExternalInputs(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest);
-    doof::Result<void, std::string> validateDependencyPolicy(const std::shared_ptr<std::vector<std::shared_ptr<ReachedPackageInput>>>& packages, const std::shared_ptr<std::vector<std::shared_ptr<ResolvedExternalInput>>>& externals, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest);
-}
-
-namespace app_src_emitter_project_ {
-    std::shared_ptr<ProjectEmission> planProjectEmission(const std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission>& graph, const std::shared_ptr<std::vector<std::shared_ptr<NativePackageInput>>>& packages);
-}
-
-namespace app_src_frontend_cache_ {
-    std::shared_ptr<FrontendCacheState> parseFrontendCacheState(const std::string& source);
-    std::string renderFrontendCacheState(const std::shared_ptr<FrontendCacheState>& state);
-}
-
-namespace app_src_module_acquisition_ {
-    std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions);
-    std::optional<std::string> acquiredModuleDiskPath(const std::string& logicalPath, const std::shared_ptr<std::vector<std::shared_ptr<ModuleAcquisition>>>& acquisitions);
-    std::string acquiredManifestPath(const std::shared_ptr<ModuleAcquisition>& acquisition);
-}
-
-namespace app_src_progress_ {
-    std::string renderProgressBar(int32_t completed, int32_t total, int32_t width);
-    int32_t boundedWorkerCount(int32_t itemCount, int32_t maximumWorkers);
-}
-
 namespace app_src_native_build_driver_ {
     int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, ::app_src_native_build_::NativeBuildMode mode, const std::string& platform, NativeBuildOutputMode outputMode, bool wasmCommand);
-}
-
-namespace app_src_package_acquisition_ {
-    std::string workspacePackageAcquisitionRoot(const std::string& workspaceRoot);
-    doof::Result<std::shared_ptr<AcquiredPackage>, std::string> acquireExactGitPackage(const std::shared_ptr<ExactPackageSource>& source, const std::string& packagesRoot);
 }
 
 namespace app_src_macos_app_driver_ {
@@ -3092,10 +3084,6 @@ namespace app_src_project_ {
     std::shared_ptr<ProjectSpec> readProjectSpec(const std::string& requestedPath, const std::string& platform, const std::string& targetOverride);
 }
 
-namespace app_src_provenance_ {
-    std::string renderBuildProvenance(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>>& packages, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>>& externals, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& nativeBuild, const std::shared_ptr<::app_src_std_catalog_::StdCatalog>& catalog);
-}
-
 namespace app_src_run_command_ {
     std::shared_ptr<RunInvocation> planNativeProgramRun(const std::string& executablePath, const std::shared_ptr<std::vector<std::string>>& programArguments, const std::string& packageRoot);
     std::shared_ptr<RunInvocation> planMacOSAppRun(const std::string& appPath, const std::string& packageRoot);
@@ -3116,6 +3104,29 @@ namespace app_src_resource_state_ {
     std::string renderResourceState(const std::shared_ptr<ResourceState>& state);
     std::shared_ptr<MaterializedResource> findMaterializedResource(const std::shared_ptr<ResourceState>& state, const std::string& sourcePath, const std::string& outputPath);
     bool materializedResourceIsCurrent(const std::shared_ptr<MaterializedResource>& previous, int64_t sourceSize, int64_t sourceModifiedNanos, int64_t outputSize, int64_t outputModifiedNanos);
+}
+
+namespace app_src_stdlib_bundle_ {
+    doof::Result<std::shared_ptr<StdlibBundleProvider>, std::string> openStdlibBundle(const std::string& path);
+    doof::Result<std::shared_ptr<MaterializedStdlibPackage>, std::string> materializeStdlibBundlePackage(const std::shared_ptr<StdlibBundleProvider>& provider, const std::string& packageName, const std::string& packagesRoot, const std::string& targetKey, const std::string& nativeTarget);
+    std::string stdlibBundleTargetKey(const std::string& nativeTarget, const std::string& sdkPath, const std::string& targetTriple, const std::string& configureHost);
+}
+
+namespace std_::archive::types {
+    struct TarEntry : public std::enable_shared_from_this<TarEntry> {
+    std::string name;
+    TarEntryKind kind;
+    int64_t contentOffset;
+    int64_t size;
+    int32_t mode;
+    std::shared_ptr<::std_::time::temporal::Instant> mtime;
+    std::string linkName;
+    TarEntry(std::string name, TarEntryKind kind, int64_t contentOffset, int64_t size, int32_t mode, std::shared_ptr<::std_::time::temporal::Instant> mtime, std::string linkName) : name(name), kind(kind), contentOffset(contentOffset), size(size), mode(mode), mtime(mtime), linkName(linkName) {}
+};
+}
+
+namespace app_src_stdlib_preparation_ {
+    doof::Result<void, std::string> prepareStdlibPackage(const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& manifest, const std::shared_ptr<StdlibPreparationTarget>& target);
 }
 
 namespace app_src_test_runner_ {
@@ -3140,9 +3151,6 @@ namespace app_src_wasm_test_runner_ {
 
 namespace doof { using Compilation = ::app_src_compiler_::Compilation; }
 namespace doof { using CliRequest = ::app_src_cli_::CliRequest; }
-namespace doof { using ExternalDependencyTarget = ::app_src_external_dependency_::ExternalDependencyTarget; }
-namespace doof { using ReachedPackageInput = ::app_src_dependency_policy_::ReachedPackageInput; }
-namespace doof { using ResolvedExternalInput = ::app_src_dependency_policy_::ResolvedExternalInput; }
 namespace doof { using NativePackageInput = ::app_src_emitter_project_::NativePackageInput; }
 namespace doof { using ProjectEmission = ::app_src_emitter_project_::ProjectEmission; }
 namespace doof { using ModuleNamespaceMapping = ::app_src_emitter_names_::ModuleNamespaceMapping; }
@@ -3156,12 +3164,9 @@ namespace doof { using FrontendSourceProbe = ::app_src_frontend_cache_::Frontend
 namespace doof { using ModuleAcquisition = ::app_src_module_acquisition_::ModuleAcquisition; }
 namespace doof { using NativeBuildOutputMode = ::app_src_native_build_driver_::NativeBuildOutputMode; }
 namespace doof { using NativeBuildMode = ::app_src_native_build_::NativeBuildMode; }
-namespace doof { using ExternalDependency = ::app_src_package_manifest_::ExternalDependency; }
 namespace doof { using NativeBuildPlan = ::app_src_package_manifest_::NativeBuildPlan; }
-namespace doof { using PackageDependency = ::app_src_package_manifest_::PackageDependency; }
 namespace doof { using PackageManifest = ::app_src_package_manifest_::PackageManifest; }
 namespace doof { using PackageResource = ::app_src_package_manifest_::PackageResource; }
-namespace doof { using ExactPackageSource = ::app_src_package_acquisition_::ExactPackageSource; }
 namespace doof { using Parser = ::app_src_parser_::Parser; }
 namespace doof { using MaterializedResource = ::app_src_resource_state_::MaterializedResource; }
 namespace doof { using ResourceState = ::app_src_resource_state_::ResourceState; }
@@ -3170,7 +3175,8 @@ namespace doof { using Diagnostic = ::app_src_semantic_::Diagnostic; }
 namespace doof { using SemanticLocation = ::app_src_semantic_::SemanticLocation; }
 namespace doof { using SemanticSpan = ::app_src_semantic_::SemanticSpan; }
 namespace doof { using SourceFile = ::app_src_semantic_::SourceFile; }
-namespace doof { using StdCatalog = ::app_src_std_catalog_::StdCatalog; }
+namespace doof { using StdlibBundleProvider = ::app_src_stdlib_bundle_::StdlibBundleProvider; }
+namespace doof { using StdlibPreparationTarget = ::app_src_stdlib_preparation_::StdlibPreparationTarget; }
 namespace doof { using CoverageModuleMetadata = ::app_src_emitter_module_::CoverageModuleMetadata; }
 namespace doof { using CoverageReport = ::app_src_test_runner_::CoverageReport; }
 namespace doof { using DiscoveredTest = ::app_src_test_runner_::DiscoveredTest; }
@@ -3196,18 +3202,15 @@ namespace app_src_driver_ {
     std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition> acquiredPackageForLoadedSource(const std::string& logicalPath, const std::shared_ptr<DriverSourceState>& state);
     doof::Result<std::shared_ptr<::app_src_package_manifest_::PackageManifest>, std::string> parseDependencyManifestForTarget(const std::string& source, const std::string& manifestPath, const std::string& rootDirectory, const std::string& nativePlatform, const std::string& rootTarget);
     doof::Result<void, std::shared_ptr<::app_src_semantic_::Diagnostic>> registerReachedPackage(const std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>& acquisition);
-    std::shared_ptr<DriverAcquiredSource> acquiredSourceFor(const std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>& acquisition);
+    std::string stdlibPackageNameForLogicalPath(const std::string& logicalPath);
     doof::Result<void, std::string> ensureStdPackageAcquisition(const std::string& logicalPath);
     doof::Result<void, std::string> ensureStdPackageReached(const std::string& packageName);
     std::shared_ptr<::app_src_semantic_::Diagnostic> driverDiagnostic(const std::string& module, const std::string& message);
     std::string driverSourceDiskRoot(const std::string& path);
-    doof::Result<doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>, std::string> sourceLoaderForRequest(const std::string& entryPath, const std::string& stdlibRoot, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>& namespaceMappings, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest, const std::string& nativePlatform, const std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget>& externalTarget);
-    doof::Result<void, std::string> configureDeclaredDependencies(const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& manifest, const std::string& ownerPrefix, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest, const std::string& packageAcquisitionRoot, const std::string& nativePlatform, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>>>& acquisitions, const std::shared_ptr<std::vector<std::shared_ptr<DriverAcquiredSource>>>& acquiredSources);
-    std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ReachedPackageInput>>> reachedPackageInputs(const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest);
-    doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>>, std::string> resolvedDependencyInputs(const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest);
-    doof::Result<void, std::string> acquireResolvedExternalInputs(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>>>& inputs, const std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget>& target);
-    std::shared_ptr<::app_src_package_manifest_::ExternalDependency> selectedExternalDependency(const std::shared_ptr<::app_src_dependency_policy_::ResolvedExternalInput>& input);
-    doof::Result<std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget>, std::string> externalTargetForRequest(const std::string& target, const std::string& nativePlatform, const std::string& iosDestination, const std::string& iosMinimumVersion);
+    doof::Result<doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>, std::string> sourceLoaderForRequest(const std::string& entryPath, const std::string& stdlibRoot, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_names_::ModuleNamespaceMapping>>>& namespaceMappings, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest, const std::string& nativePlatform, const std::shared_ptr<::app_src_stdlib_preparation_::StdlibPreparationTarget>& preparationTarget);
+    doof::Result<void, std::string> configureDeclaredDependencies(const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& manifest, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& rootManifest, const std::string& nativePlatform, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_module_acquisition_::ModuleAcquisition>>>& acquisitions);
+    doof::Result<void, std::string> prepareReachedStdlibPackages(const std::shared_ptr<::app_src_stdlib_preparation_::StdlibPreparationTarget>& target);
+    doof::Result<std::shared_ptr<::app_src_stdlib_preparation_::StdlibPreparationTarget>, std::string> preparationTargetForRequest(const std::string& target, const std::string& nativePlatform, const std::string& iosDestination, const std::string& iosMinimumVersion);
     std::string driverLogicalPrefix(const std::string& path);
     std::string driverRootLogicalPrefix(const std::string& packageName, const std::string& rootDirectory);
     std::string driverRootLogicalPath(const std::string& path, const std::string& rootDirectory, const std::string& packageName);
@@ -3218,7 +3221,8 @@ namespace app_src_driver_ {
     void writeTextIfChanged(const std::string& path, const std::string& content);
     void materializeGeneratedText(const std::string& path, const std::string& content);
     std::string frontendCachePath(const std::string& buildDirectory, const std::string& kind);
-    std::string frontendConfigurationFingerprint(const std::string& entry, const std::string& entryMode, const std::string& target, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& manifest, const std::string& stdlibRoot, const std::string& nativePlatform, const std::shared_ptr<::app_src_external_dependency_::ExternalDependencyTarget>& externalTarget);
+    std::string frontendConfigurationFingerprint(const std::string& entry, const std::string& entryMode, const std::string& target, const std::shared_ptr<::app_src_package_manifest_::PackageManifest>& manifest, const std::string& stdlibRoot, const std::string& nativePlatform, const std::shared_ptr<::app_src_stdlib_preparation_::StdlibPreparationTarget>& preparationTarget);
+    std::string configuredStdlibBundleFingerprint();
     std::string readTextOrEmpty(const std::string& path);
     std::shared_ptr<::app_src_frontend_cache_::FrontendCacheState> readFrontendState(const std::string& path);
     bool frontendStateMatches(const std::shared_ptr<::app_src_frontend_cache_::FrontendCacheState>& state, const std::string& configurationFingerprint, const doof::callback<doof::Result<std::shared_ptr<::app_src_semantic_::SourceFile>, std::shared_ptr<::app_src_semantic_::Diagnostic>>(std::string)>& loader);

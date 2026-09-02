@@ -8,7 +8,7 @@ import { isDirectory, isFile, readText } from "std/fs"
 import { parseJsonValue } from "std/json"
 import { env } from "std/os"
 import { absolute, basename, dirname, join } from "std/path"
-import { ExternalDependency, NativeBuildPlan, PackageManifest, PackageResource, parsePackageManifest } from "./package-manifest"
+import { NativeBuildPlan, PackageManifest, PackageResource, parsePackageManifest } from "./package-manifest"
 import { MacOSAppConfig, MacOSPackageConfig } from "./macos-app"
 import { IOSAppConfig, IOSPackageConfig } from "./ios-app"
 
@@ -43,7 +43,6 @@ export class ProjectSpec {
   explicitEntry: bool = false
   manifest: PackageManifest
   resources: PackageResource[] = []
-  externalDependencies: ExternalDependency[] = []
   nativeBuild: NativeBuildPlan
   target: string = ""
   macosApp: MacOSAppConfig | none = none
@@ -109,7 +108,6 @@ export function readProjectSpec(requestedPath: string, platform: string = "", ta
     explicitEntry: !isDirectory(absolutePath),
     manifest: packageManifest,
     resources: packageManifest.resources,
-    externalDependencies: packageManifest.externalDependencies,
     nativeBuild: packageManifest.nativeBuild,
     target: packageManifest.target,
     macosApp: packageManifest.macosApp,

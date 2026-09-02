@@ -181,13 +181,17 @@ allows imports such as:
 import { say } from "hello-doof/hello"
 ```
 
-Remote dependencies never float. `ref` is descriptive and supplies the Git fetch target; the compiler verifies that the checkout resolves to the exact 40-character `commit`. The Doof compiler keeps one expanded copy per logical package under the root workspace's `.doof/packages/` directory. A disposable acquisition receipt inside that package root records its canonical source URL, ref, and commit. When those coordinates or the expanded package validation no longer match, the package directory is replaced cleanly. No committed lock file or global package cache participates in resolution.
+Package dependencies are local paths. Doof does not fetch Git repositories,
+download archives, vendor third-party sources, or apply dependency resolutions.
+Projects prepare those inputs outside the compiler and reference them through
+local package paths and `build.native` inputs.
 
-The compiler applies the same rule to `std/*`: each compiler release embeds a generated catalog of canonical package origins and exact commits. A compiler upgrade intentionally selects a new tested catalog; no lock file participates in resolution.
-
-If reached packages request different commits from the same canonical URL, compilation fails unless the root `doof.json` selects an exact winner under `resolutions.packages` or `resolutions.externalDependencies`. Package-specific vendor destinations and build commands remain owned by the declaring package. Optional root policy allowlists can reject unapproved transitive package origins, external origins, libraries, frameworks, and pkg-config packages before vendor acquisition or linking.
-
-Local path dependencies and `DOOF_STDLIB_ROOT` are explicit mutable overrides accepted by every command. They are recorded as mutable provenance; packaging additionally warns when reached standard packages came from `DOOF_STDLIB_ROOT`. Source-graph and bare-module overrides are declared in `doof.json`, not supplied through command-line escape hatches.
+Each compiler release ships an adjacent `doof-stdlib.tar`; its index is the
+authority for available `std/*` packages and packages are materialized lazily.
+`DOOF_STDLIB_ROOT` overrides the bundle for every command and points to a
+directory whose immediate children are standard-package folders. Standard
+packages alone may use `build.stdlib.prepare` for bounded target-specific
+preparation of already-present sources.
 
 ### Generated C++ Namespaces
 

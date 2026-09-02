@@ -48,16 +48,16 @@ std::shared_ptr<NativeCompilerTaskResult> NativeCompilerWorker::compile(int32_t 
     return std::make_shared<NativeCompilerTaskResult>(workerIndex, result);
 }
 int32_t buildNativeProject(const std::string& compilerOverride, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<::app_src_emitter_project_::ProjectEmission>& project, ::app_src_native_build_::NativeBuildMode mode, const std::string& platform, NativeBuildOutputMode outputMode, bool wasmCommand) {
-    const auto& _iterable_5 = project->nativeBuild->pkgConfigPackages;
-    for (const auto& packageName : *_iterable_5) {
-        const auto& _iterable_7 = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("cflags"), std::string("libs")});
-        for (const auto& mode : *_iterable_7) {
+    const auto& _iterable_8 = project->nativeBuild->pkgConfigPackages;
+    for (const auto& packageName : *_iterable_8) {
+        const auto& _iterable_6 = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("cflags"), std::string("libs")});
+        for (const auto& mode : *_iterable_6) {
             const auto pkgConfigResult = runBuildCommand(std::string("pkg-config"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{(std::string("--") + mode), packageName}));
             const auto output = ::doof_blob::NativeBlobReader::constructor(pkgConfigResult->output, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((pkgConfigResult->output)->size())));
             const auto applied = ::app_src_pkg_config_::applyPkgConfigResult(project->nativeBuild, packageName, mode, std::make_shared<::app_src_pkg_config_::PkgConfigCommandResult>(pkgConfigResult->exitCode, output, pkgConfigResult->error));
-            auto _binding_value_8 = applied;
-            if (doof::is_failure(_binding_value_8)) {
-                const auto error = doof::failure_error(_binding_value_8);
+            auto _binding_value_4 = applied;
+            if (doof::is_failure(_binding_value_4)) {
+                const auto error = doof::failure_error(_binding_value_4);
                 doof::println((std::string("error: ") + error));
                 return 1;
             }
@@ -514,14 +514,14 @@ void collectManagedOutputsIndexed(const std::shared_ptr<std::vector<std::string>
             appendManagedOutput(outputs, indexed, path);
         }
     }
-    const auto& _iterable_68 = plan->compileTasks;
-    for (const auto& task : *_iterable_68) {
+    const auto& _iterable_70 = plan->compileTasks;
+    for (const auto& task : *_iterable_70) {
         appendManagedOutput(outputs, indexed, task->outputPath);
         if (task->dependencyFilePath != std::string("")) {
             appendManagedOutput(outputs, indexed, task->dependencyFilePath);
         }
-        const auto& _iterable_70 = task->auxiliaryOutputPaths;
-        for (const auto& path : *_iterable_70) {
+        const auto& _iterable_68 = task->auxiliaryOutputPaths;
+        for (const auto& path : *_iterable_68) {
             appendManagedOutput(outputs, indexed, path);
         }
     }

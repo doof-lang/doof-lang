@@ -7,10 +7,10 @@ using namespace ::app_src_ast_;
 using namespace ::app_src_checker_symbols_;
 std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> validateCheckedTypes(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{});
-    const auto& _iterable_2 = result->modules;
-    for (const auto& module : *_iterable_2) {
-        const auto& _iterable_4 = module->program->statements;
-        for (const auto& statement : *_iterable_4) {
+    const auto& _iterable_4 = result->modules;
+    for (const auto& module : *_iterable_4) {
+        const auto& _iterable_2 = module->program->statements;
+        for (const auto& statement : *_iterable_2) {
             validateStatement(statement, module->path, diagnostics);
         }
     }
@@ -94,6 +94,13 @@ void validateStatement(const std::variant<std::shared_ptr<::app_src_ast_::ConstD
                 if (!doof::is_null(variant->value)) {
                     validateExpression(doof::unwrap_optional(variant->value), module, diagnostics);
                 }
+                if (enum_->backingKind == std::string("string")) {
+                    if (doof::is_null(variant->resolvedStringValue)) {
+                        addValidationError(module, variant->span, ((((std::string("Enum variant '") + enum_->name) + std::string(".")) + variant->name) + std::string("' has no resolved string backing value")), diagnostics);
+                    }
+                } else if (doof::is_null(variant->resolvedIntValue)) {
+                    addValidationError(module, variant->span, ((((std::string("Enum variant '") + enum_->name) + std::string(".")) + variant->name) + std::string("' has no resolved integer backing value")), diagnostics);
+                }
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>>(_case_subject)) {
@@ -121,10 +128,10 @@ void validateStatement(const std::variant<std::shared_ptr<::app_src_ast_::ConstD
                 addValidationError(module, case_->span, std::string("Case statement has no resolved control-flow completion"), diagnostics);
             }
             validateExpression(case_->subject, module, diagnostics);
-            const auto& _iterable_20 = case_->arms;
-            for (const auto& arm : *_iterable_20) {
-                const auto& _iterable_22 = arm->patterns;
-                for (const auto& pattern : *_iterable_22) {
+            const auto& _iterable_22 = case_->arms;
+            for (const auto& arm : *_iterable_22) {
+                const auto& _iterable_20 = arm->patterns;
+                for (const auto& pattern : *_iterable_20) {
                     validatePattern(pattern, module, diagnostics);
                 }
                 {
@@ -473,10 +480,10 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject);
             validateExpression(case_->subject, module, diagnostics);
             validateResolved(case_->resolvedType, case_->span, module, std::string("case expression"), diagnostics);
-            const auto& _iterable_50 = case_->arms;
-            for (const auto& arm : *_iterable_50) {
-                const auto& _iterable_52 = arm->patterns;
-                for (const auto& pattern : *_iterable_52) {
+            const auto& _iterable_52 = case_->arms;
+            for (const auto& arm : *_iterable_52) {
+                const auto& _iterable_50 = arm->patterns;
+                for (const auto& pattern : *_iterable_50) {
                     validatePattern(pattern, module, diagnostics);
                 }
                 {
@@ -502,6 +509,10 @@ void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLi
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject)) {
             const auto& construct = std::get<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject);
+            if (!doof::is_null(construct->spread)) {
+                validateExpression(doof::unwrap_optional(construct->spread), module, diagnostics);
+                validateResolved(construct->resolvedSpreadType, std::visit([](auto&& _obj) { return _obj->span; }, doof::unwrap_optional(construct->spread)), module, std::string("construction spread"), diagnostics);
+            }
             if ((construct->type_ != std::string("Success")) && (construct->type_ != std::string("Failure"))) {
                 validateResolved(construct->resolvedConstructedType, construct->span, module, std::string("constructed type"), diagnostics);
                 if (doof::is_null(construct->resolvedClass)) {
