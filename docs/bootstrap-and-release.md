@@ -118,17 +118,32 @@ not leak into one another.
 
 ## Development self-install
 
-Run `./install.sh` to build through the B5/B6 fixed point, run the compiler
-suite, and install the verified artifacts. No privileged command runs until
-both verification steps pass. The default layout keeps `doof`,
-`doof_runtime.h` and `doof-stdlib.tar` together in
-`/usr/local/libexec/doof`, with `/usr/local/bin/doof` as a relative symlink to
-the bundled executable. Relative resource links are also placed in
-`/usr/local/bin`, because macOS console executables resolve packaged resources
-from the launch directory even when the executable itself is a symlink.
+Run `./install.sh` for a fast, unverified development self-install. The script
+uses `DOOF_DEV_COMPILER` when set, otherwise `doof` from `PATH`, with
+`dist/doof` as a final fallback. That seed compiler runs an incremental
+optimized package build in `build/dev-install/`, then rebuilds the stdlib
+bundle from `DOOF_STDLIB_ROOT` or the adjacent `../doof-stdlib` checkout. It
+does not compile the bootstrap snapshot, compare B5/B6, or run tests.
 
-An alternate absolute prefix can be supplied with
-`./install.sh --prefix /opt/doof`. Empty and relative prefixes, and `/` itself,
-are rejected before the build or privilege boundary. Installation replaces
-existing compiler files and symlinks but refuses to replace a directory at any
-managed destination.
+The resulting compiler and its adjacent resources are staged and installed as
+one version under `~/.doof/versions/dev`. `~/.doof/current` selects that
+version, while relative links in `~/.doof/bin` expose the compiler and
+resources. The resource links are required because macOS console executables
+resolve packaged resources from the launch directory even when the executable
+is itself a symlink. Add the stable bin directory to the front of `PATH`:
+
+```sh
+export PATH="$HOME/.doof/bin:$PATH"
+```
+
+Set `DOOF_HOME` to override the home directory with another absolute path.
+Empty or relative roots and `/` are rejected, as are directories at managed
+link paths. Reinstalling replaces only the `dev` version and preserves other
+versions and package caches. The installer does not edit shell profiles or use
+`sudo`.
+
+Run `./build.sh` plus `./scripts/test.sh`, or the complete
+`./scripts/release.sh`, when fixed-point or release-grade verification is
+required. Once release archives are published, the public installer can put a
+selected downloaded release in `versions/<version>` and switch `current`
+without changing this layout.

@@ -67,17 +67,26 @@ contracts.
 ./scripts/test.sh                  # compiler unit/component tests
 ./scripts/bootstrap-compiler-linux.sh # experimental Linux stage-0 compile
 ./scripts/release.sh               # full release acceptance gate
-./install.sh                       # build, test, and sudo-install the compiler
+./install.sh                       # quickly package and install a development compiler
 ```
 
-`./install.sh` is the development self-install workflow. It completes the
-verified fixed-point build and compiler tests before requesting `sudo`, then
-installs the compiler bundle under `/usr/local/libexec/doof` and exposes it as
-`/usr/local/bin/doof`. Relative resource symlinks in `/usr/local/bin` support
-the macOS console-executable resource lookup while keeping the canonical files
-in the bundle. Use `./install.sh --prefix /absolute/path` to select a different
-prefix. Existing compiler files or symlinks are replaced; an existing
-directory at any managed path is left untouched and reported as an error.
+`./install.sh` is the fast development self-install workflow. It uses an
+existing `doof` compiler to incrementally package the current compiler sources,
+rebuild the adjacent standard-library bundle, and install the result under
+`~/.doof/versions/dev`. Stable links in `~/.doof/bin` point through
+`~/.doof/current`, so put that bin directory at the front of `PATH`:
+
+```sh
+export PATH="$HOME/.doof/bin:$PATH"
+```
+
+The development installer deliberately skips bootstrap compilation,
+fixed-point verification, and the compiler test suite. Use `./build.sh`,
+`./scripts/test.sh`, or `./scripts/release.sh` when those gates are required.
+Set `DOOF_DEV_COMPILER` to select the seed compiler, `DOOF_STDLIB_ROOT` to use a
+non-adjacent stdlib checkout, or `DOOF_HOME` to choose another absolute install
+root. The installer never edits shell startup files and does not require
+`sudo`.
 
 The Linux stage-0 driver selects neutral and `_linux` sources from the shared
 bootstrap graph. It is an experimental portability path, not yet a supported
