@@ -53,7 +53,8 @@ Key reminders:
 
 - `main()` may return `none` or `int`, and may optionally accept `arguments: string[]`.
 - Named calls use `callee{ ... }` with no whitespace before `{`.
-- Typed tag calls use `<callee name=value/>`; general attribute expressions use
+- Typed tag calls use `<callee name=value/>`; scalar literals and leading-dot
+  shorthand may be direct attribute values, general attribute expressions use
   `{expression}`, and paired content supplies the `children` parameter.
 - `if` expressions use `then`: `if ready then start() else wait()`.
 - `for-of` evaluates its iterable once and retains returned temporaries through the loop.

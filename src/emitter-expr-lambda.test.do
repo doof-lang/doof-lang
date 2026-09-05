@@ -78,3 +78,24 @@ export function testStructLambdaKeepsValueTypeThisCapture(): none {
   Assert.stringContains(source, "doof::callback<int32_t()>([this]() -> int32_t")
   Assert.stringNotContains(source, "_doof_captured_self")
 }
+
+function destructuringReader(): (): int {
+  values := [3]
+  return (): int => { [value] := values
+    return value }
+}
+
+function destructuringNestedCounter(): (): int {
+  let count = 0
+  [increment] := [(): int => { count += 1
+    return count }]
+  return increment
+}
+
+export function testEmitterGapDestructuringParticipatesInCaptureTraversal(): none {
+  read := destructuringReader()
+  Assert.equal(read(), 3)
+  increment := destructuringNestedCounter()
+  Assert.equal(increment(), 1)
+  Assert.equal(increment(), 2)
+}

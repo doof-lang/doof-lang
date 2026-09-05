@@ -605,6 +605,20 @@ export function testParsesGreaterComparisonsInsideArrayTagShorthandAttributes():
   parse("list := <List values=>[count > 0]/>")
 }
 
+export function testParsesDirectDotShorthandTagAttributes(): none {
+  program := parse("toolbar := <Toolbar displayMode=.IconOnly/>")
+  case program.statements[0] {
+    binding: ImmutableBinding -> { case binding.value {
+      call: CallExpression -> { case call.args[0].value {
+        shorthand: DotShorthand -> { Assert.equal(shorthand.name, "IconOnly") }
+        _ -> { panic("expected dot-shorthand tag attribute") }
+      } }
+      _ -> { panic("expected tag call") }
+    } }
+    _ -> { panic("expected tag binding") }
+  }
+}
+
 export function testDiagnosesMalformedTypedTags(): none {
   mismatch := Parser { source: "value := <Foo></Bar>" }
   mismatchResult := catchPanic(=> mismatch.parse())
@@ -624,7 +638,7 @@ export function testDiagnosesMalformedTypedTags(): none {
   bareExpression := Parser { source: "value := <Foo id=value/>" }
   bareResult := catchPanic(=> bareExpression.parse())
   case bareResult { _: Failure<string> -> { } _ -> { panic("expected bare expression failure") } }
-  Assert.stringContains(bareExpression.errorMessage, "requires a scalar literal")
+  Assert.stringContains(bareExpression.errorMessage, "requires a scalar literal, dot shorthand, or '{expression}'")
 }
 
 export function testParsesConsecutiveTypedTagStatements(): none {

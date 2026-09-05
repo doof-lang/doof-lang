@@ -45,14 +45,17 @@ export function testChecksTypedTagsAsNamedCallsAndConstruction(): none {
   result := checked(
     "class Widget { id: int\nname: string\nchildren: string[] = []\nonClick: (): none = => {} }\n" +
     "class Box<T> { value: T }\n" +
+    "enum DisplayMode { IconOnly, LabelOnly }\n" +
+    "class Toolbar { displayMode: DisplayMode }\n" +
     "function render<T>(value: T, children: T[] = []): T => value\n" +
     "class Renderers { card: (title: string, children: string[]): string }\n" +
     "renderers := Renderers { card: (title: string, children: string[]): string => title }\n" +
     "widget := <Widget name=\"red\" id=1 onClick=>println(\"hello\")>hello</Widget>\n" +
     "generic := <render value=\"ok\">child</render>\n" +
     "boxed := <Box<string> value=\"boxed\"/>\n" +
+    "toolbar := <Toolbar displayMode=.IconOnly/>\n" +
     "member := <renderers.card title=\"Title\">Body</renderers.card>\n" +
-    "println(widget.name + generic + boxed.value + member)",
+    "println(widget.name + generic + boxed.value + member + string(toolbar.displayMode))",
   )
   Assert.equal(result.diagnostics.length, 0)
 }
@@ -1731,6 +1734,45 @@ export function testChecksExplicitGenericNamedCall(): none {
 export function testSubstitutesExplicitGenericTupleReturn(): none {
   result := checked("function pair<T>(value: T): Tuple<T, T> => (value, value)\nfunction total(): int { (first, second) := pair<int>(1)\nreturn first + second }\n")
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testChecksTuplePermutationsAndPositionalFields(): none {
+  result := checked(
+    "function identity<T>(value: T): T => value\n" +
+    "function choose(flag: bool): Tuple<int, string> => if flag then (1, \"one\") else (2, \"two\")\n" +
+    "function main(): int { empty: Tuple<> := ()\n" +
+    "singleton: Tuple<int> := (7,)\n" +
+    "mixed := (42, \"hello\", true)\n" +
+    "nested := ((1, \"one\"), [2, 3])\n" +
+    "(_, label) := mixed\n" +
+    "(inner, values) := nested\n" +
+    "(number, word) := inner\n" +
+    "generic := identity<Tuple<int, string> >((9, \"nine\"))\n" +
+    "return singleton._1 + mixed._1 + mixed._2.length + (if mixed._3 then 1 else 0) + number + values[0] + generic._1 + label.length + word.length }",
+  )
+  Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testRejectsInvalidTuplePositionsAndElementPermutations(): none {
+  empty := checked("function main(): none { value: Tuple<> := ()\nignored := value._1 }")
+  Assert.equal(empty.diagnostics.length, 1)
+  Assert.stringContains(empty.diagnostics[0].message, "Type \"()\" has no member \"_1\"")
+
+  zero := checked("function main(): none { pair := (1, 2)\nignored := pair._0 }")
+  Assert.equal(zero.diagnostics.length, 1)
+  Assert.stringContains(zero.diagnostics[0].message, "has no member \"_0\"")
+
+  outOfBounds := checked("function main(): none { pair := (1, 2)\nignored := pair._3 }")
+  Assert.equal(outOfBounds.diagnostics.length, 1)
+  Assert.stringContains(outOfBounds.diagnostics[0].message, "has no member \"_3\"")
+
+  reordered := checked("function accept(value: Tuple<int, string>): none {}\nfunction main(): none { accept((\"wrong\", 1)) }")
+  Assert.equal(reordered.diagnostics.length, 1)
+  Assert.stringContains(reordered.diagnostics[0].message, "expected (int, string)")
+
+  arity := checked("function accept(value: Tuple<int, string>): none {}\nfunction main(): none { accept((1, \"ok\", true)) }")
+  Assert.equal(arity.diagnostics.length, 1)
+  Assert.stringContains(arity.diagnostics[0].message, "expected (int, string)")
 }
 
 export function testRejectsExplicitGenericCallArity(): none {

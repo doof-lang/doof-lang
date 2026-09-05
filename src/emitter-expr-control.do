@@ -1,13 +1,14 @@
 // Conditional and pattern-based expression lowering.
 
 import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, RangePattern, TypePattern, ValuePattern, WildcardPattern, YieldBlockExpression } from "./ast"
-import { ResolvedType } from "./semantic"
+import { JsonValueResolvedType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitCaseTypePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
 import { exprModuleNamespaceFor, hasNoneMember } from "./emitter-expr-utils"
-import { emitType, specializeEmitType } from "./emitter-types"
+import { emitContextType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { sameType } from "./checker-types"
 
 export function emitDotShorthand(expression: DotShorthand, context: EmitContext): string {
   if expression.resolvedShorthandOwnerKind != "enum" && expression.resolvedShorthandOwnerKind != "class" {
@@ -23,15 +24,29 @@ export function emitDotShorthand(expression: DotShorthand, context: EmitContext)
   return owner + "::" + cppIdentifier(expression.name)
 }
 
-export function emitIfExpression(expression: IfExpression, context: EmitContext): string {
+export function emitIfExpression(expression: IfExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   // C++ determines the common type of `?:` operands before applying the
-  // surrounding expression's conversion. That makes nullable Doof branches
-  // such as `none` and a struct invalid (`nullptr` versus `optional<T>`).
+  // surrounding expression's conversion. Mixed union arms and nullable
+  // branches therefore need their checked carrier before C++ joins them.
   // An explicit lambda result type gives each branch the checked contextual
   // conversion independently.
-  if expression.resolvedType != none && hasNoneMember(expression.resolvedType!) {
-    resultType := expression.resolvedType!
-    return "[&]() -> " + emitType(resultType, context.modulePath) + " { if (" + emitExpression(expression.condition, context) + ") { return " + emitExpression(expression.then_, context, resultType) + "; } return " + emitExpression(expression.else_, context, resultType) + "; }()"
+  let contextualBranches = false
+  if expression.resolvedType != none {
+    resultType := specializeEmitType(expression.resolvedType!, context)
+    contextualBranches = hasNoneMember(resultType) || usesVariantRepresentation(resultType)
+    case resultType {
+      _: JsonValueResolvedType -> { contextualBranches = true }
+      _ -> { }
+    }
+  }
+  if contextualBranches {
+    let resultType = specializeEmitType(expression.resolvedType!, context)
+    // Union equality ignores arm order, but C++ variant identity does not.
+    // Preserve the contextual carrier when it denotes the same Doof type.
+    if expected != none && sameType(resultType, specializeEmitType(expected!, context)) {
+      resultType = specializeEmitType(expected!, context)
+    }
+    return "[&]() -> " + emitContextType(resultType, context) + " { if (" + emitExpression(expression.condition, context) + ") { return " + emitExpression(expression.then_, context, resultType) + "; } return " + emitExpression(expression.else_, context, resultType) + "; }()"
   }
   return "(" + emitExpression(expression.condition, context) + " ? " + emitExpression(expression.then_, context) + " : " + emitExpression(expression.else_, context) + ")"
 }

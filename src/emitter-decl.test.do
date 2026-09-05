@@ -72,3 +72,45 @@ export function testRejectsGenericDeclarationsWithoutConcreteInstantiation(): no
     _ -> { panic("expected generic declaration emission to panic") }
   }
 }
+
+export function testEmitsStructFieldEqualityWithoutStaticFields(): none {
+  result := emit("struct Color { red: int\nstatic let count: int = 0 }\nstruct Empty {}\nclass Node { value: int }")
+  Assert.stringContains(result.header, "(this->red == _doof_other.red)")
+  Assert.stringNotContains(result.header, "this->count ==")
+  Assert.stringContains(result.header, "bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }")
+  Assert.stringContains(result.header, "_DoofOther = Empty>")
+  Assert.stringNotContains(result.header, "_DoofOther = Node>")
+}
+
+struct EqualityColor { red: int }
+struct EqualityNested { color: EqualityColor
+  label: string }
+struct EqualityEmpty {}
+class EqualityNode { value: int }
+struct EqualityReference { node: EqualityNode }
+struct EqualityGeneric<T> { value: T }
+
+export function testStructFieldEqualityRuntimePaths(): none {
+  Assert.equal(EqualityColor { red: 7 }, EqualityColor { red: 7 })
+  Assert.isTrue(EqualityColor { red: 7 } != EqualityColor { red: 8 })
+  Assert.equal(EqualityNested { color: EqualityColor { red: 7 }, label: "red" }, EqualityNested { color: EqualityColor { red: 7 }, label: "red" })
+  Assert.isTrue(EqualityNested { color: EqualityColor { red: 7 }, label: "red" } != EqualityNested { color: EqualityColor { red: 7 }, label: "blue" })
+  Assert.equal(EqualityEmpty {}, EqualityEmpty {})
+  node := EqualityNode { value: 1 }
+  Assert.equal(EqualityReference { node }, EqualityReference { node })
+  Assert.isTrue(EqualityReference { node } != EqualityReference { node: EqualityNode { value: 1 } })
+  Assert.equal(EqualityGeneric<int> { value: 3 }, EqualityGeneric<int> { value: 3 })
+}
+
+export function testRejectsEqualityAcrossNominalStructTypes(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "struct Left { value: int }\nstruct Right { value: int }\n" +
+    "function main(): bool => Left { value: 1 } == Right { value: 1 }",
+  }], "/main.do")
+  Assert.isTrue(hasErrorDiagnostics(result.diagnostics))
+  let found = false
+  for diagnostic of result.diagnostics {
+    if diagnostic.message.contains("Operator '==' is not defined for Left and Right") { found = true }
+  }
+  Assert.isTrue(found)
+}

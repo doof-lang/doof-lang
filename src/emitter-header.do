@@ -21,7 +21,7 @@ import {
 } from "./semantic"
 import { moduleNamespace, moduleNativeHeaderPath } from "./emitter-names"
 import { StringBuilder } from "./string-builder"
-import { classInstantiationKey, MethodInstantiation } from "./emitter-monomorphize"
+import { ClassInstantiation, classInstantiationKey, MethodInstantiation } from "./emitter-monomorphize"
 
 export class HeaderPlan {
   functionSignatures: string[] = []
@@ -55,9 +55,9 @@ export class HeaderSection {
   plan: HeaderPlan
 }
 
-export function planHeader(program: Program, context: EmitContext, methods: MethodInstantiation[] = []): HeaderPlan {
+export function planHeader(program: Program, context: EmitContext, methods: MethodInstantiation[] = [], classes: ClassInstantiation[] = []): HeaderPlan {
   plan := HeaderPlan {}
-  for statement of program.statements { collect(statement, plan, context, methods) }
+  for statement of program.statements { collect(statement, plan, context, methods, classes) }
   // Native headers are opaque to the Doof compiler. Give each selected native
   // namespace the nominal names visible in its defining module, while keeping
   // recursively required declarations in their original namespaces.
@@ -93,7 +93,7 @@ function isNativeAliasType(symbol: Symbol): bool {
   return symbol.kind == "class" || symbol.kind == "struct" || symbol.kind == "enum" || symbol.kind == "interface" || symbol.kind == "type-alias"
 }
 
-function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, methods: MethodInstantiation[]): none {
+function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, methods: MethodInstantiation[], classes: ClassInstantiation[]): none {
   case statement {
     class_: ClassDeclaration -> {
       reserveHeaderNamespaceName(plan, class_.name)
@@ -122,7 +122,7 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, m
             if implementation.native_ { addNativeClassForwardDeclaration(implementation, plan) }
           }
         }
-        plan.interfaceAliases.push(emitInterfaceAlias(interface_, context))
+        plan.interfaceAliases.push(emitInterfaceAlias(interface_, context, classes))
         declaration := emitInterfaceJsonDeclaration(interface_)
         if declaration != "" { plan.functionSignatures.push(declaration) }
       }
@@ -190,7 +190,7 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, m
         plan.functionSignatures.push(emitFunctionDeclaration(fn, "", context.modulePath, context))
       }
     }
-    export_: ExportDeclaration -> { collect(export_.declaration, plan, context, methods) }
+    export_: ExportDeclaration -> { collect(export_.declaration, plan, context, methods, classes) }
     _ -> { }
   }
 }

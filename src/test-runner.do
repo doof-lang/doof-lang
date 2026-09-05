@@ -119,6 +119,20 @@ export function filterDiscoveredTests(tests: DiscoveredTest[], filter: string): 
   return selected
 }
 
+/** Retains a compilation group's tests that were selected for execution. */
+export function selectedTestsForExecution(
+  compilationTests: DiscoveredTest[],
+  selectedTests: DiscoveredTest[],
+): DiscoveredTest[] {
+  let result: DiscoveredTest[] = []
+  for test of compilationTests {
+    for selected of selectedTests {
+      if test.id == selected.id { result.push(test); break }
+    }
+  }
+  return result
+}
+
 /** Generates the one-file harness that dispatches one test id per process. */
 export function generateTestHarness(harnessPath: string, tests: DiscoveredTest[]): string {
   let source = ""

@@ -127,7 +127,12 @@ class CxxModuleEmitter {
       sectionContext.moduleSurfaces = moduleSurfaces
       sectionContext.jsonEligibility = jsonEligibility
       if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
-      sectionPlan := planHeader(view.program, sectionContext, if instantiations == none then [] else instantiations!.methods)
+      sectionPlan := planHeader(
+        view.program,
+        sectionContext,
+        if instantiations == none then [] else instantiations!.methods,
+        if instantiations == none then [] else instantiations!.classes,
+      )
       if instantiations != none {
         addConcreteHeaderDeclarations(sectionPlan, sectionContext, instantiations!, view.program, worldviewInterfaceKeys)
       }

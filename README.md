@@ -70,7 +70,7 @@ contracts.
 ./install.sh                       # quickly package and install a development compiler
 ```
 
-`./install.sh` is the fast development self-install workflow. It uses an
+`./install.sh` is the supported incremental development workflow. It uses an
 existing `doof` compiler to incrementally package the current compiler sources,
 rebuild the adjacent standard-library bundle, and install the result under
 `~/.doof/versions/dev`. Stable links in `~/.doof/bin` point through
@@ -80,9 +80,11 @@ rebuild the adjacent standard-library bundle, and install the result under
 export PATH="$HOME/.doof/bin:$PATH"
 ```
 
-The development installer deliberately skips bootstrap compilation,
-fixed-point verification, and the compiler test suite. Use `./build.sh`,
-`./scripts/test.sh`, or `./scripts/release.sh` when those gates are required.
+Do not use `./build.sh` as an incremental edit-test loop: it intentionally
+rebuilds the bootstrap chain and verifies the B5/B6 fixed point. The development
+installer deliberately skips those release-oriented checks and the compiler
+test suite. Use `./build.sh`, `./scripts/test.sh`, or `./scripts/release.sh` once
+their respective gates are required.
 Set `DOOF_DEV_COMPILER` to select the seed compiler, `DOOF_STDLIB_ROOT` to use a
 non-adjacent stdlib checkout, or `DOOF_HOME` to choose another absolute install
 root. The installer never edits shell startup files and does not require

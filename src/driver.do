@@ -48,7 +48,7 @@ import { StdlibPreparationTarget, prepareStdlibPackage } from "./stdlib-preparat
 import {
   CoverageModuleMetadata, CoverageReport, DiscoveredTest, buildCoverageReport, discoverModuleTests,
   coverageFileRelativePath, filterDiscoveredTests, formatParseFailure, generateTestHarness, groupTestsForCompilation,
-  mergeCoverageOutput, renderCoverageFileHtml, renderCoverageHtml, renderCoverageJson,
+  mergeCoverageOutput, renderCoverageFileHtml, renderCoverageHtml, renderCoverageJson, selectedTestsForExecution,
   stripCoverageLines, testDisplayPath,
 } from "./test-runner"
 import { boundedWorkerCount, renderProgressBar } from "./progress"
@@ -1170,10 +1170,12 @@ function testRequest(request: CliRequest): int {
   let coverageModules: CoverageModuleMetadata[] = []
   let coverageHits: int[][] = []
   let appleWasmRunner = ""
-  groups := groupTestsForCompilation(selected)
+  groups := groupTestsForCompilation(discovered)
   for group of groups {
-    moduleTests := group.tests
-    testFile := moduleTests[0].modulePath
+    compilationTests := group.tests
+    moduleTests := selectedTestsForExecution(compilationTests, selected)
+    if moduleTests.length == 0 { continue }
+    testFile := compilationTests[0].modulePath
     project := readProjectSpec(testFile, hostPlatform(), request.targetOverride)
     wasmTests := project.target == "wasm"
     if wasmTests && hostPlatform() != "macos" {
@@ -1188,7 +1190,7 @@ function testRequest(request: CliRequest): int {
     outputDirectory := joinPath(joinPath(buildRoot, ".doof-tests"), group.outputName + targetSuffix + coverageSuffix)
     harnessPath := joinPath(outputDirectory, "__doof_tests__.do")
     ensureOutputDirectory(outputDirectory)
-    writeTextIfChanged(harnessPath, generateTestHarness(harnessPath, moduleTests))
+    writeTextIfChanged(harnessPath, generateTestHarness(harnessPath, compilationTests))
 
     stdlibRoot := environmentValue("DOOF_STDLIB_ROOT")
     rootLogicalPrefix := driverRootLogicalPrefix(project.name, project.rootDirectory)

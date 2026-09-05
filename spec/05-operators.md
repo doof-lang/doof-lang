@@ -114,8 +114,17 @@ p1 == p3   // true  — same reference
 
 | Operator | Behaviour |
 |----------|-----------|
-| `==` | Reference identity — same object in memory |
-| `!=` | Reference non-identity |
+| `==` on classes | Reference identity — same object in memory |
+| `!=` on classes | Reference non-identity |
+| `==` on structs | Equality of every instance field, in declaration order |
+| `!=` on structs | Negation of field equality |
+
+Struct equality compares corresponding fields using their own `==` semantics.
+Nested structs compare recursively; class and mutable collection fields retain
+reference identity. Static fields do not participate, and two values of the same
+empty struct compare equal. Equality short-circuits at the first unequal field.
+This also applies when structs are passed to generic functions such as
+`Assert.equal`. Distinct nominal struct types cannot be compared.
 
 ---
 

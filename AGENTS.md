@@ -30,6 +30,10 @@ root, not a second implementation.
 
 ## Verification
 
+Use `./install.sh` when incremental work needs a development compiler. Do not
+use `./build.sh` as an edit-test loop; reserve it for clean-bootstrap and
+fixed-point verification.
+
 Run `./scripts/test.sh` for normal changes and `./scripts/release.sh` before a
 release or bootstrap refresh. `./build.sh` must succeed from a clean checkout
 on the documented host without Node.js or the retired compiler.
@@ -58,3 +62,14 @@ before failing when Emscripten cannot create a `*.json.lock` file.
   also exited before starting another run.
 - Do not interpret a failure from a contended shared build as a compiler
   regression. Rerun it once in isolation before investigating the result.
+
+### Quark
+
+Use Quark as durable project memory.
+
+- Use the installed Quark MCP tools, not shell commands.
+- Ask about known bugs, behavior, workarounds, or history with the Quark `query` tool for `<quark-project>`.
+- Lodge a durable bug, gap, or useful finding with the Quark `intake` tool for `<quark-project>`.
+- In reports, include expected and actual behavior, reproduction details, evidence, and uncertainty when relevant. Quark handles deduplication; do not invent issue IDs.
+- Do not lodge transient environment or tool failures, secrets, or raw logs.
+- If Quark is unavailable, continue the main task when safe and mention that its knowledge was not read or updated.

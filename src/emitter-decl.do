@@ -17,7 +17,7 @@ import { emitBlock } from "./emitter-stmt"
 import { borrowParameterType, emitClassInnerType, emitContextReturnType, emitContextType, emitParameterType, emitReturnType, specializeEmitType } from "./emitter-types"
 import { scanCapturedMutablesInBlock, scanCapturedMutablesInExpression } from "./emitter-expr-lambda"
 import { moduleNamespace } from "./emitter-names"
-import { MethodInstantiation } from "./emitter-monomorphize"
+import { ClassInstantiation, MethodInstantiation } from "./emitter-monomorphize"
 import { emitGeneratedJsonDeclarations } from "./emitter-json"
 import { emitMetadataDeclaration } from "./emitter-metadata"
 
@@ -252,6 +252,22 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
   if decl.destructor_ != none {
     result = result + "    ~" + className + "();\n"
   }
+  if decl.struct_ {
+    // Keep field comparisons dependent until equality is used: merely
+    // declaring a struct with a non-comparable native field must remain valid.
+    result = result + "    template <typename _DoofOther = " + className + ">\n    bool operator==(const _DoofOther& _doof_other) const { return "
+    let comparison = ""
+    for field of decl.fields {
+      if field.static_ { continue }
+      for name of field.names {
+        if comparison != "" { comparison = comparison + " && " }
+        member := cppIdentifier(name)
+        comparison = comparison + "(this->" + member + " == _doof_other." + member + ")"
+      }
+    }
+    result = result + (if comparison == "" then "true" else comparison) + "; }\n"
+    result = result + "    template <typename _DoofOther = " + className + ">\n    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }\n"
+  }
   result = result + emitGeneratedJsonDeclarations(decl, context)
   result = result + emitMetadataDeclaration(decl)
   return result + "};\n"
@@ -315,18 +331,31 @@ function emitCallableDescription(fn: FunctionDeclaration, indent: string): strin
   return result
 }
 
-export function emitInterfaceAlias(decl: InterfaceDeclaration, context: EmitContext): string {
+export function emitInterfaceAlias(decl: InterfaceDeclaration, context: EmitContext, classes: ClassInstantiation[] = []): string {
   if decl.resolvedSymbol == none { panic("Interface " + decl.name + " was not analyzed") }
   implementations := decl.resolvedSymbol!.implementations
   if implementations.length == 0 { panic("Interface " + decl.name + " has no implementing classes") }
   let result = emitDescriptionComment(decl.description, "") + "using " + decl.name + " = std::variant<"
   let first = true
   for symbol of implementations {
-    if !first { result = result + ", " }
-    first = false
-    className := if symbol.native_ then "::" + (if symbol.nativeCppName == "" then symbol.name else symbol.nativeCppName) else ownedClassName(symbol, context.modulePath)
-    result = result + "std::shared_ptr<" + className + ">"
+    if symbol.typeParams.length > 0 && !symbol.native_ {
+      for instantiation of classes {
+        if instantiation.modulePath != symbol.module || instantiation.declaration.name != symbol.name { continue }
+        if !first { result = result + ", " }
+        first = false
+        concreteName := if symbol.module == context.modulePath
+          then instantiation.emittedName
+          else "::" + moduleNamespace(symbol.module) + "::" + instantiation.emittedName
+        result = result + "std::shared_ptr<" + concreteName + ">"
+      }
+    } else {
+      if !first { result = result + ", " }
+      first = false
+      className := if symbol.native_ then "::" + (if symbol.nativeCppName == "" then symbol.name else symbol.nativeCppName) else ownedClassName(symbol, context.modulePath)
+      result = result + "std::shared_ptr<" + className + ">"
+    }
   }
+  if first { result = result + "std::monostate" }
   return result + ">;\n"
 }
 

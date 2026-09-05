@@ -134,8 +134,7 @@ function emitDestructuringValue(statement: DestructuringStatement, source: strin
       localName := binding.alias ?? binding.name
       if statement.kind.endsWith("-assignment") { result = result + ind + emitAssignmentTarget(localName, context) + " = " + value + ";\n" }
       else {
-        qualifier := if statement.bindingKind == "let" then "auto" else "const auto"
-        result = result + ind + qualifier + " " + cppIdentifier(localName) + " = " + value + ";\n"
+        result = result + emitDestructuredLocal(ind, localName, value, statement.bindingKind, context)
       }
     }
     return result
@@ -149,7 +148,6 @@ function emitDestructuringValue(statement: DestructuringStatement, source: strin
   for i of 0..<statement.bindings.length {
     name := statement.bindings[i]
     if name != "_" {
-      qualifier := if statement.bindingKind == "let" then "auto" else "const auto"
       let value = "std::get<" + string(i) + ">(" + temporaryName + ")"
       if sourceType != none {
         case sourceType! {
@@ -164,11 +162,21 @@ function emitDestructuringValue(statement: DestructuringStatement, source: strin
       if statement.kind.endsWith("-assignment") {
         result = result + ind + emitAssignmentTarget(name, context) + " = " + value + ";\n"
       } else {
-        result = result + ind + qualifier + " " + cppIdentifier(name) + " = " + value + ";\n"
+        result = result + emitDestructuredLocal(ind, name, value, statement.bindingKind, context)
       }
     }
   }
   return result
+}
+
+function emitDestructuredLocal(ind: string, name: string, value: string, bindingKind: string, context: EmitContext): string {
+  if bindingKind == "let" && isCapturedMutable(context, name) {
+    // decltype is unevaluated; decay matches the ordinary auto local's value
+    // type without reconstructing the checker's tuple or field type decision.
+    return ind + "auto " + cppIdentifier(name) + " = std::make_shared<std::decay_t<decltype(" + value + ")>>(" + value + ");\n"
+  }
+  qualifier := if bindingKind == "let" then "auto" else "const auto"
+  return ind + qualifier + " " + cppIdentifier(name) + " = " + value + ";\n"
 }
 
 function emitDestructuredField(source: string, field: string, sourceType: ResolvedType | none, context: EmitContext): string {
@@ -227,7 +235,14 @@ function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitCon
     output = output + emitBlock(binding.else_!, level + 1, context)
     output = output + ind + "}\n"
     if binding.name == "_" { return output }
-    return output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, "doof::unwrap_optional(" + temporaryName + ")", true, true)
+    sourceType := specializeEmitType(binding.value.resolvedType!, context)
+    narrowedType := specializeEmitType(binding.resolvedType!, context)
+    // Removing none from a variant with one remaining arm yields that arm,
+    // not the one-arm variant returned by the general runtime helper.
+    extracted := if usesVariantRepresentation(sourceType) && !usesVariantRepresentation(narrowedType)
+      then "std::get<" + emitContextType(narrowedType, context) + ">(" + temporaryName + ")"
+      else "doof::unwrap_optional(" + temporaryName + ")"
+    return output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, extracted, true, true)
   }
   let output = ind + "auto " + temporaryName + " = " + emitExpression(binding.value, context) + ";\n"
   output = output + ind + "if (doof::is_failure(" + temporaryName + ")) {\n"

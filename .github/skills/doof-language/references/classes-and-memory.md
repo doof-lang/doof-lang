@@ -37,6 +37,12 @@ struct Point {
 
 Structs are nominal value types. They use class-like syntax for fields, readonly fields, literal-valued fields, defaults, methods, static members, type parameters, construction, JSON, and metadata, but assignment, parameter passing, and return values copy the struct value.
 
+Struct `==` compares all instance fields in declaration order using each field's
+equality semantics; `!=` negates that result. Nested structs compare by value,
+while class and mutable collection fields compare by reference. Static fields
+are excluded, empty structs of the same type compare equal, and distinct nominal
+types cannot be compared. `Assert.equal` uses the same rules.
+
 Current v1 restrictions:
 
 - Structs do not implement interfaces yet.

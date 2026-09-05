@@ -421,6 +421,12 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
       if property == "value" { return functionType([], stream.elementType) }
       return unknownType()
     }
+    tuple: TupleResolvedType -> {
+      for i of 0..<tuple.elements.length {
+        if property == "_" + string(i + 1) { return tuple.elements[i] }
+      }
+      return unknownType()
+    }
     _: RangeResolvedType -> {
       if property == "lowerBound" || property == "upperBound" { return primitive("int") }
       return unknownType()

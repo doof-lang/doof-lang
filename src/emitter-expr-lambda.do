@@ -18,7 +18,7 @@ import { Binding, FunctionType, ResolvedType, ResultResolvedType, NoneType } fro
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
-import { emitReturnType, emitType } from "./emitter-types"
+import { emitContextReturnType, emitContextType } from "./emitter-types"
 
 export function emitLambdaExpression(expression: LambdaExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   let functionType = lambdaFunctionType(expression)
@@ -34,7 +34,7 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
     parameter := expression.params[i]
     if parameter.resolvedType == none { panic("Lambda parameter was not resolved before emission") }
     parameterName := if parameter.name == "_" then "_discard_parameter_" + string(i) else cppIdentifier(parameter.name)
-    params = params + emitType(parameter.resolvedType!, context.modulePath) + " " + parameterName
+    params = params + emitContextType(functionType.params[i].type_, context) + " " + parameterName
   }
 
   captureNames := lambdaCaptureNames(expression)
@@ -63,11 +63,11 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
   context.currentFunctionName = previousFunctionName + ".<lambda>"
   context.tryPanics = false
   case functionType.returnType {
-    result: ResultResolvedType -> { context.currentReturnErrorType = emitType(result.errorType, context.modulePath) }
+    result: ResultResolvedType -> { context.currentReturnErrorType = emitContextType(result.errorType, context) }
     _ -> { context.currentReturnErrorType = "" }
   }
 
-  returnType := emitReturnType(functionType.returnType, context.modulePath)
+  returnType := emitContextReturnType(functionType.returnType, context)
   let lambda = "[" + captures + "](" + params + ") -> " + returnType + " {"
   case expression.body {
     block: Block -> { lambda = lambda + "\n" + emitBlock(block, 1, context) + "}" }
@@ -77,7 +77,7 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
   context.currentReturnErrorType = previousReturnErrorType
   context.currentFunctionName = previousFunctionName
   context.tryPanics = previousTryPanics
-  return emitType(functionType, context.modulePath) + "(" + lambda + ")"
+  return emitContextType(functionType, context) + "(" + lambda + ")"
 }
 
 // Finds mutable bindings whose storage must outlive the current stack frame.
@@ -138,6 +138,7 @@ function scanBlockForLambdas(block: Block, result: string[]): none {
 
 function scanStatementForLambdas(statement: Statement, result: string[]): none {
   case statement {
+    destructuring: DestructuringStatement -> { scanExpressionForLambdas(destructuring.value, result) }
     const_: ConstDeclaration -> { scanExpressionForLambdas(const_.value, result) }
     readonly_: ReadonlyDeclaration -> { scanExpressionForLambdas(readonly_.value, result) }
     binding: ImmutableBinding -> {
@@ -271,6 +272,7 @@ function collectBlockCaptures(block: Block, bodyStart: int, bodyEnd: int, result
 
 function collectStatementCaptures(statement: Statement, bodyStart: int, bodyEnd: int, result: string[], mutableOnly: bool): none {
   case statement {
+    destructuring: DestructuringStatement -> { collectExpressionCaptures(destructuring.value, bodyStart, bodyEnd, result, mutableOnly) }
     const_: ConstDeclaration -> { collectExpressionCaptures(const_.value, bodyStart, bodyEnd, result, mutableOnly) }
     readonly_: ReadonlyDeclaration -> { collectExpressionCaptures(readonly_.value, bodyStart, bodyEnd, result, mutableOnly) }
     binding: ImmutableBinding -> {

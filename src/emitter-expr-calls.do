@@ -1,7 +1,7 @@
 // Call, native-constructor, and class-construction lowering.
 
 import { CallArgument, CallExpression, ClassDeclaration, ConstructExpression, Expression, FunctionDeclaration, Identifier, MemberExpression, SourceSpan, ThisExpression } from "./ast"
-import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, TypeSubstitution, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable, SourceLocationSpanOverride } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -93,7 +93,14 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
   if nativeConstructorCall && expression.resolvedConstructor != none && expression.callee.resolvedType != none {
     case expression.callee.resolvedType! {
       owner: ClassType -> {
-        return emitConstructorFactoryCall(owner, expression.resolvedConstructor!, expression.args, context, expression.span)
+        let concreteOwner = owner
+        if expression.resolvedType != none {
+          case expression.resolvedType! {
+            resolvedOwner: ClassType -> { concreteOwner = resolvedOwner }
+            _ -> { }
+          }
+        }
+        return emitConstructorFactoryCall(concreteOwner, expression.resolvedConstructor!, expression.args, context, expression.span)
       }
       _ -> { }
     }
@@ -136,10 +143,13 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
             for name of field.names {
               if values != "" { values = values + ", " }
               argument := if namedConstruction then callArgumentNamed(expression, name) else if positionalIndex < expression.args.length then expression.args[positionalIndex] else none
+              fieldType := specializeOwnerMemberType(field.resolvedType!, class_, context, expression.resolvedClass!.typeParams)
               if argument != none {
-                values = values + emitExpectedExpression(argument!.value, context, field.resolvedType)
+                values = values + emitExpectedExpression(argument!.value, context, fieldType)
                 if !namedConstruction { positionalIndex = positionalIndex + 1 }
-              } else if field.defaultValue != none { values = values + emitDefaultExpression(field.defaultValue!, context, field.resolvedType, expression.span) }
+              } else if field.defaultValue != none {
+                values = values + emitOwnerDefaultExpression(field.defaultValue!, context, fieldType, expression.span, class_, expression.resolvedClass!.typeParams)
+              }
               else { panic("Construction of '" + class_.name + "' is missing required field '" + name + "'") }
             }
           }
@@ -691,6 +701,12 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
     class_: ClassType -> { owner = class_ }
     _ -> { panic("Construction of '" + expression.type_ + "' has a non-class constructed type") }
   }
+  if expression.resolvedType != none {
+    case expression.resolvedType! {
+      resolvedOwner: ClassType -> { owner = resolvedOwner }
+      _ -> { }
+    }
+  }
   constructorMethod := declaredConstructor(class_!)
   insideConstructor := insideDeclaredConstructor(class_!, context)
   if constructorMethod != none && !insideConstructor && expression.resolvedConstructor == none {
@@ -725,6 +741,7 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
       if !first { values = values + ", " }
       first = false
       property := findProperty(expression.args, name)
+      fieldType := specializeOwnerMemberType(field.resolvedType!, owner!, context, class_!.typeParams)
       let value = ""
       if property != none {
         if property!.value == none {
@@ -736,21 +753,22 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
         else {
           case property!.value! {
             _: ThisExpression -> {
-              case field.resolvedType! {
+              case fieldType {
                 class_: ClassType -> { value = "std::shared_ptr<" + class_.name + ">(this, [](" + class_.name + "*) {})" }
-                _ -> { value = emitExpectedExpression(property!.value!, context, field.resolvedType) }
+                _ -> { value = emitExpectedExpression(property!.value!, context, fieldType) }
               }
             }
-            _ -> { value = emitExpectedExpression(property!.value!, context, field.resolvedType) }
+            _ -> { value = emitExpectedExpression(property!.value!, context, fieldType) }
           }
         }
       } else if hasSpreadField(expression, name) { value = emitConstructionSpreadField(expression, spreadName, name, context) }
-      else if field.defaultValue != none { value = emitDefaultExpression(field.defaultValue!, context, field.resolvedType, expression.span) }
+      else if field.defaultValue != none { value = emitOwnerDefaultExpression(field.defaultValue!, context, fieldType, expression.span, owner!, class_!.typeParams) }
       else { panic("Construction of '" + expression.type_ + "' is missing required field '" + name + "'") }
       // Shorthand fields have no expression node, so they cannot pass their
       // expected type through emitExpression's central promotion path.
-      if property != none && property!.value == none && needsNullableVariantPromotion(property!.resolvedType, field.resolvedType) { value = emitNullableVariantPromotion(value, property!.resolvedType, field.resolvedType, context.modulePath) }
-      else if property != none && property!.value == none && needsVariantPromotion(property!.resolvedType, field.resolvedType) { value = "doof::variant_promote<" + emitContextType(field.resolvedType!, context) + ">(" + value + ")" }
+      propertyType := if property == none || property!.resolvedType == none then none else specializeEmitType(property!.resolvedType!, context)
+      if property != none && property!.value == none && needsNullableVariantPromotion(propertyType, fieldType) { value = emitNullableVariantPromotion(value, propertyType, fieldType, context.modulePath) }
+      else if property != none && property!.value == none && needsVariantPromotion(propertyType, fieldType) { value = "doof::variant_promote<" + emitContextType(fieldType, context) + ">(" + value + ")" }
       values = values + value
     }
   }
@@ -769,11 +787,12 @@ function emitConstructorFactoryCall(owner: ClassType, constructorMethod: Functio
   for i of 0..<constructorMethod.params.length {
     if i > 0 { result = result + ", " }
     parameter := constructorMethod.params[i]
+    parameterType := specializeOwnerMemberType(parameter.resolvedType!, owner, context)
     argument := if named then callArgumentNamedFromArgs(args, parameter.name) else if i < args.length then args[i] else none
-    if argument != none { result = result + emitExpression(argument!.value, context, parameter.resolvedType) }
+    if argument != none { result = result + emitExpression(argument!.value, context, parameterType) }
     else {
       if parameter.defaultValue == none { panic("Constructor " + owner.name + " is missing argument " + parameter.name) }
-      result = result + emitDefaultExpression(parameter.defaultValue!, context, parameter.resolvedType, callSiteSpan)
+      result = result + emitOwnerDefaultExpression(parameter.defaultValue!, context, parameterType, callSiteSpan, owner)
     }
   }
   return result + ")"
@@ -793,14 +812,15 @@ function emitNamedConstructorFactoryCall(owner: ClassType, constructorMethod: Fu
   for i of 0..<constructorMethod.params.length {
     if i > 0 { result = result + ", " }
     parameter := constructorMethod.params[i]
+    parameterType := specializeOwnerMemberType(parameter.resolvedType!, owner, context)
     property := findProperty(expression.args, parameter.name)
     if property != none {
       if property!.value == none { result = result + cppIdentifier(property!.name) }
-      else { result = result + emitExpression(property!.value!, context, parameter.resolvedType) }
+      else { result = result + emitExpression(property!.value!, context, parameterType) }
     } else if hasSpreadField(expression, parameter.name) {
       result = result + emitConstructionSpreadField(expression, spreadName, parameter.name, context)
     } else if parameter.defaultValue != none {
-      result = result + emitDefaultExpression(parameter.defaultValue!, context, parameter.resolvedType, expression.span)
+      result = result + emitOwnerDefaultExpression(parameter.defaultValue!, context, parameterType, expression.span, owner)
     } else { panic("Constructor " + owner.name + " is missing argument " + parameter.name) }
   }
   return wrapConstructionSpread(expression, spreadName, result + ")", context)
@@ -839,6 +859,40 @@ function emitDefaultExpression(expression: Expression, context: EmitContext, exp
   context.sourceLocationSpanOverride = SourceLocationSpanOverride { span: callSiteSpan }
   result := emitExpression(expression, context, expected)
   context.sourceLocationSpanOverride = previous
+  return result
+}
+
+function specializeOwnerMemberType(type_: ResolvedType, owner: ClassType, context: EmitContext, ownerTypeParams: string[] = []): ResolvedType {
+  specializedOwner := specializeEmitType(owner, context)
+  case specializedOwner {
+    class_: ClassType -> {
+      names := if ownerTypeParams.length == 0 then owner.symbol.typeParams else ownerTypeParams
+      return substituteTypeParams(type_, names, class_.typeArgs)
+    }
+    _ -> { panic("Constructor owner did not remain a class after specialization") }
+  }
+  return type_
+}
+
+function emitOwnerDefaultExpression(
+  expression: Expression,
+  context: EmitContext,
+  expected: ResolvedType,
+  callSiteSpan: SourceSpan,
+  owner: ClassType,
+  ownerTypeParams: string[] = [],
+): string {
+  specializedOwner := specializeEmitType(owner, context)
+  let ownerArguments: ResolvedType[] = []
+  case specializedOwner {
+    class_: ClassType -> { ownerArguments = class_.typeArgs }
+    _ -> { panic("Constructor owner did not remain a class after specialization") }
+  }
+  previousSubstitution := context.substitution
+  names := if ownerTypeParams.length == 0 then owner.symbol.typeParams else ownerTypeParams
+  context.substitution = TypeSubstitution { names, arguments: ownerArguments }
+  result := emitDefaultExpression(expression, context, expected, callSiteSpan)
+  context.substitution = previousSubstitution
   return result
 }
 

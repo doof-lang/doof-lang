@@ -554,11 +554,14 @@ Each discovered test is assigned an id of the form `<relative-path>::<functionNa
 
 This is a build-time discovery convention. It is not runtime reflection, and it does not change how ordinary modules are imported or executed.
 
-After filtering, test roots without `mock import` are compiled into one shared
-test executable. Each test function is still invoked in its own process. All
-modules reached by the shared graph therefore perform module-level
-initialization in every test process. Roots containing `mock import` are each
-compiled into a separate executable so substitutions remain root-scoped.
+Filtering determines which test ids execute, but it does not narrow the shared
+compilation graph. When at least one ordinary test is selected, all discovered
+test roots without `mock import` are compiled into one stable shared executable.
+Each selected test function is still invoked in its own process. All modules
+reached by the shared graph therefore perform module-level initialization in
+every selected test process. Roots containing `mock import` are each compiled
+into a separate executable when one of their tests is selected so substitutions
+remain root-scoped; that executable includes every test from the same root.
 
 When the selected package target is `wasm`, including through `--target wasm`,
 the generated harness is a standalone WebAssembly command rather than a JSON

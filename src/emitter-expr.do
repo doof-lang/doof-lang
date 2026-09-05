@@ -46,7 +46,7 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     object: ObjectLiteral -> { value = emitObject(object, context, expected) }
     tuple: TupleLiteral -> { value = emitTuple(tuple, context) }
     lambda: LambdaExpression -> { value = emitLambdaExpression(lambda, context, expected) }
-    if_: IfExpression -> { value = emitIfExpression(if_, context) }
+    if_: IfExpression -> { value = emitIfExpression(if_, context, expected) }
     case_: CaseExpression -> { value = emitCaseExpression(case_, context, expected) }
     yieldBlock: YieldBlockExpression -> { value = emitYieldBlockExpression(yieldBlock, context, expected) }
     catch_: CatchExpression -> { value = emitCatchExpression(catch_, context) }

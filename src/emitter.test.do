@@ -1092,6 +1092,51 @@ export function testEmitsGenericTupleDestructuring(): none {
   Assert.equal(result.source.contains("std::get<1>(_destructure_"), true)
 }
 
+export function testEmitsTuplePositionalFieldsAcrossAritiesAndGenerics(): none {
+  result := emit(
+    "function first<A, B>(value: Tuple<A, B>): A => value._1\n" +
+    "function main(): int { singleton: Tuple<int> := (7,)\n" +
+    "mixed := (42, \"hello\", true)\n" +
+    "nested := ((1, 2), (3, 4))\n" +
+    "return singleton._1 + mixed._1 + mixed._2.length + (if mixed._3 then 1 else 0) + nested._1._2 + first<int, string>((9, \"nine\")) }",
+  )
+  Assert.stringContains(result.source, "std::get<0>(singleton)")
+  Assert.stringContains(result.source, "std::get<1>(mixed).size()")
+  Assert.stringContains(result.source, "std::get<2>(mixed)")
+  Assert.stringContains(result.source, "std::get<1>(std::get<0>(nested))")
+  Assert.stringContains(result.source, "std::get<0>(value)")
+}
+
+export function testSpecializesNestedGenericClassTypesInGenericClassBodies(): none {
+  result := emit(
+    "interface Element { read(): string }\n" +
+    "class Column<Row> { value: (row: Row): string = (row): string => \"\" }\n" +
+    "class Table<Row> implements Element { row: Row\ncolumns: Column<Row>[]\n" +
+    "static constructor(row: Row, children: Column<Row>[] = []): Table<Row> => Table<Row> { row, columns: children }\n" +
+    "read(): string => columns[0].value(row) }\n" +
+    "function render(element: Element): string => element.read()\n" +
+    "function main(): string => render(<Table<int> row=1><Column<int>/></Table>)",
+  )
+  Assert.stringContains(result.header, "struct Column__int;")
+  Assert.stringContains(result.header, "struct Table__int;")
+  Assert.stringContains(result.header, "using Element = std::variant<std::shared_ptr<Table__int>>;")
+  Assert.stringNotContains(result.header, "Column<Row>")
+  Assert.stringNotContains(result.source, "Column<Row>")
+  Assert.stringNotContains(result.source, "(Row)")
+  Assert.stringNotContains(result.source, "Row row")
+}
+
+export function testSpecializesGenericAsNarrowingCarriers(): none {
+  result := emit(
+    "function select<Row>(onChange: ((row: Row, value: string): none) | none): ((row: Row, value: string): none) | none {\n" +
+    "changed := onChange as (row: Row, value: string): none else { return none }\n" +
+    "return changed\n}\n" +
+    "function main(): none { selected := select<int>(none) }",
+  )
+  Assert.stringContains(result.source, "doof::callback<void(int32_t, std::string)>")
+  Assert.stringNotContains(result.source, "void(Row")
+}
+
 export function testEmitsDeclarationElseNarrowingAndCapture(): none {
   result := emit("function load(): Result<int, string> => Success { value: 4 }\nfunction main(): int { value := load() else error { println(error)\nreturn 1 }\nreturn value }")
   Assert.equal(result.source.contains("if (doof::is_failure(_binding_value_"), true)

@@ -132,10 +132,11 @@ page := <Panel title="Welcome">
 </Panel>
 ```
 
-Tag attributes accept scalar literals directly. General Doof expressions use
-braces, for example `items={loadItems()}`. A contextual `=>` lambda may use its
-ordinary syntax directly after the attribute name and inherits the expected
-callback's parameter names and types:
+Tag attributes accept scalar literals and leading-dot shorthand directly, for
+example `displayMode=.IconOnly`. General Doof expressions use braces, for
+example `items={loadItems()}`. A contextual `=>` lambda may use its ordinary
+syntax directly after the attribute name and inherits the expected callback's
+parameter names and types:
 
 ```doof
 <Button onClick=>println("clicked")/>

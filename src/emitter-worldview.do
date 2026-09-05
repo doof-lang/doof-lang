@@ -84,6 +84,20 @@ export function planWorldview(
   }
 
   if instantiations != none {
+    // Generic bodies are emitted in their defining module. Their concrete
+    // arguments can come from callers with no import edge back to that module.
+    for function_ of instantiations!.functions {
+      if function_.modulePath != rootPath { continue }
+      for argument of function_.substitution.arguments { collectType(argument, rootPath, index) }
+    }
+    for class_ of instantiations!.classes {
+      if class_.modulePath != rootPath { continue }
+      for argument of class_.substitution.arguments { collectType(argument, rootPath, index) }
+    }
+    for method of instantiations!.methods {
+      if method.modulePath != rootPath { continue }
+      for argument of method.substitution.arguments { collectType(argument, rootPath, index) }
+    }
     for interface_ of instantiations!.interfaces {
       if !index.interfaceKeySet.has(interface_.key) { continue }
       for implementation of interface_.implementations {

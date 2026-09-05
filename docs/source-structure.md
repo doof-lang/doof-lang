@@ -81,11 +81,11 @@ emitter or individual expression branch.
 | `emitter-context.do` | Graph-wide nominal/method context and per-module emission state |
 | `emitter-names.do` | Stable C++ namespaces, filenames, and diagnostic paths from logical module identity |
 | `emitter-monomorphize.do` | Fixed-point discovery of concrete generic instantiations and direction-specific generated-JSON demand |
-| `emitter-worldview.do` | Consumer-projected declaration closure from checked symbol/type uses |
+| `emitter-worldview.do` | Consumer-projected declaration closure from checked symbol/type uses and concrete arguments of module-owned generic specializations |
 | `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, and header/source pairing |
 | `emitter-header.do` | Multi-namespace worldview declaration ordering, enum identity/helper generation, and rendering |
 | `string-builder.do` | Runtime-backed append-only construction for large generated text |
-| `emitter-decl.do` | Functions, classes, top-level declarations, signatures, and definitions |
+| `emitter-decl.do` | Functions, classes, top-level declarations, signatures, definitions, and field equality operators for structs |
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering |
 | `emitter-expr.do` | Single expression dispatch façade |
 | `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as` |
@@ -104,6 +104,12 @@ emitter or individual expression branch.
 
 `runtime/doof_runtime.h` owns reusable generated-program behavior. It is not a
 place to hide a missing checker rule or an emitter decision.
+
+Conditional expressions with nullable, variant, or JSON carriers lower through
+an explicitly typed lambda so each selected branch converts to the checked
+result type. Lambda capture analysis traverses destructuring initializers;
+statement lowering boxes captured mutable destructured locals just like ordinary
+`let` locals, while evaluating the destructuring source only once.
 
 Async-block capture decoration and transfer restrictions belong to
 `checker-async.do`; transitive callable effects remain owned by

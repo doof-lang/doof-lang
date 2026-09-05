@@ -28,6 +28,16 @@ export function emitContextReturnType(resolvedType: ResolvedType, context: EmitC
   return emitReturnType(lowerRegisteredTypes(specialized, context), context.modulePath)
 }
 
+export function emitContextClassInnerType(class_: ClassType, context: EmitContext): string {
+  specialized := specializeEmitType(class_, context)
+  lowered := lowerRegisteredTypes(specialized, context)
+  case lowered {
+    concrete: ClassType -> { return emitClassInnerType(concrete, context.modulePath) }
+    _ -> { panic("Class type did not remain nominal after contextual specialization") }
+  }
+  return ""
+}
+
 export function emitReturnType(resolvedType: ResolvedType, currentModulePath: string = ""): string {
   case resolvedType {
     _: NoneType -> { return "void" }

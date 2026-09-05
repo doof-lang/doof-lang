@@ -81,7 +81,7 @@ doof test src --target wasm
 Runner behavior:
 
 - Discovery is static, not reflective.
-- Selected roots without `mock import` share one generated harness and native executable.
+- Filtering controls execution only; all discovered roots without `mock import` share one stable generated harness and native executable.
 - Each root containing `mock import` is compiled into its own isolated executable.
 - Each exported test runs in its own process.
 - All modules in a shared no-mock graph perform module-level initialization in each test process.

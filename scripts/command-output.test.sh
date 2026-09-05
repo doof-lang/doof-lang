@@ -93,6 +93,10 @@ first_test_output=$(DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" test "$test_run_
 assert_contains "$first_test_output" "Compiling "
 warm_test_output=$(DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" test "$test_run_fixture" 2>&1)
 assert_not_contains "$warm_test_output" "Compiling "
+filtered_test_output=$(DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" test "$test_run_fixture" --filter testAddsValues 2>&1)
+assert_not_contains "$filtered_test_output" "Compiling "
+assert_contains "$filtered_test_output" "Testing 1 test"
+assert_contains "$filtered_test_output" "Tests finished: 1 passed, 0 failed"
 cp "$test_run_fixture/math.test.changed" "$test_run_fixture/math.test.do"
 changed_test_output=$(DOOF_STDLIB_ROOT="$stdlib_root" "$compiler" test "$test_run_fixture" 2>&1)
 assert_contains "$changed_test_output" "Compiling 1 file"

@@ -45,3 +45,24 @@ export function testCollectsGenericInterfaceKeysDuringPrimaryWorldviewTraversal(
   plan := planWorldview(analysis, "/main.do", buildInstantiationPlan(analysis))
   Assert.equal(plan.interfaceKeys.length, 1)
 }
+
+export function testSelectsConcreteGenericArgumentDefinitionsInOwningModules(): none {
+  sources := [
+    SourceFile { path: "/main.do", source:
+      "import { Color } from \"./color\"\nimport { identity, Box, Inspect } from \"./generic\"\n" +
+      "function main(): int { value := Color { red: 7 }\n" +
+      "box := Box<Color> { value }\nreturn Inspect.red<Color>(identity<Color>(box.value)) }" },
+    SourceFile { path: "/color.do", source: "export struct Color { red: int }\nexport struct Unused { value: int }" },
+    SourceFile { path: "/generic.do", source:
+      "export function identity<T>(value: T): T => value\nexport class Box<T> { value: T }\n" +
+      "export class Inspect { static red<T>(value: T): int => 7 }" },
+  ]
+  analysis := createAnalyzer(sources).analyze("/main.do")
+  checked := createChecker(analysis).check("/main.do")
+  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
+  plan := planWorldview(analysis, "/generic.do", buildInstantiationPlan(analysis))
+  Assert.equal(plan.modules.length, 2)
+  Assert.equal(plan.modules[0].path, "/color.do")
+  Assert.equal(plan.modules[0].program.statements.length, 1)
+  Assert.equal(plan.modules[1].path, "/generic.do")
+}

@@ -1,12 +1,12 @@
 // Assignment, identifier, operator, member, and index lowering.
 
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
-import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitNoneLiteral, emitStringConstant, quote } from "./emitter-expr-literals"
 import { decoratedExpressionType, emittedSymbolName, emitNullableVariantPromotion, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, needsNullableVariantPromotion, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
-import { emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, sameType } from "./checker-types"
 
@@ -17,10 +17,10 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
   case resultType {
     result: ResultResolvedType -> {
       target := result.valueType
-      resultCpp := emitType(result, context.modulePath)
-      targetCpp := emitType(target, context.modulePath)
+      resultCpp := emitContextType(result, context)
+      targetCpp := emitContextType(target, context)
       success := "doof::Success<" + targetCpp + ">"
-      failure := "doof::Failure<" + emitType(result.errorType, context.modulePath) + ">"
+      failure := "doof::Failure<" + emitContextType(result.errorType, context) + ">"
       source := emitExpression(expression.expression, context)
       if sameType(sourceType, target) { return resultCpp + "{" + success + "{" + source + "}}" }
       case sourceType {
@@ -103,7 +103,7 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
 function emitAsFailureValue(source: ResultResolvedType, target: ResultResolvedType, context: EmitContext): string {
   errorValue := "doof::failure_error(_as_source)"
   if !sameType(source.errorType, target.errorType) {
-    return "doof::variant_promote<" + emitType(target.errorType, context.modulePath) + ">(" + errorValue + ")"
+    return "doof::variant_promote<" + emitContextType(target.errorType, context) + ">(" + errorValue + ")"
   }
   return errorValue
 }
@@ -118,7 +118,7 @@ function emitNumericUnionAs(source: string, union_: UnionResolvedType, targetCpp
   for member of union_.types {
     if isNumeric(member) {
       if numericItem != "" { numericItem = numericItem + " || " }
-      numericItem = numericItem + "std::is_same_v<_AsItem, " + emitType(member, context.modulePath) + ">"
+      numericItem = numericItem + "std::is_same_v<_AsItem, " + emitContextType(member, context) + ">"
     }
   }
   return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; auto _as_checked = std::visit([](const auto& _as_item) -> std::optional<" + targetCpp + "> { using _AsItem = std::decay_t<decltype(_as_item)>; if constexpr (" + numericItem + ") return doof::checked_numeric_as<" + targetCpp + ">(_as_item); return std::nullopt; }, _as_value); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
@@ -535,6 +535,11 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       _: ArrayResolvedType -> { if expression.property == "length" { return "static_cast<int32_t>((" + object + ")->size())" } }
       _: MapResolvedType -> { if expression.property == "size" { return object + "->size()" } }
       _: SetResolvedType -> { if expression.property == "size" { return object + "->size()" } }
+      tuple: TupleResolvedType -> {
+        for i of 0..<tuple.elements.length {
+          if expression.property == "_" + string(i + 1) { return "std::get<" + string(i) + ">(" + object + ")" }
+        }
+      }
       _: RangeResolvedType -> {
         if expression.property == "lowerBound" || expression.property == "upperBound" { return object + "." + expression.property }
       }

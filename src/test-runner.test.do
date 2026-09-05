@@ -5,7 +5,8 @@ import { SourceFile } from "./semantic"
 import {
   CoverageModuleMetadata, DiscoveredTest, buildCoverageReport, discoverModuleTests, filterDiscoveredTests,
   coverageFileRelativePath, formatParseFailure, generateTestHarness, groupTestsForCompilation, mergeCoverageOutput,
-  renderCoverageFileHtml, renderCoverageHtml, renderCoverageJson, stripCoverageLines, testDisplayPath,
+  renderCoverageFileHtml, renderCoverageHtml, renderCoverageJson, selectedTestsForExecution, stripCoverageLines,
+  testDisplayPath,
 } from "./test-runner"
 
 export function testDiscoversAndValidatesExportedTestFunctions(): none {
@@ -66,6 +67,23 @@ export function testFiltersTestIdsCaseInsensitively(): none {
   selected := filterDiscoveredTests(tests, "math.TEST.do::testa")
   Assert.equal(selected.length, 1)
   Assert.equal(selected[0].name, "testAdds")
+}
+
+export function testKeepsFullCompilationGroupWhileSelectingExecutionTests(): none {
+  program := Parser { source:
+    "export function testAdds(): none {}\n" +
+    "export function testSubtracts(): none {}\n"
+  }.parse()
+  compilationTests := discoverModuleTests(program, "/work/math.test.do", "/work").tests
+  selected := filterDiscoveredTests(compilationTests, "testSubtracts")
+  executionTests := selectedTestsForExecution(compilationTests, selected)
+
+  Assert.equal(compilationTests.length, 2)
+  Assert.equal(executionTests.length, 1)
+  Assert.equal(executionTests[0].name, "testSubtracts")
+  harness := generateTestHarness("/work/build/.doof-tests/shared/__doof_tests__.do", compilationTests)
+  Assert.stringContains(harness, "testAdds as __doof_test_0")
+  Assert.stringContains(harness, "testSubtracts as __doof_test_1")
 }
 
 export function testGeneratesPerIdHarnessWithRelativeImport(): none {

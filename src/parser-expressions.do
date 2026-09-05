@@ -440,7 +440,13 @@ function parseTagAttributeValue(parser: Parser, name: string): Expression {
       || (parser.check(TokenType.Minus) && isNumericLiteralToken(parser.peek(1).kind)) {
     return parseUnary(parser)
   }
-  parser.fail("Tag attribute '" + name + "' requires a scalar literal or '{expression}'")
+  if parser.check(TokenType.Dot) && parser.peek(1).kind == TokenType.Identifier {
+    start := parser.location()
+    parser.advance()
+    memberName := parser.text(parser.expect(TokenType.Identifier))
+    return DotShorthand { kind: "dot-shorthand", name: memberName, span: parser.span(start) }
+  }
+  parser.fail("Tag attribute '" + name + "' requires a scalar literal, dot shorthand, or '{expression}'")
   return NoneLiteral { kind: "none-literal", span: parser.locationSpan() }
 }
 

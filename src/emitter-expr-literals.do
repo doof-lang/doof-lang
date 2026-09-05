@@ -1,11 +1,12 @@
 // Literal, array, object, tuple, and string expression lowering.
 
 import { ArrayLiteral, ObjectLiteral, StringLiteral, TupleLiteral } from "./ast"
-import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, TypeSubstitution, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { emittedSymbolName, emitNullableVariantPromotion, exprModuleNamespaceFor, findProperty, needsNullableVariantPromotion } from "./emitter-expr-utils"
-import { emitResultPayloadType, emitType } from "./emitter-types"
+import { emitNullableVariantPromotion, findProperty, needsNullableVariantPromotion } from "./emitter-expr-utils"
+import { emitContextClassInnerType, emitContextType, emitResultPayloadType, emitType, specializeEmitType } from "./emitter-types"
+import { substituteTypeParams } from "./checker-types"
 
 export function emitNoneLiteral(expected: ResolvedType | none, context: EmitContext): string {
   if expected == none { return "nullptr" }
@@ -66,7 +67,7 @@ export function emitArray(expression: ArrayLiteral, context: EmitContext, expect
   if arrayType != none {
     case arrayType! {
       array: ArrayResolvedType -> {
-        elementType := emitType(array.elementType, context.modulePath)
+        elementType := emitContextType(array.elementType, context)
         let values = ""
         for i of 0..<expression.elements.length {
           if i > 0 { values = values + ", " }
@@ -75,7 +76,7 @@ export function emitArray(expression: ArrayLiteral, context: EmitContext, expect
         return "std::make_shared<std::vector<" + elementType + ">>(std::vector<" + elementType + ">{" + values + "})"
       }
       set_: SetResolvedType -> {
-        elementType := emitType(set_.elementType, context.modulePath)
+        elementType := emitContextType(set_.elementType, context)
         let values = ""
         for i of 0..<expression.elements.length {
           if i > 0 { values = values + ", " }
@@ -150,8 +151,13 @@ export function emitObject(expression: ObjectLiteral, context: EmitContext, expe
 function emitClassObject(expression: ObjectLiteral, context: EmitContext, resolved: ClassType): string {
   class_ := expression.resolvedClass
   if class_ == none { panic("Object literal has no resolved class in " + context.modulePath) }
-  let cppName = emittedSymbolName(resolved.symbol)
-  if resolved.symbol.module != "" && resolved.symbol.module != context.modulePath { cppName = "::" + exprModuleNamespaceFor(resolved.symbol.module) + "::" + cppName }
+  specialized := specializeEmitType(resolved, context)
+  let concrete: ClassType | none = none
+  case specialized {
+    classType: ClassType -> { concrete = classType }
+    _ -> { panic("Object literal has a non-class specialized type in " + context.modulePath) }
+  }
+  cppName := emitContextClassInnerType(resolved, context)
   let values = ""
   let first = true
   for field of class_!.fields {
@@ -160,12 +166,17 @@ function emitClassObject(expression: ObjectLiteral, context: EmitContext, resolv
       if !first { values = values + ", " }
       first = false
       property := findProperty(expression.properties, name)
+      fieldType := substituteTypeParams(field.resolvedType!, class_!.typeParams, concrete!.typeArgs)
       let value = "{}"
       if property != none {
-        value = if property!.value == none then cppIdentifier(name) else emitExpression(property!.value!, context, field.resolvedType)
-        if property!.value == none && needsNullableVariantPromotion(property!.resolvedType, field.resolvedType) { value = emitNullableVariantPromotion(value, property!.resolvedType, field.resolvedType, context.modulePath) }
+        value = if property!.value == none then cppIdentifier(name) else emitExpression(property!.value!, context, fieldType)
+        propertyType := if property!.resolvedType == none then none else specializeEmitType(property!.resolvedType!, context)
+        if property!.value == none && needsNullableVariantPromotion(propertyType, fieldType) { value = emitNullableVariantPromotion(value, propertyType, fieldType, context.modulePath) }
       } else if field.defaultValue != none {
-        value = emitExpression(field.defaultValue!, context, field.resolvedType)
+        previousSubstitution := context.substitution
+        context.substitution = TypeSubstitution { names: class_!.typeParams, arguments: concrete!.typeArgs }
+        value = emitExpression(field.defaultValue!, context, fieldType)
+        context.substitution = previousSubstitution
       }
       values = values + value
     }
@@ -183,8 +194,8 @@ function emitMapObject(expression: ObjectLiteral, context: EmitContext, map: Map
     key := if property.key == none then quote(property.name) else emitExpression(property.key!, context, map.keyType)
     values = values + "{" + key + ", " + value + "}"
   }
-  keyType := emitType(map.keyType, context.modulePath)
-  valueType := emitType(map.valueType, context.modulePath)
+  keyType := emitContextType(map.keyType, context)
+  valueType := emitContextType(map.valueType, context)
   return "std::make_shared<doof::ordered_map<" + keyType + ", " + valueType + ">>(std::initializer_list<std::pair<" + keyType + ", " + valueType + ">>{" + values + "})"
 }
 
