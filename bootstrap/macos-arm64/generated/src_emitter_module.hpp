@@ -222,6 +222,10 @@ namespace app_src_semantic_ {
     int32_t offset;
     SemanticLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     SemanticLocation() {}
+    template <typename _DoofOther = SemanticLocation>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->line == _doof_other.line) && (this->column == _doof_other.column) && (this->offset == _doof_other.offset); }
+    template <typename _DoofOther = SemanticLocation>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct Symbol : public std::enable_shared_from_this<Symbol> {
     std::string kind;
@@ -396,6 +400,10 @@ namespace app_src_ast_ {
     int32_t offset;
     AstLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     AstLocation() {}
+    template <typename _DoofOther = AstLocation>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->line == _doof_other.line) && (this->column == _doof_other.column) && (this->offset == _doof_other.offset); }
+    template <typename _DoofOther = AstLocation>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct TypeParameterConstraint : public std::enable_shared_from_this<TypeParameterConstraint> {
     doof_header_type_2 type_;
@@ -669,6 +677,10 @@ namespace app_src_semantic_ {
     SemanticLocation end;
     SemanticSpan(SemanticLocation start, SemanticLocation end) : start(start), end(end) {}
     SemanticSpan() {}
+    template <typename _DoofOther = SemanticSpan>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->start == _doof_other.start) && (this->end == _doof_other.end); }
+    template <typename _DoofOther = SemanticSpan>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct Diagnostic : public std::enable_shared_from_this<Diagnostic> {
     std::string severity;
@@ -699,6 +711,10 @@ namespace app_src_ast_ {
     AstLocation end;
     SourceSpan(AstLocation start, AstLocation end) : start(start), end(end) {}
     SourceSpan() {}
+    template <typename _DoofOther = SourceSpan>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->start == _doof_other.start) && (this->end == _doof_other.end); }
+    template <typename _DoofOther = SourceSpan>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct NamedType : public std::enable_shared_from_this<NamedType> {
     std::string kind;
@@ -1500,7 +1516,7 @@ namespace app_src_emitter_decl_ {
 #include "doof_runtime.hpp"
 
 namespace app_src_emitter_header_ {
-    std::shared_ptr<HeaderPlan> planHeader(const std::shared_ptr<::app_src_ast_::Program>& program, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>>& methods);
+    std::shared_ptr<HeaderPlan> planHeader(const std::shared_ptr<::app_src_ast_::Program>& program, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>>& methods, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::ClassInstantiation>>>& classes);
     std::string renderProjectedHeader(const std::shared_ptr<std::vector<std::shared_ptr<HeaderSection>>>& sections);
     void reserveHeaderNamespaceName(const std::shared_ptr<HeaderPlan>& plan, const std::string& name);
 }

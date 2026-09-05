@@ -184,6 +184,10 @@ namespace app_src_semantic_ {
     int32_t offset;
     SemanticLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     SemanticLocation() {}
+    template <typename _DoofOther = SemanticLocation>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->line == _doof_other.line) && (this->column == _doof_other.column) && (this->offset == _doof_other.offset); }
+    template <typename _DoofOther = SemanticLocation>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct Symbol : public std::enable_shared_from_this<Symbol> {
     std::string kind;
@@ -358,6 +362,10 @@ namespace app_src_ast_ {
     int32_t offset;
     AstLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     AstLocation() {}
+    template <typename _DoofOther = AstLocation>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->line == _doof_other.line) && (this->column == _doof_other.column) && (this->offset == _doof_other.offset); }
+    template <typename _DoofOther = AstLocation>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct TypeParameterConstraint : public std::enable_shared_from_this<TypeParameterConstraint> {
     doof_header_type_2 type_;
@@ -431,6 +439,10 @@ namespace app_src_semantic_ {
     SemanticLocation end;
     SemanticSpan(SemanticLocation start, SemanticLocation end) : start(start), end(end) {}
     SemanticSpan() {}
+    template <typename _DoofOther = SemanticSpan>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->start == _doof_other.start) && (this->end == _doof_other.end); }
+    template <typename _DoofOther = SemanticSpan>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct Binding : public std::enable_shared_from_this<Binding> {
     std::string name;
@@ -453,6 +465,10 @@ namespace app_src_ast_ {
     AstLocation end;
     SourceSpan(AstLocation start, AstLocation end) : start(start), end(end) {}
     SourceSpan() {}
+    template <typename _DoofOther = SourceSpan>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->start == _doof_other.start) && (this->end == _doof_other.end); }
+    template <typename _DoofOther = SourceSpan>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct NamedType : public std::enable_shared_from_this<NamedType> {
     std::string kind;
@@ -1219,6 +1235,7 @@ namespace app_src_emitter_types_ {
     doof_header_type_12 specializeEmitType(const doof_header_type_12& resolvedType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string emitContextType(const doof_header_type_12& resolvedType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string emitContextReturnType(const doof_header_type_12& resolvedType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    std::string emitContextClassInnerType(const std::shared_ptr<::app_src_semantic_::ClassType>& class_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string emitReturnType(const doof_header_type_12& resolvedType, const std::string& currentModulePath);
     std::string emitResultPayloadType(const doof_header_type_12& resolvedType, const std::string& currentModulePath);
     doof_header_type_12 lowerRegisteredTypes(const doof_header_type_12& type_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);

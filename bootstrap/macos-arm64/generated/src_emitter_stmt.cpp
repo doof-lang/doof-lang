@@ -188,8 +188,7 @@ std::string emitDestructuringValue(const std::shared_ptr<::app_src_ast_::Destruc
             if (doof::string_endsWith(statement->kind, std::string("-assignment"))) {
                 (result = (((((result + ind) + emitAssignmentTarget(localName, context)) + std::string(" = ")) + value) + std::string(";\n")));
             } else {
-                const auto qualifier = ((statement->bindingKind == std::string("let")) ? std::string("auto") : std::string("const auto"));
-                (result = (((((((result + ind) + qualifier) + std::string(" ")) + ::app_src_emitter_expr_::cppIdentifier(localName)) + std::string(" = ")) + value) + std::string(";\n")));
+                (result = (result + emitDestructuredLocal(ind, localName, value, statement->bindingKind, context)));
             }
         }
         return result;
@@ -207,9 +206,8 @@ std::string emitDestructuringValue(const std::shared_ptr<::app_src_ast_::Destruc
         }
     }
     for (int32_t i = 0; i < static_cast<int32_t>((statement->bindings)->size()); ++i) {
-        const auto name = doof::array_at(statement->bindings, i, "src/emitter-stmt", 150);
+        const auto name = doof::array_at(statement->bindings, i, "src/emitter-stmt", 149);
         if (name != std::string("_")) {
-            const auto qualifier = ((statement->bindingKind == std::string("let")) ? std::string("auto") : std::string("const auto"));
             auto value = ((((std::string("std::get<") + doof::to_string(i)) + std::string(">(")) + temporaryName) + std::string(")"));
             if (!doof::is_null(sourceType)) {
                 {
@@ -222,7 +220,7 @@ std::string emitDestructuringValue(const std::shared_ptr<::app_src_ast_::Destruc
                 else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                         const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
                         if (i < static_cast<int32_t>((positionalFields)->size())) {
-                            (value = emitDestructuredField(temporaryName, doof::array_at(positionalFields, i, "src/emitter-stmt", 159), doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(class_), context));
+                            (value = emitDestructuredField(temporaryName, doof::array_at(positionalFields, i, "src/emitter-stmt", 157), doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(class_), context));
                         }
                 }
                 else {
@@ -232,11 +230,18 @@ std::string emitDestructuringValue(const std::shared_ptr<::app_src_ast_::Destruc
             if (doof::string_endsWith(statement->kind, std::string("-assignment"))) {
                 (result = (((((result + ind) + emitAssignmentTarget(name, context)) + std::string(" = ")) + value) + std::string(";\n")));
             } else {
-                (result = (((((((result + ind) + qualifier) + std::string(" ")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(" = ")) + value) + std::string(";\n")));
+                (result = (result + emitDestructuredLocal(ind, name, value, statement->bindingKind, context)));
             }
         }
     }
     return result;
+}
+std::string emitDestructuredLocal(const std::string& ind, const std::string& name, const std::string& value, const std::string& bindingKind, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
+    if ((bindingKind == std::string("let")) && ::app_src_emitter_context_::isCapturedMutable(context, name)) {
+        return (((((((ind + std::string("auto ")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(" = std::make_shared<std::decay_t<decltype(")) + value) + std::string(")>>(")) + value) + std::string(");\n"));
+    }
+    const auto qualifier = ((bindingKind == std::string("let")) ? std::string("auto") : std::string("const auto"));
+    return ((((((ind + qualifier) + std::string(" ")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(" = ")) + value) + std::string(";\n"));
 }
 std::string emitDestructuredField(const std::string& source, const std::string& field, const std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& sourceType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (!doof::is_null(sourceType)) {
@@ -326,7 +331,10 @@ std::string emitBindingElse(const std::shared_ptr<::app_src_ast_::ImmutableBindi
         if (binding->name == std::string("_")) {
             return output;
         }
-        return (output + emitExtractedLocal(ind, binding->name, doof::unwrap_optional(binding->resolvedType), ((std::string("doof::unwrap_optional(") + temporaryName) + std::string(")")), true, true));
+        const auto sourceType = ::app_src_emitter_types_::specializeEmitType(doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, binding->value)), context);
+        const auto narrowedType = ::app_src_emitter_types_::specializeEmitType(doof::unwrap_optional(binding->resolvedType), context);
+        const auto extracted = ((::app_src_emitter_types_::usesVariantRepresentation(sourceType) && !::app_src_emitter_types_::usesVariantRepresentation(narrowedType)) ? ((((std::string("std::get<") + ::app_src_emitter_types_::emitContextType(narrowedType, context)) + std::string(">(")) + temporaryName) + std::string(")")) : ((std::string("doof::unwrap_optional(") + temporaryName) + std::string(")")));
+        return (output + emitExtractedLocal(ind, binding->name, doof::unwrap_optional(binding->resolvedType), extracted, true, true));
     }
     auto output = (((((ind + std::string("auto ")) + temporaryName) + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(binding->value, context, std::monostate{})) + std::string(";\n"));
     (output = ((((output + ind) + std::string("if (doof::is_failure(")) + temporaryName) + std::string(")) {\n")));
@@ -728,7 +736,7 @@ std::string emitForOf(const std::shared_ptr<::app_src_ast_::ForOfStatement>& sta
     const auto breakTarget = labeledBreakTarget(labeledLoopId, level);
     (context->tryCounter = (context->tryCounter + 1));
     const auto loopId = context->tryCounter;
-    const auto name = ((static_cast<int32_t>((statement->bindings)->size()) == 0) ? std::string("_item") : discardableCppName(doof::array_at(statement->bindings, 0, "src/emitter-stmt", 507), loopId, 0));
+    const auto name = ((static_cast<int32_t>((statement->bindings)->size()) == 0) ? std::string("_item") : discardableCppName(doof::array_at(statement->bindings, 0, "src/emitter-stmt", 522), loopId, 0));
     {
         auto _case_subject = statement->iterable;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::BinaryExpression>>(_case_subject)) {
@@ -764,7 +772,7 @@ std::string emitForOf(const std::shared_ptr<::app_src_ast_::ForOfStatement>& sta
             if (i > 0) {
                 (names = (names + std::string(", ")));
             }
-            (names = (names + discardableCppName(doof::array_at(statement->bindings, i, "src/emitter-stmt", 540), loopId, i)));
+            (names = (names + discardableCppName(doof::array_at(statement->bindings, i, "src/emitter-stmt", 555), loopId, i)));
         }
         return ((((((((((iterableBinding + ind) + std::string("for (const auto& [")) + names) + std::string("] : *")) + iterableName) + std::string(") {\n")) + body) + ind) + std::string("}\n")) + breakTarget);
     }
@@ -797,7 +805,7 @@ std::string emitFor(const std::shared_ptr<::app_src_ast_::ForStatement>& stateme
         if (i > 0) {
             (update = (update + std::string(", ")));
         }
-        (update = (update + ::app_src_emitter_expr_::emitExpression(doof::array_at(statement->update, i, "src/emitter-stmt", 569), context, std::monostate{})));
+        (update = (update + ::app_src_emitter_expr_::emitExpression(doof::array_at(statement->update, i, "src/emitter-stmt", 584), context, std::monostate{})));
     }
     return (((((((((((ind + std::string("for (")) + init) + std::string("; ")) + condition) + std::string("; ")) + update) + std::string(") {\n")) + body) + ind) + std::string("}\n")) + labeledBreakTarget(loopId, level));
 }
@@ -816,9 +824,9 @@ void endLabeledLoop(int32_t loopId, const std::shared_ptr<::app_src_emitter_cont
     if (loopId < 0) {
         return;
     }
-    [&]() -> std::string { auto _try_value = doof::array_pop(context->loopLabels); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-stmt", 587, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
-    [&]() -> std::string { auto _try_value = doof::array_pop(context->loopBreakTargets); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-stmt", 588, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
-    [&]() -> std::string { auto _try_value = doof::array_pop(context->loopContinueTargets); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-stmt", 589, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    [&]() -> std::string { auto _try_value = doof::array_pop(context->loopLabels); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-stmt", 602, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    [&]() -> std::string { auto _try_value = doof::array_pop(context->loopBreakTargets); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-stmt", 603, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    [&]() -> std::string { auto _try_value = doof::array_pop(context->loopContinueTargets); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-stmt", 604, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
 }
 std::string emitLabeledLoopBody(const std::shared_ptr<::app_src_ast_::Block>& body, int32_t level, int32_t loopId, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (loopId < 0) {
@@ -836,8 +844,8 @@ std::string labeledBreakTarget(int32_t loopId, int32_t level) {
 std::string loopTarget(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& label, bool break_) {
     auto target = std::string("");
     for (int32_t i = 0; i < static_cast<int32_t>((context->loopLabels)->size()); ++i) {
-        if (doof::array_at(context->loopLabels, i, "src/emitter-stmt", 607) == label) {
-            (target = (break_ ? doof::array_at(context->loopBreakTargets, i, "src/emitter-stmt", 608) : doof::array_at(context->loopContinueTargets, i, "src/emitter-stmt", 608)));
+        if (doof::array_at(context->loopLabels, i, "src/emitter-stmt", 622) == label) {
+            (target = (break_ ? doof::array_at(context->loopBreakTargets, i, "src/emitter-stmt", 623) : doof::array_at(context->loopContinueTargets, i, "src/emitter-stmt", 623)));
         }
     }
     if (target == std::string("")) {

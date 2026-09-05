@@ -20,6 +20,22 @@ std::string emitContextReturnType(const std::variant<std::shared_ptr<::app_src_s
     const auto specialized = specializeEmitType(resolvedType, context);
     return emitReturnType(lowerRegisteredTypes(specialized, context), context->modulePath);
 }
+std::string emitContextClassInnerType(const std::shared_ptr<::app_src_semantic_::ClassType>& class_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
+    const auto specialized = specializeEmitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(class_), context);
+    const auto lowered = lowerRegisteredTypes(specialized, context);
+    {
+        auto _case_subject = lowered;
+        if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
+            const auto& concrete = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
+            return emitClassInnerType(concrete, context->modulePath);
+    }
+    else {
+            doof::panic(std::string("Class type did not remain nominal after contextual specialization"));
+    }
+    }
+    doof::unreachable();
+    return std::string("");
+}
 std::string emitReturnType(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& resolvedType, const std::string& currentModulePath) {
     {
         auto _case_subject = resolvedType;
@@ -57,8 +73,8 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             if ((static_cast<int32_t>((class_->typeArgs)->size()) > 0) && !class_->symbol->native_) {
                 const auto key = ::app_src_emitter_monomorphize_::classInstantiationKey(class_->symbol->module, class_->name, class_->typeArgs);
                 for (int32_t i = 0; i < static_cast<int32_t>((context->concreteClassKeys)->size()); ++i) {
-                    if (doof::array_at(context->concreteClassKeys, i, "src/emitter-types", 57) == key) {
-                        return doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(std::make_shared<::app_src_semantic_::ClassType>(std::string("class"), doof::array_at(context->concreteClassNames, i, "src/emitter-types", 58), class_->symbol, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{})));
+                    if (doof::array_at(context->concreteClassKeys, i, "src/emitter-types", 67) == key) {
+                        return doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(std::make_shared<::app_src_semantic_::ClassType>(std::string("class"), doof::array_at(context->concreteClassNames, i, "src/emitter-types", 68), class_->symbol, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{})));
                     }
                 }
                 doof::panic((std::string("Missing concrete class instantiation for ") + key));
@@ -166,8 +182,8 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
 }
 std::string concreteInterfaceName(const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::string& key) {
     for (int32_t i = 0; i < static_cast<int32_t>((context->concreteInterfaceKeys)->size()); ++i) {
-        if (doof::array_at(context->concreteInterfaceKeys, i, "src/emitter-types", 124) == key) {
-            return doof::array_at(context->concreteInterfaceNames, i, "src/emitter-types", 124);
+        if (doof::array_at(context->concreteInterfaceKeys, i, "src/emitter-types", 134) == key) {
+            return doof::array_at(context->concreteInterfaceNames, i, "src/emitter-types", 134);
         }
     }
     return std::string("");
@@ -305,7 +321,7 @@ std::string emitWeakType(const std::variant<std::shared_ptr<::app_src_semantic_:
                 }
             }
             if (static_cast<int32_t>((nonNone)->size()) == 1) {
-                const auto inner = emitWeakType(doof::array_at(nonNone, 0, "src/emitter-types", 184), currentModulePath);
+                const auto inner = emitWeakType(doof::array_at(nonNone, 0, "src/emitter-types", 194), currentModulePath);
                 return (nullable ? ((std::string("std::optional<") + inner) + std::string(">")) : inner);
             }
             auto result = std::string("std::variant<");
@@ -313,7 +329,7 @@ std::string emitWeakType(const std::variant<std::shared_ptr<::app_src_semantic_:
                 if (index > 0) {
                     (result = (result + std::string(", ")));
                 }
-                (result = (result + emitWeakType(doof::array_at(nonNone, index, "src/emitter-types", 190), currentModulePath)));
+                (result = (result + emitWeakType(doof::array_at(nonNone, index, "src/emitter-types", 200), currentModulePath)));
             }
             (result = (result + std::string(">")));
             return (nullable ? ((std::string("std::optional<") + result) + std::string(">")) : result);
@@ -480,7 +496,7 @@ std::string emitClassInnerType(const std::shared_ptr<::app_src_semantic_::ClassT
             if (i > 0) {
                 (className = (className + std::string(", ")));
             }
-            (className = (className + emitType(doof::array_at(class_->typeArgs, i, "src/emitter-types", 287), currentModulePath)));
+            (className = (className + emitType(doof::array_at(class_->typeArgs, i, "src/emitter-types", 297), currentModulePath)));
         }
         (className = (className + std::string(">")));
     }
@@ -523,7 +539,7 @@ std::string emitCallbackType(const std::shared_ptr<::app_src_semantic_::Function
         if (i > 0) {
             (parameters = (parameters + std::string(", ")));
         }
-        (parameters = (parameters + emitType(doof::array_at(function_->params, i, "src/emitter-types", 315)->type_, currentModulePath)));
+        (parameters = (parameters + emitType(doof::array_at(function_->params, i, "src/emitter-types", 325)->type_, currentModulePath)));
     }
     return ((((std::string("doof::callback<") + emitReturnType(function_->returnType, currentModulePath)) + std::string("(")) + parameters) + std::string(")>"));
 }
@@ -533,7 +549,7 @@ std::string emitTupleType(const std::shared_ptr<::app_src_semantic_::TupleResolv
         if (i > 0) {
             (result = (result + std::string(", ")));
         }
-        (result = (result + emitType(doof::array_at(tuple->elements, i, "src/emitter-types", 324), currentModulePath)));
+        (result = (result + emitType(doof::array_at(tuple->elements, i, "src/emitter-types", 334), currentModulePath)));
     }
     return (result + std::string(">"));
 }
@@ -552,33 +568,33 @@ std::string emitUnionType(const std::shared_ptr<::app_src_semantic_::UnionResolv
             nonNone->push_back(member);
         }
     }
-    if ((hasNone && (static_cast<int32_t>((nonNone)->size()) == 1)) && usesNaturalNullableMember(doof::array_at(nonNone, 0, "src/emitter-types", 343))) {
+    if ((hasNone && (static_cast<int32_t>((nonNone)->size()) == 1)) && usesNaturalNullableMember(doof::array_at(nonNone, 0, "src/emitter-types", 353))) {
         {
-            auto _case_subject = doof::array_at(nonNone, 0, "src/emitter-types", 344);
+            auto _case_subject = doof::array_at(nonNone, 0, "src/emitter-types", 354);
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                 const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
                 if (class_->symbol->kind == std::string("struct")) {
-                    return ((std::string("std::optional<") + emitType(doof::array_at(nonNone, 0, "src/emitter-types", 346), currentModulePath)) + std::string(">"));
+                    return ((std::string("std::optional<") + emitType(doof::array_at(nonNone, 0, "src/emitter-types", 356), currentModulePath)) + std::string(">"));
                 }
-                return emitType(doof::array_at(nonNone, 0, "src/emitter-types", 347), currentModulePath);
+                return emitType(doof::array_at(nonNone, 0, "src/emitter-types", 357), currentModulePath);
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
-                return emitType(doof::array_at(nonNone, 0, "src/emitter-types", 349), currentModulePath);
+                return emitType(doof::array_at(nonNone, 0, "src/emitter-types", 359), currentModulePath);
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
-                return emitType(doof::array_at(nonNone, 0, "src/emitter-types", 350), currentModulePath);
+                return emitType(doof::array_at(nonNone, 0, "src/emitter-types", 360), currentModulePath);
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::SetResolvedType>>(_case_subject)) {
-                return emitType(doof::array_at(nonNone, 0, "src/emitter-types", 351), currentModulePath);
+                return emitType(doof::array_at(nonNone, 0, "src/emitter-types", 361), currentModulePath);
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::WeakResolvedType>>(_case_subject)) {
-                return emitType(doof::array_at(nonNone, 0, "src/emitter-types", 352), currentModulePath);
+                return emitType(doof::array_at(nonNone, 0, "src/emitter-types", 362), currentModulePath);
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
-                return ((std::string("std::optional<") + emitType(doof::array_at(nonNone, 0, "src/emitter-types", 353), currentModulePath)) + std::string(">"));
+                return ((std::string("std::optional<") + emitType(doof::array_at(nonNone, 0, "src/emitter-types", 363), currentModulePath)) + std::string(">"));
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject)) {
-                return ((std::string("std::optional<") + emitType(doof::array_at(nonNone, 0, "src/emitter-types", 354), currentModulePath)) + std::string(">"));
+                return ((std::string("std::optional<") + emitType(doof::array_at(nonNone, 0, "src/emitter-types", 364), currentModulePath)) + std::string(">"));
         }
         else {
         }
@@ -643,8 +659,8 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                     nonNone->push_back(member);
                 }
             }
-            if ((hasNone && (static_cast<int32_t>((nonNone)->size()) == 1)) && usesNaturalNullableMember(doof::array_at(nonNone, 0, "src/emitter-types", 404))) {
-                return doof::optional_value(doof::array_at(nonNone, 0, "src/emitter-types", 404));
+            if ((hasNone && (static_cast<int32_t>((nonNone)->size()) == 1)) && usesNaturalNullableMember(doof::array_at(nonNone, 0, "src/emitter-types", 414))) {
+                return doof::optional_value(doof::array_at(nonNone, 0, "src/emitter-types", 414));
             }
     }
     else {

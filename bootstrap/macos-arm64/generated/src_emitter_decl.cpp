@@ -347,6 +347,26 @@ std::string emitClassDeclaration(const std::shared_ptr<::app_src_ast_::ClassDecl
     if (!doof::is_null(decl->destructor_)) {
         (result = (((result + std::string("    ~")) + className) + std::string("();\n")));
     }
+    if (decl->struct_) {
+        (result = (((result + std::string("    template <typename _DoofOther = ")) + className) + std::string(">\n    bool operator==(const _DoofOther& _doof_other) const { return ")));
+        auto comparison = std::string("");
+        const auto& _iterable_31 = decl->fields;
+        for (const auto& field : *_iterable_31) {
+            if (field->static_) {
+                continue;
+            }
+            const auto& _iterable_29 = field->names;
+            for (const auto& name : *_iterable_29) {
+                if (comparison != std::string("")) {
+                    (comparison = (comparison + std::string(" && ")));
+                }
+                const auto member = ::app_src_emitter_expr_::cppIdentifier(name);
+                (comparison = (((((comparison + std::string("(this->")) + member) + std::string(" == _doof_other.")) + member) + std::string(")")));
+            }
+        }
+        (result = ((result + ((comparison == std::string("")) ? std::string("true") : comparison)) + std::string("; }\n")));
+        (result = (((result + std::string("    template <typename _DoofOther = ")) + className) + std::string(">\n    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }\n")));
+    }
     (result = (result + ::app_src_emitter_json_::emitGeneratedJsonDeclarations(decl, context)));
     (result = (result + ::app_src_emitter_metadata_::emitMetadataDeclaration(decl)));
     return (result + std::string("};\n"));
@@ -387,8 +407,8 @@ std::string fieldTypeTextForEmission(const std::shared_ptr<::app_src_ast_::Class
     return typeText;
 }
 bool hasInstanceFields(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& decl) {
-    const auto& _iterable_29 = decl->fields;
-    for (const auto& field : *_iterable_29) {
+    const auto& _iterable_33 = decl->fields;
+    for (const auto& field : *_iterable_33) {
         if (!field->static_ && !field->const_) {
             return true;
         }
@@ -401,13 +421,13 @@ std::string emitStaticClassFieldDefinitions(const std::shared_ptr<::app_src_ast_
     }
     const auto ownerName = ((emittedOwnerName == std::string("")) ? owner->name : emittedOwnerName);
     auto result = std::string("");
-    const auto& _iterable_33 = owner->fields;
-    for (const auto& field : *_iterable_33) {
+    const auto& _iterable_37 = owner->fields;
+    for (const auto& field : *_iterable_37) {
         if (!field->static_ || doof::is_null(field->defaultValue)) {
             continue;
         }
-        const auto& _iterable_31 = field->names;
-        for (const auto& name : *_iterable_31) {
+        const auto& _iterable_35 = field->names;
+        for (const auto& name : *_iterable_35) {
             const auto resolvedType = fieldTypeForEmission(field);
             (result = ((((((result + fieldTypeTextForEmission(field, resolvedType, context)) + std::string(" ")) + ownerName) + std::string("::")) + ::app_src_emitter_expr_::cppIdentifier(name)) + std::string(";\n")));
         }
@@ -422,15 +442,15 @@ std::string emitDescriptionComment(const std::string& description, const std::st
 }
 std::string emitCallableDescription(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn, const std::string& indent) {
     auto result = emitDescriptionComment(fn->description, indent);
-    const auto& _iterable_35 = fn->params;
-    for (const auto& parameter : *_iterable_35) {
+    const auto& _iterable_39 = fn->params;
+    for (const auto& parameter : *_iterable_39) {
         if (parameter->description != std::string("")) {
             (result = ((((((result + indent) + std::string("// @param ")) + parameter->name) + std::string(" ")) + doof::string_replaceAll(parameter->description, std::string("\n"), std::string(" "))) + std::string("\n")));
         }
     }
     return result;
 }
-std::string emitInterfaceAlias(const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& decl, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
+std::string emitInterfaceAlias(const std::shared_ptr<::app_src_ast_::InterfaceDeclaration>& decl, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::ClassInstantiation>>>& classes) {
     if (doof::is_null(decl->resolvedSymbol)) {
         doof::panic(((std::string("Interface ") + decl->name) + std::string(" was not analyzed")));
     }
@@ -440,14 +460,32 @@ std::string emitInterfaceAlias(const std::shared_ptr<::app_src_ast_::InterfaceDe
     }
     auto result = (((emitDescriptionComment(decl->description, std::string("")) + std::string("using ")) + decl->name) + std::string(" = std::variant<"));
     auto first = true;
-    const auto& _iterable_37 = implementations;
-    for (const auto& symbol : *_iterable_37) {
-        if (!first) {
-            (result = (result + std::string(", ")));
+    const auto& _iterable_43 = implementations;
+    for (const auto& symbol : *_iterable_43) {
+        if ((static_cast<int32_t>((symbol->typeParams)->size()) > 0) && !symbol->native_) {
+            const auto& _iterable_41 = classes;
+            for (const auto& instantiation : *_iterable_41) {
+                if ((instantiation->modulePath != symbol->module) || (instantiation->declaration->name != symbol->name)) {
+                    continue;
+                }
+                if (!first) {
+                    (result = (result + std::string(", ")));
+                }
+                (first = false);
+                const auto concreteName = ((symbol->module == context->modulePath) ? instantiation->emittedName : (((std::string("::") + ::app_src_emitter_names_::moduleNamespace(symbol->module)) + std::string("::")) + instantiation->emittedName));
+                (result = (((result + std::string("std::shared_ptr<")) + concreteName) + std::string(">")));
+            }
+        } else {
+            if (!first) {
+                (result = (result + std::string(", ")));
+            }
+            (first = false);
+            const auto className = (symbol->native_ ? (std::string("::") + ((symbol->nativeCppName == std::string("")) ? symbol->name : symbol->nativeCppName)) : ownedClassName(symbol, context->modulePath));
+            (result = (((result + std::string("std::shared_ptr<")) + className) + std::string(">")));
         }
-        (first = false);
-        const auto className = (symbol->native_ ? (std::string("::") + ((symbol->nativeCppName == std::string("")) ? symbol->name : symbol->nativeCppName)) : ownedClassName(symbol, context->modulePath));
-        (result = (((result + std::string("std::shared_ptr<")) + className) + std::string(">")));
+    }
+    if (first) {
+        (result = (result + std::string("std::monostate")));
     }
     return (result + std::string(">;\n"));
 }

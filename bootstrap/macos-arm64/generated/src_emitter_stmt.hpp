@@ -187,6 +187,10 @@ namespace app_src_semantic_ {
     int32_t offset;
     SemanticLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     SemanticLocation() {}
+    template <typename _DoofOther = SemanticLocation>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->line == _doof_other.line) && (this->column == _doof_other.column) && (this->offset == _doof_other.offset); }
+    template <typename _DoofOther = SemanticLocation>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct Symbol : public std::enable_shared_from_this<Symbol> {
     std::string kind;
@@ -361,6 +365,10 @@ namespace app_src_ast_ {
     int32_t offset;
     AstLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     AstLocation() {}
+    template <typename _DoofOther = AstLocation>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->line == _doof_other.line) && (this->column == _doof_other.column) && (this->offset == _doof_other.offset); }
+    template <typename _DoofOther = AstLocation>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct TypeParameterConstraint : public std::enable_shared_from_this<TypeParameterConstraint> {
     doof_header_type_2 type_;
@@ -442,6 +450,10 @@ namespace app_src_semantic_ {
     SemanticLocation end;
     SemanticSpan(SemanticLocation start, SemanticLocation end) : start(start), end(end) {}
     SemanticSpan() {}
+    template <typename _DoofOther = SemanticSpan>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->start == _doof_other.start) && (this->end == _doof_other.end); }
+    template <typename _DoofOther = SemanticSpan>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct Binding : public std::enable_shared_from_this<Binding> {
     std::string name;
@@ -464,6 +476,10 @@ namespace app_src_ast_ {
     AstLocation end;
     SourceSpan(AstLocation start, AstLocation end) : start(start), end(end) {}
     SourceSpan() {}
+    template <typename _DoofOther = SourceSpan>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->start == _doof_other.start) && (this->end == _doof_other.end); }
+    template <typename _DoofOther = SourceSpan>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct NamedType : public std::enable_shared_from_this<NamedType> {
     std::string kind;
@@ -1241,6 +1257,7 @@ namespace app_src_emitter_stmt_ {
     std::string emitWith(const std::shared_ptr<::app_src_ast_::WithStatement>& statement, int32_t level, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string emitDestructuring(const std::shared_ptr<::app_src_ast_::DestructuringStatement>& statement, int32_t level, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string emitDestructuringValue(const std::shared_ptr<::app_src_ast_::DestructuringStatement>& statement, const std::string& source, const doof_header_type_12& sourceType, int32_t level, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    std::string emitDestructuredLocal(const std::string& ind, const std::string& name, const std::string& value, const std::string& bindingKind, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::string emitDestructuredField(const std::string& source, const std::string& field, const doof_header_type_12& sourceType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::shared_ptr<std::vector<std::string>> classFieldNames(const std::shared_ptr<::app_src_semantic_::ClassType>& class_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
     std::shared_ptr<::app_src_ast_::ClassDeclaration> findClassDeclaration(const std::shared_ptr<::app_src_semantic_::ClassType>& class_, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);

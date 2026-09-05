@@ -9,6 +9,7 @@ using namespace ::app_src_emitter_expr_;
 using namespace ::app_src_emitter_stmt_;
 using namespace ::app_src_emitter_expr_utils_;
 using namespace ::app_src_emitter_types_;
+using namespace ::app_src_checker_types_;
 std::string emitDotShorthand(const std::shared_ptr<::app_src_ast_::DotShorthand>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if ((expression->resolvedShorthandOwnerKind != std::string("enum")) && (expression->resolvedShorthandOwnerKind != std::string("class"))) {
         doof::panic((std::string("Cannot emit unresolved dot shorthand .") + expression->name));
@@ -25,10 +26,26 @@ std::string emitDotShorthand(const std::shared_ptr<::app_src_ast_::DotShorthand>
     }
     return ((owner + std::string("::")) + ::app_src_emitter_expr_::cppIdentifier(expression->name));
 }
-std::string emitIfExpression(const std::shared_ptr<::app_src_ast_::IfExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
-    if ((!doof::is_null(expression->resolvedType)) && ::app_src_emitter_expr_utils_::hasNoneMember(doof::optional_value(doof::unwrap_optional(expression->resolvedType)))) {
-        const auto resultType = doof::unwrap_optional(expression->resolvedType);
-        return ((((((((std::string("[&]() -> ") + ::app_src_emitter_types_::emitType(resultType, context->modulePath)) + std::string(" { if (")) + ::app_src_emitter_expr_::emitExpression(expression->condition, context, std::monostate{})) + std::string(") { return ")) + ::app_src_emitter_expr_::emitExpression(expression->then_, context, doof::optional_value(resultType))) + std::string("; } return ")) + ::app_src_emitter_expr_::emitExpression(expression->else_, context, doof::optional_value(resultType))) + std::string("; }()"));
+std::string emitIfExpression(const std::shared_ptr<::app_src_ast_::IfExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& expected) {
+    auto contextualBranches = false;
+    if (!doof::is_null(expression->resolvedType)) {
+        const auto resultType = ::app_src_emitter_types_::specializeEmitType(doof::unwrap_optional(expression->resolvedType), context);
+        (contextualBranches = (::app_src_emitter_expr_utils_::hasNoneMember(doof::optional_value(resultType)) || ::app_src_emitter_types_::usesVariantRepresentation(resultType)));
+        {
+            auto _case_subject = resultType;
+            if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>>(_case_subject)) {
+                (contextualBranches = true);
+        }
+        else {
+        }
+        }
+    }
+    if (contextualBranches) {
+        auto resultType = ::app_src_emitter_types_::specializeEmitType(doof::unwrap_optional(expression->resolvedType), context);
+        if ((!doof::is_null(expected)) && ::app_src_checker_types_::sameType(resultType, ::app_src_emitter_types_::specializeEmitType(doof::unwrap_optional(expected), context))) {
+            (resultType = ::app_src_emitter_types_::specializeEmitType(doof::unwrap_optional(expected), context));
+        }
+        return ((((((((std::string("[&]() -> ") + ::app_src_emitter_types_::emitContextType(resultType, context)) + std::string(" { if (")) + ::app_src_emitter_expr_::emitExpression(expression->condition, context, std::monostate{})) + std::string(") { return ")) + ::app_src_emitter_expr_::emitExpression(expression->then_, context, doof::optional_value(resultType))) + std::string("; } return ")) + ::app_src_emitter_expr_::emitExpression(expression->else_, context, doof::optional_value(resultType))) + std::string("; }()"));
     }
     return ((((((std::string("(") + ::app_src_emitter_expr_::emitExpression(expression->condition, context, std::monostate{})) + std::string(" \? ")) + ::app_src_emitter_expr_::emitExpression(expression->then_, context, std::monostate{})) + std::string(" : ")) + ::app_src_emitter_expr_::emitExpression(expression->else_, context, std::monostate{})) + std::string(")"));
 }

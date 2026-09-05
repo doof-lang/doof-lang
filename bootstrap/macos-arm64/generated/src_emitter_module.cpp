@@ -64,7 +64,7 @@ std::shared_ptr<ModuleEmission> CxxModuleEmitter::emit(const std::shared_ptr<::a
         if (!doof::is_null(this->instantiations)) {
             configureInstantiationRegistry(sectionContext, doof::unwrap_optional(this->instantiations));
         }
-        const auto sectionPlan = ::app_src_emitter_header_::planHeader(view->program, sectionContext, (doof::is_null(this->instantiations) ? std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>>(std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>{}) : this->instantiations->methods));
+        const auto sectionPlan = ::app_src_emitter_header_::planHeader(view->program, sectionContext, (doof::is_null(this->instantiations) ? std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>>(std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>{}) : this->instantiations->methods), (doof::is_null(this->instantiations) ? std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::ClassInstantiation>>>(std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::ClassInstantiation>>{}) : this->instantiations->classes));
         if (!doof::is_null(this->instantiations)) {
             addConcreteHeaderDeclarations(sectionPlan, sectionContext, doof::unwrap_optional(this->instantiations), view->program, this->worldviewInterfaceKeys);
         }
@@ -849,8 +849,8 @@ std::string concreteClassTypeName(const std::shared_ptr<::app_src_emitter_contex
     }
     const auto key = ::app_src_emitter_monomorphize_::classInstantiationKey(class_->symbol->module, class_->name, class_->typeArgs);
     for (int32_t index = 0; index < static_cast<int32_t>((context->concreteClassKeys)->size()); ++index) {
-        if (doof::array_at(context->concreteClassKeys, index, "src/emitter-module", 654) == key) {
-            return doof::array_at(context->concreteClassNames, index, "src/emitter-module", 654);
+        if (doof::array_at(context->concreteClassKeys, index, "src/emitter-module", 659) == key) {
+            return doof::array_at(context->concreteClassNames, index, "src/emitter-module", 659);
         }
     }
     doof::panic((std::string("Missing concrete class instantiation for ") + key));
@@ -1027,7 +1027,7 @@ void visitInitializationModule(const std::shared_ptr<::app_src_analyzer_::Analys
     for (const auto& reExport : *_iterable_145) {
         visitInitializationModule(result, reExport, entry, entryMode, visiting, visited, order);
     }
-    auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(visiting); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-module", 785, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+    auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(visiting); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-module", 790, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     visited->push_back(path);
     const auto scriptEntry = (((path == entry) && ((entryMode == std::string("executable")) || (entryMode == std::string("ios-app")))) && hasScriptStatements(std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{info->program})));
     if (!scriptEntry && moduleHasDeferredInitialization(info->program)) {

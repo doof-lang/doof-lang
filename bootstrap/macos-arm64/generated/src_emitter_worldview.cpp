@@ -40,16 +40,46 @@ std::shared_ptr<WorldviewPlan> planWorldview(const std::shared_ptr<::app_src_ana
         }
     }
     if (!doof::is_null(instantiations)) {
-        const auto& _iterable_14 = instantiations->interfaces;
-        for (const auto& interface_ : *_iterable_14) {
+        const auto& _iterable_12 = instantiations->functions;
+        for (const auto& function_ : *_iterable_12) {
+            if (function_->modulePath != rootPath) {
+                continue;
+            }
+            const auto& _iterable_10 = function_->substitution->arguments;
+            for (const auto& argument : *_iterable_10) {
+                collectType(argument, rootPath, index);
+            }
+        }
+        const auto& _iterable_16 = instantiations->classes;
+        for (const auto& class_ : *_iterable_16) {
+            if (class_->modulePath != rootPath) {
+                continue;
+            }
+            const auto& _iterable_14 = class_->substitution->arguments;
+            for (const auto& argument : *_iterable_14) {
+                collectType(argument, rootPath, index);
+            }
+        }
+        const auto& _iterable_20 = instantiations->methods;
+        for (const auto& method : *_iterable_20) {
+            if (method->modulePath != rootPath) {
+                continue;
+            }
+            const auto& _iterable_18 = method->substitution->arguments;
+            for (const auto& argument : *_iterable_18) {
+                collectType(argument, rootPath, index);
+            }
+        }
+        const auto& _iterable_26 = instantiations->interfaces;
+        for (const auto& interface_ : *_iterable_26) {
             if (!(index->interfaceKeySet->count(interface_->key) > 0)) {
                 continue;
             }
-            const auto& _iterable_12 = interface_->implementations;
-            for (const auto& implementation : *_iterable_12) {
+            const auto& _iterable_24 = interface_->implementations;
+            for (const auto& implementation : *_iterable_24) {
                 auto name = implementation->typeName;
-                const auto& _iterable_10 = instantiations->classes;
-                for (const auto& class_ : *_iterable_10) {
+                const auto& _iterable_22 = instantiations->classes;
+                for (const auto& class_ : *_iterable_22) {
                     if ((class_->modulePath == implementation->modulePath) && (class_->emittedName == implementation->typeName)) {
                         (name = class_->declaration->name);
                         break;
@@ -68,8 +98,8 @@ std::shared_ptr<WorldviewPlan> planWorldview(const std::shared_ptr<::app_src_ana
     }
     const auto plan = std::make_shared<WorldviewPlan>(std::make_shared<std::vector<std::shared_ptr<WorldviewModule>>>(std::vector<std::shared_ptr<WorldviewModule>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     (plan->interfaceKeys = index->interfaceKeys);
-    const auto& _iterable_16 = result->modules;
-    for (const auto& info : *_iterable_16) {
+    const auto& _iterable_28 = result->modules;
+    for (const auto& info : *_iterable_28) {
         if ((info->path != rootPath) && (!doof::is_null(findSelection(index, info->path)))) {
             appendWorldviewModule(index, info->path, rootPath, plan);
         }
@@ -90,14 +120,14 @@ void appendWorldviewModule(const std::shared_ptr<WorldviewIndex>& index, const s
         return;
     }
     index->visitingPaths->insert(path);
-    const auto& _iterable_18 = info->imports;
-    for (const auto& imported : *_iterable_18) {
+    const auto& _iterable_30 = info->imports;
+    for (const auto& imported : *_iterable_30) {
         if (imported->sourceModule != rootPath) {
             appendWorldviewModule(index, imported->sourceModule, rootPath, plan);
         }
     }
-    const auto& _iterable_20 = info->reExports;
-    for (const auto& reExport : *_iterable_20) {
+    const auto& _iterable_32 = info->reExports;
+    for (const auto& reExport : *_iterable_32) {
         if (reExport != rootPath) {
             appendWorldviewModule(index, reExport, rootPath, plan);
         }
@@ -124,12 +154,12 @@ void addInterfaceKey(const std::shared_ptr<WorldviewIndex>& index, const std::st
 std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>> orderedSelectionStatements(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& info, const std::shared_ptr<WorldviewSelection>& selection) {
     std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>> ordered = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>{});
     std::shared_ptr<doof::ordered_set<std::string>> selectedNames = std::make_shared<doof::ordered_set<std::string>>(doof::ordered_set<std::string>{});
-    const auto& _iterable_22 = selection->statements;
-    for (const auto& selected : *_iterable_22) {
+    const auto& _iterable_34 = selection->statements;
+    for (const auto& selected : *_iterable_34) {
         selectedNames->insert(statementName(selected));
     }
-    const auto& _iterable_24 = info->program->statements;
-    for (const auto& candidate : *_iterable_24) {
+    const auto& _iterable_36 = info->program->statements;
+    for (const auto& candidate : *_iterable_36) {
         const auto name = statementName(candidate);
         if ((name != std::string("")) && (selectedNames->count(name) > 0)) {
             ordered->push_back(candidate);
@@ -141,7 +171,7 @@ void collectExpressionTree(const std::variant<std::shared_ptr<::app_src_ast_::In
     auto expressions = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>{expression});
     auto cursor = 0;
     while (cursor < static_cast<int32_t>((expressions)->size())) {
-        const auto current = doof::array_at(expressions, cursor, "src/emitter-worldview", 181);
+        const auto current = doof::array_at(expressions, cursor, "src/emitter-worldview", 195);
         (cursor = (cursor + 1));
         if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, current))) {
             collectType(doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, current)), rootPath, index);
@@ -175,8 +205,8 @@ void collectType(const std::variant<std::shared_ptr<::app_src_semantic_::Primiti
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
             collectSymbol(class_->symbol, rootPath, index);
-            const auto& _iterable_26 = class_->typeArgs;
-            for (const auto& argument : *_iterable_26) {
+            const auto& _iterable_38 = class_->typeArgs;
+            for (const auto& argument : *_iterable_38) {
                 collectType(argument, rootPath, index);
             }
     }
@@ -190,12 +220,12 @@ void collectType(const std::variant<std::shared_ptr<::app_src_semantic_::Primiti
             if (static_cast<int32_t>((interface_->typeArgs)->size()) > 0) {
                 addInterfaceKey(index, ::app_src_emitter_monomorphize_::interfaceInstantiationKey(interface_->symbol->module, interface_->name, interface_->typeArgs));
             }
-            const auto& _iterable_28 = interface_->symbol->implementations;
-            for (const auto& implementation : *_iterable_28) {
+            const auto& _iterable_40 = interface_->symbol->implementations;
+            for (const auto& implementation : *_iterable_40) {
                 collectSymbol(implementation, rootPath, index);
             }
-            const auto& _iterable_30 = interface_->typeArgs;
-            for (const auto& argument : *_iterable_30) {
+            const auto& _iterable_42 = interface_->typeArgs;
+            for (const auto& argument : *_iterable_42) {
                 collectType(argument, rootPath, index);
             }
     }
@@ -232,15 +262,15 @@ void collectType(const std::variant<std::shared_ptr<::app_src_semantic_::Primiti
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
-            const auto& _iterable_32 = tuple->elements;
-            for (const auto& element : *_iterable_32) {
+            const auto& _iterable_44 = tuple->elements;
+            for (const auto& element : *_iterable_44) {
                 collectType(element, rootPath, index);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
-            const auto& _iterable_34 = union_->types;
-            for (const auto& member : *_iterable_34) {
+            const auto& _iterable_46 = union_->types;
+            for (const auto& member : *_iterable_46) {
                 collectType(member, rootPath, index);
             }
     }
@@ -250,8 +280,8 @@ void collectType(const std::variant<std::shared_ptr<::app_src_semantic_::Primiti
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
-            const auto& _iterable_36 = function_->params;
-            for (const auto& parameter : *_iterable_36) {
+            const auto& _iterable_48 = function_->params;
+            for (const auto& parameter : *_iterable_48) {
                 collectType(parameter->type_, rootPath, index);
             }
             collectType(function_->returnType, rootPath, index);
@@ -287,32 +317,32 @@ void collectNativeHeaderClosure(const std::shared_ptr<::app_src_semantic_::Symbo
     if (symbol->native_ && (symbol->nativeHeader != std::string(""))) {
         const auto module = findModule(index, symbol->module);
         if (!doof::is_null(module)) {
-            const auto& _iterable_38 = module->symbols;
-            for (const auto& sibling : *_iterable_38) {
+            const auto& _iterable_50 = module->symbols;
+            for (const auto& sibling : *_iterable_50) {
                 if (sibling->native_ && (sibling->nativeHeader == symbol->nativeHeader)) {
                     collectSymbol(sibling, rootPath, index);
                 }
             }
-            const auto& _iterable_40 = module->imports;
-            for (const auto& imported : *_iterable_40) {
+            const auto& _iterable_52 = module->imports;
+            for (const auto& imported : *_iterable_52) {
                 if ((!doof::is_null(imported->symbol)) && isNominalSurfaceSymbol(doof::unwrap_optional(imported->symbol))) {
                     collectSymbol(doof::unwrap_optional(imported->symbol), rootPath, index);
                 }
             }
-            const auto& _iterable_42 = module->exports;
-            for (const auto& exported : *_iterable_42) {
+            const auto& _iterable_54 = module->exports;
+            for (const auto& exported : *_iterable_54) {
                 if (isNominalSurfaceSymbol(exported)) {
                     collectSymbol(exported, rootPath, index);
                 }
             }
-            const auto& _iterable_46 = module->reExports;
-            for (const auto& reExportPath : *_iterable_46) {
+            const auto& _iterable_58 = module->reExports;
+            for (const auto& reExportPath : *_iterable_58) {
                 const auto reExported = findModule(index, reExportPath);
                 if (doof::is_null(reExported)) {
                     continue;
                 }
-                const auto& _iterable_44 = reExported->exports;
-                for (const auto& exported : *_iterable_44) {
+                const auto& _iterable_56 = reExported->exports;
+                for (const auto& exported : *_iterable_56) {
                     if (isNominalSurfaceSymbol(exported)) {
                         collectSymbol(exported, rootPath, index);
                     }
@@ -339,8 +369,8 @@ void collectStatementSurface(const std::variant<std::shared_ptr<::app_src_ast_::
             if (!doof::is_null(fn->returnType)) {
                 collectAnnotationAliases(doof::unwrap_optional(fn->returnType), rootPath, index);
             }
-            const auto& _iterable_48 = fn->params;
-            for (const auto& parameter : *_iterable_48) {
+            const auto& _iterable_60 = fn->params;
+            for (const auto& parameter : *_iterable_60) {
                 if (!doof::is_null(parameter->resolvedType)) {
                     collectType(doof::unwrap_optional(parameter->resolvedType), rootPath, index);
                 }
@@ -357,8 +387,8 @@ void collectStatementSurface(const std::variant<std::shared_ptr<::app_src_ast_::
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-            const auto& _iterable_50 = class_->fields;
-            for (const auto& field : *_iterable_50) {
+            const auto& _iterable_62 = class_->fields;
+            for (const auto& field : *_iterable_62) {
                 if (!doof::is_null(field->resolvedType)) {
                     collectType(doof::unwrap_optional(field->resolvedType), rootPath, index);
                 }
@@ -369,16 +399,16 @@ void collectStatementSurface(const std::variant<std::shared_ptr<::app_src_ast_::
                     collectExpressionTree(doof::unwrap_optional(field->defaultValue), rootPath, index);
                 }
             }
-            const auto& _iterable_54 = class_->methods;
-            for (const auto& method : *_iterable_54) {
+            const auto& _iterable_66 = class_->methods;
+            for (const auto& method : *_iterable_66) {
                 if (!doof::is_null(method->resolvedType)) {
                     collectType(doof::unwrap_optional(method->resolvedType), rootPath, index);
                 }
                 if (!doof::is_null(method->returnType)) {
                     collectAnnotationAliases(doof::unwrap_optional(method->returnType), rootPath, index);
                 }
-                const auto& _iterable_52 = method->params;
-                for (const auto& parameter : *_iterable_52) {
+                const auto& _iterable_64 = method->params;
+                for (const auto& parameter : *_iterable_64) {
                     if (!doof::is_null(parameter->resolvedType)) {
                         collectType(doof::unwrap_optional(parameter->resolvedType), rootPath, index);
                     }
@@ -394,39 +424,39 @@ void collectStatementSurface(const std::variant<std::shared_ptr<::app_src_ast_::
                 }
             }
             if (!doof::is_null(class_->resolvedSymbol)) {
-                const auto& _iterable_56 = class_->resolvedSymbol->implementations;
-                for (const auto& implementation : *_iterable_56) {
+                const auto& _iterable_68 = class_->resolvedSymbol->implementations;
+                for (const auto& implementation : *_iterable_68) {
                     collectSymbol(implementation, rootPath, index);
                 }
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
             const auto& interface_ = std::get<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject);
-            const auto& _iterable_58 = interface_->fields;
-            for (const auto& field : *_iterable_58) {
+            const auto& _iterable_70 = interface_->fields;
+            for (const auto& field : *_iterable_70) {
                 if (!doof::is_null(field->resolvedType)) {
                     collectType(doof::unwrap_optional(field->resolvedType), rootPath, index);
                 }
                 collectAnnotationAliases(field->type_, rootPath, index);
             }
-            const auto& _iterable_62 = interface_->methods;
-            for (const auto& method : *_iterable_62) {
+            const auto& _iterable_74 = interface_->methods;
+            for (const auto& method : *_iterable_74) {
                 if (!doof::is_null(method->resolvedType)) {
                     collectType(doof::unwrap_optional(method->resolvedType), rootPath, index);
                 }
                 if (!doof::is_null(method->returnType)) {
                     collectAnnotationAliases(doof::unwrap_optional(method->returnType), rootPath, index);
                 }
-                const auto& _iterable_60 = method->params;
-                for (const auto& parameter : *_iterable_60) {
+                const auto& _iterable_72 = method->params;
+                for (const auto& parameter : *_iterable_72) {
                     if (!doof::is_null(parameter->type_)) {
                         collectAnnotationAliases(doof::unwrap_optional(parameter->type_), rootPath, index);
                     }
                 }
             }
             if (!doof::is_null(interface_->resolvedSymbol)) {
-                const auto& _iterable_64 = interface_->resolvedSymbol->implementations;
-                for (const auto& implementation : *_iterable_64) {
+                const auto& _iterable_76 = interface_->resolvedSymbol->implementations;
+                for (const auto& implementation : *_iterable_76) {
                     collectSymbol(implementation, rootPath, index);
                 }
             }
@@ -467,8 +497,8 @@ void collectStatementSurface(const std::variant<std::shared_ptr<::app_src_ast_::
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::EnumDeclaration>>(_case_subject)) {
             const auto& enum_ = std::get<std::shared_ptr<::app_src_ast_::EnumDeclaration>>(_case_subject);
-            const auto& _iterable_66 = enum_->variants;
-            for (const auto& variant : *_iterable_66) {
+            const auto& _iterable_78 = enum_->variants;
+            for (const auto& variant : *_iterable_78) {
                 if (!doof::is_null(variant->value)) {
                     collectExpressionTree(doof::unwrap_optional(variant->value), rootPath, index);
                 }
@@ -486,8 +516,8 @@ void collectAnnotationAliases(const std::variant<std::shared_ptr<::app_src_ast_:
             if ((!doof::is_null(named->resolvedSymbol)) && (named->resolvedSymbol->kind == std::string("type-alias"))) {
                 collectSymbol(doof::unwrap_optional(named->resolvedSymbol), rootPath, index);
             }
-            const auto& _iterable_68 = named->typeArgs;
-            for (const auto& argument : *_iterable_68) {
+            const auto& _iterable_80 = named->typeArgs;
+            for (const auto& argument : *_iterable_80) {
                 collectAnnotationAliases(argument, rootPath, index);
             }
     }
@@ -497,15 +527,15 @@ void collectAnnotationAliases(const std::variant<std::shared_ptr<::app_src_ast_:
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::UnionType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_ast_::UnionType>>(_case_subject);
-            const auto& _iterable_70 = union_->types;
-            for (const auto& member : *_iterable_70) {
+            const auto& _iterable_82 = union_->types;
+            for (const auto& member : *_iterable_82) {
                 collectAnnotationAliases(member, rootPath, index);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::AstFunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_ast_::AstFunctionType>>(_case_subject);
-            const auto& _iterable_72 = function_->params;
-            for (const auto& parameter : *_iterable_72) {
+            const auto& _iterable_84 = function_->params;
+            for (const auto& parameter : *_iterable_84) {
                 collectAnnotationAliases(parameter->type_, rootPath, index);
             }
             collectAnnotationAliases(function_->returnType, rootPath, index);
@@ -529,18 +559,18 @@ void collectFunctionBody(const std::shared_ptr<::app_src_ast_::FunctionDeclarati
             expressions->push_back(expression);
     }
     }
-    const auto& _iterable_74 = expressions;
-    for (const auto& expression : *_iterable_74) {
+    const auto& _iterable_86 = expressions;
+    for (const auto& expression : *_iterable_86) {
         collectExpressionTree(expression, rootPath, index);
     }
 }
 std::variant<std::monostate, std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>> declarationFor(const std::shared_ptr<WorldviewIndex>& index, const std::string& modulePath, const std::string& name) {
-    auto _binding_value_75 = doof::map_get(index->graph->declarations, declarationKey(modulePath, name), "", 0);
-    if (doof::is_failure(_binding_value_75)) {
-        const auto& declaration = _binding_value_75;
+    auto _binding_value_87 = doof::map_get(index->graph->declarations, declarationKey(modulePath, name), "", 0);
+    if (doof::is_failure(_binding_value_87)) {
+        const auto& declaration = _binding_value_87;
         return std::monostate{};
     }
-    const auto declaration = doof::success_value(_binding_value_75);
+    const auto declaration = doof::success_value(_binding_value_87);
     return doof::optional_value(declaration);
 }
 std::string statementName(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>& statement) {
@@ -591,24 +621,24 @@ std::string statementName(const std::variant<std::shared_ptr<::app_src_ast_::Con
 }
 std::shared_ptr<WorldviewGraphIndex> indexWorldviewGraph(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result) {
     const auto index = std::make_shared<WorldviewGraphIndex>(std::make_shared<doof::ordered_map<std::string, std::shared_ptr<::app_src_analyzer_::ModuleInfo>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<::app_src_analyzer_::ModuleInfo>>>{}), std::make_shared<doof::ordered_map<std::string, std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>>(std::initializer_list<std::pair<std::string, std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>>{}), std::make_shared<doof::ordered_map<std::string, std::shared_ptr<::app_src_semantic_::Symbol>>>(std::initializer_list<std::pair<std::string, std::shared_ptr<::app_src_semantic_::Symbol>>>{}));
-    const auto& _iterable_84 = result->modules;
-    for (const auto& module : *_iterable_84) {
-        if (![&]() -> bool { auto _map_has_76 = index->modules; return _map_has_76->find(module->path) != _map_has_76->end(); }()) {
+    const auto& _iterable_96 = result->modules;
+    for (const auto& module : *_iterable_96) {
+        if (![&]() -> bool { auto _map_has_88 = index->modules; return _map_has_88->find(module->path) != _map_has_88->end(); }()) {
             doof::map_set(index->modules, module->path, module, "", 0);
         }
-        const auto& _iterable_79 = module->program->statements;
-        for (const auto& statement : *_iterable_79) {
+        const auto& _iterable_91 = module->program->statements;
+        for (const auto& statement : *_iterable_91) {
             const auto name = statementName(statement);
             const auto key = declarationKey(module->path, name);
-            if ((name != std::string("")) && ![&]() -> bool { auto _map_has_77 = index->declarations; return _map_has_77->find(key) != _map_has_77->end(); }()) {
+            if ((name != std::string("")) && ![&]() -> bool { auto _map_has_89 = index->declarations; return _map_has_89->find(key) != _map_has_89->end(); }()) {
                 doof::map_set(index->declarations, key, statement, "", 0);
             }
         }
-        const auto& _iterable_82 = module->symbols;
-        for (const auto& symbol : *_iterable_82) {
+        const auto& _iterable_94 = module->symbols;
+        for (const auto& symbol : *_iterable_94) {
             const auto name = ((symbol->originalName == std::string("")) ? symbol->name : symbol->originalName);
             const auto key = declarationKey(module->path, name);
-            if (![&]() -> bool { auto _map_has_80 = index->symbols; return _map_has_80->find(key) != _map_has_80->end(); }()) {
+            if (![&]() -> bool { auto _map_has_92 = index->symbols; return _map_has_92->find(key) != _map_has_92->end(); }()) {
                 doof::map_set(index->symbols, key, symbol, "", 0);
             }
         }
@@ -619,21 +649,21 @@ std::string declarationKey(const std::string& modulePath, const std::string& nam
     return ((modulePath + std::string("\n")) + name);
 }
 std::shared_ptr<::app_src_analyzer_::ModuleInfo> findModule(const std::shared_ptr<WorldviewIndex>& index, const std::string& path) {
-    auto _binding_value_85 = doof::map_get(index->graph->modules, path, "", 0);
-    if (doof::is_failure(_binding_value_85)) {
-        const auto& module = _binding_value_85;
+    auto _binding_value_97 = doof::map_get(index->graph->modules, path, "", 0);
+    if (doof::is_failure(_binding_value_97)) {
+        const auto& module = _binding_value_97;
         return nullptr;
     }
-    const auto module = doof::success_value(_binding_value_85);
+    const auto module = doof::success_value(_binding_value_97);
     return module;
 }
 std::shared_ptr<::app_src_semantic_::Symbol> findSymbol(const std::shared_ptr<WorldviewIndex>& index, const std::string& modulePath, const std::string& name) {
-    auto _binding_value_86 = doof::map_get(index->graph->symbols, declarationKey(modulePath, name), "", 0);
-    if (doof::is_failure(_binding_value_86)) {
-        const auto& symbol = _binding_value_86;
+    auto _binding_value_98 = doof::map_get(index->graph->symbols, declarationKey(modulePath, name), "", 0);
+    if (doof::is_failure(_binding_value_98)) {
+        const auto& symbol = _binding_value_98;
         return nullptr;
     }
-    const auto symbol = doof::success_value(_binding_value_86);
+    const auto symbol = doof::success_value(_binding_value_98);
     return symbol;
 }
 std::shared_ptr<WorldviewSelection> selectionFor(const std::shared_ptr<WorldviewIndex>& index, const std::string& path) {
@@ -646,12 +676,12 @@ std::shared_ptr<WorldviewSelection> selectionFor(const std::shared_ptr<Worldview
     return selection;
 }
 std::shared_ptr<WorldviewSelection> findSelection(const std::shared_ptr<WorldviewIndex>& index, const std::string& path) {
-    auto _binding_value_87 = doof::map_get(index->selections, path, "", 0);
-    if (doof::is_failure(_binding_value_87)) {
-        const auto& selection = _binding_value_87;
+    auto _binding_value_99 = doof::map_get(index->selections, path, "", 0);
+    if (doof::is_failure(_binding_value_99)) {
+        const auto& selection = _binding_value_99;
         return nullptr;
     }
-    const auto selection = doof::success_value(_binding_value_87);
+    const auto selection = doof::success_value(_binding_value_99);
     return selection;
 }
 }

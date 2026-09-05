@@ -185,6 +185,10 @@ events.reduce(0, (count, _, _): int => count + 1)
 `_` may discard explicit lambda parameters. It introduces no binding and may
 be repeated. Named function and method parameters still require names.
 
+Structs captured by value remain owned copies that support checker-approved
+method calls, including in nested or escaping closures. Mutating a copied
+struct's `let` fields changes that closure's copy.
+
 Lambdas capture immutable outer bindings by value. Captured mutable `let`
 bindings remain shared across escaping closures; uncaptured mutable locals keep
 ordinary local lifetime. Function values still use the actor-affine callback

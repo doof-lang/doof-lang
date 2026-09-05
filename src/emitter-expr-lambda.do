@@ -14,11 +14,12 @@ import {
   Statement, StringLiteral, ThisExpression, TryStatement, DestructuringStatement, TupleLiteral, UnaryExpression,
   WhileStatement, WithStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression,
 } from "./ast"
-import { Binding, FunctionType, ResolvedType, ResultResolvedType, NoneType } from "./semantic"
-import { EmitContext } from "./emitter-context"
+import { Binding, ClassType, FunctionType, ResolvedType, ResultResolvedType, NoneType } from "./semantic"
+import { EmitContext, isCapturedMutable } from "./emitter-context"
+import { collectNestedExpressions } from "./ast-walk"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
-import { emitContextReturnType, emitContextType } from "./emitter-types"
+import { emitContextReturnType, emitContextType, specializeEmitType } from "./emitter-types"
 
 export function emitLambdaExpression(expression: LambdaExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   let functionType = lambdaFunctionType(expression)
@@ -38,6 +39,8 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
   }
 
   captureNames := lambdaCaptureNames(expression)
+  structCaptures := lambdaStructCaptures(expression, context)
+  let mutableClosure = false
   let captures = ""
   if captureNames.length > 0 {
     captures = ""
@@ -51,6 +54,12 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
       // emission and pair it with an owning init-capture.
       if capture == "this" && context.currentClass != "" && !context.currentClassStruct {
         captures = captures + "this, _doof_captured_self = this->shared_from_this()"
+      } else if structCaptures.contains(capture) {
+        // Init-capture makes an owned value copy even when an enclosing
+        // closure or binding exposes the source as const. Doof's checker
+        // enforces binding/field immutability; C++ must permit struct methods.
+        captures = captures + capture + " = " + capture
+        mutableClosure = true
       } else {
         captures = captures + capture
       }
@@ -68,7 +77,7 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
   }
 
   returnType := emitContextReturnType(functionType.returnType, context)
-  let lambda = "[" + captures + "](" + params + ") -> " + returnType + " {"
+  let lambda = "[" + captures + "](" + params + ")" + (if mutableClosure then " mutable" else "") + " -> " + returnType + " {"
   case expression.body {
     block: Block -> { lambda = lambda + "\n" + emitBlock(block, 1, context) + "}" }
     body: Expression -> { lambda = lambda + " return " + emitExpression(body, context, functionType.returnType) + "; }" }
@@ -78,6 +87,40 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
   context.currentFunctionName = previousFunctionName
   context.tryPanics = previousTryPanics
   return emitContextType(functionType, context) + "(" + lambda + ")"
+}
+
+function lambdaStructCaptures(expression: LambdaExpression, context: EmitContext): string[] {
+  let result: string[] = []
+  let expressions: Expression[] = [expression]
+  let cursor = 0
+  while cursor < expressions.length {
+    current := expressions[cursor]
+    cursor += 1
+    case current {
+      identifier: Identifier -> { addStructCapture(identifier.name, identifier.resolvedBinding, context, result) }
+      object: ObjectLiteral -> {
+        for property of object.properties {
+          if property.value == none { addStructCapture(property.name, property.resolvedBinding, context, result) }
+        }
+      }
+      construct: ConstructExpression -> {
+        for property of construct.args {
+          if property.value == none { addStructCapture(property.name, property.resolvedBinding, context, result) }
+        }
+      }
+      _ -> { }
+    }
+    collectNestedExpressions(current, expressions)
+  }
+  return result
+}
+
+function addStructCapture(name: string, binding: Binding | none, context: EmitContext, result: string[]): none {
+  if binding == none || isCapturedMutable(context, name) { return }
+  case specializeEmitType(binding!.type_, context) {
+    class_: ClassType -> { if class_.symbol.kind == "struct" { addUnique(result, cppIdentifier(name)) } }
+    _ -> { }
+  }
 }
 
 // Finds mutable bindings whose storage must outlive the current stack frame.

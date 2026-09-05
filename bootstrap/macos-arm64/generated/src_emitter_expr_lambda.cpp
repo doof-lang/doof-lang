@@ -4,6 +4,7 @@ namespace app_src_emitter_expr_lambda_ {
 using namespace ::app_src_ast_;
 using namespace ::app_src_semantic_;
 using namespace ::app_src_emitter_context_;
+using namespace ::app_src_ast_walk_;
 using namespace ::app_src_emitter_expr_;
 using namespace ::app_src_emitter_stmt_;
 using namespace ::app_src_emitter_types_;
@@ -25,14 +26,16 @@ std::string emitLambdaExpression(const std::shared_ptr<::app_src_ast_::LambdaExp
         if (i > 0) {
             (params = (params + std::string(", ")));
         }
-        const auto parameter = doof::array_at(expression->params, i, "src/emitter-expr-lambda", 34);
+        const auto parameter = doof::array_at(expression->params, i, "src/emitter-expr-lambda", 35);
         if (doof::is_null(parameter->resolvedType)) {
             doof::panic(std::string("Lambda parameter was not resolved before emission"));
         }
         const auto parameterName = ((parameter->name == std::string("_")) ? (std::string("_discard_parameter_") + doof::to_string(i)) : ::app_src_emitter_expr_::cppIdentifier(parameter->name));
-        (params = (((params + ::app_src_emitter_types_::emitType(doof::unwrap_optional(parameter->resolvedType), context->modulePath)) + std::string(" ")) + parameterName));
+        (params = (((params + ::app_src_emitter_types_::emitContextType(doof::array_at(functionType->params, i, "src/emitter-expr-lambda", 38)->type_, context)) + std::string(" ")) + parameterName));
     }
     const auto captureNames = lambdaCaptureNames(expression);
+    const auto structCaptures = lambdaStructCaptures(expression, context);
+    auto mutableClosure = false;
     auto captures = std::string("");
     if (static_cast<int32_t>((captureNames)->size()) > 0) {
         (captures = std::string(""));
@@ -40,9 +43,12 @@ std::string emitLambdaExpression(const std::shared_ptr<::app_src_ast_::LambdaExp
             if (i > 0) {
                 (captures = (captures + std::string(", ")));
             }
-            const auto capture = doof::array_at(captureNames, i, "src/emitter-expr-lambda", 46);
+            const auto capture = doof::array_at(captureNames, i, "src/emitter-expr-lambda", 49);
             if (((capture == std::string("this")) && (context->currentClass != std::string(""))) && !context->currentClassStruct) {
                 (captures = (captures + std::string("this, _doof_captured_self = this->shared_from_this()")));
+            } else if (doof::array_contains(structCaptures, capture, "", 0)) {
+                (captures = (((captures + capture) + std::string(" = ")) + capture));
+                (mutableClosure = true);
             } else {
                 (captures = (captures + capture));
             }
@@ -57,14 +63,14 @@ std::string emitLambdaExpression(const std::shared_ptr<::app_src_ast_::LambdaExp
         auto _case_subject = functionType->returnType;
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject)) {
             const auto& result = std::get<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject);
-            (context->currentReturnErrorType = ::app_src_emitter_types_::emitType(result->errorType, context->modulePath));
+            (context->currentReturnErrorType = ::app_src_emitter_types_::emitContextType(result->errorType, context));
     }
     else {
             (context->currentReturnErrorType = std::string(""));
     }
     }
-    const auto returnType = ::app_src_emitter_types_::emitReturnType(functionType->returnType, context->modulePath);
-    auto lambda = ((((((std::string("[") + captures) + std::string("](")) + params) + std::string(") -> ")) + returnType) + std::string(" {"));
+    const auto returnType = ::app_src_emitter_types_::emitContextReturnType(functionType->returnType, context);
+    auto lambda = ((((((((std::string("[") + captures) + std::string("](")) + params) + std::string(")")) + (mutableClosure ? std::string(" mutable") : std::string(""))) + std::string(" -> ")) + returnType) + std::string(" {"));
     {
         auto _case_subject = expression->body;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
@@ -79,7 +85,61 @@ std::string emitLambdaExpression(const std::shared_ptr<::app_src_ast_::LambdaExp
     (context->currentReturnErrorType = previousReturnErrorType);
     (context->currentFunctionName = previousFunctionName);
     (context->tryPanics = previousTryPanics);
-    return (((::app_src_emitter_types_::emitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(functionType), context->modulePath) + std::string("(")) + lambda) + std::string(")"));
+    return (((::app_src_emitter_types_::emitContextType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(functionType), context) + std::string("(")) + lambda) + std::string(")"));
+}
+std::shared_ptr<std::vector<std::string>> lambdaStructCaptures(const std::shared_ptr<::app_src_ast_::LambdaExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
+    std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
+    std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>> expressions = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>{expression});
+    auto cursor = 0;
+    while (cursor < static_cast<int32_t>((expressions)->size())) {
+        const auto current = doof::array_at(expressions, cursor, "src/emitter-expr-lambda", 97);
+        (cursor += 1);
+        {
+            auto _case_subject = current;
+            if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject)) {
+                const auto& identifier = std::get<std::shared_ptr<::app_src_ast_::Identifier>>(_case_subject);
+                addStructCapture(identifier->name, identifier->resolvedBinding, context, result);
+        }
+        else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ObjectLiteral>>(_case_subject)) {
+                const auto& object = std::get<std::shared_ptr<::app_src_ast_::ObjectLiteral>>(_case_subject);
+                const auto& _iterable_4 = object->properties;
+                for (const auto& property : *_iterable_4) {
+                    if (doof::is_null(property->value)) {
+                        addStructCapture(property->name, property->resolvedBinding, context, result);
+                    }
+                }
+        }
+        else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject)) {
+                const auto& construct = std::get<std::shared_ptr<::app_src_ast_::ConstructExpression>>(_case_subject);
+                const auto& _iterable_6 = construct->args;
+                for (const auto& property : *_iterable_6) {
+                    if (doof::is_null(property->value)) {
+                        addStructCapture(property->name, property->resolvedBinding, context, result);
+                    }
+                }
+        }
+        else {
+        }
+        }
+        ::app_src_ast_walk_::collectNestedExpressions(current, expressions);
+    }
+    return result;
+}
+void addStructCapture(const std::string& name, const std::shared_ptr<::app_src_semantic_::Binding>& binding, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<std::vector<std::string>>& result) {
+    if (doof::is_null(binding) || ::app_src_emitter_context_::isCapturedMutable(context, name)) {
+        return;
+    }
+    {
+        auto _case_subject = ::app_src_emitter_types_::specializeEmitType(binding->type_, context);
+        if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
+            const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
+            if (class_->symbol->kind == std::string("struct")) {
+                addUnique(result, ::app_src_emitter_expr_::cppIdentifier(name));
+            }
+    }
+    else {
+    }
+    }
 }
 std::shared_ptr<std::vector<std::string>> scanCapturedMutablesInBlock(const std::shared_ptr<::app_src_ast_::Block>& body) {
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
@@ -126,11 +186,11 @@ std::shared_ptr<std::vector<std::string>> lambdaCaptureNames(const std::shared_p
     }
     }
     std::shared_ptr<std::vector<std::string>> captures = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    const auto& _iterable_6 = result;
-    for (const auto& name : *_iterable_6) {
+    const auto& _iterable_10 = result;
+    for (const auto& name : *_iterable_10) {
         auto parameter = false;
-        const auto& _iterable_4 = expression->params;
-        for (const auto& item : *_iterable_4) {
+        const auto& _iterable_8 = expression->params;
+        for (const auto& item : *_iterable_8) {
             if (::app_src_emitter_expr_::cppIdentifier(item->name) == name) {
                 (parameter = true);
             }
@@ -142,15 +202,19 @@ std::shared_ptr<std::vector<std::string>> lambdaCaptureNames(const std::shared_p
     return captures;
 }
 void scanBlockForLambdas(const std::shared_ptr<::app_src_ast_::Block>& block, const std::shared_ptr<std::vector<std::string>>& result) {
-    const auto& _iterable_8 = block->statements;
-    for (const auto& statement : *_iterable_8) {
+    const auto& _iterable_12 = block->statements;
+    for (const auto& statement : *_iterable_12) {
         scanStatementForLambdas(statement, result);
     }
 }
 void scanStatementForLambdas(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>& statement, const std::shared_ptr<std::vector<std::string>>& result) {
     {
         auto _case_subject = statement;
-        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
+        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::DestructuringStatement>>(_case_subject)) {
+            const auto& destructuring = std::get<std::shared_ptr<::app_src_ast_::DestructuringStatement>>(_case_subject);
+            scanExpressionForLambdas(destructuring->value, result);
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
             const auto& const_ = std::get<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject);
             scanExpressionForLambdas(const_->value, result);
     }
@@ -183,8 +247,8 @@ void scanStatementForLambdas(const std::variant<std::shared_ptr<::app_src_ast_::
             const auto& if_ = std::get<std::shared_ptr<::app_src_ast_::IfStatement>>(_case_subject);
             scanExpressionForLambdas(if_->condition, result);
             scanBlockForLambdas(if_->body, result);
-            const auto& _iterable_10 = if_->elseIfs;
-            for (const auto& branch : *_iterable_10) {
+            const auto& _iterable_14 = if_->elseIfs;
+            for (const auto& branch : *_iterable_14) {
                 scanExpressionForLambdas(branch->condition, result);
                 scanBlockForLambdas(branch->body, result);
             }
@@ -195,8 +259,8 @@ void scanStatementForLambdas(const std::variant<std::shared_ptr<::app_src_ast_::
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CaseStatement>>(_case_subject)) {
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseStatement>>(_case_subject);
             scanExpressionForLambdas(case_->subject, result);
-            const auto& _iterable_12 = case_->arms;
-            for (const auto& arm : *_iterable_12) {
+            const auto& _iterable_16 = case_->arms;
+            for (const auto& arm : *_iterable_16) {
                 {
                     auto _case_subject = arm->body;
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
@@ -226,8 +290,8 @@ void scanStatementForLambdas(const std::variant<std::shared_ptr<::app_src_ast_::
             if (!doof::is_null(for_->condition)) {
                 scanExpressionForLambdas(doof::unwrap_optional(for_->condition), result);
             }
-            const auto& _iterable_14 = for_->update;
-            for (const auto& update : *_iterable_14) {
+            const auto& _iterable_18 = for_->update;
+            for (const auto& update : *_iterable_18) {
                 scanExpressionForLambdas(update, result);
             }
             scanBlockForLambdas(for_->body, result);
@@ -245,8 +309,8 @@ void scanStatementForLambdas(const std::variant<std::shared_ptr<::app_src_ast_::
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::WithStatement>>(_case_subject)) {
             const auto& with_ = std::get<std::shared_ptr<::app_src_ast_::WithStatement>>(_case_subject);
-            const auto& _iterable_16 = with_->bindings;
-            for (const auto& binding : *_iterable_16) {
+            const auto& _iterable_20 = with_->bindings;
+            for (const auto& binding : *_iterable_20) {
                 scanExpressionForLambdas(binding->value, result);
             }
             scanBlockForLambdas(with_->body, result);
@@ -326,22 +390,22 @@ void scanExpressionForLambdas(const std::variant<std::shared_ptr<::app_src_ast_:
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject)) {
             const auto& call = std::get<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject);
             scanExpressionForLambdas(call->callee, result);
-            const auto& _iterable_18 = call->args;
-            for (const auto& argument : *_iterable_18) {
+            const auto& _iterable_22 = call->args;
+            for (const auto& argument : *_iterable_22) {
                 scanExpressionForLambdas(argument->value, result);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ArrayLiteral>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_ast_::ArrayLiteral>>(_case_subject);
-            const auto& _iterable_20 = array->elements;
-            for (const auto& element : *_iterable_20) {
+            const auto& _iterable_24 = array->elements;
+            for (const auto& element : *_iterable_24) {
                 scanExpressionForLambdas(element, result);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ObjectLiteral>>(_case_subject)) {
             const auto& object = std::get<std::shared_ptr<::app_src_ast_::ObjectLiteral>>(_case_subject);
-            const auto& _iterable_22 = object->properties;
-            for (const auto& property : *_iterable_22) {
+            const auto& _iterable_26 = object->properties;
+            for (const auto& property : *_iterable_26) {
                 if (!doof::is_null(property->key)) {
                     scanExpressionForLambdas(doof::unwrap_optional(property->key), result);
                 }
@@ -355,15 +419,15 @@ void scanExpressionForLambdas(const std::variant<std::shared_ptr<::app_src_ast_:
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TupleLiteral>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_ast_::TupleLiteral>>(_case_subject);
-            const auto& _iterable_24 = tuple->elements;
-            for (const auto& element : *_iterable_24) {
+            const auto& _iterable_28 = tuple->elements;
+            for (const auto& element : *_iterable_28) {
                 scanExpressionForLambdas(element, result);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject)) {
             const auto& string_ = std::get<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject);
-            const auto& _iterable_26 = string_->interpolations;
-            for (const auto& interpolation : *_iterable_26) {
+            const auto& _iterable_30 = string_->interpolations;
+            for (const auto& interpolation : *_iterable_30) {
                 scanExpressionForLambdas(interpolation, result);
             }
     }
@@ -392,8 +456,8 @@ void scanExpressionForLambdas(const std::variant<std::shared_ptr<::app_src_ast_:
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject)) {
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject);
             scanExpressionForLambdas(case_->subject, result);
-            const auto& _iterable_28 = case_->arms;
-            for (const auto& arm : *_iterable_28) {
+            const auto& _iterable_32 = case_->arms;
+            for (const auto& arm : *_iterable_32) {
                 {
                     auto _case_subject = arm->body;
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
@@ -412,8 +476,8 @@ void scanExpressionForLambdas(const std::variant<std::shared_ptr<::app_src_ast_:
             if (!doof::is_null(construct->spread)) {
                 scanExpressionForLambdas(doof::unwrap_optional(construct->spread), result);
             }
-            const auto& _iterable_30 = construct->args;
-            for (const auto& property : *_iterable_30) {
+            const auto& _iterable_34 = construct->args;
+            for (const auto& property : *_iterable_34) {
                 if (!doof::is_null(property->value)) {
                     scanExpressionForLambdas(doof::unwrap_optional(property->value), result);
                 }
@@ -439,8 +503,8 @@ void scanExpressionForLambdas(const std::variant<std::shared_ptr<::app_src_ast_:
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject)) {
             const auto& actor = std::get<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject);
-            const auto& _iterable_32 = actor->args;
-            for (const auto& argument : *_iterable_32) {
+            const auto& _iterable_36 = actor->args;
+            for (const auto& argument : *_iterable_36) {
                 scanExpressionForLambdas(argument, result);
             }
     }
@@ -457,15 +521,19 @@ void scanExpressionForLambdas(const std::variant<std::shared_ptr<::app_src_ast_:
     }
 }
 void collectBlockCaptures(const std::shared_ptr<::app_src_ast_::Block>& block, int32_t bodyStart, int32_t bodyEnd, const std::shared_ptr<std::vector<std::string>>& result, bool mutableOnly) {
-    const auto& _iterable_34 = block->statements;
-    for (const auto& statement : *_iterable_34) {
+    const auto& _iterable_38 = block->statements;
+    for (const auto& statement : *_iterable_38) {
         collectStatementCaptures(statement, bodyStart, bodyEnd, result, mutableOnly);
     }
 }
 void collectStatementCaptures(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>& statement, int32_t bodyStart, int32_t bodyEnd, const std::shared_ptr<std::vector<std::string>>& result, bool mutableOnly) {
     {
         auto _case_subject = statement;
-        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
+        if (std::holds_alternative<std::shared_ptr<::app_src_ast_::DestructuringStatement>>(_case_subject)) {
+            const auto& destructuring = std::get<std::shared_ptr<::app_src_ast_::DestructuringStatement>>(_case_subject);
+            collectExpressionCaptures(destructuring->value, bodyStart, bodyEnd, result, mutableOnly);
+    }
+    else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
             const auto& const_ = std::get<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject);
             collectExpressionCaptures(const_->value, bodyStart, bodyEnd, result, mutableOnly);
     }
@@ -498,8 +566,8 @@ void collectStatementCaptures(const std::variant<std::shared_ptr<::app_src_ast_:
             const auto& if_ = std::get<std::shared_ptr<::app_src_ast_::IfStatement>>(_case_subject);
             collectExpressionCaptures(if_->condition, bodyStart, bodyEnd, result, mutableOnly);
             collectBlockCaptures(if_->body, bodyStart, bodyEnd, result, mutableOnly);
-            const auto& _iterable_36 = if_->elseIfs;
-            for (const auto& branch : *_iterable_36) {
+            const auto& _iterable_40 = if_->elseIfs;
+            for (const auto& branch : *_iterable_40) {
                 collectExpressionCaptures(branch->condition, bodyStart, bodyEnd, result, mutableOnly);
                 collectBlockCaptures(branch->body, bodyStart, bodyEnd, result, mutableOnly);
             }
@@ -510,8 +578,8 @@ void collectStatementCaptures(const std::variant<std::shared_ptr<::app_src_ast_:
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CaseStatement>>(_case_subject)) {
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseStatement>>(_case_subject);
             collectExpressionCaptures(case_->subject, bodyStart, bodyEnd, result, mutableOnly);
-            const auto& _iterable_38 = case_->arms;
-            for (const auto& arm : *_iterable_38) {
+            const auto& _iterable_42 = case_->arms;
+            for (const auto& arm : *_iterable_42) {
                 {
                     auto _case_subject = arm->body;
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
@@ -541,8 +609,8 @@ void collectStatementCaptures(const std::variant<std::shared_ptr<::app_src_ast_:
             if (!doof::is_null(for_->condition)) {
                 collectExpressionCaptures(doof::unwrap_optional(for_->condition), bodyStart, bodyEnd, result, mutableOnly);
             }
-            const auto& _iterable_40 = for_->update;
-            for (const auto& update : *_iterable_40) {
+            const auto& _iterable_44 = for_->update;
+            for (const auto& update : *_iterable_44) {
                 collectExpressionCaptures(update, bodyStart, bodyEnd, result, mutableOnly);
             }
             collectBlockCaptures(for_->body, bodyStart, bodyEnd, result, mutableOnly);
@@ -560,8 +628,8 @@ void collectStatementCaptures(const std::variant<std::shared_ptr<::app_src_ast_:
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::WithStatement>>(_case_subject)) {
             const auto& with_ = std::get<std::shared_ptr<::app_src_ast_::WithStatement>>(_case_subject);
-            const auto& _iterable_42 = with_->bindings;
-            for (const auto& binding : *_iterable_42) {
+            const auto& _iterable_46 = with_->bindings;
+            for (const auto& binding : *_iterable_46) {
                 collectExpressionCaptures(binding->value, bodyStart, bodyEnd, result, mutableOnly);
             }
             collectBlockCaptures(with_->body, bodyStart, bodyEnd, result, mutableOnly);
@@ -650,22 +718,22 @@ void collectExpressionCaptures(const std::variant<std::shared_ptr<::app_src_ast_
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject)) {
             const auto& call = std::get<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject);
             collectExpressionCaptures(call->callee, bodyStart, bodyEnd, result, mutableOnly);
-            const auto& _iterable_44 = call->args;
-            for (const auto& argument : *_iterable_44) {
+            const auto& _iterable_48 = call->args;
+            for (const auto& argument : *_iterable_48) {
                 collectExpressionCaptures(argument->value, bodyStart, bodyEnd, result, mutableOnly);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ArrayLiteral>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_ast_::ArrayLiteral>>(_case_subject);
-            const auto& _iterable_46 = array->elements;
-            for (const auto& element : *_iterable_46) {
+            const auto& _iterable_50 = array->elements;
+            for (const auto& element : *_iterable_50) {
                 collectExpressionCaptures(element, bodyStart, bodyEnd, result, mutableOnly);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ObjectLiteral>>(_case_subject)) {
             const auto& object = std::get<std::shared_ptr<::app_src_ast_::ObjectLiteral>>(_case_subject);
-            const auto& _iterable_48 = object->properties;
-            for (const auto& property : *_iterable_48) {
+            const auto& _iterable_52 = object->properties;
+            for (const auto& property : *_iterable_52) {
                 if (!doof::is_null(property->key)) {
                     collectExpressionCaptures(doof::unwrap_optional(property->key), bodyStart, bodyEnd, result, mutableOnly);
                 }
@@ -681,15 +749,15 @@ void collectExpressionCaptures(const std::variant<std::shared_ptr<::app_src_ast_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TupleLiteral>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_ast_::TupleLiteral>>(_case_subject);
-            const auto& _iterable_50 = tuple->elements;
-            for (const auto& element : *_iterable_50) {
+            const auto& _iterable_54 = tuple->elements;
+            for (const auto& element : *_iterable_54) {
                 collectExpressionCaptures(element, bodyStart, bodyEnd, result, mutableOnly);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject)) {
             const auto& string_ = std::get<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject);
-            const auto& _iterable_52 = string_->interpolations;
-            for (const auto& interpolation : *_iterable_52) {
+            const auto& _iterable_56 = string_->interpolations;
+            for (const auto& interpolation : *_iterable_56) {
                 collectExpressionCaptures(interpolation, bodyStart, bodyEnd, result, mutableOnly);
             }
     }
@@ -716,8 +784,8 @@ void collectExpressionCaptures(const std::variant<std::shared_ptr<::app_src_ast_
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject)) {
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject);
             collectExpressionCaptures(case_->subject, bodyStart, bodyEnd, result, mutableOnly);
-            const auto& _iterable_54 = case_->arms;
-            for (const auto& arm : *_iterable_54) {
+            const auto& _iterable_58 = case_->arms;
+            for (const auto& arm : *_iterable_58) {
                 {
                     auto _case_subject = arm->body;
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
@@ -736,8 +804,8 @@ void collectExpressionCaptures(const std::variant<std::shared_ptr<::app_src_ast_
             if (!doof::is_null(construct->spread)) {
                 collectExpressionCaptures(doof::unwrap_optional(construct->spread), bodyStart, bodyEnd, result, mutableOnly);
             }
-            const auto& _iterable_56 = construct->args;
-            for (const auto& property : *_iterable_56) {
+            const auto& _iterable_60 = construct->args;
+            for (const auto& property : *_iterable_60) {
                 if (!doof::is_null(property->value)) {
                     collectExpressionCaptures(doof::unwrap_optional(property->value), bodyStart, bodyEnd, result, mutableOnly);
                 } else if (!doof::is_null(property->resolvedBinding)) {
@@ -765,8 +833,8 @@ void collectExpressionCaptures(const std::variant<std::shared_ptr<::app_src_ast_
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject)) {
             const auto& actor = std::get<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject);
-            const auto& _iterable_58 = actor->args;
-            for (const auto& argument : *_iterable_58) {
+            const auto& _iterable_62 = actor->args;
+            for (const auto& argument : *_iterable_62) {
                 collectExpressionCaptures(argument, bodyStart, bodyEnd, result, mutableOnly);
             }
     }
@@ -817,8 +885,8 @@ void collectBindingCapture(const std::string& name, const std::shared_ptr<::app_
     addUnique(result, ::app_src_emitter_expr_::cppIdentifier(name));
 }
 void addUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
-    const auto& _iterable_60 = values;
-    for (const auto& existing : *_iterable_60) {
+    const auto& _iterable_64 = values;
+    for (const auto& existing : *_iterable_64) {
         if (existing == value) {
             return;
         }

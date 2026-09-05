@@ -513,6 +513,10 @@ namespace app_src_lexer_ {
     int32_t column;
     LexerDiagnostic(std::string severity, std::string message, int32_t line, int32_t column) : severity(severity), message(message), line(line), column(column) {}
     LexerDiagnostic() {}
+    template <typename _DoofOther = LexerDiagnostic>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->severity == _doof_other.severity) && (this->message == _doof_other.message) && (this->line == _doof_other.line) && (this->column == _doof_other.column); }
+    template <typename _DoofOther = LexerDiagnostic>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
 }
 
@@ -534,6 +538,10 @@ namespace app_src_lexer_ {
     int32_t offset;
     Token(TokenType kind, int32_t length, int32_t valueOffset, int32_t valueLength, bool needsDecode, int32_t line, int32_t column, int32_t offset) : kind(kind), length(length), valueOffset(valueOffset), valueLength(valueLength), needsDecode(needsDecode), line(line), column(column), offset(offset) {}
     Token() {}
+    template <typename _DoofOther = Token>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->kind == _doof_other.kind) && (this->length == _doof_other.length) && (this->valueOffset == _doof_other.valueOffset) && (this->valueLength == _doof_other.valueLength) && (this->needsDecode == _doof_other.needsDecode) && (this->line == _doof_other.line) && (this->column == _doof_other.column) && (this->offset == _doof_other.offset); }
+    template <typename _DoofOther = Token>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct Lexer : public std::enable_shared_from_this<Lexer> {
     std::string source;

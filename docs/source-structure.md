@@ -111,6 +111,12 @@ result type. Lambda capture analysis traverses destructuring initializers;
 statement lowering boxes captured mutable destructured locals just like ordinary
 `let` locals, while evaluating the destructuring source only once.
 
+Lambda lowering uses owned init-captures and mutable C++ closure bodies for
+struct values captured by value, including concrete generic struct arguments.
+This permits checker-approved struct method calls through nested closures;
+captured `let` bindings continue to share their boxed storage. Doof binding and
+field immutability remain checker responsibilities.
+
 Async-block capture decoration and transfer restrictions belong to
 `checker-async.do`; transitive callable effects remain owned by
 `checker-isolation.do`. `emitter-expr-actor.do` lowers actor async calls,

@@ -157,9 +157,13 @@ namespace app_src_emitter_types_ {
     using doof_header_type_10 = std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
 }
 
-namespace app_src_emitter_expr_lambda_ {
+namespace app_src_ast_walk_ {
     using doof_header_type_11 = std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>;
-    using doof_header_type_12 = std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>;
+}
+
+namespace app_src_emitter_expr_lambda_ {
+    using doof_header_type_12 = std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>;
+    using doof_header_type_13 = std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>;
 }
 
 namespace app_src_semantic_ {
@@ -181,6 +185,10 @@ namespace app_src_semantic_ {
     int32_t offset;
     SemanticLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     SemanticLocation() {}
+    template <typename _DoofOther = SemanticLocation>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->line == _doof_other.line) && (this->column == _doof_other.column) && (this->offset == _doof_other.offset); }
+    template <typename _DoofOther = SemanticLocation>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct Symbol : public std::enable_shared_from_this<Symbol> {
     std::string kind;
@@ -355,6 +363,10 @@ namespace app_src_ast_ {
     int32_t offset;
     AstLocation(int32_t line, int32_t column, int32_t offset) : line(line), column(column), offset(offset) {}
     AstLocation() {}
+    template <typename _DoofOther = AstLocation>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->line == _doof_other.line) && (this->column == _doof_other.column) && (this->offset == _doof_other.offset); }
+    template <typename _DoofOther = AstLocation>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct TypeParameterConstraint : public std::enable_shared_from_this<TypeParameterConstraint> {
     doof_header_type_2 type_;
@@ -428,6 +440,10 @@ namespace app_src_semantic_ {
     SemanticLocation end;
     SemanticSpan(SemanticLocation start, SemanticLocation end) : start(start), end(end) {}
     SemanticSpan() {}
+    template <typename _DoofOther = SemanticSpan>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->start == _doof_other.start) && (this->end == _doof_other.end); }
+    template <typename _DoofOther = SemanticSpan>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct Binding : public std::enable_shared_from_this<Binding> {
     std::string name;
@@ -450,6 +466,10 @@ namespace app_src_ast_ {
     AstLocation end;
     SourceSpan(AstLocation start, AstLocation end) : start(start), end(end) {}
     SourceSpan() {}
+    template <typename _DoofOther = SourceSpan>
+    bool operator==(const _DoofOther& _doof_other) const { return (this->start == _doof_other.start) && (this->end == _doof_other.end); }
+    template <typename _DoofOther = SourceSpan>
+    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
     struct NamedType : public std::enable_shared_from_this<NamedType> {
     std::string kind;
@@ -1196,16 +1216,22 @@ namespace app_src_emitter_context_ {
     ::app_src_ast_::SourceSpan span;
     SourceLocationSpanOverride(::app_src_ast_::SourceSpan span) : span(span) {}
 };
+    bool isCapturedMutable(const std::shared_ptr<EmitContext>& context, const std::string& name);
 }
 
 namespace app_src_emitter_types_ {
-    std::string emitReturnType(const doof_header_type_10& resolvedType, const std::string& currentModulePath);
-    std::string emitType(const doof_header_type_10& resolvedType, const std::string& currentModulePath);
+    doof_header_type_10 specializeEmitType(const doof_header_type_10& resolvedType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    std::string emitContextType(const doof_header_type_10& resolvedType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    std::string emitContextReturnType(const doof_header_type_10& resolvedType, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
 }
 
 namespace app_src_emitter_expr_ {
     std::string emitExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& expected);
     std::string cppIdentifier(const std::string& name);
+}
+
+namespace app_src_ast_walk_ {
+    void collectNestedExpressions(const doof_header_type_11& expression, const std::shared_ptr<std::vector<doof_header_type_11>>& result);
 }
 
 namespace app_src_emitter_stmt_ {
@@ -1214,16 +1240,18 @@ namespace app_src_emitter_stmt_ {
 
 namespace app_src_emitter_expr_lambda_ {
     std::string emitLambdaExpression(const std::shared_ptr<::app_src_ast_::LambdaExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& expected);
+    std::shared_ptr<std::vector<std::string>> lambdaStructCaptures(const std::shared_ptr<::app_src_ast_::LambdaExpression>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context);
+    void addStructCapture(const std::string& name, const std::shared_ptr<::app_src_semantic_::Binding>& binding, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<std::vector<std::string>>& result);
     std::shared_ptr<std::vector<std::string>> scanCapturedMutablesInBlock(const std::shared_ptr<::app_src_ast_::Block>& body);
-    std::shared_ptr<std::vector<std::string>> scanCapturedMutablesInExpression(const doof_header_type_11& body);
+    std::shared_ptr<std::vector<std::string>> scanCapturedMutablesInExpression(const doof_header_type_12& body);
     std::shared_ptr<::app_src_semantic_::FunctionType> lambdaFunctionType(const std::shared_ptr<::app_src_ast_::LambdaExpression>& expression);
     std::shared_ptr<std::vector<std::string>> lambdaCaptureNames(const std::shared_ptr<::app_src_ast_::LambdaExpression>& expression);
     void scanBlockForLambdas(const std::shared_ptr<::app_src_ast_::Block>& block, const std::shared_ptr<std::vector<std::string>>& result);
-    void scanStatementForLambdas(const doof_header_type_12& statement, const std::shared_ptr<std::vector<std::string>>& result);
-    void scanExpressionForLambdas(const doof_header_type_11& expression, const std::shared_ptr<std::vector<std::string>>& result);
+    void scanStatementForLambdas(const doof_header_type_13& statement, const std::shared_ptr<std::vector<std::string>>& result);
+    void scanExpressionForLambdas(const doof_header_type_12& expression, const std::shared_ptr<std::vector<std::string>>& result);
     void collectBlockCaptures(const std::shared_ptr<::app_src_ast_::Block>& block, int32_t bodyStart, int32_t bodyEnd, const std::shared_ptr<std::vector<std::string>>& result, bool mutableOnly);
-    void collectStatementCaptures(const doof_header_type_12& statement, int32_t bodyStart, int32_t bodyEnd, const std::shared_ptr<std::vector<std::string>>& result, bool mutableOnly);
-    void collectExpressionCaptures(const doof_header_type_11& expression, int32_t bodyStart, int32_t bodyEnd, const std::shared_ptr<std::vector<std::string>>& result, bool mutableOnly);
+    void collectStatementCaptures(const doof_header_type_13& statement, int32_t bodyStart, int32_t bodyEnd, const std::shared_ptr<std::vector<std::string>>& result, bool mutableOnly);
+    void collectExpressionCaptures(const doof_header_type_12& expression, int32_t bodyStart, int32_t bodyEnd, const std::shared_ptr<std::vector<std::string>>& result, bool mutableOnly);
     void collectIdentifierCapture(const std::shared_ptr<::app_src_ast_::Identifier>& identifier, int32_t bodyStart, int32_t bodyEnd, const std::shared_ptr<std::vector<std::string>>& result, bool mutableOnly);
     void collectBindingCapture(const std::string& name, const std::shared_ptr<::app_src_semantic_::Binding>& binding, int32_t bodyStart, int32_t bodyEnd, const std::shared_ptr<std::vector<std::string>>& result, bool mutableOnly);
     void addUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value);

@@ -106,7 +106,7 @@ std::string emitExpression(const std::variant<std::shared_ptr<::app_src_ast_::In
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::IfExpression>>(_case_subject)) {
             const auto& if_ = std::get<std::shared_ptr<::app_src_ast_::IfExpression>>(_case_subject);
-            (value = ::app_src_emitter_expr_control_::emitIfExpression(if_, context));
+            (value = ::app_src_emitter_expr_control_::emitIfExpression(if_, context, expected));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject)) {
             const auto& case_ = std::get<std::shared_ptr<::app_src_ast_::CaseExpression>>(_case_subject);

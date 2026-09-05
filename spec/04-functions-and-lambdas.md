@@ -313,6 +313,11 @@ captured by a lambda remains shared mutable state even when the lambda escapes
 the declaring function; reads and writes through all closures observe the same
 binding. Mutable locals that are not captured retain ordinary local lifetime.
 
+A struct captured by value remains an owned struct value inside the closure,
+including nested and escaping closures. Checker-approved method calls may use
+that copy. Mutating its `let` fields changes the closure's copy, while a struct
+stored in a captured `let` binding continues to use the shared binding.
+
 Function values remain actor-affine callbacks regardless of their capture set.
 Capture lifetime does not bypass the owning-actor checks described in
 [Concurrency](10-concurrency.md#actor-affine-callbacks).

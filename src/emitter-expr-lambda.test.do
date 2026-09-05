@@ -99,3 +99,64 @@ export function testEmitterGapDestructuringParticipatesInCaptureTraversal(): non
   Assert.equal(increment(), 1)
   Assert.equal(increment(), 2)
 }
+
+export function testCapturedStructMethodsUseOwnedMutableClosureCopies(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "struct Roll { value: int\nread(): int => value }\n" +
+    "function make<T>(value: T): (): T => (): T => value\n" +
+    "function main(): int { roll := Roll { value: 7 }\n" +
+    "outer := (): int => { inner := (): int => roll.read()\nreturn inner() }\n" +
+    "copy := make<Roll>(roll)\nreturn outer() + copy().read() }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "[roll = roll]() mutable -> int32_t")
+  Assert.stringContains(source, "[value = value]() mutable -> Roll")
+  Assert.stringNotContains(source, "[roll]() ->")
+}
+
+struct CapturedRoll {
+  let value: int
+  copyRolls(): int[] => [value]
+  advance(): int { value += 1
+    return value }
+}
+
+function retainedRollReader(): (): int {
+  roll := CapturedRoll { value: 7 }
+  outer := (): (): int => (): int => roll.copyRolls()[0]
+  return outer()
+}
+
+export function testCapturedStructMethodsRunInEscapingNestedCallbacks(): none {
+  read := retainedRollReader()
+  Assert.equal(read(), 7)
+  Assert.equal(read(), 7)
+  roll := CapturedRoll { value: 10 }
+  first := (): int => roll.advance()
+  second := (): int => roll.advance()
+  Assert.equal(first(), 11)
+  Assert.equal(first(), 12)
+  Assert.equal(second(), 11)
+  Assert.equal(roll.value, 10)
+  let shared = CapturedRoll { value: 20 }
+  advance := (): int => shared.advance()
+  Assert.equal(advance(), 21)
+  Assert.equal(shared.value, 21)
+  shared = CapturedRoll { value: 30 }
+  Assert.equal(advance(), 31)
+}
+
+export function testCapturedStructBindingsStillRejectReassignment(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "struct Roll { value: int }\nfunction main(): none { roll := Roll { value: 1 }\n" +
+    "callback := (): none => { roll = Roll { value: 2 } } }",
+  }], "/main.do")
+  let rejected = false
+  for diagnostic of result.diagnostics {
+    if diagnostic.message.contains("immutable") { rejected = true }
+  }
+  Assert.isTrue(rejected)
+}
