@@ -38,9 +38,11 @@ import type { Config } from "./types"       // type-only (erased at runtime)
 ```doof
 export { Vector } from "./math/linear"
 export { InternalVector as Vector } from "./internal"
-export * from "./math/linear"
-export * as linear from "./math/linear"
 ```
+
+Re-exports require explicit names. `export * from "mod"` and
+`export * as ns from "mod"` are unsupported. Namespace imports
+(`import * as ns from "mod"`) are supported.
 
 ### Module Paths
 

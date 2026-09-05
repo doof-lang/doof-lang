@@ -167,9 +167,7 @@ Package-style imports are wired through the nearest `doof.json` above the entry 
 {
     "dependencies": {
         "hello-doof": {
-            "url": "https://github.com/andrew24601/hello-doof",
-            "ref": "v0.1",
-            "commit": "5497e5306fcb80d3a0014ca41cfb236096c3583f"
+            "path": "../hello-doof"
         }
     }
 }
@@ -234,23 +232,19 @@ export { PI, E } from "./math/constants"
 export { InternalVector as Vector } from "./internal"
 ```
 
-### Re-export All
+### Explicit Re-exports Only
 
-```javascript
-export * from "./math/linear"
-export * from "./math/trig"
+Re-exports must list their names explicitly. Neither `export * from "mod"`
+nor `export * as ns from "mod"` is supported. Use named re-exports, with
+`as` aliases where needed:
+
+```doof
+export { Vector, Matrix } from "./math/linear"
+export { sin, cos, tan } from "./math/trig"
 ```
 
-### Namespace Re-export
-
-```javascript
-export * as linear from "./math/linear"
-export * as trig from "./math/trig"
-
-// Usage:
-// import { linear, trig } from "math"
-// linear.Vector { ... }
-```
+Namespace imports (`import * as ns from "mod"`) are supported; they do not
+imply support for namespace re-exports.
 
 ---
 
@@ -980,8 +974,8 @@ When an imported function is re-exported through another module, the transpiler 
 |--------|-------------|
 | `export { A, B }` | Named exports |
 | `export { A as B }` | Export with rename |
-| `export * from "mod"` | Re-export all |
-| `export * as ns from "mod"` | Re-export as namespace |
+| `export { A, B } from "mod"` | Named re-exports |
+| `export { A as B } from "mod"` | Re-export with rename |
 | `import { A, B } from "mod"` | Named imports |
 | `import { A as B } from "mod"` | Import with rename |
 | `import * as ns from "mod"` | Namespace import |
