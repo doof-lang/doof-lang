@@ -1,12 +1,15 @@
-// Call, native-constructor, and class-construction lowering.
+// Call target selection and runtime-specific member dispatch.
 
+import { emitClassCall } from "./emitter-construction"
+
+import { emitCallArguments, emitDispatchCallArguments } from "./emitter-call-arguments"
 import { weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
-import { CallArgument, CallExpression, ClassDeclaration, ConstructExpression, Expression, FunctionDeclaration, Identifier, MemberExpression, SourceSpan, ThisExpression } from "./ast"
-import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, TypeSubstitution, UnionResolvedType, WeakResolvedType } from "./semantic"
-import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
+import { CallExpression, Expression, Identifier, MemberExpression } from "./ast"
+import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { EmitContext } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { decoratedExpressionType, emittedSymbolName, emitPropertyValue, exprModuleNamespaceFor, findProperty, optionalExpectedType, variantVisitValue } from "./emitter-expr-utils"
+import { decoratedExpressionType, exprModuleNamespaceFor, variantVisitValue } from "./emitter-expr-utils"
 import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
@@ -86,86 +89,8 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     }
     _ -> { }
   }
-  let nativeConstructorCall = false
-  case expression.callee {
-    _: Identifier -> { nativeConstructorCall = true }
-    _ -> { }
-  }
-  if nativeConstructorCall && expression.resolvedConstructor != none && expression.callee.resolvedType != none {
-    case expression.callee.resolvedType! {
-      owner: ClassType -> {
-        let concreteOwner = owner
-        if expression.resolvedType != none {
-          case expression.resolvedType! {
-            resolvedOwner: ClassType -> { concreteOwner = resolvedOwner }
-            _ -> { }
-          }
-        }
-        return emitConstructorFactoryCall(concreteOwner, expression.resolvedConstructor!, expression.args, context, expression.span)
-      }
-      _ -> { }
-    }
-  }
-  if nativeConstructorCall && isClassCallee(expression.callee) && expression.resolvedType != none {
-    case expression.resolvedType! {
-      class_: ClassType -> {
-        if class_.symbol.native_ {
-          nativeName := "::" + (if class_.symbol.nativeCppName == "" then class_.symbol.name else class_.symbol.nativeCppName)
-          if expression.resolvedConstructor == none { return "std::make_shared<" + nativeName + ">()" }
-          let result = nativeName + "::constructor("
-          constructorMethod := expression.resolvedConstructor
-          for i of 0..<expression.args.length {
-            if i > 0 { result = result + ", " }
-            let expectedArgument: ResolvedType | none = none
-            if constructorMethod != none && i < constructorMethod!.params.length { expectedArgument = constructorMethod!.params[i].resolvedType }
-            let argumentText = emitExpression(expression.args[i].value, context, expectedArgument)
-            result = result + argumentText
-          }
-          if constructorMethod != none {
-            for i of expression.args.length..<constructorMethod!.params.length {
-              if result != nativeName + "::constructor(" { result = result + ", " }
-              if constructorMethod!.params[i].defaultValue == none { panic("Native constructor " + class_.name + " is missing a default argument") }
-              result = result + emitDefaultExpression(constructorMethod!.params[i].defaultValue!, context, constructorMethod!.params[i].resolvedType, expression.span)
-            }
-          }
-          return result + ")"
-        }
-        if expression.resolvedConstructor != none || isClassCallee(expression.callee) {
-        let cppName = if class_.symbol.module != "" && class_.symbol.module != context.modulePath then "::" + exprModuleNamespaceFor(class_.symbol.module) + "::" + emittedSymbolName(class_.symbol) else emittedSymbolName(class_.symbol)
-        concrete := concreteClassName(class_, context)
-        if concrete != "" { cppName = concrete }
-        let values = ""
-        let namedConstruction = false
-        for argument of expression.args { if argument.name != none { namedConstruction = true } }
-        if expression.resolvedClass != none {
-          let positionalIndex = 0
-          for field of expression.resolvedClass!.fields {
-            if field.static_ || field.const_ { continue }
-            for name of field.names {
-              if values != "" { values = values + ", " }
-              argument := if namedConstruction then callArgumentNamed(expression, name) else if positionalIndex < expression.args.length then expression.args[positionalIndex] else none
-              fieldType := specializeOwnerMemberType(field.resolvedType!, class_, context, expression.resolvedClass!.typeParams)
-              if argument != none {
-                values = values + emitExpression(argument!.value, context, fieldType)
-                if !namedConstruction { positionalIndex = positionalIndex + 1 }
-              } else if field.defaultValue != none {
-                values = values + emitOwnerDefaultExpression(field.defaultValue!, context, fieldType, expression.span, class_, expression.resolvedClass!.typeParams)
-              }
-              else { panic("Construction of '" + class_.name + "' is missing required field '" + name + "'") }
-            }
-          }
-        } else {
-          for i of 0..<expression.args.length {
-            if i > 0 { values = values + ", " }
-            values = values + emitExpression(expression.args[i].value, context)
-          }
-        }
-        return if class_.symbol.kind == "struct" then cppName + "{" + values + "}" else "std::make_shared<" + cppName + ">(" + values + ")"
-        }
-      }
-      _ -> { }
-    }
-  }
+  construction := emitClassCall(expression, context)
+  if construction != none { return construction! }
   case expression.callee {
     member: MemberExpression -> {
       let arrayObjectType = decoratedExpressionType(member.object)
@@ -417,56 +342,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
     _ -> { invokesCallback = functionType != none && functionDeclaration == none }
   }
   callPrefix := if invokesCallback then callee + ".call(" else callee + "("
-  let result = callPrefix
-  let named = false
-  for argument of expression.args { if argument.name != none { named = true } }
-  if named && functionDeclaration != none {
-    for i of 0..<functionDeclaration!.params.length {
-      parameter := functionDeclaration!.params[i]
-      argument := callArgumentNamed(expression, parameter.name)
-      let expected: ResolvedType | none = parameter.resolvedType
-      if functionType != none && i < functionType!.params.length { expected = optionalExpectedType(functionType!.params[i].type_) }
-      if argument != none || parameter.defaultValue != none {
-        if result != callPrefix { result = result + ", " }
-        if argument != none { result = result + emitExpression(argument!.value, context, expected) }
-        else { result = result + emitDefaultExpression(parameter.defaultValue!, context, expected, expression.span) }
-      }
-    }
-  } else if named && functionType != none {
-    // Callback-valued callees do not retain a declaration pointer. Their
-    // function type still defines the named-argument order required by the
-    // generated positional callback ABI.
-    for parameter of functionType!.params {
-      argument := callArgumentNamed(expression, parameter.name)
-      if argument != none {
-        if result != callPrefix { result = result + ", " }
-        result = result + emitExpression(argument!.value, context, optionalExpectedType(parameter.type_))
-      }
-    }
-  } else {
-    for i of 0..<expression.args.length {
-      if i > 0 { result = result + ", " }
-      let expected: ResolvedType | none = none
-      if functionType != none && i < functionType!.params.length { expected = optionalExpectedType(functionType!.params[i].type_) }
-      if expected == none && functionDeclaration != none && i < functionDeclaration!.params.length { expected = functionDeclaration!.params[i].resolvedType }
-      case expression.callee {
-        identifier: Identifier -> { if isBuiltinIdentifier(identifier, "println") || isBuiltinConversionIdentifier(identifier) { expected = none } }
-        _ -> { }
-      }
-      let argument = emitExpression(expression.args[i].value, context, expected)
-      result = result + argument
-    }
-    if functionDeclaration != none {
-      for i of expression.args.length..<functionDeclaration!.params.length {
-        parameter := functionDeclaration!.params[i]
-        if parameter.defaultValue != none {
-          if result != callPrefix { result = result + ", " }
-          result = result + emitDefaultExpression(parameter.defaultValue!, context, parameter.resolvedType, expression.span)
-        }
-      }
-    }
-  }
-  return result + ")"
+  return callPrefix + emitCallArguments(expression, context, functionType) + ")"
 }
 
 function emitWeakMemberCall(expression: CallExpression, member: MemberExpression, context: EmitContext): string {
@@ -484,7 +360,7 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
   if member.resolvedType != none {
     case member.resolvedType! { function_: FunctionType -> { originalReturn = function_.returnType } _ -> { } }
   }
-  arguments := emitWeakCallArguments(expression, context)
+  arguments := emitDispatchCallArguments(expression, context)
   let call = temporary + "->" + cppIdentifier(member.property) + "(" + arguments + ")"
   case member.object.resolvedType! {
     weak_: WeakResolvedType -> {
@@ -532,77 +408,8 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
   return ""
 }
 
-function emitWeakCallArguments(expression: CallExpression, context: EmitContext): string {
-  let result = ""
-  let named = false
-  for argument of expression.args { if argument.name != none { named = true } }
-  let signature: FunctionType | none = none
-  if expression.callee.resolvedType != none {
-    case specializeEmitType(expression.callee.resolvedType!, context) {
-      fn: FunctionType -> { signature = fn }
-      _ -> { }
-    }
-  }
-  if expression.resolvedFunction != none {
-    for i of 0..<expression.resolvedFunction!.params.length {
-      parameter := expression.resolvedFunction!.params[i]
-      expected := if signature != none && i < signature!.params.length then optionalExpectedType(signature!.params[i].type_) else parameter.resolvedType
-      argument := if named then callArgumentNamed(expression, parameter.name) else if i < expression.args.length then expression.args[i] else none
-      if argument != none || parameter.defaultValue != none {
-        if result != "" { result = result + ", " }
-        if argument != none { result = result + emitExpression(argument!.value, context, expected) }
-        else { result = result + emitDefaultExpression(parameter.defaultValue!, context, expected, expression.span) }
-      }
-    }
-    return result
-  }
-  if named && signature != none {
-    for parameter of signature!.params {
-      argument := callArgumentNamed(expression, parameter.name)
-      if argument != none {
-        if result != "" { result = result + ", " }
-        result = result + emitExpression(argument!.value, context, parameter.type_)
-      }
-    }
-    return result
-  }
-  for i of 0..<expression.args.length {
-    if i > 0 { result = result + ", " }
-    result = result + emitExpression(expression.args[i].value, context)
-  }
-  return result
-}
-
-function isBuiltinConversionIdentifier(identifier: Identifier): bool {
-  if identifier.resolvedBinding == none || identifier.resolvedBinding!.kind != "builtin" { return false }
-  name := identifier.name
-  return name == "string" || name == "byte" || name == "int" || name == "long" || name == "float" || name == "double" || name == "char" || name == "bool"
-}
-
 function isBuiltinIdentifier(identifier: Identifier, name: string): bool {
   return identifier.name == name && identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "builtin"
-}
-
-function isClassCallee(callee: Expression): bool {
-  case callee {
-    identifier: Identifier -> {
-      if identifier.resolvedBinding == none { return false }
-      binding := identifier.resolvedBinding!
-      if binding.kind == "class" || binding.kind == "struct" { return true }
-      // Method bindings retain their owner symbol for cross-module naming.  An
-      // owner class does not make the method identifier a class constructor.
-      if binding.kind == "import" && binding.symbol != none {
-        return binding.symbol!.kind == "class" || binding.symbol!.kind == "struct"
-      }
-      return false
-    }
-    _ -> { return false }
-  }
-}
-
-function callArgumentNamed(expression: CallExpression, name: string): CallArgument | none {
-  for argument of expression.args { if argument.name == name { return argument } }
-  return none
 }
 
 function emitBuiltinCall(name: string, object: Expression, expression: CallExpression, context: EmitContext): string {
@@ -626,7 +433,7 @@ function emitVariantMemberCall(member: MemberExpression, call: CallExpression, c
   objectType := decoratedExpressionType(member.object)
   if objectType == none { panic("Variant member call has no resolved object type") }
   if call.resolvedType == none { panic("Variant member call has no resolved return type") }
-  args := emitWeakCallArguments(call, context)
+  args := emitDispatchCallArguments(call, context)
   invocation := if member.resolvedCallableField then ".call(" else "("
   return "std::visit([&](auto&& _obj) -> " + emitContextReturnType(call.resolvedType!, context) + " { return _obj->" + cppIdentifier(member.property) + invocation + args + "); }, " + variantVisitValue(object, objectType!) + ")"
 }
@@ -660,228 +467,6 @@ function isBuiltinName(name: string): bool {
   return name == "println" || name == "panic" || name == "assert" || name == "catchPanic" || name == "string" || name == "byte" || name == "int" || name == "long" || name == "float" || name == "double" || name == "char" || name == "bool"
 }
 
-function declaredConstructor(class_: ClassDeclaration): FunctionDeclaration | none {
-  for method of class_.methods { if method.name == "constructor" { return method } }
-  return none
-}
-
-function insideDeclaredConstructor(class_: ClassDeclaration, context: EmitContext): bool {
-  return context.currentClass == class_.name && context.currentFunctionName == "constructor"
-}
-
-export function emitConstruct(expression: ConstructExpression, context: EmitContext): string {
-  if expression.type_ == "Success" || expression.type_ == "Failure" {
-    resultType := expression.resolvedType
-    if resultType == none { panic(expression.type_ + " has no resolved Result type") }
-    case resultType! {
-      result: ResultResolvedType -> {
-        valueType := if expression.type_ == "Success" then result.valueType else result.errorType
-        propertyName := if expression.type_ == "Success" then "value" else "error"
-        property := findProperty(expression.args, propertyName)
-        payloadType := emitContextReturnType(valueType, context)
-        if property == none { return "doof::" + expression.type_ + "<" + payloadType + ">{ }" }
-        value := emitPropertyValue(property!, context, valueType)
-        return "doof::" + expression.type_ + "<" + payloadType + ">{ " + value + " }"
-      }
-      _ -> { }
-    }
-    panic(expression.type_ + " does not construct a Result")
-  }
-  class_ := expression.resolvedClass
-  if class_ == none { panic("Cannot construct unresolved class " + expression.type_) }
-  constructedType := expression.resolvedConstructedType
-  if constructedType == none { panic("Construction of '" + expression.type_ + "' has no resolved constructed type") }
-  let owner: ClassType | none = none
-  case constructedType! {
-    class_: ClassType -> { owner = class_ }
-    _ -> { panic("Construction of '" + expression.type_ + "' has a non-class constructed type") }
-  }
-  if expression.resolvedType != none {
-    case expression.resolvedType! {
-      resolvedOwner: ClassType -> { owner = resolvedOwner }
-      _ -> { }
-    }
-  }
-  constructorMethod := declaredConstructor(class_!)
-  insideConstructor := insideDeclaredConstructor(class_!, context)
-  if constructorMethod != none && !insideConstructor && expression.resolvedConstructor == none {
-    panic("Construction of '" + expression.type_ + "' has no resolved constructor")
-  }
-  if expression.resolvedConstructor != none {
-    if constructorMethod == none { panic("Construction of '" + expression.type_ + "' has unexpected constructor metadata") }
-    return emitNamedConstructorFactoryCall(owner!, expression.resolvedConstructor!, expression, context)
-  }
-  spreadName := constructionSpreadTemporary(expression, context)
-  let cppName = expression.type_
-  let native = class_!.native_
-  let structValue = false
-  if native { cppName = "::" + (if class_!.nativeCppName == "" then class_!.name else class_!.nativeCppName) }
-  if expression.resolvedType != none {
-    case expression.resolvedType! {
-      resolved: ClassType -> {
-        structValue = resolved.symbol.kind == "struct"
-        if resolved.symbol.native_ { cppName = "::" + (if resolved.symbol.nativeCppName == "" then resolved.symbol.name else resolved.symbol.nativeCppName) }
-        else if context.modulePath != "" && resolved.symbol.module != "" && resolved.symbol.module != context.modulePath { cppName = "::" + exprModuleNamespaceFor(resolved.symbol.module) + "::" + emittedSymbolName(resolved.symbol) }
-        concrete := concreteClassName(resolved, context)
-        if concrete != "" { cppName = concrete }
-      }
-      _ -> { }
-    }
-  }
-  let values = ""
-  let first = true
-  for field of class_!.fields {
-    if field.static_ || field.const_ { continue }
-    for name of field.names {
-      if !first { values = values + ", " }
-      first = false
-      property := findProperty(expression.args, name)
-      fieldType := specializeOwnerMemberType(field.resolvedType!, owner!, context, class_!.typeParams)
-      let value = ""
-      if property != none {
-        if property!.value == none {
-          value = emitPropertyValue(property!, context, fieldType)
-        }
-        else {
-          case property!.value! {
-            _: ThisExpression -> {
-              case fieldType {
-                class_: ClassType -> { value = "std::shared_ptr<" + class_.name + ">(this, [](" + class_.name + "*) {})" }
-                _ -> { value = emitExpression(property!.value!, context, fieldType) }
-              }
-            }
-            _ -> { value = emitExpression(property!.value!, context, fieldType) }
-          }
-        }
-      } else if hasSpreadField(expression, name) { value = emitConstructionSpreadField(expression, spreadName, name, context) }
-      else if field.defaultValue != none { value = emitOwnerDefaultExpression(field.defaultValue!, context, fieldType, expression.span, owner!, class_!.typeParams) }
-      else { panic("Construction of '" + expression.type_ + "' is missing required field '" + name + "'") }
-      values = values + value
-    }
-  }
-  let result = "std::make_shared<" + cppName + ">(" + values + ")"
-  if structValue { result = cppName + "{" + values + "}" }
-  return wrapConstructionSpread(expression, spreadName, result, context)
-}
-
-function emitConstructorFactoryCall(owner: ClassType, constructorMethod: FunctionDeclaration, args: CallArgument[], context: EmitContext, callSiteSpan: SourceSpan): string {
-  let cppName = if owner.symbol.native_ then "::" + (if owner.symbol.nativeCppName == "" then owner.symbol.name else owner.symbol.nativeCppName) else if owner.symbol.module != "" && owner.symbol.module != context.modulePath then "::" + exprModuleNamespaceFor(owner.symbol.module) + "::" + emittedSymbolName(owner.symbol) else emittedSymbolName(owner.symbol)
-  concrete := concreteClassName(owner, context)
-  if concrete != "" { cppName = concrete }
-  let result = cppName + "::constructor("
-  let named = false
-  for argument of args { if argument.name != none { named = true } }
-  for i of 0..<constructorMethod.params.length {
-    if i > 0 { result = result + ", " }
-    parameter := constructorMethod.params[i]
-    parameterType := specializeOwnerMemberType(parameter.resolvedType!, owner, context)
-    argument := if named then callArgumentNamedFromArgs(args, parameter.name) else if i < args.length then args[i] else none
-    if argument != none { result = result + emitExpression(argument!.value, context, parameterType) }
-    else {
-      if parameter.defaultValue == none { panic("Constructor " + owner.name + " is missing argument " + parameter.name) }
-      result = result + emitOwnerDefaultExpression(parameter.defaultValue!, context, parameterType, callSiteSpan, owner)
-    }
-  }
-  return result + ")"
-}
-
-function callArgumentNamedFromArgs(args: CallArgument[], name: string): CallArgument | none {
-  for argument of args { if argument.name == name { return argument } }
-  return none
-}
-
-function emitNamedConstructorFactoryCall(owner: ClassType, constructorMethod: FunctionDeclaration, expression: ConstructExpression, context: EmitContext): string {
-  let cppName = if owner.symbol.native_ then "::" + (if owner.symbol.nativeCppName == "" then owner.symbol.name else owner.symbol.nativeCppName) else if owner.symbol.module != "" && owner.symbol.module != context.modulePath then "::" + exprModuleNamespaceFor(owner.symbol.module) + "::" + emittedSymbolName(owner.symbol) else emittedSymbolName(owner.symbol)
-  concrete := concreteClassName(owner, context)
-  if concrete != "" { cppName = concrete }
-  spreadName := constructionSpreadTemporary(expression, context)
-  let result = cppName + "::constructor("
-  for i of 0..<constructorMethod.params.length {
-    if i > 0 { result = result + ", " }
-    parameter := constructorMethod.params[i]
-    parameterType := specializeOwnerMemberType(parameter.resolvedType!, owner, context)
-    property := findProperty(expression.args, parameter.name)
-    if property != none {
-      result = result + emitPropertyValue(property!, context, parameterType)
-    } else if hasSpreadField(expression, parameter.name) {
-      result = result + emitConstructionSpreadField(expression, spreadName, parameter.name, context)
-    } else if parameter.defaultValue != none {
-      result = result + emitOwnerDefaultExpression(parameter.defaultValue!, context, parameterType, expression.span, owner)
-    } else { panic("Constructor " + owner.name + " is missing argument " + parameter.name) }
-  }
-  return wrapConstructionSpread(expression, spreadName, result + ")", context)
-}
-
-function constructionSpreadTemporary(expression: ConstructExpression, context: EmitContext): string {
-  if expression.spread == none { return "" }
-  context.tryCounter = context.tryCounter + 1
-  return "_construct_spread_" + string(context.tryCounter)
-}
-
-function hasSpreadField(expression: ConstructExpression, name: string): bool {
-  for field of expression.spreadFields { if field == name { return true } }
-  return false
-}
-
-function emitConstructionSpreadField(expression: ConstructExpression, temporary: string, name: string, context: EmitContext): string {
-  if expression.resolvedSpreadType == none { panic("Construction spread has no resolved type") }
-  case expression.resolvedSpreadType! {
-    class_: ClassType -> {
-      accessor := if class_.symbol.kind == "struct" then "." else "->"
-      return temporary + accessor + cppIdentifier(name)
-    }
-    _: InterfaceType -> { return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(name) + "; }, " + temporary + ")" }
-    _ -> { panic("Construction spread has unsupported resolved type") }
-  }
-}
-
-function wrapConstructionSpread(expression: ConstructExpression, temporary: string, result: string, context: EmitContext): string {
-  if expression.spread == none { return result }
-  return "[&]() { const auto& " + temporary + " = " + emitExpression(expression.spread!, context, expression.resolvedSpreadType) + "; return " + result + "; }()"
-}
-
-function emitDefaultExpression(expression: Expression, context: EmitContext, expected: ResolvedType | none, callSiteSpan: SourceSpan): string {
-  previous := context.sourceLocationSpanOverride
-  context.sourceLocationSpanOverride = SourceLocationSpanOverride { span: callSiteSpan }
-  result := emitExpression(expression, context, expected)
-  context.sourceLocationSpanOverride = previous
-  return result
-}
-
-function specializeOwnerMemberType(type_: ResolvedType, owner: ClassType, context: EmitContext, ownerTypeParams: string[] = []): ResolvedType {
-  specializedOwner := specializeEmitType(owner, context)
-  case specializedOwner {
-    class_: ClassType -> {
-      names := if ownerTypeParams.length == 0 then owner.symbol.typeParams else ownerTypeParams
-      return substituteTypeParams(type_, names, class_.typeArgs)
-    }
-    _ -> { panic("Constructor owner did not remain a class after specialization") }
-  }
-  return type_
-}
-
-function emitOwnerDefaultExpression(
-  expression: Expression,
-  context: EmitContext,
-  expected: ResolvedType,
-  callSiteSpan: SourceSpan,
-  owner: ClassType,
-  ownerTypeParams: string[] = [],
-): string {
-  specializedOwner := specializeEmitType(owner, context)
-  let ownerArguments: ResolvedType[] = []
-  case specializedOwner {
-    class_: ClassType -> { ownerArguments = class_.typeArgs }
-    _ -> { panic("Constructor owner did not remain a class after specialization") }
-  }
-  previousSubstitution := context.substitution
-  names := if ownerTypeParams.length == 0 then owner.symbol.typeParams else ownerTypeParams
-  context.substitution = TypeSubstitution { names, arguments: ownerArguments }
-  result := emitDefaultExpression(expression, context, expected, callSiteSpan)
-  context.substitution = previousSubstitution
-  return result
-}
-
 function concreteFunctionName(context: EmitContext, key: string): string {
   for i of 0..<context.concreteFunctionKeys.length {
     if context.concreteFunctionKeys[i] == key { return context.concreteFunctionNames[i] }
@@ -892,21 +477,6 @@ function concreteFunctionName(context: EmitContext, key: string): string {
 function concreteMethodNameFor(context: EmitContext, key: string): string {
   for i of 0..<context.concreteMethodKeys.length {
     if context.concreteMethodKeys[i] == key { return context.concreteMethodNames[i] }
-  }
-  return ""
-}
-
-function concreteClassName(class_: ClassType, context: EmitContext): string {
-  let typeArgs: ResolvedType[] = []
-  for argument of class_.typeArgs { typeArgs.push(specializeEmitType(argument, context)) }
-  if typeArgs.length == 0 { return "" }
-  key := classInstantiationKey(class_.symbol.module, class_.name, typeArgs)
-  for i of 0..<context.concreteClassKeys.length {
-    if context.concreteClassKeys[i] == key {
-      name := context.concreteClassNames[i]
-      if class_.symbol.module != "" && class_.symbol.module != context.modulePath { return "::" + exprModuleNamespaceFor(class_.symbol.module) + "::" + name }
-      return name
-    }
   }
   return ""
 }

@@ -104,3 +104,35 @@ export function testUppercaseNamedCallImportedReturn(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 }
+
+export function testCheckerConsolidationWeakDefaultsKeepDeclaration(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class C { read(first: int = 9, second: int = 9): int => first + second }\n" +
+    "function call(value: weak C): int => value!.read{second: 4}",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  Assert.stringContains(result.emission!.modules[0].source, "->read(9, 4)")
+}
+
+export function testCheckerConsolidationGenericFactorySyntaxParity(): none {
+  for construction of ["Box<int>(3)", "Box<int> { value: 3 }"] {
+    result := compile([SourceFile { path: "/main.do", source:
+      "class Box<T> { value: T\nstatic constructor(value: T): Box<T> => Box<T> { value } }\n" +
+      "function make(): Box<int> => " + construction,
+    }], "/main.do")
+    for diagnostic of result.diagnostics { println(diagnostic.message) }
+    Assert.equal(result.diagnostics.length, 0)
+    Assert.isTrue(result.emission != none)
+    Assert.stringContains(result.emission!.modules[0].source, "Box__int::constructor(3)")
+  }
+}
+
+export function testSecondConsolidationRecursiveGenericAliasSignature(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "type Items<T> = readonly T[]\nfunction first(values: Items<int>, again: bool): int { if again { return second(values) }\nreturn values[0] }\nfunction second(values: Items<int>): int => first(values, false)",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+}

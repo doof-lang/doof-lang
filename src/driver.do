@@ -1114,8 +1114,9 @@ function coverageHtmlPath(jsonPath: string): string {
   return jsonPath + ".html"
 }
 
-function writeCoverageHtml(report: CoverageReport, jsonPath: string, rootDirectory: string): string {
+export function writeCoverageHtml(report: CoverageReport, jsonPath: string, rootDirectory: string): string {
   indexPath := coverageHtmlPath(jsonPath)
+  ensureOutputDirectory(parentPath(indexPath))
   filesDirectory := indexPath.substring(0, indexPath.length - 5) + "_files"
   filesDirectoryName := fileName(filesDirectory)
   for file of report.files {

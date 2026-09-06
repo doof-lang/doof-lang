@@ -98,3 +98,19 @@ export function testCombinationNoneMapInsertionUsesConcreteTypes(): none {
     Assert.stringContains(result.emission!.modules[0].source, "doof::map_set<std::string, " + cpp + ">")
   }
 }
+
+export function testEmissionCleanupCallDispatchKeepsNamedDefaults(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function read(first: int = 2, second: int = 3): int => first + second\n" +
+    "interface Reader { read(first: int = 2, second: int = 3): int }\n" +
+    "class C { read(first: int = 9, second: int = 9): int => first + second }\n" +
+    "function a(): int => read{second: 4}\nfunction b(value: Reader): int => value.read{second: 4}\n" +
+    "function c(value: weak C): int => value!.read{first: 9, second: 4}",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "return read(2, 4)")
+  Assert.stringContains(source, "_obj->read(2, 4)")
+  Assert.stringContains(source, "->read(9, 4)")
+}

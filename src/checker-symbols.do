@@ -1,42 +1,13 @@
 // Binding, symbol, builtin, annotation, and scope helpers.
 
-import {
-  ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
-  Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
-} from "./semantic"
+import { resolveProvisionalAnnotation } from "./checker-annotations"
+
+import { ArrayResolvedType, Binding, ClassType, FunctionParamType, FunctionType, MapResolvedType, RangeResolvedType, ResolvedType, Scope, SetResolvedType, Symbol, StreamResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import {
-  ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, AstLocation, BinaryExpression, Block,
-  BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ClassField, ConstructExpression,
-  ConstDeclaration, ContinueStatement, DestructuringStatement, DoubleLiteral,
-  DotShorthand, EnumDeclaration, ExportDeclaration, ExportList, Expression, ExpressionStatement,
-  FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
-  IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
-  IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
-  LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
-  NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
-  ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
-  ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
-  UnaryExpression, UnionType, WhileStatement, WithBinding, WithStatement, BreakStatement,
-  YieldStatement, CaseArm, CaseExpression, CasePattern, CaseStatement, TypePattern, ValuePattern, WildcardPattern,
-  TryStatement,
-  AsyncExpression, RetireExpression, ActorCreationExpression, Parameter, WeakType,
-  CatchExpression, YieldBlockExpression, YieldBlockAssignmentStatement,
-} from "./ast"
-import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
-  isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
-  neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType,
-} from "./checker-types"
-import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
-import { findActorBoundaryViolation } from "./checker-actor-boundary"
-import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
+import { ArrayType, Block, ClassDeclaration, ConstDeclaration, EnumDeclaration, Expression, FunctionDeclaration, AstFunctionType, IfStatement, ImmutableBinding, Identifier, InterfaceDeclaration, LetDeclaration, NamedType, ObjectProperty, ReadonlyDeclaration, Statement, TypeAliasDeclaration, TypeAnnotation, UnionType, WithStatement, BreakStatement, CaseStatement, TypePattern, WeakType } from "./ast"
+import { classType, enumType, functionType, interfaceType, jsonValueType, resultType, neverType, noneType, primitive, tupleType, unionType, typeParameter, unknownType } from "./checker-types"
 
-
-import { symbolSpan, findModule, classModuleFor } from "./checker-interfaces"
+import { symbolSpan, findModule } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
 export function builtinSourceLocationType(): ClassType {
@@ -217,7 +188,7 @@ export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisRes
           _ -> { }
         }
       }
-      return functionType(functionParametersFor(fn, info, result), if fn.returnType == none then noneType() else resolveAnnotation(fn.returnType!, info, result, fn.typeParams), fn.typeParams)
+      return methodSignature(fn, info, result)
     }
     alias: TypeAliasDeclaration -> { return resolveAnnotation(alias.type_, info, result) }
     const_: ConstDeclaration -> { if const_.resolvedType != none { return const_.resolvedType! } }
@@ -231,125 +202,23 @@ export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisRes
 // Imported member lookup needs a declaration's signature without checking its
 // body in the caller's module scope. This also keeps cross-module context
 // objects usable when their implementation methods refer to local imports.
-export function methodSignature(method: FunctionDeclaration, info: ModuleInfo, result: AnalysisResult): ResolvedType {
-  let parameters: FunctionParamType[] = []
-  for parameter of method.params {
-    parameterType := if parameter.type_ == none then unknownType() else resolveAnnotation(parameter.type_!, info, result, method.typeParams)
-    parameters.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
-  }
-  return functionType(parameters, if method.returnType == none then noneType() else resolveAnnotation(method.returnType!, info, result, method.typeParams), method.typeParams)
+export function methodSignature(method: FunctionDeclaration, info: ModuleInfo, result: AnalysisResult, ownerTypeParams: string[] = []): ResolvedType {
+  let typeParams: string[] = []
+  for name of ownerTypeParams { typeParams.push(name) }
+  for name of method.typeParams { typeParams.push(name) }
+  return functionType(functionParametersFor(method, info, result, ownerTypeParams), if method.returnType == none then noneType() else resolveAnnotation(method.returnType!, info, result, typeParams), method.typeParams)
 }
 
-export function functionParametersFor(fn: FunctionDeclaration, info: ModuleInfo, result: AnalysisResult): FunctionParamType[] {
+export function functionParametersFor(fn: FunctionDeclaration, info: ModuleInfo, result: AnalysisResult, ownerTypeParams: string[] = []): FunctionParamType[] {
+  let typeParams: string[] = []
+  for name of ownerTypeParams { typeParams.push(name) }
+  for name of fn.typeParams { typeParams.push(name) }
   let resultTypes: FunctionParamType[] = []
   for parameter of fn.params {
-    parameterType := if parameter.resolvedType != none then parameter.resolvedType! else if parameter.type_ == none then unknownType() else resolveAnnotation(parameter.type_!, info, result, fn.typeParams)
+    parameterType := if parameter.resolvedType != none then parameter.resolvedType! else if parameter.type_ == none then unknownType() else resolveAnnotation(parameter.type_!, info, result, typeParams)
     resultTypes.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
   }
   return resultTypes
-}
-
-export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, result: AnalysisResult, typeParams: string[] = []): ResolvedType {
-  // ModuleChecker performs the full alias walk.  This helper handles the
-  // declaration types needed to predeclare recursive functions.
-  case annotation {
-    named: NamedType -> {
-      if named.name == "none" || named.name == "void" || named.name == "null" { return noneType() }
-      if named.name == "never" { return neverType() }
-      if named.name == "JsonValue" { return jsonValueType() }
-      if named.name == "JsonObject" { return jsonObjectType() }
-      if named.name == "SourceLocation" { return builtinSourceLocationType() }
-      if named.name == "WeakReferenceError" { return weakReferenceErrorType() }
-      if named.name == "Range" { return rangeType() }
-      for typeParam of typeParams { if named.name == typeParam { return typeParameter(named.name) } }
-      if named.name == "Tuple" {
-        let elements: ResolvedType[] = []
-        for argument of named.typeArgs { elements.push(resolveAnnotation(argument, info, result, typeParams)) }
-        return tupleType(elements)
-      }
-      if named.name == "Map" || named.name == "ReadonlyMap" {
-        let key: ResolvedType = unknownType()
-        let value: ResolvedType = unknownType()
-        if named.typeArgs.length >= 2 {
-          key = resolveAnnotation(named.typeArgs[0], info, result, typeParams)
-          value = resolveAnnotation(named.typeArgs[1], info, result, typeParams)
-        }
-        return mapType(key, value, named.name == "ReadonlyMap")
-      }
-      if named.name == "Set" || named.name == "ReadonlySet" {
-        element := if named.typeArgs.length >= 1 then resolveAnnotation(named.typeArgs[0], info, result, typeParams) else unknownType()
-        return setType(element, named.name == "ReadonlySet")
-      }
-      if named.name == "Stream" && named.typeArgs.length >= 1 { return streamType(resolveAnnotation(named.typeArgs[0], info, result, typeParams)) }
-      if named.name == "Actor" && named.typeArgs.length == 1 {
-        inner := resolveAnnotation(named.typeArgs[0], info, result, typeParams)
-        case inner {
-          class_: ClassType -> { return actorType(class_) }
-          _ -> { return unknownType() }
-        }
-      }
-      if named.name == "Promise" && named.typeArgs.length == 1 { return promiseType(resolveAnnotation(named.typeArgs[0], info, result, typeParams)) }
-      if named.name == "Result" && named.typeArgs.length >= 2 {
-        let value: ResolvedType | none = none
-        let error: ResolvedType | none = none
-        let index = 0
-        for typeArg of named.typeArgs {
-          if index == 0 { value = resolveAnnotation(typeArg, info, result, typeParams) }
-          if index == 1 { error = resolveAnnotation(typeArg, info, result, typeParams) }
-          index = index + 1
-        }
-        return resultType(value!, error!)
-      }
-      if (named.name == "Success" || named.name == "Failure") && named.typeArgs.length == 1 {
-        payload := resolveAnnotation(named.typeArgs[0], info, result, typeParams)
-        if named.name == "Success" { return resultType(payload, unknownType()) }
-        return resultType(unknownType(), payload)
-      }
-      if named.name == "byte" || named.name == "int" || named.name == "long" || named.name == "float" || named.name == "double" || named.name == "string" || named.name == "char" || named.name == "bool" { return primitive(named.name) }
-      symbol := named.resolvedSymbol ?? symbolFor(info, named.name)
-      if symbol == none { return unknownType() }
-      if symbol!.kind == "type-alias" {
-        declaration := declarationFor(result, symbol!)
-        if declaration == none { return unknownType() }
-        case declaration! {
-          alias: TypeAliasDeclaration -> {
-            let aliasParams: string[] = []
-            for outer of typeParams { aliasParams.push(outer) }
-            for parameter of alias.typeParams { aliasParams.push(parameter) }
-            resolvedAlias := resolveAnnotation(alias.type_, classModuleFor(result, symbol!), result, aliasParams)
-            let arguments: ResolvedType[] = []
-            for argument of named.typeArgs { arguments.push(resolveAnnotation(argument, info, result, typeParams)) }
-            return substituteTypeParams(resolvedAlias, alias.typeParams, arguments)
-          }
-          _ -> { return unknownType() }
-        }
-      }
-      if symbol!.kind == "interface" {
-        let typeArgs: ResolvedType[] = []
-        for argument of named.typeArgs { typeArgs.push(resolveAnnotation(argument, info, result, typeParams)) }
-        return interfaceType(declaredSymbolName(symbol!), symbol!, typeArgs)
-      }
-      if symbol!.kind == "enum" { return enumType(declaredSymbolName(symbol!), symbol!) }
-      let typeArgs: ResolvedType[] = []
-      for argument of named.typeArgs { typeArgs.push(resolveAnnotation(argument, info, result, typeParams)) }
-      return classType(declaredSymbolName(symbol!), symbol!, typeArgs)
-    }
-    array: ArrayType -> { return arrayType(resolveAnnotation(array.elementType, info, result, typeParams), array.readonly_) }
-    union: UnionType -> {
-      let members: ResolvedType[] = []
-      for item of union.types { members.push(resolveAnnotation(item, info, result, typeParams)) }
-      return unionType(members)
-    }
-    function_: AstFunctionType -> {
-      let params: FunctionParamType[] = []
-      for parameter of function_.params {
-        params.push(FunctionParamType { name: parameter.name, type_: resolveAnnotation(parameter.type_, info, result, typeParams), hasDefault: false })
-      }
-      return functionType(params, resolveAnnotation(function_.returnType, info, result, typeParams))
-    }
-    weak_: WeakType -> { return weakType(resolveAnnotation(weak_.type_, info, result, typeParams)) }
-  }
-  return unknownType()
 }
 
 export function declare(scope: Scope, binding: Binding): bool {
@@ -567,3 +436,7 @@ export function symbolName(statement: Statement): string {
 // Infer one generic argument by structurally matching a checked parameter
 // pattern against the concrete argument type. Conflicting candidates are
 // rejected by the caller before substitution.
+
+export function resolveAnnotation(annotation: TypeAnnotation, info: ModuleInfo, result: AnalysisResult, typeParams: string[] = []): ResolvedType {
+  return resolveProvisionalAnnotation(annotation, info, result, typeParams)
+}

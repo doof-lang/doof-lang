@@ -1,297 +1,85 @@
 // Type annotation, member, index, and callable-field resolution.
 
-import {
-  ActorType, ArrayResolvedType, Binding, CheckResult, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType,
-  Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType, ResolvedTypeConstraint,
-} from "./semantic"
+import { ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, FunctionParamType, FunctionType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, Scope, SetResolvedType, Symbol, StreamResolvedType, TupleResolvedType, UnionResolvedType, TypeParameterType } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import {
-  ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, AstLocation, BinaryExpression, Block,
-  BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ClassField, ConstructExpression,
-  ConstDeclaration, ContinueStatement, DestructuringStatement, DoubleLiteral,
-  DotShorthand, EnumDeclaration, ExportDeclaration, ExportList, Expression, ExpressionStatement,
-  FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
-  IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
-  IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
-  LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
-  NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
-  ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
-  ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
-  UnaryExpression, UnionType, WhileStatement, WithBinding, WithStatement, BreakStatement,
-  YieldStatement, CaseArm, CaseExpression, CasePattern, CaseStatement, TypePattern, ValuePattern, WildcardPattern,
-  TryStatement,
-  AsyncExpression, RetireExpression, ActorCreationExpression, Parameter, WeakType, TypeParameterConstraint,
-} from "./ast"
-import {
-  interfaceBoundReceiver, actorType, applyDeepReadonly, arrayType, classMetadataType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
-  isJsonValueType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
-  neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
-  isWeakReferenceTarget, methodReflectionType, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType,
-} from "./checker-types"
+import { CheckedMember, ClassDeclaration, EnumDeclaration, Expression, FunctionDeclaration, Identifier, InterfaceDeclaration, MemberExpression, Program, SourceSpan, TypeAnnotation, Parameter, TypeParameterConstraint } from "./ast"
+import { interfaceBoundReceiver, applyDeepReadonly, arrayType, classMetadataType, classType, functionType, joinTypes, jsonObjectType, jsonValueType, mapType, resultType, setType, noneType, primitive, promiseType, sameType, typeName, unionType, methodReflectionType, substituteTypeParams, typeParameter, unknownType } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, isGeneratedJsonType } from "./json-semantics"
-import { findActorBoundaryViolation } from "./checker-actor-boundary"
-import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
-
 
 import { CheckerState } from "./checker-state"
-import { isNumericConstraint, satisfiesNumericConstraint } from "./checker-numeric"
-import { deprecatedBuildReadonly, deprecatedNoneAlias, typeError } from "./checker-common"
-import { builtinSourceLocationType, declaredSymbolName, optionalResolvedType, resolveAnnotation, methodSignature, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
-import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
+
+import { deprecatedBuildReadonly, typeError } from "./checker-common"
+import { resolveAnnotation, methodSignature, declarationFor } from "./checker-symbols"
+import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
+import { resolveCheckedAnnotation, validateAnnotationConstraints, decorateAnnotationType } from "./checker-annotations"
+
 export function resolveType(state: CheckerState, annotation: TypeAnnotation, module: ModuleInfo, scope: Scope, validateConstraints: bool = true): ResolvedType {
-  case annotation {
-    named: NamedType -> {
-      if named.name == "none" || named.name == "void" || named.name == "null" {
-        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
-        if named.name != "none" && named.resolvedType == none { deprecatedNoneAlias(state, named.name, named.span, module.path) }
-        return decorateType(state, annotation, noneType())
-      }
-      if named.name == "never" {
-        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, neverType())
-      }
-      if named.name == "JsonValue" {
-        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, jsonValueType())
-      }
-      if named.name == "JsonObject" {
-        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, jsonObjectType())
-      }
-      if named.name == "SourceLocation" {
-        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, builtinSourceLocationType())
-      }
-      if named.name == "WeakReferenceError" {
-        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, weakReferenceErrorType())
-      }
-      if named.name == "Range" {
-        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, rangeType())
-      }
-      if hasTypeParam(scope, named.name) {
-        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, typeParameter(named.name, typeParamConstraintName(scope, named.name), typeParamConstraint(scope, named.name)))
-      }
-      if named.name == "Tuple" {
-        let elements: ResolvedType[] = []
-        for argument of named.typeArgs { elements.push(resolveType(state, argument, module, scope, validateConstraints)) }
-        return decorateType(state, annotation, tupleType(elements))
-      }
-      if named.name == "Map" || named.name == "ReadonlyMap" {
-        if named.typeArgs.length != 2 { typeError(state, named.name + " requires two type arguments", named.span); return decorateType(state, annotation, unknownType()) }
-        key := resolveType(state, named.typeArgs[0], module, scope, validateConstraints)
-        value := resolveType(state, named.typeArgs[1], module, scope, validateConstraints)
-        return decorateType(state, annotation, mapType(key, value, named.name == "ReadonlyMap"))
-      }
-      if named.name == "Set" || named.name == "ReadonlySet" {
-        if named.typeArgs.length != 1 { typeError(state, named.name + " requires one type argument", named.span); return decorateType(state, annotation, unknownType()) }
-        element := resolveType(state, named.typeArgs[0], module, scope, validateConstraints)
-        if !isSupportedHashCollectionType(element) {
-          typeError(state, "Set element type \"" + typeName(element) + "\" is not supported; set elements must be byte, string, int, long, char, bool, or enum", named.typeArgs[0].span)
-        }
-        return decorateType(state, annotation, setType(element, named.name == "ReadonlySet"))
-      }
-      if named.name == "Stream" {
-        if named.typeArgs.length != 1 { typeError(state, "Stream requires one type argument", named.span); return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, streamType(resolveType(state, named.typeArgs[0], module, scope, validateConstraints)))
-      }
-      if named.name == "Actor" {
-        if named.typeArgs.length != 1 { typeError(state, "Actor requires one type argument", named.span); return decorateType(state, annotation, unknownType()) }
-        inner := resolveType(state, named.typeArgs[0], module, scope, validateConstraints)
-        case inner {
-          class_: ClassType -> { return decorateType(state, annotation, actorType(class_)) }
-          _ -> { typeError(state, "Actor requires a class type", named.span); return decorateType(state, annotation, unknownType()) }
-        }
-      }
-      if named.name == "Promise" {
-        if named.typeArgs.length != 1 { typeError(state, "Promise requires one type argument", named.span); return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, promiseType(resolveType(state, named.typeArgs[0], module, scope, validateConstraints)))
-      }
-      if named.name == "Result" {
-        if named.typeArgs.length != 2 { typeError(state, "Result requires two type arguments", named.span); return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, resultType(resolveType(state, named.typeArgs[0], module, scope, validateConstraints), resolveType(state, named.typeArgs[1], module, scope, validateConstraints)))
-      }
-      if named.name == "Success" || named.name == "Failure" {
-        if named.typeArgs.length != 1 { typeError(state, named.name + " requires one type argument", named.span); return decorateType(state, annotation, unknownType()) }
-        payload := resolveType(state, named.typeArgs[0], module, scope, validateConstraints)
-        if named.name == "Success" { return decorateType(state, annotation, resultType(payload, unknownType())) }
-        return decorateType(state, annotation, resultType(unknownType(), payload))
-      }
-      if named.name == "byte" || named.name == "int" || named.name == "long" || named.name == "float" || named.name == "double" || named.name == "string" || named.name == "char" || named.name == "bool" {
-        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, primitive(named.name))
-      }
-      let symbol: Symbol | none = named.resolvedSymbol
-      if symbol == none { symbol = symbolFor(module, named.name) }
-      if symbol == none {
-        typeError(state, "Unknown type '" + named.name + "'", named.span)
-        return decorateType(state, annotation, unknownType())
-      }
-      if symbol!.kind == "type-alias" {
-        declaration := declarationFor(state.result, symbol!)
-        if declaration == none { return decorateType(state, annotation, unknownType()) }
-        case declaration! {
-          alias: TypeAliasDeclaration -> {
-            if named.typeArgs.length != alias.typeParams.length {
-              typeError(state, alias.name + " requires " + string(alias.typeParams.length) + " type argument" + (if alias.typeParams.length == 1 then "" else "s"), named.span)
-              return decorateType(state, annotation, unknownType())
-            }
-            aliasScope := Scope { parent: scope }
-            for typeParam of alias.typeParams { aliasScope.typeParams.push(typeParam) }
-            let resolvedAlias = resolveType(state, alias.type_, classModuleFor(state.result, symbol!), aliasScope, false)
-            let typeArgs: ResolvedType[] = []
-            for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope, validateConstraints)) }
-            if validateConstraints { validateTypeArgumentConstraints(state, alias.typeParams, alias.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope) }
-            resolvedAlias = substituteTypeParams(resolvedAlias, alias.typeParams, typeArgs)
-            return decorateType(state, annotation, resolvedAlias)
-          }
-          _ -> { return decorateType(state, annotation, unknownType()) }
-        }
-      }
-      if symbol!.kind == "interface" {
-        let typeArgs: ResolvedType[] = []
-        for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope, validateConstraints)) }
-        declaration := declarationFor(state.result, symbol!)
-        if declaration != none {
-          case declaration! {
-            interfaceDeclaration: InterfaceDeclaration -> {
-              if !validateNominalTypeArity(state, interfaceDeclaration.name, interfaceDeclaration.typeParams.length, typeArgs.length, named.span) {
-                return decorateType(state, annotation, unknownType())
-              }
-              if validateConstraints { validateTypeArgumentConstraints(state, interfaceDeclaration.typeParams, interfaceDeclaration.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope) }
-            }
-            _ -> { }
-          }
-        }
-        concreteInterface := interfaceType(declaredSymbolName(symbol!), symbol!, typeArgs)
-        if concreteTypes(typeArgs) { registerConcreteInterfaceImplementations(state.result, concreteInterface) }
-        return decorateType(state, annotation, concreteInterface)
-      }
-      if symbol!.kind == "enum" {
-        if rejectUnexpectedTypeArguments(state, named, module, scope) { return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, enumType(declaredSymbolName(symbol!), symbol!))
-      }
-      let typeArgs: ResolvedType[] = []
-      for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope, validateConstraints)) }
-      declaration := declarationFor(state.result, symbol!)
-      if declaration != none {
-        case declaration! {
-          classDeclaration: ClassDeclaration -> {
-            if !validateNominalTypeArity(state, classDeclaration.name, classDeclaration.typeParams.length, typeArgs.length, named.span) {
-              return decorateType(state, annotation, unknownType())
-            }
-            if validateConstraints { validateTypeArgumentConstraints(state, classDeclaration.typeParams, classDeclaration.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope) }
-          }
-          _ -> {
-            typeError(state, "Symbol '" + named.name + "' is not a type", named.span)
-            return decorateType(state, annotation, unknownType())
-          }
-        }
-      } else if symbol!.kind != "class" && symbol!.kind != "struct" {
-        typeError(state, "Symbol '" + named.name + "' is not a type", named.span)
-        return decorateType(state, annotation, unknownType())
-      }
-      return decorateType(state, annotation, classType(declaredSymbolName(symbol!), symbol!, typeArgs))
-    }
-    array: ArrayType -> { return decorateType(state, annotation, arrayType(resolveType(state, array.elementType, module, scope, validateConstraints), array.readonly_)) }
-    union: UnionType -> {
-      let members: ResolvedType[] = []
-      for item of union.types { members.push(resolveType(state, item, module, scope, validateConstraints)) }
-      return decorateType(state, annotation, unionType(members))
-    }
-    function_: AstFunctionType -> {
-      let params: FunctionParamType[] = []
-      for parameter of function_.params { params.push(FunctionParamType { name: parameter.name, type_: resolveType(state, parameter.type_, module, scope, validateConstraints), hasDefault: false }) }
-      return decorateType(state, annotation, functionType(params, resolveType(state, function_.returnType, module, scope, validateConstraints)))
-    }
-    weak_: WeakType -> {
-      inner := resolveType(state, weak_.type_, module, scope, validateConstraints)
-      if !isWeakReferenceTarget(inner) { typeError(state, "Type \"" + typeName(inner) + "\" is not a valid weak reference target", weak_.span) }
-      return decorateType(state, annotation, weakType(inner))
-    }
-  }
-  return decorateType(state, annotation, unknownType())
+  return resolveCheckedAnnotation(state, annotation, module, scope, validateConstraints)
 }
 
-function rejectUnexpectedTypeArguments(state: CheckerState, named: NamedType, module: ModuleInfo, scope: Scope): bool {
-  if named.typeArgs.length == 0 { return false }
-  for argument of named.typeArgs { resolveType(state, argument, module, scope) }
-  typeError(state, named.name + " does not accept type arguments", named.span)
-  return true
-}
-
-function validateNominalTypeArity(state: CheckerState, name: string, expected: int, actual: int, span: SourceSpan): bool {
-  if expected == actual { return true }
-  typeError(state, name + " requires " + string(expected) + " type argument" + (if expected == 1 then "" else "s") + "; received " + string(actual), span)
-  return false
-}
-
-/** Validates concrete arguments against substituted declaration constraints. */
 export function validateTypeArgumentConstraints(state: CheckerState, names: string[], constraints: TypeParameterConstraint[], arguments: ResolvedType[], span: SourceSpan, module: ModuleInfo, outer: Scope, ownerNames: string[] = [], ownerArguments: ResolvedType[] = []): none {
-  if names.length != arguments.length { return }
-  constraintScope := Scope { parent: outer }
-  for name of ownerNames { constraintScope.typeParams.push(name); constraintScope.typeParamConstraintNames.push(""); constraintScope.typeParamConstraints.push(ResolvedTypeConstraint {}) }
-  for name of names {
-    constraintScope.typeParams.push(name)
-    constraintScope.typeParamConstraintNames.push("")
-    constraintScope.typeParamConstraints.push(ResolvedTypeConstraint {})
-  }
-  for index of 0..<names.length {
-    if index >= constraints.length || constraints[index].type_ == none { continue }
-    annotation := constraints[index].type_!
-    case annotation {
-      named: NamedType -> {
-        if named.typeArgs.length == 0 && (named.name == "Reflectable" || named.name == "JsonSerializable") {
-          case arguments[index] {
-            parameter: TypeParameterType -> { if parameter.constraintName == named.name { continue } }
-            _ -> { }
-          }
-        }
-        if named.typeArgs.length == 0 && named.name == "Reflectable" {
-          case arguments[index] {
-            _: ClassType -> { memberType(state, arguments[index], "metadata", span) }
-            _ -> { reportConstraintViolation(state, names[index], arguments[index], "Reflectable", span) }
-          }
-          continue
-        }
-        if named.typeArgs.length == 0 && named.name == "JsonSerializable" {
-          result := memberType(state, arguments[index], "fromJsonValue", span)
-          if result.kind == "unknown" { reportConstraintViolation(state, names[index], arguments[index], "JsonSerializable", span) }
-          continue
-        }
-      }
-      _ -> { }
-    }
-    resolvedConstraint := resolveType(state, annotation, module, constraintScope, false)
-    substitutedConstraint := substituteTypeParams(substituteTypeParams(resolvedConstraint, ownerNames, ownerArguments), names, arguments)
-    if isNumericConstraint(substitutedConstraint) {
-      if !satisfiesNumericConstraint(arguments[index], substitutedConstraint) { reportConstraintViolation(state, names[index], arguments[index], typeName(substitutedConstraint), span) }
-    } else if !isAssignableWithInterfaces(state.result, arguments[index], substitutedConstraint) {
-      reportConstraintViolation(state, names[index], arguments[index], typeName(substitutedConstraint), span)
-    }
-  }
-}
-
-function reportConstraintViolation(state: CheckerState, typeParam: string, argument: ResolvedType, constraint: string, span: SourceSpan): none {
-  typeError(state, "Type \"" + typeName(argument) + "\" does not satisfy constraint \"" + constraint + "\" for type parameter \"" + typeParam + "\"", span)
+  validateAnnotationConstraints(state, names, constraints, arguments, span, module, outer, ownerNames, ownerArguments)
 }
 
 export function decorateType(state: CheckerState, annotation: TypeAnnotation, resolvedType: ResolvedType): ResolvedType {
-  annotation.resolvedType = optionalResolvedType(resolvedType)
-  return resolvedType
+  return decorateAnnotationType(state, annotation, resolvedType)
 }
 
 // Some checker phases need a member's type without performing a source-level
 // access (for example, when synthesizing constructor parameters). Keep that
 // lookup distinct from an explicit access so declaration spans cannot be
 // reported against the module currently being checked.
+export function resolveMember(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan, validateVisibility: bool = true, declaredOnly: bool = false): CheckedMember {
+  resolved := CheckedMember {}
+  resolved.type_ = resolveMemberType(state, object, property, span, validateVisibility, declaredOnly, resolved)
+  return resolved
+}
+
+// Identifier bindings already select a symbol. Explicit member expressions
+// retain the selection produced while checking that expression.
+export function resolveCalleeTarget(state: CheckerState, callee: Expression, calleeType: ResolvedType): CheckedMember {
+  case callee {
+    member: MemberExpression -> {
+      if member.resolvedMember != none { return member.resolvedMember! }
+    }
+    identifier: Identifier -> {
+      if identifier.resolvedBinding != none && identifier.resolvedBinding!.symbol != none {
+        symbol := identifier.resolvedBinding!.symbol!
+        target := declarationFor(state.result, symbol)
+        if target != none {
+          case target! {
+            fn: FunctionDeclaration -> { return CheckedMember { type_: calleeType, function_: fn, modulePath: symbol.module } }
+            _: ClassDeclaration -> {
+              resolved := resolveMember(state, classType(symbol.name, symbol), identifier.name, identifier.span, false)
+              resolved.type_ = calleeType
+              return resolved
+            }
+            _ -> { }
+          }
+        }
+      }
+    }
+    _ -> { }
+  }
+  return CheckedMember { type_: calleeType }
+}
+
+function recordMember(resolved: CheckedMember, owner: ResolvedType, modulePath: string, function_: FunctionDeclaration | none = none, field: bool = false, staticOwner: ClassDeclaration | none = none, instance: bool = true): none {
+  resolved.owner = owner
+  resolved.modulePath = modulePath
+  resolved.function_ = function_
+  resolved.field = field
+  resolved.staticOwner = staticOwner
+  resolved.instance = instance
+}
+
 export function memberType(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan, validateVisibility: bool = true, declaredOnly: bool = false): ResolvedType {
+  return resolveMember(state, object, property, span, validateVisibility, declaredOnly).type_!
+}
+
+function resolveMemberType(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan, validateVisibility: bool, declaredOnly: bool, selection: CheckedMember): ResolvedType {
   if typeName(object) == "string" {
     if property == "length" { return primitive("int") }
     if property == "startsWith" || property == "endsWith" || property == "contains" { return functionType([FunctionParamType { name: "value", type_: primitive("string"), hasDefault: false }], primitive("bool")) }
@@ -320,9 +108,20 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
     }
     union: UnionResolvedType -> {
       let resolved: ResolvedType | none = none
+      let first = true
       for member of union.types {
         if member.kind == "none" { continue }
-        memberValue := memberType(state, member, property, span, validateVisibility)
+        arm := CheckedMember {}
+        memberValue := resolveMemberType(state, member, property, span, validateVisibility, declaredOnly, arm)
+        if first {
+          recordMember(selection, member, arm.modulePath, arm.function_, arm.field, arm.staticOwner, arm.instance)
+        } else {
+          if selection.function_ != arm.function_ || selection.modulePath != arm.modulePath { selection.function_ = none; selection.modulePath = "" }
+          selection.field = selection.field && arm.field
+          selection.instance = selection.instance && arm.instance
+          if selection.staticOwner != arm.staticOwner { selection.staticOwner = none }
+        }
+        first = false
         if memberValue.kind == "unknown" { return unknownType() }
         resolved = if resolved == none then memberValue else joinTypes(resolved!, memberValue)
       }
@@ -437,14 +236,21 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
       if property == "lowerBound" || property == "upperBound" { return primitive("int") }
       return unknownType()
     }
-    actor: ActorType -> { return memberType(state, actor.innerClass, property, span) }
+    actor: ActorType -> {
+      resolved := resolveMemberType(state, actor.innerClass, property, span, validateVisibility, declaredOnly, selection)
+      if validateVisibility && selection.field && selection.instance {
+        typeError(state, "Cannot access actor field '" + property + "' directly; use an actor method to read or update actor state", span)
+        return unknownType()
+      }
+      return resolved
+    }
     promise: PromiseType -> {
       if property == "get" { return functionType([], resultType(promise.valueType, primitive("string"))) }
       return unknownType()
     }
     parameter: TypeParameterType -> {
       bound := interfaceBoundReceiver(parameter)
-      if bound.kind == "interface" { return memberType(state, bound, property, span, validateVisibility, true) }
+      if bound.kind == "interface" { return resolveMemberType(state, bound, property, span, validateVisibility, true, selection) }
       if property == "metadata" {
         if parameter.constraintName != "Reflectable" {
           typeError(state, "Static member \"metadata\" requires type parameter \"" + parameter.name + "\" to be constrained by Reflectable", span)
@@ -576,12 +382,14 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
             }
             if !valid { return unknownType() }
             classDeclaration.needsMetadata = true
+            recordMember(selection, class_, class_.symbol.module, none, false, classDeclaration, false)
             return classMetadataType(class_)
           }
           if property == "toJsonObject" && canGenerateJsonSerialization(classDeclaration, jsonPrograms(state.result)) {
             return functionType([], jsonObjectType())
           }
           if property == "fromJsonValue" && canGenerateJsonDeserialization(classDeclaration, jsonPrograms(state.result)) {
+            recordMember(selection, class_, class_.symbol.module, none, false, classDeclaration, false)
             return functionType([
               FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
               FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
@@ -594,6 +402,7 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
           for field of classDeclaration.fields {
             for name of field.names {
               if name == property {
+                recordMember(selection, class_, class_.symbol.module, none, true, if field.static_ then classDeclaration else none, !field.static_)
                 fieldType := if field.resolvedType != none then field.resolvedType! else if field.type_ != none then resolveType(state, field.type_!, state.info!, state.moduleScope!) else unknownType()
                 if validateVisibility && field.private_ && class_.symbol.module != state.info!.path {
                   typeError(state, "Field '" + property + "' is private to module '" + class_.symbol.module + "'", span)
@@ -604,7 +413,8 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
           }
           for method of classDeclaration.methods {
             if method.name == property {
-              methodType := method.resolvedType ?? methodSignature(method, classModuleFor(state.result, class_.symbol), state.result)
+              recordMember(selection, class_, class_.symbol.module, method, false, if method.static_ then classDeclaration else none, !method.static_)
+              methodType := method.resolvedType ?? methodSignature(method, classModuleFor(state.result, class_.symbol), state.result, class_.symbol.typeParams)
               if validateVisibility && method.private_ && class_.symbol.module != state.info!.path {
                 typeError(state, "Method '" + property + "' is private to module '" + class_.symbol.module + "'", span)
               }
@@ -613,8 +423,8 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
           }
         }
         interface_: InterfaceDeclaration -> {
-          for field of interface_.fields { if field.name == property { return field.resolvedType ?? resolveType(state, field.type_, state.info!, state.moduleScope!) } }
-          for method of interface_.methods { if method.name == property { return method.resolvedType ?? methodSignature(method, classModuleFor(state.result, class_.symbol), state.result) } }
+          for field of interface_.fields { if field.name == property { recordMember(selection, class_, class_.symbol.module, none, true); return field.resolvedType ?? resolveType(state, field.type_, state.info!, state.moduleScope!) } }
+          for method of interface_.methods { if method.name == property { recordMember(selection, class_, class_.symbol.module, method); return method.resolvedType ?? methodSignature(method, classModuleFor(state.result, class_.symbol), state.result, class_.symbol.typeParams) } }
         }
         _ -> { }
       }
@@ -627,12 +437,14 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
         interface_: InterfaceDeclaration -> {
           for field of interface_.fields {
             if field.name == property {
+              recordMember(selection, interfaceType_, interfaceType_.symbol.module, none, true)
               fieldType := field.resolvedType ?? resolveAnnotation(field.type_, classModuleFor(state.result, interfaceType_.symbol), state.result, interface_.typeParams)
               return substituteTypeParams(if field.readonly_ then applyDeepReadonly(fieldType) else fieldType, interface_.typeParams, interfaceType_.typeArgs)
             }
           }
           for method of interface_.methods {
             if method.name == property {
+              recordMember(selection, interfaceType_, interfaceType_.symbol.module, method, false, none, !method.static_)
               methodType := method.resolvedType ?? interfaceMethodSignature(state, method, interface_, interfaceType_.symbol)
               return substituteTypeParams(methodType, interface_.typeParams, interfaceType_.typeArgs)
             }
@@ -767,11 +579,5 @@ export function indexType(state: CheckerState, object: ResolvedType, index: Reso
 }
 
 function interfaceMethodSignature(state: CheckerState, method: FunctionDeclaration, owner: InterfaceDeclaration, symbol: Symbol): ResolvedType {
-  module := classModuleFor(state.result, symbol)
-  let params: FunctionParamType[] = []
-  for parameter of method.params {
-    type_ := if parameter.type_ == none then unknownType() else resolveAnnotation(parameter.type_!, module, state.result, owner.typeParams)
-    params.push(FunctionParamType { name: parameter.name, type_, hasDefault: parameter.defaultValue != none })
-  }
-  return functionType(params, if method.returnType == none then noneType() else resolveAnnotation(method.returnType!, module, state.result, owner.typeParams))
+  return methodSignature(method, classModuleFor(state.result, symbol), state.result, owner.typeParams)
 }

@@ -22,7 +22,7 @@ import { ClassInstantiation, MethodInstantiation } from "./emitter-monomorphize"
 import { emitGeneratedJsonDeclarations } from "./emitter-json"
 import { emitMetadataDeclaration } from "./emitter-metadata"
 
-export function emitFunctionSignature(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none, ownerTypeParams: string[] = []): string {
+export function emitFunctionSignature(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none): string {
   let functionType = checkedFunctionType(fn)
   if context != none {
     case specializeEmitType(functionType, context!) {
@@ -31,9 +31,6 @@ export function emitFunctionSignature(fn: FunctionDeclaration, name: string = ""
     }
   }
   functionName := cppIdentifier(if name == "" then fn.name else name)
-  let genericParams: string[] = []
-  for typeParam of ownerTypeParams { genericParams.push(typeParam) }
-  for typeParam of fn.typeParams { genericParams.push(typeParam) }
   returnType := if context == none then emitReturnType(functionType.returnType, modulePath) else emitContextReturnType(functionType.returnType, context!)
   ensureKnown(functionType.returnType, fn.name + " return type")
   let result = (if functionType.returnType.kind == "never" then "[[noreturn]] " else "") + returnType + " " + functionName + "("
@@ -54,6 +51,11 @@ export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitCon
   if fn.typeParams.length > 0 && context.substitution == none {
     panic("Generic function " + fn.name + " reached emission without a concrete instantiation")
   }
+  return emitCallableDefinition(fn, context, name, emitCallableDescription(fn, ""))
+}
+
+// Functions and methods share the same checked return boundary, including never.
+function emitCallableDefinition(fn: FunctionDeclaration, context: EmitContext, name: string, description: string): string {
   previousReturnErrorType := context.currentReturnErrorType
   previousFunctionName := context.currentFunctionName
   previousCapturedMutables := context.capturedMutables
@@ -72,22 +74,20 @@ export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitCon
     }
     _ -> { context.currentReturnErrorType = "" }
   }
-  let result = sourceLineDirective(fn.span, context) + emitCallableDescription(fn, "") + emitFunctionSignature(fn, name, context.modulePath, context) + " {\n"
+  declaredReturnType := functionReturnType(fn)
+  returnType := if declaredReturnType == none then none else specializeEmitType(declaredReturnType!, context)
+  let result = sourceLineDirective(fn.span, context) + description + emitFunctionSignature(fn, name, context.modulePath, context) + " {\n"
   case fn.body {
     expression: Expression -> {
       result = result + emitExpressionCoverageMark(expression, context)
-      declaredReturnType := functionReturnType(fn)
-      returnType := if declaredReturnType == none then none else specializeEmitType(declaredReturnType!, context)
-      if returnType != none && returnType!.kind == "never" { result = result + "    " + emitExpression(expression, context, returnType) + ";\n    doof::panic(\"never function returned\");\n" }
+      if returnType != none && returnType!.kind == "never" { result = result + "    " + emitExpression(expression, context, returnType) + ";\n" }
       else { result = result + "    " + emitExpressionReturn(expression, context, returnType) + "\n" }
     }
     block: Block -> {
       result = result + emitBlock(block, 1, context)
-      declaredReturnType := functionReturnType(fn)
-      returnType := if declaredReturnType == none then none else specializeEmitType(declaredReturnType!, context)
-      if returnType != none && returnType!.kind == "never" { result = result + "    doof::panic(\"never function returned\");\n" }
     }
   }
+  if returnType != none && returnType!.kind == "never" { result = result + "    doof::panic(\"never function returned\");\n" }
   context.currentReturnErrorType = previousReturnErrorType
   context.currentFunctionName = previousFunctionName
   context.capturedMutables = previousCapturedMutables
@@ -243,12 +243,12 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
         previousSubstitution := context.substitution
         context.substitution = instantiation.substitution
         staticPrefix := if method.static_ then "static " else ""
-        result = result + emitCallableDescription(method, "    ") + "    " + staticPrefix + emitFunctionSignature(method, instantiation.emittedName, context.modulePath, context, decl.typeParams) + ";\n"
+        result = result + emitCallableDescription(method, "    ") + "    " + staticPrefix + emitFunctionSignature(method, instantiation.emittedName, context.modulePath, context) + ";\n"
         context.substitution = previousSubstitution
       }
     } else {
       staticPrefix := if method.static_ then "static " else ""
-      result = result + emitCallableDescription(method, "    ") + "    " + staticPrefix + emitFunctionSignature(method, "", context.modulePath, context, decl.typeParams) + ";\n"
+      result = result + emitCallableDescription(method, "    ") + "    " + staticPrefix + emitFunctionSignature(method, "", context.modulePath, context) + ";\n"
     }
   }
   if decl.destructor_ != none {
@@ -371,47 +371,19 @@ export function emitClassMethodDefinition(owner: ClassDeclaration, method: Funct
   previous := context.currentClass
   previousNative := context.currentClassNative
   previousStruct := context.currentClassStruct
-  previousReturnErrorType := context.currentReturnErrorType
-  previousFunctionName := context.currentFunctionName
   previousFunctionStatic := context.currentFunctionStatic
-  previousCapturedMutables := context.capturedMutables
   context.currentClass = owner.name
   context.currentClassNative = owner.native_
   context.currentClassStruct = owner.struct_
-  context.currentFunctionName = method.name
   context.currentFunctionStatic = method.static_
-  context.capturedMutables = []
-  case method.body {
-    expression: Expression -> { context.capturedMutables = scanCapturedMutablesInExpression(expression) }
-    block: Block -> { context.capturedMutables = scanCapturedMutablesInBlock(block) }
-  }
-  case method.resolvedType! {
-    function_: FunctionType -> {
-      case function_.returnType {
-        result: ResultResolvedType -> { context.currentReturnErrorType = emitContextType(result.errorType, context) }
-        _ -> { context.currentReturnErrorType = "" }
-      }
-    }
-    _ -> { context.currentReturnErrorType = "" }
-  }
   ownerName := if emittedOwnerName != "" then emittedOwnerName else if owner.native_ then (if owner.nativeCppName == "" then owner.name else owner.nativeCppName) else owner.name
   methodName := if emittedMethodName == "" then cppIdentifier(method.name) else emittedMethodName
-  let result = sourceLineDirective(method.span, context) + emitFunctionSignature(method, ownerName + "::" + methodName, context.modulePath, context) + " {\n"
-  case method.body {
-    expression: Expression -> {
-      result = result + emitExpressionCoverageMark(expression, context)
-      result = result + "    " + emitExpressionReturn(expression, context, functionReturnType(method)) + "\n"
-    }
-    block: Block -> { result = result + emitBlock(block, 1, context) }
-  }
+  result := emitCallableDefinition(method, context, ownerName + "::" + methodName, "")
   context.currentClass = previous
   context.currentClassNative = previousNative
   context.currentClassStruct = previousStruct
-  context.currentReturnErrorType = previousReturnErrorType
-  context.currentFunctionName = previousFunctionName
   context.currentFunctionStatic = previousFunctionStatic
-  context.capturedMutables = previousCapturedMutables
-  return result + "}\n"
+  return result
 }
 
 export function emitClassDestructorDefinition(owner: ClassDeclaration, context: EmitContext, emittedOwnerName: string = ""): string {

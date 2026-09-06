@@ -30,7 +30,7 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
 | `parser-statements.do` | Statements, control flow, case patterns | Declaration and expression internals |
 | `parser-expressions.do` | Expressions, literals, precedence, and typed-tag desugaring into named calls | Type annotations |
 | `parser-types.do` | Type annotation grammar | Type resolution |
-| `ast.do` | Syntax node shapes, source spans, semantic decoration slots | Resolved-type definitions or checking policy |
+| `ast.do` | Syntax node shapes, source spans, semantic decoration slots including checked member selections | Resolved-type definitions or checking policy |
 | `resolver.do` | Logical module-path resolution, lazy source loading, source cache | Disk/package acquisition |
 | `analyzer.do` | Main-thread module discovery, parallel parse scheduling, deterministic graph ordering, declaration collection, imports/re-exports, module symbols, named-type decoration | Lexical scopes or expression typing |
 | `semantic.do` | Diagnostics, symbols, bindings, scopes, resolved-type records | Pass orchestration |
@@ -47,23 +47,28 @@ modules own the following decisions:
 | File | Responsibility |
 | --- | --- |
 | `checker-state.do` | Mutable per-run and per-module checker state |
-| `checker-symbols.do` | Scope/binding operations, builtins, annotation resolution, symbol/declaration lookup |
+| `checker-symbols.do` | Scope/binding operations, builtins, shared declaration signatures, symbol/declaration lookup |
 | `checker-types.do` | Resolved-type construction, comparison, assignability, substitution, interface-bound receiver views, and display |
-| `checker-resolution.do` | Type annotations, bound-aware members and assignment bindings, indexing, and declaration-scoped type-argument constraints |
+| `checker-annotations.do` | One annotation resolver for provisional signatures and checked types; builtin arity, alias expansion, constraints, and annotation decoration |
+| `checker-resolution.do` | Bound-aware member selections (type, declaration, owner, static/field flags), assignment bindings, indexing, and annotation API forwarding |
 | `checker-common.do` | State-aware diagnostics, expression type decoration, and centralized assignment-binding validation |
 | `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, enum backing-value resolution, and control-flow continuation |
 | `checker-try.do` | Result propagation boundaries, error compatibility, and success declaration checking |
 | `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |
 | `checker-inference.do` | Contextual path validation and common-type inference; only optional unions are synthesized for value paths |
 | `checker-expressions.do` | Expression dispatch, operators, narrowing, assignment, and case expressions |
-| `checker-calls.do` | Calls, positional/named construction, lambdas, generic calls, and actor-call boundaries |
+| `checker-calls.do` | Calls, lambdas, generic inference/application, and actor-call boundaries |
+| `checker-arguments.do` | Shared positional/named parameter mapping, contextual value checking, argument diagnostics, and required/default/spread validation |
+| `checker-construction.do` | Retained specialized construction plans for ordinary, named, contextual, and actor construction; shared field validation and visibility |
+| `checker-properties.do` | Shorthand/explicit property decoration, contextual assignability, and fixed literal field validation |
 | `checker-literals.do` | Contextual array and object literal inference |
-| `checker-generics.do` | Generic inference and decorated call-target resolution |
+| `checker-generics.do` | Structural generic type-argument inference |
 | `checker-interfaces.do` | Structural conformance and closed-world implementation discovery |
 | `checker-actor-boundary.do` | Deep immutability graph analysis for actor payloads and `readonly` fields |
 | `checker-actor-lifecycle.do` | Conservative straight-line use-after-retire diagnostics |
-| `ast-walk.do` | Shared shallow statement/expression traversal primitives for semantic and lowering passes |
+| `ast-walk.do` | Shared shallow traversal and explicit preorder expression-tree collection for semantic and lowering passes |
 | `checker-module-initialization.do` | Construction-only declarative initializer validation and direct-storage eligibility |
+| `checker-async.do` | One recursive async boundary walk with direction-specific handle rules; capture decoration |
 | `checker-isolation.do` | Graph-wide transitive mutable-global effect validation |
 | `checker-validation.do` | Final graph walk proving the AST is decorated and safe to emit |
 | `json-semantics.do` | Shared eligibility contract for generated JSON methods |
@@ -71,6 +76,34 @@ modules own the following decisions:
 When a check produces information needed for lowering, add an explicit
 decoration to `ast.do`, populate it in the owning checker module, require it in
 `checker-validation.do`, and consume it in the focused emitter.
+
+Annotation predeclaration and full checking run the same resolver. Provisional
+signatures use a disposable diagnostic context and do not decorate the AST or
+register concrete interfaces; declaration checking owns those effects and
+dependent constraint validation. Alias expansion tracks active declarations to
+reject cycles. Function and method signatures share parameter construction,
+with owner and method type parameters supplied explicitly.
+
+Member selection is recorded once while checking the receiver, including the
+underlying owner of weak and actor access and the exposed contract of an
+interface bound. Calls consume that selection; graph validation rejects missing
+member selections or inconsistent call targets. Type-only member queries use the
+same resolver. Synthetic members and callable fields have no method declaration.
+Distinct union method declarations do not select an arbitrary arm's defaults.
+
+Constructor planning specializes the factory signature against the checked owner
+before any syntax-specific argument adapter runs. Ordinary calls, constructors,
+and actors share argument validation; actor payload restrictions remain a
+separate boundary check. Explicit construction and contextual class literals
+share property/field validation after union shape selection. `CheckedConstruction`
+retains the owner, declaration, factory, specialized signature, and ordered default
+expressions on the AST. Emission and graph validation consume this plan without
+rescanning constructors or rechecking whether construction occurs inside a factory.
+Actor construction shares argument/default lowering while retaining actor storage.
+
+Async capture and result validation share container and nominal-type recursion.
+Directional handle restrictions remain explicit: accepting an actor handle as a
+capture does not imply that returning that handle from async is permitted.
 
 Expression nodes explicitly declare their writable `resolvedType` decorations
 with `let`, including writes made through the `Expression` union.
@@ -85,17 +118,19 @@ emitter or individual expression branch.
 | File | Responsibility |
 | --- | --- |
 | `emitter-context.do` | Graph-wide nominal/method context and per-module emission state |
-| `emitter-names.do` | Stable C++ namespaces, filenames, and diagnostic paths from logical module identity |
+| `emitter-names.do` | Stable C++ namespaces, filenames, and diagnostic paths from logical module identity; shared C++ keyword escaping for namespace and value identifiers |
 | `emitter-monomorphize.do` | Fixed-point discovery of concrete generic instantiations and direction-specific generated-JSON demand |
 | `emitter-worldview.do` | Consumer-projected declaration closure from checked symbol/type uses and concrete arguments of module-owned generic specializations |
 | `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, and header/source pairing |
 | `emitter-header.do` | Multi-namespace worldview declaration ordering, enum identity/helper generation, and rendering |
 | `string-builder.do` | Runtime-backed append-only construction for large generated text |
-| `emitter-decl.do` | Functions, classes, top-level declarations, signatures, definitions, and field equality operators for structs |
+| `emitter-decl.do` | Shared function/method body and return boundaries, signatures, class declarations, top-level definitions, and field equality operators for structs |
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering |
 | `emitter-expr.do` | Single expression dispatch façade; contextual conversion of checked unit expressions and native void calls to stored unit values while preserving evaluation |
 | `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as`; equality uses checked none types and unit unwraps produce stored unit values |
-| `emitter-expr-calls.do` | Calls, native construction, positional/named class construction, and Result payload construction; shorthand bindings reuse checked identifier emission |
+| `emitter-expr-calls.do` | Call target selection, runtime member dispatch, and positional Result payload construction |
+| `emitter-call-arguments.do` | Shared named/positional argument ordering, checked contextual argument types, and call-site default emission for direct and dispatched calls |
+| `emitter-construction.do` | Positional, named, contextual, and actor construction from checked plans; shared argument/default lowering, owner specialization, and spread handling |
 | `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering; shared contextual absence values for literals and catch initialization |
 | `emitter-expr-control.do` | Conditional, case, catch, dot-shorthand, and yield-block expressions |
 | `emitter-expr-lambda.do` | Lambda capture analysis, mutable capture boxing, and callback lowering |
@@ -110,6 +145,14 @@ emitter or individual expression branch.
 | `emitter-metadata.do` | Reflection metadata, backing-value JSON Schema, and JSON invocation |
 | `emitter-wasm.do` | JSON-over-C-ABI WebAssembly wrapper generation |
 | `emitter-project.do` | Generated project shape and reached-package native input collation |
+
+Function and method definitions share capture/context setup and a specialized return
+boundary. Both expression and block bodies of `never` callables retain the
+non-returning fallback. Class construction omits static and literal-valued fields
+from stored-field arguments; literal-valued fields initialize in declarations.
+Contextual object defaults use the same construction-site attribution and owner
+substitution as explicit construction. The native emission-consolidation fixture
+checks these boundaries alongside contextual callback arguments through unions.
 
 The [native carrier model](native-carriers.md) defines representation and conversion
 invariants and its native test matrix.
@@ -157,7 +200,7 @@ threads or reconstruct scheduling policy.
 | `native-build.do` | Pure GCC-compatible/MSVC support-file, PCH, compile, and link task planning |
 | `native-build-state.do` | Versioned incremental state plus Make/MSVC dependency parsing |
 | `native-build-driver.do` | Native compiler processes, fingerprints, dependency signatures, PCH/object/link execution |
-| `test-runner.do` | Pure test discovery, grouping, harness generation, and coverage reports |
+| `test-runner.do` | Pure test discovery, grouping, harness generation, coverage reports, and relative URL-safe coverage page paths |
 | `wasm-test-runner.do` | Pure Apple JavaScriptCore runner build and per-test invocation plans |
 | `run-command.do` | Pure invocation plans for built artifacts |
 | `profile-command.do` | Pure macOS xctrace capture and completed-trace open plans |
@@ -185,3 +228,9 @@ numeric `.parse` intrinsics; the emitter and runtime contain no parsing
 lowering or `ParseError` compatibility implementation.
 
 Keep files focused and make ownership changes explicit in this document.
+
+Coverage source-page paths are mapped component by component inside the report's
+`*_files` directory. Absolute paths receive an `_absolute` prefix, parent
+components become `_external`, and punctuation or marker-name collisions are
+escaped. The same mapping drives summary links and filesystem writes; the driver
+creates the index directory even for an empty report.

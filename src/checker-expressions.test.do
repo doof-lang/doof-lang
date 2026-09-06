@@ -1,3 +1,5 @@
+import { compile } from "./compiler"
+import { hasErrorDiagnostics } from "./diagnostics"
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
@@ -121,4 +123,35 @@ export function testRestrictedCatchInference(): none {
   valid := checked(prefix + "function run(): none { error: string | int | none := catch { try one()\ntry two() }\nsingle := catch { try one() }\nx: string | none := single }")
   for diagnostic of valid.diagnostics { println(diagnostic.message) }
   Assert.equal(valid.diagnostics.length, 0)
+}
+
+export function testCheckerConsolidationActorConstructorDefaults(): none {
+  result := compile([SourceFile { path: "/main.do", source: "class Worker { value: int\nstatic constructor(value: int = 4): Worker => Worker { value }\nread(): int => value }\nfunction main(): int { actor := Actor<Worker>()\nreturn actor.read() }" }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(hasErrorDiagnostics(result.diagnostics), false)
+  Assert.isTrue(result.emission != none)
+}
+
+export function testSecondConsolidationActorFactoryMustReturnDirectOwner(): none {
+  result := checked("class Worker { value: int\nstatic constructor(value: int): Result<Worker, string> => Success { value: Worker { value } } }\nfunction make(): none { worker := Actor<Worker>(3) }")
+  let found = false
+  for diagnostic of result.diagnostics { if diagnostic.message.contains("must return Worker directly") { found = true } }
+  Assert.isTrue(found)
+}
+
+export function testActorFieldAccessWritesRejectedOnce(): none {
+  for update of ["actor.value = 8", "actor.value += 1", "actor.value -= 1"] {
+    result := compile([SourceFile { path: "/main.do", source:
+      "class State { let value: int = 7 }\nfunction bad(actor: Actor<State>): none { " + update + " }",
+    }], "/main.do")
+    let errors = 0
+    for diagnostic of result.diagnostics {
+      if diagnostic.severity != "error" { continue }
+      errors = errors + 1
+      Assert.stringContains(diagnostic.message, "Cannot access actor field 'value' directly")
+      Assert.equal(diagnostic.span.start.line, 2)
+    }
+    Assert.equal(errors, 1)
+    Assert.equal(result.emission, none)
+  }
 }

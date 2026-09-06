@@ -196,11 +196,14 @@ preparation of already-present sources.
 For packaged builds, generated C++ namespaces are derived from the package
 `name` in `doof.json` plus the module path relative to that package root. The
 same package therefore emits the same namespace when compiled directly or when
-compiled as a dependency.
+compiled as a dependency. Hyphens and dots in namespace components become
+underscores. C++ keywords receive a trailing underscore, as do the reserved
+components `std`, `doof`, and `main`. For example, `more/explicit.do` in package
+`tools` emits `tools::more::explicit_`.
 
 ```text
 package name "hello-doof"
-main.do       -> hello_doof::main
+main.do       -> hello_doof::main_
 src/util.do   -> hello_doof::src::util
 ```
 

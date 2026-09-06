@@ -1,43 +1,16 @@
 // Contextual array and object literal inference.
 
-import {
-  ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
-  Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType,
-} from "./semantic"
-import { AnalysisResult, ModuleInfo } from "./analyzer"
-import {
-  ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, AstLocation, BinaryExpression, Block,
-  BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ClassField, ConstructExpression,
-  ConstDeclaration, ContinueStatement, DestructuringStatement, DoubleLiteral,
-  DotShorthand, EnumDeclaration, ExportDeclaration, ExportList, Expression, ExpressionStatement,
-  FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
-  IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
-  IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
-  LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
-  NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
-  ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
-  ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
-  UnaryExpression, UnionType, WhileStatement, WithBinding, WithStatement, BreakStatement,
-  YieldStatement, CaseArm, CaseExpression, CasePattern, CaseStatement, TypePattern, ValuePattern, WildcardPattern,
-  TryStatement,
-  AsyncExpression, RetireExpression, ActorCreationExpression, Parameter,
-} from "./ast"
-import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
-  isJsonValueType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
-  noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType,
-} from "./checker-types"
-import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
-import { findActorBoundaryViolation } from "./checker-actor-boundary"
-import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
+import { resolveConstructor, checkClassProperties } from "./checker-construction"
+import { checkPropertyValue, checkAssignableProperty } from "./checker-properties"
 
+import { ArrayResolvedType, ClassType, JsonValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, Scope, SetResolvedType, UnionResolvedType, UnknownType } from "./semantic"
+
+import { ArrayLiteral, ClassDeclaration, Expression, NamedType, ObjectLiteral, TypeAnnotation } from "./ast"
+import { arrayType, joinTypes, isJsonValueType, isSupportedHashCollectionType, jsonValueType, mapType, setType, primitive, sameType, typeName, unknownType } from "./checker-types"
 
 import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
-import { memberType } from "./checker-resolution"
+
 import { finish, typeError } from "./checker-common"
 import { optionalResolvedType, hasObjectProperty, lookup, declarationFor } from "./checker-symbols"
 import { findClassField, isAssignableWithInterfaces } from "./checker-interfaces"
@@ -193,16 +166,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
           let propertyExpected: ResolvedType | none = none
           if property.name == "value" { recognized = recognized + 1; hasValue = true; propertyExpected = result.valueType }
           else if property.name == "error" { recognized = recognized + 1; hasError = true; propertyExpected = result.errorType }
-          if property.value != none {
-            property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, propertyExpected))
-          } else {
-            binding := lookup(scope, property.name)
-            if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
-            else { property.resolvedBinding = binding; property.resolvedType = optionalResolvedType(binding!.type_) }
-          }
-          if propertyExpected != none && !isAssignableWithInterfaces(state.result, property.resolvedType!, propertyExpected!) {
-            typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(propertyExpected!), property.span)
-          }
+          checkAssignableProperty(state, property, scope, propertyExpected)
         }
         if hasValue && hasError { typeError(state, "Result object literal must contain either a 'value' field or an 'error' field, but not both", expression.span) }
         else if !hasValue && !hasError { typeError(state, "Result object literal must contain a 'value' field or an 'error' field", expression.span) }
@@ -242,14 +206,8 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
       _ -> { }
     }
   }
-  for property of expression.properties {
-    if property.value != none {
-      property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, expectedValue))
-      if expectedValue != none && !isAssignableWithInterfaces(state.result, property.resolvedType!, expectedValue!) {
-        typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(expectedValue!), property.span)
-      }
-    }
-  }
+  for property of expression.properties { checkAssignableProperty(state, property, scope, expectedValue) }
+
   if expected != none {
     case expected! {
       _: JsonValueResolvedType -> { return finish(state, expression, expected!) }
@@ -266,30 +224,9 @@ function checkClassObject(state: CheckerState, expression: ObjectLiteral, scope:
   if declaration == none { return none }
   case declaration! {
     classDeclaration: ClassDeclaration -> {
+      expression.resolvedConstruction = resolveConstructor(state, class_, false)
       expression.resolvedClass = classDeclaration
-      for property of expression.properties {
-        field := findClassField(classDeclaration.fields, property.name)
-        if field == none || field!.static_ || (!structural && field!.const_) {
-          typeError(state, "Unknown field '" + property.name + "' for " + class_.name, property.span)
-          decorateObjectProperty(state, property, scope, none)
-          continue
-        }
-        fieldType := memberType(state, class_, property.name, property.span)
-        decorateObjectProperty(state, property, scope, optionalResolvedType(fieldType))
-        if !isAssignableWithInterfaces(state.result, property.resolvedType!, fieldType) { typeError(state, "Cannot assign " + typeName(property.resolvedType!) + " to " + typeName(fieldType), property.span) }
-        if structural && field!.const_ {
-          if property.value == none || field!.defaultValue == none || !sameFixedFieldValue(property.value!, field!.defaultValue!) {
-            typeError(state, "Field '" + property.name + "' must match its literal-valued declaration", property.span)
-          }
-        }
-      }
-      for field of classDeclaration.fields {
-        if field.static_ || (!structural && field.const_) { continue }
-        for name of field.names {
-          required := field.const_ || field.defaultValue == none
-          if required && !hasObjectProperty(expression.properties, name) { typeError(state, "Missing required field '" + name + "'", expression.span) }
-        }
-      }
+      checkClassProperties(state, expression.properties, scope, class_, classDeclaration, expression.span, structural)
       return finish(state, expression, class_)
     }
     _ -> { }
@@ -365,70 +302,12 @@ function objectShapeMatchesClass(state: CheckerState, expression: ObjectLiteral,
   return false
 }
 
-function decorateObjectProperty(state: CheckerState, property: ObjectProperty, scope: Scope, expected: ResolvedType | none): none {
-  if property.key != none { checkExpression(state, property.key!, scope, none) }
-  if property.value != none { property.resolvedType = optionalResolvedType(checkExpression(state, property.value!, scope, expected)) }
-  else {
-    binding := lookup(scope, property.name)
-    if binding == none { typeError(state, "Unknown shorthand property '" + property.name + "'", property.span); property.resolvedType = optionalResolvedType(unknownType()) }
-    else { property.resolvedBinding = binding; property.resolvedType = optionalResolvedType(binding!.type_) }
-  }
-}
-
 function decorateUnresolvedObject(state: CheckerState, expression: ObjectLiteral, scope: Scope): none {
   if expression.spread != none { checkExpression(state, expression.spread!, scope, none) }
-  for property of expression.properties { decorateObjectProperty(state, property, scope, none) }
-}
-
-function sameFixedFieldValue(actual: Expression, expected: Expression): bool {
-  case expected {
-    expectedString: StringLiteral -> {
-      case actual { actualString: StringLiteral -> { return actualString.value == expectedString.value } _ -> { return false } }
-    }
-    expectedInt: IntLiteral -> {
-      case actual { actualInt: IntLiteral -> { return actualInt.value == expectedInt.value } _ -> { return false } }
-    }
-    expectedLong: LongLiteral -> {
-      case actual { actualLong: LongLiteral -> { return actualLong.value == expectedLong.value } _ -> { return false } }
-    }
-    expectedFloat: FloatLiteral -> {
-      case actual { actualFloat: FloatLiteral -> { return actualFloat.value == expectedFloat.value } _ -> { return false } }
-    }
-    expectedDouble: DoubleLiteral -> {
-      case actual { actualDouble: DoubleLiteral -> { return actualDouble.value == expectedDouble.value } _ -> { return false } }
-    }
-    expectedChar: CharLiteral -> {
-      case actual { actualChar: CharLiteral -> { return actualChar.value == expectedChar.value } _ -> { return false } }
-    }
-    expectedBool: BoolLiteral -> {
-      case actual { actualBool: BoolLiteral -> { return actualBool.value == expectedBool.value } _ -> { return false } }
-    }
-    _: NoneLiteral -> {
-      case actual { _: NoneLiteral -> { return true } _ -> { return false } }
-    }
-    expectedMember: MemberExpression -> {
-      case actual {
-        actualMember: MemberExpression -> { return actualMember.property == expectedMember.property }
-        actualDot: DotShorthand -> { return actualDot.name == expectedMember.property }
-        _ -> { return false }
-      }
-    }
-    expectedDot: DotShorthand -> {
-      case actual {
-        actualMember: MemberExpression -> { return actualMember.property == expectedDot.name }
-        actualDot: DotShorthand -> { return actualDot.name == expectedDot.name }
-        _ -> { return false }
-      }
-    }
-    expectedUnary: UnaryExpression -> {
-      case actual {
-        actualUnary: UnaryExpression -> { return actualUnary.operator == expectedUnary.operator && sameFixedFieldValue(actualUnary.operand, expectedUnary.operand) }
-        _ -> { return false }
-      }
-    }
-    _ -> { return false }
+  for property of expression.properties {
+    if property.key != none { checkExpression(state, property.key!, scope, none) }
+    checkPropertyValue(state, property, scope, none)
   }
-  return false
 }
 
 function joinNames(names: string[]): string {

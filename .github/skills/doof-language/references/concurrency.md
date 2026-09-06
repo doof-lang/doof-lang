@@ -9,7 +9,7 @@ Core rules:
 
 - Mutable state belongs to exactly one actor domain at a time.
 - Immutable values may cross actor boundaries freely.
-- Cross-domain mutable interaction happens through actor method calls.
+- Cross-domain mutable interaction happens through actor method calls. Direct field reads/writes through `Actor<T>` are rejected, including readonly and callback fields; use a method. Fields on the inner state returned by `retire` are accessible normally.
 - Actor method calls are synchronous by default.
 - `async` supports actor method calls and isolated value-producing blocks.
 - `retire actor` drains accepted work, stops the actor, and returns the inner

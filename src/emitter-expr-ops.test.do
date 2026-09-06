@@ -71,3 +71,12 @@ export function testWiderNoneNamedEqualityAndUnitUnwrap(): none {
   Assert.stringContains(source, "take([&]() -> std::monostate")
   Assert.stringNotContains(source, "take([&]() -> void")
 }
+
+export function testQuarkFixSharedKeywordIdentifierPolicy(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function explicit(namespace: int): int => namespace\nfunction main(): int => explicit(0)",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.stringContains(result.emission!.modules[0].source, "explicit_(int32_t namespace_)")
+  Assert.stringContains(result.emission!.modules[0].source, "explicit_(0)")
+}

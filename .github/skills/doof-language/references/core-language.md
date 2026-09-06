@@ -130,7 +130,7 @@ value := score
 clamp{ value, min: 0, max: 100 }
 ```
 
-Named calls match parameters by name. Any omitted parameter must have a default. The `{` must immediately follow the callee.
+Named calls match parameters by name. Any omitted parameter must have a default. The `{` must immediately follow the callee. Positional calls fill parameter slots from left to right and may omit only a trailing suffix of defaulted parameters. A default before a required parameter cannot make that required slot optional; use named arguments to omit the earlier parameter. The same rule applies to class, struct, and actor construction.
 
 Named-call syntax is independent of capitalization: `GroupBox{title: "Account"}` calls the bound function and has its declared return type. Spaced `View { ... }` uses named construction syntax. Generic named calls retain their explicit type arguments, for example `Identity<View>{value: view}`.
 

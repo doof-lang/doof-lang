@@ -204,3 +204,40 @@ export function testSynchronizesExecutableResourceEditsAdditionsAndRemovals(): n
   Assert.equal(exists(removedOutput), false)
   removeDriverTestTree(root)
 }
+
+import { writeCoverageHtml } from "./driver"
+import { CoverageReport, CoverageFileReport, coverageFileRelativePath } from "./test-runner"
+
+export function testQuarkFixCoverageWritesInsideOutputDirectory(): none {
+  root := join([tempDirectory(), "doof-coverage-containment-test"])
+  removeDriverTestTree(root)
+  try! mkdir(root)
+  sourceRoot := join([root, "source"])
+  try! mkdir(sourceRoot)
+  absoluteSource := join([sourceRoot, "readers.do"])
+  try! writeText(absoluteSource, "function read(): int => 7")
+  report := CoverageReport { files: [CoverageFileReport {
+    path: absoluteSource, covered: 1, total: 1, percentTenths: 1000, hitLines: [1],
+  }] }
+  jsonPath := join([root, "output/compiler.json"])
+  index := writeCoverageHtml(report, jsonPath, sourceRoot)
+  page := coverageFileRelativePath(absoluteSource)
+  expectedPage := join([root, "output/compiler_files", page])
+  Assert.isTrue(expectedPage.startsWith(join([root, "output/compiler_files"]) + "/"))
+  Assert.isTrue(exists(expectedPage))
+  Assert.equal(exists(absoluteSource + ".html"), false)
+  Assert.stringContains(try! readText(index), "compiler_files/" + page)
+  Assert.stringContains(try! readText(expectedPage), "function read(): int")
+  let depth = 1
+  for i of 0..<page.length { if page[i] == '/' { depth += 1 } }
+  Assert.stringContains(try! readText(expectedPage), "../".repeat(depth) + "compiler.html")
+  removeDriverTestTree(root)
+}
+
+export function testQuarkFixEmptyCoverageCreatesIndexDirectory(): none {
+  root := join([tempDirectory(), "doof-empty-coverage-test"])
+  removeDriverTestTree(root)
+  index := writeCoverageHtml(CoverageReport {}, join([root, "nested/coverage.json"]), root)
+  Assert.isTrue(exists(index))
+  removeDriverTestTree(root)
+}

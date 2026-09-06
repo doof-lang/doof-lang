@@ -142,8 +142,10 @@ import class HttpClient from "<httplib.h>" as httplib::Client {
 
 Generated C++ namespaces for packaged Doof modules come from the package
 `doof.json` name plus the module path relative to that package root. A package
-named `hello-doof` emits `main.do` as `hello_doof::main` whether compiled
-directly or as a dependency.
+named `hello-doof` emits `main.do` as `hello_doof::main_` whether compiled
+directly or as a dependency. Namespace components escape C++ keywords with a
+trailing underscore (`explicit.do` becomes `explicit_`); `std`, `doof`, and
+`main` also receive that suffix.
 
 ### Header Resolution
 

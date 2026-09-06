@@ -1,3 +1,4 @@
+import { hasErrorDiagnostics } from "./diagnostics"
 import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
@@ -86,4 +87,30 @@ export function testNoneCarrierShorthandObject(): none {
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
   Assert.stringContains(result.emission!.modules[0].source, "(static_cast<void>(value), std::nullopt)")
+}
+
+export function testEmissionCleanupContextualFieldsAndJsonObjects(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Box { const kind = \"box\"\nvalue: int = 7\nsource: SourceLocation = @caller }\n" +
+    "function make(): Box => {}\nfunction json(): JsonValue => {}",
+  }], "/main.do")
+  Assert.equal(hasErrorDiagnostics(result.diagnostics), false)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "std::make_shared<Box>(7, std::make_shared<doof::SourceLocation>(std::string(\"main\"), 4, std::string(\"make\")))")
+  Assert.stringContains(source, "std::initializer_list<std::pair<std::string, doof::JsonValue>>{}")
+}
+
+export function testCheckerConsolidationJsonShorthandEmission(): none {
+  let previous = ""
+  for property of ["value", "value: value"] {
+    result := compile([SourceFile { path: "/main.do", source:
+      "function make(value: int): JsonValue => { " + property + " }",
+    }], "/main.do")
+    Assert.equal(result.diagnostics.length, 0)
+    source := result.emission!.modules[0].source
+    Assert.stringContains(source, "doof::json_value(value)")
+    if previous != "" { Assert.equal(source, previous) }
+    previous = source
+  }
 }

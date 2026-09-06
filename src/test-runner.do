@@ -307,9 +307,34 @@ export function renderCoverageFileHtml(file: CoverageFileReport, source: string,
     "</body></html>\n"
 }
 
-/** Produces a traversal-safe relative filename for a source coverage page. */
+/** Maps source paths to relative, URL-safe pages inside the coverage directory. */
 export function coverageFileRelativePath(path: string): string {
-  return path.replaceAll("\\", "/").replaceAll("../", "_external/") + ".html"
+  normalized := path.replaceAll("\\", "/")
+  let result = if normalized.startsWith("/") then "_absolute" else ""
+  for component of normalized.split("/") {
+    if component == "" || component == "." { continue }
+    safe := if component == ".." then "_external" else coveragePathComponent(component)
+    if result != "" { result = result + "/" }
+    result = result + safe
+  }
+  return (if result == "" then "_empty" else result) + ".html"
+}
+
+function coveragePathComponent(value: string): string {
+  // Escape marker names as well as the escape character, so distinct source
+  // names cannot collide with absolute/parent paths or encoded punctuation.
+  if value == "_absolute" || value == "_external" || value == "_empty" {
+    return "~95~" + value.substring(1, value.length)
+  }
+  let result = ""
+  for index of 0..<value.length {
+    character := value[index]
+    if character >= 'a' && character <= 'z' || character >= 'A' && character <= 'Z' ||
+        character >= '0' && character <= '9' || character == '_' || character == '-' || character == '.' {
+      result = result + string(character)
+    } else { result = result + "~" + string(int(character)) + "~" }
+  }
+  return result
 }
 
 function parseCoverageInteger(value: string): int {

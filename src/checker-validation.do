@@ -1,39 +1,8 @@
 // Graph-wide decorated-AST validation before emission.
 
-import {
-  ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
-  Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
-} from "./semantic"
-import { AnalysisResult, ModuleInfo } from "./analyzer"
-import {
-  ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, AstLocation, BinaryExpression, Block,
-  BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ClassField, ConstructExpression,
-  ConstDeclaration, ContinueStatement, DestructuringStatement, DoubleLiteral,
-  DotShorthand, EnumDeclaration, ExportDeclaration, ExportList, Expression, ExpressionStatement,
-  FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
-  IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
-  IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
-  LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
-  NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
-  ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
-  ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
-  UnaryExpression, UnionType, WhileStatement, WithBinding, WithStatement, BreakStatement,
-  YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, CaseArm, CaseExpression, CasePattern, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern,
-  TryStatement,
-  AsyncExpression, RetireExpression, ActorCreationExpression, Parameter, WeakType, TypeParameterConstraint,
-} from "./ast"
-import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
-  isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
-  noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
-  substituteTypeParams, typeParameter, unknownType,
-} from "./checker-types"
-import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
-import { findActorBoundaryViolation } from "./checker-actor-boundary"
-import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
-
+import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, MapResolvedType, PromiseType, ResolvedType, ResultResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
+import { AnalysisResult } from "./analyzer"
+import { CheckedConstruction, ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, BinaryExpression, Block, CallExpression, ClassDeclaration, ConstructExpression, ConstDeclaration, DestructuringStatement, EnumDeclaration, ExportDeclaration, Expression, ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType, IfExpression, IfStatement, ImmutableBinding, Identifier, IndexExpression, InterfaceDeclaration, LetDeclaration, LambdaExpression, MemberExpression, NamedType, ObjectLiteral, ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral, TupleLiteral, TypeAliasDeclaration, TypeAnnotation, UnaryExpression, UnionType, WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, CaseExpression, CasePattern, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern, TryStatement, AsyncExpression, RetireExpression, ActorCreationExpression, WeakType, TypeParameterConstraint } from "./ast"
 
 import { optionalResolvedType } from "./checker-symbols"
 
@@ -201,6 +170,16 @@ export function validateExpression(expression: Expression, module: string, diagn
     unary: UnaryExpression -> { validateExpression(unary.operand, module, diagnostics) }
     assignment: AssignmentExpression -> { validateExpression(assignment.target, module, diagnostics); validateExpression(assignment.value, module, diagnostics) }
     member: MemberExpression -> {
+      if member.resolvedMember == none {
+        if member.resolvedType != none && member.resolvedType!.kind != "never" {
+          addValidationError(module, member.span, "Member '" + member.property + "' has no checked member selection", diagnostics)
+        }
+      } else {
+        validateResolved(member.resolvedMember!.type_, member.span, module, "member selection", diagnostics)
+        if member.resolvedMember!.function_ != none && member.resolvedMember!.modulePath == "" {
+          addValidationError(module, member.span, "Resolved member target has no defining module", diagnostics)
+        }
+      }
       if member.resolvedNamespaceAccess {
         if member.resolvedNamespaceSymbol == none {
           addValidationError(module, member.span, "Namespace member '" + member.property + "' has no resolved symbol", diagnostics)
@@ -210,6 +189,17 @@ export function validateExpression(expression: Expression, module: string, diagn
     index: IndexExpression -> { validateExpression(index.object, module, diagnostics); validateExpression(index.index, module, diagnostics) }
     call: CallExpression -> {
       validateExpression(call.callee, module, diagnostics)
+      if call.resolvedClass != none || call.resolvedConstruction != none {
+        validateConstructionPlan(call.resolvedConstruction, call.span, module, diagnostics)
+      }
+      case call.callee {
+        member: MemberExpression -> {
+          if member.resolvedMember != none && call.resolvedFunction != member.resolvedMember!.function_ {
+            addValidationError(module, call.span, "Call target does not match checked member selection", diagnostics)
+          }
+        }
+        _ -> { }
+      }
       if call.resolvedFunction != none && call.resolvedFunctionModule == "" {
         addValidationError(module, call.span, "Resolved call target has no defining module", diagnostics)
       }
@@ -219,6 +209,7 @@ export function validateExpression(expression: Expression, module: string, diagn
     }
     array: ArrayLiteral -> { for item of array.elements { validateExpression(item, module, diagnostics) } }
     object: ObjectLiteral -> {
+      if object.resolvedClass != none { validateConstructionPlan(object.resolvedConstruction, object.span, module, diagnostics) }
       if object.spread != none { validateExpression(object.spread!, module, diagnostics) }
       for property of object.properties {
         validateResolved(property.resolvedType, property.span, module, "object property", diagnostics)
@@ -268,11 +259,9 @@ export function validateExpression(expression: Expression, module: string, diagn
       if construct.type_ != "Success" && construct.type_ != "Failure" {
         validateResolved(construct.resolvedConstructedType, construct.span, module, "constructed type", diagnostics)
         if construct.resolvedClass == none { addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved class", diagnostics) }
-        else {
-          constructor := classConstructor(construct.resolvedClass!)
-          if constructor != none && construct.resolvedConstructor == none && !spanInsideFunction(construct.span, constructor!) {
-            addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved constructor", diagnostics)
-          }
+        validateConstructionPlan(construct.resolvedConstruction, construct.span, module, diagnostics)
+        if construct.resolvedConstruction != none && construct.resolvedConstruction!.factory != construct.resolvedConstructor {
+          addValidationError(module, construct.span, "Construction of '" + construct.type_ + "' has no resolved constructor consistent with its checked plan", diagnostics)
         }
       }
       if construct.resolvedConstructor != none {
@@ -295,6 +284,7 @@ export function validateExpression(expression: Expression, module: string, diagn
     }
     retire_: RetireExpression -> { validateExpression(retire_.actor, module, diagnostics) }
     actor: ActorCreationExpression -> {
+      validateConstructionPlan(actor.resolvedConstruction, actor.span, module, diagnostics)
       if actor.resolvedConstructor != none { validateResolved(actor.resolvedConstructor!.resolvedType, actor.span, module, "actor constructor", diagnostics) }
       for argument of actor.args { validateExpression(argument, module, diagnostics) }
     }
@@ -307,17 +297,13 @@ export function validateExpression(expression: Expression, module: string, diagn
   }
 }
 
-export function classConstructor(class_: ClassDeclaration): FunctionDeclaration | none {
-  for method of class_.methods { if method.name == "constructor" { return method } }
-  return none
-}
-
-export function spanInsideFunction(span: SourceSpan, fn: FunctionDeclaration): bool {
-  case fn.body {
-    block: Block -> { return span.start.offset >= block.span.start.offset && span.end.offset <= block.span.end.offset }
-    expression: Expression -> { return span.start.offset >= expression.span.start.offset && span.end.offset <= expression.span.end.offset }
+function validateConstructionPlan(plan: CheckedConstruction | none, span: SourceSpan, module: string, diagnostics: Diagnostic[]): none {
+  if plan == none { addValidationError(module, span, "Construction has no checked plan", diagnostics); return }
+  validateResolved(plan!.owner, span, module, "construction owner", diagnostics)
+  validateResolved(plan!.signature, span, module, "construction signature", diagnostics)
+  if plan!.defaults.length != plan!.signature.params.length {
+    addValidationError(module, span, "Construction defaults do not match checked parameters", diagnostics)
   }
-  return false
 }
 
 export function validateTypeAnnotation(annotation: TypeAnnotation, module: string, diagnostics: Diagnostic[]): none {

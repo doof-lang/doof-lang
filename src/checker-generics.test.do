@@ -1,3 +1,4 @@
+import { hasErrorDiagnostics } from "./diagnostics"
 import { compile } from "./compiler"
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
@@ -34,4 +35,11 @@ export function testInterfaceBoundPreservesIsolationEffects(): none {
   let found = false
   for diagnostic of result.diagnostics { if diagnostic.message.contains("isolated") { found = true } }
   Assert.isTrue(found)
+}
+
+export function testCheckerConsolidationFieldInferenceSkipsConstants(): none {
+  result := compile([SourceFile { path: "/main.do", source: "class Box<T> { const kind = \"box\"\nvalue: T }\nfunction main(): int => Box(3).value" }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(hasErrorDiagnostics(result.diagnostics), false)
+  Assert.isTrue(result.emission != none)
 }

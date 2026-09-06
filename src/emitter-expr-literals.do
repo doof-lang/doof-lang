@@ -1,13 +1,13 @@
 // Literal, array, object, tuple, and string expression lowering.
 
 import { emitCarrierAbsence } from "./emitter-carrier-values"
+import { emitClassObject } from "./emitter-construction"
 import { ArrayLiteral, ObjectLiteral, StringLiteral, TupleLiteral } from "./ast"
-import { ArrayResolvedType, ClassType, JsonValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, TypeSubstitution } from "./semantic"
+import { ArrayResolvedType, ClassType, JsonValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, SetResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitPropertyValue, findProperty } from "./emitter-expr-utils"
-import { emitContextClassInnerType, emitContextReturnType, emitContextType, specializeEmitType } from "./emitter-types"
-import { substituteTypeParams } from "./checker-types"
+import { emitContextReturnType, emitContextType } from "./emitter-types"
 
 export function emitNoneLiteral(expected: ResolvedType | none, context: EmitContext): string {
   if expected == none { panic("None literal has no checked type in " + context.modulePath) }
@@ -107,51 +107,10 @@ export function emitObject(expression: ObjectLiteral, context: EmitContext, expe
     if !first { values = values + ", " }
     first = false
     key := quote(property.name)
-    value := if property.value == none then "doof::json_value(nullptr)" else "doof::json_value(" + emitExpression(property.value!, context) + ")"
+    value := "doof::json_value(" + emitPropertyValue(property, context) + ")"
     values = values + "{" + key + ", " + value + "}"
   }
-  if expected != none {
-    case expected! {
-      _: JsonValueResolvedType -> { return "doof::json_value(std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{" + values + "}))" }
-      _ -> { }
-    }
-  }
   return "doof::json_value(std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{" + values + "}))"
-}
-
-function emitClassObject(expression: ObjectLiteral, context: EmitContext, resolved: ClassType): string {
-  class_ := expression.resolvedClass
-  if class_ == none { panic("Object literal has no resolved class in " + context.modulePath) }
-  specialized := specializeEmitType(resolved, context)
-  let concrete: ClassType | none = none
-  case specialized {
-    classType: ClassType -> { concrete = classType }
-    _ -> { panic("Object literal has a non-class specialized type in " + context.modulePath) }
-  }
-  cppName := emitContextClassInnerType(resolved, context)
-  let values = ""
-  let first = true
-  for field of class_!.fields {
-    if field.static_ { continue }
-    for name of field.names {
-      if !first { values = values + ", " }
-      first = false
-      property := findProperty(expression.properties, name)
-      fieldType := substituteTypeParams(field.resolvedType!, class_!.typeParams, concrete!.typeArgs)
-      let value = "{}"
-      if property != none {
-        value = emitPropertyValue(property!, context, fieldType)
-      } else if field.defaultValue != none {
-        previousSubstitution := context.substitution
-        context.substitution = TypeSubstitution { names: class_!.typeParams, arguments: concrete!.typeArgs }
-        value = emitExpression(field.defaultValue!, context, fieldType)
-        context.substitution = previousSubstitution
-      }
-      values = values + value
-    }
-  }
-  if resolved.symbol.kind == "struct" { return cppName + "{" + values + "}" }
-  return "std::make_shared<" + cppName + ">(" + values + ")"
 }
 
 function emitMapObject(expression: ObjectLiteral, context: EmitContext, map: MapResolvedType): string {

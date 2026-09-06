@@ -163,6 +163,18 @@ export class AssignmentExpression {
   span: SourceSpan
 }
 
+// The member resolver records type and target in the same lookup. Synthetic
+// members and callable fields have no declaration-backed function target.
+export class CheckedMember {
+  let type_: ResolvedType | none = none
+  let function_: FunctionDeclaration | none = none
+  let modulePath: string = ""
+  let owner: ResolvedType | none = none
+  let staticOwner: ClassDeclaration | none = none
+  let instance: bool = false
+  let field: bool = false
+}
+
 export class MemberExpression {
   kind: string
   object: Expression
@@ -174,6 +186,7 @@ export class MemberExpression {
   // exported symbol so lowering can project its exact declaration.
   let resolvedNamespaceAccess: bool = false
   let resolvedNamespaceSymbol: Symbol | none = none
+  let resolvedMember: CheckedMember | none = none
   let resolvedCallableField: bool = false
   let resolvedType: ResolvedType | none = none
   span: SourceSpan
@@ -194,7 +207,21 @@ export class CallArgument {
   span: SourceSpan
 }
 
+// Checker-owned construction selection, specialized before argument checking.
+export class CheckedConstruction {
+  owner: ClassType
+  declaration: ClassDeclaration | none
+  factory: FunctionDeclaration | none
+  signature: FunctionType
+  defaults: ConstructionDefault[] = []
+}
+
+export class ConstructionDefault {
+  value: Expression | none = none
+}
+
 export class CallExpression {
+  let resolvedConstruction: CheckedConstruction | none = none
   kind: string
   callee: Expression
   args: CallArgument[]
@@ -233,6 +260,7 @@ export class ObjectProperty {
 }
 
 export class ObjectLiteral {
+  let resolvedConstruction: CheckedConstruction | none = none
   kind: string
   properties: ObjectProperty[]
   spread: Expression | none
@@ -269,6 +297,7 @@ export class IfExpression {
 }
 
 export class ConstructExpression {
+  let resolvedConstruction: CheckedConstruction | none = none
   kind: string
   type_: string
   typeArgs: TypeAnnotation[]
@@ -332,6 +361,7 @@ export class AsExpression {
 }
 
 export class ActorCreationExpression {
+  let resolvedConstruction: CheckedConstruction | none = none
   kind: string
   className: string
   args: Expression[]

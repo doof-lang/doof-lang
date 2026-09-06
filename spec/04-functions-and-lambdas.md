@@ -90,6 +90,12 @@ value := score
 clamp{ value, min: 0, max: 100 }      // shorthand for value: value
 ```
 
+Positional arguments fill parameter slots from left to right. Only an omitted
+suffix whose parameters all have defaults may be left out. A defaulted parameter
+before a required one does not let a positional call skip that required slot;
+use named arguments to omit the earlier parameter. This rule also applies to
+class, struct, and actor construction.
+
 Omitting a named parameter is only valid when that parameter has a default value:
 
 ```javascript

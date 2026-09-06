@@ -1,53 +1,28 @@
 // Expression dispatch, operators, narrowing, and assignment checking.
 
-import {
-  ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
-  Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NeverType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, Symbol,
-  StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
-} from "./semantic"
-import { AnalysisResult, ModuleInfo } from "./analyzer"
-import {
-  ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, AstLocation, BinaryExpression, Block,
-  BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ClassField, ConstructExpression,
-  ConstDeclaration, ContinueStatement, DestructuringStatement, DoubleLiteral,
-  DotShorthand, EnumDeclaration, ExportDeclaration, ExportList, Expression, ExpressionStatement,
-  FloatLiteral, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType,
-  IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration,
-  IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
-  LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
-  NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
-  ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
-  ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
-  UnaryExpression, UnionType, WhileStatement, WithBinding, WithStatement, BreakStatement,
-  YieldStatement, YieldBlockExpression, CatchExpression, CaseArm, CaseExpression, CasePattern, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern,
-  TryStatement,
-  AsyncExpression, RetireExpression, ActorCreationExpression, Parameter,
-} from "./ast"
-import {
-  interfaceBoundReceiver, actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric,
-  isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
-  neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
-  isStringInterpolatable, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType,
-} from "./checker-types"
-import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
+import { checkArguments, positionalArguments } from "./checker-arguments"
+import { resolveMember } from "./checker-resolution"
+
+import { ActorType, ArrayResolvedType, Binding, ClassType, EnumType, InterfaceType, Diagnostic, FunctionParamType, FunctionType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
+
+import { CheckedMember, ArrayLiteral, AsExpression, AssignmentExpression, BinaryExpression, Block, BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ConstructExpression, DoubleLiteral, DotShorthand, EnumDeclaration, Expression, FloatLiteral, FunctionDeclaration, IfExpression, Identifier, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral, ObjectLiteral, SourceSpan, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression, CatchExpression, CaseExpression, CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern, AsyncExpression, RetireExpression, ActorCreationExpression } from "./ast"
+import { actorType, classType, functionType, isNumeric, isJsonValueType, resultType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
+
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { asyncResultViolation } from "./checker-async"
-import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
-
 
 import { pathType } from "./checker-inference"
 import { CheckerState } from "./checker-state"
 import { isNumericOperand, isIntegerOperand, numericOperatorAllowed, numericOperationType } from "./checker-numeric"
 import { checkFunction, checkBlock } from "./checker-statements"
-import { checkCall, checkLambda, checkConstruct, callableField } from "./checker-calls"
+import { checkCall, checkLambda } from "./checker-calls"
 import { checkArray, checkObject } from "./checker-literals"
 import { fieldAssignmentBinding, resolveType, memberType, indexType } from "./checker-resolution"
 import { deprecatedNoneAlias, finish, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
-import { builtinSourceLocationType, casePatternName, methodSignature, optionalResolvedType, isNamespaceImport, isTypeOnlyNamespaceImport, namespaceMemberSymbol, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
-import { constructorForClass, staticMemberOwner } from "./checker-generics"
+import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, isTypeOnlyNamespaceImport, namespaceMemberSymbol, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
+import { resolveConstructor, validateConstructorVisibility, validateFieldArguments, checkConstruct } from "./checker-construction"
 import { checkerSemanticSpan } from "./checker-validation"
-import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
+import { isAssignableWithInterfaces } from "./checker-interfaces"
 
 export function checkCaseExpression(state: CheckerState, expression: CaseExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   subjectType := checkExpression(state, expression.subject, scope, none)
@@ -445,6 +420,13 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         _ -> { objectType = checkExpression(state, member.object, scope, none) }
       }
       if namespaceMember != none {
+        selected := CheckedMember { type_: namespaceMember }
+        if member.resolvedNamespaceSymbol != none {
+          selected.modulePath = member.resolvedNamespaceSymbol!.module
+          declaration := declarationFor(state.result, member.resolvedNamespaceSymbol!)
+          if declaration != none { case declaration! { fn: FunctionDeclaration -> { selected.function_ = fn } _ -> { } } }
+        }
+        member.resolvedMember = selected
         if namespaceMember!.kind == "unknown" {
           typeError(state, "Namespace \"" + namespaceName + "\" has no member \"" + member.property + "\"", member.span)
         }
@@ -476,15 +458,17 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         _ -> { }
       }
       diagnosticCount := state.diagnostics.length
-      memberValue := memberType(state, objectType, member.property, member.span)
+      selected := resolveMember(state, objectType, member.property, member.span)
+      member.resolvedMember = selected
+      memberValue := selected.type_!
       if memberValue.kind == "unknown" && objectType.kind != "unknown" && state.diagnostics.length == diagnosticCount {
         typeError(state, "Type \"" + typeName(objectType) + "\" has no member \"" + member.property + "\"", member.span)
       }
-      member.resolvedStaticOwner = staticMemberOwner(objectType, member.property, state.result)
+      member.resolvedStaticOwner = selected.staticOwner
       if member.resolvedStaticOwner != none && !isNamedStaticReceiver(member.object) {
         typeError(state, "Static member '" + member.property + "' cannot be accessed through an instance with '.'; use '::'", member.span)
       }
-      if member.resolvedStaticOwner == none && isNamedStaticReceiver(member.object) && declaredInstanceMember(state, objectType, member.property) {
+      if member.resolvedStaticOwner == none && isNamedStaticReceiver(member.object) && selected.instance {
         typeError(state, "Instance member '" + member.property + "' cannot be accessed through a class", member.span)
       }
       case objectType {
@@ -502,7 +486,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         }
         _ -> { }
       }
-      member.resolvedCallableField = callableField(state, objectType, member.property)
+      member.resolvedCallableField = selected.field
       if weakReceiver != none {
         case memberValue {
           _: FunctionType -> { return finish(state, expression, memberValue) }
@@ -657,36 +641,21 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         return finish(state, expression, unknownType())
       }
       inner := classType(actorCreation.className, symbol!)
-      actorCreation.resolvedConstructor = constructorForClass(inner, state.result)
-      if actorCreation.resolvedConstructor != none && actorCreation.resolvedConstructor!.private_ && inner.symbol.module != state.info!.path {
-        typeError(state, "Constructor for \"" + inner.name + "\" is private", actorCreation.span)
-      }
-      if actorCreation.resolvedConstructor != none {
-        constructorType := actorCreation.resolvedConstructor!.resolvedType ?? methodSignature(actorCreation.resolvedConstructor!, classModuleFor(state.result, inner.symbol), state.result)
-        case constructorType {
-          function_: FunctionType -> {
-            if !sameType(function_.returnType, inner) {
-              typeError(state, "Actor constructor factory for \"" + inner.name + "\" must return " + inner.name + " directly", actorCreation.span)
-            }
-          }
-          _ -> { }
+      construction := resolveConstructor(state, inner)
+      actorCreation.resolvedConstruction = construction
+      actorCreation.resolvedConstructor = construction.factory
+      if construction.factory != none {
+        validateConstructorVisibility(state, inner, construction.factory!, actorCreation.span)
+        if !sameType(construction.signature.returnType, inner) {
+          typeError(state, "Actor constructor factory for \"" + inner.name + "\" must return " + inner.name + " directly", actorCreation.span)
         }
       }
-      params := actorConstructorParameters(state, inner)
-      validateActorFieldConstructorVisibility(state, actorCreation, inner)
-      let requiredCount = 0
-      for parameter of params { if !parameter.hasDefault { requiredCount = requiredCount + 1 } }
-      if actorCreation.args.length < requiredCount || actorCreation.args.length > params.length {
-        range := if requiredCount == params.length then string(requiredCount) else string(requiredCount) + "-" + string(params.length)
-        typeError(state, "Actor \"" + actorCreation.className + "\" expects " + range + " constructor argument(s) but got " + string(actorCreation.args.length), actorCreation.span)
-      }
+      params := construction.signature.params
+      validateFieldArguments(state, construction, inner, positionalArguments(actorCreation.args))
+      checkArguments(state, positionalArguments(actorCreation.args), params, scope, actorCreation.span,
+        "Actor \"" + actorCreation.className + "\"", "Actor constructor argument")
       for i of 0..<actorCreation.args.length {
-        let expectedArgument: ResolvedType | none = none
-        if i < params.length { expectedArgument = optionalResolvedType(params[i].type_) }
-        actual := checkExpression(state, actorCreation.args[i], scope, expectedArgument)
-        if expectedArgument != none && !isAssignableWithInterfaces(state.result, actual, expectedArgument!) {
-          typeError(state, "Actor constructor argument " + string(i + 1) + " has type " + typeName(actual) + "; expected " + typeName(expectedArgument!), actorCreation.args[i].span)
-        }
+        actual := actorCreation.args[i].resolvedType ?? unknownType()
         violation := findActorBoundaryViolation(state.result, actual)
         if violation != none {
           typeError(state,
@@ -726,61 +695,6 @@ function weakAccessTarget(type_: ResolvedType): ResolvedType {
   return type_
 }
 
-function actorConstructorParameters(state: CheckerState, inner: ClassType): FunctionParamType[] {
-  constructor := constructorForClass(inner, state.result)
-  if constructor != none {
-    let params: FunctionParamType[] = []
-    for parameter of constructor!.params {
-      params.push(FunctionParamType {
-        name: parameter.name,
-        type_: parameter.resolvedType ?? unknownType(),
-        hasDefault: parameter.defaultValue != none,
-      })
-    }
-    return params
-  }
-  let params: FunctionParamType[] = []
-  declaration := declarationFor(state.result, inner.symbol)
-  if declaration == none { return params }
-  case declaration! {
-    class_: ClassDeclaration -> {
-      for field of class_.fields {
-        if field.static_ || field.const_ { continue }
-        for name of field.names {
-          params.push(FunctionParamType {
-            name,
-            type_: memberType(state, inner, name, field.span, false),
-            hasDefault: field.defaultValue != none,
-          })
-        }
-      }
-    }
-    _ -> { }
-  }
-  return params
-}
-
-function validateActorFieldConstructorVisibility(state: CheckerState, expression: ActorCreationExpression, inner: ClassType): none {
-  if expression.resolvedConstructor != none || inner.symbol.module == state.info!.path { return }
-  declaration := declarationFor(state.result, inner.symbol)
-  if declaration == none { return }
-  case declaration! {
-    owner: ClassDeclaration -> {
-      let parameterIndex = 0
-      for field of owner.fields {
-        if field.static_ || field.const_ { continue }
-        for name of field.names {
-          if parameterIndex < expression.args.length && field.private_ {
-            typeError(state, "Field '" + name + "' is private to module '" + inner.symbol.module + "'", expression.args[parameterIndex].span)
-          }
-          parameterIndex += 1
-        }
-      }
-    }
-    _ -> { }
-  }
-}
-
 function isNamedStaticReceiver(expression: Expression): bool {
   case expression {
     identifier: Identifier -> {
@@ -807,29 +721,6 @@ function enumVariantMember(state: CheckerState, receiver: ResolvedType, property
           _ -> { }
         }
       }
-    }
-    _ -> { }
-  }
-  return false
-}
-
-function declaredInstanceMember(state: CheckerState, receiver: ResolvedType, property: string): bool {
-  let symbol: Symbol | none = none
-  case interfaceBoundReceiver(receiver) {
-    class_: ClassType -> { symbol = class_.symbol }
-    interface_: InterfaceType -> { symbol = interface_.symbol }
-    _ -> { return false }
-  }
-  declaration := declarationFor(state.result, symbol!)
-  if declaration == none { return false }
-  case declaration! {
-    class_: ClassDeclaration -> {
-      for field of class_.fields { for name of field.names { if name == property && !field.static_ { return true } } }
-      for method of class_.methods { if method.name == property && !method.static_ { return true } }
-    }
-    interface_: InterfaceDeclaration -> {
-      for field of interface_.fields { if field.name == property { return true } }
-      for method of interface_.methods { if method.name == property && !method.static_ { return true } }
     }
     _ -> { }
   }
@@ -866,8 +757,9 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
     }
     class_: ClassType -> {
       diagnosticCount := state.diagnostics.length
-      value := memberType(state, class_, expression.name, expression.span)
-      if staticMemberOwner(class_, expression.name, state.result) == none {
+      selected := resolveMember(state, class_, expression.name, expression.span)
+      value := selected.type_!
+      if selected.staticOwner == none {
         if state.diagnostics.length == diagnosticCount {
           typeError(state, "Type \"" + class_.name + "\" has no static member \"" + expression.name + "\"", expression.span)
         }
@@ -1229,8 +1121,10 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       }
     }
     member: MemberExpression -> {
-      objectType := checkExpression(state, member.object, scope, none)
-      targetType := memberType(state, objectType, member.property, member.span)
+      // The target was already checked above. In particular, do not resolve an
+      // inaccessible actor field again or add assignment errors to that failure.
+      if targetType.kind == "unknown" { return finish(state, expression, value) }
+      objectType := member.object.resolvedType ?? unknownType()
       fieldBinding := fieldAssignmentBinding(state, objectType, member.property, targetType, member.span)
       if fieldBinding != none { validateAssignmentBinding(state, fieldBinding!, member.span) }
       else if objectType.kind != "unknown" && objectType.kind != "never" { typeError(state, "Member '" + member.property + "' is not an assignable field", member.span) }
@@ -1243,7 +1137,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
 }
 
 function validateAssignmentOperator(state: CheckerState, operator: string, target: ResolvedType, value: ResolvedType, span: SourceSpan): none {
-  if operator == "=" { return }
+  if operator == "=" || target.kind == "unknown" || value.kind == "unknown" { return }
   if operator == "??=" {
     if !isFallibleType(target) { typeError(state, "Operator '??=' requires a nullable or Result assignment target, got " + typeName(target), span); return }
     case target {

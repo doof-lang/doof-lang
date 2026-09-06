@@ -1028,7 +1028,9 @@ show({ kind: .Failure, error: "timeout" })
 
 Doof provides built-in generic collection types and supports generic type aliases.
 Generic alias parameters remain in scope throughout the aliased type, including
-inside union members:
+inside union members. Alias expansion must terminate; direct and indirect cyclic
+aliases are errors. The same type-argument arity rules apply to forward and
+recursive function signatures as to other annotation sites:
 
 ```javascript
 type Event<T> = Message<T> | Ready<T> | Closed<T>

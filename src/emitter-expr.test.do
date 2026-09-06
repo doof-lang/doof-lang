@@ -95,3 +95,16 @@ export function testWiderNoneUnitValuesNeedNoExpectedType(): none {
   Assert.isTrue(result.emission != none)
   Assert.stringContains(result.emission!.modules[0].source, "std::make_tuple((static_cast<void>(effect()), std::monostate{}), 1)")
 }
+
+export function testEmissionCleanupThisRetainsClassAndStructCarriers(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class C { self(): C => this }\nstruct S { self(): S => this }\n" +
+    "import class Native from \"native.hpp\" { self(): Native => this }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "C::self() {\n    return this->shared_from_this();")
+  Assert.stringContains(source, "S::self() {\n    return *this;")
+  Assert.stringContains(source, "Native::self() {\n    return this->shared_from_this();")
+}

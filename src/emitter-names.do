@@ -138,7 +138,7 @@ function namespacePath(path: string): string {
 function namespaceComponent(value: string): string {
   result := value.replaceAll("-", "_").replaceAll(".", "_")
   if result == "std" || result == "doof" || result == "main" { return result + "_" }
-  return result
+  return cppIdentifier(result)
 }
 
 export function moduleHeaderName(path: string): string {
@@ -147,4 +147,31 @@ export function moduleHeaderName(path: string): string {
 
 export function moduleSourceName(path: string): string {
   return moduleStem(path) + ".cpp"
+}
+
+// One keyword policy for namespace components and emitted value identifiers.
+export function cppIdentifier(name: string): string {
+  if isCppKeyword(name) { return name + "_" }
+  if name == "stdin" { return "stdin_" }
+  if name == "stdout" { return "stdout_" }
+  if name == "stderr" { return "stderr_" }
+  return name
+}
+
+function isCppKeyword(name: string): bool {
+  return name == "alignas" || name == "alignof" || name == "and" || name == "and_eq" || name == "asm" || name == "auto" ||
+    name == "bitand" || name == "bitor" || name == "bool" || name == "break" || name == "case" || name == "catch" ||
+    name == "char" || name == "char8_t" || name == "char16_t" || name == "char32_t" || name == "class" || name == "compl" ||
+    name == "concept" || name == "const" || name == "consteval" || name == "constexpr" || name == "constinit" || name == "const_cast" ||
+    name == "continue" || name == "co_await" || name == "co_return" || name == "co_yield" || name == "decltype" || name == "default" ||
+    name == "delete" || name == "do" || name == "double" || name == "dynamic_cast" || name == "else" || name == "enum" ||
+    name == "explicit" || name == "export" || name == "extern" || name == "false" || name == "float" || name == "for" ||
+    name == "friend" || name == "goto" || name == "if" || name == "inline" || name == "int" || name == "long" ||
+    name == "mutable" || name == "namespace" || name == "new" || name == "noexcept" || name == "not" || name == "not_eq" ||
+    name == "nullptr" || name == "operator" || name == "or" || name == "or_eq" || name == "private" || name == "protected" ||
+    name == "public" || name == "register" || name == "reinterpret_cast" || name == "requires" || name == "return" || name == "short" ||
+    name == "signed" || name == "sizeof" || name == "static" || name == "static_assert" || name == "struct" || name == "switch" ||
+    name == "template" || name == "this" || name == "thread_local" || name == "throw" || name == "true" || name == "try" ||
+    name == "typedef" || name == "typeid" || name == "typename" || name == "union" || name == "unsigned" || name == "using" ||
+    name == "virtual" || name == "void" || name == "volatile" || name == "wchar_t" || name == "while" || name == "xor" || name == "xor_eq"
 }

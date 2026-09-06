@@ -1,17 +1,11 @@
 // Transitive mutable-global effect analysis for isolated and actor-dispatched code.
 
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import {
-  ActorType, Binding, Diagnostic, InterfaceType, ResolvedType, SemanticLocation, SemanticSpan,
-} from "./semantic"
-import {
-  ActorCreationExpression, AsyncExpression, Block, CallExpression, ClassDeclaration, ConstDeclaration,
-  ExportDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding,
-  InterfaceDeclaration, LetDeclaration, MemberExpression, ReadonlyDeclaration, SourceSpan, Statement,
-} from "./ast"
+import { ActorType, Binding, Diagnostic, InterfaceType, SemanticLocation, SemanticSpan } from "./semantic"
+import { ActorCreationExpression, AsyncExpression, Block, CallExpression, ClassDeclaration, ConstDeclaration, ExportDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, LetDeclaration, MemberExpression, ReadonlyDeclaration, SourceSpan, Statement } from "./ast"
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { validateAsyncBlock } from "./checker-async"
-import { collectBlockExpressions, collectNestedExpressions, collectStatementExpressions } from "./ast-walk"
+import { collectExpressionTree, collectBlockExpressions, collectStatementExpressions } from "./ast-walk"
 import { declarationFor } from "./checker-symbols"
 
 export class IsolationReason {
@@ -158,13 +152,6 @@ function allExpressions(roots: Expression[]): Expression[] {
   let result: Expression[] = []
   for root of roots { collectExpressionTree(root, result) }
   return result
-}
-
-function collectExpressionTree(expression: Expression, result: Expression[]): none {
-  result.push(expression)
-  let nested: Expression[] = []
-  collectNestedExpressions(expression, nested)
-  for child of nested { collectExpressionTree(child, result) }
 }
 
 function functionExpressionRoots(fn: FunctionDeclaration): Expression[] {

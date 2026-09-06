@@ -9,6 +9,11 @@ is the implicit root actor domain. Mutable state belongs to exactly one actor
 domain at a time. Immutable values may be shared freely across actor domains.
 
 Cross-domain mutable interaction happens only through actor method calls.
+Fields of the wrapped class cannot be read or written directly through an
+`Actor<T>` handle, including readonly fields and fields containing callbacks.
+Use an actor method to read or update state. A method accesses its own fields
+normally through `this`; after `retire` returns the inner `T`, its fields are
+ordinary local state again.
 
 ---
 

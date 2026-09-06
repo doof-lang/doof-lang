@@ -200,3 +200,17 @@ export function testBuildsCoverageReportFromRuntimeOutput(): none {
   Assert.equal(coverageFileRelativePath("../shared/math.do"), "_external/shared/math.do.html")
   Assert.equal(stripCoverageLines("before\n__COV__ 3 1\nafter\n"), "before\nafter")
 }
+
+import { join } from "std/path"
+
+export function testQuarkFixCoveragePagesStayRelative(): none {
+  let pages: string[] = []
+  for path of ["/tests/readers.do", "../shared/math.do", "..", "a/../../b.do", "C:\\src\\file.do", "//server/share/file.do", "src/a#b?.do", "src/a~35~b.do", "src/naïve.do", "_absolute/tests/readers.do", "_external/shared/math.do"] {
+    page := coverageFileRelativePath(path)
+    Assert.isTrue(join(["/reports/coverage_files", page]).startsWith("/reports/coverage_files/"))
+    Assert.equal(page.contains("#"), false)
+    Assert.equal(page.contains("?"), false)
+    for previous of pages { Assert.isTrue(previous != page) }
+    pages.push(page)
+  }
+}

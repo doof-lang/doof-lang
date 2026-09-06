@@ -151,3 +151,11 @@ export function collectNestedExpressions(expression: Expression, result: Express
     _ -> { }
   }
 }
+
+// Preorder traversal for analyses that deliberately include every expression.
+export function collectExpressionTree(expression: Expression, result: Expression[]): none {
+  result.push(expression)
+  let nested: Expression[] = []
+  collectNestedExpressions(expression, nested)
+  for child of nested { collectExpressionTree(child, result) }
+}

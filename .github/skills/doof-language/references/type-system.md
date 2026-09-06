@@ -457,3 +457,9 @@ Contextual `byte` literals must fit 0–255. Collection/string properties such a
 
 Shift results use the promoted left operand type. Exponentiation with an
 integral operand returns `double`; otherwise it uses float/double promotion.
+
+## Annotation consistency
+
+Type aliases may be generic, but direct and indirect cyclic alias expansion is
+invalid. Forward and recursive function signatures obey the same type-argument
+arity rules as other annotations; declaration order does not relax those rules.

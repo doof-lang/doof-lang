@@ -1,6 +1,8 @@
 // Actor, Promise, async-call, and retirement lowering.
 
-import { ActorCreationExpression, AsyncExpression, Block, CallExpression, ClassDeclaration, ExportDeclaration, Expression, FunctionDeclaration, MemberExpression, RetireExpression, Statement } from "./ast"
+import { emitActorConstruction } from "./emitter-construction"
+
+import { ActorCreationExpression, AsyncExpression, Block, CallExpression, Expression, MemberExpression, RetireExpression } from "./ast"
 import { ActorType, FunctionType, PromiseType, ResolvedType } from "./semantic"
 import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -8,80 +10,7 @@ import { emitBlock } from "./emitter-stmt"
 import { emitClassInnerType, emitContextReturnType } from "./emitter-types"
 
 export function emitActorCreation(expression: ActorCreationExpression, context: EmitContext): string {
-  if expression.resolvedType == none { panic("Actor creation is missing its resolved type") }
-  case expression.resolvedType! {
-    actor: ActorType -> {
-      className := emitClassInnerType(actor.innerClass, context.modulePath)
-      if expression.resolvedConstructor != none {
-        factory := emitActorConstructorFactory(className, expression.resolvedConstructor!, expression, context)
-        return "std::make_shared<doof::Actor<" + className + ">>(" + factory + ")"
-      }
-      let args = ""
-      declaration := actorClassDeclaration(actor.innerClass.symbol.module, actor.innerClass.symbol.name, context)
-      if declaration == none { panic("Actor construction is missing class declaration " + actor.innerClass.name) }
-      let argumentIndex = 0
-      for field of declaration!.fields {
-        if field.static_ || field.const_ { continue }
-        for name of field.names {
-          if args != "" { args = args + ", " }
-          if argumentIndex < expression.args.length {
-            args = args + emitExpression(expression.args[argumentIndex], context, field.resolvedType)
-          } else {
-            if field.defaultValue == none { panic("Actor constructor is missing argument " + name) }
-            previous := context.sourceLocationSpanOverride
-            context.sourceLocationSpanOverride = SourceLocationSpanOverride { span: expression.span }
-            args = args + emitExpression(field.defaultValue!, context, field.resolvedType)
-            context.sourceLocationSpanOverride = previous
-          }
-          argumentIndex = argumentIndex + 1
-        }
-      }
-      return "std::make_shared<doof::Actor<" + className + ">>(" + className + "{" + args + "})"
-    }
-    _ -> { panic("Actor creation does not have Actor<T> type") }
-  }
-  return ""
-}
-
-function actorClassDeclaration(modulePath: string, name: string, context: EmitContext): ClassDeclaration | none {
-  for program of context.allPrograms {
-    for statement of program.statements {
-      declaration := actorClassFromStatement(statement)
-      if declaration != none && declaration!.name == name && declaration!.resolvedSymbol != none && declaration!.resolvedSymbol!.module == modulePath { return declaration }
-    }
-  }
-  return none
-}
-
-function actorClassFromStatement(statement: Statement): ClassDeclaration | none {
-  case statement {
-    class_: ClassDeclaration -> { return class_ }
-    export_: ExportDeclaration -> {
-      case export_.declaration {
-        class_: ClassDeclaration -> { return class_ }
-        _ -> { }
-      }
-    }
-    _ -> { }
-  }
-  return none
-}
-
-function emitActorConstructorFactory(className: string, constructor: FunctionDeclaration, expression: ActorCreationExpression, context: EmitContext): string {
-  let result = className + "::constructor("
-  for i of 0..<constructor.params.length {
-    if i > 0 { result = result + ", " }
-    parameter := constructor.params[i]
-    if i < expression.args.length { result = result + emitExpression(expression.args[i], context, parameter.resolvedType) }
-    else {
-      if parameter.defaultValue == none { panic("Actor constructor is missing argument " + parameter.name) }
-      previous := context.sourceLocationSpanOverride
-      context.sourceLocationSpanOverride = SourceLocationSpanOverride { span: expression.span }
-      result = result + emitExpression(parameter.defaultValue!, context, parameter.resolvedType)
-      context.sourceLocationSpanOverride = previous
-    }
-  }
-  return result + ")"
+  return emitActorConstruction(expression, context)
 }
 
 export function emitAsyncExpression(expression: AsyncExpression, context: EmitContext): string {

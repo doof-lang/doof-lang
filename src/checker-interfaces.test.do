@@ -35,3 +35,9 @@ export function testCheckerReviewInvariantWritableFields(): none {
   readOnlyView := checked("interface View { value: long }\nclass IntBox { value: int }\nfunction read(): long { box: View := IntBox { value: 1 }\nreturn box.value }")
   Assert.equal(readOnlyView.diagnostics.length, 0)
 }
+
+export function testSecondConsolidationGenericInterfaceSignatureBeforeBodies(): none {
+  result := checked("interface Reader<T> { read(): T }\nfunction use(reader: Reader<int>): int => reader.read()\nclass Box<T> { value: T\nread(): T => value }\nfunction main(): int => use(Box<int> { value: 3 })")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+}

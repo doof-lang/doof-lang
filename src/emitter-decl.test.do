@@ -125,3 +125,39 @@ export function testCombinationNoneGenericExpressionReturn(): none {
   Assert.stringContains(result.source, "return static_cast<void>(value);")
   Assert.stringContains(result.source, "return value;")
 }
+
+export function testEmissionCleanupUnifiesNeverCallableBodies(): none {
+  result := emit(
+    "function stop(): never => panic(\"stop\")\n" +
+    "function stopBlock(): never { panic(\"stop\") }\n" +
+    "class C { stop(): never => panic(\"stop\")\nstopBlock(): never { panic(\"stop\") } }\n" +
+    "struct S { stop<T>(value: T): never => panic(\"stop\") }\n" +
+    "function use(value: S): never => value.stop(3)",
+  )
+  Assert.stringContains(result.source, "C::stop() {\n    doof::panic(std::string(\"stop\"));\n    doof::panic(\"never function returned\");")
+  Assert.stringContains(result.source, "C::stopBlock()")
+  Assert.stringContains(result.source, "S::stop__int(int32_t value)")
+  Assert.stringNotContains(result.source, "return doof::panic(")
+}
+
+export function testEmissionCleanupRejectsCompletingNeverMethods(): none {
+  for body of ["=> 3", "{}"] {
+    result := compile([SourceFile { path: "/main.do", source: "class C { stop(): never " + body + " }" }], "/main.do")
+    Assert.isTrue(hasErrorDiagnostics(result.diagnostics))
+    let actionable = false
+    for diagnostic of result.diagnostics { if diagnostic.message.contains("never") { actionable = true } }
+    Assert.isTrue(actionable)
+  }
+}
+
+export function testEmissionCleanupRestoresCallableCaptureAndReturnContext(): none {
+  result := emit(
+    "class C { make(): (): int { let count = 0\nreturn (): int => { count += 1\nreturn count } }\n" +
+    "plain(count: int): int => count\nunit<T>(value: T): T => value }\n" +
+    "function main(): none { C {}.unit(none)\nC {}.unit(3) }",
+  )
+  Assert.stringContains(result.source, "auto count = std::make_shared<int32_t>(0);")
+  Assert.stringContains(result.source, "C::plain(int32_t count) {\n    return count;")
+  Assert.stringContains(result.source, "return static_cast<void>(value);")
+  Assert.stringContains(result.source, "return value;")
+}

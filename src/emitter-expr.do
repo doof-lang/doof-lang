@@ -10,7 +10,8 @@ import { ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpressi
 import { ClassType, JsonValueResolvedType, NoneType, PrimitiveType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitAs, emitAssignment, emitBinary, emitIdentifier, emitIndex, emitMember, emitUnary, cppIdentifier as emitCppIdentifier } from "./emitter-expr-ops"
-import { emitCall, emitConstruct } from "./emitter-expr-calls"
+import { emitCall } from "./emitter-expr-calls"
+import { emitConstruct } from "./emitter-construction"
 import { emitArray, emitChar, emitNoneLiteral, emitObject, emitString, emitTuple } from "./emitter-expr-literals"
 import { emitCaseExpression, emitCatchExpression, emitDotShorthand, emitIfExpression, emitYieldBlockExpression } from "./emitter-expr-control"
 import { emitLambdaExpression } from "./emitter-expr-lambda"
@@ -67,7 +68,6 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
         }
       }
       if structThis { value = "*this" }
-      else if context.currentClassNative { value = "this->shared_from_this()" }
       else { value = "this->shared_from_this()" }
     }
     _ -> { panic("Unsupported expression in initial C++ emitter: " + expression.kind) }

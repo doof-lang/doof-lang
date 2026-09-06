@@ -9,7 +9,7 @@ import { emitExpression } from "./emitter-expr"
 import { emitNoneLiteral, emitStringConstant, quote } from "./emitter-expr-literals"
 import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
 import { emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
-import { moduleDiagnosticPath } from "./emitter-names"
+import { cppIdentifier as emittedCppIdentifier, moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, sameType } from "./checker-types"
 
 /** Lowers checked `as` conversion to a Result without evaluating its source twice. */
@@ -246,31 +246,7 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
   return cppIdentifier(expression.name)
 }
 
-export function cppIdentifier(name: string): string {
-  if isCppKeyword(name) { return name + "_" }
-  if name == "stdin" { return "stdin_" }
-  if name == "stdout" { return "stdout_" }
-  if name == "stderr" { return "stderr_" }
-  return name
-}
-
-function isCppKeyword(name: string): bool {
-  return name == "alignas" || name == "alignof" || name == "and" || name == "and_eq" || name == "asm" || name == "auto" ||
-    name == "bitand" || name == "bitor" || name == "bool" || name == "break" || name == "case" || name == "catch" ||
-    name == "char" || name == "char8_t" || name == "char16_t" || name == "char32_t" || name == "class" || name == "compl" ||
-    name == "concept" || name == "const" || name == "consteval" || name == "constexpr" || name == "constinit" || name == "const_cast" ||
-    name == "continue" || name == "co_await" || name == "co_return" || name == "co_yield" || name == "decltype" || name == "default" ||
-    name == "delete" || name == "do" || name == "double" || name == "dynamic_cast" || name == "else" || name == "enum" ||
-    name == "explicit" || name == "export" || name == "extern" || name == "false" || name == "float" || name == "for" ||
-    name == "friend" || name == "goto" || name == "if" || name == "inline" || name == "int" || name == "long" ||
-    name == "mutable" || name == "namespace" || name == "new" || name == "noexcept" || name == "not" || name == "not_eq" ||
-    name == "nullptr" || name == "operator" || name == "or" || name == "or_eq" || name == "private" || name == "protected" ||
-    name == "public" || name == "register" || name == "reinterpret_cast" || name == "requires" || name == "return" || name == "short" ||
-    name == "signed" || name == "sizeof" || name == "static" || name == "static_assert" || name == "struct" || name == "switch" ||
-    name == "template" || name == "this" || name == "thread_local" || name == "throw" || name == "true" || name == "try" ||
-    name == "typedef" || name == "typeid" || name == "typename" || name == "union" || name == "unsigned" || name == "using" ||
-    name == "virtual" || name == "void" || name == "volatile" || name == "wchar_t" || name == "while" || name == "xor" || name == "xor_eq"
-}
+export function cppIdentifier(name: string): string { return emittedCppIdentifier(name) }
 
 export function emitUnary(expression: UnaryExpression, context: EmitContext): string {
   if expression.operator == "try!" || expression.operator == "try?" {
