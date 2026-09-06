@@ -79,3 +79,46 @@ export function testCheckerReviewNumericOperatorPromotions(): none {
   invalid := checked("function bad<T: int | long>(a: T): T => a ** a")
   Assert.isTrue(invalid.diagnostics.length > 0)
 }
+
+export function testRestrictedPathInference(): none {
+  for body of [
+    "x := if flag then 1 else \"text\"",
+    "x := if flag then \"text\" else 1",
+    "x := case flag { true -> 1, false -> \"text\" }",
+    "x := if flag then [1] else readonly [2]",
+    "x := (): int | string => if flag then true else 1",
+    "x := () => if flag then 1 else \"text\"",
+    "value: int | none := none\nx := value ?? \"text\"",
+  ] {
+    result := checked("function run(flag: bool): none { " + body + " }")
+    Assert.isTrue(result.diagnostics.length > 0)
+    Assert.isTrue(result.diagnostics[0].span.start.line > 0)
+  }
+  for body of [
+    "x := if flag then 1 else none\ny: int | none := x",
+    "x := if flag then none else 1\ny: int | none := x",
+    "x := if flag then 1 else 2L\ny: long := x",
+    "x := if flag then panic(\"stop\") else 1\ny: int := x",
+    "x := case flag { true -> none, false -> 1 }\ny: int | none := x",
+    "x: int | string := if flag then 1 else \"text\"",
+    "x: int | string := case flag { true -> 1, false -> \"text\" }",
+    "value: int | string := 1\nx := if flag then value else none",
+    "value: int | none := none\nx: int | string := value ?? \"text\"",
+    "value: int | none := none\nx := value ?? 2L\ny: long := x",
+    "value: Result<int, string> := Success { value: 1 }\nx := value ?? 2\ny: int := x",
+  ] {
+    result := checked("function run(flag: bool): none { " + body + " }")
+    for diagnostic of result.diagnostics { println(diagnostic.message) }
+    Assert.equal(result.diagnostics.length, 0)
+  }
+}
+
+export function testRestrictedCatchInference(): none {
+  prefix := "function one(): Result<int, string> => Failure { error: \"bad\" }\nfunction two(): Result<int, int> => Failure { error: 1 }\n"
+  invalid := checked(prefix + "function run(): none { error := catch { try one()\ntry two() } }")
+  Assert.isTrue(invalid.diagnostics.length > 0)
+  Assert.stringContains(invalid.diagnostics[0].message, "provide an explicit type annotation")
+  valid := checked(prefix + "function run(): none { error: string | int | none := catch { try one()\ntry two() }\nsingle := catch { try one() }\nx: string | none := single }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+}

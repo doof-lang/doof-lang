@@ -55,7 +55,7 @@ export function emitStatement(statement: Statement, level: int = 1, context: Emi
       if context.valueYieldReturnsVoid {
         return sourceMark + coverageMark + ind + emitExpression(yield_.value, context) + ";\n" + ind + "return;\n"
       }
-      return sourceMark + coverageMark + ind + "return " + emitExpression(yield_.value, context) + ";\n"
+      return sourceMark + coverageMark + ind + "return " + emitExpression(yield_.value, context, context.valueYieldType) + ";\n"
     }
     expression: ExpressionStatement -> { return sourceMark + coverageMark + ind + emitExpression(expression.expression, context) + ";\n" }
     if_: IfStatement -> { return sourceMark + coverageMark + emitIf(if_, level, context) }

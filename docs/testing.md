@@ -34,6 +34,17 @@ modules in that shared graph perform module-level initialization in each test
 process. A test file that declares `mock import` receives its own isolated
 harness and executable so its substitutions cannot affect another root.
 
+Separate compiler invocations for one project queue on its `build/.doof.lock`
+(or configured `build.buildDir`). The lock covers compilation and all test
+workers, including coverage and custom output directories. `--list` remains
+read-only and does not wait. Parallel workers inside the owning invocation
+continue to run normally.
+
+After rebuilding the compiler, the POSIX process regression
+`python3 scripts/project-build-lock.test.py <compiler>` verifies waiting builds
+and tests, cancellation of a waiter, independent projects, and lock ownership
+through test-worker execution.
+
 On macOS, a package with `build.target = "wasm"` or an explicit `--target wasm`
 builds the generated harness as a standalone Emscripten Wasm command. Each test
 runs in a fresh process, JavaScriptCore context, and WebAssembly instance, so

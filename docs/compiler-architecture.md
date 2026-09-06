@@ -68,7 +68,7 @@ the row from left to right.
 | Interfaces | interface/class declarations and resolved nominal types | `checker-interfaces.do` validates structural conformance and discovers the closed implementor set | `emitter-types.do` and declaration/JSON emitters lower interface variants |
 | JSON and reflection | annotations/declarations in AST; eligibility in `json-semantics.do` | checker advertises only supported synthetic members and records metadata demand | `emitter-json.do`, `emitter-metadata.do`, and `emitter-wasm.do` generate definitions/adapters |
 | Actors and isolation | actor/promise types and actor syntax | `checker-actor-boundary.do`, `checker-actor-lifecycle.do`, and `checker-isolation.do` own call boundaries, retirement diagnostics, and graph-wide effects | `emitter-expr-actor.do` and lambda/call emitters lower checked operations; the bounded runtime scheduler executes isolated function calls, async blocks, and serial actor messages |
-| Closures and mutable capture | lambda/binding AST and checker bindings | checker establishes callable types and retains lexical bindings on identifier and shorthand-property nodes | `emitter-expr-lambda.do` finds escaping captures, including uses nested in shorthand construction, and boxes mutable storage |
+| Closures and mutable capture | lambda/binding AST and checker bindings | checker establishes callable types and retains lexical bindings on identifier and shorthand-property nodes, including Result payloads | `emitter-expr-lambda.do` finds escaping captures, including uses nested in shorthand construction, and boxes mutable storage; Result construction emits shorthand through a decorated identifier using the checked binding and type |
 | Module initialization | top-level checked declarations/statements and compiler entry mode | `checker-module-initialization.do` validates construction-only expressions and direct storage | `emitter-module.do`, `emitter-header.do`, and `emitter-decl.do` emit direct storage and graph-ordered execution |
 | Packages and standard inputs | local-path manifests in `package-manifest.do`; authoritative bundled stdlib index in `stdlib-bundle.do` | the driver registers reached local and standard packages | bundle materialization and std-only preparation feed `emitter-project.do` |
 | Incremental native builds | normalized native plan and emitted modules | `native-build.do` creates stable tasks; `pkg-config.do` normalizes flags | `native-build-driver.do` fingerprints arguments/dependencies, persists content fingerprints plus metadata, and runs dirty work |
@@ -150,10 +150,22 @@ deterministic.
 
 ## Incremental cache boundary
 
+Before reading or mutating shared build state, the driver retains an exclusive
+`std/fs.File` lock in the project's configured build directory. The lock path
+does not depend on command output overrides. Test invocations retain their locks
+through all worker execution and coverage output; multiple roots are locked in
+sorted, deduplicated order. `project-build-lock.do` owns acquisition and the
+waiting diagnostic. The handle lifetime releases the OS lock, including on
+early returns; the stable lock file is never unlinked during normal operation.
+
 Incrementality deliberately stops at generated artifacts. The persistent
 frontend cache contains source-resolution probes (including missing exact-path
 probes), content hashes, relevant manifests/configuration, module output names,
-and emission fingerprints. It never serializes AST, symbol, binding, or checker
+and emission fingerprints. Configuration includes a SHA-256 digest of the running
+compiler executable, so replacing its bytes invalidates both checked graph and
+module emission reuse even at the same install path. Identical compiler copies
+retain the same identity. If executable discovery or reading fails, the driver
+disables both reuse paths for that invocation. It never serializes AST, symbol, binding, or checker
 objects.
 
 An exact graph/configuration hit skips checking and emission. After any input
@@ -166,6 +178,11 @@ Missing, corrupt, or version-mismatched cache files are ordinary cache misses.
 Clean compilation semantics remain authoritative.
 Changes to checking or lowering semantics must bump `FRONTEND_SEMANTIC_ABI`
 even when the serialized JSON shape is unchanged.
+
+After rebuilding the development compiler, run
+`sh scripts/frontend-compiler-cache.test.sh <old-compiler> <new-compiler>` to
+verify same-path replacement invalidates checked state and emitted files while
+unchanged compiler bytes continue to reuse them.
 
 ## Adding or changing a language concept
 
@@ -184,3 +201,14 @@ Before considering a feature complete:
    map if the cross-phase path changed.
 
 Adjacent braces produce a named-call AST even for uppercase callees; spaced uppercase braces retain named-construction parsing. The checker resolves the call target and its return type through ordinary call checking.
+
+Multi-path expression joins are owned by `checker-inference.do`. The expression
+checker supplies explicit context and branch types; the statement checker uses
+the same rule for yields. `Scope.yieldExpectedType` retains the explicit
+contract separately from accumulated `yieldType`. Resolved expression types
+remain the emitter's carrier input; general union construction and existing
+union member lookup remain in the type and resolution modules.
+Yield emission carries that decorated block result through
+`EmitContext.valueYieldType`, restoring the outer context after nested blocks.
+Yield, case-arm, and async block owners set it; the statement emitter uses it
+for contextual value conversion, including the representation of `none`.

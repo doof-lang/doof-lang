@@ -17,6 +17,19 @@ doof package <path> [-o <build-directory>] [--distdir <directory>]
 doof test <path> [filter] [--list] [--coverage] [--target wasm]
 ```
 
+Commands that write compiler state (`check`, `emit`, `build`, `run`, `profile`,
+`package`, and executing tests) hold an exclusive project lock at
+`<project>/<build.buildDir>/.doof.lock` (normally `build/.doof.lock`). A busy
+command prints a waiting message and blocks until the current command finishes;
+contention is not an error. The OS chooses the next waiter, so strict FIFO order
+is not guaranteed. Different projects can run concurrently.
+
+The lock location is independent of `-o`, keeping builds, coverage, and tests
+for the same project serialized. It covers test execution; `run` releases it
+after building/installing and before launching the program. `test --list` does not acquire it.
+The lock file stays on disk; closing the handle or process exit releases
+ownership automatically. Do not delete the file to unlock a running command.
+
 ## Executable scripts
 
 On POSIX systems, a `.do` source file can be invoked directly with a shebang:

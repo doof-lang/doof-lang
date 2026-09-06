@@ -35,6 +35,7 @@ import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
 
 
+import { pathType } from "./checker-inference"
 import { CheckerState } from "./checker-state"
 import { checkTry } from "./checker-try"
 import { casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
@@ -176,20 +177,9 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         checkExpression(state, yield_.value, scope, none)
         return false
       }
-      expectedYield := target!.yieldType
+      expectedYield := target!.yieldExpectedType
       valueType := checkExpression(state, yield_.value, scope, expectedYield)
-      if expectedYield == none { target!.yieldType = optionalResolvedType(valueType) }
-      else {
-        expectedType := expectedYield!
-        case expectedType {
-          _: UnknownType -> { target!.yieldType = optionalResolvedType(valueType) }
-          _ -> {
-            if isAssignableWithInterfaces(state.result, valueType, expectedType) { }
-            else if isAssignableWithInterfaces(state.result, expectedType, valueType) { target!.yieldType = optionalResolvedType(valueType) }
-            else { typeError(state, "Cannot yield " + typeName(valueType) + " from block yielding " + typeName(expectedType), yield_.span) }
-          }
-        }
-      }
+      target!.yieldType = optionalResolvedType(pathType(state, target!.yieldType ?? unknownType(), valueType, expectedYield, yield_.span))
       return false
     }
     assignment: YieldBlockAssignmentStatement -> {
@@ -285,6 +275,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
   if annotation != none && elseBlock == none { inferredCollectionType = checkOmittedCollectionLiteral(state, annotation!, value, scope) }
   let expectedValueType: ResolvedType | none = none
   if annotation != none && elseBlock == none && inferredCollectionType == none { expectedValueType = optionalResolvedType(resolveType(state, annotation!, state.info!, scope)) }
+  if kind == "readonly" && expectedValueType != none { expectedValueType = optionalResolvedType(applyDeepReadonly(expectedValueType!)) }
   let valueType = if inferredCollectionType == none then checkExpression(state, value, scope, expectedValueType) else inferredCollectionType!
   let declaredType: ResolvedType = valueType
   if annotation != none && inferredCollectionType == none { declaredType = resolveType(state, annotation!, state.info!, scope) }

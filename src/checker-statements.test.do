@@ -69,3 +69,25 @@ export function testCheckerReviewWithCompletion(): none {
   unreachable := checked("function bad(): int { with x := 1 { return x }\nmissing() }")
   Assert.isTrue(unreachable.diagnostics.length > 0)
 }
+
+export function testRestrictedYieldInference(): none {
+  for body of [
+    "let x <- { if flag { yield 1 } else { yield none } }\ny: int | none := x",
+    "let x <- { if flag { yield none } else { yield 1 } }\ny: int | none := x",
+    "let x: int | string <- { if flag { yield 1 } else { yield \"text\" } }",
+    "x := case flag { true -> { yield none }, false -> { yield 1 } }\ny: int | none := x",
+    "x := async { if flag { yield 1 } else { yield none } }\ny: Promise<int | none> := x",
+  ] {
+    result := checked("function run(flag: bool): none { " + body + " }")
+    for diagnostic of result.diagnostics { println(diagnostic.message) }
+    Assert.equal(result.diagnostics.length, 0)
+  }
+  for body of [
+    "let x <- { if flag { yield 1 } else { yield \"text\" } }",
+    "let x: int <- { if flag { yield 1 } else { yield 2L } }",
+    "x := async { if flag { yield 1 } else { yield \"text\" } }",
+  ] {
+    result := checked("function run(flag: bool): none { " + body + " }")
+    Assert.isTrue(result.diagnostics.length > 0)
+  }
+}

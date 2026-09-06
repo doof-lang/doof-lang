@@ -143,11 +143,14 @@ function emitAsyncBlock(expression: AsyncExpression, block: Block, context: Emit
   }
   previousYieldState := context.inValueYieldBlock
   previousVoidState := context.valueYieldReturnsVoid
+  previousYieldType := context.valueYieldType
   context.inValueYieldBlock = true
   context.valueYieldReturnsVoid = cppReturn == "void"
+  context.valueYieldType = valueType
   body := emitBlock(block, 1, context)
   context.inValueYieldBlock = previousYieldState
   context.valueYieldReturnsVoid = previousVoidState
+  context.valueYieldType = previousYieldType
   return "doof::submit_async<" + cppReturn + ">([" + captures + "]() -> " + cppReturn + " {\n" + body + "})"
 }
 

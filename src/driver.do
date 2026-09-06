@@ -30,6 +30,7 @@ import { assembleIOSApp, configureIOSNativeBuild, signAndArchiveIOSApp } from ".
 import { resolveIOSDeviceIdentifier, resolveIOSDeviceSigningOptions, signIOSDeviceApp } from "./ios-device"
 import { Parser } from "./parser"
 import { environmentValue, fileName, joinPath, parentPath, projectEntryRequestError, readProjectSpec } from "./project"
+import { acquireProjectBuildLock } from "./project-build-lock"
 import { planProfileCapture, planProfileOpen, planProfileSymbols } from "./profile-command"
 import {
   MaterializedResource, ResourceState, findMaterializedResource, materializedResourceIsCurrent,
@@ -54,10 +55,10 @@ import {
 import { boundedWorkerCount, renderProgressBar } from "./progress"
 import { planAppleWasmTestRun, planAppleWasmTestRunnerBuild } from "./wasm-test-runner"
 import { BlobReader } from "std/blob"
-import { sha256HexString } from "std/crypto"
-import { EntryKind, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
+import { sha256Hex, sha256HexString } from "std/crypto"
+import { EntryKind, File, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
 import { ExecOptions, ProcessGroupMode, architecture, run, platform } from "std/os"
-import { absolute, resourcePath } from "std/path"
+import { absolute, executablePath, resourcePath } from "std/path"
 import { Instant } from "std/time"
 
 import isolated function printFlushed(value: string): none from "doof_runtime.hpp" as doof::print_flushed
@@ -675,6 +676,12 @@ function frontendCachePath(buildDirectory: string, kind: string): string {
   return driverOutputPath(driverOutputPath(buildDirectory, ".doof-cache/v1"), kind + ".json")
 }
 
+/** Empty identity disables reuse when the running compiler cannot be read. */
+export function compilerCacheIdentity(path: string): string {
+  bytes := readBlob(path) else { return "" }
+  return sha256Hex(bytes)
+}
+
 function frontendConfigurationFingerprint(
   entry: string,
   entryMode: string,
@@ -684,9 +691,12 @@ function frontendConfigurationFingerprint(
   nativePlatform: string,
   preparationTarget: StdlibPreparationTarget,
 ): string {
+  compilerPath := executablePath() else { return "" }
+  compilerIdentity := compilerCacheIdentity(compilerPath)
+  if compilerIdentity == "" { return "" }
   manifestSource := readTextOrEmpty(manifest.manifestPath)
   return sha256HexString(
-    "doof-frontend-cache-2:" + string(FRONTEND_SEMANTIC_ABI) + "\n" + entry + "\n" + entryMode + "\n" + target + "\n" +
+    "doof-frontend-cache-3:" + string(FRONTEND_SEMANTIC_ABI) + "\n" + compilerIdentity + "\n" + entry + "\n" + entryMode + "\n" + target + "\n" +
       stdlibRoot + "\n" + nativePlatform + "\n" + preparationTarget.nativeTarget + "\n" +
       preparationTarget.sdkPath + "\n" + preparationTarget.targetTriple + "\n" +
       configuredStdlibBundleFingerprint() + "\n" + manifestSource,
@@ -710,12 +720,12 @@ function readFrontendState(path: string): FrontendCacheState | none {
   return parseFrontendCacheState(source)
 }
 
-function frontendStateMatches(
+export function frontendStateMatches(
   state: FrontendCacheState | none,
   configurationFingerprint: string,
   loader: SourceLoader,
 ): bool {
-  if state == none || state!.configurationFingerprint != configurationFingerprint { return false }
+  if configurationFingerprint == "" || state == none || state!.configurationFingerprint != configurationFingerprint { return false }
   for input of state!.fileInputs {
     source := readText(input.path) else { return false }
     if sha256HexString(source) != input.sourceHash { return false }
@@ -1165,12 +1175,28 @@ function testRequest(request: CliRequest): int {
     return 0
   }
 
+  groups := groupTestsForCompilation(discovered)
+  let lockDirectories: string[] = []
+  for group of groups {
+    if selectedTestsForExecution(group.tests, selected).length == 0 { continue }
+    projectForLock := readProjectSpec(group.tests[0].modulePath, hostPlatform(), request.targetOverride)
+    lockDirectories.push(joinPath(projectForLock.rootDirectory, projectForLock.buildDirectory))
+  }
+  // Sort and deduplicate before taking any locks, including for mock groups.
+  let projectLocks: File[] = []
+  for directory of sortedTestFiles(lockDirectories) {
+    projectLock := acquireProjectBuildLock(directory, ".") else error {
+      println("error: " + error)
+      return 1
+    }
+    projectLocks.push(projectLock)
+  }
+
   let passed = 0
   let failed = 0
   let coverageModules: CoverageModuleMetadata[] = []
   let coverageHits: int[][] = []
   let appleWasmRunner = ""
-  groups := groupTestsForCompilation(discovered)
   for group of groups {
     compilationTests := group.tests
     moduleTests := selectedTestsForExecution(compilationTests, selected)
@@ -1344,6 +1370,10 @@ function emitRequest(request: CliRequest): int {
     println("error: " + entryError)
     return 1
   }
+  projectLock := acquireProjectBuildLock(project.rootDirectory, project.buildDirectory) else error {
+    println("error: " + error)
+    return 1
+  }
   if request.command == "profile" && (project.target == "wasm" || project.iosApp != none) {
     println("error: doof profile supports native console executables and macOS applications")
     return 1
@@ -1411,7 +1441,7 @@ function emitRequest(request: CliRequest): int {
       then checkWithLoader([], entry, loader, entryMode)
       else compileWithLoader(
         [], entry, loader, namespaceMappings, entryMode, false,
-        if request.command == "package" then [] else reusableEmissionKeys(previousEmissionState, outputDirectory),
+        if request.command == "package" || frontendConfiguration == "" then [] else reusableEmissionKeys(previousEmissionState, outputDirectory),
         frontendConfiguration,
         request.command == "profile",
       )
@@ -1508,6 +1538,7 @@ function emitRequest(request: CliRequest): int {
         installResult := runNativeCommand(installPlan.command, installPlan.arguments, installPlan.directory, true)
         if installResult.error != "" { println("error: " + installResult.error) }
         if installResult.exitCode != 0 { return installResult.exitCode }
+        try! projectLock.close()
         launchPlan := planIOSDeviceLaunch(project.iosApp!.bundleId, deviceIdentifier, project.rootDirectory)
         launchResult := runNativeCommand(launchPlan.command, launchPlan.arguments, launchPlan.directory, true)
         if launchResult.error != "" { println("error: " + launchResult.error) }
@@ -1517,6 +1548,7 @@ function emitRequest(request: CliRequest): int {
       installResult := runNativeCommand(installPlan.command, installPlan.arguments, installPlan.directory, true)
       if installResult.error != "" { println("error: " + installResult.error) }
       if installResult.exitCode != 0 { return installResult.exitCode }
+      try! projectLock.close()
       launchPlan := planIOSSimulatorLaunch(project.iosApp!.bundleId, project.rootDirectory)
       launchResult := runNativeCommand(launchPlan.command, launchPlan.arguments, launchPlan.directory, true)
       if launchResult.error != "" { println("error: " + launchResult.error) }
@@ -1534,6 +1566,7 @@ function emitRequest(request: CliRequest): int {
           project.rootDirectory, buildDirectory, executableName, false,
         )
       }
+      try! projectLock.close()
       launchPlan := planMacOSAppRun(appPath, project.rootDirectory)
       launchResult := runNativeCommand(launchPlan.command, launchPlan.arguments, launchPlan.directory, true)
       if launchResult.error != "" { println("error: " + launchResult.error) }
@@ -1546,6 +1579,7 @@ function emitRequest(request: CliRequest): int {
         project.rootDirectory, buildDirectory, executableName, true,
       )
     }
+    try! projectLock.close()
     runPlan := planNativeProgramRun(outputPath, request.programArguments, project.rootDirectory)
     runResult := runNativeCommand(runPlan.command, runPlan.arguments, runPlan.directory, true, .Inherited)
     if runResult.error != "" { println("error: " + runResult.error) }

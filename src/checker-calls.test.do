@@ -1,6 +1,7 @@
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
+import { compile } from "./compiler"
 import { CheckResult, SourceFile } from "./semantic"
 
 function checked(source: string): CheckResult {
@@ -8,6 +9,38 @@ function checked(source: string): CheckResult {
   for diagnostic of analysis.diagnostics { println(diagnostic.message) }
   Assert.equal(analysis.diagnostics.length, 0)
   return createChecker(analysis, "/main.do").check("/main.do")
+}
+
+export function testResultConstructorShorthandPayloads(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function load(): Result<int, string> => Success { value: 1 }\n" +
+    "function widened(): Result<long, string> { try let value: long = load()\nreturn Success { value } }\n" +
+    "function failed(error: string): Result<int, string> => Failure { error }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  inferred := checked("function inferred(): none { value := 1\nsuccess := Success { value }\nerror := \"bad\"\nfailure := Failure { error } }")
+  Assert.equal(inferred.diagnostics.length, 0)
+}
+
+export function testResultConstructorShorthandDiagnostics(): none {
+  for source of [
+    "function success(): Result<int, string> => Success { value }",
+    "function failure(): Result<int, string> => Failure { error }",
+  ] {
+    result := checked(source)
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.stringContains(result.diagnostics[0].message, "Unknown shorthand property")
+  }
+  for source of [
+    "function success(value: string): Result<int, string> => Success { value }",
+    "function failure(error: int): Result<int, string> => Failure { error }",
+  ] {
+    result := checked(source)
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.stringContains(result.diagnostics[0].message, "Cannot assign")
+  }
 }
 
 export function testInterfaceBoundCallableField(): none {

@@ -32,7 +32,7 @@ export function testEmitterGapConditionalIncompatibleReturnRemainsDiagnostic(): 
     source: "function choose(flag: bool): int => if flag then 1 else \"two\"",
   }], "/conditional.do")
   Assert.isTrue(result.diagnostics.length > 0)
-  Assert.stringContains(result.diagnostics[0].message, "Cannot return int | string from function returning int")
+  Assert.stringContains(result.diagnostics[0].message, "Cannot use string in expression expecting int")
   Assert.isTrue(result.emission == none)
 }
 
@@ -68,4 +68,19 @@ export function testGenericNoneLiteralReadonlyConditionalHasOneCarrier(): none {
   for module of result.emission!.modules { source = source + module.source }
   Assert.stringNotContains(source, "std::variant<std::shared_ptr<std::vector<int32_t>>")
   Assert.stringContains(source, "const std::shared_ptr<std::vector<int32_t>> scopes =")
+}
+
+export function testRestrictedPathRuntimeCarriers(): none {
+  flag := true
+  optional := if flag then 7 else none
+  Assert.equal(optional!, 7)
+  reversed := if flag then none else 9
+  Assert.isTrue(reversed == none)
+  let yielded <- { if flag { yield 3 } else { yield none } }
+  Assert.equal(yielded!, 3)
+  absent: int | none := none
+  fallback: int | string := absent ?? "fallback"
+  Assert.equal((fallback as string)!, "fallback")
+  chosen := case flag { true -> none, false -> 4 }
+  Assert.isTrue(chosen == none)
 }

@@ -54,6 +54,7 @@ modules own the following decisions:
 | `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, enum backing-value resolution, and control-flow continuation |
 | `checker-try.do` | Result propagation boundaries, error compatibility, and success declaration checking |
 | `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |
+| `checker-inference.do` | Contextual path validation and common-type inference; only optional unions are synthesized for value paths |
 | `checker-expressions.do` | Expression dispatch, operators, narrowing, assignment, and case expressions |
 | `checker-calls.do` | Calls, positional/named construction, lambdas, generic calls, and actor-call boundaries |
 | `checker-literals.do` | Contextual array and object literal inference |
@@ -94,7 +95,7 @@ emitter or individual expression branch.
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering |
 | `emitter-expr.do` | Single expression dispatch façade |
 | `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as` |
-| `emitter-expr-calls.do` | Calls, native construction, and positional/named class construction |
+| `emitter-expr-calls.do` | Calls, native construction, positional/named class construction, and Result payload construction from checked expressions or shorthand bindings |
 | `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering; shared contextual absence values for literals and catch initialization |
 | `emitter-expr-control.do` | Conditional, case, catch, dot-shorthand, and yield-block expressions |
 | `emitter-expr-lambda.do` | Lambda capture analysis, mutable capture boxing, and callback lowering |
@@ -137,6 +138,7 @@ threads or reconstruct scheduling policy.
 | --- | --- |
 | `cli.do` | Pure command-line parsing and request model |
 | `project.do` | Requested entry, manifest discovery, and project settings |
+| `project-build-lock.do` | Stable project lock path, directory creation, blocking OS lock acquisition, and contention diagnostics |
 | `package-manifest.do` | `doof.json` validation and normalized package/native models |
 | `stdlib-bundle.do` | Seekable archive validation and reached-package materialization |
 | `module-acquisition.do` | Logical module prefix → acquired disk root mapping |

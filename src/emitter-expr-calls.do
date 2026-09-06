@@ -698,8 +698,15 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
         propertyName := if expression.type_ == "Success" then "value" else "error"
         property := findProperty(expression.args, propertyName)
         payloadType := emitContextReturnType(valueType, context)
-        if property == none || property!.value == none { return "doof::" + expression.type_ + "<" + payloadType + ">{ }" }
-        value := emitExpectedExpression(property!.value!, context, valueType)
+        if property == none { return "doof::" + expression.type_ + "<" + payloadType + ">{ }" }
+        let payload: Expression | none = property!.value
+        if payload == none {
+          payload = Identifier {
+            kind: "identifier", name: property!.name, span: property!.span,
+            resolvedType: property!.resolvedType, resolvedBinding: property!.resolvedBinding,
+          }
+        }
+        value := emitExpectedExpression(payload!, context, valueType)
         return "doof::" + expression.type_ + "<" + payloadType + ">{ " + value + " }"
       }
       _ -> { }

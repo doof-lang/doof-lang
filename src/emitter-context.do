@@ -37,6 +37,7 @@ export class EmitContext {
   let currentFunctionName: string = ""
   let inValueYieldBlock: bool = false
   let valueYieldReturnsVoid: bool = false
+  let valueYieldType: ResolvedType | none = none
   let catchVarName: string = ""
   let catchResultType: ResolvedType | none = none
   // Call-site override used while materializing defaults such as @caller.

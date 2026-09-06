@@ -338,6 +338,31 @@ node.next!.value                // ✅ Alternative: !. force-unwrap member acces
 
 Doof uses **bidirectional type inference** — single-step, context-aware inference without aggressive propagation.
 
+### Multi-path expression inference
+
+Without an explicit expected type, `if ... then ... else`, `case`, `??`,
+value/yield blocks, async blocks, and `catch` must share an assignable result
+type. They do not synthesize unions of unrelated value types. The only new
+union inferred by joining paths is `T | none`; `T` may itself be an already
+explicit union. Ordinary widening remains valid, including widening the
+present type of an optional. Terminating (`never`) paths contribute no value.
+
+Use an explicit binding, parameter, return, or contextual lambda return type
+when distinct alternatives are intentional:
+
+```doof
+optional := if ready then 1 else none             // int | none
+value: int | string := if ready then 1 else "one"
+bad := if ready then 1 else "one"                 // annotation required
+```
+
+Every path must fit an explicit expected type; an annotation does not allow an
+incompatible arm. Case arms are checked against the surrounding context, not
+an inferred type from the preceding arm. Yield blocks keep their explicit
+expectation separate from the type accumulated from their yields. A catch
+with unrelated error types needs an explicit union including `none` for its
+success path. The same rules apply inside expression-bodied lambdas.
+
 ### Basic Inference Rules
 
 ```javascript

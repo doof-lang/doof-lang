@@ -109,3 +109,15 @@ export function testCheckerReviewTypedTryStorage(): none {
   Assert.stringContains(source, "const int64_t x = doof::variant_promote<int64_t>(doof::success_value(")
   Assert.stringContains(source, "const int64_t value = doof::variant_promote<int64_t>(doof::success_value(")
 }
+
+export function testRestrictedNestedYieldCarriers(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function run(flag: bool): int | none { let x <- { let inner: string | none <- { yield none }\nif flag { yield 1 } else { yield none } }\nreturn x }\nfunction main(): none { run(true) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let source = ""
+  for module of result.emission!.modules { source = source + module.source }
+  Assert.stringContains(source, "return std::nullopt;")
+  Assert.stringNotContains(source, "return std::monostate{};")
+}

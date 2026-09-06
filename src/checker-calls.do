@@ -610,14 +610,26 @@ export function checkConstruct(state: CheckerState, expression: ConstructExpress
     }
     let valueType: ResolvedType = unknownType()
     for property of expression.args {
-      if property.value != none {
-        let propertyExpected: ResolvedType | none = none
-        if expectedResult != none {
-          propertyExpected = if expression.type_ == "Success" then expectedResult!.valueType else expectedResult!.errorType
-        }
-        valueType = checkExpression(state, property.value!, scope, propertyExpected)
-        property.resolvedType = optionalResolvedType(valueType)
+      let propertyExpected: ResolvedType | none = none
+      if expectedResult != none {
+        propertyExpected = if expression.type_ == "Success" then expectedResult!.valueType else expectedResult!.errorType
       }
+      if property.value != none {
+        valueType = checkExpression(state, property.value!, scope, propertyExpected)
+      } else {
+        binding := lookup(scope, property.name)
+        if binding == none {
+          typeError(state, "Unknown shorthand property '" + property.name + "'", property.span)
+          valueType = unknownType()
+        } else {
+          property.resolvedBinding = binding
+          valueType = binding!.type_
+          if propertyExpected != none && !isAssignableWithInterfaces(state.result, valueType, propertyExpected!) {
+            typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(propertyExpected!), property.span)
+          }
+        }
+      }
+      property.resolvedType = optionalResolvedType(valueType)
     }
     if expectedResult != none { return finish(state, expression, expectedResult!) }
     if expression.type_ == "Success" { return finish(state, expression, resultType(valueType, unknownType())) }

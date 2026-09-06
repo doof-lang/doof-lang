@@ -2,6 +2,20 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+export function testResultConstructorShorthandEmission(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function success(value: int): Result<long, string> => Success { value }\n" +
+    "function failure(error: string): Result<int, string> => Failure { error }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  let source = ""
+  for module of result.emission!.modules { source = source + module.source }
+  Assert.stringContains(source, "doof::Success<int64_t>{ value }")
+  Assert.stringContains(source, "doof::Failure<std::string>{ error }")
+}
+
 export function testGenericNoneLiteralConstructPayloadUsesSpecializedCarrier(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "class Item {}\n" +

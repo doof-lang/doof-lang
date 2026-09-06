@@ -55,6 +55,11 @@ or another simple type when every failure is handled uniformly.
 `Failure<E>`. A surrounding Result type provides contextual payload typing when
 available; otherwise the payload determines the standalone arm type.
 
+Named construction accepts lexical shorthand: `Success { value }` is equivalent
+to `Success { value: value }`, and `Failure { error }` to
+`Failure { error: error }`. The binding must exist and its type must be assignable
+to the contextual payload type.
+
 ```doof
 function parseCount(text: string): Result<int, string> {
     if text == "" {
@@ -509,7 +514,7 @@ operator matrix.
 propagating them from the enclosing function.
 
 ```doof
-err := catch {
+err: IOError | HeaderParseError | none := catch {
     try readHeader()
     try readBody()
 }
@@ -519,13 +524,14 @@ If every `try` in the block succeeds, the `catch` expression evaluates to
 `none`. If a `try` sees a `Failure`, the block stops immediately and evaluates
 to that failure payload.
 
-The type is the union of all captured error types plus `none`:
+Without an annotation, captured errors must share an assignable type `E`,
+and the result is `E | none`. Unrelated error types require an explicit union:
 
 ```doof
 // readHeader(): Result<none, IOError>
 // parseHeader(): Result<Header, HeaderParseError>
 
-err := catch {
+err: IOError | HeaderParseError | none := catch {
     try readHeader()
     try header := parseHeader()
 }

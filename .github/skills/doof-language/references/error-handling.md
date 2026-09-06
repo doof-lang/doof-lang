@@ -20,6 +20,9 @@ standalone arm types, while an expected Result context supplies contextual
 payload typing. Normal union case patterns expose `.value` only on Success and
 `.error` only on Failure.
 
+`Success { value }` and `Failure { error }` use the in-scope payload binding,
+with the same contextual assignability requirements as explicit properties.
+
 `Success()` / `Success {}` construct `Success<none>`. `Failure()` /
 `Failure {}` construct `Failure<none>`. Payloadless arms omit their payload
 member; failure capture and `.err()` are unavailable for `Failure<none>`, and
@@ -220,7 +223,9 @@ err := catch {
 }
 ```
 
-The resulting type is the union of all captured error types plus `none`.
+Without an annotation, captured errors must share an assignable type `E`;
+the result is `E | none`. For unrelated errors, annotate the result with
+an explicit union of the error types plus `none`.
 
 Inside `catch`:
 

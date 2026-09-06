@@ -25,7 +25,7 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter,
 } from "./ast"
 import {
-  interfaceBoundReceiver, actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
+  interfaceBoundReceiver, actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
   isStringInterpolatable, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType,
@@ -36,6 +36,7 @@ import { asyncResultViolation } from "./checker-async"
 import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-actor-lifecycle"
 
 
+import { pathType } from "./checker-inference"
 import { CheckerState } from "./checker-state"
 import { isNumericOperand, isIntegerOperand, numericOperatorAllowed, numericOperationType } from "./checker-numeric"
 import { checkFunction, checkBlock } from "./checker-statements"
@@ -50,23 +51,18 @@ import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces
 
 export function checkCaseExpression(state: CheckerState, expression: CaseExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   subjectType := checkExpression(state, expression.subject, scope, none)
-  let inferredType: ResolvedType = unknownType()
+  let inferredType: ResolvedType = neverType()
   let armPatterns: CasePattern[][] = []
   for arm of expression.arms {
     armPatterns.push(arm.patterns)
     armScope := Scope { parent: scope }
     checkCasePatterns(state, arm.patterns, subjectType, armScope)
-    let armExpected = expected
-    if armExpected == none {
-      case inferredType {
-        _: UnknownType -> { }
-        _ -> { armExpected = inferredType }
-      }
-    }
+    armExpected := expected
     let armType: ResolvedType = unknownType()
     case arm.body {
       block: Block -> {
         armScope.inValueYieldBlock = true
+        armScope.yieldExpectedType = armExpected
         armScope.yieldType = if armExpected == none then optionalResolvedType(unknownType()) else armExpected
         completes := checkBlock(state, block, armScope)
         if completes { typeError(state, "Block case-expression arms must yield a value on every path", block.span) }
@@ -75,7 +71,7 @@ export function checkCaseExpression(state: CheckerState, expression: CaseExpress
       }
       bodyExpression: Expression -> { armType = checkExpression(state, bodyExpression, armScope, armExpected) }
     }
-    if inferredType.kind == "unknown" { inferredType = armType } else { inferredType = joinTypes(inferredType, armType) }
+    inferredType = pathType(state, inferredType, armType, expected, arm.span)
   }
   if subjectType.kind != "unknown" && subjectType.kind != "never" && !casePatternsExhaustive(state, subjectType, armPatterns) {
     typeError(state, "Case expression must be exhaustive", expression.span)
@@ -332,6 +328,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       yieldScope := Scope {
         parent: scope,
         inValueYieldBlock: true,
+        yieldExpectedType: expected,
         yieldType: if expected == none then optionalResolvedType(unknownType()) else expected,
       }
       completes := checkBlock(state, yieldBlock.body, yieldScope)
@@ -355,10 +352,9 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         })
         return finish(state, catch_, noneType())
       }
-      let members: ResolvedType[] = []
-      for errorType of errorTypes { members.push(errorType) }
-      members.push(noneType())
-      return finish(state, catch_, unionType(members))
+      let caught: ResolvedType = noneType()
+      for errorType of errorTypes { caught = pathType(state, caught, errorType, expected, catch_.span) }
+      return finish(state, catch_, caught)
     }
     literal: IntLiteral -> {
       if expected != none { case expected! {
@@ -419,7 +415,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     }
     dot: DotShorthand -> { return checkDotShorthand(state, dot, expected) }
     identifier: Identifier -> { return checkIdentifier(state, identifier, scope) }
-    binary: BinaryExpression -> { return checkBinary(state, binary, scope) }
+    binary: BinaryExpression -> { return checkBinary(state, binary, scope, expected) }
     unary: UnaryExpression -> { return checkUnary(state, unary, scope) }
     as_: AsExpression -> { return checkAs(state, as_, scope) }
     assignment: AssignmentExpression -> { return checkAssignment(state, assignment, scope) }
@@ -554,7 +550,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       thenType := checkExpression(state, if_.then_, scope, expected)
       elseType := checkExpression(state, if_.else_, scope, expected)
       if conditionType.kind == "never" { return finish(state, expression, neverType()) }
-      return finish(state, expression, joinTypes(thenType, elseType))
+      return finish(state, expression, pathType(state, thenType, elseType, expected, if_.span))
     }
     case_: CaseExpression -> { return finish(state, expression, checkCaseExpression(state, case_, scope, expected)) }
     construct: ConstructExpression -> { return checkConstruct(state, construct, scope, expected) }
@@ -571,6 +567,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
           asyncScope := Scope {
             parent: scope,
             inValueYieldBlock: true,
+            yieldExpectedType: expectedValue,
             yieldType: if expectedValue == none then optionalResolvedType(unknownType()) else expectedValue,
           }
           completes := checkBlock(state, block, asyncScope)
@@ -976,7 +973,7 @@ export function addClassMethods(state: CheckerState, scope: Scope, owner: ClassT
   }
 }
 
-export function checkBinary(state: CheckerState, expression: BinaryExpression, scope: Scope): ResolvedType {
+export function checkBinary(state: CheckerState, expression: BinaryExpression, scope: Scope, expected: ResolvedType | none = none): ResolvedType {
   let left: ResolvedType = unknownType()
   let right: ResolvedType = unknownType()
   case expression.left {
@@ -993,7 +990,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
         }
         _ -> {
           left = checkExpression(state, expression.left, scope, none)
-          right = checkExpression(state, expression.right, scope, none)
+          right = checkExpression(state, expression.right, scope, if expression.operator == "??" then expected else none)
         }
       }
     }
@@ -1006,11 +1003,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   }
   if operator == "??" {
     if !isFallibleType(left) { typeError(state, "Operator '??' requires a nullable or Result left operand, got " + typeName(left), expression.left.span) }
-    expectedFallback := fallibleValueType(left)
-    if expectedFallback != none && !isAssignableWithInterfaces(state.result, right, expectedFallback!) && !isAssignableWithInterfaces(state.result, right, left) {
-      typeError(state, "Cannot use " + typeName(right) + " as fallback for " + typeName(left), expression.right.span)
-    }
-    return finish(state, expression, coalescedType(state, left, right))
+    return finish(state, expression, pathType(state, fallibleValueType(left) ?? unknownType(), right, expected, expression.span))
   }
   if right.kind == "never" { return finish(state, expression, neverType()) }
   if operator == "..<" || operator == ".." {
@@ -1072,25 +1065,6 @@ function validateRangeOperand(state: CheckerState, operator: string, side: strin
     }
     _ -> { typeError(state, "Range operator \"" + operator + "\" requires integer bounds, got " + side + " bound of type \"" + typeName(operand) + "\"", span) }
   }
-}
-
-export function coalescedType(state: CheckerState, left: ResolvedType, right: ResolvedType): ResolvedType {
-  case left {
-    result: ResultResolvedType -> { return joinTypes(result.valueType, right) }
-    union_: UnionResolvedType -> {
-      let nonNull: ResolvedType | none = none
-      for member of union_.types {
-        if member.kind != "none" {
-          nonNull = if nonNull == none then member else joinTypes(nonNull!, member)
-        }
-      }
-      if nonNull == none { return right }
-      return joinTypes(nonNull!, right)
-    }
-    _: NoneType -> { return right }
-    _ -> { return left }
-  }
-  return unknownType()
 }
 
 export function checkUnary(state: CheckerState, expression: UnaryExpression, scope: Scope): ResolvedType {

@@ -98,7 +98,7 @@ comments, and CDATA and escapes text and attributes.
 import {
   absolute, homeDirectory, tempDirectory, dataDirectory, cacheDirectory,
   currentWorkingDirectory, setCurrentWorkingDirectory,
-  resourcesDirectory, resourcePath,
+  resourcesDirectory, resourcePath, executablePath,
   join, dirname, basename, stem, extension, isAbsolute,
 } from "std/path"
 ```
@@ -109,6 +109,8 @@ Directory discovery and `absolute` return `Result<string, string>` where the OS
 can fail. `dataDirectory(appId)` and `cacheDirectory(appId)` optionally append
 an application id. `resourcesDirectory` and `resourcePath` locate resources in
 both development and packaged applications.
+`executablePath()` returns the normalized absolute path of the running native
+executable as `Result<string, string>`; discovery failures remain recoverable.
 
 ## `std/stream`
 

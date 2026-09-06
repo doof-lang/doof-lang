@@ -55,10 +55,16 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
 export function emitYieldBlockExpression(expression: YieldBlockExpression, context: EmitContext, expected: ResolvedType | none): string {
   resultType := if expected == none then expression.resolvedType else expected
   if resultType == none { panic("Yield block has no resolved result type") }
+  previousYieldType := context.valueYieldType
+  previousYieldVoid := context.valueYieldReturnsVoid
   previousYieldState := context.inValueYieldBlock
   context.inValueYieldBlock = true
+  context.valueYieldReturnsVoid = false
+  context.valueYieldType = resultType
   body := emitBlock(expression.body, 1, context)
   context.inValueYieldBlock = previousYieldState
+  context.valueYieldType = previousYieldType
+  context.valueYieldReturnsVoid = previousYieldVoid
   return "[&]() -> " + emitType(resultType!, context.modulePath) + " {\n" + body + "}()"
 }
 
@@ -108,10 +114,16 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
       if binding != "" { output = output + "        " + binding }
       case arm.body {
         block: Block -> {
+          previousYieldType := context.valueYieldType
+          previousYieldVoid := context.valueYieldReturnsVoid
           previousYieldState := context.inValueYieldBlock
           context.inValueYieldBlock = true
+          context.valueYieldReturnsVoid = false
+          context.valueYieldType = resultType
           output = output + emitBlock(block, 2, context)
           context.inValueYieldBlock = previousYieldState
+          context.valueYieldType = previousYieldType
+          context.valueYieldReturnsVoid = previousYieldVoid
         }
         bodyExpression: Expression -> {
           emittedBody := emitExpression(bodyExpression, context, resultType)

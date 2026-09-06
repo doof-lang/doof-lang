@@ -1,13 +1,58 @@
 import { Assert } from "std/assert"
 import {
-  driverRootLogicalPath, driverRootLogicalPrefix, frontendEmissionCacheSupported, materializeGeneratedText,
+  compilerCacheIdentity, driverRootLogicalPath, driverRootLogicalPrefix, frontendEmissionCacheSupported, frontendStateMatches, materializeGeneratedText,
   nativeBuildOutputModeForCommand, nativeBuildOutputName, parseDependencyManifestForTarget,
   stdlibPackageNameForLogicalPath, synchronizeExecutableResources,
 } from "./driver"
 import { NativeBuildOutputMode } from "./native-build-driver"
 import { PackageResource } from "./package-manifest"
+import { FrontendCacheState } from "./frontend-cache"
+import { noSourceLoader } from "./resolver"
+import { readProjectSpec } from "./project"
+import { projectBuildLockPath } from "./project-build-lock"
 import { exists, isDirectory, metadata, mkdir, readDir, readText, remove, writeText } from "std/fs"
 import { join, tempDirectory } from "std/path"
+
+export function testProjectBuildLockUsesSameRootForBuildAndTest(): none {
+  root := join([tempDirectory(), "doof-driver-project-lock-test"])
+  removeDriverTestTree(root)
+  try! mkdir(root)
+  try! mkdir(join([root, "src"]))
+  try! writeText(join([root, "doof.json"]), "{\"name\":\"lock-test\",\"build\":{\"entry\":\"src/main.do\",\"buildDir\":\"artifacts\"}}")
+  try! writeText(join([root, "src/main.do"]), "function main(): none {}")
+  try! writeText(join([root, "src/main.test.do"]), "export function testOne(): none {}")
+  build := readProjectSpec(root)
+  test := readProjectSpec(join([root, "src/main.test.do"]))
+  Assert.equal(projectBuildLockPath(build.rootDirectory, build.buildDirectory), join([root, "artifacts/.doof.lock"]))
+  Assert.equal(projectBuildLockPath(test.rootDirectory, test.buildDirectory), projectBuildLockPath(build.rootDirectory, build.buildDirectory))
+  removeDriverTestTree(root)
+}
+
+export function testCompilerCacheIdentityTracksReplacementBytes(): none {
+  root := join([tempDirectory(), "doof-compiler-identity-test"])
+  removeDriverTestTree(root)
+  try! mkdir(root)
+  first := join([root, "doof"])
+  copy := join([root, "renamed-doof"])
+  try! writeText(first, "compiler-a")
+  try! writeText(copy, "compiler-a")
+  identity := compilerCacheIdentity(first)
+  Assert.isTrue(identity != "")
+  Assert.equal(compilerCacheIdentity(copy), identity)
+  try! writeText(first, "compiler-b")
+  Assert.isTrue(compilerCacheIdentity(first) != identity)
+  Assert.equal(compilerCacheIdentity(join([root, "missing"])), "")
+  removeDriverTestTree(root)
+}
+
+export function testCompilerCacheIdentityControlsFrontendReuse(): none {
+  state := FrontendCacheState { configurationFingerprint: "compiler-a" }
+  Assert.isTrue(frontendStateMatches(state, "compiler-a", noSourceLoader))
+  Assert.isFalse(frontendStateMatches(state, "compiler-b", noSourceLoader))
+  Assert.isFalse(frontendStateMatches(none, "compiler-a", noSourceLoader))
+  unreadable := FrontendCacheState { configurationFingerprint: "" }
+  Assert.isFalse(frontendStateMatches(unreadable, "", noSourceLoader))
+}
 
 function removeDriverTestTree(path: string): none {
   if !exists(path) { return }
