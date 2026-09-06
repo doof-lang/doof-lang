@@ -25,7 +25,7 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
+  interfaceBoundReceiver, actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
   substituteTypeParams, typeParameter, unknownType,
@@ -148,7 +148,8 @@ function classSatisfiesConcreteInterfaceSeen(result: AnalysisResult, class_: Cla
         if actualBase == none { return false }
         requiredBase := if required.resolvedType == none then resolveAnnotation(required.type_, classModuleFor(result, interfaceType_.symbol), result, interface_.typeParams) else required.resolvedType!
         actual := substituteTypeParams(actualBase!, class_.typeParams, classType_.typeArgs)
-        expected := substituteTypeParams(requiredBase, interface_.typeParams, interfaceType_.typeArgs)
+        expected := substituteTypeParams(if required.readonly_ then applyDeepReadonly(requiredBase) else requiredBase, interface_.typeParams, interfaceType_.typeArgs)
+        if required.let_ && !sameType(actual, expected) { return false }
         if !isAssignableWithInterfacesSeen(result, actual, expected, next) { return false }
       }
       for requiredMethod of interface_.methods {
@@ -196,6 +197,8 @@ export function isAssignableWithInterfaces(result: AnalysisResult, value: Resolv
 
 function isAssignableWithInterfacesSeen(result: AnalysisResult, value: ResolvedType, target: ResolvedType, seen: string[]): bool {
   if isAssignable(value, target) { return true }
+  bound := interfaceBoundReceiver(value)
+  if value.kind == "type-parameter" && bound.kind == "interface" { return isAssignableWithInterfacesSeen(result, bound, target, seen) }
   case value {
     union_: UnionResolvedType -> {
       for member of union_.types {

@@ -36,6 +36,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 
 
 import { CheckerState } from "./checker-state"
+import { checkTry } from "./checker-try"
 import { casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
@@ -164,8 +165,8 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
           declareUserBinding(state, bodyScope, Binding { name: binding.name, kind: "with", type_: declaredType, mutable: false, span: checkerSemanticSpan(binding.span), module: state.info!.path }, binding.span)
         }
       }
-      checkBlock(state, with_.body, bodyScope, inLoop)
-      return bindingsComplete
+      bodyCompletes := checkBlock(state, with_.body, bodyScope, inLoop)
+      return bindingsComplete && bodyCompletes
     }
     return_: ReturnStatement -> { return checkReturn(state, return_, scope) }
     yield_: YieldStatement -> {
@@ -610,24 +611,58 @@ function validateUniqueInterfaceMembers(state: CheckerState, interface_: Interfa
 // participate in body checking while the two constraint-only intrinsics retain
 // their dedicated member semantics.
 function populateTypeParameters(state: CheckerState, scope: Scope, names: string[], constraints: TypeParameterConstraint[]): none {
+  offset := scope.typeParams.length
   for name of names {
     scope.typeParams.push(name)
     scope.typeParamConstraintNames.push("")
     scope.typeParamConstraints.push(ResolvedTypeConstraint {})
   }
+  let active: string[] = []
+  let completed: string[] = []
+  for index of 0..<names.length { populateConstraint(state, scope, names, constraints, offset, index, active, completed) }
+  // Validate nested applications only after every parameter has its bound.
   for index of 0..<names.length {
-    if index >= constraints.length || constraints[index].type_ == none { continue }
-    annotation := constraints[index].type_!
-    case annotation {
-      named: NamedType -> {
-        if named.typeArgs.length == 0 && (named.name == "JsonSerializable" || named.name == "Reflectable") {
-          scope.typeParamConstraintNames[index] = named.name
-          continue
-        }
+    if index >= constraints.length || constraints[index].type_ == none || scope.typeParamConstraintNames[offset + index] != "" { continue }
+    if scope.typeParamConstraints[offset + index].type_ != none && scope.typeParamConstraints[offset + index].type_!.kind == "unknown" { continue }
+    resolveType(state, constraints[index].type_!, state.info!, scope)
+  }
+}
+
+function populateConstraint(state: CheckerState, scope: Scope, names: string[], constraints: TypeParameterConstraint[], offset: int, index: int, active: string[], completed: string[]): none {
+  if containsString(completed, names[index]) { return }
+  if index >= constraints.length || constraints[index].type_ == none { completed.push(names[index]); return }
+  annotation := constraints[index].type_!
+  if containsString(active, names[index]) {
+    typeError(state, "Cyclic constraint for type parameter '" + names[index] + "'", annotation.span)
+    scope.typeParamConstraints[offset + index].type_ = unknownType()
+    completed.push(names[index])
+    return
+  }
+  active.push(names[index])
+  case annotation {
+    named: NamedType -> {
+      if named.typeArgs.length == 0 && (named.name == "JsonSerializable" || named.name == "Reflectable") {
+        scope.typeParamConstraintNames[offset + index] = named.name
+        completed.push(names[index])
+        return
       }
-      _ -> { }
     }
-    scope.typeParamConstraints[index].type_ = resolveType(state, annotation, state.info!, scope)
+    _ -> { }
+  }
+  let resolved = resolveType(state, annotation, state.info!, scope, false)
+  case resolved {
+    parameter: TypeParameterType -> {
+      // Alias-expanded parameter bounds also resolve independently of order.
+      for dependency of 0..<names.length {
+        if parameter.name == names[dependency] { populateConstraint(state, scope, names, constraints, offset, dependency, active, completed) }
+      }
+      if !containsString(completed, names[index]) { resolved = resolveType(state, annotation, state.info!, scope, false) }
+    }
+    _ -> { }
+  }
+  if !containsString(completed, names[index]) {
+    scope.typeParamConstraints[offset + index].type_ = resolved
+    completed.push(names[index])
   }
 }
 
@@ -820,70 +855,8 @@ export function checkBlock(state: CheckerState, block: Block, parent: Scope, inL
   return completes
 }
 
-export function checkTry(state: CheckerState, statement: TryStatement, scope: Scope): bool {
-  if valueYieldScope(scope) != none && catchErrorScope(scope) == none {
-    typeError(state, "'try' cannot be used inside a value-producing block; handle the Result outside the block", statement.span)
-  }
-  let value: Expression = Identifier { kind: "identifier", name: "<try>", span: statement.span }
-  case statement.binding {
-    declaration: ConstDeclaration -> { value = declaration.value }
-    declaration: ReadonlyDeclaration -> { value = declaration.value }
-    binding: ImmutableBinding -> { value = binding.value }
-    declaration: LetDeclaration -> { value = declaration.value }
-    expression: ExpressionStatement -> { value = expression.expression }
-    destructuring: DestructuringStatement -> { value = destructuring.value }
-  }
-  resultValue := checkExpression(state, value, scope, none)
-  value.resolvedType = optionalResolvedType(resultValue)
-  case resultValue {
-    result: ResultResolvedType -> {
-      collector := catchErrorScope(scope)
-      if collector != none { collector!.catchErrorTypes.push(result.errorType) }
-      case statement.binding {
-        declaration: ConstDeclaration -> {
-          declaration.value.resolvedType = optionalResolvedType(resultValue)
-          declaration.resolvedType = optionalResolvedType(result.valueType)
-          declareUserBinding(state, scope, Binding { name: declaration.name, kind: "const", type_: result.valueType, mutable: false, span: checkerSemanticSpan(declaration.span), module: state.info!.path }, declaration.span)
-        }
-        declaration: ReadonlyDeclaration -> {
-          declaration.value.resolvedType = optionalResolvedType(resultValue)
-          declaration.resolvedType = optionalResolvedType(result.valueType)
-          declareUserBinding(state, scope, Binding { name: declaration.name, kind: "readonly", type_: result.valueType, mutable: false, span: checkerSemanticSpan(declaration.span), module: state.info!.path }, declaration.span)
-        }
-        binding: ImmutableBinding -> {
-          binding.value.resolvedType = optionalResolvedType(resultValue)
-          let bindingType = result.valueType
-          if binding.type_ != none {
-            bindingType = resolveType(state, binding.type_!, state.info!, scope)
-            if !isAssignableWithInterfaces(state.result, result.valueType, bindingType) {
-              typeError(state, "Cannot assign " + typeName(result.valueType) + " to " + typeName(bindingType), binding.span)
-            }
-          }
-          binding.resolvedType = optionalResolvedType(bindingType)
-          declareUserBinding(state, scope, Binding {
-            name: binding.name, kind: "immutable-binding", type_: bindingType,
-            mutable: false, span: checkerSemanticSpan(binding.span), module: state.info!.path,
-          }, binding.span)
-        }
-        declaration: LetDeclaration -> {
-          declaration.value.resolvedType = optionalResolvedType(resultValue)
-          declaration.resolvedType = optionalResolvedType(result.valueType)
-          declareUserBinding(state, scope, Binding { name: declaration.name, kind: "let", type_: result.valueType, mutable: true, span: checkerSemanticSpan(declaration.span), module: state.info!.path }, declaration.span)
-        }
-        expression: ExpressionStatement -> { expression.expression.resolvedType = optionalResolvedType(resultValue) }
-        destructuring: DestructuringStatement -> {
-          destructuring.value.resolvedType = optionalResolvedType(resultValue)
-          checkDestructuring(state, destructuring, scope, result.valueType)
-        }
-      }
-    }
-    _ -> { typeError(state, "try requires a Result expression", value.span) }
-  }
-  return true
-}
-
 /** Checks declaration and assignment destructuring against an already-resolved source shape. */
-function checkDestructuring(state: CheckerState, statement: DestructuringStatement, scope: Scope, sourceType: ResolvedType | none): none {
+export function checkDestructuring(state: CheckerState, statement: DestructuringStatement, scope: Scope, sourceType: ResolvedType | none): none {
   valueType := if sourceType == none then checkExpression(state, statement.value, scope, none) else sourceType!
   let bindingTypes: ResolvedType[] = []
 
@@ -948,7 +921,7 @@ function declareDestructuredBinding(state: CheckerState, scope: Scope, name: str
   }, span)
 }
 
-function declareUserBinding(state: CheckerState, scope: Scope, binding: Binding, span: SourceSpan): none {
+export function declareUserBinding(state: CheckerState, scope: Scope, binding: Binding, span: SourceSpan): none {
   if !declare(scope, binding) { typeError(state, "Binding '" + binding.name + "' is already declared in this scope", span) }
 }
 
@@ -957,15 +930,6 @@ function validateDestructuringTarget(state: CheckerState, scope: Scope, name: st
   if target == none { typeError(state, "Destructuring assignment target \"" + name + "\" is not defined", span); return }
   validateAssignmentBinding(state, target!, span)
   if !isAssignableWithInterfaces(state.result, valueType, target!.type_) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(target!.type_), span) }
-}
-
-function catchErrorScope(scope: Scope): Scope | none {
-  let current: Scope | none = scope
-  while current != none {
-    if current!.capturesTryErrors { return current }
-    current = current!.parent
-  }
-  return none
 }
 
 function lookupYieldBinding(scope: Scope, name: string): Binding | none {

@@ -98,3 +98,14 @@ function optionalCallbackValue(callback: ((): int) | none): int {
   narrowed := callback else { return -1 }
   return narrowed()
 }
+
+export function testCheckerReviewTypedTryStorage(): none {
+  result := compile([SourceFile { path: "/main.do", source: "function load(): Result<int, string> => Success { value: 1 }\nfunction good(): Result<long, string> { try let x: long = load()\nx += 2147483648L\nreturn Success { value: x } }\nfunction caught(): none { error := catch { try readonly x: long = load() } }\ntry value: long := load()\nprintln(value)" }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let source = ""
+  for module of result.emission!.modules { source = source + module.source }
+  Assert.stringContains(source, "int64_t x = doof::variant_promote<int64_t>(doof::success_value(")
+  Assert.stringContains(source, "const int64_t x = doof::variant_promote<int64_t>(doof::success_value(")
+  Assert.stringContains(source, "const int64_t value = doof::variant_promote<int64_t>(doof::success_value(")
+}

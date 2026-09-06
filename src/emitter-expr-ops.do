@@ -12,8 +12,8 @@ import { isNumeric, sameType } from "./checker-types"
 
 /** Lowers checked `as` conversion to a Result without evaluating its source twice. */
 export function emitAs(expression: AsExpression, context: EmitContext): string {
-  sourceType := requireExpressionType(expression.expression, "as source")
-  resultType := requireExpressionType(expression, "as expression")
+  sourceType := specializeEmitType(requireExpressionType(expression.expression, "as source"), context)
+  resultType := specializeEmitType(requireExpressionType(expression, "as expression"), context)
   case resultType {
     result: ResultResolvedType -> {
       target := result.valueType
@@ -155,6 +155,13 @@ function emitJsonAs(source: string, target: ResolvedType, resultCpp: string, suc
 }
 
 export function emitAssignment(expression: AssignmentExpression, context: EmitContext): string {
+  if expression.operator == "**=" {
+    targetType := emitContextType(requireExpressionType(expression.target, "compound assignment target"), context)
+    target := emitAssignmentTarget(expression.target, context)
+    value := emitExpression(expression.value, context)
+    operation := "std::pow(_assignment_target, _assignment_value)"
+    return "[&]() -> " + targetType + " { auto&& _assignment_target = " + target + "; auto _assignment_value = " + value + "; _assignment_target = " + operation + "; return _assignment_target; }()"
+  }
   operator := if expression.operator == "\\=" then "/=" else expression.operator
   targetType := expression.target.resolvedType
   value := emitExpression(expression.value, context, targetType)
@@ -175,7 +182,8 @@ function emitAssignmentTarget(target: Expression, context: EmitContext): string 
       }
     }
     member: MemberExpression -> {
-      objectType := decoratedExpressionType(member.object)
+      let objectType = decoratedExpressionType(member.object)
+      if objectType != none { objectType = specializeEmitType(objectType!, context) }
       if objectType != none && isVariantCarrier(objectType!) {
         object := emitExpression(member.object, context)
         return "std::visit([](auto&& _obj) -> decltype(auto) { return (_obj->" + cppIdentifier(member.property) + "); }, " + variantVisitValue(object, objectType!) + ")"
@@ -265,13 +273,13 @@ function isCppKeyword(name: string): bool {
 export function emitUnary(expression: UnaryExpression, context: EmitContext): string {
   if expression.operator == "try!" || expression.operator == "try?" {
     operand := emitExpression(expression.operand, context)
-    operandType := requireExpressionType(expression.operand, expression.operator + " operand")
+    operandType := specializeEmitType(requireExpressionType(expression.operand, expression.operator + " operand"), context)
     case operandType {
       result: ResultResolvedType -> {
-        valueType := emitType(result.valueType, context.modulePath)
+        valueType := emitContextType(result.valueType, context)
         if expression.operator == "try?" {
-          expressionType := requireExpressionType(expression, "try? expression")
-          expressionCpp := emitType(expressionType, context.modulePath)
+          expressionType := specializeEmitType(requireExpressionType(expression, "try? expression"), context)
+          expressionCpp := emitContextType(expressionType, context)
           let successValue = "std::move(doof::success_value(_try_value))"
           if needsNullableVariantPromotion(result.valueType, expressionType) {
             successValue = emitNullableVariantPromotion(successValue, result.valueType, expressionType, context.modulePath)
@@ -396,11 +404,19 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
     let test = "doof::is_null(" + emitExpression(expression.right, context) + ")"
     return if expression.operator == "==" then test else "(!" + test + ")"
   }
+  if expression.operator == ">>>" {
+    resultType := emitContextType(requireExpressionType(expression, "unsigned shift"), context)
+    return unsignedShift(emitExpression(expression.left, context), emitExpression(expression.right, context), resultType)
+  }
   if expression.operator == "**" {
     return "std::pow(" + emitExpression(expression.left, context) + ", " + emitExpression(expression.right, context) + ")"
   }
   operator := if expression.operator == "\\" then "/" else expression.operator
   return "(" + emitExpression(expression.left, context) + " " + operator + " " + emitExpression(expression.right, context) + ")"
+}
+
+function unsignedShift(left: string, right: string, resultType: string): string {
+  return "static_cast<" + resultType + ">(static_cast<std::make_unsigned_t<" + resultType + ">>(" + left + ") >> (" + right + "))"
 }
 
 function appendConstantStringParts(expression: Expression, parts: string[]): bool {
@@ -473,13 +489,13 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     }
     _ -> { }
   }
-  staticObjectType := decoratedExpressionType(expression.object)
+  let staticObjectType = decoratedExpressionType(expression.object)
   if staticObjectType != none {
     case staticObjectType! {
       parameter: TypeParameterType -> {
         specialized := specializeEmitType(parameter, context)
-        if expression.property == "metadata" { return "doof::metadata_for_type<" + emitType(specialized, context.modulePath) + ">()" }
-        if expression.property == "fromJsonValue" {
+        if parameter.constraintName == "Reflectable" && expression.property == "metadata" { return "doof::metadata_for_type<" + emitType(specialized, context.modulePath) + ">()" }
+        if parameter.constraintName == "JsonSerializable" && expression.property == "fromJsonValue" {
           case specialized {
             concrete: ClassType -> { return emitType(concrete, context.modulePath) + "::element_type::fromJsonValue" }
             unresolved: TypeParameterType -> { return cppIdentifier(unresolved.name) + "::element_type::fromJsonValue" }
@@ -502,6 +518,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       _ -> { }
     }
   }
+  if staticObjectType != none { staticObjectType = specializeEmitType(staticObjectType!, context) }
   // Nominal fields and methods take precedence over builtin and aggregate
   // pseudo-members. This keeps ordinary members named length, kind,
   // resolvedType, span, push, or value from being rewritten as accessors.
@@ -525,7 +542,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     return "std::visit([](auto&& _obj) { return _obj->" + cppIdentifier(expression.property) + "; }, " + variantVisitValue(object, staticObjectType!) + ")"
   }
   if expression.property == "push" { return object + "->push_back" }
-  objectType = decoratedExpressionType(expression.object)
+  objectType = staticObjectType
   if objectType != none {
     case objectType! {
       function_: FunctionType -> { return object + "." + cppIdentifier(expression.property) }

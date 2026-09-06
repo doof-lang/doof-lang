@@ -198,6 +198,10 @@ Rules:
 - The tried expression must have type `Result<T, F>`.
 - `F` must be assignable to the enclosing function's error type `E`.
 - The binding receives the success payload type `T`, not `Result<T, F>`.
+- Every annotated declaration form checks and stores the annotated success type.
+  `try readonly` applies the same deep immutability as ordinary `readonly`.
+- A surrounding `catch` handles failures within its own scope. It does not
+  handle failures inside nested functions, lambdas, or value-producing blocks.
 - `try` is a statement-level construct, not an expression.
 
 Supported forms:

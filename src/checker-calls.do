@@ -26,7 +26,7 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
+  interfaceBoundReceiver, actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   neverType, noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
   substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType,
@@ -119,7 +119,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           let resolvedTypeArgs: ResolvedType[] = []
           for argument of expression.typeArgs { resolvedTypeArgs.push(resolveType(state, argument, state.info!, scope)) }
           expression.resolvedGenericTypeArgs = resolvedTypeArgs
-          applyTypeArgumentConstraints(state, expression.resolvedFunction, resolvedTypeArgs, expression.span, scope)
+          applyTypeArgumentConstraints(state, expression.resolvedFunction, resolvedTypeArgs, expression.span, scope, expression.resolvedFunctionModule, expression.callee)
           substituted := substituteTypeParams(resolvedFunction, resolvedFunction.typeParams, resolvedTypeArgs)
           case substituted {
             function_: FunctionType -> { effectiveFunction = function_ }
@@ -163,7 +163,7 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
         }
         if complete {
           expression.resolvedGenericTypeArgs = inferred
-          applyTypeArgumentConstraints(state, expression.resolvedFunction, inferred, expression.span, scope)
+          applyTypeArgumentConstraints(state, expression.resolvedFunction, inferred, expression.span, scope, expression.resolvedFunctionModule, expression.callee)
           substituted := substituteTypeParams(resolvedFunction, resolvedFunction.typeParams, inferred)
           case substituted {
             function_: FunctionType -> { effectiveFunction = function_ }
@@ -376,9 +376,41 @@ function inferClassTypeArguments(state: CheckerState, expression: CallExpression
   return inferred
 }
 
-function applyTypeArgumentConstraints(state: CheckerState, declaration: FunctionDeclaration | none, arguments: ResolvedType[], span: SourceSpan, scope: Scope): none {
+function applyTypeArgumentConstraints(state: CheckerState, declaration: FunctionDeclaration | none, arguments: ResolvedType[], span: SourceSpan, scope: Scope, modulePath: string, callee: Expression): none {
   if declaration == none { return }
-  validateTypeArgumentConstraints(state, declaration!.typeParams, declaration!.typeParamConstraints, arguments, span, state.info!, scope)
+  let module = state.info!
+  for candidate of state.result.modules { if candidate.path == modulePath { module = candidate } }
+  let ownerNames: string[] = []
+  let ownerArguments: ResolvedType[] = []
+  let receiver: ResolvedType | none = none
+  case callee {
+    member: MemberExpression -> { receiver = member.object.resolvedType }
+    identifier: Identifier -> {
+      if identifier.resolvedBinding != none && identifier.resolvedBinding!.kind == "method" {
+        let current: Scope | none = scope
+        while current != none {
+          if current!.thisType != none && current!.thisType!.kind == "class" { receiver = current!.thisType; break }
+          current = current!.parent
+        }
+      }
+    }
+    _ -> { }
+  }
+  if receiver != none {
+    case receiver! {
+      owner: ClassType -> {
+        ownerDeclaration := declarationFor(state.result, owner.symbol)
+        if ownerDeclaration != none {
+          case ownerDeclaration! {
+            class_: ClassDeclaration -> { ownerNames = class_.typeParams; ownerArguments = owner.typeArgs }
+            _ -> { }
+          }
+        }
+      }
+      _ -> { }
+    }
+  }
+  validateTypeArgumentConstraints(state, declaration!.typeParams, declaration!.typeParamConstraints, arguments, span, module, scope, ownerNames, ownerArguments)
 }
 
 // Positional class calls share function-call assignability rules, but report
@@ -760,7 +792,7 @@ function constructionField(declaration: ClassDeclaration, name: string): ClassFi
 
 export function callableField(state: CheckerState, objectType: ResolvedType, property: string): bool {
   let symbol: Symbol | none = none
-  case objectType {
+  case interfaceBoundReceiver(objectType) {
     class_: ClassType -> { symbol = class_.symbol }
     interface_: InterfaceType -> { symbol = interface_.symbol }
     union_: UnionResolvedType -> {

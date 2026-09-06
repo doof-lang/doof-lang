@@ -58,7 +58,9 @@ the row from left to right.
 | --- | --- | --- | --- |
 | Source identity and diagnostics | token/AST spans in `lexer.do` and `ast.do`; diagnostic records in `semantic.do` | analyzer and focused checker module attach semantic spans | `driver.do` formats bounded diagnostic output |
 | Modules and names | `resolver.do` resolves logical paths; `analyzer.do` owns imports, exports, symbols, and defining-module identity | `checker-symbols.do` resolves lexical, named-import, and namespace-member bindings | `emitter-names.do` derives stable C++ identity; the worldview planner projects referenced declarations into each module header |
-| Types and assignability | resolved type records in `semantic.do`; shared operations in `checker-types.do` | focused checker modules decorate annotations and expressions | `emitter-types.do` chooses representation; expression/declaration emitters require decorations |
+| Types and assignability | resolved type records in `semantic.do`; shared operations in `checker-types.do` | focused checker modules decorate annotations and expressions | `emitter-types.do` chooses representation; expression/declaration emitters require decorations. Absence values share `emitNoneLiteral`, which specializes the checked type and uses type lowering's flattened nullable-member classification; catch initialization uses the same path. |
+| Numeric constraints | resolved primitive alternatives | `checker-numeric.do` proves operator capabilities and promotion; `checker-resolution.do` validates exact numeric arguments | specialized expression emission consumes checked types; unsigned shifts and compound powers lower explicitly |
+| Result propagation | try statements and lexical scopes | `checker-try.do` validates the nearest error channel and decorates success bindings | `emitter-stmt.do` stores typed success payloads using their checked representation |
 | Enums | variant syntax and resolved backing slots in `ast.do` | `checker-statements.do` selects integer/string backing kind, resolves values, and validates uniqueness; `checker-resolution.do` exposes the typed API | `emitter-header.do` emits identity/lookups/formatting, `emitter-types.do` selects optional nullable carriers, and JSON/metadata emitters consume the checked backing values |
 | Calls and dispatch | declarations and symbols from analysis | `checker-calls.do`, `checker-generics.do`, and `checker-interfaces.do` choose targets, defining modules, and substitutions | `emitter-expr-calls.do` lowers the recorded target without resolving callee syntax again |
 | Control flow and narrowing | statement/expression/pattern AST in parser modules | `checker-statements.do` and `checker-expressions.do` determine continuation, exhaustiveness, and narrowed bindings | `emitter-stmt.do`, `emitter-expr-control.do`, and `emitter-case-pattern.do` lower those decisions |
@@ -111,6 +113,15 @@ Wasm test harnesses instead retain their generated executable `main(arguments)`
 and link as Emscripten command modules with `_start`. On macOS the driver runs
 each test id in a fresh JavaScriptCore host process and Wasm instance through a
 bounded WASI command shim.
+
+Interface-constrained parameters retain their `TypeParameterType` on decorated
+receivers. Checker member lookup borrows the resolved interface contract for
+field bindings, signatures, callable-field identity, and method targets. Generic
+argument validation substitutes declaration and enclosing-owner parameters;
+symbolic alias/bound expansion does not validate temporary placeholders as real
+arguments. The emitter specializes those decorated receivers before choosing
+class/struct member access or variant dispatch, and uses the checked contract's
+argument order and defaults. It does not discover constraints during emission.
 
 Closed-world information drives interface variants, generic specialization,
 actor isolation validation, JSON/reflection generation, and stable module
@@ -171,3 +182,5 @@ Before considering a feature complete:
    runtime, native resources, or platform behavior changes.
 7. Update [source structure](source-structure.md) if ownership moved and this
    map if the cross-phase path changed.
+
+Adjacent braces produce a named-call AST even for uppercase callees; spaced uppercase braces retain named-construction parsing. The checker resolves the call target and its return type through ordinary call checking.

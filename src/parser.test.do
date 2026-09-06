@@ -1535,3 +1535,8 @@ export function testParsesTryDestructuringForms(): none {
     _ -> { panic("expected function") }
   }
 }
+
+export function testInterfaceBoundAdjacentGenericClosers(): none {
+  program := parse("interface Reader<V> { read(): V }\nfunction readOne<T: Reader<int>>(value: T): int => value.read()\nfunction shifted(value: int): int => value >> 1")
+  Assert.equal(program.statements.length, 3)
+}

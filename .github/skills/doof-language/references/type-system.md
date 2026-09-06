@@ -98,7 +98,13 @@ ratio := parseDouble("3.14")
 ## Generic Constraints
 
 Generic type parameters can be constrained with `T: Constraint`. Union
-constraints restrict type arguments to assignable members. `JsonSerializable` is
+constraints restrict type arguments to assignable members. Numeric-only bounds
+list exact primitive alternatives: `T: double` excludes `int`, and
+`T: float | double` excludes runtime union values. Narrow a union before calling.
+Numeric bounds enable operators valid for every alternative; arithmetic keeps
+`T` only when promotion preserves every alternative (`byte` promotes to `int`).
+Integer division, remainder and bitwise operations require integer bounds; `/`
+requires a floating operand for every possible combination. `JsonSerializable` is
 a compiler-known constraint-only intrinsic used for generic JSON helpers:
 
 ```doof
@@ -115,6 +121,23 @@ explicitly or infer the complete list from value arguments; expected return
 types do not infer otherwise-unresolved parameters. Closed-world emission
 specializes every reached Doof-owned generic function, nominal type, and
 method. Runtime- and native-owned C++ templates remain external.
+
+Interface bounds expose declared instance members while retaining the concrete
+`T`. For example:
+
+```doof
+interface Reader<V> { read(): V }
+function readOne<T: Reader<int>>(reader: T): int => reader.read()
+function keep<T: Reader<int>>(reader: T): T => reader
+```
+
+- Dependent bounds such as `<V, T: Reader<V>>` substitute `V` into member types.
+- Use the interface's field mutability, readonly rules, parameter names, and defaults.
+- Forwarding requires a bound that proves the receiving constraint; an unconstrained `T` is insufficient.
+- Bounds resolve in their declaration module and may reference enclosing class parameters.
+- Constraints alone do not infer otherwise-undetermined type arguments.
+- Adjacent generic closers (`>>`, `>>>`) need no separating whitespace.
+- Interface bounds do not grant `Reflectable` or `JsonSerializable` intrinsics; combined bounds remain unsupported.
 
 ## Type Inference
 
@@ -403,3 +426,9 @@ interface Drawable { draw(canvas: Canvas): none }
 ```
 
 Use classes for identity-rich domain types, structs for copied value data, and interfaces for structural contracts.
+
+Contextual `byte` literals must fit 0–255. Collection/string properties such as
+`length` and methods are not assignable fields.
+
+Shift results use the promoted left operand type. Exponentiation with an
+integral operand returns `double`; otherwise it uses float/double promotion.

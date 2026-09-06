@@ -35,3 +35,37 @@ export function testEmitterGapConditionalIncompatibleReturnRemainsDiagnostic(): 
   Assert.stringContains(result.diagnostics[0].message, "Cannot return int | string from function returning int")
   Assert.isTrue(result.emission == none)
 }
+
+export function testGenericNoneLiteralCatchUsesSpecializedCarrier(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Error { message: string }\n" +
+    "function fail<E>(error: E): Result<int, E> { return Failure { error: error } }\n" +
+    "function capture<E>(error: E): E | none { return catch { try value := fail(error) } }\n" +
+    "function main(): none { capture(Error { message: \"bad\" })\ncapture(7) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  let source = ""
+  for module of result.emission!.modules { source = source + module.source }
+  Assert.stringContains(source, " = nullptr;")
+  Assert.stringContains(source, " = std::nullopt;")
+  Assert.stringNotContains(source, " = std::monostate{};")
+  Assert.stringNotContains(source, "std::variant<std::monostate, E>")
+}
+
+export function testGenericNoneLiteralReadonlyConditionalHasOneCarrier(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Effect { rerollScope: int\nreadonly rerollScopes: int[] }\n" +
+    "function scopes(effect: Effect): int {\n" +
+    "readonly scopes: int[] = if effect.rerollScopes.length == 0 then [effect.rerollScope] else effect.rerollScopes\n" +
+    "return scopes.length }\nfunction main(): none { scopes(Effect { rerollScope: 7, rerollScopes: [] }) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  let source = ""
+  for module of result.emission!.modules { source = source + module.source }
+  Assert.stringNotContains(source, "std::variant<std::shared_ptr<std::vector<int32_t>>")
+  Assert.stringContains(source, "const std::shared_ptr<std::vector<int32_t>> scopes =")
+}

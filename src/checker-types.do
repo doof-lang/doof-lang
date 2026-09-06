@@ -118,8 +118,8 @@ export function applyDeepReadonly(type_: ResolvedType): ResolvedType {
     union_: UnionResolvedType -> {
       let members: ResolvedType[] = []
       for member of union_.types { members.push(applyDeepReadonly(member)) }
-      result := UnionResolvedType { types: members }
-      return result
+      // Readonly can make previously distinct mutable/readonly arms identical.
+      return unionType(members)
     }
     class_: ClassType -> {
       let typeArgs: ResolvedType[] = []
@@ -165,7 +165,7 @@ export function substituteTypeParams(type_: ResolvedType, names: string[], argum
     union_: UnionResolvedType -> {
       let members: ResolvedType[] = []
       for member of union_.types { members.push(substituteTypeParams(member, names, arguments)) }
-      return UnionResolvedType { types: members }
+      return unionType(members)
     }
     class_: ClassType -> {
       let typeArgs: ResolvedType[] = []
@@ -185,6 +185,26 @@ export function substituteTypeParams(type_: ResolvedType, names: string[], argum
       return functionType(params, substituteTypeParams(function_.returnType, names, arguments), function_.typeParams)
     }
     _ -> { return type_ }
+  }
+  return type_
+}
+
+// Member lookup borrows an interface contract without erasing the receiver's T.
+// A malformed chain must never turn lookup into unbounded recursion.
+export function interfaceBoundReceiver(type_: ResolvedType): ResolvedType {
+  let current = type_
+  let seen: string[] = []
+  while true {
+    case current {
+      parameter: TypeParameterType -> {
+        for name of seen { if name == parameter.name { return type_ } }
+        seen.push(parameter.name)
+        if parameter.constraint == none { return type_ }
+        current = parameter.constraint!
+      }
+      _: InterfaceType -> { return current }
+      _ -> { return type_ }
+    }
   }
   return type_
 }

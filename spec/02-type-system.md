@@ -121,6 +121,9 @@ let x: long = 42    // Literal interpreted as long
 let y: float = 3.14 // Literal interpreted as float
 ```
 
+A literal contextualized as `byte` must be in `0..255`; out-of-range values are
+rejected rather than implicitly truncated.
+
 Underscores may appear between two digits in numeric literals to improve readability. Leading, trailing, and consecutive underscores are rejected.
 
 ### Implicit Numeric Widening
@@ -1083,6 +1086,80 @@ expected result type and must be supplied explicitly.
 Constraints are checked for explicit and inferred arguments. Ordinary
 constraints restrict admissible concrete arguments; `JsonSerializable` and
 `Reflectable` additionally provide only their documented compiler intrinsics.
+
+### Numeric Constraints
+
+A numeric constraint, such as `T: double` or `T: float | double`, lists exact
+primitive alternatives. Numeric widening does not satisfy a numeric constraint:
+`int` is not a valid argument for `T: double`. A runtime `float | double` union
+is not a numeric type argument; narrow it before calling the generic. Forwarding
+another numeric type parameter is allowed when all of its alternatives occur
+in the receiving bound.
+
+Numeric bounds enable arithmetic, unary numeric operators, and comparisons.
+Every permitted alternative must support the operator: `/` requires at least
+one floating operand for every combination; integer division, remainder, and
+bitwise operators require integer alternatives. Two operands of the same `T`
+have the same concrete type. Arithmetic preserves `T` only when numeric
+promotion preserves it for every permitted alternative. Otherwise its type is
+the promoted primitive or union of possible promoted primitives. In particular,
+`byte` arithmetic promotes to `int`, so a `T: byte | int` sum cannot return `T`.
+Compound assignments must be able to store the promoted result in the target.
+Shift results use the promoted left operand type. Exponentiation returns
+`double` if either operand is integral; otherwise it uses float/double promotion.
+
+```doof
+function add<T: float | double>(a: T, b: T): T => a + b
+function quotient<T: float | double>(a: T, b: T): T => a / b
+function complement<T: int | long>(value: T): T => ~value
+```
+
+### Interface Constraints
+
+An interface bound exposes its declared instance fields and methods inside a
+generic body. Interface arguments are substituted into those member types:
+
+```doof
+interface Reader<V> {
+  read(): V
+}
+
+function readOne<T: Reader<int>>(reader: T): int => reader.read()
+
+function readOr<V, T: Reader<V>>(reader: T, fallback: V): V => reader.read()
+
+function keep<T: Reader<int>>(reader: T): T => reader
+```
+
+`T` retains the concrete argument type; its interface bound supplies the contract
+used to check the body. Members absent from that contract are unavailable even
+when every current call supplies a class with additional members. Fields retain
+the interface's implicit-immutable, `let`, and `readonly` rules. Method calls use
+the contract's parameter names and default expressions. An instance member is
+accessed through `reader`, not through the type name `T`.
+
+A constrained parameter can be forwarded to another generic declaration when
+its bound proves the required constraint under existing assignability rules.
+Unconstrained or incompatible forwarding is an error. Bounds resolve in the
+owning declaration's module, and method bounds can refer to enclosing class
+parameters. Direct or alias-mediated cyclic parameter bounds are errors.
+
+The same rules apply to generic functions, methods, classes, structs, interfaces,
+and aliases. Classes and structs satisfy interface bounds structurally; an
+interface-valued argument can also satisfy the same interface bound. Existing
+interface compatibility rules continue to apply.
+
+Bounds do not add an inference source: in `readOr`, the `fallback` argument can
+infer `V`; without an argument that determines `V`, supply all type arguments
+explicitly. A bound alone does not infer `V` from a concrete reader's methods.
+
+Adjacent closing brackets such as `Reader<int>>` and `Box<Reader<int>>>` are
+accepted in generic declarations, type annotations, and explicit generic calls.
+Expression shift operators retain their ordinary meaning.
+
+Interface bounds do not grant the compiler-generated static capabilities of
+`Reflectable` or `JsonSerializable`. Combined/intersection constraints and
+associated types are not introduced by interface bounds.
 
 ### Generic Emission
 

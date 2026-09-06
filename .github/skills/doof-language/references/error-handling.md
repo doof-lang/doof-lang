@@ -262,3 +262,9 @@ Use it only as a controlled escape hatch at process or host boundaries. It is no
 ## Resource Cleanup
 
 There is no `finally` or `defer`. Cleanup relies on deterministic destructors and reference counting.
+
+All typed `try` declaration forms validate and store the annotated success type.
+`try readonly` deep-freezes the success binding. A `none` success payload is
+allowed only in bare `try expr`. Propagated errors must fit the enclosing
+function’s error type; catches and native-script handlers do not cross nested
+function, lambda, or value-producing-block boundaries.

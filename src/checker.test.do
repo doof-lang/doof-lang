@@ -1057,7 +1057,7 @@ export function testChecksCanonicalNoneReturnsAndLegacyUnionNormalization(): non
 }
 
 export function testChecksPayloadlessNoneResultAndRejectsTryQuestion(): none {
-  valid := checked("function save(): Result<none, string> => Success()\nfunction fail(): Result<int, none> => Failure()\nfunction use(): none { try save() }")
+  valid := checked("function save(): Result<none, string> => Success()\nfunction fail(): Result<int, none> => Failure()\nfunction use(): Result<none, string> { try save()\nreturn Success() }")
   Assert.equal(valid.diagnostics.length, 0)
 
   invalid := checked("function save(): Result<none, string> => Success()\nfunction use(): none { value := try? save() }")
@@ -2021,7 +2021,7 @@ export function testChecksNativeMethodsAndStaticMethods(): none {
 }
 
 export function testChecksNativeResultMethodsThroughTryBindings(): none {
-  result := checked("import class Writer from \"writer.hpp\" as native::Writer { static open(path: string): Result<Writer, string> writeBlob(data: byte[]): Result<void, string> }\nfunction write(): void { try writer := Writer.open(\"path\")\ntry writer.writeBlob([]) }")
+  result := checked("import class Writer from \"writer.hpp\" as native::Writer { static open(path: string): Result<Writer, string> writeBlob(data: byte[]): Result<void, string> }\nfunction write(): Result<none, string> { try writer := Writer.open(\"path\")\ntry writer.writeBlob([])\nreturn Success() }")
   Assert.equal(result.diagnostics.length, 0)
 }
 

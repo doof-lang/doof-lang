@@ -51,10 +51,10 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         if resultType == none { panic(identifier.name + " has no expected Result type") }
         case resultType! {
           result: ResultResolvedType -> {
-            if expression.args.length == 0 { return "doof::" + identifier.name + "<" + emitResultPayloadType(if identifier.name == "Success" then result.valueType else result.errorType, context.modulePath) + ">{}" }
+            if expression.args.length == 0 { return "doof::" + identifier.name + "<" + emitContextReturnType(if identifier.name == "Success" then result.valueType else result.errorType, context) + ">{}" }
             valueType := if identifier.name == "Success" then result.valueType else result.errorType
             value := emitExpression(expression.args[0].value, context, valueType)
-            payloadType := emitResultPayloadType(valueType, context.modulePath)
+            payloadType := emitContextReturnType(valueType, context)
             return "doof::" + identifier.name + "<" + payloadType + ">{ " + value + " }"
           }
           _ -> { }
@@ -193,7 +193,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if arrayObjectType != none {
         case arrayObjectType! {
           _: InterfaceType -> {
-            if member.property == "fromJsonValue" { return emitInterfaceJsonCall(member, expression, context) }
+            if member.property == "fromJsonValue" && expression.resolvedFunction == none && !member.resolvedCallableField { return emitInterfaceJsonCall(member, expression, context) }
             return emitVariantMemberCall(member, expression, context)
           }
           _: StreamResolvedType -> { return emitInterfaceCall(member, expression, context) }
@@ -555,14 +555,32 @@ function emitWeakCallArguments(expression: CallExpression, context: EmitContext)
   let result = ""
   let named = false
   for argument of expression.args { if argument.name != none { named = true } }
+  let signature: FunctionType | none = none
+  if expression.callee.resolvedType != none {
+    case specializeEmitType(expression.callee.resolvedType!, context) {
+      fn: FunctionType -> { signature = fn }
+      _ -> { }
+    }
+  }
   if expression.resolvedFunction != none {
     for i of 0..<expression.resolvedFunction!.params.length {
       parameter := expression.resolvedFunction!.params[i]
+      expected := if signature != none && i < signature!.params.length then optionalExpectedType(signature!.params[i].type_) else parameter.resolvedType
       argument := if named then callArgumentNamed(expression, parameter.name) else if i < expression.args.length then expression.args[i] else none
       if argument != none || parameter.defaultValue != none {
         if result != "" { result = result + ", " }
-        if argument != none { result = result + emitExpectedExpression(argument!.value, context, parameter.resolvedType) }
-        else { result = result + emitDefaultExpression(parameter.defaultValue!, context, parameter.resolvedType, expression.span) }
+        if argument != none { result = result + emitExpectedExpression(argument!.value, context, expected) }
+        else { result = result + emitDefaultExpression(parameter.defaultValue!, context, expected, expression.span) }
+      }
+    }
+    return result
+  }
+  if named && signature != none {
+    for parameter of signature!.params {
+      argument := callArgumentNamed(expression, parameter.name)
+      if argument != none {
+        if result != "" { result = result + ", " }
+        result = result + emitExpectedExpression(argument!.value, context, parameter.type_)
       }
     }
     return result
@@ -627,11 +645,7 @@ function emitVariantMemberCall(member: MemberExpression, call: CallExpression, c
   objectType := decoratedExpressionType(member.object)
   if objectType == none { panic("Variant member call has no resolved object type") }
   if call.resolvedType == none { panic("Variant member call has no resolved return type") }
-  let args = ""
-  for i of 0..<call.args.length {
-    if i > 0 { args = args + ", " }
-    args = args + emitExpression(call.args[i].value, context)
-  }
+  args := emitWeakCallArguments(call, context)
   invocation := if member.resolvedCallableField then ".call(" else "("
   return "std::visit([&](auto&& _obj) -> " + emitContextReturnType(call.resolvedType!, context) + " { return _obj->" + cppIdentifier(member.property) + invocation + args + "); }, " + variantVisitValue(object, objectType!) + ")"
 }
@@ -683,7 +697,7 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
         valueType := if expression.type_ == "Success" then result.valueType else result.errorType
         propertyName := if expression.type_ == "Success" then "value" else "error"
         property := findProperty(expression.args, propertyName)
-        payloadType := emitResultPayloadType(valueType, context.modulePath)
+        payloadType := emitContextReturnType(valueType, context)
         if property == none || property!.value == none { return "doof::" + expression.type_ + "<" + payloadType + ">{ }" }
         value := emitExpectedExpression(property!.value!, context, valueType)
         return "doof::" + expression.type_ + "<" + payloadType + ">{ " + value + " }"

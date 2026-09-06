@@ -14,6 +14,10 @@ f := 10 % 3    // Modulo: 1 (integer operands only)
 g := 2 ** 3    // Exponentiation: 8
 ```
 
+Exponentiation uses `double` when either operand is integral; two floating
+operands use their common floating type. Shift results use the promoted left
+operand type, independently of the shift-count type.
+
 ### Division Operators
 
 Doof has two division operators:

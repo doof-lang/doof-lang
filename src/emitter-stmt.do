@@ -307,10 +307,10 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
       }
       output = output + "break; }\n"
       case statement.binding {
-        declaration: ConstDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true) }
-        declaration: ReadonlyDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true) }
-        binding: ImmutableBinding -> { output = output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, "doof::success_value(" + temporaryName + ")", true, true) }
-        declaration: LetDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", false) }
+        declaration: ConstDeclaration -> { output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true) }
+        declaration: ReadonlyDeclaration -> { output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true) }
+        binding: ImmutableBinding -> { output = output + emitTryLocal(ind, binding.name, binding.type_, binding.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true, true) }
+        declaration: LetDeclaration -> { output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", false) }
         _: ExpressionStatement -> { }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
       }
@@ -322,16 +322,16 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
       output = output + ind + "if (doof::is_failure(" + temporaryName + ")) return doof::Failure<" + errorType + ">{doof::variant_promote<" + errorType + ">(doof::failure_error(" + temporaryName + "))};\n"
       case statement.binding {
         declaration: ConstDeclaration -> {
-          output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true)
+          output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true)
         }
         declaration: ReadonlyDeclaration -> {
-          output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true)
+          output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true)
         }
         binding: ImmutableBinding -> {
-          output = output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, "doof::success_value(" + temporaryName + ")", true, true)
+          output = output + emitTryLocal(ind, binding.name, binding.type_, binding.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true, true)
         }
         declaration: LetDeclaration -> {
-          output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", false)
+          output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", false)
         }
         _: ExpressionStatement -> { }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
@@ -350,10 +350,10 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
       }
       output = output + ind + "if (doof::is_failure(" + temporaryName + ")) doof::panic_at(" + quote(context.modulePath) + ", " + string(statement.span.start.line) + ", " + failureMessage + ");\n"
       case statement.binding {
-        declaration: ConstDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true) }
-        declaration: ReadonlyDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", true) }
-        binding: ImmutableBinding -> { output = output + emitExtractedLocal(ind, binding.name, binding.resolvedType!, "doof::success_value(" + temporaryName + ")", true, true) }
-        declaration: LetDeclaration -> { output = output + emitExtractedLocal(ind, declaration.name, declaration.resolvedType!, "doof::success_value(" + temporaryName + ")", false) }
+        declaration: ConstDeclaration -> { output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true) }
+        declaration: ReadonlyDeclaration -> { output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true) }
+        binding: ImmutableBinding -> { output = output + emitTryLocal(ind, binding.name, binding.type_, binding.resolvedType!, context, "doof::success_value(" + temporaryName + ")", true, true) }
+        declaration: LetDeclaration -> { output = output + emitTryLocal(ind, declaration.name, declaration.type_, declaration.resolvedType!, context, "doof::success_value(" + temporaryName + ")", false) }
         _: ExpressionStatement -> { }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
       }
@@ -361,6 +361,13 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
   }
   panic("try expression is outside a Result-returning function")
   return ""
+}
+
+/** Typed try bindings must store the checked success type instead of inferring it again. */
+function emitTryLocal(ind: string, name: string, annotation: TypeAnnotation | none, resolvedType: ResolvedType, context: EmitContext, value: string, readonly_: bool, shallowImmutable: bool = false): string {
+  if annotation == none { return emitExtractedLocal(ind, name, resolvedType, value, readonly_, shallowImmutable) }
+  typeText := emitContextType(resolvedType, context)
+  return ind + localConstPrefix(resolvedType, readonly_, shallowImmutable) + typeText + " " + cppIdentifier(name) + " = doof::variant_promote<" + typeText + ">(" + value + ");\n"
 }
 
 function resultValueType(expression: Expression): ResolvedType | none => expression.resolvedType

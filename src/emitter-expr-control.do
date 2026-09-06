@@ -9,6 +9,7 @@ import { emitBlock } from "./emitter-stmt"
 import { exprModuleNamespaceFor, hasNoneMember } from "./emitter-expr-utils"
 import { emitContextType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { sameType } from "./checker-types"
+import { emitNoneLiteral } from "./emitter-expr-literals"
 
 export function emitDotShorthand(expression: DotShorthand, context: EmitContext): string {
   if expression.resolvedShorthandOwnerKind != "enum" && expression.resolvedShorthandOwnerKind != "class" {
@@ -63,8 +64,8 @@ export function emitYieldBlockExpression(expression: YieldBlockExpression, conte
 
 export function emitCatchExpression(expression: CatchExpression, context: EmitContext): string {
   if expression.resolvedType == none { panic("Catch expression has no resolved result type") }
-  resultType := expression.resolvedType!
-  resultCppType := emitType(resultType, context.modulePath)
+  resultType := specializeEmitType(expression.resolvedType!, context)
+  resultCppType := emitContextType(resultType, context)
   context.tryCounter = context.tryCounter + 1
   catchVar := "_catch_" + string(context.tryCounter)
   previousCatchVar := context.catchVarName
@@ -75,15 +76,9 @@ export function emitCatchExpression(expression: CatchExpression, context: EmitCo
   context.catchVarName = previousCatchVar
   context.catchResultType = previousCatchType
   return "[&]() -> " + resultCppType + " {\n" +
-    "    " + resultCppType + " " + catchVar + " = " + catchNullValue(resultCppType) + ";\n" +
+    "    " + resultCppType + " " + catchVar + " = " + emitNoneLiteral(resultType, context) + ";\n" +
     "    do {\n" + body + "    } while (false);\n" +
     "    return " + catchVar + ";\n}()"
-}
-
-function catchNullValue(resultCppType: string): string {
-  if resultCppType.startsWith("std::optional<") { return "std::nullopt" }
-  if resultCppType.startsWith("std::shared_ptr<") || resultCppType.startsWith("std::weak_ptr<") { return "nullptr" }
-  return "std::monostate{}"
 }
 
 export function emitCaseExpression(expression: CaseExpression, context: EmitContext, expected: ResolvedType | none): string {

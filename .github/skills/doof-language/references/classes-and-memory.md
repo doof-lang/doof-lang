@@ -205,9 +205,10 @@ interface Shape {
 
 Rules:
 
-- Interfaces are structural.
+- Interfaces are structural. They can constrain generics (`T: Reader<int>`), exposing their instance contract without erasing the concrete `T`.
 - Classes satisfy them automatically when structure matches.
 - Generic class and interface arguments are substituted before structure is compared.
+- Writable (`let`) interface fields require identical implementation types after substitution; read-only field compatibility remains covariant.
 - Interface method parameters match exactly; implementation returns may be narrower when assignable to the required return type.
 - An unresolved inferred field cannot establish structural conformance.
 - Structs do not satisfy interfaces in v1.

@@ -369,6 +369,11 @@ with <name> [:Type] := <expression> [, ...] {
 // name is NOT in scope here
 ```
 
+After all bindings are evaluated, the body determines whether the `with`
+statement completes normally. An unconditional return or panic in its body
+terminates the enclosing path for return-completeness checking.
+
+
 ### Single Binding
 
 ```javascript

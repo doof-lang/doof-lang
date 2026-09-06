@@ -118,6 +118,8 @@ The `{` must immediately follow the callee token with no whitespace: `clamp{ ...
 
 The same named-call form applies to methods and imported functions.
 
+Named-call syntax is independent of capitalization: `GroupBox{title: "Account"}` calls the bound function and has its declared return type. Spaced `View { ... }` uses named construction syntax. Generic named calls retain their explicit type arguments, for example `Identity<View>{value: view}`.
+
 ### Typed tag calls
 
 Typed tags are an alternate named-call spelling for classes, structs,

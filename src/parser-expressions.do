@@ -339,6 +339,14 @@ isolated function parsePrimary(parser: Parser): Expression {
       }
       parser.expect(TokenType.Greater)
     }
+    // Adjacent braces are named calls regardless of the callee's capitalization.
+    // Resolve the callable (and its return type) in the checker.
+    if parser.check(TokenType.LeftBrace) && parser.immediatelyAfterPrevious() {
+      return parseNamedCall(parser, Identifier { kind: "identifier", name, span: identifierSpan }, typeArgs)
+    }
+    if typeArgs.length > 0 && parser.check(TokenType.LeftParen) {
+      return parseCall(parser, Identifier { kind: "identifier", name, span: identifierSpan }, typeArgs)
+    }
     if parser.check(TokenType.LeftBrace) && startsWithUppercase(name) && !parser.inForIterable && looksLikeConstruction(parser) {
       return parseConstruction(parser, start, name, typeArgs)
     }
@@ -711,8 +719,9 @@ function looksLikeGenericTypeArguments(parser: Parser): bool {
   while index < 64 {
     token := parser.peek(index)
     if token.kind == TokenType.Less { depth = depth + 1 }
-    if token.kind == TokenType.Greater {
-      depth = depth - 1
+    if token.kind == TokenType.Greater || token.kind == TokenType.GreaterGreater || token.kind == TokenType.GreaterGreaterGreater {
+      depth = depth - (if token.kind == TokenType.GreaterGreaterGreater then 3 else if token.kind == TokenType.GreaterGreater then 2 else 1)
+      if depth < 0 { return false }
       if depth == 0 {
         next := parser.peek(index + 1).kind
         return next == TokenType.LeftBrace || next == TokenType.LeftParen

@@ -71,14 +71,14 @@ export type TypeAnnotation = NamedType | ArrayType | UnionType | AstFunctionType
 export class IntLiteral {
   kind: string
   value: int
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class LongLiteral {
   kind: string
   value: long
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -86,7 +86,7 @@ export class FloatLiteral {
   kind: string
   value: float
   raw: string = ""
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -94,7 +94,7 @@ export class DoubleLiteral {
   kind: string
   value: double
   raw: string = ""
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -103,28 +103,28 @@ export class StringLiteral {
   value: string
   parts: string[]
   interpolations: Expression[]
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class CharLiteral {
   kind: string
   value: char
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class BoolLiteral {
   kind: string
   value: bool
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class NoneLiteral {
   kind: string
   sourceSpelling: string = "none"
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -141,7 +141,7 @@ export class BinaryExpression {
   operator: string
   left: Expression
   right: Expression
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -150,7 +150,7 @@ export class UnaryExpression {
   operator: string
   operand: Expression
   prefix: bool
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -159,7 +159,7 @@ export class AssignmentExpression {
   operator: string
   target: Expression
   value: Expression
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -175,7 +175,7 @@ export class MemberExpression {
   let resolvedNamespaceAccess: bool = false
   let resolvedNamespaceSymbol: Symbol | none = none
   let resolvedCallableField: bool = false
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -184,7 +184,7 @@ export class IndexExpression {
   object: Expression
   index: Expression
   optional: bool
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -207,7 +207,7 @@ export class CallExpression {
   let resolvedFunctionModule: string = ""
   let resolvedConstructor: FunctionDeclaration | none = none
   let resolvedClass: ClassDeclaration | none = none
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   let span: SourceSpan
 }
 
@@ -215,7 +215,7 @@ export class ArrayLiteral {
   kind: string
   elements: Expression[]
   let readonly_: bool
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -237,14 +237,14 @@ export class ObjectLiteral {
   properties: ObjectProperty[]
   spread: Expression | none
   let resolvedClass: ClassDeclaration | none = none
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class TupleLiteral {
   kind: string
   elements: Expression[]
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -255,7 +255,7 @@ export class LambdaExpression {
   body: Expression | Block
   parameterless: bool
   trailing: bool
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -264,7 +264,7 @@ export class IfExpression {
   condition: Expression
   then_: Expression
   else_: Expression
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -280,7 +280,7 @@ export class ConstructExpression {
   let resolvedClass: ClassDeclaration | none = none
   let resolvedConstructor: FunctionDeclaration | none = none
   let resolvedConstructedType: ResolvedType | none = none
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -292,19 +292,19 @@ export class DotShorthand {
   let resolvedShorthandOwnerModule: string = ""
   let resolvedShorthandOwnerNative: bool = false
   let resolvedShorthandOwnerCppName: string = ""
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class ThisExpression {
   kind: string
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class CallerExpression {
   kind: string
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -312,14 +312,14 @@ export class AsyncExpression {
   kind: string
   expression: Expression | Block
   let resolvedCaptureNames: string[] = []
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class RetireExpression {
   kind: string
   actor: Expression
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -327,7 +327,7 @@ export class AsExpression {
   kind: string
   expression: Expression
   targetType: TypeAnnotation
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
@@ -336,21 +336,21 @@ export class ActorCreationExpression {
   className: string
   args: Expression[]
   let resolvedConstructor: FunctionDeclaration | none = none
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class YieldBlockExpression {
   kind: string = "yield-block-expression"
   body: Block
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 
 export class CatchExpression {
   kind: string = "catch-expression"
   body: Block
-  resolvedType: ResolvedType | none = none
+  let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
 

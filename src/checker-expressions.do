@@ -25,9 +25,9 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
+  interfaceBoundReceiver, actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
-  neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
+  neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
   isStringInterpolatable, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
@@ -37,6 +37,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 
 
 import { CheckerState } from "./checker-state"
+import { isNumericOperand, isIntegerOperand, numericOperatorAllowed, numericOperationType } from "./checker-numeric"
 import { checkFunction, checkBlock } from "./checker-statements"
 import { checkCall, checkLambda, checkConstruct, callableField } from "./checker-calls"
 import { checkArray, checkObject } from "./checker-literals"
@@ -359,9 +360,12 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       members.push(noneType())
       return finish(state, catch_, unionType(members))
     }
-    _: IntLiteral -> {
+    literal: IntLiteral -> {
       if expected != none { case expected! {
         primitiveExpected: PrimitiveType -> {
+          if primitiveExpected.name == "byte" && (literal.value < 0 || literal.value > 255) {
+            typeError(state, "Byte literal must be in the range 0–255", expression.span)
+          }
           if primitiveExpected.name == "byte" || primitiveExpected.name == "long" || primitiveExpected.name == "float" || primitiveExpected.name == "double" {
             return finish(state, expression, expected!)
           }
@@ -785,7 +789,7 @@ function isNamedStaticReceiver(expression: Expression): bool {
     identifier: Identifier -> {
       if identifier.resolvedBinding == none { return false }
       binding := identifier.resolvedBinding!
-      if binding.kind == "class" || binding.kind == "struct" || binding.kind == "interface" || binding.kind == "enum" { return true }
+      if binding.kind == "type-parameter" || binding.kind == "class" || binding.kind == "struct" || binding.kind == "interface" || binding.kind == "enum" { return true }
       if binding.kind == "import" && binding.symbol != none {
         kind := binding.symbol!.kind
         return kind == "class" || kind == "struct" || kind == "interface" || kind == "enum"
@@ -814,7 +818,7 @@ function enumVariantMember(state: CheckerState, receiver: ResolvedType, property
 
 function declaredInstanceMember(state: CheckerState, receiver: ResolvedType, property: string): bool {
   let symbol: Symbol | none = none
-  case receiver {
+  case interfaceBoundReceiver(receiver) {
     class_: ClassType -> { symbol = class_.symbol }
     interface_: InterfaceType -> { symbol = interface_.symbol }
     _ -> { return false }
@@ -1027,14 +1031,9 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   }
   if operator == "+" && typeName(left) == "string" && (typeName(right) == "string" || typeName(right) == "char" || typeName(right) == "unknown") { return finish(state, expression, primitive("string")) }
   if operator == "+" && typeName(right) == "string" && (typeName(left) == "char" || typeName(left) == "unknown") { return finish(state, expression, primitive("string")) }
-  if isNumeric(left) && isNumeric(right) {
-    if (operator == "\\" || operator == "%" || bitwiseOperator(operator)) && (!isInteger(left) || !isInteger(right)) {
-      typeError(state, "Operator '" + operator + "' requires integer operands, got " + typeName(left) + " and " + typeName(right), expression.span)
-    }
-    if operator == "/" && isInteger(left) && isInteger(right) {
-      typeError(state, "Operator '/' requires at least one floating-point operand", expression.span)
-    }
-    return finish(state, expression, numericResult(left, right))
+  if isNumericOperand(left) && isNumericOperand(right) {
+    validateNumericOperator(state, operator, left, right, expression.span)
+    return finish(state, expression, numericOperationType(left, right, operator))
   }
   typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span)
   return finish(state, expression, unknownType())
@@ -1128,8 +1127,11 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
   }
   if expression.operator == "!" { requireBool(state, value, expression.span); return finish(state, expression, primitive("bool")) }
   if expression.operator == "+" || expression.operator == "-" || expression.operator == "~" {
-    if !isNumeric(value) { typeError(state, "Unary '" + expression.operator + "' requires a numeric operand", expression.span) }
-    else if expression.operator == "~" && !isInteger(value) { typeError(state, "Unary '~' requires an integer operand", expression.span) }
+    if !isNumericOperand(value) { typeError(state, "Unary '" + expression.operator + "' requires a numeric operand", expression.span) }
+    else {
+      if expression.operator == "~" && !isIntegerOperand(value) { typeError(state, "Unary '~' requires an integer operand", expression.span) }
+      return finish(state, expression, numericOperationType(value, value))
+    }
     return finish(state, expression, value)
   }
   return finish(state, expression, value)
@@ -1255,14 +1257,15 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
     member: MemberExpression -> {
       objectType := checkExpression(state, member.object, scope, none)
       targetType := memberType(state, objectType, member.property, member.span)
-      fieldBinding := fieldAssignmentBinding(state, objectType, member.property, targetType)
+      fieldBinding := fieldAssignmentBinding(state, objectType, member.property, targetType, member.span)
       if fieldBinding != none { validateAssignmentBinding(state, fieldBinding!, member.span) }
+      else if objectType.kind != "unknown" && objectType.kind != "never" { typeError(state, "Member '" + member.property + "' is not an assignable field", member.span) }
       if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, targetType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(targetType), expression.span) }
     }
     _ -> { typeError(state, "Assignment target must be a binding", expression.target.span) }
   }
   if targetType.kind == "never" || value.kind == "never" { return finish(state, expression, neverType()) }
-  return finish(state, expression, value)
+  return finish(state, expression, if expression.operator == "=" then value else targetType)
 }
 
 function validateAssignmentOperator(state: CheckerState, operator: string, target: ResolvedType, value: ResolvedType, span: SourceSpan): none {
@@ -1286,28 +1289,21 @@ function validateAssignmentOperator(state: CheckerState, operator: string, targe
 
 function binaryOperatorType(state: CheckerState, operator: string, left: ResolvedType, right: ResolvedType, span: SourceSpan): ResolvedType {
   if operator == "+" && typeName(left) == "string" && (typeName(right) == "string" || typeName(right) == "char") { return primitive("string") }
-  if isNumeric(left) && isNumeric(right) {
-    if (operator == "\\" || operator == "%" || bitwiseOperator(operator)) && (!isInteger(left) || !isInteger(right)) {
-      typeError(state, "Operator '" + operator + "' requires integer operands, got " + typeName(left) + " and " + typeName(right), span)
-    }
-    if operator == "/" && isInteger(left) && isInteger(right) { typeError(state, "Operator '/' requires at least one floating-point operand", span) }
-    return numericResult(left, right)
+  if isNumericOperand(left) && isNumericOperand(right) {
+    validateNumericOperator(state, operator, left, right, span)
+    return numericOperationType(left, right, operator)
   }
   typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), span)
   return unknownType()
 }
 
-function isInteger(type_: ResolvedType): bool {
-  case type_ {
-    primitive_: PrimitiveType -> { return primitive_.name == "byte" || primitive_.name == "int" || primitive_.name == "long" }
-    _ -> { }
-  }
-  return false
+function validateNumericOperator(state: CheckerState, operator: string, left: ResolvedType, right: ResolvedType, span: SourceSpan): none {
+  if numericOperatorAllowed(operator, left, right) { return }
+  if operator == "/" { typeError(state, "Operator '/' requires at least one floating-point operand for every allowed type", span) }
+  else { typeError(state, "Operator '" + operator + "' requires integer operands, got " + typeName(left) + " and " + typeName(right), span) }
 }
 
-function bitwiseOperator(operator: string): bool {
-  return operator == "&" || operator == "|" || operator == "^" || operator == "<<" || operator == ">>" || operator == ">>>"
-}
+function isInteger(type_: ResolvedType): bool { return isIntegerOperand(type_) }
 
 function isNullableType(type_: ResolvedType): bool {
   case type_ {
@@ -1339,7 +1335,7 @@ function fallibleValueType(type_: ResolvedType): ResolvedType | none {
 
 function orderedTypes(state: CheckerState, left: ResolvedType, right: ResolvedType): bool {
   if left.kind == "unknown" || right.kind == "unknown" { return true }
-  if isNumeric(left) && isNumeric(right) { return true }
+  if isNumericOperand(left) && isNumericOperand(right) { return true }
   if sameType(left, right) {
     case left {
       primitive_: PrimitiveType -> { return primitive_.name == "string" || primitive_.name == "char" }
@@ -1376,7 +1372,7 @@ function typesOverlap(state: CheckerState, left: ResolvedType, right: ResolvedTy
     }
     _ -> { }
   }
-  return isAssignableWithInterfaces(state.result, left, right) || isAssignableWithInterfaces(state.result, right, left) || (isNumeric(left) && isNumeric(right))
+  return isAssignableWithInterfaces(state.result, left, right) || isAssignableWithInterfaces(state.result, right, left) || (isNumericOperand(left) && isNumericOperand(right))
 }
 
 function validateCaseRangeBound(state: CheckerState, bound: Expression | none, subjectType: ResolvedType, scope: Scope, span: SourceSpan): none {

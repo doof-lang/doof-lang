@@ -132,6 +132,8 @@ clamp{ value, min: 0, max: 100 }
 
 Named calls match parameters by name. Any omitted parameter must have a default. The `{` must immediately follow the callee.
 
+Named-call syntax is independent of capitalization: `GroupBox{title: "Account"}` calls the bound function and has its declared return type. Spaced `View { ... }` uses named construction syntax. Generic named calls retain their explicit type arguments, for example `Identity<View>{value: view}`.
+
 Typed tags are another named-call spelling for classes, structs, functions,
 callbacks, and callable members:
 
@@ -407,3 +409,6 @@ function process(): Result<Output, Error> {
 - `if` expressions require `then`
 - `/` is not integer division
 - `Map<K, V>` and `Set<T>` use literal syntax rather than constructor APIs
+
+A `with` body that unconditionally returns or panics terminates the enclosing
+control-flow path for return-completeness checking.

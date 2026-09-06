@@ -25,7 +25,7 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter, WeakType, TypeParameterConstraint,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classMetadataType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
+  interfaceBoundReceiver, actorType, applyDeepReadonly, arrayType, classMetadataType, classType, enumType, functionType, interfaceType, isNumeric, joinTypes,
   isJsonValueType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType,
   neverType, noneType, numericResult, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType,
   isWeakReferenceTarget, methodReflectionType, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType,
@@ -36,12 +36,13 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 
 
 import { CheckerState } from "./checker-state"
+import { isNumericConstraint, satisfiesNumericConstraint } from "./checker-numeric"
 import { deprecatedBuildReadonly, deprecatedNoneAlias, typeError } from "./checker-common"
-import { builtinSourceLocationType, declaredSymbolName, optionalResolvedType, methodSignature, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
+import { builtinSourceLocationType, declaredSymbolName, optionalResolvedType, resolveAnnotation, methodSignature, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
 import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
-export function resolveType(state: CheckerState, annotation: TypeAnnotation, module: ModuleInfo, scope: Scope): ResolvedType {
+export function resolveType(state: CheckerState, annotation: TypeAnnotation, module: ModuleInfo, scope: Scope, validateConstraints: bool = true): ResolvedType {
   case annotation {
     named: NamedType -> {
       if named.name == "none" || named.name == "void" || named.name == "null" {
@@ -79,18 +80,18 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
       }
       if named.name == "Tuple" {
         let elements: ResolvedType[] = []
-        for argument of named.typeArgs { elements.push(resolveType(state, argument, module, scope)) }
+        for argument of named.typeArgs { elements.push(resolveType(state, argument, module, scope, validateConstraints)) }
         return decorateType(state, annotation, tupleType(elements))
       }
       if named.name == "Map" || named.name == "ReadonlyMap" {
         if named.typeArgs.length != 2 { typeError(state, named.name + " requires two type arguments", named.span); return decorateType(state, annotation, unknownType()) }
-        key := resolveType(state, named.typeArgs[0], module, scope)
-        value := resolveType(state, named.typeArgs[1], module, scope)
+        key := resolveType(state, named.typeArgs[0], module, scope, validateConstraints)
+        value := resolveType(state, named.typeArgs[1], module, scope, validateConstraints)
         return decorateType(state, annotation, mapType(key, value, named.name == "ReadonlyMap"))
       }
       if named.name == "Set" || named.name == "ReadonlySet" {
         if named.typeArgs.length != 1 { typeError(state, named.name + " requires one type argument", named.span); return decorateType(state, annotation, unknownType()) }
-        element := resolveType(state, named.typeArgs[0], module, scope)
+        element := resolveType(state, named.typeArgs[0], module, scope, validateConstraints)
         if !isSupportedHashCollectionType(element) {
           typeError(state, "Set element type \"" + typeName(element) + "\" is not supported; set elements must be byte, string, int, long, char, bool, or enum", named.typeArgs[0].span)
         }
@@ -98,11 +99,11 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
       }
       if named.name == "Stream" {
         if named.typeArgs.length != 1 { typeError(state, "Stream requires one type argument", named.span); return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, streamType(resolveType(state, named.typeArgs[0], module, scope)))
+        return decorateType(state, annotation, streamType(resolveType(state, named.typeArgs[0], module, scope, validateConstraints)))
       }
       if named.name == "Actor" {
         if named.typeArgs.length != 1 { typeError(state, "Actor requires one type argument", named.span); return decorateType(state, annotation, unknownType()) }
-        inner := resolveType(state, named.typeArgs[0], module, scope)
+        inner := resolveType(state, named.typeArgs[0], module, scope, validateConstraints)
         case inner {
           class_: ClassType -> { return decorateType(state, annotation, actorType(class_)) }
           _ -> { typeError(state, "Actor requires a class type", named.span); return decorateType(state, annotation, unknownType()) }
@@ -110,15 +111,15 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
       }
       if named.name == "Promise" {
         if named.typeArgs.length != 1 { typeError(state, "Promise requires one type argument", named.span); return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, promiseType(resolveType(state, named.typeArgs[0], module, scope)))
+        return decorateType(state, annotation, promiseType(resolveType(state, named.typeArgs[0], module, scope, validateConstraints)))
       }
       if named.name == "Result" {
         if named.typeArgs.length != 2 { typeError(state, "Result requires two type arguments", named.span); return decorateType(state, annotation, unknownType()) }
-        return decorateType(state, annotation, resultType(resolveType(state, named.typeArgs[0], module, scope), resolveType(state, named.typeArgs[1], module, scope)))
+        return decorateType(state, annotation, resultType(resolveType(state, named.typeArgs[0], module, scope, validateConstraints), resolveType(state, named.typeArgs[1], module, scope, validateConstraints)))
       }
       if named.name == "Success" || named.name == "Failure" {
         if named.typeArgs.length != 1 { typeError(state, named.name + " requires one type argument", named.span); return decorateType(state, annotation, unknownType()) }
-        payload := resolveType(state, named.typeArgs[0], module, scope)
+        payload := resolveType(state, named.typeArgs[0], module, scope, validateConstraints)
         if named.name == "Success" { return decorateType(state, annotation, resultType(payload, unknownType())) }
         return decorateType(state, annotation, resultType(unknownType(), payload))
       }
@@ -143,10 +144,10 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
             }
             aliasScope := Scope { parent: scope }
             for typeParam of alias.typeParams { aliasScope.typeParams.push(typeParam) }
-            let resolvedAlias = resolveType(state, alias.type_, classModuleFor(state.result, symbol!), aliasScope)
+            let resolvedAlias = resolveType(state, alias.type_, classModuleFor(state.result, symbol!), aliasScope, false)
             let typeArgs: ResolvedType[] = []
-            for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope)) }
-            validateTypeArgumentConstraints(state, alias.typeParams, alias.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope)
+            for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope, validateConstraints)) }
+            if validateConstraints { validateTypeArgumentConstraints(state, alias.typeParams, alias.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope) }
             resolvedAlias = substituteTypeParams(resolvedAlias, alias.typeParams, typeArgs)
             return decorateType(state, annotation, resolvedAlias)
           }
@@ -155,7 +156,7 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
       }
       if symbol!.kind == "interface" {
         let typeArgs: ResolvedType[] = []
-        for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope)) }
+        for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope, validateConstraints)) }
         declaration := declarationFor(state.result, symbol!)
         if declaration != none {
           case declaration! {
@@ -163,7 +164,7 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
               if !validateNominalTypeArity(state, interfaceDeclaration.name, interfaceDeclaration.typeParams.length, typeArgs.length, named.span) {
                 return decorateType(state, annotation, unknownType())
               }
-              validateTypeArgumentConstraints(state, interfaceDeclaration.typeParams, interfaceDeclaration.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope)
+              if validateConstraints { validateTypeArgumentConstraints(state, interfaceDeclaration.typeParams, interfaceDeclaration.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope) }
             }
             _ -> { }
           }
@@ -177,7 +178,7 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
         return decorateType(state, annotation, enumType(declaredSymbolName(symbol!), symbol!))
       }
       let typeArgs: ResolvedType[] = []
-      for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope)) }
+      for argument of named.typeArgs { typeArgs.push(resolveType(state, argument, module, scope, validateConstraints)) }
       declaration := declarationFor(state.result, symbol!)
       if declaration != none {
         case declaration! {
@@ -185,7 +186,7 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
             if !validateNominalTypeArity(state, classDeclaration.name, classDeclaration.typeParams.length, typeArgs.length, named.span) {
               return decorateType(state, annotation, unknownType())
             }
-            validateTypeArgumentConstraints(state, classDeclaration.typeParams, classDeclaration.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope)
+            if validateConstraints { validateTypeArgumentConstraints(state, classDeclaration.typeParams, classDeclaration.typeParamConstraints, typeArgs, named.span, classModuleFor(state.result, symbol!), scope) }
           }
           _ -> {
             typeError(state, "Symbol '" + named.name + "' is not a type", named.span)
@@ -198,19 +199,19 @@ export function resolveType(state: CheckerState, annotation: TypeAnnotation, mod
       }
       return decorateType(state, annotation, classType(declaredSymbolName(symbol!), symbol!, typeArgs))
     }
-    array: ArrayType -> { return decorateType(state, annotation, arrayType(resolveType(state, array.elementType, module, scope), array.readonly_)) }
+    array: ArrayType -> { return decorateType(state, annotation, arrayType(resolveType(state, array.elementType, module, scope, validateConstraints), array.readonly_)) }
     union: UnionType -> {
       let members: ResolvedType[] = []
-      for item of union.types { members.push(resolveType(state, item, module, scope)) }
+      for item of union.types { members.push(resolveType(state, item, module, scope, validateConstraints)) }
       return decorateType(state, annotation, unionType(members))
     }
     function_: AstFunctionType -> {
       let params: FunctionParamType[] = []
-      for parameter of function_.params { params.push(FunctionParamType { name: parameter.name, type_: resolveType(state, parameter.type_, module, scope), hasDefault: false }) }
-      return decorateType(state, annotation, functionType(params, resolveType(state, function_.returnType, module, scope)))
+      for parameter of function_.params { params.push(FunctionParamType { name: parameter.name, type_: resolveType(state, parameter.type_, module, scope, validateConstraints), hasDefault: false }) }
+      return decorateType(state, annotation, functionType(params, resolveType(state, function_.returnType, module, scope, validateConstraints)))
     }
     weak_: WeakType -> {
-      inner := resolveType(state, weak_.type_, module, scope)
+      inner := resolveType(state, weak_.type_, module, scope, validateConstraints)
       if !isWeakReferenceTarget(inner) { typeError(state, "Type \"" + typeName(inner) + "\" is not a valid weak reference target", weak_.span) }
       return decorateType(state, annotation, weakType(inner))
     }
@@ -232,9 +233,10 @@ function validateNominalTypeArity(state: CheckerState, name: string, expected: i
 }
 
 /** Validates concrete arguments against substituted declaration constraints. */
-export function validateTypeArgumentConstraints(state: CheckerState, names: string[], constraints: TypeParameterConstraint[], arguments: ResolvedType[], span: SourceSpan, module: ModuleInfo, outer: Scope): none {
+export function validateTypeArgumentConstraints(state: CheckerState, names: string[], constraints: TypeParameterConstraint[], arguments: ResolvedType[], span: SourceSpan, module: ModuleInfo, outer: Scope, ownerNames: string[] = [], ownerArguments: ResolvedType[] = []): none {
   if names.length != arguments.length { return }
   constraintScope := Scope { parent: outer }
+  for name of ownerNames { constraintScope.typeParams.push(name); constraintScope.typeParamConstraintNames.push(""); constraintScope.typeParamConstraints.push(ResolvedTypeConstraint {}) }
   for name of names {
     constraintScope.typeParams.push(name)
     constraintScope.typeParamConstraintNames.push("")
@@ -242,13 +244,15 @@ export function validateTypeArgumentConstraints(state: CheckerState, names: stri
   }
   for index of 0..<names.length {
     if index >= constraints.length || constraints[index].type_ == none { continue }
-    case arguments[index] {
-      parameter: TypeParameterType -> { if parameter.constraint == none && parameter.constraintName == "" { continue } }
-      _ -> { }
-    }
     annotation := constraints[index].type_!
     case annotation {
       named: NamedType -> {
+        if named.typeArgs.length == 0 && (named.name == "Reflectable" || named.name == "JsonSerializable") {
+          case arguments[index] {
+            parameter: TypeParameterType -> { if parameter.constraintName == named.name { continue } }
+            _ -> { }
+          }
+        }
         if named.typeArgs.length == 0 && named.name == "Reflectable" {
           case arguments[index] {
             _: ClassType -> { memberType(state, arguments[index], "metadata", span) }
@@ -264,9 +268,11 @@ export function validateTypeArgumentConstraints(state: CheckerState, names: stri
       }
       _ -> { }
     }
-    resolvedConstraint := resolveType(state, annotation, module, constraintScope)
-    substitutedConstraint := substituteTypeParams(resolvedConstraint, names, arguments)
-    if !isAssignableWithInterfaces(state.result, arguments[index], substitutedConstraint) {
+    resolvedConstraint := resolveType(state, annotation, module, constraintScope, false)
+    substitutedConstraint := substituteTypeParams(substituteTypeParams(resolvedConstraint, ownerNames, ownerArguments), names, arguments)
+    if isNumericConstraint(substitutedConstraint) {
+      if !satisfiesNumericConstraint(arguments[index], substitutedConstraint) { reportConstraintViolation(state, names[index], arguments[index], typeName(substitutedConstraint), span) }
+    } else if !isAssignableWithInterfaces(state.result, arguments[index], substitutedConstraint) {
       reportConstraintViolation(state, names[index], arguments[index], typeName(substitutedConstraint), span)
     }
   }
@@ -285,7 +291,7 @@ export function decorateType(state: CheckerState, annotation: TypeAnnotation, re
 // access (for example, when synthesizing constructor parameters). Keep that
 // lookup distinct from an explicit access so declaration spans cannot be
 // reported against the module currently being checked.
-export function memberType(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan, validateVisibility: bool = true): ResolvedType {
+export function memberType(state: CheckerState, object: ResolvedType, property: string, span: SourceSpan, validateVisibility: bool = true, declaredOnly: bool = false): ResolvedType {
   if typeName(object) == "string" {
     if property == "length" { return primitive("int") }
     if property == "startsWith" || property == "endsWith" || property == "contains" { return functionType([FunctionParamType { name: "value", type_: primitive("string"), hasDefault: false }], primitive("bool")) }
@@ -437,6 +443,8 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
       return unknownType()
     }
     parameter: TypeParameterType -> {
+      bound := interfaceBoundReceiver(parameter)
+      if bound.kind == "interface" { return memberType(state, bound, property, span, validateVisibility, true) }
       if property == "metadata" {
         if parameter.constraintName != "Reflectable" {
           typeError(state, "Static member \"metadata\" requires type parameter \"" + parameter.name + "\" to be constrained by Reflectable", span)
@@ -617,6 +625,19 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
       if declaration == none { return unknownType() }
       case declaration! {
         interface_: InterfaceDeclaration -> {
+          for field of interface_.fields {
+            if field.name == property {
+              fieldType := field.resolvedType ?? resolveAnnotation(field.type_, classModuleFor(state.result, interfaceType_.symbol), state.result, interface_.typeParams)
+              return substituteTypeParams(if field.readonly_ then applyDeepReadonly(fieldType) else fieldType, interface_.typeParams, interfaceType_.typeArgs)
+            }
+          }
+          for method of interface_.methods {
+            if method.name == property {
+              methodType := method.resolvedType ?? interfaceMethodSignature(state, method, interface_, interfaceType_.symbol)
+              return substituteTypeParams(methodType, interface_.typeParams, interfaceType_.typeArgs)
+            }
+          }
+          if declaredOnly { return unknownType() }
           if property == "fromJsonValue" {
             if interface_.typeParams.length > 0 {
               typeError(state, "Automatic JSON deserialization is not available on generic interface \"" + interface_.name + "\"", span)
@@ -637,18 +658,7 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
               FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
             ], resultType(object, primitive("string")))
           }
-          for field of interface_.fields {
-            if field.name == property {
-              fieldType := field.resolvedType ?? resolveType(state, field.type_, state.info!, state.moduleScope!)
-              return substituteTypeParams(fieldType, interface_.typeParams, interfaceType_.typeArgs)
-            }
-          }
-          for method of interface_.methods {
-            if method.name == property {
-              methodType := method.resolvedType ?? methodSignature(method, classModuleFor(state.result, interfaceType_.symbol), state.result)
-              return substituteTypeParams(methodType, interface_.typeParams, interfaceType_.typeArgs)
-            }
-          }
+
         }
         _ -> { }
       }
@@ -658,9 +668,21 @@ export function memberType(state: CheckerState, object: ResolvedType, property: 
   return unknownType()
 }
 
-export function fieldAssignmentBinding(state: CheckerState, object: ResolvedType, property: string, fieldType: ResolvedType): Binding | none {
-  case object {
-    actor: ActorType -> { return fieldAssignmentBinding(state, actor.innerClass, property, fieldType) }
+export function fieldAssignmentBinding(state: CheckerState, object: ResolvedType, property: string, fieldType: ResolvedType, span: SourceSpan): Binding | none {
+  case interfaceBoundReceiver(object) {
+    union_: UnionResolvedType -> {
+      let selected: Binding | none = none
+      for member of union_.types {
+        if member.kind == "none" { continue }
+        concreteType := memberType(state, member, property, span, false)
+        if !sameType(concreteType, fieldType) { return none }
+        binding := fieldAssignmentBinding(state, member, property, concreteType, span)
+        if binding == none { return none }
+        if selected == none || !binding!.mutable { selected = binding }
+      }
+      return selected
+    }
+    actor: ActorType -> { return fieldAssignmentBinding(state, actor.innerClass, property, fieldType, span) }
     class_: ClassType -> {
       declaration := declarationFor(state.result, class_.symbol)
       if declaration == none { return none }
@@ -742,4 +764,14 @@ export function indexType(state: CheckerState, object: ResolvedType, index: Reso
     _ -> { }
   }
   return unknownType()
+}
+
+function interfaceMethodSignature(state: CheckerState, method: FunctionDeclaration, owner: InterfaceDeclaration, symbol: Symbol): ResolvedType {
+  module := classModuleFor(state.result, symbol)
+  let params: FunctionParamType[] = []
+  for parameter of method.params {
+    type_ := if parameter.type_ == none then unknownType() else resolveAnnotation(parameter.type_!, module, state.result, owner.typeParams)
+    params.push(FunctionParamType { name: parameter.name, type_, hasDefault: parameter.defaultValue != none })
+  }
+  return functionType(params, if method.returnType == none then noneType() else resolveAnnotation(method.returnType!, module, state.result, owner.typeParams))
 }

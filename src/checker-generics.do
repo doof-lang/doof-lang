@@ -25,7 +25,7 @@ import {
   AsyncExpression, RetireExpression, ActorCreationExpression, Parameter,
 } from "./ast"
 import {
-  actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
+  interfaceBoundReceiver, actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isAssignable, isNumeric, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
   noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
   substituteTypeParams, typeParameter, unknownType,
@@ -176,7 +176,7 @@ export function functionDeclarationForCallee(callee: Expression, calleeType: Res
       }
       objectType := member.object.resolvedType
       if objectType != none {
-        case objectType! {
+        case interfaceBoundReceiver(objectType!) {
           class_: ClassType -> {
             declaration := declarationFor(result, class_.symbol)
             if declaration != none {
@@ -234,7 +234,7 @@ export function functionModuleForCallee(callee: Expression, fallback: string): s
     member: MemberExpression -> {
       if member.resolvedNamespaceSymbol != none { return member.resolvedNamespaceSymbol!.module }
       if member.object.resolvedType != none {
-        case member.object.resolvedType! {
+        case interfaceBoundReceiver(member.object.resolvedType!) {
           class_: ClassType -> { return class_.symbol.module }
           actor: ActorType -> { return actor.innerClass.symbol.module }
           interface_: InterfaceType -> { return interface_.symbol.module }

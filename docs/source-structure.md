@@ -48,10 +48,12 @@ modules own the following decisions:
 | --- | --- |
 | `checker-state.do` | Mutable per-run and per-module checker state |
 | `checker-symbols.do` | Scope/binding operations, builtins, annotation resolution, symbol/declaration lookup |
-| `checker-types.do` | Resolved-type construction, comparison, assignability, substitution, and display |
-| `checker-resolution.do` | Type annotations, members, indexing, callable fields, and type-argument constraints |
+| `checker-types.do` | Resolved-type construction, comparison, assignability, substitution, interface-bound receiver views, and display |
+| `checker-resolution.do` | Type annotations, bound-aware members and assignment bindings, indexing, and declaration-scoped type-argument constraints |
 | `checker-common.do` | State-aware diagnostics, expression type decoration, and centralized assignment-binding validation |
 | `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, enum backing-value resolution, and control-flow continuation |
+| `checker-try.do` | Result propagation boundaries, error compatibility, and success declaration checking |
+| `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |
 | `checker-expressions.do` | Expression dispatch, operators, narrowing, assignment, and case expressions |
 | `checker-calls.do` | Calls, positional/named construction, lambdas, generic calls, and actor-call boundaries |
 | `checker-literals.do` | Contextual array and object literal inference |
@@ -68,6 +70,9 @@ modules own the following decisions:
 When a check produces information needed for lowering, add an explicit
 decoration to `ast.do`, populate it in the owning checker module, require it in
 `checker-validation.do`, and consume it in the focused emitter.
+
+Expression nodes explicitly declare their writable `resolvedType` decorations
+with `let`, including writes made through the `Expression` union.
 
 Field mutability provenance is carried from the AST into semantic bindings.
 Implicit, explicit member, destructuring, and yield-block writes must use the
@@ -90,7 +95,7 @@ emitter or individual expression branch.
 | `emitter-expr.do` | Single expression dispatch façade |
 | `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as` |
 | `emitter-expr-calls.do` | Calls, native construction, and positional/named class construction |
-| `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering |
+| `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering; shared contextual absence values for literals and catch initialization |
 | `emitter-expr-control.do` | Conditional, case, catch, dot-shorthand, and yield-block expressions |
 | `emitter-expr-lambda.do` | Lambda capture analysis, mutable capture boxing, and callback lowering |
 | `emitter-expr-actor.do` | Actors, promises, async calls, and retirement |

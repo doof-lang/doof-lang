@@ -5,38 +5,34 @@ import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResol
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitNullableVariantPromotion, findProperty, needsNullableVariantPromotion } from "./emitter-expr-utils"
-import { emitContextClassInnerType, emitContextType, emitResultPayloadType, emitType, specializeEmitType } from "./emitter-types"
+import { emitContextClassInnerType, emitContextReturnType, emitContextType, emitType, naturalNullableUnionMember, specializeEmitType } from "./emitter-types"
 import { substituteTypeParams } from "./checker-types"
 
 export function emitNoneLiteral(expected: ResolvedType | none, context: EmitContext): string {
   if expected == none { return "nullptr" }
-  case expected! {
+  // Use the same concrete type as the enclosing specialization's signature.
+  specialized := specializeEmitType(expected!, context)
+  case specialized {
     class_: ClassType -> {
       return "nullptr"
     }
     _: JsonValueResolvedType -> { return "doof::json_value(nullptr)" }
     _: NoneType -> { return "std::monostate{}" }
-    _: WeakResolvedType -> { return emitType(expected!, context.modulePath) + "{}" }
+    _: WeakResolvedType -> { return emitContextType(specialized, context) + "{}" }
     union_: UnionResolvedType -> {
-      let nonNone = 0
-      for member of union_.types { if member.kind != "none" { nonNone = nonNone + 1 } }
-      if nonNone == 1 {
-        for member of union_.types {
-          case member {
-            _: PrimitiveType -> { return "std::nullopt" }
-            _: EnumType -> { return "std::nullopt" }
-            class_: ClassType -> {
-              if class_.symbol.kind == "struct" { return "std::nullopt" }
-              return "nullptr"
-            }
-            _: ArrayResolvedType -> { return "nullptr" }
-            _: MapResolvedType -> { return "nullptr" }
-            _: SetResolvedType -> { return "nullptr" }
-            _ -> { }
-          }
+      // Type emission owns union flattening and natural-carrier selection.
+      member := naturalNullableUnionMember(union_)
+      if member == none { return "std::monostate{}" }
+      case member! {
+        _: PrimitiveType -> { return "std::nullopt" }
+        _: EnumType -> { return "std::nullopt" }
+        class_: ClassType -> {
+          if class_.symbol.kind == "struct" { return "std::nullopt" }
+          return "nullptr"
         }
+        _: WeakResolvedType -> { return emitContextType(member!, context) + "{}" }
+        _ -> { return "nullptr" }
       }
-      return "std::monostate{}"
     }
     _ -> { return "nullptr" }
   }
@@ -71,7 +67,7 @@ export function emitArray(expression: ArrayLiteral, context: EmitContext, expect
         let values = ""
         for i of 0..<expression.elements.length {
           if i > 0 { values = values + ", " }
-          values = values + emitExpression(expression.elements[i], context)
+          values = values + emitExpression(expression.elements[i], context, array.elementType)
         }
         return "std::make_shared<std::vector<" + elementType + ">>(std::vector<" + elementType + ">{" + values + "})"
       }
@@ -113,11 +109,11 @@ export function emitObject(expression: ObjectLiteral, context: EmitContext, expe
         error := findProperty(expression.properties, "error")
         if value != none {
           emitted := if value!.value == none then cppIdentifier(value!.name) else emitExpression(value!.value!, context, result.valueType)
-          return "doof::Success<" + emitResultPayloadType(result.valueType, context.modulePath) + ">{ " + emitted + " }"
+          return "doof::Success<" + emitContextReturnType(result.valueType, context) + ">{ " + emitted + " }"
         }
         if error != none {
           emitted := if error!.value == none then cppIdentifier(error!.name) else emitExpression(error!.value!, context, result.errorType)
-          return "doof::Failure<" + emitResultPayloadType(result.errorType, context.modulePath) + ">{ " + emitted + " }"
+          return "doof::Failure<" + emitContextReturnType(result.errorType, context) + ">{ " + emitted + " }"
         }
       }
       class_: ClassType -> { return emitClassObject(expression, context, class_) }

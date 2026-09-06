@@ -1,6 +1,19 @@
 import { Assert } from "std/assert"
 import { FunctionParamType, Symbol } from "./semantic"
-import { arrayType, classType, functionType, isAssignable, mapType, primitive, promiseType, sameType, streamType, typeParameter, unionType, weakType } from "./checker-types"
+import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, functionType, isAssignable, mapType, noneType, primitive, promiseType, sameType, streamType, substituteTypeParams, typeParameter, unionType, weakType } from "./checker-types"
+
+export function testGenericNoneLiteralReadonlyUnionNormalization(): none {
+  mutableArray := arrayType(primitive("int"))
+  readonlyArray := arrayType(primitive("int"), true)
+  Assert.isTrue(sameType(applyDeepReadonly(unionType([mutableArray, readonlyArray])), readonlyArray))
+  Assert.isTrue(sameType(applyDeepReadonly(unionType([readonlyArray, mutableArray])), readonlyArray))
+  distinct := unionType([arrayType(primitive("int")), arrayType(primitive("string"))])
+  Assert.equal(applyDeepReadonly(distinct).kind, "union")
+  Assert.isFalse(isAssignable(readonlyArray, mutableArray))
+  optional := unionType([primitive("int"), noneType()])
+  genericOptional := unionType([typeParameter("T"), noneType()])
+  Assert.isTrue(sameType(substituteTypeParams(genericOptional, ["T"], [optional]), optional))
+}
 
 function symbol(name: string, module: string): Symbol {
   return Symbol { kind: "class", name, module, exported: false }
@@ -111,4 +124,9 @@ export function testRequiresRecordedStructuralStreamConformance(): none {
   ints := classType("Values", streamSymbol, [primitive("int")])
   Assert.isTrue(isAssignable(ints, streamType(primitive("int"))))
   Assert.isFalse(isAssignable(ints, streamType(primitive("string"))))
+}
+
+export function testInterfaceBoundReceiverPreservesUnboundedParameters(): none {
+  parameter := typeParameter("T")
+  Assert.isTrue(sameType(interfaceBoundReceiver(parameter), parameter))
 }

@@ -787,9 +787,24 @@ Method parameter types must match exactly. Method return types are covariant:
 the implementation return type must be assignable to the interface return
 type. The same rules apply to generic and non-generic interfaces.
 
+Writable (`let`) interface fields require identical implementation field types
+after substitution. Read compatibility alone is insufficient because values
+can also be written through the interface. Non-writable fields retain their
+ordinary covariant read compatibility.
+
 An inferred class field is considered only once its type has been resolved.
 If its type cannot be resolved, it cannot establish structural conformance and
 the compiler reports the resulting type mismatch rather than assuming a type.
+
+### Interfaces as Generic Bounds
+
+Use `T: Interface` to require structural conformance while retaining the concrete
+argument type. For example, `function render<T: Drawable>(value: T): none` can
+call `value.draw(...)` using `Drawable`'s declared signature. Generic interface
+bounds such as `T: Reader<int>` substitute their arguments before member lookup.
+Fields retain the interface's mutability and deep-readonly contract, and methods
+use the interface's parameter names and defaults. The full generic-bound rules
+are specified in [the type system](02-type-system.md#interface-constraints).
 
 ### Optional Explicit Implementation
 

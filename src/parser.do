@@ -87,6 +87,20 @@ export class Parser {
   }
 
   expect(kind: TokenType, message: string = ""): Token {
+    // The lexer retains shift operators. Split only when the grammar expects
+    // a closing type delimiter, preserving offsets for subsequent diagnostics.
+    if kind == TokenType.Greater && (check(TokenType.GreaterGreater) || check(TokenType.GreaterGreaterGreater)) {
+      token := current()
+      let expanded: Token[] = []
+      for index of 0..<tokens.length {
+        if index == pos {
+          for part of 0..<token.length {
+            expanded.push(Token { kind: TokenType.Greater, length: 1, valueOffset: token.offset + part, valueLength: 1, needsDecode: false, line: token.line, column: token.column + part, offset: token.offset + part })
+          }
+        } else { expanded.push(tokens[index]) }
+      }
+      tokens = expanded
+    }
     if check(kind) { return advance() }
     let expectedMessage = message
     if expectedMessage == "" { expectedMessage = "Expected " + expectedLabel(kind) + " before '" + currentText() + "'" }
