@@ -19,8 +19,8 @@ doof::Result<std::shared_ptr<::NativeExecProcess>, std::string> spawnNative(cons
     const std::shared_ptr<std::vector<std::string>> envValues = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_2 = options->env;
     for (const auto& [key, value] : *_iterable_2) {
-        envKeys->push_back(key);
-        envValues->push_back(value);
+        (static_cast<void>(envKeys->push_back(key)), std::monostate{});
+        (static_cast<void>(envValues->push_back(value)), std::monostate{});
     }
     std::optional<int64_t> timeoutNanos = std::nullopt;
     if (!doof::is_null(options->timeout)) {
@@ -114,7 +114,7 @@ doof::Result<std::shared_ptr<ExecResult>, std::string> run(const std::string& co
             return doof::Failure<std::string>{ f.error };
     }
     }
-    doof::assert_((!doof::is_null(proc)), std::string("expected Exec.spawn success case to initialize proc"));
+    (static_cast<void>(doof::assert_((!doof::is_null(proc)), std::string("expected Exec.spawn success case to initialize proc"))), std::monostate{});
     return [&]() -> doof::Result<std::shared_ptr<ExecResult>, std::string> {
     auto _case_subject = proc->runToCompletion();
     if (std::holds_alternative<doof::Success<std::shared_ptr<::NativeRunResult>>>(_case_subject)) {

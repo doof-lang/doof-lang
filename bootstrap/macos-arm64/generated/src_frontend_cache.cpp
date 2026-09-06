@@ -3,7 +3,7 @@
 namespace app_src_frontend_cache_ {
 using namespace ::std_::json::index;
 int32_t FRONTEND_CACHE_VERSION = 2;
-int32_t FRONTEND_SEMANTIC_ABI = 13;
+int32_t FRONTEND_SEMANTIC_ABI = 14;
 
 doof::JsonObject FrontendSourceProbe::toJsonObject() const {
     auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();
@@ -128,21 +128,21 @@ doof::Result<std::shared_ptr<FrontendCacheState>, std::string> FrontendCacheStat
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<FrontendSourceProbe>>>> _field_probes;
     if (auto _iterator_probes = _object->find("probes"); _iterator_probes != _object->end()) {
             if (!(doof::json_is_array(_iterator_probes->second))) { return doof::Failure<std::string>{"Field \"probes\" expected array but got " + std::string(doof::json_type_name(_iterator_probes->second))}; }
-        _field_probes = doof::json_decode_at("Field \"probes\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_probes->second); auto _values = std::make_shared<std::vector<std::shared_ptr<FrontendSourceProbe>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(FrontendSourceProbe::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
+        _field_probes = doof::json_decode_at("Field \"probes\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_probes->second); if (_array == nullptr) throw doof::JsonDecodeError("Expected array"); auto _values = std::make_shared<std::vector<std::shared_ptr<FrontendSourceProbe>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(FrontendSourceProbe::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
     } else {
         _field_probes = std::make_shared<std::vector<std::shared_ptr<FrontendSourceProbe>>>(std::vector<std::shared_ptr<FrontendSourceProbe>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<FrontendFileInput>>>> _field_fileInputs;
     if (auto _iterator_fileInputs = _object->find("fileInputs"); _iterator_fileInputs != _object->end()) {
             if (!(doof::json_is_array(_iterator_fileInputs->second))) { return doof::Failure<std::string>{"Field \"fileInputs\" expected array but got " + std::string(doof::json_type_name(_iterator_fileInputs->second))}; }
-        _field_fileInputs = doof::json_decode_at("Field \"fileInputs\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_fileInputs->second); auto _values = std::make_shared<std::vector<std::shared_ptr<FrontendFileInput>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(FrontendFileInput::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
+        _field_fileInputs = doof::json_decode_at("Field \"fileInputs\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_fileInputs->second); if (_array == nullptr) throw doof::JsonDecodeError("Expected array"); auto _values = std::make_shared<std::vector<std::shared_ptr<FrontendFileInput>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(FrontendFileInput::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
     } else {
         _field_fileInputs = std::make_shared<std::vector<std::shared_ptr<FrontendFileInput>>>(std::vector<std::shared_ptr<FrontendFileInput>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<FrontendModuleOutput>>>> _field_modules;
     if (auto _iterator_modules = _object->find("modules"); _iterator_modules != _object->end()) {
             if (!(doof::json_is_array(_iterator_modules->second))) { return doof::Failure<std::string>{"Field \"modules\" expected array but got " + std::string(doof::json_type_name(_iterator_modules->second))}; }
-        _field_modules = doof::json_decode_at("Field \"modules\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_modules->second); auto _values = std::make_shared<std::vector<std::shared_ptr<FrontendModuleOutput>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(FrontendModuleOutput::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
+        _field_modules = doof::json_decode_at("Field \"modules\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_modules->second); if (_array == nullptr) throw doof::JsonDecodeError("Expected array"); auto _values = std::make_shared<std::vector<std::shared_ptr<FrontendModuleOutput>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(FrontendModuleOutput::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
     } else {
         _field_modules = std::make_shared<std::vector<std::shared_ptr<FrontendModuleOutput>>>(std::vector<std::shared_ptr<FrontendModuleOutput>>{});
     }

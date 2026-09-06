@@ -93,23 +93,33 @@ emitter or individual expression branch.
 | `string-builder.do` | Runtime-backed append-only construction for large generated text |
 | `emitter-decl.do` | Functions, classes, top-level declarations, signatures, definitions, and field equality operators for structs |
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering |
-| `emitter-expr.do` | Single expression dispatch façade |
-| `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as` |
-| `emitter-expr-calls.do` | Calls, native construction, positional/named class construction, and Result payload construction from checked expressions or shorthand bindings |
+| `emitter-expr.do` | Single expression dispatch façade; contextual conversion of checked unit expressions and native void calls to stored unit values while preserving evaluation |
+| `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as`; equality uses checked none types and unit unwraps produce stored unit values |
+| `emitter-expr-calls.do` | Calls, native construction, positional/named class construction, and Result payload construction; shorthand bindings reuse checked identifier emission |
 | `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering; shared contextual absence values for literals and catch initialization |
 | `emitter-expr-control.do` | Conditional, case, catch, dot-shorthand, and yield-block expressions |
 | `emitter-expr-lambda.do` | Lambda capture analysis, mutable capture boxing, and callback lowering |
 | `emitter-expr-actor.do` | Actors, promises, async calls, and retirement |
-| `emitter-expr-utils.do` | Decorated-type requirements and contextual/variant promotion helpers |
-| `emitter-case-pattern.do` | Type-pattern lowering shared by statement and expression cases |
-| `emitter-types.do` | C++ representation choices for resolved Doof types, including natural nullable enum carriers |
-| `emitter-json.do` | Demand-gated generated JSON reads, writes, enum backing values, paths, and interface dispatch |
+| `emitter-expr-utils.do` | Decorated-type requirements, shared shorthand property emission, specialized expression-return boundaries, and model-backed nullable queries |
+| `emitter-case-pattern.do` | Type-pattern lowering shared by statement and expression cases; natural nullable absence patterns test for null, and absence bindings use the unit carrier |
+| `emitter-carriers.do` | Pure specialized-type classification for value, return, payload, nullable storage, and explicit absence |
+| `emitter-carrier-values.do` | Shared absence construction and native carrier conversion, with exactly-once evaluation |
+| `emitter-carrier-native.test.do` | Compiles current-source emitter output and executes the durable native carrier matrix in the normal suite |
+| `emitter-types.do` | C++ type spelling and generic specialization using the shared carrier classification |
+| `emitter-json.do` | Demand-gated generated JSON reads, writes, enum backing values, paths, and interface dispatch; unit decoding validates null and all nested containers validate shape before access |
 | `emitter-metadata.do` | Reflection metadata, backing-value JSON Schema, and JSON invocation |
 | `emitter-wasm.do` | JSON-over-C-ABI WebAssembly wrapper generation |
 | `emitter-project.do` | Generated project shape and reached-package native input collation |
 
+The [native carrier model](native-carriers.md) defines representation and conversion
+invariants and its native test matrix.
+
 `runtime/doof_runtime.h` owns reusable generated-program behavior. It is not a
 place to hide a missing checker rule or an emitter decision.
+Its nullable weak-pointer helpers distinguish an empty pointer from an expired
+owner and preserve that owner when unwrapping. Map mutation emission supplies
+the checked key and value template types so absence tokens cannot change native
+template deduction.
 
 Conditional expressions with nullable, variant, or JSON carriers lower through
 an explicitly typed lambda so each selected branch converts to the checked

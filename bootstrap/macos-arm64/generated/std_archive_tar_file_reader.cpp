@@ -149,7 +149,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types:
         } else if ((typeFlag != 0) && (typeFlag != 48)) {
             return doof::Failure<std::string>{ (std::string("tar read failed: unsupported entry type ") + doof::to_string(typeFlag)) };
         }
-        entries->push_back(std::make_shared<::std_::archive::types::TarEntry>(resolvedName, kind, contentOffset, resolvedSize, static_cast<int32_t>(baseMode), resolvedMtime, resolvedLinkName));
+        (static_cast<void>(entries->push_back(std::make_shared<::std_::archive::types::TarEntry>(resolvedName, kind, contentOffset, resolvedSize, static_cast<int32_t>(baseMode), resolvedMtime, resolvedLinkName))), std::monostate{});
         (localPax = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}));
         (offset = resolvedNextOffset);
     }

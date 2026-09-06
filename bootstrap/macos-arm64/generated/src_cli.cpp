@@ -35,7 +35,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
     if (doof::string_endsWith(doof::array_at(args, 0, "src/cli", 94), std::string(".do"))) {
         const auto request = std::make_shared<CliRequest>(std::string("run"), doof::array_at(args, 0, "src/cli", 95), std::string(""), std::string(""), std::string(""), false, false, std::string(""), std::string(""), std::string(""), false, std::string(""), std::string(""), std::string(""), false, std::string(""), std::string("simulator"), std::string(""), std::string(""), std::string(""), std::string(""), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
         for (int32_t index = 1; index < static_cast<int32_t>((args)->size()); ++index) {
-            request->programArguments->push_back(doof::array_at(args, index, "src/cli", 96));
+            (static_cast<void>(request->programArguments->push_back(doof::array_at(args, index, "src/cli", 96))), std::monostate{});
         }
         return std::make_shared<CliParseResult>(request, std::string(""), false);
     }
@@ -53,7 +53,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             }
             (index += 1);
             while (index < static_cast<int32_t>((args)->size())) {
-                request->programArguments->push_back(doof::array_at(args, index, "src/cli", 114));
+                (static_cast<void>(request->programArguments->push_back(doof::array_at(args, index, "src/cli", 114))), std::monostate{});
                 (index += 1);
             }
             continue;

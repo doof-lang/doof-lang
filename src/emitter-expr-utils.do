@@ -3,13 +3,31 @@
 // These helpers carry decorated-type and contextual-promotion logic so the
 // expression dispatcher and its focused lowering modules stay small.
 
+import { carrierOf } from "./emitter-carriers"
 import { Expression, Identifier, ObjectProperty } from "./ast"
-import { InterfaceType, NoneType, ResolvedType, ResultResolvedType, Symbol, UnionResolvedType } from "./semantic"
+import { ResolvedType, Symbol, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { moduleNamespace } from "./emitter-names"
-import { emitType } from "./emitter-types"
-import { isAssignable, sameType } from "./checker-types"
+import { specializeEmitType } from "./emitter-types"
+
+/** Shorthand and expanded fields share binding-aware contextual emission. */
+export function emitPropertyValue(property: ObjectProperty, context: EmitContext, expected: ResolvedType | none = none): string {
+  if property.value != none { return emitExpression(property.value!, context, expected) }
+  return emitExpression(Identifier {
+    kind: "identifier", name: property.name, span: property.span,
+    resolvedType: property.resolvedType, resolvedBinding: property.resolvedBinding,
+  }, context, expected)
+}
+
+/** Expression-bodied native returns discard unit values at the void boundary. */
+export function emitExpressionReturn(expression: Expression, context: EmitContext, expected: ResolvedType | none): string {
+  value := emitExpression(expression, context, expected)
+  if expected != none && carrierOf(specializeEmitType(expected!, context), .Return).kind == .Void {
+    return "return static_cast<void>(" + value + ");"
+  }
+  return "return " + value + ";"
+}
 
 export function decoratedExpressionType(expression: Expression): ResolvedType | none {
   case expression {
@@ -24,78 +42,14 @@ export function decoratedExpressionType(expression: Expression): ResolvedType | 
 
 export function optionalExpectedType(value: ResolvedType): ResolvedType | none { return value }
 
-export function emitExpectedExpression(expression: Expression, context: EmitContext, expected: ResolvedType | none): string {
-  return emitExpression(expression, context, expected)
+export function isNullableVariantType(type_: ResolvedType | none): bool {
+  if type_ == none { return false }
+  carrier := carrierOf(type_!)
+  return carrier.kind == .Variant && carrier.hasNone && !carrier.naturalNullable
 }
 
-export function needsNullableVariantPromotion(source: ResolvedType | none, expected: ResolvedType | none): bool {
-  if expected == none || !isNullableVariantType(expected) || source == none { return false }
-  case source! {
-    _: NoneType -> { return false }
-    _ -> { }
-  }
-  return !hasNoneMember(source)
-}
-
-/** Promotes a non-null value into a nullable multi-arm union using its actual carrier. */
-export function emitNullableVariantPromotion(value: string, source: ResolvedType | none, expected: ResolvedType | none, currentModulePath: string): string {
-  if source == none || expected == none { panic("Nullable variant promotion requires checked source and target types") }
-  if nullablePromotionSourceUsesVariant(source!) { return "doof::optional_value(" + value + ")" }
-  return "doof::variant_promote<" + emitType(expected!, currentModulePath) + ">(" + value + ")"
-}
-
-function nullablePromotionSourceUsesVariant(source: ResolvedType): bool {
-  case source {
-    _: InterfaceType -> { return true }
-    _: ResultResolvedType -> { return true }
-    _: UnionResolvedType -> { return true }
-    _ -> { return false }
-  }
-  return false
-}
-
-// C++ std::variant does not implicitly convert one variant into a wider
-// variant, even when every source alternative exists in the target. Doof
-// union assignability does allow that promotion, so emission must make it
-// explicit at contextual boundaries such as returns and arguments.
-export function needsVariantPromotion(source: ResolvedType | none, expected: ResolvedType | none): bool {
-  if source == none || expected == none || sameType(source!, expected!) || hasNoneMember(expected) { return false }
-  case expected! {
-    _: UnionResolvedType -> { return isAssignable(source!, expected!) }
-    _ -> { return false }
-  }
-  return false
-}
-
-export function isNullableVariantType(resolvedType: ResolvedType | none): bool {
-  if resolvedType == none { return false }
-  case resolvedType! {
-    union_: UnionResolvedType -> {
-      let hasNone = false
-      let nonNoneCount = 0
-      for member of union_.types {
-        if member.kind == "none" { hasNone = true }
-        else { nonNoneCount = nonNoneCount + 1 }
-      }
-      if !hasNone { return false }
-      if nonNoneCount > 1 { return true }
-      return false
-    }
-    _ -> { return false }
-  }
-  return false
-}
-
-export function hasNoneMember(resolvedType: ResolvedType | none): bool {
-  if resolvedType == none { return false }
-  case resolvedType! {
-    _: NoneType -> { return true }
-    union_: UnionResolvedType -> {
-      for member of union_.types { if member.kind == "none" { return true } }
-    }
-    _ -> { }
-  }
-  return false
+export function hasNoneMember(type_: ResolvedType | none): bool {
+  return type_ != none && carrierOf(type_!).hasNone
 }
 
 // A nullable multi-arm union is represented as variant<monostate, ...>.

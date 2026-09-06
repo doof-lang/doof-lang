@@ -52,6 +52,18 @@ std::string ioErrorText(::std_::fs::types::IoError error) {
     if (_case_subject == ::std_::fs::types::IoError::Unsupported) {
         return std::string("unsupported operation");
     }
+    if (_case_subject == ::std_::fs::types::IoError::InvalidArgument) {
+        return std::string("invalid argument");
+    }
+    if (_case_subject == ::std_::fs::types::IoError::Closed) {
+        return std::string("closed");
+    }
+    if (_case_subject == ::std_::fs::types::IoError::UnexpectedEof) {
+        return std::string("unexpected end of file");
+    }
+    if (_case_subject == ::std_::fs::types::IoError::WouldBlock) {
+        return std::string("operation would block");
+    }
     throw std::runtime_error("non-exhaustive case expression");
 }();
 }
@@ -64,7 +76,7 @@ bool isZeroRange(const std::shared_ptr<std::vector<uint8_t>>& data, int64_t offs
     }
     auto index = offset;
     while (index < (offset + length)) {
-        if (doof::array_at(data, static_cast<int32_t>(index), "tar_reader", 49) != 0) {
+        if (doof::array_at(data, static_cast<int32_t>(index), "tar_reader", 53) != 0) {
             return false;
         }
         (index = (index + 1LL));
@@ -74,7 +86,7 @@ bool isZeroRange(const std::shared_ptr<std::vector<uint8_t>>& data, int64_t offs
 int64_t fieldEnd(const std::shared_ptr<std::vector<uint8_t>>& data, int64_t offset, int64_t length) {
     auto index = offset;
     while (index < (offset + length)) {
-        if (doof::array_at(data, static_cast<int32_t>(index), "tar_reader", 60) == 0) {
+        if (doof::array_at(data, static_cast<int32_t>(index), "tar_reader", 64) == 0) {
             return index;
         }
         (index = (index + 1LL));
@@ -98,7 +110,7 @@ doof::Result<int64_t, std::string> parseOctalField(const std::shared_ptr<std::ve
     auto ended = false;
     auto index = offset;
     while (index < (offset + length)) {
-        const auto character = doof::array_at(data, static_cast<int32_t>(index), "tar_reader", 84);
+        const auto character = doof::array_at(data, static_cast<int32_t>(index), "tar_reader", 88);
         if ((character == 0) || (character == 32)) {
             if (sawDigit) {
                 (ended = true);
@@ -129,7 +141,7 @@ int64_t headerChecksum(const std::shared_ptr<std::vector<uint8_t>>& data, int64_
         if ((relative >= TAR_CHECKSUM_OFFSET) && (relative < (TAR_CHECKSUM_OFFSET + TAR_CHECKSUM_LENGTH))) {
             (sum = (sum + 32LL));
         } else {
-            (sum = (sum + static_cast<int64_t>(doof::array_at(data, static_cast<int32_t>((offset + relative)), "tar_reader", 117))));
+            (sum = (sum + static_cast<int64_t>(doof::array_at(data, static_cast<int32_t>((offset + relative)), "tar_reader", 121))));
         }
         (relative = (relative + 1LL));
     }
@@ -142,7 +154,7 @@ doof::Result<void, std::string> validateHeader(const std::shared_ptr<std::vector
     if (storedChecksum != headerChecksum(data, offset)) {
         return doof::Failure<std::string>{ std::string("tar read failed: header checksum mismatch") };
     }
-    if ((((((doof::array_at(data, static_cast<int32_t>((offset + TAR_MAGIC_OFFSET)), "tar_reader", 130) != 117) || (doof::array_at(data, static_cast<int32_t>(((offset + TAR_MAGIC_OFFSET) + 1LL)), "tar_reader", 131) != 115)) || (doof::array_at(data, static_cast<int32_t>(((offset + TAR_MAGIC_OFFSET) + 2LL)), "tar_reader", 132) != 116)) || (doof::array_at(data, static_cast<int32_t>(((offset + TAR_MAGIC_OFFSET) + 3LL)), "tar_reader", 133) != 97)) || (doof::array_at(data, static_cast<int32_t>(((offset + TAR_MAGIC_OFFSET) + 4LL)), "tar_reader", 134) != 114)) || (doof::array_at(data, static_cast<int32_t>(((offset + TAR_MAGIC_OFFSET) + 5LL)), "tar_reader", 135) != 0)) {
+    if ((((((doof::array_at(data, static_cast<int32_t>((offset + TAR_MAGIC_OFFSET)), "tar_reader", 134) != 117) || (doof::array_at(data, static_cast<int32_t>(((offset + TAR_MAGIC_OFFSET) + 1LL)), "tar_reader", 135) != 115)) || (doof::array_at(data, static_cast<int32_t>(((offset + TAR_MAGIC_OFFSET) + 2LL)), "tar_reader", 136) != 116)) || (doof::array_at(data, static_cast<int32_t>(((offset + TAR_MAGIC_OFFSET) + 3LL)), "tar_reader", 137) != 97)) || (doof::array_at(data, static_cast<int32_t>(((offset + TAR_MAGIC_OFFSET) + 4LL)), "tar_reader", 138) != 114)) || (doof::array_at(data, static_cast<int32_t>(((offset + TAR_MAGIC_OFFSET) + 5LL)), "tar_reader", 139) != 0)) {
         return doof::Failure<std::string>{ std::string("tar read failed: unsupported header format") };
     }
     return doof::Success<void>{};
@@ -229,8 +241,8 @@ doof::Result<void, std::string> parsePaxRecords(const std::shared_ptr<std::vecto
     auto position = offset;
     while (position < end) {
         auto lengthEnd = position;
-        while ((lengthEnd < end) && (doof::array_at(data, static_cast<int32_t>(lengthEnd), "tar_reader", 229) != 32)) {
-            const auto character = doof::array_at(data, static_cast<int32_t>(lengthEnd), "tar_reader", 230);
+        while ((lengthEnd < end) && (doof::array_at(data, static_cast<int32_t>(lengthEnd), "tar_reader", 233) != 32)) {
+            const auto character = doof::array_at(data, static_cast<int32_t>(lengthEnd), "tar_reader", 234);
             if ((character < 48) || (character > 57)) {
                 return doof::Failure<std::string>{ std::string("tar read failed: invalid PAX record length") };
             }
@@ -249,12 +261,12 @@ doof::Result<void, std::string> parsePaxRecords(const std::shared_ptr<std::vecto
             return doof::Failure<std::string>{ std::string("tar read failed: invalid PAX record bounds") };
         }
         const auto recordEnd = (position + recordLength);
-        if (doof::array_at(data, static_cast<int32_t>((recordEnd - 1LL)), "tar_reader", 246) != 10) {
+        if (doof::array_at(data, static_cast<int32_t>((recordEnd - 1LL)), "tar_reader", 250) != 10) {
             return doof::Failure<std::string>{ std::string("tar read failed: PAX record is missing newline") };
         }
         const auto contentStart = (lengthEnd + 1LL);
         auto equals = contentStart;
-        while ((equals < (recordEnd - 1LL)) && (doof::array_at(data, static_cast<int32_t>(equals), "tar_reader", 252) != 61)) {
+        while ((equals < (recordEnd - 1LL)) && (doof::array_at(data, static_cast<int32_t>(equals), "tar_reader", 256) != 61)) {
             (equals = (equals + 1LL));
         }
         if ((equals == contentStart) || (equals >= (recordEnd - 1LL))) {
@@ -274,7 +286,7 @@ doof::Result<void, std::string> parsePaxRecords(const std::shared_ptr<std::vecto
             return doof::Failure<std::string>{ std::string("tar read failed: invalid UTF-8 in PAX value") };
         }
         const auto value = doof::success_value(_binding_value_11);
-        doof::map_set(values, key, value, "", 0);
+        (static_cast<void>(doof::map_set<std::string, std::string>(values, key, value, "", 0)), std::monostate{});
         (position = recordEnd);
     }
     return doof::Success<void>{};
@@ -351,7 +363,7 @@ doof::Result<std::shared_ptr<::std_::archive::types::TarArchive>, std::string> r
         if (baseMtime > 9223372036LL) {
             return doof::Failure<std::string>{ std::string("tar read failed: entry modification time is out of range") };
         }
-        const auto typeFlag = doof::array_at(data, static_cast<int32_t>((offset + TAR_TYPE_OFFSET)), "tar_reader", 327);
+        const auto typeFlag = doof::array_at(data, static_cast<int32_t>((offset + TAR_TYPE_OFFSET)), "tar_reader", 331);
         const auto contentOffset = (offset + TAR_BLOCK_SIZE);
         auto _try_value_17 = alignedPayloadEnd(contentOffset, baseSize, static_cast<int64_t>(static_cast<int32_t>((data)->size())));
         if (doof::is_failure(_try_value_17)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_17))};
@@ -401,7 +413,7 @@ doof::Result<std::shared_ptr<::std_::archive::types::TarArchive>, std::string> r
         } else if ((typeFlag != 0) && (typeFlag != 48)) {
             return doof::Failure<std::string>{ (std::string("tar read failed: unsupported entry type ") + doof::to_string(typeFlag)) };
         }
-        entries->push_back(std::make_shared<::std_::archive::types::TarEntry>(resolvedName, kind, contentOffset, resolvedSize, static_cast<int32_t>(baseMode), resolvedMtime, resolvedLinkName));
+        (static_cast<void>(entries->push_back(std::make_shared<::std_::archive::types::TarEntry>(resolvedName, kind, contentOffset, resolvedSize, static_cast<int32_t>(baseMode), resolvedMtime, resolvedLinkName))), std::monostate{});
         (localPax = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}));
         (offset = resolvedNextOffset);
     }

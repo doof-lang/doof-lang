@@ -21,9 +21,25 @@ namespace std_::os::index { struct ExecStderrStream; }
 namespace std_::gzip::index { struct GzipStream; }
 namespace std_::archive::tar_writer { struct TarChunkStream; }
 namespace std_::zstd::index { struct ZstdCompressStream; }
+namespace std_::fs::types { enum class FileMode; }
+namespace std_::fs::types { enum class FileLock; }
+namespace std_::fs::types { enum class IoError; }
+namespace std_::fs::file { struct File; }
+namespace std_::blob::types { enum class Endian; }
+namespace std_::blob::types { enum class TextEncoding; }
+namespace std_::blob::types { enum class EncodingError; }
+namespace std_::fs::index { struct BlockReadStream; }
+namespace std_::os::index { struct ExecStdoutStream; }
+namespace std_::os::index { struct ExecStderrStream; }
+namespace std_::gzip::index { struct GzipStream; }
+namespace std_::archive::tar_writer { struct TarChunkStream; }
+namespace std_::zstd::index { struct ZstdCompressStream; }
 namespace std_::fs::types { enum class IoError; }
 namespace std_::fs::types { struct FileInfo; }
 namespace std_::fs::types { enum class EntryKind; }
+namespace std_::fs::file { struct File; }
+namespace std_::fs::types { enum class FileMode; }
+namespace std_::fs::types { enum class FileLock; }
 namespace std_::os::index { struct ExecStdoutStream; }
 namespace std_::os::index { struct ExecStderrStream; }
 namespace std_::gzip::index { struct GzipStream; }
@@ -76,6 +92,10 @@ namespace std_::zstd::index { struct ZstdCompressStream; }
 
 namespace std_::fs::types {
     struct FileInfo;
+}
+
+namespace std_::fs::file {
+    struct File;
 }
 
 namespace std_::fs::index {
@@ -292,7 +312,11 @@ inline std::ostream& operator<<(std::ostream& output, EntryKind value) { return 
     InvalidPath = 5,
     Interrupted = 6,
     Other = 7,
-    Unsupported = 8
+    Unsupported = 8,
+    InvalidArgument = 9,
+    Closed = 10,
+    UnexpectedEof = 11,
+    WouldBlock = 12
 };
 inline const char* IoError_name(IoError value) {
   switch (value) {
@@ -305,6 +329,10 @@ inline const char* IoError_name(IoError value) {
     case IoError::Interrupted: return "Interrupted";
     case IoError::Other: return "Other";
     case IoError::Unsupported: return "Unsupported";
+    case IoError::InvalidArgument: return "InvalidArgument";
+    case IoError::Closed: return "Closed";
+    case IoError::UnexpectedEof: return "UnexpectedEof";
+    case IoError::WouldBlock: return "WouldBlock";
   }
   doof::panic(std::string("Invalid IoError enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
@@ -318,6 +346,10 @@ inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "Interrupted") return IoError::Interrupted;
   if (value == "Other") return IoError::Other;
   if (value == "Unsupported") return IoError::Unsupported;
+  if (value == "InvalidArgument") return IoError::InvalidArgument;
+  if (value == "Closed") return IoError::Closed;
+  if (value == "UnexpectedEof") return IoError::UnexpectedEof;
+  if (value == "WouldBlock") return IoError::WouldBlock;
   return std::nullopt;
 }
 inline int32_t IoError_value(IoError value) { return static_cast<int32_t>(value); }
@@ -331,17 +363,87 @@ inline std::optional<IoError> IoError_fromValue(int32_t value) {
   if (value == 6) return IoError::Interrupted;
   if (value == 7) return IoError::Other;
   if (value == 8) return IoError::Unsupported;
+  if (value == 9) return IoError::InvalidArgument;
+  if (value == 10) return IoError::Closed;
+  if (value == 11) return IoError::UnexpectedEof;
+  if (value == 12) return IoError::WouldBlock;
   return std::nullopt;
 }
-inline std::shared_ptr<std::vector<IoError>> IoError_values() { return std::make_shared<std::vector<IoError>>(std::initializer_list<IoError>{IoError::NotFound, IoError::PermissionDenied, IoError::AlreadyExists, IoError::IsDirectory, IoError::NotDirectory, IoError::InvalidPath, IoError::Interrupted, IoError::Other, IoError::Unsupported}); }
+inline std::shared_ptr<std::vector<IoError>> IoError_values() { return std::make_shared<std::vector<IoError>>(std::initializer_list<IoError>{IoError::NotFound, IoError::PermissionDenied, IoError::AlreadyExists, IoError::IsDirectory, IoError::NotDirectory, IoError::InvalidPath, IoError::Interrupted, IoError::Other, IoError::Unsupported, IoError::InvalidArgument, IoError::Closed, IoError::UnexpectedEof, IoError::WouldBlock}); }
 inline doof::JsonValue IoError_toJsonValue(IoError value) { return doof::json_value(IoError_value(value)); }
 inline doof::Result<IoError, std::string> IoError_fromJsonValue(const doof::JsonValue& value, bool) {
   if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum IoError, got ") + doof::json_type_name(value)};
   auto resolved = IoError_fromValue(doof::json_as_int(value));
-  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum IoError: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6, 7, 8"};
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum IoError: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"};
   return doof::Success<IoError>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, IoError value) { return output << IoError_name(value); }
+    enum class FileMode {
+    ReadOnly = 0,
+    ReadWrite = 1
+};
+inline const char* FileMode_name(FileMode value) {
+  switch (value) {
+    case FileMode::ReadOnly: return "ReadOnly";
+    case FileMode::ReadWrite: return "ReadWrite";
+  }
+  doof::panic(std::string("Invalid FileMode enum value: ") + doof::to_string(static_cast<int32_t>(value)));
+}
+inline std::optional<FileMode> FileMode_fromName(std::string_view value) {
+  if (value == "ReadOnly") return FileMode::ReadOnly;
+  if (value == "ReadWrite") return FileMode::ReadWrite;
+  return std::nullopt;
+}
+inline int32_t FileMode_value(FileMode value) { return static_cast<int32_t>(value); }
+inline std::optional<FileMode> FileMode_fromValue(int32_t value) {
+  if (value == 0) return FileMode::ReadOnly;
+  if (value == 1) return FileMode::ReadWrite;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<FileMode>> FileMode_values() { return std::make_shared<std::vector<FileMode>>(std::initializer_list<FileMode>{FileMode::ReadOnly, FileMode::ReadWrite}); }
+inline doof::JsonValue FileMode_toJsonValue(FileMode value) { return doof::json_value(FileMode_value(value)); }
+inline doof::Result<FileMode, std::string> FileMode_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum FileMode, got ") + doof::json_type_name(value)};
+  auto resolved = FileMode_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum FileMode: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1"};
+  return doof::Success<FileMode>{resolved.value()};
+}
+inline std::ostream& operator<<(std::ostream& output, FileMode value) { return output << FileMode_name(value); }
+    enum class FileLock {
+    None = 0,
+    Shared = 1,
+    Exclusive = 2
+};
+inline const char* FileLock_name(FileLock value) {
+  switch (value) {
+    case FileLock::None: return "None";
+    case FileLock::Shared: return "Shared";
+    case FileLock::Exclusive: return "Exclusive";
+  }
+  doof::panic(std::string("Invalid FileLock enum value: ") + doof::to_string(static_cast<int32_t>(value)));
+}
+inline std::optional<FileLock> FileLock_fromName(std::string_view value) {
+  if (value == "None") return FileLock::None;
+  if (value == "Shared") return FileLock::Shared;
+  if (value == "Exclusive") return FileLock::Exclusive;
+  return std::nullopt;
+}
+inline int32_t FileLock_value(FileLock value) { return static_cast<int32_t>(value); }
+inline std::optional<FileLock> FileLock_fromValue(int32_t value) {
+  if (value == 0) return FileLock::None;
+  if (value == 1) return FileLock::Shared;
+  if (value == 2) return FileLock::Exclusive;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<FileLock>> FileLock_values() { return std::make_shared<std::vector<FileLock>>(std::initializer_list<FileLock>{FileLock::None, FileLock::Shared, FileLock::Exclusive}); }
+inline doof::JsonValue FileLock_toJsonValue(FileLock value) { return doof::json_value(FileLock_value(value)); }
+inline doof::Result<FileLock, std::string> FileLock_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum FileLock, got ") + doof::json_type_name(value)};
+  auto resolved = FileLock_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum FileLock: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2"};
+  return doof::Success<FileLock>{resolved.value()};
+}
+inline std::ostream& operator<<(std::ostream& output, FileLock value) { return output << FileLock_name(value); }
 }
 
 namespace std_::time::temporal {
@@ -479,6 +581,10 @@ namespace std_::blob::index {
 }
 
 namespace std_::fs::types {
+    using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
+}
+
+namespace std_::fs::file {
     using Stream__readonly_array_byte = std::variant<std::shared_ptr<::std_::fs::index::BlockReadStream>, std::shared_ptr<::std_::os::index::ExecStdoutStream>, std::shared_ptr<::std_::os::index::ExecStderrStream>, std::shared_ptr<::std_::gzip::index::GzipStream>, std::shared_ptr<::std_::archive::tar_writer::TarChunkStream>, std::shared_ptr<::std_::zstd::index::ZstdCompressStream>>;
 }
 
@@ -732,12 +838,73 @@ namespace std_::fs::types {
 };
 }
 
+namespace doof_fs { using FileMode = ::std_::fs::types::FileMode; }
+namespace doof_fs { using FileLock = ::std_::fs::types::FileLock; }
+namespace doof_fs { using IoError = ::std_::fs::types::IoError; }
+namespace doof_fs { using File = ::std_::fs::file::File; }
+namespace doof_fs { using Endian = ::std_::blob::types::Endian; }
+namespace doof_fs { using TextEncoding = ::std_::blob::types::TextEncoding; }
+namespace doof_fs { using EncodingError = ::std_::blob::types::EncodingError; }
+#include "native_file.hpp"
+
+namespace std_::fs::file {
+    struct File : public std::enable_shared_from_this<File> {
+    std::shared_ptr<::doof_fs::NativeFile> native;
+    ::std_::blob::types::Endian endianness;
+    File(std::shared_ptr<::doof_fs::NativeFile> native, ::std_::blob::types::Endian endianness) : native(native), endianness(endianness) {}
+    static doof::Result<std::shared_ptr<File>, ::std_::fs::types::IoError> constructor(const std::string& path, ::std_::fs::types::FileMode mode, bool create, ::std_::fs::types::FileLock lock, bool waitForLock, ::std_::blob::types::Endian endianness);
+    doof::Result<int64_t, ::std_::fs::types::IoError> getPosition();
+    doof::Result<void, ::std_::fs::types::IoError> setPosition(int64_t position);
+    doof::Result<int64_t, ::std_::fs::types::IoError> length();
+    doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readBytes(int64_t length);
+    doof::Result<std::shared_ptr<std::vector<uint8_t>>, ::std_::fs::types::IoError> readUpTo(int64_t length);
+    doof::Result<void, ::std_::fs::types::IoError> writeBytes(const std::shared_ptr<std::vector<uint8_t>>& data);
+    doof::Result<void, ::std_::fs::types::IoError> truncate(int64_t length);
+    doof::Result<void, ::std_::fs::types::IoError> flush();
+    doof::Result<void, ::std_::fs::types::IoError> close();
+    doof::Result<int64_t, ::std_::fs::types::IoError> remaining();
+    doof::Result<std::shared_ptr<::doof_blob::NativeBlobReader>, ::std_::fs::types::IoError> reader(int64_t length);
+    doof::Result<uint8_t, ::std_::fs::types::IoError> readByte();
+    doof::Result<void, ::std_::fs::types::IoError> writeByte(uint8_t value);
+    doof::Result<int32_t, ::std_::fs::types::IoError> readSignedByte();
+    doof::Result<void, ::std_::fs::types::IoError> writeSignedByte(int32_t value);
+    doof::Result<bool, ::std_::fs::types::IoError> readBool();
+    doof::Result<void, ::std_::fs::types::IoError> writeBool(bool value);
+    doof::Result<int32_t, ::std_::fs::types::IoError> readShort();
+    doof::Result<void, ::std_::fs::types::IoError> writeShort(int32_t value);
+    doof::Result<int32_t, ::std_::fs::types::IoError> readUnsignedShort();
+    doof::Result<void, ::std_::fs::types::IoError> writeUnsignedShort(int32_t value);
+    doof::Result<int32_t, ::std_::fs::types::IoError> readInt();
+    doof::Result<void, ::std_::fs::types::IoError> writeInt(int32_t value);
+    doof::Result<int64_t, ::std_::fs::types::IoError> readUnsignedInt();
+    doof::Result<void, ::std_::fs::types::IoError> writeUnsignedInt(int64_t value);
+    doof::Result<int64_t, ::std_::fs::types::IoError> readLong();
+    doof::Result<void, ::std_::fs::types::IoError> writeLong(int64_t value);
+    doof::Result<float, ::std_::fs::types::IoError> readFloat();
+    doof::Result<void, ::std_::fs::types::IoError> writeFloat(float value);
+    doof::Result<double, ::std_::fs::types::IoError> readDouble();
+    doof::Result<void, ::std_::fs::types::IoError> writeDouble(double value);
+    doof::Result<std::string, ::std_::fs::types::IoError> readString(int64_t length);
+    doof::Result<void, ::std_::fs::types::IoError> writeString(const std::string& value);
+    doof::Result<std::string, std::variant<::std_::fs::types::IoError, ::std_::blob::types::EncodingError>> readText(int64_t length, ::std_::blob::types::TextEncoding encoding);
+    doof::Result<int32_t, std::variant<::std_::fs::types::IoError, ::std_::blob::types::EncodingError>> writeText(const std::string& value, ::std_::blob::types::TextEncoding encoding);
+    doof::Result<std::string, ::std_::fs::types::IoError> readTextLossy(int64_t length, ::std_::blob::types::TextEncoding encoding);
+    doof::Result<int32_t, ::std_::fs::types::IoError> writeTextLossy(const std::string& value, ::std_::blob::types::TextEncoding encoding);
+};
+}
+
 namespace doof_fs { using IoError = ::std_::fs::types::IoError; }
 using IoError = ::std_::fs::types::IoError;
 namespace doof_fs { using FileInfo = ::std_::fs::types::FileInfo; }
 namespace doof_fs { using EntryKind = ::std_::fs::types::EntryKind; }
+namespace doof_fs { using File = ::std_::fs::file::File; }
+namespace doof_fs { using FileMode = ::std_::fs::types::FileMode; }
+namespace doof_fs { using FileLock = ::std_::fs::types::FileLock; }
 using EntryKind = ::std_::fs::types::EntryKind;
 using FileInfo = ::std_::fs::types::FileInfo;
+using File = ::std_::fs::file::File;
+using FileMode = ::std_::fs::types::FileMode;
+using FileLock = ::std_::fs::types::FileLock;
 #include "native_fs.hpp"
 
 namespace std_::fs::index {

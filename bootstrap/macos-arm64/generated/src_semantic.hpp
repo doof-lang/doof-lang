@@ -240,12 +240,13 @@ namespace app_src_semantic_ {
     std::string functionName;
     bool staticContext;
     bool inValueYieldBlock;
+    doof_header_type_1 yieldExpectedType;
     doof_header_type_1 yieldType;
     bool capturesTryErrors;
     std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes;
     bool tryPanics;
     std::optional<std::string> loopLabel;
-    Scope(std::shared_ptr<Scope> parent, std::shared_ptr<std::vector<std::shared_ptr<Binding>>> bindings, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::string>> typeParamConstraintNames, std::shared_ptr<std::vector<std::shared_ptr<ResolvedTypeConstraint>>> typeParamConstraints, doof_header_type_1 returnType, doof_header_type_1 thisType, std::string functionName, bool staticContext, bool inValueYieldBlock, doof_header_type_1 yieldType, bool capturesTryErrors, std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes, bool tryPanics, std::optional<std::string> loopLabel) : parent(parent), bindings(bindings), typeParams(typeParams), typeParamConstraintNames(typeParamConstraintNames), typeParamConstraints(typeParamConstraints), returnType(returnType), thisType(thisType), functionName(functionName), staticContext(staticContext), inValueYieldBlock(inValueYieldBlock), yieldType(yieldType), capturesTryErrors(capturesTryErrors), catchErrorTypes(catchErrorTypes), tryPanics(tryPanics), loopLabel(loopLabel) {}
+    Scope(std::shared_ptr<Scope> parent, std::shared_ptr<std::vector<std::shared_ptr<Binding>>> bindings, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::string>> typeParamConstraintNames, std::shared_ptr<std::vector<std::shared_ptr<ResolvedTypeConstraint>>> typeParamConstraints, doof_header_type_1 returnType, doof_header_type_1 thisType, std::string functionName, bool staticContext, bool inValueYieldBlock, doof_header_type_1 yieldExpectedType, doof_header_type_1 yieldType, bool capturesTryErrors, std::shared_ptr<std::vector<ResolvedType>> catchErrorTypes, bool tryPanics, std::optional<std::string> loopLabel) : parent(parent), bindings(bindings), typeParams(typeParams), typeParamConstraintNames(typeParamConstraintNames), typeParamConstraints(typeParamConstraints), returnType(returnType), thisType(thisType), functionName(functionName), staticContext(staticContext), inValueYieldBlock(inValueYieldBlock), yieldExpectedType(yieldExpectedType), yieldType(yieldType), capturesTryErrors(capturesTryErrors), catchErrorTypes(catchErrorTypes), tryPanics(tryPanics), loopLabel(loopLabel) {}
 };
     struct ResolvedTypeConstraint : public std::enable_shared_from_this<ResolvedTypeConstraint> {
     doof_header_type_1 type_;

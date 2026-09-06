@@ -89,7 +89,7 @@ doof::Result<std::shared_ptr<NativeTaskState>, std::string> NativeTaskState::fro
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<NativeInputSignature>>>> _field_inputs;
     if (auto _iterator_inputs = _object->find("inputs"); _iterator_inputs != _object->end()) {
             if (!(doof::json_is_array(_iterator_inputs->second))) { return doof::Failure<std::string>{"Field \"inputs\" expected array but got " + std::string(doof::json_type_name(_iterator_inputs->second))}; }
-        _field_inputs = doof::json_decode_at("Field \"inputs\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_inputs->second); auto _values = std::make_shared<std::vector<std::shared_ptr<NativeInputSignature>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(NativeInputSignature::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
+        _field_inputs = doof::json_decode_at("Field \"inputs\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_inputs->second); if (_array == nullptr) throw doof::JsonDecodeError("Expected array"); auto _values = std::make_shared<std::vector<std::shared_ptr<NativeInputSignature>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(NativeInputSignature::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
     } else {
         _field_inputs = std::make_shared<std::vector<std::shared_ptr<NativeInputSignature>>>(std::vector<std::shared_ptr<NativeInputSignature>>{});
     }
@@ -120,14 +120,14 @@ doof::Result<std::shared_ptr<NativeBuildState>, std::string> NativeBuildState::f
     std::optional<std::shared_ptr<std::vector<std::shared_ptr<NativeTaskState>>>> _field_tasks;
     if (auto _iterator_tasks = _object->find("tasks"); _iterator_tasks != _object->end()) {
             if (!(doof::json_is_array(_iterator_tasks->second))) { return doof::Failure<std::string>{"Field \"tasks\" expected array but got " + std::string(doof::json_type_name(_iterator_tasks->second))}; }
-        _field_tasks = doof::json_decode_at("Field \"tasks\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_tasks->second); auto _values = std::make_shared<std::vector<std::shared_ptr<NativeTaskState>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(NativeTaskState::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
+        _field_tasks = doof::json_decode_at("Field \"tasks\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_tasks->second); if (_array == nullptr) throw doof::JsonDecodeError("Expected array"); auto _values = std::make_shared<std::vector<std::shared_ptr<NativeTaskState>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(NativeTaskState::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
     } else {
         _field_tasks = std::make_shared<std::vector<std::shared_ptr<NativeTaskState>>>(std::vector<std::shared_ptr<NativeTaskState>>{});
     }
     std::optional<std::shared_ptr<std::vector<std::string>>> _field_managedOutputs;
     if (auto _iterator_managedOutputs = _object->find("managedOutputs"); _iterator_managedOutputs != _object->end()) {
             if (!(doof::json_is_array(_iterator_managedOutputs->second))) { return doof::Failure<std::string>{"Field \"managedOutputs\" expected array but got " + std::string(doof::json_type_name(_iterator_managedOutputs->second))}; }
-        _field_managedOutputs = doof::json_decode_at("Field \"managedOutputs\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_managedOutputs->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return (_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element)); })); } return _values; }(); });
+        _field_managedOutputs = doof::json_decode_at("Field \"managedOutputs\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_managedOutputs->second); if (_array == nullptr) throw doof::JsonDecodeError("Expected array"); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return (_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element)); })); } return _values; }(); });
     } else {
         _field_managedOutputs = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     }
@@ -192,7 +192,7 @@ std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::strin
         }
         if ((((char_ == U'\u0020') || (char_ == U'\t')) || (char_ == U'\r')) || (char_ == U'\n')) {
             if (current != std::string("")) {
-                appendUnique(result, current);
+                (static_cast<void>(appendUnique(result, current)), std::monostate{});
                 (current = std::string(""));
             }
             continue;
@@ -203,7 +203,7 @@ std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::strin
         (current = (current + std::string("\\")));
     }
     if (current != std::string("")) {
-        appendUnique(result, current);
+        (static_cast<void>(appendUnique(result, current)), std::monostate{});
     }
     return result;
 }
@@ -253,7 +253,7 @@ std::shared_ptr<std::vector<std::string>> parseMsvcDependencies(const std::strin
             continue;
         }
         const auto path = doof::success_value(_binding_value_11);
-        appendUnique(result, path);
+        (static_cast<void>(appendUnique(result, path)), std::monostate{});
     }
     return result;
 }
@@ -264,6 +264,6 @@ void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const
             return;
         }
     }
-    values->push_back(value);
+    (static_cast<void>(values->push_back(value)), std::monostate{});
 }
 }

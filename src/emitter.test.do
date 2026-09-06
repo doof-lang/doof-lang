@@ -289,7 +289,7 @@ export function testLambdaCapturesExplicitThis(): none {
 export function testLambdaCapturesThisForImplicitMethodCalls(): none {
   result := emit("class Receiver { handle(value: int): void {}\nmake(): (value: int): void => (value: int): void => handle(value) }")
   Assert.equal(result.source.contains("[this, _doof_captured_self = this->shared_from_this()](int32_t value)"), true)
-  Assert.equal(result.source.contains("return handle(value)"), true)
+  Assert.equal(result.source.contains("static_cast<void>(handle(value))"), true)
 }
 
 struct CapturedOptionalPoint {
@@ -683,7 +683,7 @@ export function testEmitsIsolatedAsyncFunctionCalls(): none {
   Assert.stringContains(result.source, "doof::submit_async<int32_t>([=]() -> int32_t { return compute(value); })")
 
   noneResult := emit("function notify(value: int): none { println(value) }\nfunction run(value: int): Promise<none> => async notify(value)")
-  Assert.stringContains(noneResult.source, "doof::submit_async<void>([=]() { notify(value); })")
+  Assert.stringContains(noneResult.source, "doof::submit_async<void>([=]() { (static_cast<void>(notify(value)), std::monostate{}); })")
 }
 
 export function testTryBangPanicIncludesOriginAndStringFailure(): none {
@@ -711,7 +711,7 @@ export function testTryQuestionFlattensNullableSuccessPayload(): none {
 
 export function testTryQuestionPromotesUnionSuccessIntoNullableUnion(): none {
   result := emit("function maybe(flag: bool): Result<int | string, string> => if flag then Success { value: 1 } else Success { value: \"present\" }\nfunction main(): int | string | none => try? maybe(true)")
-  Assert.stringContains(result.source, "doof::optional_value(std::move(doof::success_value(_try_value)))")
+  Assert.stringContains(result.source, "doof::variant_promote<std::variant<std::monostate, int32_t, std::string>>(std::move(doof::success_value(_try_value)))")
   Assert.stringContains(result.source, "if (doof::is_failure(_try_value)) return std::monostate{};")
 }
 
@@ -1023,8 +1023,8 @@ export function testEmitsDeprecatedBuildReadonlyThroughDrainHelper(): none {
 
 export function testWrapsMapSetArgumentsForJsonValueMaps(): none {
   result := emit("function fill(receipt: Map<string, JsonValue>, version: int, name: string): void { receipt.set(\"schemaVersion\", version)\nreceipt.set(\"name\", name) }\nfunction widen(value: int): long => long(value)")
-  Assert.stringContains(result.source, "doof::map_set(receipt, std::string(\"schemaVersion\"), doof::json_value(version)")
-  Assert.stringContains(result.source, "doof::map_set(receipt, std::string(\"name\"), doof::json_value(name)")
+  Assert.stringContains(result.source, "doof::map_set<std::string, doof::JsonValue>(receipt, std::string(\"schemaVersion\"), doof::json_value(version)")
+  Assert.stringContains(result.source, "doof::map_set<std::string, doof::JsonValue>(receipt, std::string(\"name\"), doof::json_value(name)")
   Assert.stringContains(result.source, "static_cast<int64_t>(value)")
   Assert.equal(result.source.contains("static_cast<int64_t>(doof::json_value(value))"), false)
 }
@@ -1249,8 +1249,8 @@ export function testEmitsYieldingCaseExpressionBlocks(): none {
 
 export function testEmitsNoneReturningCaseExpressionArms(): none {
   result := emit("function verify(condition: bool): none {}\nfunction check(condition: bool): none => case condition { true -> verify(true), _ -> verify(false) }\nfunction checkReturned(condition: bool): none { return case condition { true -> verify(true), _ -> verify(false) } }")
-  Assert.stringContains(result.source, "verify(true);\n        return std::monostate{};")
-  Assert.stringContains(result.source, "verify(false);\n        return std::monostate{};")
+  Assert.stringContains(result.source, "(static_cast<void>(verify(true)), std::monostate{});\n        return std::monostate{};")
+  Assert.stringContains(result.source, "(static_cast<void>(verify(false)), std::monostate{});\n        return std::monostate{};")
   Assert.equal(result.source.contains("return [&]() -> std::monostate"), false)
 }
 
@@ -1290,7 +1290,7 @@ export function testEmitsClassDestructorBody(): none {
   Assert.equal(result.header.contains("~Resource();"), true)
   Assert.equal(result.header.contains("doof::println(std::string(\"closed\"));"), false)
   Assert.equal(result.source.contains("Resource::~Resource()"), true)
-  Assert.equal(result.source.contains("doof::println(std::string(\"closed\"));"), true)
+  Assert.equal(result.source.contains("(static_cast<void>(doof::println(std::string(\"closed\"))), std::monostate{});"), true)
   Assert.equal(result.source.contains("std::make_shared<Resource>(1)"), true)
   Assert.equal(result.source.contains("std::make_shared<Resource>(Resource{"), false)
 }
@@ -1981,7 +1981,7 @@ export function testDoesNotForwardDeclareOrAliasImportedGenericTypesForNativeHea
 export function testEmitsInterfaceVariantsAndDispatch(): none {
   result := emit("interface Drawable { value: int\nrender(): int }\nclass Point implements Drawable { readonly value: int\nfunction render(): int => value }\nfunction read(shape: Drawable): int => shape.render()\nfunction main(): int { point := Point { value: 5 }\nshape: Drawable := point\nreturn read(shape) + shape.value }")
   Assert.equal(result.header.contains("using Drawable = std::variant<std::shared_ptr<Point>>;"), true)
-  Assert.equal(result.source.contains("const Drawable shape = point;"), true)
+  Assert.equal(result.source.contains("const Drawable shape = doof::variant_promote<Drawable>(point);"), true)
   Assert.equal(result.source.contains("std::visit([&](auto&& _obj) -> int32_t { return _obj->render(); }, shape)"), true)
   Assert.equal(result.source.contains("std::visit([](auto&& _obj) { return _obj->value; }, shape)"), true)
 }

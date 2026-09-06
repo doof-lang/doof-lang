@@ -114,3 +114,14 @@ export function testRejectsEqualityAcrossNominalStructTypes(): none {
   }
   Assert.isTrue(found)
 }
+
+export function testNoneCarrierMethodDiscardsUnitReturn(): none {
+  result := emit("class Item { effect(): none {}\nforward(): none => effect() }\nfunction main(): none { Item {}.forward() }")
+  Assert.stringContains(result.source, "return static_cast<void>((static_cast<void>(effect()), std::monostate{}));")
+}
+
+export function testCombinationNoneGenericExpressionReturn(): none {
+  result := emit("function identity<T>(value: T): T => value\nfunction main(): none { identity(none)\nidentity(7) }")
+  Assert.stringContains(result.source, "return static_cast<void>(value);")
+  Assert.stringContains(result.source, "return value;")
+}

@@ -29,7 +29,7 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
                 const auto& fn = std::get<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject);
                 if (fn->exported && doof::string_startsWith(fn->name, std::string("test"))) {
-                    addDiscoveredTest(result, fn, fn->name, modulePath, rootDirectory, usesMocks);
+                    (static_cast<void>(addDiscoveredTest(result, fn, fn->name, modulePath, rootDirectory, usesMocks)), std::monostate{});
                 }
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExportList>>(_case_subject)) {
@@ -45,7 +45,7 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
                     }
                     const auto declaration = findFunction(program->statements, specifier->name);
                     if (!doof::is_null(declaration)) {
-                        addDiscoveredTest(result, doof::unwrap_optional(declaration), exportedName, modulePath, rootDirectory, usesMocks);
+                        (static_cast<void>(addDiscoveredTest(result, doof::unwrap_optional(declaration), exportedName, modulePath, rootDirectory, usesMocks)), std::monostate{});
                     }
                 }
         }
@@ -61,7 +61,7 @@ std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsFo
     const auto& _iterable_10 = tests;
     for (const auto& test : *_iterable_10) {
         if (!test->usesMocks) {
-            shared->tests->push_back(test);
+            (static_cast<void>(shared->tests->push_back(test)), std::monostate{});
             continue;
         }
         std::shared_ptr<TestCompilationGroup> group = nullptr;
@@ -74,17 +74,17 @@ std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsFo
         }
         if (doof::is_null(group)) {
             (group = std::make_shared<TestCompilationGroup>((std::string("mock-") + safeGroupName(test->moduleDisplayPath)), std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{})));
-            mocked->push_back(doof::unwrap_optional(group));
+            (static_cast<void>(mocked->push_back(doof::unwrap_optional(group))), std::monostate{});
         }
-        group->tests->push_back(test);
+        (static_cast<void>(group->tests->push_back(test)), std::monostate{});
     }
     std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> result = std::make_shared<std::vector<std::shared_ptr<TestCompilationGroup>>>(std::vector<std::shared_ptr<TestCompilationGroup>>{});
     if (static_cast<int32_t>((shared->tests)->size()) > 0) {
-        result->push_back(shared);
+        (static_cast<void>(result->push_back(shared)), std::monostate{});
     }
     const auto& _iterable_12 = mocked;
     for (const auto& group : *_iterable_12) {
-        result->push_back(group);
+        (static_cast<void>(result->push_back(group)), std::monostate{});
     }
     return result;
 }
@@ -97,7 +97,7 @@ std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> filterDiscoveredTe
     const auto& _iterable_14 = tests;
     for (const auto& test : *_iterable_14) {
         if (doof::string_contains(doof::string_toLowerCase(test->id), needle)) {
-            selected->push_back(test);
+            (static_cast<void>(selected->push_back(test)), std::monostate{});
         }
     }
     return selected;
@@ -109,7 +109,7 @@ std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> selectedTestsForEx
         const auto& _iterable_16 = selectedTests;
         for (const auto& selected : *_iterable_16) {
             if (test->id == selected->id) {
-                result->push_back(test);
+                (static_cast<void>(result->push_back(test)), std::monostate{});
                 break;
             }
         }
@@ -181,9 +181,9 @@ void mergeCoverageOutput(const std::string& output, const std::shared_ptr<std::v
         for (int32_t index = 0; index < static_cast<int32_t>((modules)->size()); ++index) {
             if (doof::array_at(modules, index, "src/test-runner", 206)->moduleId == moduleId) {
                 while (static_cast<int32_t>((hitsByModule)->size()) <= index) {
-                    hitsByModule->push_back(std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
+                    (static_cast<void>(hitsByModule->push_back(std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}))), std::monostate{});
                 }
-                appendUniqueLine(doof::array_at(hitsByModule, index, "src/test-runner", 208), sourceLine);
+                (static_cast<void>(appendUniqueLine(doof::array_at(hitsByModule, index, "src/test-runner", 208), sourceLine)), std::monostate{});
             }
         }
     }
@@ -217,14 +217,14 @@ std::shared_ptr<CoverageReport> buildCoverageReport(const std::shared_ptr<std::v
         const auto& _iterable_27 = module->instrumentedLines;
         for (const auto& line : *_iterable_27) {
             if (containsLine(hits, line)) {
-                file->hitLines->push_back(line);
+                (static_cast<void>(file->hitLines->push_back(line)), std::monostate{});
                 (file->covered += 1);
             } else {
-                file->missedLines->push_back(line);
+                (static_cast<void>(file->missedLines->push_back(line)), std::monostate{});
             }
         }
         (file->percentTenths = coveragePercentTenths(file->covered, file->total));
-        report->files->push_back(file);
+        (static_cast<void>(report->files->push_back(file)), std::monostate{});
         (report->totalCovered += file->covered);
         (report->totalLines += file->total);
     }
@@ -310,7 +310,7 @@ int32_t parseCoverageInteger(const std::string& value) {
 }
 void appendUniqueLine(const std::shared_ptr<std::vector<int32_t>>& lines, int32_t line) {
     if (!containsLine(lines, line)) {
-        lines->push_back(line);
+        (static_cast<void>(lines->push_back(line)), std::monostate{});
     }
 }
 bool containsLine(const std::shared_ptr<std::vector<int32_t>>& lines, int32_t line) {
@@ -350,19 +350,19 @@ std::string escapeHtml(const std::string& value) {
 void addDiscoveredTest(const std::shared_ptr<TestDiscovery>& result, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& declaration, const std::string& exportedName, const std::string& modulePath, const std::string& rootDirectory, bool usesMocks) {
     const auto location = ((((modulePath + std::string(":")) + doof::to_string(declaration->span.start.line)) + std::string(":")) + doof::to_string(declaration->span.start.column));
     if (static_cast<int32_t>((declaration->params)->size()) > 0) {
-        result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must not declare parameters")));
+        (static_cast<void>(result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must not declare parameters")))), std::monostate{});
         return;
     }
     if (static_cast<int32_t>((declaration->typeParams)->size()) > 0) {
-        result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must not declare type parameters")));
+        (static_cast<void>(result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must not declare type parameters")))), std::monostate{});
         return;
     }
     if (!returnsNone(declaration)) {
-        result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must return none")));
+        (static_cast<void>(result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must return none")))), std::monostate{});
         return;
     }
     const auto displayPath = testDisplayPath(rootDirectory, modulePath);
-    result->tests->push_back(std::make_shared<DiscoveredTest>(((displayPath + std::string("::")) + exportedName), exportedName, modulePath, displayPath, usesMocks));
+    (static_cast<void>(result->tests->push_back(std::make_shared<DiscoveredTest>(((displayPath + std::string("::")) + exportedName), exportedName, modulePath, displayPath, usesMocks))), std::monostate{});
 }
 bool returnsNone(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& declaration) {
     if (doof::is_null(declaration->returnType)) {
@@ -410,7 +410,7 @@ std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> copyTests(const st
     std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> result = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{});
     const auto& _iterable_40 = tests;
     for (const auto& test : *_iterable_40) {
-        result->push_back(test);
+        (static_cast<void>(result->push_back(test)), std::monostate{});
     }
     return result;
 }

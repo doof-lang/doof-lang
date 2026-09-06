@@ -53,21 +53,21 @@ void ensureDirectory(const std::string& path) {
     }
     const auto parent = parentPath(path);
     if (parent != path) {
-        ensureDirectory(parent);
+        (static_cast<void>(ensureDirectory(parent)), std::monostate{});
     }
-    [&]() -> void { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 63, std::string("try! failed"));  }();
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 63, std::string("try! failed"));  return {}; }();
 }
 void copyPath(const std::string& sourcePath, const std::string& destinationPath) {
     if (::doof_fs::isDirectory(sourcePath)) {
-        ensureDirectory(destinationPath);
+        (static_cast<void>(ensureDirectory(destinationPath)), std::monostate{});
         const auto& _iterable_4 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(sourcePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 69, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_4) {
-            copyPath(outputPath(sourcePath, entry->name), outputPath(destinationPath, entry->name));
+            (static_cast<void>(copyPath(outputPath(sourcePath, entry->name), outputPath(destinationPath, entry->name))), std::monostate{});
         }
         return;
     }
-    ensureDirectory(parentPath(destinationPath));
-    [&]() -> void { auto _try_value = ::doof_fs::writeBlob(destinationPath, [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(sourcePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 75, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 75, std::string("try! failed"));  }();
+    (static_cast<void>(ensureDirectory(parentPath(destinationPath))), std::monostate{});
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::writeBlob(destinationPath, [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(sourcePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 75, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 75, std::string("try! failed"));  return {}; }();
 }
 void removeTree(const std::string& path) {
     if (!::doof_fs::exists(path)) {
@@ -76,14 +76,14 @@ void removeTree(const std::string& path) {
     if (::doof_fs::isDirectory(path)) {
         const auto& _iterable_6 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 81, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_6) {
-            removeTree(outputPath(path, entry->name));
+            (static_cast<void>(removeTree(outputPath(path, entry->name))), std::monostate{});
         }
     }
-    [&]() -> void { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 83, std::string("try! failed"));  }();
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 83, std::string("try! failed"));  return {}; }();
 }
 void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
     if (!doof::array_contains(values, value, "", 0)) {
-        values->push_back(value);
+        (static_cast<void>(values->push_back(value)), std::monostate{});
     }
 }
 doof::Result<void, std::string> configureIOSNativeBuild(const std::string& outputDirectory, const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& destination, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native) {
@@ -100,17 +100,17 @@ doof::Result<void, std::string> configureIOSNativeBuild(const std::string& outpu
     auto _try_value_9 = ::app_src_ios_app_::iosTargetTriple(config->minimumDeploymentTarget, destination, architecture);
     if (doof::is_failure(_try_value_9)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_9))};
     const auto target = doof::success_value(_try_value_9);
-    [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(outputDirectory, std::string("Info.plist")), ::app_src_ios_app_::renderIOSInfoPlist(config)); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 102, std::string("try! failed"));  }();
-    [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(outputDirectory, std::string("ios-main.mm")), ::app_src_ios_app_::renderIOSMainSource(config->executableName)); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 103, std::string("try! failed"));  }();
-    appendUnique(native->sourceFiles, std::string("ios-main.mm"));
-    appendUnique(native->frameworks, std::string("UIKit"));
-    appendUnique(native->frameworks, std::string("Foundation"));
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::writeText(outputPath(outputDirectory, std::string("Info.plist")), ::app_src_ios_app_::renderIOSInfoPlist(config)); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 102, std::string("try! failed"));  return {}; }();
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::writeText(outputPath(outputDirectory, std::string("ios-main.mm")), ::app_src_ios_app_::renderIOSMainSource(config->executableName)); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 103, std::string("try! failed"));  return {}; }();
+    (static_cast<void>(appendUnique(native->sourceFiles, std::string("ios-main.mm"))), std::monostate{});
+    (static_cast<void>(appendUnique(native->frameworks, std::string("UIKit"))), std::monostate{});
+    (static_cast<void>(appendUnique(native->frameworks, std::string("Foundation"))), std::monostate{});
     const auto& _iterable_11 = std::make_shared<std::vector<std::shared_ptr<std::vector<std::string>>>>(std::vector<std::shared_ptr<std::vector<std::string>>>{native->compilerFlags, native->linkerFlags});
     for (const auto& values : *_iterable_11) {
-        appendUnique(values, std::string("-isysroot"));
-        appendUnique(values, sdkPath);
-        appendUnique(values, std::string("-target"));
-        appendUnique(values, target);
+        (static_cast<void>(appendUnique(values, std::string("-isysroot"))), std::monostate{});
+        (static_cast<void>(appendUnique(values, sdkPath)), std::monostate{});
+        (static_cast<void>(appendUnique(values, std::string("-target"))), std::monostate{});
+        (static_cast<void>(appendUnique(values, target)), std::monostate{});
     }
     return doof::Success<void>{};
 }
@@ -156,7 +156,7 @@ void collectResourceFiles(const std::string& path, const std::string& baseDirect
     if (::doof_fs::isDirectory(path)) {
         const auto& _iterable_14 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 144, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_14) {
-            collectResourceFiles(outputPath(path, entry->name), baseDirectory, pattern, results);
+            (static_cast<void>(collectResourceFiles(outputPath(path, entry->name), baseDirectory, pattern, results)), std::monostate{});
         }
         return;
     }
@@ -164,7 +164,7 @@ void collectResourceFiles(const std::string& path, const std::string& baseDirect
     const auto relative = (doof::string_startsWith(path, prefix) ? doof::string_substring(path, static_cast<int32_t>(prefix.size()), static_cast<int32_t>(path.size())) : fileName(path));
     const auto relativePattern = (doof::string_startsWith(pattern, prefix) ? doof::string_substring(pattern, static_cast<int32_t>(prefix.size()), static_cast<int32_t>(pattern.size())) : fileName(pattern));
     if (globMatches(relativePattern, relative, 0, 0)) {
-        results->push_back(path);
+        (static_cast<void>(results->push_back(path)), std::monostate{});
     }
 }
 doof::Result<void, std::string> copyIOSResources(const std::shared_ptr<::app_src_ios_app_::IOSAppConfig>& config, const std::string& appPath) {
@@ -175,13 +175,13 @@ doof::Result<void, std::string> copyIOSResources(const std::shared_ptr<::app_src
         auto baseDirectory = globBaseDirectory(resource->sourcePath);
         if (doof::string_contains(resource->sourcePath, std::string("*"))) {
             if (::doof_fs::exists(baseDirectory)) {
-                collectResourceFiles(baseDirectory, baseDirectory, resource->sourcePath, files);
+                (static_cast<void>(collectResourceFiles(baseDirectory, baseDirectory, resource->sourcePath, files)), std::monostate{});
             }
         } else if (::doof_fs::isDirectory(resource->sourcePath)) {
-            collectResourceFiles(resource->sourcePath, resource->sourcePath, (resource->sourcePath + std::string("/**")), files);
+            (static_cast<void>(collectResourceFiles(resource->sourcePath, resource->sourcePath, (resource->sourcePath + std::string("/**")), files)), std::monostate{});
             (baseDirectory = resource->sourcePath);
         } else if (::doof_fs::exists(resource->sourcePath)) {
-            files->push_back(resource->sourcePath);
+            (static_cast<void>(files->push_back(resource->sourcePath)), std::monostate{});
             (baseDirectory = parentPath(resource->sourcePath));
         }
         if (static_cast<int32_t>((files)->size()) == 0) {
@@ -196,8 +196,8 @@ doof::Result<void, std::string> copyIOSResources(const std::shared_ptr<::app_src
             if (doof::array_contains(destinations, destination, "", 0)) {
                 return doof::Failure<std::string>{ (std::string("Duplicate iOS app resource destination: ") + destination) };
             }
-            destinations->push_back(destination);
-            copyPath(sourcePath, destination);
+            (static_cast<void>(destinations->push_back(destination)), std::monostate{});
+            (static_cast<void>(copyPath(sourcePath, destination)), std::monostate{});
         }
     }
     return doof::Success<void>{};
@@ -208,9 +208,9 @@ doof::Result<void, std::string> compileIOSIcon(const std::shared_ptr<::app_src_i
     }
     const auto catalogPath = outputPath(buildDirectory, std::string("Assets.xcassets"));
     const auto iconSetPath = outputPath(catalogPath, std::string("AppIcon.appiconset"));
-    removeTree(catalogPath);
-    ensureDirectory(iconSetPath);
-    [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(iconSetPath, std::string("Contents.json")), (::app_src_ios_app_::renderIOSIconSetContents() + std::string("\n"))); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 187, std::string("try! failed"));  }();
+    (static_cast<void>(removeTree(catalogPath)), std::monostate{});
+    (static_cast<void>(ensureDirectory(iconSetPath)), std::monostate{});
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::writeText(outputPath(iconSetPath, std::string("Contents.json")), (::app_src_ios_app_::renderIOSIconSetContents() + std::string("\n"))); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 187, std::string("try! failed"));  return {}; }();
     const auto names = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("iphone_notification_20@2x.png"), std::string("iphone_notification_20@3x.png"), std::string("iphone_settings_29@2x.png"), std::string("iphone_settings_29@3x.png"), std::string("iphone_spotlight_40@2x.png"), std::string("iphone_spotlight_40@3x.png"), std::string("iphone_app_60@2x.png"), std::string("iphone_app_60@3x.png"), std::string("ipad_notification_20.png"), std::string("ipad_notification_20@2x.png"), std::string("ipad_settings_29.png"), std::string("ipad_settings_29@2x.png"), std::string("ipad_spotlight_40.png"), std::string("ipad_spotlight_40@2x.png"), std::string("ipad_app_76.png"), std::string("ipad_app_76@2x.png"), std::string("ipad_pro_83_5@2x.png"), std::string("app_store_1024.png")});
     const auto sizes = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{40, 60, 58, 87, 80, 120, 120, 180, 20, 40, 29, 58, 40, 80, 76, 152, 167, 1024});
     for (int32_t index = 0; index < static_cast<int32_t>((names)->size()); ++index) {
@@ -225,7 +225,7 @@ doof::Result<void, std::string> compileIOSIcon(const std::shared_ptr<::app_src_i
     auto _try_value_22 = runRequiredCommand(std::string("/usr/libexec/PlistBuddy"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-c"), (std::string("Merge ") + partialPlistPath), outputPath(appPath, std::string("Info.plist"))}), std::string("merging iOS app icon metadata"));
     if (doof::is_failure(_try_value_22)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_22))};
     if (::doof_fs::exists(partialPlistPath)) {
-        [&]() -> void { auto _try_value = ::doof_fs::remove(partialPlistPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 216, std::string("try! failed"));  }();
+        [&]() -> std::monostate { auto _try_value = ::doof_fs::remove(partialPlistPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 216, std::string("try! failed"));  return {}; }();
     }
     return doof::Success<void>{};
 }
@@ -237,17 +237,17 @@ doof::Result<std::string, std::string> assembleIOSApp(const std::string& buildDi
         return doof::Failure<std::string>{ std::string("Self-hosted iOS embedded library bundling is not yet supported") };
     }
     const auto appPath = outputPath(buildDirectory, (config->executableName + std::string(".app")));
-    removeTree(appPath);
-    ensureDirectory(appPath);
+    (static_cast<void>(removeTree(appPath)), std::monostate{});
+    (static_cast<void>(ensureDirectory(appPath)), std::monostate{});
     const auto bundleExecutable = outputPath(appPath, config->executableName);
-    copyPath(executablePath, bundleExecutable);
+    (static_cast<void>(copyPath(executablePath, bundleExecutable)), std::monostate{});
     auto _try_value_23 = runRequiredCommand(std::string("chmod"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("+x"), bundleExecutable}), std::string("marking the iOS executable"));
     if (doof::is_failure(_try_value_23)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_23))};
     const auto infoPlistPath = outputPath(buildDirectory, std::string("Info.plist"));
     if (::doof_fs::exists(infoPlistPath)) {
-        copyPath(infoPlistPath, outputPath(appPath, std::string("Info.plist")));
+        (static_cast<void>(copyPath(infoPlistPath, outputPath(appPath, std::string("Info.plist")))), std::monostate{});
     } else {
-        [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(appPath, std::string("Info.plist")), ::app_src_ios_app_::renderIOSInfoPlist(config)); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 241, std::string("try! failed"));  }();
+        [&]() -> std::monostate { auto _try_value = ::doof_fs::writeText(outputPath(appPath, std::string("Info.plist")), ::app_src_ios_app_::renderIOSInfoPlist(config)); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 241, std::string("try! failed"));  return {}; }();
     }
     auto _try_value_24 = copyIOSResources(config, appPath);
     if (doof::is_failure(_try_value_24)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_24))};
@@ -262,15 +262,15 @@ void collectNestedCode(const std::string& path, const std::shared_ptr<std::vecto
     if (::doof_fs::isDirectory(path)) {
         const auto& _iterable_27 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 251, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_27) {
-            collectNestedCode(outputPath(path, entry->name), results);
+            (static_cast<void>(collectNestedCode(outputPath(path, entry->name), results)), std::monostate{});
         }
         if (doof::string_endsWith(path, std::string(".framework")) || doof::string_endsWith(path, std::string(".appex"))) {
-            results->push_back(path);
+            (static_cast<void>(results->push_back(path)), std::monostate{});
         }
         return;
     }
     if (doof::string_endsWith(path, std::string(".dylib")) || doof::string_endsWith(path, std::string(".so"))) {
-        results->push_back(path);
+        (static_cast<void>(results->push_back(path)), std::monostate{});
     }
 }
 doof::Result<void, std::string> signAndArchiveIOSApp(const std::string& appPath, const std::string& archivePath, const std::string& bundleId, const std::shared_ptr<::app_src_ios_app_::IOSPackageConfig>& config, const std::string& buildDirectory) {
@@ -284,8 +284,8 @@ doof::Result<void, std::string> signAndArchiveIOSApp(const std::string& appPath,
         return doof::Failure<std::string>{ (std::string("Provisioning profile not found: ") + config->provisioningProfilePath) };
     }
     const auto workDirectory = outputPath(buildDirectory, std::string(".doof-ios-package"));
-    removeTree(workDirectory);
-    ensureDirectory(workDirectory);
+    (static_cast<void>(removeTree(workDirectory)), std::monostate{});
+    (static_cast<void>(ensureDirectory(workDirectory)), std::monostate{});
     const auto decodedProfilePath = outputPath(workDirectory, std::string("profile.plist"));
     const auto entitlementsPath = outputPath(workDirectory, std::string("entitlements.plist"));
     auto _try_value_28 = ::app_src_ios_device_::parseProvisioningProfile(config->provisioningProfilePath, workDirectory);
@@ -338,10 +338,10 @@ doof::Result<void, std::string> signAndArchiveIOSApp(const std::string& appPath,
             if (doof::is_failure(_try_value_36)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_36))};
         }
     }
-    copyPath(config->provisioningProfilePath, outputPath(appPath, std::string("embedded.mobileprovision")));
+    (static_cast<void>(copyPath(config->provisioningProfilePath, outputPath(appPath, std::string("embedded.mobileprovision")))), std::monostate{});
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    collectNestedCode(outputPath(appPath, std::string("Frameworks")), nested);
-    collectNestedCode(outputPath(appPath, std::string("PlugIns")), nested);
+    (static_cast<void>(collectNestedCode(outputPath(appPath, std::string("Frameworks")), nested)), std::monostate{});
+    (static_cast<void>(collectNestedCode(outputPath(appPath, std::string("PlugIns")), nested)), std::monostate{});
     const auto& _iterable_40 = nested;
     for (const auto& path : *_iterable_40) {
         auto _try_value_38 = runRequiredCommand(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(path, identity, std::string("")), std::string("signing nested iOS code"));
@@ -355,20 +355,20 @@ doof::Result<void, std::string> signAndArchiveIOSApp(const std::string& appPath,
     if (doof::is_failure(_try_value_43)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_43))};
     const auto signedEntitlements = doof::success_value(_try_value_43);
     if (doof::string_contains(signedEntitlements, std::string("invalid entitlements blob")) || !doof::string_contains(signedEntitlements, exactApplicationIdentifier)) {
-        removeTree(workDirectory);
+        (static_cast<void>(removeTree(workDirectory)), std::monostate{});
         return doof::Failure<std::string>{ ((std::string("Signed iOS entitlements do not contain the exact application identifier \"") + exactApplicationIdentifier) + std::string("\"")) };
     }
     const auto payloadDirectory = outputPath(workDirectory, std::string("Payload"));
-    ensureDirectory(payloadDirectory);
+    (static_cast<void>(ensureDirectory(payloadDirectory)), std::monostate{});
     auto _try_value_44 = runRequiredCommand(std::string("ditto"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{appPath, outputPath(payloadDirectory, fileName(appPath))}), std::string("staging the iOS app payload"));
     if (doof::is_failure(_try_value_44)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_44))};
-    ensureDirectory(parentPath(archivePath));
+    (static_cast<void>(ensureDirectory(parentPath(archivePath))), std::monostate{});
     if (::doof_fs::exists(archivePath)) {
-        [&]() -> void { auto _try_value = ::doof_fs::remove(archivePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 340, std::string("try! failed"));  }();
+        [&]() -> std::monostate { auto _try_value = ::doof_fs::remove(archivePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-app-driver", 340, std::string("try! failed"));  return {}; }();
     }
     auto _try_value_45 = runRequiredCommand(std::string("ditto"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-c"), std::string("-k"), std::string("--sequesterRsrc"), std::string("--keepParent"), payloadDirectory, archivePath}), std::string("archiving the iOS app"));
     if (doof::is_failure(_try_value_45)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_45))};
-    removeTree(workDirectory);
+    (static_cast<void>(removeTree(workDirectory)), std::monostate{});
     return doof::Success<void>{};
 }
 }

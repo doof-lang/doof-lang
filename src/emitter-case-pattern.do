@@ -1,5 +1,7 @@
 // Shared type-pattern lowering for statement and expression cases.
 
+import { emitCarrierAbsence } from "./emitter-carrier-values"
+import { EmitContext } from "./emitter-context"
 import { NamedType, TypePattern } from "./ast"
 import {
   ArrayResolvedType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType,
@@ -41,6 +43,12 @@ export function emitCaseTypePattern(
     }
   }
   nullable := usesNullableSingleValueRepresentation(subjectType)
+  if nullable && patternType.kind == "none" {
+    return CaseTypePatternEmission {
+      condition: "doof::is_null(" + subject + ")",
+      binding: if bindingName == "" then "" else "const auto " + bindingName + " = " + emitCarrierAbsence(patternType, EmitContext { modulePath: currentModulePath }) + ";\n",
+    }
+  }
   value := if nullable then "doof::unwrap_optional(" + subject + ")" else subject
   return CaseTypePatternEmission {
     condition: if nullable then "!doof::is_null(" + subject + ")" else "true",
@@ -85,7 +93,7 @@ function emitJsonValuePattern(patternType: ResolvedType, subject: string, bindin
     }
     _: ArrayResolvedType -> { condition = "doof::json_is_array(" + subject + ")"; value = "std::get<doof::JsonArray>(doof::json_storage(" + subject + "))" }
     _: MapResolvedType -> { condition = "doof::json_is_object(" + subject + ")"; value = "doof::json_object(" + subject + ")" }
-    _: NoneType -> { condition = "doof::json_is_null(" + subject + ")"; value = "nullptr" }
+    _: NoneType -> { condition = "doof::json_is_null(" + subject + ")"; value = emitCarrierAbsence(patternType, EmitContext {}) }
     _: JsonValueResolvedType -> { }
     _ -> { panic("Unsupported JsonValue case pattern") }
   }

@@ -17,7 +17,7 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
         if (doof::is_null(declaration) || !canGenerateJsonDeserialization(doof::unwrap_optional(declaration), programs, cache)) {
             return nullptr;
         }
-        implementations->push_back(doof::unwrap_optional(declaration));
+        (static_cast<void>(implementations->push_back(doof::unwrap_optional(declaration))), std::monostate{});
     }
     if (static_cast<int32_t>((implementations)->size()) == 0) {
         return nullptr;
@@ -39,7 +39,7 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
                         (discriminator->entries = std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{}));
                         break;
                     }
-                    discriminator->entries->push_back(std::make_shared<JsonDiscriminatorEntry>(matching.value(), implementation));
+                    (static_cast<void>(discriminator->entries->push_back(std::make_shared<JsonDiscriminatorEntry>(matching.value(), implementation))), std::monostate{});
                 }
                 if (static_cast<int32_t>((discriminator->entries)->size()) == static_cast<int32_t>((implementations)->size())) {
                     return discriminator;
@@ -98,7 +98,7 @@ bool canGenerateJsonSerialization(const std::shared_ptr<::app_src_ast_::ClassDec
     std::shared_ptr<std::vector<std::string>> visited = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto result = canGenerateJsonSerializationInner(owner, programs, visited);
     if (!doof::is_null(cache)) {
-        doof::map_set(cache->serialization, key, result, "", 0);
+        (static_cast<void>(doof::map_set<std::string, bool>(cache->serialization, key, result, "", 0)), std::monostate{});
     }
     return result;
 }
@@ -128,7 +128,7 @@ bool canGenerateJsonDeserialization(const std::shared_ptr<::app_src_ast_::ClassD
     std::shared_ptr<std::vector<std::string>> visited = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto result = canGenerateJsonDeserializationInner(owner, programs, visited);
     if (!doof::is_null(cache)) {
-        doof::map_set(cache->deserialization, key, result, "", 0);
+        (static_cast<void>(doof::map_set<std::string, bool>(cache->deserialization, key, result, "", 0)), std::monostate{});
     }
     return result;
 }
@@ -344,7 +344,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
                 if (!doof::is_null(value)) {
                     return std::monostate{};
                 }
-                (value = doof::optional_value(member));
+                (value = doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(member));
         }
         }
     }
@@ -616,7 +616,7 @@ bool markJsonOwnerVisited(const std::shared_ptr<::app_src_ast_::ClassDeclaration
             return true;
         }
     }
-    visited->push_back(key);
+    (static_cast<void>(visited->push_back(key)), std::monostate{});
     return false;
 }
 std::string jsonOwnerKey(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner) {

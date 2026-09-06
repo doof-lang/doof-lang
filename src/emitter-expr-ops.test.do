@@ -57,3 +57,17 @@ export function testCheckerReviewNumericSpecializedLowering(): none {
   Assert.stringContains(source, "std::make_unsigned_t<int64_t>")
   Assert.stringContains(source, "std::pow(_assignment_target, _assignment_value)")
 }
+
+export function testWiderNoneNamedEqualityAndUnitUnwrap(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function effect(): Result<none, string> => Success {}\nfunction take(value: none): none {}\n" +
+    "function main(): none { absent := none\nlet value: int | none = none\nprintln(value == absent)\nprintln(absent != value)\ntake(try! effect())\ntake(effect()!) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "return doof::is_null(_none_left);")
+  Assert.stringContains(source, "return !doof::is_null(_none_right);")
+  Assert.stringContains(source, "take([&]() -> std::monostate")
+  Assert.stringNotContains(source, "take([&]() -> void")
+}

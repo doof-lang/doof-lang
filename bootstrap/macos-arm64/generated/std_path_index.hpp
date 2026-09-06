@@ -11,6 +11,7 @@ namespace std_::path::index {
     doof::Result<std::string, std::string> currentWorkingDirectory();
     doof::Result<std::string, std::string> absolute(const std::string& path);
     doof::Result<std::string, std::string> resourcesDirectory();
+    doof::Result<std::string, std::string> executablePath();
     doof::Result<std::string, std::string> resourcePath(const std::string& path);
     std::string normalize(const std::string& path);
     doof::Result<std::string, std::string> relative(const std::string& fromPath, const std::string& toPath);

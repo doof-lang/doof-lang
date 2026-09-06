@@ -1168,7 +1168,9 @@ namespace app_src_ast_ {
 }
 
 namespace app_src_checker_types_ {
+    doof_header_type_9 applyDeepReadonly(const doof_header_type_9& type_);
     doof_header_type_9 substituteTypeParams(const doof_header_type_9& type_, const std::shared_ptr<std::vector<std::string>>& names, const std::shared_ptr<std::vector<doof_header_type_9>>& arguments);
+    doof_header_type_9 interfaceBoundReceiver(const doof_header_type_9& type_);
     std::shared_ptr<::app_src_semantic_::ClassType> classType(const std::string& name, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::shared_ptr<std::vector<doof_header_type_9>>& typeArgs);
     std::shared_ptr<::app_src_semantic_::InterfaceType> interfaceType(const std::string& name, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::shared_ptr<std::vector<doof_header_type_9>>& typeArgs);
     std::string typeName(const doof_header_type_9& resolvedType);

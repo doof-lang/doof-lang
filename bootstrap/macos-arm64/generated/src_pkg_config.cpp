@@ -13,7 +13,7 @@ doof::Result<void, std::string> applyPkgConfigResult(const std::shared_ptr<::app
         const auto suffix = ((detail == std::string("")) ? std::string("") : (std::string(": ") + detail));
         return doof::Failure<std::string>{ ((((((std::string("pkg-config could not resolve package \"") + packageName) + std::string("\" (exit code ")) + doof::to_string(result->exitCode)) + std::string(")")) + suffix) + std::string(". Install the package metadata, or remove it from build.native.pkgConfigPackages.")) };
     }
-    applyPkgConfigTokens(native, pkgConfigTokens(result->output), mode);
+    (static_cast<void>(applyPkgConfigTokens(native, pkgConfigTokens(result->output), mode)), std::monostate{});
     return doof::Success<void>{};
 }
 std::shared_ptr<std::vector<std::string>> pkgConfigTokens(const std::string& output) {
@@ -22,7 +22,7 @@ std::shared_ptr<std::vector<std::string>> pkgConfigTokens(const std::string& out
     const auto& _iterable_2 = doof::string_split(normalized, std::string(" "));
     for (const auto& token : *_iterable_2) {
         if (token != std::string("")) {
-            tokens->push_back(token);
+            (static_cast<void>(tokens->push_back(token)), std::monostate{});
         }
     }
     return tokens;
@@ -33,7 +33,7 @@ void applyPkgConfigTokens(const std::shared_ptr<::app_src_package_manifest_::Nat
         const auto token = doof::array_at(tokens, index, "src/pkg-config", 62);
         if (token == std::string("-framework")) {
             if ((index + 1) < static_cast<int32_t>((tokens)->size())) {
-                appendUnique(native->frameworks, doof::array_at(tokens, (index + 1), "src/pkg-config", 65));
+                (static_cast<void>(appendUnique(native->frameworks, doof::array_at(tokens, (index + 1), "src/pkg-config", 65))), std::monostate{});
                 (index += 2);
             } else {
                 (index += 1);
@@ -44,13 +44,13 @@ void applyPkgConfigTokens(const std::shared_ptr<::app_src_package_manifest_::Nat
             if ((index + 1) < static_cast<int32_t>((tokens)->size())) {
                 const auto value = doof::array_at(tokens, (index + 1), "src/pkg-config", 75);
                 if (token == std::string("-I")) {
-                    appendUnique(native->includePaths, value);
+                    (static_cast<void>(appendUnique(native->includePaths, value)), std::monostate{});
                 }
                 if (token == std::string("-L")) {
-                    appendUnique(native->libraryPaths, value);
+                    (static_cast<void>(appendUnique(native->libraryPaths, value)), std::monostate{});
                 }
                 if (token == std::string("-D")) {
-                    appendUnique(native->defines, value);
+                    (static_cast<void>(appendUnique(native->defines, value)), std::monostate{});
                 }
                 (index += 2);
             } else {
@@ -59,17 +59,17 @@ void applyPkgConfigTokens(const std::shared_ptr<::app_src_package_manifest_::Nat
             continue;
         }
         if (doof::string_startsWith(token, std::string("-I"))) {
-            appendUnique(native->includePaths, doof::string_substring(token, 2, static_cast<int32_t>(token.size())));
+            (static_cast<void>(appendUnique(native->includePaths, doof::string_substring(token, 2, static_cast<int32_t>(token.size())))), std::monostate{});
         } else if (doof::string_startsWith(token, std::string("-L"))) {
-            appendUnique(native->libraryPaths, doof::string_substring(token, 2, static_cast<int32_t>(token.size())));
+            (static_cast<void>(appendUnique(native->libraryPaths, doof::string_substring(token, 2, static_cast<int32_t>(token.size())))), std::monostate{});
         } else if (doof::string_startsWith(token, std::string("-l"))) {
-            appendUnique(native->linkLibraries, doof::string_substring(token, 2, static_cast<int32_t>(token.size())));
+            (static_cast<void>(appendUnique(native->linkLibraries, doof::string_substring(token, 2, static_cast<int32_t>(token.size())))), std::monostate{});
         } else if (doof::string_startsWith(token, std::string("-D"))) {
-            appendUnique(native->defines, doof::string_substring(token, 2, static_cast<int32_t>(token.size())));
+            (static_cast<void>(appendUnique(native->defines, doof::string_substring(token, 2, static_cast<int32_t>(token.size())))), std::monostate{});
         } else if (mode == std::string("cflags")) {
-            appendUnique(native->compilerFlags, token);
+            (static_cast<void>(appendUnique(native->compilerFlags, token)), std::monostate{});
         } else {
-            appendUnique(native->linkerFlags, token);
+            (static_cast<void>(appendUnique(native->linkerFlags, token)), std::monostate{});
         }
         (index += 1);
     }
@@ -81,6 +81,6 @@ void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const
             return;
         }
     }
-    target->push_back(value);
+    (static_cast<void>(target->push_back(value)), std::monostate{});
 }
 }

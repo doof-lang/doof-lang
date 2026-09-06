@@ -22,7 +22,7 @@ void TimerBucket::record(const std::shared_ptr<::std_::time::duration::Duration>
     }
     (this->count += 1);
     (this->totalNanos += nanos);
-    insertSorted(nanos);
+    (static_cast<void>(insertSorted(nanos)), std::monostate{});
 }
 std::shared_ptr<::std_::time::duration::Duration> TimerBucket::total() {
     return ::std_::time::duration::Duration::ofNanos(this->totalNanos);
@@ -41,7 +41,7 @@ std::shared_ptr<::std_::time::duration::Duration> TimerBucket::p95() {
     return ::std_::time::duration::Duration::ofNanos(doof::array_at(this->durations, index, "stopwatch", 53));
 }
 void TimerBucket::insertSorted(int64_t nanos) {
-    this->durations->push_back(nanos);
+    (static_cast<void>(this->durations->push_back(nanos)), std::monostate{});
     auto index = (static_cast<int32_t>((this->durations)->size()) - 1);
     while ((index > 0) && (doof::array_at(this->durations, (index - 1), "stopwatch", 60) > nanos)) {
         (doof::array_at(this->durations, index, "stopwatch", 61) = doof::array_at(this->durations, (index - 1), "stopwatch", 61));
@@ -96,16 +96,16 @@ std::shared_ptr<TimerSummary> Stopwatch::summary() {
     const std::shared_ptr<std::vector<std::shared_ptr<TimerStats>>> entries = std::make_shared<std::vector<std::shared_ptr<TimerStats>>>(std::vector<std::shared_ptr<TimerStats>>{});
     const auto& _iterable_8 = this->timers;
     for (const auto& [name, bucket] : *_iterable_8) {
-        entries->push_back(std::make_shared<TimerStats>(name, bucket->count, bucket->total(), bucket->mean(), bucket->min(), bucket->max(), bucket->p95()));
+        (static_cast<void>(entries->push_back(std::make_shared<TimerStats>(name, bucket->count, bucket->total(), bucket->mean(), bucket->min(), bucket->max(), bucket->p95()))), std::monostate{});
     }
     return std::make_shared<TimerSummary>(doof::array_drainToReadonly(entries, "", 0));
 }
 void Stopwatch::record(const std::string& name, const std::shared_ptr<::std_::time::duration::Duration>& duration) {
     auto bucket = [&]() -> std::shared_ptr<TimerBucket> { auto _coalesce_9 = bucketFor(name); if (doof::is_null(_coalesce_9)) return std::make_shared<TimerBucket>(0, 0LL, 0LL, 0LL, std::make_shared<std::vector<int64_t>>(std::vector<int64_t>{})); return doof::unwrap_optional(_coalesce_9); }();
     if (![&]() -> bool { auto _map_has_10 = this->timers; return _map_has_10->find(name) != _map_has_10->end(); }()) {
-        doof::map_set(this->timers, name, bucket, "", 0);
+        (static_cast<void>(doof::map_set<std::string, std::shared_ptr<TimerBucket>>(this->timers, name, bucket, "", 0)), std::monostate{});
     }
-    bucket->record(duration);
+    (static_cast<void>(bucket->record(duration)), std::monostate{});
 }
 std::shared_ptr<TimerBucket> Stopwatch::bucketFor(const std::string& name) {
     return [&]() -> std::shared_ptr<TimerBucket> {
@@ -135,7 +135,7 @@ std::shared_ptr<::std_::time::duration::Duration> StopwatchSpan::finish() {
         return doof::unwrap_optional(this->finishedDuration);
     }
     auto elapsed = this->startedAt->durationUntil(::std_::time::monotonic::MonotonicInstant::now());
-    this->stopwatch->record(this->name, elapsed);
+    (static_cast<void>(this->stopwatch->record(this->name, elapsed)), std::monostate{});
     (this->finished = true);
     (this->finishedDuration = elapsed);
     return elapsed;

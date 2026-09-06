@@ -22,12 +22,12 @@ doof::Result<void, std::string> runPreparationCommand(const std::shared_ptr<::ap
     std::shared_ptr<doof::ordered_map<std::string, std::string>> environment = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{});
     const auto& _iterable_2 = command->env;
     for (const auto& [key, value] : *_iterable_2) {
-        doof::map_set(environment, key, applyStdlibPreparationSubstitutions(value, manifest->rootDirectory, target), "", 0);
+        (static_cast<void>(doof::map_set<std::string, std::string>(environment, key, applyStdlibPreparationSubstitutions(value, manifest->rootDirectory, target), "", 0)), std::monostate{});
     }
     std::shared_ptr<std::vector<std::string>> arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_4 = command->args;
     for (const auto& argument : *_iterable_4) {
-        arguments->push_back(applyStdlibPreparationSubstitutions(argument, manifest->rootDirectory, target));
+        (static_cast<void>(arguments->push_back(applyStdlibPreparationSubstitutions(argument, manifest->rootDirectory, target))), std::monostate{});
     }
     const auto program = applyStdlibPreparationSubstitutions(command->program, manifest->rootDirectory, target);
     auto _binding_value_5 = ::std_::os::index::run(program, arguments, std::make_shared<::std_::os::index::ExecOptions>(workingDirectory, doof::map_drainToReadonly(environment, "", 0), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_STDLIB_PREPARATION_OUTPUT_BYTES, nullptr));

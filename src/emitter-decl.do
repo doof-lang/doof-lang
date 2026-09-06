@@ -3,6 +3,7 @@
 // Function signatures are shared by header planning and source rendering so
 // the two halves cannot silently drift apart.
 
+import { emitExpressionReturn } from "./emitter-expr-utils"
 import {
   Block, ClassDeclaration, ClassField, ConstDeclaration, Expression, FunctionDeclaration, InterfaceDeclaration,
   ImmutableBinding, LetDeclaration, ReadonlyDeclaration,
@@ -75,14 +76,15 @@ export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitCon
   case fn.body {
     expression: Expression -> {
       result = result + emitExpressionCoverageMark(expression, context)
-      returnType := functionReturnType(fn)
-      if returnType != none && returnType!.kind == "none" { result = result + "    " + emitExpression(expression, context, returnType) + ";\n" }
-      else if returnType != none && returnType!.kind == "never" { result = result + "    " + emitExpression(expression, context, returnType) + ";\n    doof::panic(\"never function returned\");\n" }
-      else { result = result + "    return " + emitExpression(expression, context, returnType) + ";\n" }
+      declaredReturnType := functionReturnType(fn)
+      returnType := if declaredReturnType == none then none else specializeEmitType(declaredReturnType!, context)
+      if returnType != none && returnType!.kind == "never" { result = result + "    " + emitExpression(expression, context, returnType) + ";\n    doof::panic(\"never function returned\");\n" }
+      else { result = result + "    " + emitExpressionReturn(expression, context, returnType) + "\n" }
     }
     block: Block -> {
       result = result + emitBlock(block, 1, context)
-      returnType := functionReturnType(fn)
+      declaredReturnType := functionReturnType(fn)
+      returnType := if declaredReturnType == none then none else specializeEmitType(declaredReturnType!, context)
       if returnType != none && returnType!.kind == "never" { result = result + "    doof::panic(\"never function returned\");\n" }
     }
   }
@@ -398,7 +400,7 @@ export function emitClassMethodDefinition(owner: ClassDeclaration, method: Funct
   case method.body {
     expression: Expression -> {
       result = result + emitExpressionCoverageMark(expression, context)
-      result = result + "    return " + emitExpression(expression, context, functionReturnType(method)) + ";\n"
+      result = result + "    " + emitExpressionReturn(expression, context, functionReturnType(method)) + "\n"
     }
     block: Block -> { result = result + emitBlock(block, 1, context) }
   }

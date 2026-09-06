@@ -77,3 +77,13 @@ export function testGenericNoneLiteralResultPayloadUsesSpecializedCarrier(): non
   Assert.stringNotContains(source, "doof::Success<T>")
   Assert.stringNotContains(source, "doof::Failure<E>")
 }
+
+export function testNoneCarrierShorthandObject(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Holder { value: int | none }\n" +
+    "function main(): none { value := none\nlet holder: Holder = { value } }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  Assert.stringContains(result.emission!.modules[0].source, "(static_cast<void>(value), std::nullopt)")
+}

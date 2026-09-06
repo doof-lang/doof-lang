@@ -18,11 +18,11 @@ std::shared_ptr<HeaderPlan> planHeader(const std::shared_ptr<::app_src_ast_::Pro
     const auto plan = std::make_shared<HeaderPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, false, false);
     const auto& _iterable_2 = program->statements;
     for (const auto& statement : *_iterable_2) {
-        collect(statement, plan, context, methods, classes);
+        (static_cast<void>(collect(statement, plan, context, methods, classes)), std::monostate{});
     }
     const auto& _iterable_4 = plan->nativeNamespaces;
     for (const auto& namespace_ : *_iterable_4) {
-        collectNativeModuleTypeAliases(context->modulePath, namespace_, plan, context);
+        (static_cast<void>(collectNativeModuleTypeAliases(context->modulePath, namespace_, plan, context)), std::monostate{});
     }
     return plan;
 }
@@ -35,13 +35,13 @@ void collectNativeModuleTypeAliases(const std::string& modulePath, const std::st
         const auto& _iterable_6 = surface->exports;
         for (const auto& symbol : *_iterable_6) {
             if (isNativeAliasType(symbol) && !surfaceTypeIsGeneric(surface, symbol->name)) {
-                addNativeSymbolAlias(symbol, namespace_, plan);
+                (static_cast<void>(addNativeSymbolAlias(symbol, namespace_, plan)), std::monostate{});
             }
         }
         const auto& _iterable_8 = surface->imports;
         for (const auto& imported : *_iterable_8) {
             if (((!doof::is_null(imported->symbol)) && isNativeAliasType(doof::unwrap_optional(imported->symbol))) && !surfaceSymbolIsGeneric(context, doof::unwrap_optional(imported->symbol))) {
-                addNativeSymbolAlias(doof::unwrap_optional(imported->symbol), namespace_, plan);
+                (static_cast<void>(addNativeSymbolAlias(doof::unwrap_optional(imported->symbol), namespace_, plan)), std::monostate{});
             }
         }
         return;
@@ -64,104 +64,104 @@ void collect(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration
         auto _case_subject = statement;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-            reserveHeaderNamespaceName(plan, class_->name);
+            (static_cast<void>(reserveHeaderNamespaceName(plan, class_->name)), std::monostate{});
             if (class_->native_) {
                 const auto rawInclude = ((class_->nativeHeader == std::string("")) ? (class_->name + std::string(".hpp")) : class_->nativeHeader);
                 const auto include = ::app_src_emitter_names_::moduleNativeHeaderPath(context->modulePath, rawInclude);
-                addUnique(plan->nativeIncludes, include);
+                (static_cast<void>(addUnique(plan->nativeIncludes, include)), std::monostate{});
                 const auto namespace_ = nativeNamespace(class_->nativeCppName);
-                addUnique(plan->nativeNamespaces, namespace_);
-                collectNativeClassAliases(class_, namespace_, plan, context);
+                (static_cast<void>(addUnique(plan->nativeNamespaces, namespace_)), std::monostate{});
+                (static_cast<void>(collectNativeClassAliases(class_, namespace_, plan, context)), std::monostate{});
             } else if (static_cast<int32_t>((class_->typeParams)->size()) == 0) {
-                plan->classForwardDeclarations->push_back(((std::string("struct ") + class_->name) + std::string(";\n")));
+                (static_cast<void>(plan->classForwardDeclarations->push_back(((std::string("struct ") + class_->name) + std::string(";\n")))), std::monostate{});
                 std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>> concreteMethods = std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>>(std::vector<std::shared_ptr<::app_src_emitter_monomorphize_::MethodInstantiation>>{});
                 const auto ownerKey = ::app_src_emitter_monomorphize_::classInstantiationKey(context->modulePath, class_->name, std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}));
                 const auto& _iterable_14 = methods;
                 for (const auto& method : *_iterable_14) {
                     if (method->ownerKey == ownerKey) {
-                        concreteMethods->push_back(method);
+                        (static_cast<void>(concreteMethods->push_back(method)), std::monostate{});
                     }
                 }
                 const auto definition = ::app_src_emitter_decl_::emitClassDeclaration(class_, context, std::string(""), concreteMethods);
                 if (classCanEmitBeforeModuleIncludes(class_)) {
-                    plan->earlyClassDefinitions->push_back(definition);
+                    (static_cast<void>(plan->earlyClassDefinitions->push_back(definition)), std::monostate{});
                 } else {
-                    plan->classDefinitions->push_back(definition);
+                    (static_cast<void>(plan->classDefinitions->push_back(definition)), std::monostate{});
                 }
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
             const auto& interface_ = std::get<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject);
-            reserveHeaderNamespaceName(plan, interface_->name);
+            (static_cast<void>(reserveHeaderNamespaceName(plan, interface_->name)), std::monostate{});
             if (static_cast<int32_t>((interface_->typeParams)->size()) == 0) {
                 if (!doof::is_null(interface_->resolvedSymbol)) {
                     const auto& _iterable_16 = interface_->resolvedSymbol->implementations;
                     for (const auto& implementation : *_iterable_16) {
                         if (implementation->native_) {
-                            addNativeClassForwardDeclaration(implementation, plan);
+                            (static_cast<void>(addNativeClassForwardDeclaration(implementation, plan)), std::monostate{});
                         }
                     }
                 }
-                plan->interfaceAliases->push_back(::app_src_emitter_decl_::emitInterfaceAlias(interface_, context, classes));
+                (static_cast<void>(plan->interfaceAliases->push_back(::app_src_emitter_decl_::emitInterfaceAlias(interface_, context, classes))), std::monostate{});
                 const auto declaration = ::app_src_emitter_json_::emitInterfaceJsonDeclaration(interface_);
                 if (declaration != std::string("")) {
-                    plan->functionSignatures->push_back(declaration);
+                    (static_cast<void>(plan->functionSignatures->push_back(declaration)), std::monostate{});
                 }
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::EnumDeclaration>>(_case_subject)) {
             const auto& enum_ = std::get<std::shared_ptr<::app_src_ast_::EnumDeclaration>>(_case_subject);
-            reserveHeaderNamespaceName(plan, enum_->name);
-            plan->enumDefinitions->push_back(emitEnumDeclaration(enum_, context));
+            (static_cast<void>(reserveHeaderNamespaceName(plan, enum_->name)), std::monostate{});
+            (static_cast<void>(plan->enumDefinitions->push_back(emitEnumDeclaration(enum_, context))), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>>(_case_subject)) {
             const auto& alias = std::get<std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>>(_case_subject);
-            reserveHeaderNamespaceName(plan, alias->name);
+            (static_cast<void>(reserveHeaderNamespaceName(plan, alias->name)), std::monostate{});
             if (static_cast<int32_t>((alias->typeParams)->size()) == 0) {
                 const auto emitted = emitTypeAlias(alias, context);
                 if ((!doof::is_null(alias->resolvedType)) && !typeNeedsCompleteNominalDefinition(doof::unwrap_optional(alias->resolvedType))) {
-                    plan->earlyTypeAliases->push_back(emitted);
+                    (static_cast<void>(plan->earlyTypeAliases->push_back(emitted)), std::monostate{});
                     const auto spelling = ::app_src_emitter_types_::emitType(doof::unwrap_optional(alias->resolvedType), context->modulePath);
                     if (referenceOnlyVariant(spelling)) {
-                        plan->preferredTypeAliasNames->push_back(alias->name);
-                        plan->preferredTypeAliasSpellings->push_back(spelling);
+                        (static_cast<void>(plan->preferredTypeAliasNames->push_back(alias->name)), std::monostate{});
+                        (static_cast<void>(plan->preferredTypeAliasSpellings->push_back(spelling)), std::monostate{});
                     }
                 } else {
-                    plan->typeAliases->push_back(emitted);
+                    (static_cast<void>(plan->typeAliases->push_back(emitted)), std::monostate{});
                 }
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
             const auto& const_ = std::get<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject);
-            reserveHeaderNamespaceName(plan, const_->name);
-            collectModuleValueDeclaration(plan, (::app_src_emitter_decl_::emitDescriptionComment(const_->description, std::string("")) + emitModuleValueDeclaration(const_->name, doof::unwrap_optional(const_->resolvedType), context)), doof::unwrap_optional(const_->resolvedType));
+            (static_cast<void>(reserveHeaderNamespaceName(plan, const_->name)), std::monostate{});
+            (static_cast<void>(collectModuleValueDeclaration(plan, (::app_src_emitter_decl_::emitDescriptionComment(const_->description, std::string("")) + emitModuleValueDeclaration(const_->name, doof::unwrap_optional(const_->resolvedType), context)), doof::unwrap_optional(const_->resolvedType))), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject)) {
             const auto& readonly_ = std::get<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject);
-            reserveHeaderNamespaceName(plan, readonly_->name);
-            collectModuleValueDeclaration(plan, (::app_src_emitter_decl_::emitDescriptionComment(readonly_->description, std::string("")) + emitModuleValueDeclaration(readonly_->name, doof::unwrap_optional(readonly_->resolvedType), context)), doof::unwrap_optional(readonly_->resolvedType));
+            (static_cast<void>(reserveHeaderNamespaceName(plan, readonly_->name)), std::monostate{});
+            (static_cast<void>(collectModuleValueDeclaration(plan, (::app_src_emitter_decl_::emitDescriptionComment(readonly_->description, std::string("")) + emitModuleValueDeclaration(readonly_->name, doof::unwrap_optional(readonly_->resolvedType), context)), doof::unwrap_optional(readonly_->resolvedType))), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject)) {
             const auto& binding = std::get<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject);
-            reserveHeaderNamespaceName(plan, binding->name);
-            collectModuleValueDeclaration(plan, emitModuleValueDeclaration(binding->name, doof::unwrap_optional(binding->resolvedType), context), doof::unwrap_optional(binding->resolvedType));
+            (static_cast<void>(reserveHeaderNamespaceName(plan, binding->name)), std::monostate{});
+            (static_cast<void>(collectModuleValueDeclaration(plan, emitModuleValueDeclaration(binding->name, doof::unwrap_optional(binding->resolvedType), context), doof::unwrap_optional(binding->resolvedType))), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject)) {
             const auto& let_ = std::get<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject);
-            reserveHeaderNamespaceName(plan, let_->name);
-            collectModuleValueDeclaration(plan, emitModuleValueDeclaration(let_->name, doof::unwrap_optional(let_->resolvedType), context), doof::unwrap_optional(let_->resolvedType));
+            (static_cast<void>(reserveHeaderNamespaceName(plan, let_->name)), std::monostate{});
+            (static_cast<void>(collectModuleValueDeclaration(plan, emitModuleValueDeclaration(let_->name, doof::unwrap_optional(let_->resolvedType), context), doof::unwrap_optional(let_->resolvedType))), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
             const auto& fn = std::get<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject);
-            reserveHeaderNamespaceName(plan, ((fn->name == std::string("main")) ? std::string("doof_main") : fn->name));
+            (static_cast<void>(reserveHeaderNamespaceName(plan, ((fn->name == std::string("main")) ? std::string("doof_main") : fn->name))), std::monostate{});
             if (fn->native_) {
                 if (fn->nativeHeader != std::string("")) {
-                    addUnique(plan->nativeIncludes, ::app_src_emitter_names_::moduleNativeHeaderPath(context->modulePath, fn->nativeHeader));
+                    (static_cast<void>(addUnique(plan->nativeIncludes, ::app_src_emitter_names_::moduleNativeHeaderPath(context->modulePath, fn->nativeHeader))), std::monostate{});
                 }
                 const auto namespace_ = nativeNamespace(fn->nativeCppName);
-                addUnique(plan->nativeNamespaces, namespace_);
+                (static_cast<void>(addUnique(plan->nativeNamespaces, namespace_)), std::monostate{});
                 if (!doof::is_null(fn->resolvedType)) {
-                    collectNativeTypeAliases(doof::unwrap_optional(fn->resolvedType), namespace_, plan, context);
+                    (static_cast<void>(collectNativeTypeAliases(doof::unwrap_optional(fn->resolvedType), namespace_, plan, context)), std::monostate{});
                 }
                 return;
             }
@@ -169,15 +169,15 @@ void collect(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration
                 (plan->hasMain = true);
                 (plan->mainReturnsInt = functionReturnsInt(fn));
                 (plan->mainAcceptsArgs = (static_cast<int32_t>((fn->params)->size()) == 1));
-                plan->functionSignatures->push_back(::app_src_emitter_decl_::emitFunctionDeclaration(fn, std::string("doof_main"), context->modulePath, context));
+                (static_cast<void>(plan->functionSignatures->push_back(::app_src_emitter_decl_::emitFunctionDeclaration(fn, std::string("doof_main"), context->modulePath, context))), std::monostate{});
             } else if (static_cast<int32_t>((fn->typeParams)->size()) > 0) {
             } else {
-                plan->functionSignatures->push_back(::app_src_emitter_decl_::emitFunctionDeclaration(fn, std::string(""), context->modulePath, context));
+                (static_cast<void>(plan->functionSignatures->push_back(::app_src_emitter_decl_::emitFunctionDeclaration(fn, std::string(""), context->modulePath, context))), std::monostate{});
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExportDeclaration>>(_case_subject)) {
             const auto& export_ = std::get<std::shared_ptr<::app_src_ast_::ExportDeclaration>>(_case_subject);
-            collect(export_->declaration, plan, context, methods, classes);
+            (static_cast<void>(collect(export_->declaration, plan, context, methods, classes)), std::monostate{});
     }
     else {
     }
@@ -289,13 +289,13 @@ void collectNativeClassAliases(const std::shared_ptr<::app_src_ast_::ClassDeclar
     const auto& _iterable_30 = class_->fields;
     for (const auto& field : *_iterable_30) {
         if (!doof::is_null(field->resolvedType)) {
-            collectNativeTypeAliases(doof::unwrap_optional(field->resolvedType), namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(doof::unwrap_optional(field->resolvedType), namespace_, plan, context)), std::monostate{});
         }
     }
     const auto& _iterable_32 = class_->methods;
     for (const auto& method : *_iterable_32) {
         if (!doof::is_null(method->resolvedType)) {
-            collectNativeTypeAliases(doof::unwrap_optional(method->resolvedType), namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(doof::unwrap_optional(method->resolvedType), namespace_, plan, context)), std::monostate{});
         }
     }
 }
@@ -305,78 +305,78 @@ void collectNativeTypeAliases(const std::variant<std::shared_ptr<::app_src_seman
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
             if (!surfaceSymbolIsGeneric(context, class_->symbol)) {
-                addNativeSymbolAlias(class_->symbol, namespace_, plan);
+                (static_cast<void>(addNativeSymbolAlias(class_->symbol, namespace_, plan)), std::monostate{});
             }
             const auto& _iterable_34 = class_->typeArgs;
             for (const auto& argument : *_iterable_34) {
-                collectNativeTypeAliases(argument, namespace_, plan, context);
+                (static_cast<void>(collectNativeTypeAliases(argument, namespace_, plan, context)), std::monostate{});
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject)) {
             const auto& enum_ = std::get<std::shared_ptr<::app_src_semantic_::EnumType>>(_case_subject);
-            addNativeSymbolAlias(enum_->symbol, namespace_, plan);
+            (static_cast<void>(addNativeSymbolAlias(enum_->symbol, namespace_, plan)), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject)) {
             const auto& interface_ = std::get<std::shared_ptr<::app_src_semantic_::InterfaceType>>(_case_subject);
             if (!surfaceSymbolIsGeneric(context, interface_->symbol)) {
-                addNativeSymbolAlias(interface_->symbol, namespace_, plan);
+                (static_cast<void>(addNativeSymbolAlias(interface_->symbol, namespace_, plan)), std::monostate{});
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject);
-            collectNativeTypeAliases(array->elementType, namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(array->elementType, namespace_, plan, context)), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
             const auto& map = std::get<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject);
-            collectNativeTypeAliases(map->keyType, namespace_, plan, context);
-            collectNativeTypeAliases(map->valueType, namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(map->keyType, namespace_, plan, context)), std::monostate{});
+            (static_cast<void>(collectNativeTypeAliases(map->valueType, namespace_, plan, context)), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::SetResolvedType>>(_case_subject)) {
             const auto& set_ = std::get<std::shared_ptr<::app_src_semantic_::SetResolvedType>>(_case_subject);
-            collectNativeTypeAliases(set_->elementType, namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(set_->elementType, namespace_, plan, context)), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::StreamResolvedType>>(_case_subject)) {
             const auto& stream = std::get<std::shared_ptr<::app_src_semantic_::StreamResolvedType>>(_case_subject);
-            collectNativeTypeAliases(stream->elementType, namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(stream->elementType, namespace_, plan, context)), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject)) {
             const auto& actor = std::get<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject);
-            collectNativeTypeAliases(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(actor->innerClass), namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(actor->innerClass), namespace_, plan, context)), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PromiseType>>(_case_subject)) {
             const auto& promise = std::get<std::shared_ptr<::app_src_semantic_::PromiseType>>(_case_subject);
-            collectNativeTypeAliases(promise->valueType, namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(promise->valueType, namespace_, plan, context)), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject)) {
             const auto& result = std::get<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject);
-            collectNativeTypeAliases(result->valueType, namespace_, plan, context);
-            collectNativeTypeAliases(result->errorType, namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(result->valueType, namespace_, plan, context)), std::monostate{});
+            (static_cast<void>(collectNativeTypeAliases(result->errorType, namespace_, plan, context)), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject)) {
             const auto& tuple = std::get<std::shared_ptr<::app_src_semantic_::TupleResolvedType>>(_case_subject);
             const auto& _iterable_36 = tuple->elements;
             for (const auto& element : *_iterable_36) {
-                collectNativeTypeAliases(element, namespace_, plan, context);
+                (static_cast<void>(collectNativeTypeAliases(element, namespace_, plan, context)), std::monostate{});
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_semantic_::UnionResolvedType>>(_case_subject);
             const auto& _iterable_38 = union_->types;
             for (const auto& member : *_iterable_38) {
-                collectNativeTypeAliases(member, namespace_, plan, context);
+                (static_cast<void>(collectNativeTypeAliases(member, namespace_, plan, context)), std::monostate{});
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::WeakResolvedType>>(_case_subject)) {
             const auto& weak_ = std::get<std::shared_ptr<::app_src_semantic_::WeakResolvedType>>(_case_subject);
-            collectNativeTypeAliases(weak_->inner, namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(weak_->inner, namespace_, plan, context)), std::monostate{});
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_semantic_::FunctionType>>(_case_subject);
             const auto& _iterable_40 = function_->params;
             for (const auto& parameter : *_iterable_40) {
-                collectNativeTypeAliases(parameter->type_, namespace_, plan, context);
+                (static_cast<void>(collectNativeTypeAliases(parameter->type_, namespace_, plan, context)), std::monostate{});
             }
-            collectNativeTypeAliases(function_->returnType, namespace_, plan, context);
+            (static_cast<void>(collectNativeTypeAliases(function_->returnType, namespace_, plan, context)), std::monostate{});
     }
     else {
     }
@@ -396,103 +396,103 @@ void addNativeSymbolAlias(const std::shared_ptr<::app_src_semantic_::Symbol>& sy
         return;
     }
     if ((symbol->kind == std::string("class")) || (symbol->kind == std::string("struct"))) {
-        addUnique(plan->typeOnlyForwardDeclarations, ((((std::string("namespace ") + ::app_src_emitter_names_::moduleNamespace(symbol->module)) + std::string(" { struct ")) + symbol->name) + std::string("; }\n")));
+        (static_cast<void>(addUnique(plan->typeOnlyForwardDeclarations, ((((std::string("namespace ") + ::app_src_emitter_names_::moduleNamespace(symbol->module)) + std::string(" { struct ")) + symbol->name) + std::string("; }\n")))), std::monostate{});
     } else if (symbol->kind == std::string("enum")) {
-        addUnique(plan->typeOnlyForwardDeclarations, ((((std::string("namespace ") + ::app_src_emitter_names_::moduleNamespace(symbol->module)) + std::string(" { enum class ")) + symbol->name) + std::string("; }\n")));
+        (static_cast<void>(addUnique(plan->typeOnlyForwardDeclarations, ((((std::string("namespace ") + ::app_src_emitter_names_::moduleNamespace(symbol->module)) + std::string(" { enum class ")) + symbol->name) + std::string("; }\n")))), std::monostate{});
     }
     const auto alias = ((((((std::string("using ") + symbol->name) + std::string(" = ::")) + ::app_src_emitter_names_::moduleNamespace(symbol->module)) + std::string("::")) + symbol->name) + std::string(";"));
-    addUnique(plan->nativeAliases, ((namespace_ == std::string("")) ? (alias + std::string("\n")) : ((((std::string("namespace ") + namespace_) + std::string(" { ")) + alias) + std::string(" }\n"))));
+    (static_cast<void>(addUnique(plan->nativeAliases, ((namespace_ == std::string("")) ? (alias + std::string("\n")) : ((((std::string("namespace ") + namespace_) + std::string(" { ")) + alias) + std::string(" }\n"))))), std::monostate{});
 }
 std::string renderProjectedHeader(const std::shared_ptr<std::vector<std::shared_ptr<HeaderSection>>>& sections) {
     const auto compression = std::make_shared<HeaderCompressionState>(1);
     const auto& _iterable_44 = sections;
     for (const auto& section : *_iterable_44) {
-        compressRepeatedHeaderVariants(section->plan, compression);
+        (static_cast<void>(compressRepeatedHeaderVariants(section->plan, compression)), std::monostate{});
     }
     const auto result = ::doof::StringBuilder::constructor();
-    result->append(std::string("#pragma once\n"));
-    result->append(std::string("#include \"doof_runtime.hpp\"\n"));
+    (static_cast<void>(result->append(std::string("#pragma once\n"))), std::monostate{});
+    (static_cast<void>(result->append(std::string("#include \"doof_runtime.hpp\"\n"))), std::monostate{});
     auto emittedForward = false;
     const auto& _iterable_48 = sections;
     for (const auto& section : *_iterable_48) {
         const auto& _iterable_46 = section->plan->typeOnlyForwardDeclarations;
         for (const auto& declaration : *_iterable_46) {
-            result->append(declaration);
+            (static_cast<void>(result->append(declaration)), std::monostate{});
             (emittedForward = true);
         }
     }
     if (emittedForward) {
-        result->append(std::string("\n"));
+        (static_cast<void>(result->append(std::string("\n"))), std::monostate{});
     }
     const auto& _iterable_54 = sections;
     for (const auto& section : *_iterable_54) {
         if (((static_cast<int32_t>((section->plan->classForwardDeclarations)->size()) == 0) && (static_cast<int32_t>((section->plan->earlyModuleValueDeclarations)->size()) == 0)) && headerPlanEmitsNamespaceContent(section->plan)) {
             continue;
         }
-        result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+        (static_cast<void>(result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")))), std::monostate{});
         const auto& _iterable_50 = section->plan->classForwardDeclarations;
         for (const auto& declaration : *_iterable_50) {
-            result->append((std::string("    ") + declaration));
+            (static_cast<void>(result->append((std::string("    ") + declaration))), std::monostate{});
         }
         const auto& _iterable_52 = section->plan->earlyModuleValueDeclarations;
         for (const auto& declaration : *_iterable_52) {
-            result->append((std::string("    ") + declaration));
+            (static_cast<void>(result->append((std::string("    ") + declaration))), std::monostate{});
         }
-        result->append(std::string("}\n\n"));
+        (static_cast<void>(result->append(std::string("}\n\n"))), std::monostate{});
     }
     const auto& _iterable_58 = sections;
     for (const auto& section : *_iterable_58) {
         if (static_cast<int32_t>((section->plan->ephemeralTypeAliases)->size()) > 0) {
-            result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+            (static_cast<void>(result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")))), std::monostate{});
             const auto& _iterable_56 = section->plan->ephemeralTypeAliases;
             for (const auto& alias : *_iterable_56) {
-                result->append((std::string("    ") + alias));
+                (static_cast<void>(result->append((std::string("    ") + alias))), std::monostate{});
             }
-            result->append(std::string("}\n\n"));
+            (static_cast<void>(result->append(std::string("}\n\n"))), std::monostate{});
         }
     }
     const auto& _iterable_62 = sections;
     for (const auto& section : *_iterable_62) {
         if (static_cast<int32_t>((section->plan->enumDefinitions)->size()) > 0) {
-            result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+            (static_cast<void>(result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")))), std::monostate{});
             const auto& _iterable_60 = section->plan->enumDefinitions;
             for (const auto& definition : *_iterable_60) {
-                result->append((std::string("    ") + definition));
+                (static_cast<void>(result->append((std::string("    ") + definition))), std::monostate{});
             }
-            result->append(std::string("}\n\n"));
+            (static_cast<void>(result->append(std::string("}\n\n"))), std::monostate{});
         }
     }
     const auto& _iterable_66 = sections;
     for (const auto& section : *_iterable_66) {
         if (static_cast<int32_t>((section->plan->interfaceAliases)->size()) > 0) {
-            result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+            (static_cast<void>(result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")))), std::monostate{});
             const auto& _iterable_64 = section->plan->interfaceAliases;
             for (const auto& alias : *_iterable_64) {
-                result->append((std::string("    ") + alias));
+                (static_cast<void>(result->append((std::string("    ") + alias))), std::monostate{});
             }
-            result->append(std::string("}\n\n"));
+            (static_cast<void>(result->append(std::string("}\n\n"))), std::monostate{});
         }
     }
     const auto& _iterable_70 = sections;
     for (const auto& section : *_iterable_70) {
         if (static_cast<int32_t>((section->plan->earlyTypeAliases)->size()) > 0) {
-            result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+            (static_cast<void>(result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")))), std::monostate{});
             const auto& _iterable_68 = section->plan->earlyTypeAliases;
             for (const auto& alias : *_iterable_68) {
-                result->append((std::string("    ") + alias));
+                (static_cast<void>(result->append((std::string("    ") + alias))), std::monostate{});
             }
-            result->append(std::string("}\n\n"));
+            (static_cast<void>(result->append(std::string("}\n\n"))), std::monostate{});
         }
     }
     const auto& _iterable_74 = sections;
     for (const auto& section : *_iterable_74) {
         if (static_cast<int32_t>((section->plan->earlyClassDefinitions)->size()) > 0) {
-            result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+            (static_cast<void>(result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")))), std::monostate{});
             const auto& _iterable_72 = section->plan->earlyClassDefinitions;
             for (const auto& definition : *_iterable_72) {
-                result->append((std::string("    ") + definition));
+                (static_cast<void>(result->append((std::string("    ") + definition))), std::monostate{});
             }
-            result->append(std::string("}\n\n"));
+            (static_cast<void>(result->append(std::string("}\n\n"))), std::monostate{});
         }
     }
     const auto& _iterable_80 = sections;
@@ -500,22 +500,22 @@ std::string renderProjectedHeader(const std::shared_ptr<std::vector<std::shared_
         auto emittedNative = false;
         const auto& _iterable_76 = section->plan->nativeAliases;
         for (const auto& alias : *_iterable_76) {
-            result->append(alias);
+            (static_cast<void>(result->append(alias)), std::monostate{});
             (emittedNative = true);
         }
         const auto& _iterable_78 = section->plan->nativeIncludes;
         for (const auto& include : *_iterable_78) {
             if (doof::string_startsWith(include, std::string("<"))) {
-                result->append(((std::string("#include ") + include) + std::string("\n")));
+                (static_cast<void>(result->append(((std::string("#include ") + include) + std::string("\n")))), std::monostate{});
             } else {
-                result->append(((std::string("#include \"") + include) + std::string("\"\n")));
+                (static_cast<void>(result->append(((std::string("#include \"") + include) + std::string("\"\n")))), std::monostate{});
             }
             (emittedNative = true);
         }
         if (emittedNative) {
-            result->append(std::string("\n"));
+            (static_cast<void>(result->append(std::string("\n"))), std::monostate{});
         }
-        renderFinalSection(result, section);
+        (static_cast<void>(renderFinalSection(result, section)), std::monostate{});
     }
     auto rendered = result->drainToString();
     while (doof::string_endsWith(rendered, std::string("\n\n"))) {
@@ -528,28 +528,28 @@ void renderFinalSection(const std::shared_ptr<::doof::StringBuilder>& result, co
     if (((((static_cast<int32_t>((plan->nativeAdapterSignatures)->size()) == 0) && (static_cast<int32_t>((plan->moduleValueDeclarations)->size()) == 0)) && (static_cast<int32_t>((plan->classDefinitions)->size()) == 0)) && (static_cast<int32_t>((plan->typeAliases)->size()) == 0)) && (static_cast<int32_t>((plan->functionSignatures)->size()) == 0)) {
         return;
     }
-    result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")));
+    (static_cast<void>(result->append(((std::string("namespace ") + section->namespaceName) + std::string(" {\n")))), std::monostate{});
     const auto& _iterable_82 = plan->nativeAdapterSignatures;
     for (const auto& signature : *_iterable_82) {
-        result->append((std::string("    ") + signature));
+        (static_cast<void>(result->append((std::string("    ") + signature))), std::monostate{});
     }
     const auto& _iterable_84 = plan->moduleValueDeclarations;
     for (const auto& declaration : *_iterable_84) {
-        result->append((std::string("    ") + declaration));
+        (static_cast<void>(result->append((std::string("    ") + declaration))), std::monostate{});
     }
     const auto& _iterable_86 = plan->classDefinitions;
     for (const auto& definition : *_iterable_86) {
-        result->append((std::string("    ") + definition));
+        (static_cast<void>(result->append((std::string("    ") + definition))), std::monostate{});
     }
     const auto& _iterable_88 = plan->typeAliases;
     for (const auto& alias : *_iterable_88) {
-        result->append((std::string("    ") + alias));
+        (static_cast<void>(result->append((std::string("    ") + alias))), std::monostate{});
     }
     const auto& _iterable_90 = plan->functionSignatures;
     for (const auto& signature : *_iterable_90) {
-        result->append((std::string("    ") + signature));
+        (static_cast<void>(result->append((std::string("    ") + signature))), std::monostate{});
     }
-    result->append(std::string("}\n\n"));
+    (static_cast<void>(result->append(std::string("}\n\n"))), std::monostate{});
 }
 bool headerPlanEmitsNamespaceContent(const std::shared_ptr<HeaderPlan>& plan) {
     return ((((((((((static_cast<int32_t>((plan->ephemeralTypeAliases)->size()) > 0) || (static_cast<int32_t>((plan->enumDefinitions)->size()) > 0)) || (static_cast<int32_t>((plan->interfaceAliases)->size()) > 0)) || (static_cast<int32_t>((plan->earlyClassDefinitions)->size()) > 0)) || (static_cast<int32_t>((plan->earlyTypeAliases)->size()) > 0)) || (static_cast<int32_t>((plan->nativeAdapterSignatures)->size()) > 0)) || (static_cast<int32_t>((plan->moduleValueDeclarations)->size()) > 0)) || (static_cast<int32_t>((plan->classDefinitions)->size()) > 0)) || (static_cast<int32_t>((plan->typeAliases)->size()) > 0)) || (static_cast<int32_t>((plan->functionSignatures)->size()) > 0));
@@ -558,16 +558,16 @@ bool headerPlanEmitsNamespaceContent(const std::shared_ptr<HeaderPlan>& plan) {
 
 void compressRepeatedHeaderVariants(const std::shared_ptr<HeaderPlan>& plan, const std::shared_ptr<HeaderCompressionState>& state) {
     std::shared_ptr<std::vector<std::shared_ptr<HeaderTypeUse>>> uses = std::make_shared<std::vector<std::shared_ptr<HeaderTypeUse>>>(std::vector<std::shared_ptr<HeaderTypeUse>>{});
-    collectHeaderTypeUses(plan->functionSignatures, uses);
-    collectHeaderTypeUses(plan->nativeAdapterSignatures, uses);
-    collectHeaderTypeUses(plan->earlyModuleValueDeclarations, uses);
-    collectHeaderTypeUses(plan->moduleValueDeclarations, uses);
-    collectHeaderTypeUses(plan->earlyClassDefinitions, uses);
-    collectHeaderTypeUses(plan->classDefinitions, uses);
-    collectHeaderTypeUses(plan->interfaceAliases, uses);
-    collectHeaderTypeUses(plan->enumDefinitions, uses);
-    collectHeaderTypeUses(plan->earlyTypeAliases, uses);
-    collectHeaderTypeUses(plan->typeAliases, uses);
+    (static_cast<void>(collectHeaderTypeUses(plan->functionSignatures, uses)), std::monostate{});
+    (static_cast<void>(collectHeaderTypeUses(plan->nativeAdapterSignatures, uses)), std::monostate{});
+    (static_cast<void>(collectHeaderTypeUses(plan->earlyModuleValueDeclarations, uses)), std::monostate{});
+    (static_cast<void>(collectHeaderTypeUses(plan->moduleValueDeclarations, uses)), std::monostate{});
+    (static_cast<void>(collectHeaderTypeUses(plan->earlyClassDefinitions, uses)), std::monostate{});
+    (static_cast<void>(collectHeaderTypeUses(plan->classDefinitions, uses)), std::monostate{});
+    (static_cast<void>(collectHeaderTypeUses(plan->interfaceAliases, uses)), std::monostate{});
+    (static_cast<void>(collectHeaderTypeUses(plan->enumDefinitions, uses)), std::monostate{});
+    (static_cast<void>(collectHeaderTypeUses(plan->earlyTypeAliases, uses)), std::monostate{});
+    (static_cast<void>(collectHeaderTypeUses(plan->typeAliases, uses)), std::monostate{});
     const auto& _iterable_92 = uses;
     for (const auto& use : *_iterable_92) {
         if (use->count < 2) {
@@ -576,19 +576,19 @@ void compressRepeatedHeaderVariants(const std::shared_ptr<HeaderPlan>& plan, con
         auto name = preferredHeaderTypeAlias(plan, use->spelling);
         if (name == std::string("")) {
             (name = nextHeaderTypeAliasName(plan, state));
-            plan->ephemeralTypeAliases->push_back(((((std::string("using ") + name) + std::string(" = ")) + use->spelling) + std::string(";\n")));
+            (static_cast<void>(plan->ephemeralTypeAliases->push_back(((((std::string("using ") + name) + std::string(" = ")) + use->spelling) + std::string(";\n")))), std::monostate{});
         }
-        replaceHeaderTypeUses(plan->functionSignatures, use->spelling, name);
-        replaceHeaderTypeUses(plan->nativeAdapterSignatures, use->spelling, name);
-        replaceHeaderTypeUses(plan->earlyModuleValueDeclarations, use->spelling, name);
-        replaceHeaderTypeUses(plan->moduleValueDeclarations, use->spelling, name);
-        replaceHeaderTypeUses(plan->earlyClassDefinitions, use->spelling, name);
-        replaceHeaderTypeUses(plan->classDefinitions, use->spelling, name);
-        replaceHeaderTypeUses(plan->interfaceAliases, use->spelling, name);
-        replaceHeaderTypeUses(plan->enumDefinitions, use->spelling, name);
+        (static_cast<void>(replaceHeaderTypeUses(plan->functionSignatures, use->spelling, name)), std::monostate{});
+        (static_cast<void>(replaceHeaderTypeUses(plan->nativeAdapterSignatures, use->spelling, name)), std::monostate{});
+        (static_cast<void>(replaceHeaderTypeUses(plan->earlyModuleValueDeclarations, use->spelling, name)), std::monostate{});
+        (static_cast<void>(replaceHeaderTypeUses(plan->moduleValueDeclarations, use->spelling, name)), std::monostate{});
+        (static_cast<void>(replaceHeaderTypeUses(plan->earlyClassDefinitions, use->spelling, name)), std::monostate{});
+        (static_cast<void>(replaceHeaderTypeUses(plan->classDefinitions, use->spelling, name)), std::monostate{});
+        (static_cast<void>(replaceHeaderTypeUses(plan->interfaceAliases, use->spelling, name)), std::monostate{});
+        (static_cast<void>(replaceHeaderTypeUses(plan->enumDefinitions, use->spelling, name)), std::monostate{});
         if (preferredHeaderTypeAlias(plan, use->spelling) == std::string("")) {
-            replaceHeaderTypeUses(plan->earlyTypeAliases, use->spelling, name);
-            replaceHeaderTypeUses(plan->typeAliases, use->spelling, name);
+            (static_cast<void>(replaceHeaderTypeUses(plan->earlyTypeAliases, use->spelling, name)), std::monostate{});
+            (static_cast<void>(replaceHeaderTypeUses(plan->typeAliases, use->spelling, name)), std::monostate{});
         }
     }
 }
@@ -605,7 +605,7 @@ std::string nextHeaderTypeAliasName(const std::shared_ptr<HeaderPlan>& plan, con
             }
         }
         if (!occupied) {
-            plan->reservedNamespaceNames->push_back(candidate);
+            (static_cast<void>(plan->reservedNamespaceNames->push_back(candidate)), std::monostate{});
             return candidate;
         }
     }
@@ -619,7 +619,7 @@ void reserveHeaderNamespaceName(const std::shared_ptr<HeaderPlan>& plan, const s
             return;
         }
     }
-    plan->reservedNamespaceNames->push_back(emitted);
+    (static_cast<void>(plan->reservedNamespaceNames->push_back(emitted)), std::monostate{});
 }
 std::string preferredHeaderTypeAlias(const std::shared_ptr<HeaderPlan>& plan, const std::string& spelling) {
     for (int32_t index = 0; index < static_cast<int32_t>((plan->preferredTypeAliasSpellings)->size()); ++index) {
@@ -646,7 +646,7 @@ void collectHeaderTypeUses(const std::shared_ptr<std::vector<std::string>>& valu
             }
             const auto spelling = doof::string_substring(value, start, (end + 1));
             if (referenceOnlyVariant(spelling)) {
-                addHeaderTypeUse(uses, spelling);
+                (static_cast<void>(addHeaderTypeUse(uses, spelling)), std::monostate{});
             }
             (offset = (end + 1));
         }
@@ -697,7 +697,7 @@ void addHeaderTypeUse(const std::shared_ptr<std::vector<std::shared_ptr<HeaderTy
             return;
         }
     }
-    uses->push_back(std::make_shared<HeaderTypeUse>(spelling, 1));
+    (static_cast<void>(uses->push_back(std::make_shared<HeaderTypeUse>(spelling, 1))), std::monostate{});
 }
 void replaceHeaderTypeUses(const std::shared_ptr<std::vector<std::string>>& values, const std::string& spelling, const std::string& name) {
     for (int32_t index = 0; index < static_cast<int32_t>((values)->size()); ++index) {
@@ -706,9 +706,9 @@ void replaceHeaderTypeUses(const std::shared_ptr<std::vector<std::string>>& valu
 }
 void collectModuleValueDeclaration(const std::shared_ptr<HeaderPlan>& plan, const std::string& declaration, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
     if (moduleValueDeclarationNeedsIncludes(type_)) {
-        plan->moduleValueDeclarations->push_back(declaration);
+        (static_cast<void>(plan->moduleValueDeclarations->push_back(declaration)), std::monostate{});
     } else {
-        plan->earlyModuleValueDeclarations->push_back(declaration);
+        (static_cast<void>(plan->earlyModuleValueDeclarations->push_back(declaration)), std::monostate{});
     }
 }
 bool moduleValueDeclarationNeedsIncludes(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_) {
@@ -804,14 +804,14 @@ void addUnique(const std::shared_ptr<std::vector<std::string>>& values, const st
             return;
         }
     }
-    values->push_back(value);
+    (static_cast<void>(values->push_back(value)), std::monostate{});
 }
 void addNativeClassForwardDeclaration(const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::shared_ptr<HeaderPlan>& plan) {
     const auto cppName = ((symbol->nativeCppName == std::string("")) ? symbol->name : symbol->nativeCppName);
     const auto namespace_ = nativeNamespace(cppName);
     const auto name = ((namespace_ == std::string("")) ? cppName : doof::string_substring(cppName, (static_cast<int32_t>(namespace_.size()) + 2), static_cast<int32_t>(cppName.size())));
     const auto declaration = ((namespace_ == std::string("")) ? ((std::string("class ") + name) + std::string(";\n")) : ((((std::string("namespace ") + namespace_) + std::string(" { class ")) + name) + std::string("; }\n")));
-    addUnique(plan->typeOnlyForwardDeclarations, declaration);
+    (static_cast<void>(addUnique(plan->typeOnlyForwardDeclarations, declaration)), std::monostate{});
 }
 std::string nativeNamespace(const std::string& cppName) {
     auto separator = -1;

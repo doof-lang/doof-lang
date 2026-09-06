@@ -12,24 +12,24 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
     return resolvedType;
 }
 void typeError(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::string& message, ::app_src_ast_::SourceSpan span) {
-    state->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, std::string("")));
+    (static_cast<void>(state->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, std::string("")))), std::monostate{});
 }
 void deprecatedNoneAlias(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::string& spelling, ::app_src_ast_::SourceSpan span, const std::string& module) {
-    state->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("warning"), ((std::string("'") + spelling) + std::string("' is deprecated; replace it with 'none'")), ::app_src_checker_validation_::checkerSemanticSpan(span), ((module == std::string("")) ? state->info->path : module), std::string("none")));
+    (static_cast<void>(state->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("warning"), ((std::string("'") + spelling) + std::string("' is deprecated; replace it with 'none'")), ::app_src_checker_validation_::checkerSemanticSpan(span), ((module == std::string("")) ? state->info->path : module), std::string("none")))), std::monostate{});
 }
 void deprecatedBuildReadonly(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, ::app_src_ast_::SourceSpan span) {
-    state->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("warning"), std::string("'buildReadonly' is deprecated; replace it with 'drainToReadonly'"), ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, std::string("drainToReadonly")));
+    (static_cast<void>(state->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("warning"), std::string("'buildReadonly' is deprecated; replace it with 'drainToReadonly'"), ::app_src_checker_validation_::checkerSemanticSpan(span), state->info->path, std::string("drainToReadonly")))), std::monostate{});
 }
 void deprecatedClassMethodFunction(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn) {
     if (doof::is_null(fn->legacyMethodFunctionSpan)) {
         return;
     }
-    state->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("warning"), ((std::string("'function' on class methods is deprecated; declare '") + fn->name) + std::string("(...)' without the keyword")), ::app_src_checker_validation_::checkerSemanticSpan(doof::unwrap_optional(fn->legacyMethodFunctionSpan)), state->info->path, fn->name));
+    (static_cast<void>(state->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("warning"), ((std::string("'function' on class methods is deprecated; declare '") + fn->name) + std::string("(...)' without the keyword")), ::app_src_checker_validation_::checkerSemanticSpan(doof::unwrap_optional(fn->legacyMethodFunctionSpan)), state->info->path, fn->name))), std::monostate{});
 }
 void validateAssignmentBinding(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::shared_ptr<::app_src_semantic_::Binding>& binding, ::app_src_ast_::SourceSpan span) {
     if (binding->kind != std::string("field")) {
         if (!binding->mutable_) {
-            typeError(state, ((std::string("Cannot assign to immutable binding '") + binding->name) + std::string("'")), span);
+            (static_cast<void>(typeError(state, ((std::string("Cannot assign to immutable binding '") + binding->name) + std::string("'")), span)), std::monostate{});
         }
         return;
     }
@@ -40,7 +40,7 @@ void validateAssignmentBinding(const std::shared_ptr<::app_src_checker_state_::C
     if (binding->fieldMode == std::string("implicit")) {
         (suffix = std::string("; declare it with 'let' to allow reassignment"));
     }
-    typeError(state, (((((std::string("Cannot assign to immutable field '") + binding->fieldOwner) + std::string(".")) + binding->name) + std::string("'")) + suffix), span);
+    (static_cast<void>(typeError(state, (((((std::string("Cannot assign to immutable field '") + binding->fieldOwner) + std::string(".")) + binding->name) + std::string("'")) + suffix), span)), std::monostate{});
 }
 void requireBool(const std::shared_ptr<::app_src_checker_state_::CheckerState>& state, const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& resolvedType, ::app_src_ast_::SourceSpan span) {
     {
@@ -52,7 +52,7 @@ void requireBool(const std::shared_ptr<::app_src_checker_state_::CheckerState>& 
     }
     }
     if ((::app_src_checker_types_::typeName(resolvedType) != std::string("bool")) && (::app_src_checker_types_::typeName(resolvedType) != std::string("unknown"))) {
-        typeError(state, (std::string("Expected bool, got ") + ::app_src_checker_types_::typeName(resolvedType)), span);
+        (static_cast<void>(typeError(state, (std::string("Expected bool, got ") + ::app_src_checker_types_::typeName(resolvedType)), span)), std::monostate{});
     }
 }
 }

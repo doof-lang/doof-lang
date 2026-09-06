@@ -120,7 +120,11 @@ inline std::ostream& operator<<(std::ostream& output, EntryKind value) { return 
     InvalidPath = 5,
     Interrupted = 6,
     Other = 7,
-    Unsupported = 8
+    Unsupported = 8,
+    InvalidArgument = 9,
+    Closed = 10,
+    UnexpectedEof = 11,
+    WouldBlock = 12
 };
 inline const char* IoError_name(IoError value) {
   switch (value) {
@@ -133,6 +137,10 @@ inline const char* IoError_name(IoError value) {
     case IoError::Interrupted: return "Interrupted";
     case IoError::Other: return "Other";
     case IoError::Unsupported: return "Unsupported";
+    case IoError::InvalidArgument: return "InvalidArgument";
+    case IoError::Closed: return "Closed";
+    case IoError::UnexpectedEof: return "UnexpectedEof";
+    case IoError::WouldBlock: return "WouldBlock";
   }
   doof::panic(std::string("Invalid IoError enum value: ") + doof::to_string(static_cast<int32_t>(value)));
 }
@@ -146,6 +154,10 @@ inline std::optional<IoError> IoError_fromName(std::string_view value) {
   if (value == "Interrupted") return IoError::Interrupted;
   if (value == "Other") return IoError::Other;
   if (value == "Unsupported") return IoError::Unsupported;
+  if (value == "InvalidArgument") return IoError::InvalidArgument;
+  if (value == "Closed") return IoError::Closed;
+  if (value == "UnexpectedEof") return IoError::UnexpectedEof;
+  if (value == "WouldBlock") return IoError::WouldBlock;
   return std::nullopt;
 }
 inline int32_t IoError_value(IoError value) { return static_cast<int32_t>(value); }
@@ -159,17 +171,87 @@ inline std::optional<IoError> IoError_fromValue(int32_t value) {
   if (value == 6) return IoError::Interrupted;
   if (value == 7) return IoError::Other;
   if (value == 8) return IoError::Unsupported;
+  if (value == 9) return IoError::InvalidArgument;
+  if (value == 10) return IoError::Closed;
+  if (value == 11) return IoError::UnexpectedEof;
+  if (value == 12) return IoError::WouldBlock;
   return std::nullopt;
 }
-inline std::shared_ptr<std::vector<IoError>> IoError_values() { return std::make_shared<std::vector<IoError>>(std::initializer_list<IoError>{IoError::NotFound, IoError::PermissionDenied, IoError::AlreadyExists, IoError::IsDirectory, IoError::NotDirectory, IoError::InvalidPath, IoError::Interrupted, IoError::Other, IoError::Unsupported}); }
+inline std::shared_ptr<std::vector<IoError>> IoError_values() { return std::make_shared<std::vector<IoError>>(std::initializer_list<IoError>{IoError::NotFound, IoError::PermissionDenied, IoError::AlreadyExists, IoError::IsDirectory, IoError::NotDirectory, IoError::InvalidPath, IoError::Interrupted, IoError::Other, IoError::Unsupported, IoError::InvalidArgument, IoError::Closed, IoError::UnexpectedEof, IoError::WouldBlock}); }
 inline doof::JsonValue IoError_toJsonValue(IoError value) { return doof::json_value(IoError_value(value)); }
 inline doof::Result<IoError, std::string> IoError_fromJsonValue(const doof::JsonValue& value, bool) {
   if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum IoError, got ") + doof::json_type_name(value)};
   auto resolved = IoError_fromValue(doof::json_as_int(value));
-  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum IoError: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6, 7, 8"};
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum IoError: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"};
   return doof::Success<IoError>{resolved.value()};
 }
 inline std::ostream& operator<<(std::ostream& output, IoError value) { return output << IoError_name(value); }
+    enum class FileMode {
+    ReadOnly = 0,
+    ReadWrite = 1
+};
+inline const char* FileMode_name(FileMode value) {
+  switch (value) {
+    case FileMode::ReadOnly: return "ReadOnly";
+    case FileMode::ReadWrite: return "ReadWrite";
+  }
+  doof::panic(std::string("Invalid FileMode enum value: ") + doof::to_string(static_cast<int32_t>(value)));
+}
+inline std::optional<FileMode> FileMode_fromName(std::string_view value) {
+  if (value == "ReadOnly") return FileMode::ReadOnly;
+  if (value == "ReadWrite") return FileMode::ReadWrite;
+  return std::nullopt;
+}
+inline int32_t FileMode_value(FileMode value) { return static_cast<int32_t>(value); }
+inline std::optional<FileMode> FileMode_fromValue(int32_t value) {
+  if (value == 0) return FileMode::ReadOnly;
+  if (value == 1) return FileMode::ReadWrite;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<FileMode>> FileMode_values() { return std::make_shared<std::vector<FileMode>>(std::initializer_list<FileMode>{FileMode::ReadOnly, FileMode::ReadWrite}); }
+inline doof::JsonValue FileMode_toJsonValue(FileMode value) { return doof::json_value(FileMode_value(value)); }
+inline doof::Result<FileMode, std::string> FileMode_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum FileMode, got ") + doof::json_type_name(value)};
+  auto resolved = FileMode_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum FileMode: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1"};
+  return doof::Success<FileMode>{resolved.value()};
+}
+inline std::ostream& operator<<(std::ostream& output, FileMode value) { return output << FileMode_name(value); }
+    enum class FileLock {
+    None = 0,
+    Shared = 1,
+    Exclusive = 2
+};
+inline const char* FileLock_name(FileLock value) {
+  switch (value) {
+    case FileLock::None: return "None";
+    case FileLock::Shared: return "Shared";
+    case FileLock::Exclusive: return "Exclusive";
+  }
+  doof::panic(std::string("Invalid FileLock enum value: ") + doof::to_string(static_cast<int32_t>(value)));
+}
+inline std::optional<FileLock> FileLock_fromName(std::string_view value) {
+  if (value == "None") return FileLock::None;
+  if (value == "Shared") return FileLock::Shared;
+  if (value == "Exclusive") return FileLock::Exclusive;
+  return std::nullopt;
+}
+inline int32_t FileLock_value(FileLock value) { return static_cast<int32_t>(value); }
+inline std::optional<FileLock> FileLock_fromValue(int32_t value) {
+  if (value == 0) return FileLock::None;
+  if (value == 1) return FileLock::Shared;
+  if (value == 2) return FileLock::Exclusive;
+  return std::nullopt;
+}
+inline std::shared_ptr<std::vector<FileLock>> FileLock_values() { return std::make_shared<std::vector<FileLock>>(std::initializer_list<FileLock>{FileLock::None, FileLock::Shared, FileLock::Exclusive}); }
+inline doof::JsonValue FileLock_toJsonValue(FileLock value) { return doof::json_value(FileLock_value(value)); }
+inline doof::Result<FileLock, std::string> FileLock_fromJsonValue(const doof::JsonValue& value, bool) {
+  if (!(doof::json_is_integer(value))) return doof::Failure<std::string>{std::string("Expected integer for enum FileLock, got ") + doof::json_type_name(value)};
+  auto resolved = FileLock_fromValue(doof::json_as_int(value));
+  if (!resolved.has_value()) return doof::Failure<std::string>{std::string("Unknown backing value for enum FileLock: ") + doof::to_string(doof::json_as_int(value)) + "; expected one of 0, 1, 2"};
+  return doof::Success<FileLock>{resolved.value()};
+}
+inline std::ostream& operator<<(std::ostream& output, FileLock value) { return output << FileLock_name(value); }
 }
 
 namespace std_::time::duration {

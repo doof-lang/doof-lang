@@ -75,3 +75,26 @@ export function testInterfaceBoundUsesContractDefaultsForVariantCalls(): none {
   Assert.equal(result.diagnostics.length, 0)
   Assert.stringContains(result.emission!.modules[0].source, "_obj->read(2, 4)")
 }
+
+export function testNoneCarrierShorthandConstruction(): none {
+  for declaration of ["class Holder { value: int | none }", "struct Holder { value: int | none }", "class Holder { value: int | none\nstatic constructor(value: int | none): Holder => Holder { value } }"] {
+    result := compile([SourceFile { path: "/main.do", source:
+      declaration + "\nfunction main(): none { value := none\nholder := Holder { value } }",
+    }], "/main.do")
+    Assert.equal(result.diagnostics.length, 0)
+    Assert.isTrue(result.emission != none)
+    Assert.stringContains(result.emission!.modules[0].source, "(static_cast<void>(value), std::nullopt)")
+  }
+}
+
+export function testCombinationNoneMapInsertionUsesConcreteTypes(): none {
+  for type_ of ["int", "Item"] {
+    result := compile([SourceFile { path: "/main.do", source:
+      "class Item {}\nfunction main(): none { absent := none\nlet values: Map<string, " + type_ + " | none> = {}\nvalues.set(\"a\", none)\nvalues.set(\"b\", absent) }",
+    }], "/main.do")
+    Assert.equal(result.diagnostics.length, 0)
+    Assert.isTrue(result.emission != none)
+    cpp := if type_ == "int" then "std::optional<int32_t>" else "std::shared_ptr<Item>"
+    Assert.stringContains(result.emission!.modules[0].source, "doof::map_set<std::string, " + cpp + ">")
+  }
+}

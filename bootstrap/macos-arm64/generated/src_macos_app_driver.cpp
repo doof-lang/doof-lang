@@ -36,21 +36,21 @@ void ensureDirectory(const std::string& path) {
     }
     const auto parent = parentPath(path);
     if (parent != path) {
-        ensureDirectory(parent);
+        (static_cast<void>(ensureDirectory(parent)), std::monostate{});
     }
-    [&]() -> void { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 45, std::string("try! failed"));  }();
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 45, std::string("try! failed"));  return {}; }();
 }
 void copyPath(const std::string& sourcePath, const std::string& destinationPath) {
     if (::doof_fs::isDirectory(sourcePath)) {
-        ensureDirectory(destinationPath);
+        (static_cast<void>(ensureDirectory(destinationPath)), std::monostate{});
         const auto& _iterable_3 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(sourcePath); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 51, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_3) {
-            copyPath(outputPath(sourcePath, entry->name), outputPath(destinationPath, entry->name));
+            (static_cast<void>(copyPath(outputPath(sourcePath, entry->name), outputPath(destinationPath, entry->name))), std::monostate{});
         }
         return;
     }
-    ensureDirectory(parentPath(destinationPath));
-    [&]() -> void { auto _try_value = ::doof_fs::writeBlob(destinationPath, [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(sourcePath); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 57, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 57, std::string("try! failed"));  }();
+    (static_cast<void>(ensureDirectory(parentPath(destinationPath))), std::monostate{});
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::writeBlob(destinationPath, [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(sourcePath); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 57, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 57, std::string("try! failed"));  return {}; }();
 }
 void removeTree(const std::string& path) {
     if (!::doof_fs::exists(path)) {
@@ -59,10 +59,10 @@ void removeTree(const std::string& path) {
     if (::doof_fs::isDirectory(path)) {
         const auto& _iterable_5 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 63, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_5) {
-            removeTree(outputPath(path, entry->name));
+            (static_cast<void>(removeTree(outputPath(path, entry->name))), std::monostate{});
         }
     }
-    [&]() -> void { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 65, std::string("try! failed"));  }();
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 65, std::string("try! failed"));  return {}; }();
 }
 std::string globBaseDirectory(const std::string& pattern) {
     auto wildcard = static_cast<int32_t>(pattern.size());
@@ -106,7 +106,7 @@ void collectResourceFiles(const std::string& path, const std::string& baseDirect
     if (::doof_fs::isDirectory(path)) {
         const auto& _iterable_8 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 96, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_8) {
-            collectResourceFiles(outputPath(path, entry->name), baseDirectory, pattern, results);
+            (static_cast<void>(collectResourceFiles(outputPath(path, entry->name), baseDirectory, pattern, results)), std::monostate{});
         }
         return;
     }
@@ -114,7 +114,7 @@ void collectResourceFiles(const std::string& path, const std::string& baseDirect
     const auto relative = (doof::string_startsWith(path, prefix) ? doof::string_substring(path, static_cast<int32_t>(prefix.size()), static_cast<int32_t>(path.size())) : fileName(path));
     const auto relativePattern = (doof::string_startsWith(pattern, prefix) ? doof::string_substring(pattern, static_cast<int32_t>(prefix.size()), static_cast<int32_t>(pattern.size())) : fileName(pattern));
     if (globMatches(relativePattern, relative, 0, 0)) {
-        results->push_back(path);
+        (static_cast<void>(results->push_back(path)), std::monostate{});
     }
 }
 void materializeMacOSResources(const std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>& config, const std::string& resourcesDirectory) {
@@ -125,13 +125,13 @@ void materializeMacOSResources(const std::shared_ptr<::app_src_macos_app_::MacOS
         auto baseDirectory = globBaseDirectory(resource->sourcePath);
         if (doof::string_contains(resource->sourcePath, std::string("*"))) {
             if (::doof_fs::exists(baseDirectory)) {
-                collectResourceFiles(baseDirectory, baseDirectory, resource->sourcePath, files);
+                (static_cast<void>(collectResourceFiles(baseDirectory, baseDirectory, resource->sourcePath, files)), std::monostate{});
             }
         } else if (::doof_fs::isDirectory(resource->sourcePath)) {
-            collectResourceFiles(resource->sourcePath, resource->sourcePath, (resource->sourcePath + std::string("/**")), files);
+            (static_cast<void>(collectResourceFiles(resource->sourcePath, resource->sourcePath, (resource->sourcePath + std::string("/**")), files)), std::monostate{});
             (baseDirectory = resource->sourcePath);
         } else if (::doof_fs::exists(resource->sourcePath)) {
-            files->push_back(resource->sourcePath);
+            (static_cast<void>(files->push_back(resource->sourcePath)), std::monostate{});
             (baseDirectory = parentPath(resource->sourcePath));
         }
         if (static_cast<int32_t>((files)->size()) == 0) {
@@ -146,8 +146,8 @@ void materializeMacOSResources(const std::shared_ptr<::app_src_macos_app_::MacOS
             if (doof::array_contains(destinations, destinationPath, "", 0)) {
                 doof::panic((std::string("Duplicate macOS app resource destination: ") + destinationPath));
             }
-            destinations->push_back(destinationPath);
-            copyPath(sourcePath, destinationPath);
+            (static_cast<void>(destinations->push_back(destinationPath)), std::monostate{});
+            (static_cast<void>(copyPath(sourcePath, destinationPath)), std::monostate{});
         }
     }
 }
@@ -161,8 +161,8 @@ doof::Result<void, std::string> runRequiredCommand(const std::string& command, c
 }
 doof::Result<void, std::string> generateMacOSIcon(const std::string& iconPath, const std::string& destinationPath, const std::string& workRoot) {
     const auto iconset = outputPath(workRoot, std::string(".doof-app.iconset"));
-    removeTree(iconset);
-    ensureDirectory(iconset);
+    (static_cast<void>(removeTree(iconset)), std::monostate{});
+    (static_cast<void>(ensureDirectory(iconset)), std::monostate{});
     const auto sizes = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{16, 32, 32, 64, 128, 256, 256, 512, 512, 1024});
     const auto names = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("icon_16x16.png"), std::string("icon_16x16@2x.png"), std::string("icon_32x32.png"), std::string("icon_32x32@2x.png"), std::string("icon_128x128.png"), std::string("icon_128x128@2x.png"), std::string("icon_256x256.png"), std::string("icon_256x256@2x.png"), std::string("icon_512x512.png"), std::string("icon_512x512@2x.png")});
     for (int32_t index = 0; index < static_cast<int32_t>((sizes)->size()); ++index) {
@@ -170,7 +170,7 @@ doof::Result<void, std::string> generateMacOSIcon(const std::string& iconPath, c
         if (doof::is_failure(_try_value_13)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_13))};
     }
     const auto result = runRequiredCommand(std::string("iconutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-c"), std::string("icns"), iconset, std::string("-o"), destinationPath}), std::string("macOS icon generation"));
-    removeTree(iconset);
+    (static_cast<void>(removeTree(iconset)), std::monostate{});
     return result;
 }
 
@@ -304,7 +304,7 @@ doof::Result<std::shared_ptr<std::vector<std::string>>, std::string> machODepend
             (end = (end + 1));
         }
         if (end > 0) {
-            dependencies->push_back(doof::string_substring(trimmed, 0, end));
+            (static_cast<void>(dependencies->push_back(doof::string_substring(trimmed, 0, end))), std::monostate{});
         }
     }
     return doof::Success<std::shared_ptr<std::vector<std::string>>>{ dependencies };
@@ -355,7 +355,7 @@ doof::Result<void, std::string> embedMacOSLibraries(const std::string& executabl
         return doof::Success<void>{};
     }
     const auto frameworksDirectory = outputPath(contentsDirectory, std::string("Frameworks"));
-    ensureDirectory(frameworksDirectory);
+    (static_cast<void>(ensureDirectory(frameworksDirectory)), std::monostate{});
     std::shared_ptr<std::vector<std::shared_ptr<EmbeddedCode>>> embedded = std::make_shared<std::vector<std::shared_ptr<EmbeddedCode>>>(std::vector<std::shared_ptr<EmbeddedCode>>{});
     std::shared_ptr<std::vector<std::string>> destinations = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_42 = config->embeddedLibraries;
@@ -373,14 +373,14 @@ doof::Result<void, std::string> embedMacOSLibraries(const std::string& executabl
         if (doof::array_contains(destinations, code->bundledRoot, "", 0)) {
             return doof::Failure<std::string>{ (std::string("Duplicate embedded library destination: ") + code->bundledRoot) };
         }
-        destinations->push_back(code->bundledRoot);
-        removeTree(code->bundledRoot);
-        copyPath(code->sourcePath, code->bundledRoot);
+        (static_cast<void>(destinations->push_back(code->bundledRoot)), std::monostate{});
+        (static_cast<void>(removeTree(code->bundledRoot)), std::monostate{});
+        (static_cast<void>(copyPath(code->sourcePath, code->bundledRoot)), std::monostate{});
         if (!::doof_fs::isDirectory(code->bundledRoot)) {
             auto _try_value_40 = runRequiredCommand(std::string("chmod"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("+x"), code->bundledRoot}), std::string("marking embedded library executable"));
             if (doof::is_failure(_try_value_40)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_40))};
         }
-        embedded->push_back(code);
+        (static_cast<void>(embedded->push_back(code)), std::monostate{});
     }
     auto _try_value_43 = rewriteEmbeddedDependencies(executablePath, embedded);
     if (doof::is_failure(_try_value_43)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_43))};
@@ -404,15 +404,15 @@ void collectNestedMacOSCode(const std::string& path, const std::shared_ptr<std::
     if (::doof_fs::isDirectory(path)) {
         const auto& _iterable_51 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 349, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_51) {
-            collectNestedMacOSCode(outputPath(path, entry->name), results);
+            (static_cast<void>(collectNestedMacOSCode(outputPath(path, entry->name), results)), std::monostate{});
         }
         if ((doof::string_endsWith(path, std::string(".framework")) || doof::string_endsWith(path, std::string(".appex"))) || doof::string_endsWith(path, std::string(".xpc"))) {
-            results->push_back(path);
+            (static_cast<void>(results->push_back(path)), std::monostate{});
         }
         return;
     }
     if (doof::string_endsWith(path, std::string(".dylib")) || doof::string_endsWith(path, std::string(".so"))) {
-        results->push_back(path);
+        (static_cast<void>(results->push_back(path)), std::monostate{});
     }
 }
 doof::Result<std::string, std::string> assembleMacOSApp(const std::string& buildDirectory, const std::string& executablePath, const std::shared_ptr<::app_src_macos_app_::MacOSAppConfig>& config, const std::shared_ptr<std::vector<std::string>>& libraryPaths) {
@@ -420,27 +420,27 @@ doof::Result<std::string, std::string> assembleMacOSApp(const std::string& build
         return doof::Failure<std::string>{ std::string("macOS app builds are only supported on macOS") };
     }
     const auto appPath = outputPath(buildDirectory, (config->executableName + std::string(".app")));
-    removeTree(appPath);
+    (static_cast<void>(removeTree(appPath)), std::monostate{});
     const auto contentsDirectory = outputPath(appPath, std::string("Contents"));
     const auto macosDirectory = outputPath(contentsDirectory, std::string("MacOS"));
     const auto resourcesDirectory = outputPath(contentsDirectory, std::string("Resources"));
-    ensureDirectory(macosDirectory);
-    ensureDirectory(resourcesDirectory);
+    (static_cast<void>(ensureDirectory(macosDirectory)), std::monostate{});
+    (static_cast<void>(ensureDirectory(resourcesDirectory)), std::monostate{});
     const auto bundleExecutable = outputPath(macosDirectory, config->executableName);
-    copyPath(executablePath, bundleExecutable);
+    (static_cast<void>(copyPath(executablePath, bundleExecutable)), std::monostate{});
     auto _try_value_52 = runRequiredCommand(std::string("chmod"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("+x"), bundleExecutable}), std::string("marking bundled executable"));
     if (doof::is_failure(_try_value_52)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_52))};
-    [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(contentsDirectory, std::string("Info.plist")), ::app_src_macos_app_::renderMacOSInfoPlist(config)); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 374, std::string("try! failed"));  }();
-    [&]() -> void { auto _try_value = ::doof_fs::writeText(outputPath(contentsDirectory, std::string("PkgInfo")), std::string("APPL\?\?\?\?")); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 375, std::string("try! failed"));  }();
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::writeText(outputPath(contentsDirectory, std::string("Info.plist")), ::app_src_macos_app_::renderMacOSInfoPlist(config)); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 374, std::string("try! failed"));  return {}; }();
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::writeText(outputPath(contentsDirectory, std::string("PkgInfo")), std::string("APPL\?\?\?\?")); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 375, std::string("try! failed"));  return {}; }();
     if (config->iconPath != std::string("")) {
         auto _try_value_53 = generateMacOSIcon(config->iconPath, outputPath(resourcesDirectory, (config->executableName + std::string(".icns"))), buildDirectory);
         if (doof::is_failure(_try_value_53)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_53))};
     }
-    materializeMacOSResources(config, resourcesDirectory);
+    (static_cast<void>(materializeMacOSResources(config, resourcesDirectory)), std::monostate{});
     auto _try_value_54 = embedMacOSLibraries(bundleExecutable, config, libraryPaths, buildDirectory, contentsDirectory);
     if (doof::is_failure(_try_value_54)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_54))};
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    collectNestedMacOSCode(outputPath(contentsDirectory, std::string("Frameworks")), nested);
+    (static_cast<void>(collectNestedMacOSCode(outputPath(contentsDirectory, std::string("Frameworks")), nested)), std::monostate{});
     const auto& _iterable_57 = nested;
     for (const auto& path : *_iterable_57) {
         auto _try_value_55 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(path, std::string("-"), std::string("ad-hoc"), std::string("")), std::string("ad-hoc signing nested macOS code"));
@@ -478,7 +478,7 @@ doof::Result<std::string, std::string> developerIdIdentity(const std::string& co
             (end = (end + 1));
         }
         if (end > start) {
-            identities->push_back(doof::string_substring(line, start, end));
+            (static_cast<void>(identities->push_back(doof::string_substring(line, start, end))), std::monostate{});
         }
     }
     if (static_cast<int32_t>((identities)->size()) == 0) {
@@ -495,7 +495,7 @@ doof::Result<std::string, std::string> effectiveEntitlements(const std::shared_p
     }
     const auto destinationPath = outputPath(buildDirectory, std::string(".doof-package-entitlements.plist"));
     if (config->entitlementsPath != std::string("")) {
-        copyPath(config->entitlementsPath, destinationPath);
+        (static_cast<void>(copyPath(config->entitlementsPath, destinationPath)), std::monostate{});
         const auto sandboxValue = runMacOSCommand(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), std::string("com.apple.security.app-sandbox"), std::string("raw"), std::string("-o"), std::string("-"), destinationPath}));
         if (sandboxValue->exitCode == 0) {
             const auto value = doof::string_toLowerCase(::doof_blob::NativeBlobReader::constructor(sandboxValue->output, ::std_::blob::types::Endian::LittleEndian)->readString(static_cast<int64_t>(static_cast<int32_t>((sandboxValue->output)->size()))));
@@ -509,7 +509,7 @@ doof::Result<std::string, std::string> effectiveEntitlements(const std::shared_p
             if (doof::is_failure(_try_value_62)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_62))};
         }
     } else {
-        [&]() -> void { auto _try_value = ::doof_fs::writeText(destinationPath, std::string("<\?xml version=\"1.0\" encoding=\"UTF-8\"\?>\n<plist version=\"1.0\"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>\n")); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 429, std::string("try! failed"));  }();
+        [&]() -> std::monostate { auto _try_value = ::doof_fs::writeText(destinationPath, std::string("<\?xml version=\"1.0\" encoding=\"UTF-8\"\?>\n<plist version=\"1.0\"><dict><key>com.apple.security.app-sandbox</key><true/></dict></plist>\n")); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 429, std::string("try! failed"));  return {}; }();
     }
     return doof::Success<std::string>{ destinationPath };
 }
@@ -525,9 +525,9 @@ doof::Result<void, std::string> signAndArchiveMacOSApp(const std::string& appPat
     if (doof::is_failure(_try_value_64)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_64))};
     const auto entitlementsPath = doof::success_value(_try_value_64);
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    collectNestedMacOSCode(outputPath(appPath, std::string("Contents/Frameworks")), nested);
-    collectNestedMacOSCode(outputPath(appPath, std::string("Contents/PlugIns")), nested);
-    collectNestedMacOSCode(outputPath(appPath, std::string("Contents/XPCServices")), nested);
+    (static_cast<void>(collectNestedMacOSCode(outputPath(appPath, std::string("Contents/Frameworks")), nested)), std::monostate{});
+    (static_cast<void>(collectNestedMacOSCode(outputPath(appPath, std::string("Contents/PlugIns")), nested)), std::monostate{});
+    (static_cast<void>(collectNestedMacOSCode(outputPath(appPath, std::string("Contents/XPCServices")), nested)), std::monostate{});
     const auto& _iterable_67 = nested;
     for (const auto& path : *_iterable_67) {
         auto _try_value_65 = runRequiredCommand(std::string("codesign"), ::app_src_macos_app_::macOSCodesignArguments(path, identity, config->signing, std::string("")), std::string("signing nested macOS code"));
@@ -537,9 +537,9 @@ doof::Result<void, std::string> signAndArchiveMacOSApp(const std::string& appPat
     if (doof::is_failure(_try_value_68)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_68))};
     auto _try_value_69 = runRequiredCommand(std::string("codesign"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("--verify"), std::string("--deep"), std::string("--strict"), std::string("--verbose=2"), appPath}), std::string("verifying macOS app signature"));
     if (doof::is_failure(_try_value_69)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_69))};
-    ensureDirectory(parentPath(archivePath));
+    (static_cast<void>(ensureDirectory(parentPath(archivePath))), std::monostate{});
     if (::doof_fs::exists(archivePath)) {
-        [&]() -> void { auto _try_value = ::doof_fs::remove(archivePath); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 455, std::string("try! failed"));  }();
+        [&]() -> std::monostate { auto _try_value = ::doof_fs::remove(archivePath); if (doof::is_failure(_try_value)) doof::panic_at("src/macos-app-driver", 455, std::string("try! failed"));  return {}; }();
     }
     auto _try_value_70 = runRequiredCommand(std::string("ditto"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-c"), std::string("-k"), std::string("--sequesterRsrc"), std::string("--keepParent"), appPath, archivePath}), std::string("archiving macOS app"));
     if (doof::is_failure(_try_value_70)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_70))};

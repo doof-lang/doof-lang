@@ -8,13 +8,13 @@ std::variant<std::monostate, std::shared_ptr<::app_src_ast_::NamedType>, std::sh
     if (!parser->match(::app_src_lexer_::TokenType::Colon)) {
         return std::monostate{};
     }
-    return doof::optional_value(parseTypeAnnotation(parser));
+    return doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(parseTypeAnnotation(parser));
 }
 std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> parseTypeAnnotation(const std::shared_ptr<::app_src_parser_::Parser>& parser) {
     const auto first = parseTypeMember(parser);
     std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>> types = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>{first});
     while (parser->match(::app_src_lexer_::TokenType::Pipe)) {
-        types->push_back(parseTypeMember(parser));
+        (static_cast<void>(types->push_back(parseTypeMember(parser))), std::monostate{});
     }
     std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>> result = first;
     if (static_cast<int32_t>((types)->size()) > 1) {
@@ -58,7 +58,7 @@ std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_s
         }
     }
     if (readonlyPrefix) {
-        parser->fail(std::string("Unexpected readonly type modifier; expected an array, Array<T>, Map<K, V>, or Set<T> type"));
+        (static_cast<void>(parser->fail(std::string("Unexpected readonly type modifier; expected an array, Array<T>, Map<K, V>, or Set<T> type"))), std::monostate{});
     }
     return result;
 }
@@ -78,7 +78,7 @@ std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_s
             const auto paramName = parser->text(parser->expect(::app_src_lexer_::TokenType::Identifier, std::string("")));
             parser->expect(::app_src_lexer_::TokenType::Colon, std::string(""));
             const auto paramType = parseTypeAnnotation(parser);
-            params->push_back(std::make_shared<::app_src_ast_::FunctionTypeParam>(paramName, paramType, parser->span(paramStart)));
+            (static_cast<void>(params->push_back(std::make_shared<::app_src_ast_::FunctionTypeParam>(paramName, paramType, parser->span(paramStart)))), std::monostate{});
             if (!parser->match(::app_src_lexer_::TokenType::Comma)) {
                 break;
             }
@@ -90,13 +90,13 @@ std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_s
     }
     auto nameToken = parser->advance();
     if ((((nameToken.kind != ::app_src_lexer_::TokenType::Identifier) && (nameToken.kind != ::app_src_lexer_::TokenType::None)) && (nameToken.kind != ::app_src_lexer_::TokenType::Void)) && (nameToken.kind != ::app_src_lexer_::TokenType::Null)) {
-        parser->fail(std::string("Expected a type name"));
+        (static_cast<void>(parser->fail(std::string("Expected a type name"))), std::monostate{});
     }
     const auto name = parser->text(nameToken);
     std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>> typeArgs = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>{});
     if (parser->match(::app_src_lexer_::TokenType::Less)) {
         while (!parser->check(::app_src_lexer_::TokenType::Greater) && !parser->atEnd()) {
-            typeArgs->push_back(parseTypeAnnotation(parser));
+            (static_cast<void>(typeArgs->push_back(parseTypeAnnotation(parser))), std::monostate{});
             if (!parser->match(::app_src_lexer_::TokenType::Comma)) {
                 break;
             }

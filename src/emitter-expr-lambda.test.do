@@ -17,7 +17,7 @@ export function testModuleMutableBindingsRemainNamespaceStorageInLambda(): none 
   Assert.isTrue(result.emission != none)
   source := result.emission!.modules[0].source
   Assert.stringContains(source, "doof::callback<void()>([]() -> void")
-  Assert.stringContains(source, "values->push_back(1);")
+  Assert.stringContains(source, "(static_cast<void>(values->push_back(1)), std::monostate{});")
   Assert.stringContains(source, "(count += 1);")
   Assert.stringNotContains(source, "[values, count]")
   Assert.stringNotContains(source, "(*values)")
@@ -159,4 +159,13 @@ export function testCapturedStructBindingsStillRejectReassignment(): none {
     if diagnostic.message.contains("immutable") { rejected = true }
   }
   Assert.isTrue(rejected)
+}
+
+export function testNoneCarrierLambdaDiscardsUnitReturn(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function effect(): none {}\nfunction main(): none { callback := (): none => effect()\ncallback() }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  Assert.stringContains(result.emission!.modules[0].source, "return static_cast<void>((static_cast<void>(effect()), std::monostate{}));")
 }

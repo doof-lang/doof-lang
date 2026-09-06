@@ -4,6 +4,7 @@ namespace app_src_checker_generics_ {
 using namespace ::app_src_semantic_;
 using namespace ::app_src_analyzer_;
 using namespace ::app_src_ast_;
+using namespace ::app_src_checker_types_;
 using namespace ::app_src_json_semantics_;
 using namespace ::app_src_checker_symbols_;
 using namespace ::app_src_checker_interfaces_;
@@ -13,7 +14,7 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::TypeParameterType>>(_case_subject)) {
             const auto& parameter = std::get<std::shared_ptr<::app_src_semantic_::TypeParameterType>>(_case_subject);
             if (parameter->name == name) {
-                return doof::optional_value(actual);
+                return doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(actual);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
@@ -232,7 +233,7 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> functionDeclarationForCalle
             const auto objectType = std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object);
             if (!doof::is_null(objectType)) {
                 {
-                    auto _case_subject = doof::unwrap_optional(objectType);
+                    auto _case_subject = ::app_src_checker_types_::interfaceBoundReceiver(doof::unwrap_optional(objectType));
                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                         const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
                         const auto declaration = ::app_src_checker_symbols_::declarationFor(result, class_->symbol);
@@ -324,7 +325,7 @@ std::string functionModuleForCallee(const std::variant<std::shared_ptr<::app_src
             }
             if (!doof::is_null(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object))) {
                 {
-                    auto _case_subject = doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object));
+                    auto _case_subject = ::app_src_checker_types_::interfaceBoundReceiver(doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object)));
                     if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                         const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
                         return class_->symbol->module;
@@ -441,7 +442,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> jsonProgr
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{});
     const auto& _iterable_16 = result->modules;
     for (const auto& module : *_iterable_16) {
-        programs->push_back(module->program);
+        (static_cast<void>(programs->push_back(module->program)), std::monostate{});
     }
     return programs;
 }

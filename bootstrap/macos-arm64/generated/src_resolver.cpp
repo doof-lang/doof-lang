@@ -19,17 +19,17 @@ std::shared_ptr<::app_src_semantic_::SourceFile> ModuleResolver::find(const std:
             return nullptr;
         }
     }
-    this->loadedPaths->push_back(path);
+    (static_cast<void>(this->loadedPaths->push_back(path)), std::monostate{});
     auto _binding_value_5 = this->loader.call(path);
     if (doof::is_failure(_binding_value_5)) {
         const auto diagnostic = doof::failure_error(_binding_value_5);
-        this->failedPaths->push_back(path);
-        this->diagnostics->push_back(diagnostic);
+        (static_cast<void>(this->failedPaths->push_back(path)), std::monostate{});
+        (static_cast<void>(this->diagnostics->push_back(diagnostic)), std::monostate{});
         return nullptr;
     }
     const auto loaded = doof::success_value(_binding_value_5);
     if (!doof::is_null(loaded)) {
-        this->sources->push_back(doof::unwrap_optional(loaded));
+        (static_cast<void>(this->sources->push_back(doof::unwrap_optional(loaded))), std::monostate{});
         return doof::unwrap_optional(loaded);
     }
     return nullptr;

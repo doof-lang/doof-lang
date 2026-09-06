@@ -10,14 +10,14 @@ using namespace ::app_src_package_manifest_;
 std::shared_ptr<ProjectEmission> planProjectEmission(const std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission>& graph, const std::shared_ptr<std::vector<std::shared_ptr<NativePackageInput>>>& packages) {
     const auto project = std::make_shared<ProjectEmission>(graph->modules, std::make_shared<std::vector<std::shared_ptr<ProjectSupportFile>>>(std::vector<std::shared_ptr<ProjectSupportFile>>{}), std::make_shared<std::vector<std::shared_ptr<ProjectNativeCopy>>>(std::vector<std::shared_ptr<ProjectNativeCopy>>{}), std::make_shared<::app_src_package_manifest_::NativeBuildPlan>(std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{})), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     if (graph->wasmSupportSource != std::string("")) {
-        project->supportFiles->push_back(std::make_shared<ProjectSupportFile>(std::string("doof_wasm.cpp"), graph->wasmSupportSource));
-        project->nativeBuild->sourceFiles->push_back(std::string("doof_wasm.cpp"));
+        (static_cast<void>(project->supportFiles->push_back(std::make_shared<ProjectSupportFile>(std::string("doof_wasm.cpp"), graph->wasmSupportSource))), std::monostate{});
+        (static_cast<void>(project->nativeBuild->sourceFiles->push_back(std::string("doof_wasm.cpp"))), std::monostate{});
         (project->wasmExportNames = graph->wasmExportNames);
     }
     const auto& _iterable_2 = packages;
     for (const auto& package_ : *_iterable_2) {
-        planPackageSupportFiles(project, graph, package_);
-        planPackageNativeBuild(project, package_);
+        (static_cast<void>(planPackageSupportFiles(project, graph, package_)), std::monostate{});
+        (static_cast<void>(planPackageNativeBuild(project, package_)), std::monostate{});
     }
     return project;
 }
@@ -29,7 +29,7 @@ void planPackageSupportFiles(const std::shared_ptr<ProjectEmission>& project, co
             continue;
         }
         const auto relativeHeaderPath = replaceDoExtension(relativeModulePath.value());
-        addSupportFile(project->supportFiles, std::make_shared<ProjectSupportFile>(projectJoinPath(package_->outputRoot, relativeHeaderPath), ((std::string("#pragma once\n#include \"") + module->headerName) + std::string("\"\n"))));
+        (static_cast<void>(addSupportFile(project->supportFiles, std::make_shared<ProjectSupportFile>(projectJoinPath(package_->outputRoot, relativeHeaderPath), ((std::string("#pragma once\n#include \"") + module->headerName) + std::string("\"\n"))))), std::monostate{});
     }
 }
 void planPackageNativeBuild(const std::shared_ptr<ProjectEmission>& project, const std::shared_ptr<NativePackageInput>& package_) {
@@ -38,39 +38,39 @@ void planPackageNativeBuild(const std::shared_ptr<ProjectEmission>& project, con
     const auto& _iterable_6 = native->includePaths;
     for (const auto& includePath : *_iterable_6) {
         const auto relativePath = addNativeCopy(project->nativeCopies, package_, includePath);
-        appendUnique(project->nativeBuild->includePaths, relativePath);
+        (static_cast<void>(appendUnique(project->nativeBuild->includePaths, relativePath)), std::monostate{});
         (copiedAny = true);
     }
     const auto& _iterable_8 = native->sourceFiles;
     for (const auto& sourcePath : *_iterable_8) {
         const auto relativePath = addNativeCopy(project->nativeCopies, package_, sourcePath);
-        appendUnique(project->nativeBuild->sourceFiles, relativePath);
+        (static_cast<void>(appendUnique(project->nativeBuild->sourceFiles, relativePath)), std::monostate{});
         (copiedAny = true);
     }
     const auto& _iterable_10 = native->libraryPaths;
     for (const auto& libraryPath : *_iterable_10) {
         const auto relativePath = addNativeCopy(project->nativeCopies, package_, libraryPath);
-        appendUnique(project->nativeBuild->libraryPaths, relativePath);
+        (static_cast<void>(appendUnique(project->nativeBuild->libraryPaths, relativePath)), std::monostate{});
         (copiedAny = true);
     }
     const auto& _iterable_12 = native->extraCopyPaths;
     for (const auto& extraCopyPath : *_iterable_12) {
         const auto relativePath = addNativeCopy(project->nativeCopies, package_, extraCopyPath);
-        appendUnique(project->nativeBuild->includePaths, projectParentPath(relativePath));
+        (static_cast<void>(appendUnique(project->nativeBuild->includePaths, projectParentPath(relativePath))), std::monostate{});
         (copiedAny = true);
     }
     if (copiedAny) {
-        appendUnique(project->nativeBuild->includePaths, package_->outputRoot);
+        (static_cast<void>(appendUnique(project->nativeBuild->includePaths, package_->outputRoot)), std::monostate{});
         if (package_->outputRoot != std::string("")) {
-            appendUnique(project->nativeBuild->includePaths, projectParentPath(package_->outputRoot));
+            (static_cast<void>(appendUnique(project->nativeBuild->includePaths, projectParentPath(package_->outputRoot))), std::monostate{});
         }
     }
-    appendUniqueValues(project->nativeBuild->linkLibraries, native->linkLibraries);
-    appendUniqueValues(project->nativeBuild->frameworks, native->frameworks);
-    appendUniqueValues(project->nativeBuild->pkgConfigPackages, native->pkgConfigPackages);
-    appendUniqueValues(project->nativeBuild->defines, native->defines);
-    appendUniqueValues(project->nativeBuild->compilerFlags, native->compilerFlags);
-    appendUniqueValues(project->nativeBuild->linkerFlags, native->linkerFlags);
+    (static_cast<void>(appendUniqueValues(project->nativeBuild->linkLibraries, native->linkLibraries)), std::monostate{});
+    (static_cast<void>(appendUniqueValues(project->nativeBuild->frameworks, native->frameworks)), std::monostate{});
+    (static_cast<void>(appendUniqueValues(project->nativeBuild->pkgConfigPackages, native->pkgConfigPackages)), std::monostate{});
+    (static_cast<void>(appendUniqueValues(project->nativeBuild->defines, native->defines)), std::monostate{});
+    (static_cast<void>(appendUniqueValues(project->nativeBuild->compilerFlags, native->compilerFlags)), std::monostate{});
+    (static_cast<void>(appendUniqueValues(project->nativeBuild->linkerFlags, native->linkerFlags)), std::monostate{});
 }
 std::string addNativeCopy(const std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>>& copies, const std::shared_ptr<NativePackageInput>& package_, const std::string& sourcePath) {
     const auto relativeWithinPackage = diskSuffix(sourcePath, package_->manifest->rootDirectory);
@@ -84,7 +84,7 @@ std::string addNativeCopy(const std::shared_ptr<std::vector<std::shared_ptr<Proj
             return relativePath;
         }
     }
-    copies->push_back(std::make_shared<ProjectNativeCopy>(sourcePath, relativePath));
+    (static_cast<void>(copies->push_back(std::make_shared<ProjectNativeCopy>(sourcePath, relativePath))), std::monostate{});
     return relativePath;
 }
 std::optional<std::string> logicalSuffix(const std::string& path, const std::string& prefix) {
@@ -149,12 +149,12 @@ void addSupportFile(const std::shared_ptr<std::vector<std::shared_ptr<ProjectSup
             return;
         }
     }
-    files->push_back(file);
+    (static_cast<void>(files->push_back(file)), std::monostate{});
 }
 void appendUniqueValues(const std::shared_ptr<std::vector<std::string>>& target, const std::shared_ptr<std::vector<std::string>>& values) {
     const auto& _iterable_18 = values;
     for (const auto& value : *_iterable_18) {
-        appendUnique(target, value);
+        (static_cast<void>(appendUnique(target, value)), std::monostate{});
     }
 }
 void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const std::string& value) {
@@ -164,6 +164,6 @@ void appendUnique(const std::shared_ptr<std::vector<std::string>>& target, const
             return;
         }
     }
-    target->push_back(value);
+    (static_cast<void>(target->push_back(value)), std::monostate{});
 }
 }

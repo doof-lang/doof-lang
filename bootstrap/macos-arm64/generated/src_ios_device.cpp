@@ -25,7 +25,7 @@ std::variant<std::monostate, doof::JsonValue> jsonObjectField(const std::shared_
         return std::monostate{};
     }
     const auto value = doof::success_value(_binding_value_2);
-    return value;
+    return doof::variant_promote<std::variant<std::monostate, doof::JsonValue>>(value);
 }
 std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> jsonObjectValue(const std::variant<std::monostate, doof::JsonValue>& value) {
     if (doof::is_null(value)) {
@@ -82,7 +82,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<IOSDevice>>>, std::stri
         return doof::Failure<std::string>{ error };
     }
     const auto parsed = doof::success_value(_binding_value_3);
-    const auto root = jsonObjectValue(parsed);
+    const auto root = jsonObjectValue(doof::variant_promote<std::variant<std::monostate, doof::JsonValue>>(parsed));
     if (doof::is_null(root)) {
         return doof::Failure<std::string>{ std::string("Invalid devicectl device JSON: expected an object") };
     }
@@ -94,7 +94,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<IOSDevice>>>, std::stri
     std::shared_ptr<std::vector<std::shared_ptr<IOSDevice>>> devices = std::make_shared<std::vector<std::shared_ptr<IOSDevice>>>(std::vector<std::shared_ptr<IOSDevice>>{});
     const auto& _iterable_5 = values;
     for (const auto& value : *_iterable_5) {
-        const auto device = jsonObjectValue(value);
+        const auto device = jsonObjectValue(doof::variant_promote<std::variant<std::monostate, doof::JsonValue>>(value));
         if (doof::is_null(device)) {
             continue;
         }
@@ -112,7 +112,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<IOSDevice>>>, std::stri
         if ((reality != std::string("")) && (reality != std::string("physical"))) {
             continue;
         }
-        devices->push_back(std::make_shared<IOSDevice>(identifier, ((name == std::string("")) ? identifier : name)));
+        (static_cast<void>(devices->push_back(std::make_shared<IOSDevice>(identifier, ((name == std::string("")) ? identifier : name)))), std::monostate{});
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<IOSDevice>>>>{ devices };
 }
@@ -165,7 +165,7 @@ std::shared_ptr<std::vector<std::shared_ptr<IOSCodesignIdentity>>> parseCodesign
         if (((!isHexFingerprint(fingerprint) || (static_cast<int32_t>(quotedName.size()) < 2)) || !doof::string_startsWith(quotedName, std::string("\""))) || !doof::string_endsWith(quotedName, std::string("\""))) {
             continue;
         }
-        identities->push_back(std::make_shared<IOSCodesignIdentity>(fingerprint, doof::string_substring(quotedName, 1, (static_cast<int32_t>(quotedName.size()) - 1))));
+        (static_cast<void>(identities->push_back(std::make_shared<IOSCodesignIdentity>(fingerprint, doof::string_substring(quotedName, 1, (static_cast<int32_t>(quotedName.size()) - 1))))), std::monostate{});
     }
     return identities;
 }
@@ -243,7 +243,7 @@ doof::Result<std::string, std::string> resolveIOSAdHocSigningIdentity(const std:
     for (const auto& identity : *_iterable_17) {
         const auto distribution = (doof::string_startsWith(identity->name, std::string("Apple Distribution:")) || doof::string_startsWith(identity->name, std::string("iPhone Distribution:")));
         if (distribution && doof::array_contains(profile->certFingerprints, identity->fingerprint, "", 0)) {
-            matching->push_back(identity);
+            (static_cast<void>(matching->push_back(identity)), std::monostate{});
         }
     }
     if (static_cast<int32_t>((matching)->size()) == 0) {
@@ -309,9 +309,9 @@ void ensureDirectory(const std::string& path) {
     }
     const auto parent = ::std_::path::index::dirname(path);
     if (parent != path) {
-        ensureDirectory(parent);
+        (static_cast<void>(ensureDirectory(parent)), std::monostate{});
     }
-    [&]() -> void { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 308, std::string("try! failed"));  }();
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::mkdir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 308, std::string("try! failed"));  return {}; }();
 }
 void removeTree(const std::string& path) {
     if (!::doof_fs::exists(path)) {
@@ -320,10 +320,10 @@ void removeTree(const std::string& path) {
     if (::doof_fs::isDirectory(path)) {
         const auto& _iterable_22 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 314, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_22) {
-            removeTree(devicePath(path, entry->name));
+            (static_cast<void>(removeTree(devicePath(path, entry->name))), std::monostate{});
         }
     }
-    [&]() -> void { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 316, std::string("try! failed"));  }();
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::remove(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 316, std::string("try! failed"));  return {}; }();
 }
 std::shared_ptr<IOSDeviceCommandResult> runDeviceCommand(const std::string& command, const std::shared_ptr<std::vector<std::string>>& arguments) {
     auto _binding_value_23 = ::std_::os::index::run(command, arguments, std::make_shared<::std_::os::index::ExecOptions>(std::nullopt, std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}), true, false, true, false, ::std_::os::index::ProcessGroupMode::Isolated, MAX_IOS_DEVICE_COMMAND_OUTPUT_BYTES, nullptr));
@@ -346,7 +346,7 @@ doof::Result<std::string, std::string> deviceCommandText(const std::string& comm
 doof::Result<void, std::string> decodeProvisioningProfile(const std::string& profilePath, const std::string& decodedPath) {
     const auto securityResult = runDeviceCommand(std::string("security"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("cms"), std::string("-D"), std::string("-i"), profilePath}));
     if (securityResult->exitCode == 0) {
-        [&]() -> void { auto _try_value = ::doof_fs::writeText(decodedPath, securityResult->output); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 341, std::string("try! failed"));  }();
+        [&]() -> std::monostate { auto _try_value = ::doof_fs::writeText(decodedPath, securityResult->output); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 341, std::string("try! failed"));  return {}; }();
         return doof::Success<void>{};
     }
     const auto opensslResult = runDeviceCommand(std::string("openssl"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("smime"), std::string("-inform"), std::string("der"), std::string("-verify"), std::string("-noverify"), std::string("-in"), profilePath, std::string("-out"), decodedPath}));
@@ -368,7 +368,7 @@ std::string resolveUserPath(const std::string& path) {
 }
 void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const std::string& value) {
     if (!doof::array_contains(values, value, "", 0)) {
-        values->push_back(value);
+        (static_cast<void>(values->push_back(value)), std::monostate{});
     }
 }
 doof::Result<std::string, std::string> certificateFingerprint(const std::string& certificateData) {
@@ -385,7 +385,7 @@ doof::Result<std::string, std::string> certificateFingerprint(const std::string&
     return doof::Success<std::string>{ fingerprint };
 }
 doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisioningProfile(const std::string& profilePath, const std::string& workDirectory) {
-    ensureDirectory(workDirectory);
+    (static_cast<void>(ensureDirectory(workDirectory)), std::monostate{});
     const auto decodedPath = devicePath(workDirectory, std::string("profile.plist"));
     auto _try_value_25 = decodeProvisioningProfile(profilePath, decodedPath);
     if (doof::is_failure(_try_value_25)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_25))};
@@ -491,7 +491,7 @@ doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> parseProvisio
             continue;
         }
         const auto fingerprint = doof::success_value(_binding_value_28);
-        appendUnique(certFingerprints, fingerprint);
+        (static_cast<void>(appendUnique(certFingerprints, fingerprint)), std::monostate{});
     }
     return doof::Success<std::shared_ptr<IOSProvisioningProfile>>{ std::make_shared<IOSProvisioningProfile>(profilePath, applicationIdentifier, certFingerprints, expirationEpochMs, provisionedDeviceCount, provisionsAllDevices, getTaskAllow) };
 }
@@ -507,7 +507,7 @@ std::shared_ptr<std::vector<std::string>> collectProvisioningProfilePaths(const 
         const auto& _iterable_31 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(expanded); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 474, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_31) {
             if (doof::string_endsWith(entry->name, std::string(".mobileprovision"))) {
-                appendUnique(paths, devicePath(expanded, entry->name));
+                (static_cast<void>(appendUnique(paths, devicePath(expanded, entry->name))), std::monostate{});
             }
         }
     }
@@ -523,7 +523,7 @@ doof::Result<std::shared_ptr<IOSProvisioningProfile>, std::string> autoResolvePr
             continue;
         }
         const auto profile = doof::success_value(_binding_value_34);
-        profiles->push_back(profile);
+        (static_cast<void>(profiles->push_back(profile)), std::monostate{});
     }
     return selectProvisioningProfile(bundleId, profiles, ::std_::time::temporal::Instant::now()->toEpochMillis());
 }
@@ -560,10 +560,10 @@ doof::Result<std::string, std::string> resolveIOSDeviceIdentifier(const std::str
     if (hostPlatform() != std::string("macos")) {
         return doof::Failure<std::string>{ std::string("iOS device discovery is only supported on macOS") };
     }
-    ensureDirectory(workDirectory);
+    (static_cast<void>(ensureDirectory(workDirectory)), std::monostate{});
     const auto devicesPath = devicePath(workDirectory, std::string("devices.json"));
     if (::doof_fs::exists(devicesPath)) {
-        [&]() -> void { auto _try_value = ::doof_fs::remove(devicesPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 536, std::string("try! failed"));  }();
+        [&]() -> std::monostate { auto _try_value = ::doof_fs::remove(devicesPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 536, std::string("try! failed"));  return {}; }();
     }
     auto _binding_value_40 = deviceCommandText(std::string("xcrun"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("devicectl"), std::string("list"), std::string("devices"), std::string("--json-output"), devicesPath}), std::string("listing connected iOS devices"));
     if (doof::is_failure(_binding_value_40)) {
@@ -584,7 +584,7 @@ doof::Result<std::string, std::string> resolveIOSDeviceIdentifier(const std::str
     }
     const auto devices = doof::success_value(_binding_value_42);
     if (::doof_fs::exists(devicesPath)) {
-        [&]() -> void { auto _try_value = ::doof_fs::remove(devicesPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 543, std::string("try! failed"));  }();
+        [&]() -> std::monostate { auto _try_value = ::doof_fs::remove(devicesPath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 543, std::string("try! failed"));  return {}; }();
     }
     return selectIOSDeviceIdentifier(std::string(""), devices);
 }
@@ -594,17 +594,17 @@ void collectNestedIOSCode(const std::string& path, const std::shared_ptr<std::ve
     }
     if (::doof_fs::isDirectory(path)) {
         if (doof::string_endsWith(path, std::string(".framework")) || doof::string_endsWith(path, std::string(".appex"))) {
-            results->push_back(path);
+            (static_cast<void>(results->push_back(path)), std::monostate{});
             return;
         }
         const auto& _iterable_44 = [&]() -> std::shared_ptr<std::vector<std::shared_ptr<::std_::fs::types::FileInfo>>> { auto _try_value = ::doof_fs::readDir(path); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 551, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }();
         for (const auto& entry : *_iterable_44) {
-            collectNestedIOSCode(devicePath(path, entry->name), results);
+            (static_cast<void>(collectNestedIOSCode(devicePath(path, entry->name), results)), std::monostate{});
         }
         return;
     }
     if (doof::string_endsWith(path, std::string(".dylib")) || doof::string_endsWith(path, std::string(".so"))) {
-        results->push_back(path);
+        (static_cast<void>(results->push_back(path)), std::monostate{});
     }
 }
 doof::Result<void, std::string> signIOSDeviceApp(const std::string& appPath, const std::string& bundleId, const std::shared_ptr<IOSDeviceSigningOptions>& options, const std::string& workDirectory) {
@@ -614,8 +614,8 @@ doof::Result<void, std::string> signIOSDeviceApp(const std::string& appPath, con
     if (!::doof_fs::exists(options->provisioningProfilePath)) {
         return doof::Failure<std::string>{ (std::string("Provisioning profile not found: ") + options->provisioningProfilePath) };
     }
-    removeTree(workDirectory);
-    ensureDirectory(workDirectory);
+    (static_cast<void>(removeTree(workDirectory)), std::monostate{});
+    (static_cast<void>(ensureDirectory(workDirectory)), std::monostate{});
     const auto decodedPath = devicePath(workDirectory, std::string("profile.plist"));
     const auto entitlementsPath = devicePath(workDirectory, std::string("entitlements.plist"));
     auto _try_value_45 = decodeProvisioningProfile(options->provisioningProfilePath, decodedPath);
@@ -624,16 +624,16 @@ doof::Result<void, std::string> signIOSDeviceApp(const std::string& appPath, con
     if (doof::is_failure(_try_value_46)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_46))};
     const auto applicationIdentifier = doof::success_value(_try_value_46);
     if (!profileMatchesBundleId(applicationIdentifier, bundleId)) {
-        removeTree(workDirectory);
+        (static_cast<void>(removeTree(workDirectory)), std::monostate{});
         return doof::Failure<std::string>{ ((((std::string("Provisioning profile application-identifier \"") + applicationIdentifier) + std::string("\" does not match bundle id \"")) + bundleId) + std::string("\"")) };
     }
     auto _try_value_47 = deviceCommandText(std::string("plutil"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-extract"), std::string("Entitlements"), std::string("xml1"), std::string("-o"), entitlementsPath, decodedPath}), std::string("extracting iOS signing entitlements"));
     if (doof::is_failure(_try_value_47)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_47))};
     const auto ignored = doof::success_value(_try_value_47);
-    [&]() -> void { auto _try_value = ::doof_fs::writeBlob(devicePath(appPath, std::string("embedded.mobileprovision")), [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(options->provisioningProfilePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 588, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 588, std::string("try! failed"));  }();
+    [&]() -> std::monostate { auto _try_value = ::doof_fs::writeBlob(devicePath(appPath, std::string("embedded.mobileprovision")), [&]() -> std::shared_ptr<std::vector<uint8_t>> { auto _try_value = ::doof_fs::readBlob(options->provisioningProfilePath); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 588, std::string("try! failed")); return std::move(doof::success_value(_try_value)); }()); if (doof::is_failure(_try_value)) doof::panic_at("src/ios-device", 588, std::string("try! failed"));  return {}; }();
     std::shared_ptr<std::vector<std::string>> nested = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    collectNestedIOSCode(devicePath(appPath, std::string("Frameworks")), nested);
-    collectNestedIOSCode(devicePath(appPath, std::string("PlugIns")), nested);
+    (static_cast<void>(collectNestedIOSCode(devicePath(appPath, std::string("Frameworks")), nested)), std::monostate{});
+    (static_cast<void>(collectNestedIOSCode(devicePath(appPath, std::string("PlugIns")), nested)), std::monostate{});
     const auto& _iterable_50 = nested;
     for (const auto& path : *_iterable_50) {
         auto _try_value_48 = deviceCommandText(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(path, options->signIdentity, std::string("")), std::string("signing nested iOS code"));
@@ -643,7 +643,7 @@ doof::Result<void, std::string> signIOSDeviceApp(const std::string& appPath, con
     auto _try_value_51 = deviceCommandText(std::string("codesign"), ::app_src_ios_app_::iosCodesignArguments(appPath, options->signIdentity, entitlementsPath), std::string("signing the iOS app"));
     if (doof::is_failure(_try_value_51)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_51))};
     const auto appIgnored = doof::success_value(_try_value_51);
-    removeTree(workDirectory);
+    (static_cast<void>(removeTree(workDirectory)), std::monostate{});
     return doof::Success<void>{};
 }
 }

@@ -4,6 +4,7 @@
 // are intentionally handled by emitter-decl.do so the module emitter can
 // place signatures in headers and bodies in sources.
 
+import { carrierOf } from "./emitter-carriers"
 import {
   Block, Expression, ExpressionStatement, IfStatement, LetDeclaration, ImmutableBinding,
   ReadonlyDeclaration, ConstDeclaration, ReturnStatement, Statement,
@@ -15,6 +16,7 @@ import {
 import type { TypeAnnotation } from "./ast"
 import { ArrayResolvedType, ClassType, InterfaceType, PrimitiveType, RangeResolvedType, ResolvedType, ResultResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable, recordCoverageLine, sourceLineDirective } from "./emitter-context"
+import { emitExpressionReturn } from "./emitter-expr-utils"
 import { emitCaseTypePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
@@ -258,20 +260,7 @@ function emitBindingElse(binding: ImmutableBinding, level: int, context: EmitCon
 }
 
 function isSingleOptional(resolvedType: ResolvedType): bool {
-  case resolvedType {
-    union_: UnionResolvedType -> {
-      let hasNone = false
-      for member of union_.types {
-        if member.kind == "none" { hasNone = true }
-      }
-      // Nullable aliases may flatten into several non-null arms. All native
-      // nullable carriers (pointer, optional, or monostate variant) share the
-      // is_null/unwrap_optional runtime surface.
-      return hasNone
-    }
-    _ -> { return false }
-  }
-  return false
+  return resolvedType.kind == "union" && carrierOf(resolvedType).hasNone
 }
 
 function emitTry(statement: TryStatement, level: int, context: EmitContext): string {
@@ -488,11 +477,8 @@ function caseSubjectType(expression: Expression): ResolvedType | none {
 function emitReturn(statement: ReturnStatement, context: EmitContext): string {
   if statement.value == none { return "return;\n" }
   expected := statement.resolvedExpectedType
-  if expected != none && expected!.kind == "none" {
-    if statement.value!.kind == "none-literal" { return "return;\n" }
-    return emitExpression(statement.value!, context, expected) + ";\nreturn;\n"
-  }
-  return "return " + emitExpression(statement.value!, context, expected) + ";\n"
+  if expected != none && carrierOf(specializeEmitType(expected!, context), .Return).kind == .Void && statement.value!.kind == "none-literal" { return "return;\n" }
+  return emitExpressionReturn(statement.value!, context, expected) + "\n"
 }
 
 function emitIf(statement: IfStatement, level: int, context: EmitContext): string {

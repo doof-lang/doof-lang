@@ -48,11 +48,11 @@ std::string cacheModuleNamespace(const std::string& path) {
         if (relativePath != std::string("")) {
             (namespace_ = ((namespace_ + std::string("::")) + namespacePath(relativePath)));
         }
-        doof::map_set(cachedModuleNamespaces, path, namespace_, "", 0);
+        (static_cast<void>(doof::map_set<std::string, std::string>(cachedModuleNamespaces, path, namespace_, "", 0)), std::monostate{});
         return namespace_;
     }
     const auto namespace_ = ((std::string("app_") + moduleStem(path)) + std::string("_"));
-    doof::map_set(cachedModuleNamespaces, path, namespace_, "", 0);
+    (static_cast<void>(doof::map_set<std::string, std::string>(cachedModuleNamespaces, path, namespace_, "", 0)), std::monostate{});
     return namespace_;
 }
 std::string moduleDiagnosticPath(const std::string& path, bool stripExtension) {
@@ -96,7 +96,7 @@ std::string moduleNativeHeaderPath(const std::string& modulePath, const std::str
             }
             const auto ignoredParent = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/emitter-names", 100, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
         } else {
-            components->push_back(component);
+            (static_cast<void>(components->push_back(component)), std::monostate{});
         }
     }
     auto result = mapping->outputRoot;

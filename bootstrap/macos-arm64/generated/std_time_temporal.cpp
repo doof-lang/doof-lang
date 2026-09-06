@@ -267,10 +267,10 @@ doof::Result<std::shared_ptr<DateTime>, std::string> DateTime::parse(const std::
     return ::doof_time::parse_datetime(s);
 }
 std::shared_ptr<DateTime> DateTime::plusDays(int32_t n) {
-    return std::make_shared<DateTime>(this->date->plusDays(n), time);
+    return std::make_shared<DateTime>(this->date->plusDays(n), this->time);
 }
 std::shared_ptr<DateTime> DateTime::minusDays(int32_t n) {
-    return std::make_shared<DateTime>(this->date->minusDays(n), time);
+    return std::make_shared<DateTime>(this->date->minusDays(n), this->time);
 }
 std::shared_ptr<DateTime> DateTime::plusHours(int32_t n) {
     return ::doof_time::datetime_plus_nanos(this->date, this->time, (static_cast<int64_t>(n) * 3600000000000LL));
@@ -352,7 +352,7 @@ std::shared_ptr<ZonedDateTime> ZonedDateTime::withZoneSameInstant(const std::sha
     return this->toInstant()->toZonedDateTime(newZone);
 }
 std::shared_ptr<ZonedDateTime> ZonedDateTime::withZoneSameLocal(const std::shared_ptr<TimeZone>& newZone) {
-    return std::make_shared<ZonedDateTime>(dateTime, newZone);
+    return std::make_shared<ZonedDateTime>(this->dateTime, newZone);
 }
 std::shared_ptr<DateTime> ZonedDateTime::toDateTime() {
     return this->dateTime;

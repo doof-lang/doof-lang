@@ -212,3 +212,12 @@ Yield emission carries that decorated block result through
 `EmitContext.valueYieldType`, restoring the outer context after nested blocks.
 Yield, case-arm, and async block owners set it; the statement emitter uses it
 for contextual value conversion, including the representation of `none`.
+
+## Native representation boundary
+
+The [native carrier model](native-carriers.md) separates checked semantic types
+from value, return, and Result/Promise payload representations. A pure classifier
+owns nullable storage choices; one conversion layer preserves evaluation and
+absence when crossing native carriers. The normal compiler suite compiles and
+runs a durable matrix using the current source emitter, in addition to its
+structural emission tests.

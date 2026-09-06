@@ -43,15 +43,15 @@ std::string renderMacOSInfoPlist(const std::shared_ptr<MacOSAppConfig>& config) 
 std::shared_ptr<std::vector<std::string>> macOSCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& signing, const std::string& entitlementsPath) {
     auto arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("--force"), std::string("--sign"), identity});
     if (signing != std::string("ad-hoc")) {
-        arguments->push_back(std::string("--options"));
-        arguments->push_back(std::string("runtime"));
+        (static_cast<void>(arguments->push_back(std::string("--options"))), std::monostate{});
+        (static_cast<void>(arguments->push_back(std::string("runtime"))), std::monostate{});
     }
-    arguments->push_back(((signing == std::string("ad-hoc")) ? std::string("--timestamp=none") : std::string("--timestamp")));
+    (static_cast<void>(arguments->push_back(((signing == std::string("ad-hoc")) ? std::string("--timestamp=none") : std::string("--timestamp")))), std::monostate{});
     if (entitlementsPath != std::string("")) {
-        arguments->push_back(std::string("--entitlements"));
-        arguments->push_back(entitlementsPath);
+        (static_cast<void>(arguments->push_back(std::string("--entitlements"))), std::monostate{});
+        (static_cast<void>(arguments->push_back(entitlementsPath)), std::monostate{});
     }
-    arguments->push_back(targetPath);
+    (static_cast<void>(arguments->push_back(targetPath)), std::monostate{});
     return arguments;
 }
 std::string plistString(const std::string& key, const std::string& value) {

@@ -1,7 +1,15 @@
 import { Assert } from "std/assert"
 import { EmitContext } from "./emitter-context"
-import { emitContextType, emitType } from "./emitter-types"
-import { ClassType, InterfaceType, PrimitiveType, Symbol } from "./semantic"
+import { emitContextType, emitType, usesVariantRepresentation } from "./emitter-types"
+import { ClassType, InterfaceType, NoneType, PrimitiveType, ResultResolvedType, Symbol, UnionResolvedType } from "./semantic"
+
+export function testCarrierModelSeparatesResultStorageFromUnionDispatch(): none {
+  integer := PrimitiveType { name: "int" }
+  result := ResultResolvedType { valueType: integer, errorType: integer }
+  Assert.isFalse(usesVariantRepresentation(result))
+  Assert.isTrue(usesVariantRepresentation(UnionResolvedType { types: [result, NoneType {}] }))
+  Assert.isFalse(usesVariantRepresentation(UnionResolvedType { types: [integer, NoneType {}] }))
+}
 
 export function testRejectsUnloweredNonNativeGenericClassTypes(): none {
   symbol := Symbol { kind: "class", name: "Box", module: "/box.do", exported: true }

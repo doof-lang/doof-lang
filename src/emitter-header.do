@@ -5,12 +5,12 @@
 // or statement emission.
 
 import {
-  ClassDeclaration, ConstDeclaration, EnumDeclaration, ExportDeclaration, Expression, FunctionDeclaration, InterfaceDeclaration,
+  ClassDeclaration, ConstDeclaration, EnumDeclaration, ExportDeclaration, FunctionDeclaration, InterfaceDeclaration,
   ImmutableBinding, LetDeclaration, Program, ReadonlyDeclaration, Statement, TypeAliasDeclaration,
 } from "./ast"
 import { EmitContext, EmitModuleSurface } from "./emitter-context"
 import { emitClassDeclaration, emitDescriptionComment, emitFunctionDeclaration, emitInterfaceAlias } from "./emitter-decl"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { cppIdentifier } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
 import { emitInterfaceJsonDeclaration } from "./emitter-json"
 import { emitContextType, emitType } from "./emitter-types"

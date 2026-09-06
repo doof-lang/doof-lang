@@ -13,13 +13,13 @@ std::shared_ptr<::app_src_ast_::Program> Parser::parse() {
     (this->errorLine = 0);
     (this->errorColumn = 0);
     (this->errorOffset = 0);
-    const auto lexer = std::make_shared<::app_src_lexer_::Lexer>(source, 0, 1, 1, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), std::make_shared<std::vector<::app_src_lexer_::LexerDiagnostic>>(std::vector<::app_src_lexer_::LexerDiagnostic>{}), std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::string("code"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), 0, 0);
+    const auto lexer = std::make_shared<::app_src_lexer_::Lexer>(this->source, 0, 1, 1, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), std::make_shared<std::vector<::app_src_lexer_::LexerDiagnostic>>(std::vector<::app_src_lexer_::LexerDiagnostic>{}), std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::string("code"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), 0, 0);
     (this->tokens = lexer->tokenize());
     (this->pos = 0);
     auto start = location();
     std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>> statements = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>{});
     while (!atEnd()) {
-        statements->push_back(parseStatement());
+        (static_cast<void>(statements->push_back(parseStatement())), std::monostate{});
     }
     return std::make_shared<::app_src_ast_::Program>(std::string("program"), statements, span(start));
 }
@@ -61,6 +61,20 @@ bool Parser::match(::app_src_lexer_::TokenType kind) {
     return true;
 }
 ::app_src_lexer_::Token Parser::expect(::app_src_lexer_::TokenType kind, const std::string& message) {
+    if ((kind == ::app_src_lexer_::TokenType::Greater) && (check(::app_src_lexer_::TokenType::GreaterGreater) || check(::app_src_lexer_::TokenType::GreaterGreaterGreater))) {
+        auto token = current();
+        std::shared_ptr<std::vector<::app_src_lexer_::Token>> expanded = std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{});
+        for (int32_t index = 0; index < static_cast<int32_t>((this->tokens)->size()); ++index) {
+            if (index == this->pos) {
+                for (int32_t part = 0; part < token.length; ++part) {
+                    (static_cast<void>(expanded->push_back(::app_src_lexer_::Token{::app_src_lexer_::TokenType::Greater, 1, (token.offset + part), 1, false, token.line, (token.column + part), (token.offset + part)})), std::monostate{});
+                }
+            } else {
+                (static_cast<void>(expanded->push_back(doof::array_at(this->tokens, index, "src/parser", 100))), std::monostate{});
+            }
+        }
+        (this->tokens = expanded);
+    }
     if (check(kind)) {
         return advance();
     }
@@ -68,7 +82,7 @@ bool Parser::match(::app_src_lexer_::TokenType kind) {
     if (expectedMessage == std::string("")) {
         (expectedMessage = ((((std::string("Expected ") + expectedLabel(kind)) + std::string(" before '")) + currentText()) + std::string("'")));
     }
-    fail(expectedMessage);
+    (static_cast<void>(fail(expectedMessage)), std::monostate{});
     return current();
 }
 void Parser::fail(const std::string& message) {
@@ -120,26 +134,26 @@ std::string Parser::currentText() {
     return ::app_src_ast_::SourceSpan{start, previousEnd()};
 }
 ::app_src_ast_::AstLocation Parser::previousEnd() {
-    auto previous = ((this->pos > 0) ? doof::array_at(this->tokens, (this->pos - 1), "src/parser", 131) : current());
+    auto previous = ((this->pos > 0) ? doof::array_at(this->tokens, (this->pos - 1), "src/parser", 145) : current());
     return ::app_src_ast_::AstLocation{previous.line, (previous.column + previous.length), (previous.offset + previous.length)};
 }
 bool Parser::sameLineAsPrevious() {
     if (this->pos == 0) {
         return false;
     }
-    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 141).line == current().line);
+    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 155).line == current().line);
 }
 bool Parser::previousIs(::app_src_lexer_::TokenType kind) {
     if (this->pos == 0) {
         return false;
     }
-    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 146).kind == kind);
+    return (doof::array_at(this->tokens, (this->pos - 1), "src/parser", 160).kind == kind);
 }
 bool Parser::immediatelyAfterPrevious() {
     if (this->pos == 0) {
         return false;
     }
-    auto previous = doof::array_at(this->tokens, (this->pos - 1), "src/parser", 151);
+    auto previous = doof::array_at(this->tokens, (this->pos - 1), "src/parser", 165);
     return ((previous.offset + previous.length) == current().offset);
 }
 void Parser::consumeSemicolon() {

@@ -4,6 +4,8 @@
 // single decorated-AST dispatch point and the public identifier helper used
 // by statement and declaration emission.
 
+import { CarrierPosition } from "./emitter-carriers"
+import { emitCarrierConversion } from "./emitter-carrier-values"
 import { ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, BoolLiteral, CallExpression, CallerExpression, CaseExpression, CatchExpression, CharLiteral, ConstructExpression, DoubleLiteral, DotShorthand, Expression, FloatLiteral, Identifier, IfExpression, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NoneLiteral, ObjectLiteral, RetireExpression, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression } from "./ast"
 import { ClassType, JsonValueResolvedType, NoneType, PrimitiveType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
@@ -12,13 +14,14 @@ import { emitCall, emitConstruct } from "./emitter-expr-calls"
 import { emitArray, emitChar, emitNoneLiteral, emitObject, emitString, emitTuple } from "./emitter-expr-literals"
 import { emitCaseExpression, emitCatchExpression, emitDotShorthand, emitIfExpression, emitYieldBlockExpression } from "./emitter-expr-control"
 import { emitLambdaExpression } from "./emitter-expr-lambda"
-import { decoratedExpressionType, emitNullableVariantPromotion, needsNullableVariantPromotion, needsVariantPromotion } from "./emitter-expr-utils"
-import { emitType } from "./emitter-types"
+import { decoratedExpressionType } from "./emitter-expr-utils"
+import { specializeEmitType } from "./emitter-types"
 import { emitActorCreation, emitAsyncExpression, emitRetireActor } from "./emitter-expr-actor"
 import { moduleDiagnosticPath } from "./emitter-names"
 
 export function emitExpression(expression: Expression, context: EmitContext, expected: ResolvedType | none = none): string {
   let value = ""
+  let sourcePosition: CarrierPosition = .Value
   case expression {
     int_: IntLiteral -> { value = string(int_.value) }
     long_: LongLiteral -> { value = string(long_.value) + "LL" }
@@ -41,7 +44,7 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     assignment: AssignmentExpression -> { value = emitAssignment(assignment, context) }
     member: MemberExpression -> { value = emitMember(member, context) }
     index: IndexExpression -> { value = emitIndex(index, context) }
-    call: CallExpression -> { value = emitCall(call, context, expected) }
+    call: CallExpression -> { value = emitCall(call, context, expected); sourcePosition = .Return }
     array: ArrayLiteral -> { value = emitArray(array, context, expected) }
     object: ObjectLiteral -> { value = emitObject(object, context, expected) }
     tuple: TupleLiteral -> { value = emitTuple(tuple, context) }
@@ -69,13 +72,14 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     }
     _ -> { panic("Unsupported expression in initial C++ emitter: " + expression.kind) }
   }
-  sourceType := decoratedExpressionType(expression)
-  value = emitJsonValuePromotion(expression, value, sourceType, expected)
-  if needsNullableVariantPromotion(sourceType, expected) {
-    return emitNullableVariantPromotion(value, sourceType, expected, context.modulePath)
-  }
-  if needsVariantPromotion(sourceType, expected) {
-    return "doof::variant_promote<" + emitType(expected!, context.modulePath) + ">(" + value + ")"
+  checkedSource := decoratedExpressionType(expression)
+  sourceType := if checkedSource == none then none else specializeEmitType(checkedSource!, context)
+  targetType := if expected == none then none else specializeEmitType(expected!, context)
+  // The none literal branch already constructs the checked target carrier.
+  if expression.kind == "none-literal" { return value }
+  value = emitJsonValuePromotion(expression, value, sourceType, targetType)
+  if sourceType != none {
+    return emitCarrierConversion(value, sourceType!, if targetType == none then sourceType! else targetType!, context, sourcePosition)
   }
   return value
 }

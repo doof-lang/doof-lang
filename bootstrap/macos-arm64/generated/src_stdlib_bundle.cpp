@@ -95,19 +95,19 @@ doof::Result<std::shared_ptr<StdlibBundleIndex>, std::string> StdlibBundleIndex:
     auto _iterator_targets = _object->find("targets");
     if (_iterator_targets == _object->end()) { return doof::Failure<std::string>{"Missing required field \"targets\""}; }
         if (!(doof::json_is_array(_iterator_targets->second))) { return doof::Failure<std::string>{"Field \"targets\" expected array but got " + std::string(doof::json_type_name(_iterator_targets->second))}; }
-    auto _field_targets = doof::json_decode_at("Field \"targets\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_targets->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return (_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element)); })); } return _values; }(); });
+    auto _field_targets = doof::json_decode_at("Field \"targets\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_targets->second); if (_array == nullptr) throw doof::JsonDecodeError("Expected array"); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return (_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element)); })); } return _values; }(); });
     auto _iterator_packages = _object->find("packages");
     if (_iterator_packages == _object->end()) { return doof::Failure<std::string>{"Missing required field \"packages\""}; }
         if (!(doof::json_is_array(_iterator_packages->second))) { return doof::Failure<std::string>{"Field \"packages\" expected array but got " + std::string(doof::json_type_name(_iterator_packages->second))}; }
-    auto _field_packages = doof::json_decode_at("Field \"packages\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_packages->second); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return (_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element)); })); } return _values; }(); });
+    auto _field_packages = doof::json_decode_at("Field \"packages\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_packages->second); if (_array == nullptr) throw doof::JsonDecodeError("Expected array"); auto _values = std::make_shared<std::vector<std::string>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return (_lenient ? doof::json_as_string_lenient(_element) : doof::json_as_string(_element)); })); } return _values; }(); });
     auto _iterator_members = _object->find("members");
     if (_iterator_members == _object->end()) { return doof::Failure<std::string>{"Missing required field \"members\""}; }
         if (!(doof::json_is_array(_iterator_members->second))) { return doof::Failure<std::string>{"Field \"members\" expected array but got " + std::string(doof::json_type_name(_iterator_members->second))}; }
-    auto _field_members = doof::json_decode_at("Field \"members\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_members->second); auto _values = std::make_shared<std::vector<std::shared_ptr<StdlibBundleMember>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(StdlibBundleMember::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
+    auto _field_members = doof::json_decode_at("Field \"members\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_members->second); if (_array == nullptr) throw doof::JsonDecodeError("Expected array"); auto _values = std::make_shared<std::vector<std::shared_ptr<StdlibBundleMember>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(StdlibBundleMember::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
     auto _iterator_licenseFiles = _object->find("licenseFiles");
     if (_iterator_licenseFiles == _object->end()) { return doof::Failure<std::string>{"Missing required field \"licenseFiles\""}; }
         if (!(doof::json_is_array(_iterator_licenseFiles->second))) { return doof::Failure<std::string>{"Field \"licenseFiles\" expected array but got " + std::string(doof::json_type_name(_iterator_licenseFiles->second))}; }
-    auto _field_licenseFiles = doof::json_decode_at("Field \"licenseFiles\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_licenseFiles->second); auto _values = std::make_shared<std::vector<std::shared_ptr<StdlibBundleLicenseFile>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(StdlibBundleLicenseFile::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
+    auto _field_licenseFiles = doof::json_decode_at("Field \"licenseFiles\"", [&]() { return [&]() { const auto* _array = doof::json_as_array(_iterator_licenseFiles->second); if (_array == nullptr) throw doof::JsonDecodeError("Expected array"); auto _values = std::make_shared<std::vector<std::shared_ptr<StdlibBundleLicenseFile>>>(); _values->reserve(_array->size()); for (size_t _index = 0; _index < _array->size(); ++_index) { const auto& _element = (*_array)[_index]; _values->push_back(doof::json_decode_at(std::string("[") + doof::to_string(_index) + "]", [&]() { return doof::json_decode_value(StdlibBundleLicenseFile::fromJsonValue(_element, _lenient)); })); } return _values; }(); });
         return doof::Success<std::shared_ptr<StdlibBundleIndex>>{std::make_shared<StdlibBundleIndex>(_field_schemaVersion, _field_format, _field_bundleDigest, _field_zstdLevel, _field_targets, _field_packages, _field_members, _field_licenseFiles)};
     } catch (const doof::JsonDecodeError& _error) {
         return doof::Failure<std::string>{_error.message()};
@@ -229,7 +229,7 @@ doof::Result<void, std::string> validateBundleIndex(const std::shared_ptr<Stdlib
         if (doof::array_contains(seenOuter, entry->name, "", 0)) {
             return doof::Failure<std::string>{ (std::string("Stdlib bundle has duplicate outer member ") + entry->name) };
         }
-        seenOuter->push_back(entry->name);
+        (static_cast<void>(seenOuter->push_back(entry->name)), std::monostate{});
     }
     if (((static_cast<int32_t>((entries)->size()) != (static_cast<int32_t>((index->members)->size()) + 1)) || (static_cast<int32_t>((entries)->size()) == 0)) || (doof::array_at(entries, 0, "src/stdlib-bundle", 148)->name != std::string("bundle-index.json"))) {
         return doof::Failure<std::string>{ std::string("Stdlib bundle outer archive does not match its index") };
@@ -255,7 +255,7 @@ doof::Result<void, std::string> validateBundleIndex(const std::shared_ptr<Stdlib
         if (doof::array_contains(seenMembers, member->member, "", 0)) {
             return doof::Failure<std::string>{ (std::string("Stdlib bundle index duplicates member ") + member->member) };
         }
-        seenMembers->push_back(member->member);
+        (static_cast<void>(seenMembers->push_back(member->member)), std::monostate{});
         const auto entry = memberArchiveEntry(std::make_shared<StdlibBundleProvider>(std::string(""), index, entries), member->member);
         if (doof::is_null(entry) || (entry->size != member->compressedBytes)) {
             return doof::Failure<std::string>{ (std::string("Stdlib bundle member is missing or has the wrong size: ") + member->member) };
@@ -271,7 +271,7 @@ doof::Result<void, std::string> validateBundleIndex(const std::shared_ptr<Stdlib
         if (doof::array_contains(seenLicenses, licenseKey, "", 0)) {
             return doof::Failure<std::string>{ (std::string("Stdlib bundle duplicates required license ") + license->path) };
         }
-        seenLicenses->push_back(licenseKey);
+        (static_cast<void>(seenLicenses->push_back(licenseKey)), std::monostate{});
         auto hasNativeMember = false;
         const auto& _iterable_27 = index->members;
         for (const auto& member : *_iterable_27) {
@@ -431,9 +431,9 @@ bool receiptMatches(const std::string& path, const std::shared_ptr<StdlibBundleP
 }
 std::string receiptSource(const std::shared_ptr<StdlibBundleProvider>& provider, const std::string& packageName) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> value = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
-    doof::map_set(value, std::string("schemaVersion"), doof::json_value(1), "", 0);
-    doof::map_set(value, std::string("bundleDigest"), doof::json_value(provider->index->bundleDigest), "", 0);
-    doof::map_set(value, std::string("packageName"), doof::json_value(packageName), "", 0);
+    (static_cast<void>(doof::map_set<std::string, doof::JsonValue>(value, std::string("schemaVersion"), doof::json_value(1), "", 0)), std::monostate{});
+    (static_cast<void>(doof::map_set<std::string, doof::JsonValue>(value, std::string("bundleDigest"), doof::json_value(provider->index->bundleDigest), "", 0)), std::monostate{});
+    (static_cast<void>(doof::map_set<std::string, doof::JsonValue>(value, std::string("packageName"), doof::json_value(packageName), "", 0)), std::monostate{});
     return (::doof_json::format(doof::json_value(value)) + std::string("\n"));
 }
 doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> readCompressedMember(const std::shared_ptr<StdlibBundleProvider>& provider, const std::shared_ptr<StdlibBundleMember>& member) {
@@ -484,7 +484,7 @@ doof::Result<void, std::string> materializeInnerArchive(const std::shared_ptr<St
             return doof::Failure<std::string>{ (std::string("Bundled stdlib package duplicates path ") + entry->name) };
         }
         (sourceBytes += entry->size);
-        writtenPaths->push_back(entry->name);
+        (static_cast<void>(writtenPaths->push_back(entry->name)), std::monostate{});
         const auto outputPath = bundlePath(staging, entry->name);
         auto _try_value_54 = ensureDirectory(::std_::path::index::dirname(outputPath));
         if (doof::is_failure(_try_value_54)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_54))};

@@ -25,7 +25,7 @@ void DecodedLineStream::skipLeadingLineFeed() {
     }
     const auto nextPosition = this->current->getPosition();
     if (this->current->readByte() != 10) {
-        this->current->setPosition(nextPosition);
+        (static_cast<void>(this->current->setPosition(nextPosition)), std::monostate{});
     }
     (this->skipLeadingLf = false);
 }
@@ -40,7 +40,7 @@ std::optional<std::string> DecodedLineStream::flushTrailingLine() {
         if (this->pendingLine->length() == 0LL) {
             return this->current->readString(remaining);
         }
-        this->pendingLine->writeBytes(this->current->readBytes(remaining));
+        (static_cast<void>(this->pendingLine->writeBytes(this->current->readBytes(remaining))), std::monostate{});
     }
     if (this->pendingLine->length() == 0LL) {
         return std::nullopt;
@@ -67,7 +67,7 @@ std::optional<std::string> DecodedLineStream::tryTakeCurrentLine() {
         return line;
     }
     if (lineLength > 0LL) {
-        this->pendingLine->writeBytes(this->current->readBytes(lineLength));
+        (static_cast<void>(this->pendingLine->writeBytes(this->current->readBytes(lineLength))), std::monostate{});
     }
     const auto line = finishPendingLine();
     if (this->current->readByte() == 13) {
@@ -78,12 +78,12 @@ std::optional<std::string> DecodedLineStream::tryTakeCurrentLine() {
 void DecodedLineStream::moveCurrentRemainderToPending() {
     const auto remaining = this->current->remaining();
     if (remaining > 0LL) {
-        this->pendingLine->writeBytes(this->current->readBytes(remaining));
+        (static_cast<void>(this->pendingLine->writeBytes(this->current->readBytes(remaining))), std::monostate{});
     }
 }
 bool DecodedLineStream::next() {
     while (true) {
-        skipLeadingLineFeed();
+        (static_cast<void>(skipLeadingLineFeed()), std::monostate{});
         const auto candidate = tryTakeCurrentLine();
         if (!doof::is_null(candidate)) {
             (this->currentValue = candidate);
@@ -97,7 +97,7 @@ bool DecodedLineStream::next() {
             (this->currentValue = trailing);
             return true;
         }
-        moveCurrentRemainderToPending();
+        (static_cast<void>(moveCurrentRemainderToPending()), std::monostate{});
         if (!loadNextChunk()) {
             const auto trailing = flushTrailingLine();
             if (doof::is_null(trailing)) {

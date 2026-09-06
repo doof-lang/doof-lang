@@ -268,7 +268,7 @@ int32_t digitValue(char32_t c) {
 }
 
 void Thread::sleep(const std::shared_ptr<Duration>& duration) {
-    ::doof_time::thread_sleep_nanos(duration->toNanos());
+    (static_cast<void>(::doof_time::thread_sleep_nanos(duration->toNanos())), std::monostate{});
 }
 
 void __doof_initialize_module() {

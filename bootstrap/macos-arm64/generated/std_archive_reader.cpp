@@ -36,22 +36,22 @@ doof::Result<std::shared_ptr<::std_::archive::types::ZipFileEntry>, std::string>
     if (signature != CENTRAL_DIRECTORY_SIGNATURE) {
         return doof::Failure<std::string>{ std::string("zip read failed: invalid central directory signature") };
     }
-    reader->skip(4LL);
+    (static_cast<void>(reader->skip(4LL)), std::monostate{});
     const auto flags = reader->readUnsignedShort();
     const auto method = reader->readUnsignedShort();
-    reader->skip(4LL);
+    (static_cast<void>(reader->skip(4LL)), std::monostate{});
     const auto crc = reader->readUnsignedInt();
     const auto compressedSize = reader->readUnsignedInt();
     const auto size = reader->readUnsignedInt();
     const auto nameLength = reader->readUnsignedShort();
     const auto extraLength = reader->readUnsignedShort();
     const auto commentLength = reader->readUnsignedShort();
-    reader->skip(8LL);
+    (static_cast<void>(reader->skip(8LL)), std::monostate{});
     const auto localHeaderOffset = reader->readUnsignedInt();
     auto _try_value_2 = requireRemaining(reader, static_cast<int64_t>(((nameLength + extraLength) + commentLength)), std::string("central directory entry payload"));
     if (doof::is_failure(_try_value_2)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_2))};
     const auto name = reader->readString(static_cast<int64_t>(nameLength));
-    reader->skip(static_cast<int64_t>((extraLength + commentLength)));
+    (static_cast<void>(reader->skip(static_cast<int64_t>((extraLength + commentLength)))), std::monostate{});
     if ((flags & 8) != 0) {
         return doof::Failure<std::string>{ std::string("zip read failed: data descriptors are not supported") };
     }
@@ -79,7 +79,7 @@ doof::Result<int64_t, std::string> findEndOfCentralDirectory(const std::shared_p
 }
 doof::Result<std::shared_ptr<ZipDirectoryInfo>, std::string> readZipDirectoryInfo(const std::shared_ptr<std::vector<uint8_t>>& data, int64_t eocdOffset, int64_t dataOffset, int64_t archiveSize) {
     const auto reader = ::doof_blob::NativeBlobReader::constructor(data, ::std_::blob::types::Endian::LittleEndian);
-    reader->setPosition(eocdOffset);
+    (static_cast<void>(reader->setPosition(eocdOffset)), std::monostate{});
     auto _try_value_5 = requireRemaining(reader, 22LL, std::string("end of central directory"));
     if (doof::is_failure(_try_value_5)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_5))};
     const auto signature = reader->readUnsignedInt();
@@ -119,7 +119,7 @@ doof::Result<int64_t, std::string> zipPayloadOffset(const std::shared_ptr<std::v
     if (signature != LOCAL_FILE_HEADER_SIGNATURE) {
         return doof::Failure<std::string>{ std::string("zip read failed: invalid local file header signature") };
     }
-    reader->skip(22LL);
+    (static_cast<void>(reader->skip(22LL)), std::monostate{});
     const auto nameLength = reader->readUnsignedShort();
     const auto extraLength = reader->readUnsignedShort();
     return doof::Success<int64_t>{ ((localHeaderOffset + 30LL) + static_cast<int64_t>((nameLength + extraLength))) };
@@ -161,13 +161,13 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types:
     if (doof::is_failure(_try_value_11)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_11))};
     const auto directory = doof::success_value(_try_value_11);
     const auto reader = ::doof_blob::NativeBlobReader::constructor(data, ::std_::blob::types::Endian::LittleEndian);
-    reader->setPosition(directory->offset);
+    (static_cast<void>(reader->setPosition(directory->offset)), std::monostate{});
     std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types::ZipFileEntry>>> centralEntries = std::make_shared<std::vector<std::shared_ptr<::std_::archive::types::ZipFileEntry>>>(std::vector<std::shared_ptr<::std_::archive::types::ZipFileEntry>>{});
     for (int32_t index = 0; index < directory->entryCount; ++index) {
         auto _try_value_12 = readCentralDirectoryEntry(reader);
         if (doof::is_failure(_try_value_12)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_12))};
         const auto entry = doof::success_value(_try_value_12);
-        centralEntries->push_back(entry);
+        (static_cast<void>(centralEntries->push_back(entry)), std::monostate{});
     }
     if (reader->getPosition() > (directory->offset + directory->size)) {
         return doof::Failure<std::string>{ std::string("zip read failed: central directory entries exceed declared size") };
@@ -178,7 +178,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types:
         auto _try_value_14 = readEntryPayload(data, entry);
         if (doof::is_failure(_try_value_14)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_14))};
         const auto payload = doof::success_value(_try_value_14);
-        entries->push_back(payload);
+        (static_cast<void>(entries->push_back(payload)), std::monostate{});
     }
     return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types::ZipEntry>>>>{ entries };
 }

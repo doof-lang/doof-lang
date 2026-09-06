@@ -1,11 +1,12 @@
 // Call, native-constructor, and class-construction lowering.
 
+import { weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 import { CallArgument, CallExpression, ClassDeclaration, ConstructExpression, Expression, FunctionDeclaration, Identifier, MemberExpression, SourceSpan, ThisExpression } from "./ast"
 import { ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType, MapResolvedType, NoneType, ResultResolvedType, ResolvedType, SetResolvedType, StreamResolvedType, TypeParameterType, TypeSubstitution, UnionResolvedType, WeakResolvedType } from "./semantic"
-import { EmitContext, isCapturedMutable, SourceLocationSpanOverride } from "./emitter-context"
+import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
 import { substituteTypeParams } from "./checker-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { decoratedExpressionType, emittedSymbolName, emitExpectedExpression, emitNullableVariantPromotion, exprModuleNamespaceFor, findProperty, needsNullableVariantPromotion, needsVariantPromotion, optionalExpectedType, variantVisitValue } from "./emitter-expr-utils"
+import { decoratedExpressionType, emittedSymbolName, emitPropertyValue, exprModuleNamespaceFor, findProperty, optionalExpectedType, variantVisitValue } from "./emitter-expr-utils"
 import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
@@ -145,7 +146,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
               argument := if namedConstruction then callArgumentNamed(expression, name) else if positionalIndex < expression.args.length then expression.args[positionalIndex] else none
               fieldType := specializeOwnerMemberType(field.resolvedType!, class_, context, expression.resolvedClass!.typeParams)
               if argument != none {
-                values = values + emitExpectedExpression(argument!.value, context, fieldType)
+                values = values + emitExpression(argument!.value, context, fieldType)
                 if !namedConstruction { positionalIndex = positionalIndex + 1 }
               } else if field.defaultValue != none {
                 values = values + emitOwnerDefaultExpression(field.defaultValue!, context, fieldType, expression.span, class_, expression.resolvedClass!.typeParams)
@@ -216,7 +217,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
               temporary := "_map_has_" + string(context.tryCounter)
               return "[&]() -> bool { auto " + temporary + " = " + emitExpression(member.object, context) + "; return " + temporary + "->find(" + emitExpression(expression.args[0].value, context) + ") != " + temporary + "->end(); }()"
             }
-            if member.property == "set" { return "doof::map_set(" + emitExpression(member.object, context) + ", " + emitExpectedExpression(expression.args[0].value, context, map.keyType) + ", " + emitExpectedExpression(expression.args[1].value, context, map.valueType) + ", \"\", 0)" }
+            if member.property == "set" { return "doof::map_set<" + emitContextType(map.keyType, context) + ", " + emitContextType(map.valueType, context) + ">(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context, map.keyType) + ", " + emitExpression(expression.args[1].value, context, map.valueType) + ", \"\", 0)" }
             if member.property == "get" && expression.args.length > 0 { return "doof::map_get(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
             if member.property == "keys" { return "doof::map_keys(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "values" { return "doof::map_values(" + emitExpression(member.object, context) + ", \"\", 0)" }
@@ -427,7 +428,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if functionType != none && i < functionType!.params.length { expected = optionalExpectedType(functionType!.params[i].type_) }
       if argument != none || parameter.defaultValue != none {
         if result != callPrefix { result = result + ", " }
-        if argument != none { result = result + emitExpectedExpression(argument!.value, context, expected) }
+        if argument != none { result = result + emitExpression(argument!.value, context, expected) }
         else { result = result + emitDefaultExpression(parameter.defaultValue!, context, expected, expression.span) }
       }
     }
@@ -439,7 +440,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       argument := callArgumentNamed(expression, parameter.name)
       if argument != none {
         if result != callPrefix { result = result + ", " }
-        result = result + emitExpectedExpression(argument!.value, context, optionalExpectedType(parameter.type_))
+        result = result + emitExpression(argument!.value, context, optionalExpectedType(parameter.type_))
       }
     }
   } else {
@@ -452,7 +453,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         identifier: Identifier -> { if isBuiltinIdentifier(identifier, "println") || isBuiltinConversionIdentifier(identifier) { expected = none } }
         _ -> { }
       }
-      let argument = emitExpectedExpression(expression.args[i].value, context, expected)
+      let argument = emitExpression(expression.args[i].value, context, expected)
       result = result + argument
     }
     if functionDeclaration != none {
@@ -475,7 +476,7 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
   object := emitExpression(member.object, context)
   let nullable = false
   case member.object.resolvedType! {
-    weak_: WeakResolvedType -> { nullable = weakCallTargetAllowsNone(weak_.inner) }
+    weak_: WeakResolvedType -> { nullable = weakTargetAllowsNone(weak_.inner) }
     _ -> { }
   }
   weakValue := if nullable then storage + ".value()" else storage
@@ -487,7 +488,7 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
   let call = temporary + "->" + cppIdentifier(member.property) + "(" + arguments + ")"
   case member.object.resolvedType! {
     weak_: WeakResolvedType -> {
-      if weakCallTargetUsesVariant(weak_.inner) {
+      if weakTargetUsesVariant(weak_.inner) {
         if originalReturn == none { panic("Weak union method call has no resolved return type") }
         call = "std::visit([&](auto&& _weak_item) -> " + emitContextReturnType(originalReturn!, context) + " { return _weak_item->" + cppIdentifier(member.property) + "(" + arguments + "); }, " + temporary + ")"
       }
@@ -531,26 +532,6 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
   return ""
 }
 
-function weakCallTargetAllowsNone(type_: ResolvedType): bool {
-  case type_ {
-    union_: UnionResolvedType -> { for member of union_.types { if member.kind == "none" { return true } } }
-    _ -> { }
-  }
-  return false
-}
-
-function weakCallTargetUsesVariant(type_: ResolvedType): bool {
-  case type_ {
-    union_: UnionResolvedType -> {
-      let present = 0
-      for member of union_.types { if member.kind != "none" { present = present + 1 } }
-      return present > 1
-    }
-    _ -> { }
-  }
-  return false
-}
-
 function emitWeakCallArguments(expression: CallExpression, context: EmitContext): string {
   let result = ""
   let named = false
@@ -569,7 +550,7 @@ function emitWeakCallArguments(expression: CallExpression, context: EmitContext)
       argument := if named then callArgumentNamed(expression, parameter.name) else if i < expression.args.length then expression.args[i] else none
       if argument != none || parameter.defaultValue != none {
         if result != "" { result = result + ", " }
-        if argument != none { result = result + emitExpectedExpression(argument!.value, context, expected) }
+        if argument != none { result = result + emitExpression(argument!.value, context, expected) }
         else { result = result + emitDefaultExpression(parameter.defaultValue!, context, expected, expression.span) }
       }
     }
@@ -580,7 +561,7 @@ function emitWeakCallArguments(expression: CallExpression, context: EmitContext)
       argument := callArgumentNamed(expression, parameter.name)
       if argument != none {
         if result != "" { result = result + ", " }
-        result = result + emitExpectedExpression(argument!.value, context, parameter.type_)
+        result = result + emitExpression(argument!.value, context, parameter.type_)
       }
     }
     return result
@@ -699,14 +680,7 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
         property := findProperty(expression.args, propertyName)
         payloadType := emitContextReturnType(valueType, context)
         if property == none { return "doof::" + expression.type_ + "<" + payloadType + ">{ }" }
-        let payload: Expression | none = property!.value
-        if payload == none {
-          payload = Identifier {
-            kind: "identifier", name: property!.name, span: property!.span,
-            resolvedType: property!.resolvedType, resolvedBinding: property!.resolvedBinding,
-          }
-        }
-        value := emitExpectedExpression(payload!, context, valueType)
+        value := emitPropertyValue(property!, context, valueType)
         return "doof::" + expression.type_ + "<" + payloadType + ">{ " + value + " }"
       }
       _ -> { }
@@ -766,30 +740,22 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
       let value = ""
       if property != none {
         if property!.value == none {
-          value = cppIdentifier(name)
-          if property!.resolvedBinding != none && property!.resolvedBinding!.mutable && isCapturedMutable(context, name) {
-            value = "(*" + value + ")"
-          }
+          value = emitPropertyValue(property!, context, fieldType)
         }
         else {
           case property!.value! {
             _: ThisExpression -> {
               case fieldType {
                 class_: ClassType -> { value = "std::shared_ptr<" + class_.name + ">(this, [](" + class_.name + "*) {})" }
-                _ -> { value = emitExpectedExpression(property!.value!, context, fieldType) }
+                _ -> { value = emitExpression(property!.value!, context, fieldType) }
               }
             }
-            _ -> { value = emitExpectedExpression(property!.value!, context, fieldType) }
+            _ -> { value = emitExpression(property!.value!, context, fieldType) }
           }
         }
       } else if hasSpreadField(expression, name) { value = emitConstructionSpreadField(expression, spreadName, name, context) }
       else if field.defaultValue != none { value = emitOwnerDefaultExpression(field.defaultValue!, context, fieldType, expression.span, owner!, class_!.typeParams) }
       else { panic("Construction of '" + expression.type_ + "' is missing required field '" + name + "'") }
-      // Shorthand fields have no expression node, so they cannot pass their
-      // expected type through emitExpression's central promotion path.
-      propertyType := if property == none || property!.resolvedType == none then none else specializeEmitType(property!.resolvedType!, context)
-      if property != none && property!.value == none && needsNullableVariantPromotion(propertyType, fieldType) { value = emitNullableVariantPromotion(value, propertyType, fieldType, context.modulePath) }
-      else if property != none && property!.value == none && needsVariantPromotion(propertyType, fieldType) { value = "doof::variant_promote<" + emitContextType(fieldType, context) + ">(" + value + ")" }
       values = values + value
     }
   }
@@ -836,8 +802,7 @@ function emitNamedConstructorFactoryCall(owner: ClassType, constructorMethod: Fu
     parameterType := specializeOwnerMemberType(parameter.resolvedType!, owner, context)
     property := findProperty(expression.args, parameter.name)
     if property != none {
-      if property!.value == none { result = result + cppIdentifier(property!.name) }
-      else { result = result + emitExpression(property!.value!, context, parameterType) }
+      result = result + emitPropertyValue(property!, context, parameterType)
     } else if hasSpreadField(expression, parameter.name) {
       result = result + emitConstructionSpreadField(expression, spreadName, parameter.name, context)
     } else if parameter.defaultValue != none {

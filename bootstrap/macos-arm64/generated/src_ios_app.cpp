@@ -45,12 +45,12 @@ doof::Result<std::string, std::string> iosTargetTriple(const std::string& minimu
 std::shared_ptr<std::vector<std::string>> iosCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& entitlementsPath) {
     auto arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("--force"), std::string("--sign"), identity});
     if (entitlementsPath != std::string("")) {
-        arguments->push_back(std::string("--entitlements"));
-        arguments->push_back(entitlementsPath);
-        arguments->push_back(std::string("--generate-entitlement-der"));
+        (static_cast<void>(arguments->push_back(std::string("--entitlements"))), std::monostate{});
+        (static_cast<void>(arguments->push_back(entitlementsPath)), std::monostate{});
+        (static_cast<void>(arguments->push_back(std::string("--generate-entitlement-der"))), std::monostate{});
     }
-    arguments->push_back(std::string("--timestamp=none"));
-    arguments->push_back(targetPath);
+    (static_cast<void>(arguments->push_back(std::string("--timestamp=none"))), std::monostate{});
+    (static_cast<void>(arguments->push_back(targetPath)), std::monostate{});
     return arguments;
 }
 std::string renderIOSInfoPlist(const std::shared_ptr<IOSAppConfig>& config) {

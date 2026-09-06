@@ -337,6 +337,7 @@ void test_collection_indexing() {
 }
 
 void test_null_carriers() {
+    require(doof::is_null(std::monostate{}), "stored unit was not recognized");
     require(doof::is_null(doof::JsonValue{}), "JSON null was not recognized");
     require(!doof::is_null(doof::JsonValue{int32_t{1}}), "JSON value was treated as null");
 
@@ -344,6 +345,31 @@ void test_null_carriers() {
     require(doof::is_null(optional), "empty optional was not recognized");
     optional = 1;
     require(!doof::is_null(optional), "present optional was treated as null");
+
+    std::weak_ptr<int> weak;
+    require(doof::is_null(weak), "empty weak reference was not recognized");
+    auto owner = std::make_shared<int>(7);
+    weak = owner;
+    require(!doof::is_null(weak), "live weak reference was treated as null");
+    require(doof::unwrap_optional(weak).lock() == owner, "weak unwrap lost its referent");
+    owner.reset();
+    require(weak.expired(), "test weak reference should have expired");
+    require(!doof::is_null(weak), "expired weak reference lost its distinct failure state");
+    auto unwrapped = doof::unwrap_optional(weak);
+    require(!unwrapped.owner_before(weak) && !weak.owner_before(unwrapped), "weak unwrap lost its expired owner");
+    std::variant<std::weak_ptr<int>, std::weak_ptr<double>> weakUnion;
+    require(doof::is_null(weakUnion), "empty weak union was not recognized");
+    weakUnion = weak;
+    require(!doof::is_null(weakUnion), "expired weak union was treated as absent");
+    require(!doof::is_null(doof::unwrap_optional(weakUnion)), "weak union unwrap lost ownership");
+
+    using Nested = std::variant<int, std::string>;
+    using Wider = std::variant<std::monostate, Nested, double>;
+    auto nested = doof::variant_promote<Wider>(Nested{7});
+    require(std::holds_alternative<Nested>(nested), "variant target arm was flattened");
+    require(std::get<int>(std::get<Nested>(nested)) == 7, "nested variant payload was lost");
+    auto flat = doof::variant_promote<std::variant<std::monostate, int, std::string>>(Nested{7});
+    require(std::get<int>(flat) == 7, "ordinary variant widening stopped working");
 }
 
 void test_string_builder() {

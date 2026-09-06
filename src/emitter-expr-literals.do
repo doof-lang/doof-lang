@@ -1,42 +1,17 @@
 // Literal, array, object, tuple, and string expression lowering.
 
+import { emitCarrierAbsence } from "./emitter-carrier-values"
 import { ArrayLiteral, ObjectLiteral, StringLiteral, TupleLiteral } from "./ast"
-import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, TypeSubstitution, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, JsonValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, TypeSubstitution } from "./semantic"
 import { EmitContext } from "./emitter-context"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { emitNullableVariantPromotion, findProperty, needsNullableVariantPromotion } from "./emitter-expr-utils"
-import { emitContextClassInnerType, emitContextReturnType, emitContextType, emitType, naturalNullableUnionMember, specializeEmitType } from "./emitter-types"
+import { emitExpression } from "./emitter-expr"
+import { emitPropertyValue, findProperty } from "./emitter-expr-utils"
+import { emitContextClassInnerType, emitContextReturnType, emitContextType, specializeEmitType } from "./emitter-types"
 import { substituteTypeParams } from "./checker-types"
 
 export function emitNoneLiteral(expected: ResolvedType | none, context: EmitContext): string {
-  if expected == none { return "nullptr" }
-  // Use the same concrete type as the enclosing specialization's signature.
-  specialized := specializeEmitType(expected!, context)
-  case specialized {
-    class_: ClassType -> {
-      return "nullptr"
-    }
-    _: JsonValueResolvedType -> { return "doof::json_value(nullptr)" }
-    _: NoneType -> { return "std::monostate{}" }
-    _: WeakResolvedType -> { return emitContextType(specialized, context) + "{}" }
-    union_: UnionResolvedType -> {
-      // Type emission owns union flattening and natural-carrier selection.
-      member := naturalNullableUnionMember(union_)
-      if member == none { return "std::monostate{}" }
-      case member! {
-        _: PrimitiveType -> { return "std::nullopt" }
-        _: EnumType -> { return "std::nullopt" }
-        class_: ClassType -> {
-          if class_.symbol.kind == "struct" { return "std::nullopt" }
-          return "nullptr"
-        }
-        _: WeakResolvedType -> { return emitContextType(member!, context) + "{}" }
-        _ -> { return "nullptr" }
-      }
-    }
-    _ -> { return "nullptr" }
-  }
-  return "nullptr"
+  if expected == none { panic("None literal has no checked type in " + context.modulePath) }
+  return emitCarrierAbsence(expected!, context)
 }
 
 export function emitChar(value: char): string {
@@ -108,11 +83,11 @@ export function emitObject(expression: ObjectLiteral, context: EmitContext, expe
         value := findProperty(expression.properties, "value")
         error := findProperty(expression.properties, "error")
         if value != none {
-          emitted := if value!.value == none then cppIdentifier(value!.name) else emitExpression(value!.value!, context, result.valueType)
+          emitted := emitPropertyValue(value!, context, result.valueType)
           return "doof::Success<" + emitContextReturnType(result.valueType, context) + ">{ " + emitted + " }"
         }
         if error != none {
-          emitted := if error!.value == none then cppIdentifier(error!.name) else emitExpression(error!.value!, context, result.errorType)
+          emitted := emitPropertyValue(error!, context, result.errorType)
           return "doof::Failure<" + emitContextReturnType(result.errorType, context) + ">{ " + emitted + " }"
         }
       }
@@ -165,9 +140,7 @@ function emitClassObject(expression: ObjectLiteral, context: EmitContext, resolv
       fieldType := substituteTypeParams(field.resolvedType!, class_!.typeParams, concrete!.typeArgs)
       let value = "{}"
       if property != none {
-        value = if property!.value == none then cppIdentifier(name) else emitExpression(property!.value!, context, fieldType)
-        propertyType := if property!.resolvedType == none then none else specializeEmitType(property!.resolvedType!, context)
-        if property!.value == none && needsNullableVariantPromotion(propertyType, fieldType) { value = emitNullableVariantPromotion(value, propertyType, fieldType, context.modulePath) }
+        value = emitPropertyValue(property!, context, fieldType)
       } else if field.defaultValue != none {
         previousSubstitution := context.substitution
         context.substitution = TypeSubstitution { names: class_!.typeParams, arguments: concrete!.typeArgs }
@@ -186,7 +159,7 @@ function emitMapObject(expression: ObjectLiteral, context: EmitContext, map: Map
   for i of 0..<expression.properties.length {
     if i > 0 { values = values + ", " }
     property := expression.properties[i]
-    value := if property.value == none then "{}" else emitExpression(property.value!, context, map.valueType)
+    value := emitPropertyValue(property, context, map.valueType)
     key := if property.key == none then quote(property.name) else emitExpression(property.key!, context, map.keyType)
     values = values + "{" + key + ", " + value + "}"
   }

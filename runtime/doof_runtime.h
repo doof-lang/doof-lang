@@ -1806,6 +1806,8 @@ inline std::string string_repeat(const std::string& s, int32_t count) {
 
 // Representation-dependent helpers used by generated code. Operations whose
 // receiver representation is statically known are lowered directly instead.
+inline bool is_null(std::monostate) { return true; }
+
 inline bool is_null(const JsonValue& value) {
     return json_is_null(value);
 }
@@ -1818,6 +1820,18 @@ bool is_null(const std::shared_ptr<T>& value) {
 template <typename T>
 bool is_null(const std::optional<T>& value) {
     return !value.has_value();
+}
+
+template <typename T>
+bool is_null(const std::weak_ptr<T>& value) {
+    // An expired reference still has an owner and remains a weak-reference arm.
+    const std::weak_ptr<T> empty;
+    return !value.owner_before(empty) && !empty.owner_before(value);
+}
+
+template <typename... T>
+bool is_null(const std::variant<std::weak_ptr<T>...>& value) {
+    return std::visit([](const auto& weak) { return is_null(weak); }, value);
 }
 
 template <typename... T>
@@ -1854,22 +1868,17 @@ Target variant_narrow(const std::variant<Source...>& value) {
 
 template <typename Target, typename... Source>
 Target variant_promote(const std::variant<Source...>& value) {
-    return std::visit([](const auto& item) -> Target { return item; }, value);
+    // A Result or another variant can itself be one checked target arm.
+    if constexpr (is_variant_alternative<std::variant<Source...>, Target>::value) {
+        return Target{value};
+    } else {
+        return std::visit([](const auto& item) -> Target { return item; }, value);
+    }
 }
 
 template <typename Target, typename Source>
 Target variant_promote(const Source& value) {
     return Target{value};
-}
-
-template <typename... T>
-const std::variant<std::monostate, T...>& optional_value(const std::variant<std::monostate, T...>& value) {
-    return value;
-}
-
-template <typename... T>
-std::variant<std::monostate, T...> optional_value(const std::variant<T...>& value) {
-    return std::visit([](const auto& item) -> std::variant<std::monostate, T...> { return item; }, value);
 }
 
 template <typename... T>
@@ -1892,6 +1901,16 @@ std::shared_ptr<T> unwrap_optional(const std::shared_ptr<T>& value) {
 template <typename T>
 T unwrap_optional(const std::optional<T>& value) {
     return value.value();
+}
+
+template <typename T>
+std::weak_ptr<T> unwrap_optional(const std::weak_ptr<T>& value) {
+    return value;
+}
+
+template <typename... T>
+const std::variant<std::weak_ptr<T>...>& unwrap_optional(const std::variant<std::weak_ptr<T>...>& value) {
+    return value;
 }
 
 // ============================================================================

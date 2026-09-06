@@ -121,3 +121,14 @@ export function testRestrictedNestedYieldCarriers(): none {
   Assert.stringContains(source, "return std::nullopt;")
   Assert.stringNotContains(source, "return std::monostate{};")
 }
+
+export function testCombinationNoneGenericBlockReturn(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function identity<T>(value: T): T { return value }\nfunction main(): none { identity(none)\nidentity(7) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "return static_cast<void>(value);")
+  Assert.stringContains(source, "return value;")
+}

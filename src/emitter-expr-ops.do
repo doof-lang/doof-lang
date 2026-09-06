@@ -1,11 +1,13 @@
 // Assignment, identifier, operator, member, and index lowering.
 
+import { emitCarrierConversion } from "./emitter-carrier-values"
+import { carrierOf, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
-import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitNoneLiteral, emitStringConstant, quote } from "./emitter-expr-literals"
-import { decoratedExpressionType, emittedSymbolName, emitNullableVariantPromotion, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, needsNullableVariantPromotion, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
+import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
 import { emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, sameType } from "./checker-types"
@@ -280,10 +282,7 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
         if expression.operator == "try?" {
           expressionType := specializeEmitType(requireExpressionType(expression, "try? expression"), context)
           expressionCpp := emitContextType(expressionType, context)
-          let successValue = "std::move(doof::success_value(_try_value))"
-          if needsNullableVariantPromotion(result.valueType, expressionType) {
-            successValue = emitNullableVariantPromotion(successValue, result.valueType, expressionType, context.modulePath)
-          }
+          successValue := emitCarrierConversion("std::move(doof::success_value(_try_value))", result.valueType, expressionType, context)
           noneValue := emitNoneLiteral(expressionType, context)
           return "[&]() -> " + expressionCpp + " { auto _try_value = " + operand + "; if (doof::is_failure(_try_value)) return " + noneValue + "; return " + successValue + "; }()"
         }
@@ -298,10 +297,7 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
         }
         sourcePath := moduleDiagnosticPath(context.modulePath, true)
         body := "auto _try_value = " + operand + "; if (doof::is_failure(_try_value)) doof::panic_at(" + quote(sourcePath) + ", " + string(expression.span.start.line) + ", " + failureMessage + "); "
-        case result.valueType {
-          _: NoneType -> { return "[&]() -> void { " + body + " }()" }
-          _ -> { }
-        }
+        if carrierOf(result.valueType, .Payload).kind == .Void { return "[&]() -> std::monostate { " + body + " return {}; }()" }
         return "[&]() -> " + valueType + " { " + body + "return std::move(doof::success_value(_try_value)); }()"
       }
       _ -> { panic(expression.operator + " operand is not a Result") }
@@ -315,10 +311,7 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
         result: ResultResolvedType -> {
           valueType := emitType(result.valueType, context.modulePath)
           body := "auto _assert_value = " + operand + "; if (doof::is_failure(_assert_value)) doof::panic(\"! failed\"); "
-          case result.valueType {
-            _: NoneType -> { return "[&]() -> void { " + body + "}()" }
-            _ -> { }
-          }
+          if carrierOf(specializeEmitType(result.valueType, context), .Payload).kind == .Void { return "[&]() -> std::monostate { " + body + "return {}; }()" }
           return "[&]() -> " + valueType + " { " + body + "return std::move(doof::success_value(_assert_value)); }()"
         }
         _ -> { }
@@ -394,6 +387,16 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
       _ -> {
         return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + temporary + " = " + left + "; if (doof::is_null(" + temporary + ")) " + fallback + " return doof::unwrap_optional(" + temporary + "); }()"
       }
+    }
+  }
+  if expression.operator == "==" || expression.operator == "!=" {
+    leftType := specializeEmitType(requireExpressionType(expression.left, "equality operand"), context)
+    rightType := specializeEmitType(requireExpressionType(expression.right, "equality operand"), context)
+    if (carrierOf(leftType).kind == .Unit || carrierOf(rightType).kind == .Unit) && expression.left.kind != "none-literal" && expression.right.kind != "none-literal" {
+      left := emitExpression(expression.left, context)
+      right := emitExpression(expression.right, context)
+      test := if carrierOf(leftType).kind == .Unit then "doof::is_null(_none_right)" else "doof::is_null(_none_left)"
+      return "[&]() { const auto _none_left = " + left + "; const auto _none_right = " + right + "; return " + (if expression.operator == "==" then test else "!" + test) + "; }()"
     }
   }
   if (expression.operator == "==" || expression.operator == "!=") && expression.right.kind == "none-literal" {
@@ -618,26 +621,6 @@ function emitWeakFieldAccess(expression: MemberExpression, object: string, conte
     _ -> { panic("Optional weak field access must resolve to Result") }
   }
   return ""
-}
-
-function weakTargetAllowsNone(type_: ResolvedType): bool {
-  case type_ {
-    union_: UnionResolvedType -> { for member of union_.types { if member.kind == "none" { return true } } }
-    _ -> { }
-  }
-  return false
-}
-
-function weakTargetUsesVariant(type_: ResolvedType): bool {
-  case type_ {
-    union_: UnionResolvedType -> {
-      let present = 0
-      for member of union_.types { if member.kind != "none" { present = present + 1 } }
-      return present > 1
-    }
-    _ -> { }
-  }
-  return false
 }
 
 function weakFailureValue(errorType: ResolvedType, errorCpp: string, context: EmitContext): string {

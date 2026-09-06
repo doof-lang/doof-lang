@@ -20,7 +20,7 @@ doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const s
     }
     const auto jsonPlan = [&]() -> std::shared_ptr<::app_src_emitter_monomorphize_::InstantiationPlan> { auto _coalesce_1 = instantiations; if (doof::is_null(_coalesce_1)) return ::app_src_emitter_monomorphize_::buildInstantiationPlan(result); return doof::unwrap_optional(_coalesce_1); }();
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>> exports = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>>(std::vector<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>{});
-    collectExportedFunctions(doof::unwrap_optional(info), exports);
+    (static_cast<void>(collectExportedFunctions(doof::unwrap_optional(info), exports)), std::monostate{});
     std::shared_ptr<std::vector<std::string>> names = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("doof_initialize")});
     std::shared_ptr<std::vector<std::string>> functionNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_6 = exports;
@@ -30,7 +30,7 @@ doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const s
         }
         auto _try_value_2 = validateWasmFunction(fn, result);
         if (doof::is_failure(_try_value_2)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_2))};
-        addWasmJsonDemands(fn, result, jsonPlan);
+        (static_cast<void>(addWasmJsonDemands(fn, result, jsonPlan)), std::monostate{});
         const auto name = (std::string("doof_export_") + ::app_src_emitter_expr_::cppIdentifier(fn->name));
         const auto& _iterable_4 = functionNames;
         for (const auto& existing : *_iterable_4) {
@@ -38,7 +38,7 @@ doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const s
                 return doof::Failure<std::string>{ (((std::string("WebAssembly export name collision for ") + fn->name) + std::string(" at ")) + name) };
             }
         }
-        functionNames->push_back(name);
+        (static_cast<void>(functionNames->push_back(name)), std::monostate{});
     }
     const auto programs = allPrograms(result);
     const auto context = ::app_src_emitter_context_::createEmitContextForModule(info->program, entry, programs);
@@ -56,7 +56,7 @@ doof::Result<std::shared_ptr<WasmEmission>, std::string> emitWasmSupport(const s
     }
     const auto& _iterable_10 = functionNames;
     for (const auto& name : *_iterable_10) {
-        names->push_back(name);
+        (static_cast<void>(names->push_back(name)), std::monostate{});
     }
     return doof::Success<std::shared_ptr<WasmEmission>>{ std::make_shared<WasmEmission>(source, names) };
 }
@@ -64,7 +64,7 @@ void addWasmJsonDemands(const std::shared_ptr<::app_src_ast_::FunctionDeclaratio
     const auto& _iterable_12 = fn->params;
     for (const auto& parameter : *_iterable_12) {
         if (!doof::is_null(parameter->resolvedType)) {
-            ::app_src_emitter_monomorphize_::addJsonDeserializationDemand(plan, doof::unwrap_optional(parameter->resolvedType), analysis);
+            (static_cast<void>(::app_src_emitter_monomorphize_::addJsonDeserializationDemand(plan, doof::unwrap_optional(parameter->resolvedType), analysis)), std::monostate{});
         }
     }
     if (doof::is_null(fn->resolvedType)) {
@@ -78,11 +78,11 @@ void addWasmJsonDemands(const std::shared_ptr<::app_src_ast_::FunctionDeclaratio
                 auto _case_subject = function_->returnType;
                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject)) {
                     const auto& result = std::get<std::shared_ptr<::app_src_semantic_::ResultResolvedType>>(_case_subject);
-                    ::app_src_emitter_monomorphize_::addJsonSerializationDemand(plan, result->valueType, analysis);
-                    ::app_src_emitter_monomorphize_::addJsonSerializationDemand(plan, result->errorType, analysis);
+                    (static_cast<void>(::app_src_emitter_monomorphize_::addJsonSerializationDemand(plan, result->valueType, analysis)), std::monostate{});
+                    (static_cast<void>(::app_src_emitter_monomorphize_::addJsonSerializationDemand(plan, result->errorType, analysis)), std::monostate{});
             }
             else {
-                    ::app_src_emitter_monomorphize_::addJsonSerializationDemand(plan, function_->returnType, analysis);
+                    (static_cast<void>(::app_src_emitter_monomorphize_::addJsonSerializationDemand(plan, function_->returnType, analysis)), std::monostate{});
             }
             }
     }
@@ -98,7 +98,7 @@ void collectExportedFunctions(const std::shared_ptr<::app_src_analyzer_::ModuleI
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
                 const auto& fn = std::get<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject);
                 if (fn->exported || moduleExportsFunction(info, fn->name)) {
-                    result->push_back(fn);
+                    (static_cast<void>(result->push_back(fn)), std::monostate{});
                 }
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExportDeclaration>>(_case_subject)) {
@@ -107,7 +107,7 @@ void collectExportedFunctions(const std::shared_ptr<::app_src_analyzer_::ModuleI
                     auto _case_subject = export_->declaration;
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
                         const auto& fn = std::get<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject);
-                        result->push_back(fn);
+                        (static_cast<void>(result->push_back(fn)), std::monostate{});
                 }
                 else {
                 }
@@ -298,7 +298,7 @@ std::string emitParameter(const std::shared_ptr<::app_src_ast_::Parameter>& para
     const auto iterator = (std::string("__it_") + name);
     auto source = ((((std::string("        auto ") + iterator) + std::string(" = __params->find(\"")) + parameter->name) + std::string("\");\n"));
     if (!doof::is_null(parameter->defaultValue)) {
-        (source = (((((((((((source + std::string("        ")) + ::app_src_emitter_types_::emitContextType(type_, context)) + std::string(" ")) + name) + std::string(";\n        if (")) + iterator) + std::string(" == __params->end()) { ")) + name) + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(parameter->defaultValue), context, doof::optional_value(type_))) + std::string("; } else {\n")));
+        (source = (((((((((((source + std::string("        ")) + ::app_src_emitter_types_::emitContextType(type_, context)) + std::string(" ")) + name) + std::string(";\n        if (")) + iterator) + std::string(" == __params->end()) { ")) + name) + std::string(" = ")) + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(parameter->defaultValue), context, doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(type_))) + std::string("; } else {\n")));
         (source = (((((((source + std::string("            if (!(")) + ::app_src_emitter_json_::emitJsonTypeCheck((iterator + std::string("->second")), type_, context)) + std::string(")) return __doof_wasm_failure_message(400, \"Parameter ")) + parameter->name) + std::string(" expected ")) + ::app_src_emitter_json_::jsonTypeName(type_, context)) + std::string("\");\n")));
         return (((((source + std::string("            ")) + name) + std::string(" = ")) + ::app_src_emitter_json_::emitJsonRead((iterator + std::string("->second")), type_, context)) + std::string(";\n        }\n"));
     }
@@ -319,7 +319,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> allProgra
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>> programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{});
     const auto& _iterable_31 = result->modules;
     for (const auto& module : *_iterable_31) {
-        programs->push_back(module->program);
+        (static_cast<void>(programs->push_back(module->program)), std::monostate{});
     }
     return programs;
 }

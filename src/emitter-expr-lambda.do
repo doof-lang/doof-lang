@@ -5,6 +5,7 @@
 // boxed in shared_ptr. Lambda capture lists then copy both ordinary immutable
 // values and those boxes into the actor-affine doof::callback wrapper.
 
+import { emitExpressionReturn } from "./emitter-expr-utils"
 import {
   ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, Block, CallExpression,
   CaseExpression, CaseStatement, ConstDeclaration, ConstructExpression, Expression,
@@ -17,7 +18,7 @@ import {
 import { Binding, ClassType, FunctionType, ResolvedType, ResultResolvedType, NoneType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { collectNestedExpressions } from "./ast-walk"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { cppIdentifier } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
 import { emitContextReturnType, emitContextType, specializeEmitType } from "./emitter-types"
 
@@ -80,7 +81,7 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
   let lambda = "[" + captures + "](" + params + ")" + (if mutableClosure then " mutable" else "") + " -> " + returnType + " {"
   case expression.body {
     block: Block -> { lambda = lambda + "\n" + emitBlock(block, 1, context) + "}" }
-    body: Expression -> { lambda = lambda + " return " + emitExpression(body, context, functionType.returnType) + "; }" }
+    body: Expression -> { lambda = lambda + " " + emitExpressionReturn(body, context, functionType.returnType) + " }" }
   }
 
   context.currentReturnErrorType = previousReturnErrorType

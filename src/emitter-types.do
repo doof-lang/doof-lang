@@ -4,6 +4,7 @@
 // inspect declarations or expressions; those concerns belong to the other
 // emitter modules.
 
+import { carrierOf, flattenCarrierMembers, naturalCarrierMember } from "./emitter-carriers"
 import {
   ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol,
   NeverType, NoneType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
@@ -39,20 +40,13 @@ export function emitContextClassInnerType(class_: ClassType, context: EmitContex
 }
 
 export function emitReturnType(resolvedType: ResolvedType, currentModulePath: string = ""): string {
-  case resolvedType {
-    _: NoneType -> { return "void" }
-    _: NeverType -> { return "doof::Never" }
-    _ -> { return emitType(resolvedType, currentModulePath) }
-  }
-  return "void"
+  if carrierOf(resolvedType, .Return).kind == .Void { return "void" }
+  return emitType(resolvedType, currentModulePath)
 }
 
 export function emitResultPayloadType(resolvedType: ResolvedType, currentModulePath: string = ""): string {
-  case resolvedType {
-    _: NoneType -> { return "void" }
-    _ -> { return emitType(resolvedType, currentModulePath) }
-  }
-  return "void"
+  if carrierOf(resolvedType, .Payload).kind == .Void { return "void" }
+  return emitType(resolvedType, currentModulePath)
 }
 
 // Replace reached Doof generic nominals throughout a compound type before
@@ -188,8 +182,8 @@ function emitWeakType(inner: ResolvedType, currentModulePath: string): string {
     set_: SetResolvedType -> { return "std::weak_ptr<doof::ordered_set<" + emitType(set_.elementType, currentModulePath) + ">>" }
     union_: UnionResolvedType -> {
       let nonNone: ResolvedType[] = []
-      let nullable = false
-      for member of union_.types { if member.kind == "none" { nullable = true } else { nonNone.push(member) } }
+      nullable := carrierOf(union_).hasNone
+      for member of flattenCarrierMembers(union_.types) { if member.kind != "none" { nonNone.push(member) } }
       if nonNone.length == 1 {
         inner := emitWeakType(nonNone[0], currentModulePath)
         return if nullable then "std::optional<" + inner + ">" else inner
@@ -340,7 +334,7 @@ function emitUnionType(union_: UnionResolvedType, currentModulePath: string = ""
   if union_.types.length == 0 {
     panic("Cannot emit empty resolved union in " + currentModulePath)
   }
-  flattened := flattenUnionMembers(union_.types)
+  flattened := flattenCarrierMembers(union_.types)
   let nonNone: ResolvedType[] = []
   let hasNone = false
   for member of flattened {
@@ -348,22 +342,10 @@ function emitUnionType(union_: UnionResolvedType, currentModulePath: string = ""
     else { nonNone.push(member) }
   }
 
-  // A nullable class already has a natural nullptr representation.  Primitive
-  // nullable values use optional; larger unions retain an explicit variant.
-  if hasNone && nonNone.length == 1 && usesNaturalNullableMember(nonNone[0]) {
-    case nonNone[0] {
-      class_: ClassType -> {
-        if class_.symbol.kind == "struct" { return "std::optional<" + emitType(nonNone[0], currentModulePath) + ">" }
-        return emitType(nonNone[0], currentModulePath)
-      }
-      _: ArrayResolvedType -> { return emitType(nonNone[0], currentModulePath) }
-      _: MapResolvedType -> { return emitType(nonNone[0], currentModulePath) }
-      _: SetResolvedType -> { return emitType(nonNone[0], currentModulePath) }
-      _: WeakResolvedType -> { return emitType(nonNone[0], currentModulePath) }
-      _: PrimitiveType -> { return "std::optional<" + emitType(nonNone[0], currentModulePath) + ">" }
-      _: EnumType -> { return "std::optional<" + emitType(nonNone[0], currentModulePath) + ">" }
-      _ -> { }
-    }
+  carrier := carrierOf(union_)
+  if carrier.naturalNullable {
+    memberType := emitType(carrier.member!, currentModulePath)
+    return if carrier.wrapsOptional then "std::optional<" + memberType + ">" else memberType
   }
 
   let result = "std::variant<"
@@ -381,14 +363,10 @@ function emitUnionType(union_: UnionResolvedType, currentModulePath: string = ""
   return result + ">"
 }
 
-/** Whether a checked type is represented by std::variant in generated C++. */
+/** Whether a checked union/interface dispatches through native variant arms. */
 export function usesVariantRepresentation(type_: ResolvedType): bool {
-  case type_ {
-    _: InterfaceType -> { return true }
-    union_: UnionResolvedType -> { return !usesNaturalNullableUnion(union_) }
-    _ -> { return false }
-  }
-  return false
+  carrier := carrierOf(type_)
+  return carrier.kind == .Variant && carrier.unionLike && !carrier.naturalNullable
 }
 
 /** Whether a union uses a natural nullable/optional carrier instead of variant. */
@@ -396,55 +374,9 @@ export function usesNullableSingleValueRepresentation(type_: ResolvedType): bool
   return naturalNullableUnionMember(type_) != none
 }
 
-function usesNaturalNullableUnion(union_: UnionResolvedType): bool {
-  return naturalNullableUnionMember(union_) != none
-}
-
-/** Returns the sole non-null member when a union uses a natural nullable carrier. */
+/** Compatibility query backed by the representation model. */
 export function naturalNullableUnionMember(type_: ResolvedType): ResolvedType | none {
-  case type_ {
-    union_: UnionResolvedType -> {
-      flattened := flattenUnionMembers(union_.types)
-      let nonNone: ResolvedType[] = []
-      let hasNone = false
-      for member of flattened {
-        if member.kind == "none" { hasNone = true }
-        else { nonNone.push(member) }
-      }
-      if hasNone && nonNone.length == 1 && usesNaturalNullableMember(nonNone[0]) { return nonNone[0] }
-    }
-    _ -> { return none }
-  }
-  return none
-}
-
-function usesNaturalNullableMember(member: ResolvedType): bool {
-  case member {
-    _: ClassType -> { return true }
-    _: ArrayResolvedType -> { return true }
-    _: MapResolvedType -> { return true }
-    _: SetResolvedType -> { return true }
-    _: WeakResolvedType -> { return true }
-    _: PrimitiveType -> { return true }
-    _: EnumType -> { return true }
-    _ -> { return false }
-  }
-  return false
-}
-
-// Keep lowering defensive against nested compound types even though the
-// checker normally flattens unions as it constructs them.
-function flattenUnionMembers(types: ResolvedType[]): ResolvedType[] {
-  let result: ResolvedType[] = []
-  for member of types {
-    case member {
-      nested: UnionResolvedType -> {
-        for nestedMember of flattenUnionMembers(nested.types) { result.push(nestedMember) }
-      }
-      _ -> { result.push(member) }
-    }
-  }
-  return result
+  return naturalCarrierMember(type_)
 }
 
 function ownedName(name: string, ownerModule: string, currentModulePath: string): string {
