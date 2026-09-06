@@ -18,7 +18,7 @@ import { ArrayResolvedType, ClassType, InterfaceType, PrimitiveType, RangeResolv
 import { EmitContext, isCapturedMutable, recordCoverageLine, sourceLineDirective } from "./emitter-context"
 import { emitExpressionReturn } from "./emitter-expr-utils"
 import { emitCaseTypePattern } from "./emitter-case-pattern"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { cppIdentifier, emitExpression, emitDiscardedExpression } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
 import { emitContextType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 
@@ -55,11 +55,11 @@ export function emitStatement(statement: Statement, level: int = 1, context: Emi
     yield_: YieldStatement -> {
       if !context.inValueYieldBlock { panic("yield statement is outside a value-producing block") }
       if context.valueYieldReturnsVoid {
-        return sourceMark + coverageMark + ind + emitExpression(yield_.value, context) + ";\n" + ind + "return;\n"
+        return sourceMark + coverageMark + ind + emitDiscardedExpression(yield_.value, context) + ";\n" + ind + "return;\n"
       }
       return sourceMark + coverageMark + ind + "return " + emitExpression(yield_.value, context, context.valueYieldType) + ";\n"
     }
-    expression: ExpressionStatement -> { return sourceMark + coverageMark + ind + emitExpression(expression.expression, context) + ";\n" }
+    expression: ExpressionStatement -> { return sourceMark + coverageMark + ind + emitDiscardedExpression(expression.expression, context) + ";\n" }
     if_: IfStatement -> { return sourceMark + coverageMark + emitIf(if_, level, context) }
     case_: CaseStatement -> { return sourceMark + coverageMark + emitCase(case_, level, context) }
     while_: WhileStatement -> { return sourceMark + coverageMark + emitWhile(while_, level, context) }
@@ -574,7 +574,7 @@ function emitFor(statement: ForStatement, level: int, context: EmitContext): str
   let update = ""
   for i of 0..<statement.update.length {
     if i > 0 { update = update + ", " }
-    update = update + emitExpression(statement.update[i], context)
+    update = update + emitDiscardedExpression(statement.update[i], context)
   }
   return ind + "for (" + init + "; " + condition + "; " + update + ") {\n" +
     body + ind + "}\n" + labeledBreakTarget(loopId, level)
@@ -624,7 +624,7 @@ function indent(level: int): string {
   return "    ".repeat(level)
 }
 
-function emitCondition(expression: Expression, context: EmitContext): string {
+export function emitCondition(expression: Expression, context: EmitContext): string {
   value := emitExpression(expression, context)
   if value.startsWith("(") && value.endsWith(")") {
     return value.substring(1, value.length - 1)

@@ -5,7 +5,7 @@ import { emitActorConstruction } from "./emitter-construction"
 import { ActorCreationExpression, AsyncExpression, Block, CallExpression, Expression, MemberExpression, RetireExpression } from "./ast"
 import { ActorType, FunctionType, PromiseType, ResolvedType } from "./semantic"
 import { EmitContext, SourceLocationSpanOverride } from "./emitter-context"
-import { cppIdentifier, emitExpression } from "./emitter-expr"
+import { cppIdentifier, emitExpression, emitDiscardedExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
 import { emitClassInnerType, emitContextReturnType } from "./emitter-types"
 
@@ -49,10 +49,10 @@ function emitIsolatedFunctionCall(expression: AsyncExpression, call: CallExpress
   }
   if valueType == none { return "" }
   cppReturn := emitContextReturnType(valueType!, context)
-  invocation := emitExpression(call, context)
   if cppReturn == "void" {
-    return "doof::submit_async<void>([=]() { " + invocation + "; })"
+    return "doof::submit_async<void>([=]() { " + emitDiscardedExpression(call, context) + "; })"
   }
+  invocation := emitExpression(call, context)
   return "doof::submit_async<" + cppReturn + ">([=]() -> " + cppReturn + " { return " + invocation + "; })"
 }
 

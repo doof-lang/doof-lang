@@ -73,7 +73,7 @@ bool hasSinglePrimitiveMember(const std::shared_ptr<::app_src_semantic_::UnionRe
         if (std::visit([](auto&& _obj) { return _obj->kind; }, member) != std::string("primitive")) {
             return false;
         }
-        (count = (count + 1));
+        static_cast<void>((count = (count + 1)));
     }
     return (count == 1);
 }

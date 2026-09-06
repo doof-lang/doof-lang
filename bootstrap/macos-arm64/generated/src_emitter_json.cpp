@@ -26,20 +26,20 @@ std::string emitInterfaceJsonDefinition(const std::shared_ptr<::app_src_ast_::In
     const auto failureType = std::string("doof::Failure<std::string>");
     const auto successType = ((std::string("doof::Success<") + owner->name) + std::string(">"));
     auto result = ((((std::string("\ndoof::Result<") + owner->name) + std::string(", std::string> ")) + owner->name) + std::string("_fromJsonValue(const doof::JsonValue& _json, bool _lenient) {\n"));
-    (result = (result + std::string("    const auto* _object = doof::json_as_object(_json);\n")));
-    (result = (((result + std::string("    if (_object == nullptr) { return ")) + failureType) + std::string("{\"Expected JSON object\"}; }\n")));
-    (result = (((result + std::string("    auto _discriminator_iterator = _object->find(\"")) + discriminator->fieldName) + std::string("\");\n")));
-    (result = (((((result + std::string("    if (_discriminator_iterator == _object->end() || !doof::json_is_string(_discriminator_iterator->second)) { return ")) + failureType) + std::string("{\"Missing or invalid discriminator field \\\"")) + discriminator->fieldName) + std::string("\\\"\"}; }\n")));
-    (result = (result + std::string("    auto _discriminator = doof::json_as_string(_discriminator_iterator->second);\n")));
+    static_cast<void>((result = (result + std::string("    const auto* _object = doof::json_as_object(_json);\n"))));
+    static_cast<void>((result = (((result + std::string("    if (_object == nullptr) { return ")) + failureType) + std::string("{\"Expected JSON object\"}; }\n"))));
+    static_cast<void>((result = (((result + std::string("    auto _discriminator_iterator = _object->find(\"")) + discriminator->fieldName) + std::string("\");\n"))));
+    static_cast<void>((result = (((((result + std::string("    if (_discriminator_iterator == _object->end() || !doof::json_is_string(_discriminator_iterator->second)) { return ")) + failureType) + std::string("{\"Missing or invalid discriminator field \\\"")) + discriminator->fieldName) + std::string("\\\"\"}; }\n"))));
+    static_cast<void>((result = (result + std::string("    auto _discriminator = doof::json_as_string(_discriminator_iterator->second);\n"))));
     for (int32_t i = 0; i < static_cast<int32_t>((discriminator->entries)->size()); ++i) {
         const auto entry = doof::array_at(discriminator->entries, i, "src/emitter-json", 33);
         const auto classType_ = std::make_shared<::app_src_semantic_::ClassType>(std::string("class"), entry->declaration->name, doof::unwrap_optional(entry->declaration->resolvedSymbol), std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>>(std::vector<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>{}));
         const auto className = ::app_src_emitter_types_::emitClassInnerType(classType_, context->modulePath);
-        (result = (((((result + std::string("    ")) + ((i == 0) ? std::string("if") : std::string("else if"))) + std::string(" (_discriminator == \"")) + entry->value) + std::string("\") {\n")));
-        (result = (((result + std::string("        auto _result = ")) + className) + std::string("::fromJsonValue(_json, _lenient);\n")));
-        (result = (((((result + std::string("        if (doof::is_success(_result)) { return ")) + successType) + std::string("{")) + owner->name) + std::string("{doof::success_value(_result)}}; }\n")));
-        (result = (((result + std::string("        return ")) + failureType) + std::string("{doof::failure_error(_result)};\n")));
-        (result = (result + std::string("    }\n")));
+        static_cast<void>((result = (((((result + std::string("    ")) + ((i == 0) ? std::string("if") : std::string("else if"))) + std::string(" (_discriminator == \"")) + entry->value) + std::string("\") {\n"))));
+        static_cast<void>((result = (((result + std::string("        auto _result = ")) + className) + std::string("::fromJsonValue(_json, _lenient);\n"))));
+        static_cast<void>((result = (((((result + std::string("        if (doof::is_success(_result)) { return ")) + successType) + std::string("{")) + owner->name) + std::string("{doof::success_value(_result)}}; }\n"))));
+        static_cast<void>((result = (((result + std::string("        return ")) + failureType) + std::string("{doof::failure_error(_result)};\n"))));
+        static_cast<void>((result = (result + std::string("    }\n"))));
     }
     return (((((result + std::string("    return ")) + failureType) + std::string("{\"Unknown ")) + discriminator->fieldName) + std::string(": \\\"\" + _discriminator + \"\\\"\"};\n}\n"));
 }
@@ -47,11 +47,11 @@ std::string emitGeneratedJsonDeclarations(const std::shared_ptr<::app_src_ast_::
     const auto key = ::app_src_json_semantics_::jsonOwnerKey(owner);
     auto result = std::string("");
     if (containsJsonDemand(context->jsonSerializationKeys, key)) {
-        (result = (result + std::string("    doof::JsonObject toJsonObject() const;\n")));
+        static_cast<void>((result = (result + std::string("    doof::JsonObject toJsonObject() const;\n"))));
     }
     if (containsJsonDemand(context->jsonDeserializationKeys, key)) {
         const auto valueType = jsonResultValueType(owner);
-        (result = (((result + std::string("    static doof::Result<")) + valueType) + std::string(", std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);\n")));
+        static_cast<void>((result = (((result + std::string("    static doof::Result<")) + valueType) + std::string(", std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);\n"))));
     }
     return result;
 }
@@ -59,10 +59,10 @@ std::string emitGeneratedJsonMethods(const std::shared_ptr<::app_src_ast_::Class
     const auto key = ::app_src_json_semantics_::jsonOwnerKey(owner);
     auto result = std::string("");
     if (containsJsonDemand(context->jsonSerializationKeys, key)) {
-        (result = (result + emitToJsonObject(owner, context)));
+        static_cast<void>((result = (result + emitToJsonObject(owner, context))));
     }
     if (containsJsonDemand(context->jsonDeserializationKeys, key)) {
-        (result = (result + emitFromJsonValue(owner, context)));
+        static_cast<void>((result = (result + emitFromJsonValue(owner, context))));
     }
     return result;
 }
@@ -77,7 +77,7 @@ bool containsJsonDemand(const std::shared_ptr<std::vector<std::string>>& keys, c
 }
 std::string emitToJsonObject(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     auto result = ((std::string("doof::JsonObject ") + owner->name) + std::string("::toJsonObject() const {\n"));
-    (result = (result + std::string("    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();\n")));
+    static_cast<void>((result = (result + std::string("    auto _json = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();\n"))));
     const auto& _iterable_7 = owner->fields;
     for (const auto& field : *_iterable_7) {
         if (field->static_) {
@@ -85,7 +85,7 @@ std::string emitToJsonObject(const std::shared_ptr<::app_src_ast_::ClassDeclarat
         }
         const auto& _iterable_5 = field->names;
         for (const auto& name : *_iterable_5) {
-            (result = (((((result + std::string("    (*_json)[\"")) + name) + std::string("\"] = ")) + emitJsonField((std::string("this->") + ::app_src_emitter_expr_::cppIdentifier(name)), doof::unwrap_optional(field->resolvedType), context)) + std::string(";\n")));
+            static_cast<void>((result = (((((result + std::string("    (*_json)[\"")) + name) + std::string("\"] = ")) + emitJsonField((std::string("this->") + ::app_src_emitter_expr_::cppIdentifier(name)), doof::unwrap_optional(field->resolvedType), context)) + std::string(";\n"))));
         }
     }
     return (result + std::string("    return _json;\n}\n"));
@@ -94,9 +94,9 @@ std::string emitFromJsonValue(const std::shared_ptr<::app_src_ast_::ClassDeclara
     const auto valueType = jsonResultValueType(owner);
     const auto failureType = std::string("doof::Failure<std::string>");
     auto result = ((((std::string("doof::Result<") + valueType) + std::string(", std::string> ")) + owner->name) + std::string("::fromJsonValue(const doof::JsonValue& _json, bool _lenient) {\n"));
-    (result = (result + std::string("    try {\n")));
-    (result = (result + std::string("        const auto* _object = doof::json_as_object(_json);\n")));
-    (result = (((result + std::string("        if (_object == nullptr) { return ")) + failureType) + std::string("{\"Expected JSON object\"}; }\n")));
+    static_cast<void>((result = (result + std::string("    try {\n"))));
+    static_cast<void>((result = (result + std::string("        const auto* _object = doof::json_as_object(_json);\n"))));
+    static_cast<void>((result = (((result + std::string("        if (_object == nullptr) { return ")) + failureType) + std::string("{\"Expected JSON object\"}; }\n"))));
     const auto& _iterable_11 = owner->fields;
     for (const auto& field : *_iterable_11) {
         if (field->static_) {
@@ -105,9 +105,9 @@ std::string emitFromJsonValue(const std::shared_ptr<::app_src_ast_::ClassDeclara
         const auto& _iterable_9 = field->names;
         for (const auto& name : *_iterable_9) {
             if (field->const_) {
-                (result = (result + emitJsonConstFieldValidation(field, name, failureType)));
+                static_cast<void>((result = (result + emitJsonConstFieldValidation(field, name, failureType))));
             } else {
-                (result = (result + emitJsonFieldRead(field, name, context, failureType)));
+                static_cast<void>((result = (result + emitJsonFieldRead(field, name, context, failureType))));
             }
         }
     }
@@ -120,17 +120,17 @@ std::string emitFromJsonValue(const std::shared_ptr<::app_src_ast_::ClassDeclara
         const auto& _iterable_13 = field->names;
         for (const auto& name : *_iterable_13) {
             if (arguments != std::string("")) {
-                (arguments = (arguments + std::string(", ")));
+                static_cast<void>((arguments = (arguments + std::string(", "))));
             }
-            (arguments = ((arguments + std::string("_field_")) + ::app_src_emitter_expr_::cppIdentifier(name)));
+            static_cast<void>((arguments = ((arguments + std::string("_field_")) + ::app_src_emitter_expr_::cppIdentifier(name))));
             if (!doof::is_null(field->defaultValue)) {
-                (arguments = (arguments + std::string(".value()")));
+                static_cast<void>((arguments = (arguments + std::string(".value()"))));
             }
         }
     }
     auto constructed = (((owner->name + std::string("{")) + arguments) + std::string("}"));
     if (!owner->struct_) {
-        (constructed = ((((std::string("std::make_shared<") + owner->name) + std::string(">(")) + arguments) + std::string(")")));
+        static_cast<void>((constructed = ((((std::string("std::make_shared<") + owner->name) + std::string(">(")) + arguments) + std::string(")"))));
     }
     return ((((((((((result + std::string("        return doof::Success<")) + valueType) + std::string(">{")) + constructed) + std::string("};\n")) + std::string("    } catch (const doof::JsonDecodeError& _error) {\n")) + std::string("        return ")) + failureType) + std::string("{_error.message()};\n")) + std::string("    }\n}\n"));
 }
@@ -144,13 +144,13 @@ std::string emitJsonConstFieldValidation(const std::shared_ptr<::app_src_ast_::C
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject)) {
             const auto& value = std::get<std::shared_ptr<::app_src_ast_::StringLiteral>>(_case_subject);
             auto result = ((((((std::string("    if (auto ") + iterator) + std::string(" = _object->find(\"")) + name) + std::string("\"); ")) + iterator) + std::string(" != _object->end()) {\n"));
-            (result = (((((((((((((result + std::string("        if (!doof::json_is_string(")) + iterator) + std::string("->second) || doof::json_as_string(")) + iterator) + std::string("->second) != \"")) + value->value) + std::string("\") { return ")) + failureType) + std::string("{\"Field \\\"")) + name) + std::string("\\\" must be \\\"")) + value->value) + std::string("\\\"\"}; }\n")));
+            static_cast<void>((result = (((((((((((((result + std::string("        if (!doof::json_is_string(")) + iterator) + std::string("->second) || doof::json_as_string(")) + iterator) + std::string("->second) != \"")) + value->value) + std::string("\") { return ")) + failureType) + std::string("{\"Field \\\"")) + name) + std::string("\\\" must be \\\"")) + value->value) + std::string("\\\"\"}; }\n"))));
             return (result + std::string("    }\n"));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::IntLiteral>>(_case_subject)) {
             const auto& value = std::get<std::shared_ptr<::app_src_ast_::IntLiteral>>(_case_subject);
             auto result = ((((((std::string("    if (auto ") + iterator) + std::string(" = _object->find(\"")) + name) + std::string("\"); ")) + iterator) + std::string(" != _object->end()) {\n"));
-            (result = (((((((((((((result + std::string("        if (!doof::json_is_number(")) + iterator) + std::string("->second) || doof::json_as_int(")) + iterator) + std::string("->second) != ")) + doof::to_string(value->value)) + std::string(") { return ")) + failureType) + std::string("{\"Field \\\"")) + name) + std::string("\\\" must be ")) + doof::to_string(value->value)) + std::string("\"}; }\n")));
+            static_cast<void>((result = (((((((((((((result + std::string("        if (!doof::json_is_number(")) + iterator) + std::string("->second) || doof::json_as_int(")) + iterator) + std::string("->second) != ")) + doof::to_string(value->value)) + std::string(") { return ")) + failureType) + std::string("{\"Field \\\"")) + name) + std::string("\\\" must be ")) + doof::to_string(value->value)) + std::string("\"}; }\n"))));
             return (result + std::string("    }\n"));
     }
     else {
@@ -168,27 +168,27 @@ std::string emitJsonFieldRead(const std::shared_ptr<::app_src_ast_::ClassField>&
     const auto typeText = ::app_src_emitter_types_::emitContextType(type_, context);
     auto result = std::string("");
     if (!doof::is_null(field->defaultValue)) {
-        (result = (((((result + std::string("    std::optional<")) + typeText) + std::string("> ")) + value) + std::string(";\n")));
-        (result = (((((((result + std::string("    if (auto ")) + iterator) + std::string(" = _object->find(\"")) + name) + std::string("\"); ")) + iterator) + std::string(" != _object->end()) {\n")));
-        (result = (result + emitJsonValidation((iterator + std::string("->second")), type_, name, context, failureType, 2)));
+        static_cast<void>((result = (((((result + std::string("    std::optional<")) + typeText) + std::string("> ")) + value) + std::string(";\n"))));
+        static_cast<void>((result = (((((((result + std::string("    if (auto ")) + iterator) + std::string(" = _object->find(\"")) + name) + std::string("\"); ")) + iterator) + std::string(" != _object->end()) {\n"))));
+        static_cast<void>((result = (result + emitJsonValidation((iterator + std::string("->second")), type_, name, context, failureType, 2))));
         const auto read = emitJsonRead((iterator + std::string("->second")), type_, context);
-        (result = (((((((result + std::string("        ")) + value) + std::string(" = doof::json_decode_at(\"Field \\\"")) + name) + std::string("\\\"\", [&]() { return ")) + read) + std::string("; });\n")));
-        (result = (result + std::string("    } else {\n")));
+        static_cast<void>((result = (((((((result + std::string("        ")) + value) + std::string(" = doof::json_decode_at(\"Field \\\"")) + name) + std::string("\\\"\", [&]() { return ")) + read) + std::string("; });\n"))));
+        static_cast<void>((result = (result + std::string("    } else {\n"))));
         auto defaultValue = ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(field->defaultValue), context, doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(type_));
         {
             auto _case_subject = doof::unwrap_optional(field->defaultValue);
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NoneLiteral>>(_case_subject)) {
-                (defaultValue = (((typeText + std::string("{")) + defaultValue) + std::string("}")));
+                static_cast<void>((defaultValue = (((typeText + std::string("{")) + defaultValue) + std::string("}"))));
         }
         else {
         }
         }
-        (result = (((((result + std::string("        ")) + value) + std::string(" = ")) + defaultValue) + std::string(";\n")));
+        static_cast<void>((result = (((((result + std::string("        ")) + value) + std::string(" = ")) + defaultValue) + std::string(";\n"))));
         return (result + std::string("    }\n"));
     }
-    (result = (((((result + std::string("    auto ")) + iterator) + std::string(" = _object->find(\"")) + name) + std::string("\");\n")));
-    (result = (((((((result + std::string("    if (")) + iterator) + std::string(" == _object->end()) { return ")) + failureType) + std::string("{\"Missing required field \\\"")) + name) + std::string("\\\"\"}; }\n")));
-    (result = (result + emitJsonValidation((iterator + std::string("->second")), type_, name, context, failureType, 1)));
+    static_cast<void>((result = (((((result + std::string("    auto ")) + iterator) + std::string(" = _object->find(\"")) + name) + std::string("\");\n"))));
+    static_cast<void>((result = (((((((result + std::string("    if (")) + iterator) + std::string(" == _object->end()) { return ")) + failureType) + std::string("{\"Missing required field \\\"")) + name) + std::string("\\\"\"}; }\n"))));
+    static_cast<void>((result = (result + emitJsonValidation((iterator + std::string("->second")), type_, name, context, failureType, 1))));
     const auto read = emitJsonRead((iterator + std::string("->second")), type_, context);
     return (((((((result + std::string("    auto ")) + value) + std::string(" = doof::json_decode_at(\"Field \\\"")) + name) + std::string("\\\"\", [&]() { return ")) + read) + std::string("; });\n"));
 }
@@ -288,9 +288,9 @@ std::string emitJsonRead(const std::string& json, const std::variant<std::shared
             auto elements = std::string("");
             for (int32_t i = 0; i < static_cast<int32_t>((tuple->elements)->size()); ++i) {
                 if (i > 0) {
-                    (elements = (elements + std::string(", ")));
+                    static_cast<void>((elements = (elements + std::string(", "))));
                 }
-                (elements = (((((elements + std::string("doof::json_decode_at(\"[")) + doof::to_string(i)) + std::string("]\", [&]() { return ")) + emitJsonRead(((std::string("(*_tuple)[") + doof::to_string(i)) + std::string("]")), doof::array_at(tuple->elements, i, "src/emitter-json", 226), context)) + std::string("; })")));
+                static_cast<void>((elements = (((((elements + std::string("doof::json_decode_at(\"[")) + doof::to_string(i)) + std::string("]\", [&]() { return ")) + emitJsonRead(((std::string("(*_tuple)[") + doof::to_string(i)) + std::string("]")), doof::array_at(tuple->elements, i, "src/emitter-json", 226), context)) + std::string("; })"))));
             }
             return ((((((((std::string("[&]() { ") + emitJsonContainerRead(json, std::string("_tuple"), false)) + std::string("if (_tuple->size() != ")) + doof::to_string(static_cast<int32_t>((tuple->elements)->size()))) + std::string(") throw doof::JsonDecodeError(\"Expected tuple of length ")) + doof::to_string(static_cast<int32_t>((tuple->elements)->size()))) + std::string("\"); return std::make_tuple(")) + elements) + std::string("); }()"));
     }
@@ -448,9 +448,9 @@ std::string emitJsonField(const std::string& value, const std::variant<std::shar
             auto elements = std::string("");
             for (int32_t i = 0; i < static_cast<int32_t>((tuple->elements)->size()); ++i) {
                 if (i > 0) {
-                    (elements = (elements + std::string(", ")));
+                    static_cast<void>((elements = (elements + std::string(", "))));
                 }
-                (elements = (elements + emitJsonField(((((std::string("std::get<") + doof::to_string(i)) + std::string(">(")) + value) + std::string(")")), doof::array_at(tuple->elements, i, "src/emitter-json", 322), context)));
+                static_cast<void>((elements = (elements + emitJsonField(((((std::string("std::get<") + doof::to_string(i)) + std::string(">(")) + value) + std::string(")")), doof::array_at(tuple->elements, i, "src/emitter-json", 322), context))));
             }
             return ((std::string("doof::json_value(std::make_shared<std::vector<doof::JsonValue>>(std::initializer_list<doof::JsonValue>{") + elements) + std::string("}))"));
     }

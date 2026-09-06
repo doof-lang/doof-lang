@@ -297,6 +297,30 @@ export function typeName(resolvedType: ResolvedType): string {
 }
 
 export function sameType(left: ResolvedType, right: ResolvedType): bool {
+  return compareTypes(left, right, false)
+}
+
+/** Union arms must remain distinguishable when collection mutability is erased. */
+export function unionMutabilityConflict(type_: ResolvedType): string | none {
+  case type_ {
+    union_: UnionResolvedType -> {
+      for i of 0..<union_.types.length {
+        for j of (i + 1)..<union_.types.length {
+          left := union_.types[i]
+          right := union_.types[j]
+          if !sameType(left, right) && compareTypes(left, right, true) {
+            return "Union members " + typeName(left) + " and " + typeName(right) +
+              " differ only in collection mutability and cannot be distinguished at runtime; use a single mutability or distinct wrapper types"
+          }
+        }
+      }
+    }
+    _ -> { }
+  }
+  return none
+}
+
+function compareTypes(left: ResolvedType, right: ResolvedType, ignoreMutability: bool): bool {
   if left.kind != right.kind { return false }
   case left {
     leftPrimitive: PrimitiveType -> {
@@ -308,7 +332,7 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
     leftArray: ArrayResolvedType -> {
       case right {
         rightArray: ArrayResolvedType -> {
-          return leftArray.readonly_ == rightArray.readonly_ && sameType(leftArray.elementType, rightArray.elementType)
+          return (ignoreMutability || leftArray.readonly_ == rightArray.readonly_) && compareTypes(leftArray.elementType, rightArray.elementType, ignoreMutability)
         }
         _ -> { return false }
       }
@@ -316,7 +340,7 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
     leftMap: MapResolvedType -> {
       case right {
         rightMap: MapResolvedType -> {
-          return leftMap.readonly_ == rightMap.readonly_ && sameType(leftMap.keyType, rightMap.keyType) && sameType(leftMap.valueType, rightMap.valueType)
+          return (ignoreMutability || leftMap.readonly_ == rightMap.readonly_) && compareTypes(leftMap.keyType, rightMap.keyType, ignoreMutability) && compareTypes(leftMap.valueType, rightMap.valueType, ignoreMutability)
         }
         _ -> { return false }
       }
@@ -324,38 +348,38 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
     leftSet: SetResolvedType -> {
       case right {
         rightSet: SetResolvedType -> {
-          return leftSet.readonly_ == rightSet.readonly_ && sameType(leftSet.elementType, rightSet.elementType)
+          return (ignoreMutability || leftSet.readonly_ == rightSet.readonly_) && compareTypes(leftSet.elementType, rightSet.elementType, ignoreMutability)
         }
         _ -> { return false }
       }
     }
     leftStream: StreamResolvedType -> {
       case right {
-        rightStream: StreamResolvedType -> { return sameType(leftStream.elementType, rightStream.elementType) }
+        rightStream: StreamResolvedType -> { return compareTypes(leftStream.elementType, rightStream.elementType, ignoreMutability) }
         _ -> { return false }
       }
     }
     leftResult: ResultResolvedType -> {
       case right {
-        rightResult: ResultResolvedType -> { return sameType(leftResult.valueType, rightResult.valueType) && sameType(leftResult.errorType, rightResult.errorType) }
+        rightResult: ResultResolvedType -> { return compareTypes(leftResult.valueType, rightResult.valueType, ignoreMutability) && compareTypes(leftResult.errorType, rightResult.errorType, ignoreMutability) }
         _ -> { return false }
       }
     }
     leftWeak: WeakResolvedType -> {
       case right {
-        rightWeak: WeakResolvedType -> { return sameType(leftWeak.inner, rightWeak.inner) }
+        rightWeak: WeakResolvedType -> { return compareTypes(leftWeak.inner, rightWeak.inner, ignoreMutability) }
         _ -> { return false }
       }
     }
     leftActor: ActorType -> {
       case right {
-        rightActor: ActorType -> { return sameType(leftActor.innerClass, rightActor.innerClass) }
+        rightActor: ActorType -> { return compareTypes(leftActor.innerClass, rightActor.innerClass, ignoreMutability) }
         _ -> { return false }
       }
     }
     leftPromise: PromiseType -> {
       case right {
-        rightPromise: PromiseType -> { return sameType(leftPromise.valueType, rightPromise.valueType) }
+        rightPromise: PromiseType -> { return compareTypes(leftPromise.valueType, rightPromise.valueType, ignoreMutability) }
         _ -> { return false }
       }
     }
@@ -364,7 +388,7 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
         rightTuple: TupleResolvedType -> {
           if leftTuple.elements.length != rightTuple.elements.length { return false }
           for i of 0..<leftTuple.elements.length {
-            if !sameType(leftTuple.elements[i], rightTuple.elements[i]) { return false }
+            if !compareTypes(leftTuple.elements[i], rightTuple.elements[i], ignoreMutability) { return false }
           }
           return true
         }
@@ -377,9 +401,9 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
           if leftFunction.params.length != rightFunction.params.length { return false }
           for i of 0..<leftFunction.params.length {
             if leftFunction.params[i].name != rightFunction.params[i].name { return false }
-            if !sameType(leftFunction.params[i].type_, rightFunction.params[i].type_) { return false }
+            if !compareTypes(leftFunction.params[i].type_, rightFunction.params[i].type_, ignoreMutability) { return false }
           }
-          return sameType(leftFunction.returnType, rightFunction.returnType)
+          return compareTypes(leftFunction.returnType, rightFunction.returnType, ignoreMutability)
         }
         _ -> { return false }
       }
@@ -398,7 +422,7 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
           return leftClass.symbol.module == rightClass.symbol.module &&
             leftClass.symbol.name == rightClass.symbol.name &&
             leftClass.typeArgs.length == rightClass.typeArgs.length &&
-            sameTypeArguments(leftClass.typeArgs, rightClass.typeArgs)
+            sameTypeArguments(leftClass.typeArgs, rightClass.typeArgs, ignoreMutability)
         }
         _ -> { return false }
       }
@@ -409,7 +433,7 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
           return leftInterface.symbol.module == rightInterface.symbol.module &&
             leftInterface.symbol.name == rightInterface.symbol.name &&
             leftInterface.typeArgs.length == rightInterface.typeArgs.length &&
-            sameTypeArguments(leftInterface.typeArgs, rightInterface.typeArgs)
+            sameTypeArguments(leftInterface.typeArgs, rightInterface.typeArgs, ignoreMutability)
         }
         _ -> { return false }
       }
@@ -421,7 +445,7 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
           for leftMember of leftUnion.types {
             let found = false
             for rightMember of rightUnion.types {
-              if sameType(leftMember, rightMember) {
+              if compareTypes(leftMember, rightMember, ignoreMutability) {
                 found = true
                 break
               }
@@ -441,13 +465,13 @@ export function sameType(left: ResolvedType, right: ResolvedType): bool {
     }
     leftMetadata: ClassMetadataResolvedType -> {
       case right {
-        rightMetadata: ClassMetadataResolvedType -> { return sameType(leftMetadata.classType, rightMetadata.classType) }
+        rightMetadata: ClassMetadataResolvedType -> { return compareTypes(leftMetadata.classType, rightMetadata.classType, ignoreMutability) }
         _ -> { return false }
       }
     }
     leftReflection: MethodReflectionResolvedType -> {
       case right {
-        rightReflection: MethodReflectionResolvedType -> { return sameType(leftReflection.classType, rightReflection.classType) }
+        rightReflection: MethodReflectionResolvedType -> { return compareTypes(leftReflection.classType, rightReflection.classType, ignoreMutability) }
         _ -> { return false }
       }
     }
@@ -655,9 +679,9 @@ export function isWeakReferenceTarget(type_: ResolvedType): bool {
   return false
 }
 
-function sameTypeArguments(left: ResolvedType[], right: ResolvedType[]): bool {
+function sameTypeArguments(left: ResolvedType[], right: ResolvedType[], ignoreMutability: bool = false): bool {
   for i of 0..<left.length {
-    if !sameType(left[i], right[i]) { return false }
+    if !compareTypes(left[i], right[i], ignoreMutability) { return false }
   }
   return true
 }

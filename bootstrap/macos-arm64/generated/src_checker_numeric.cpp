@@ -64,7 +64,7 @@ std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_semantic_::Pr
             for (const auto& member : *_iterable_6) {
                 const auto& _iterable_4 = alternatives(member);
                 for (const auto& candidate : *_iterable_4) {
-                    (static_cast<void>(members->push_back(candidate)), std::monostate{});
+                    members->push_back(candidate);
                 }
             }
             return members;
@@ -86,7 +86,7 @@ bool satisfiesNumericConstraint(const std::variant<std::shared_ptr<::app_src_sem
         const auto& _iterable_8 = allowed;
         for (const auto& member : *_iterable_8) {
             if (::app_src_checker_types_::sameType(candidate, member)) {
-                (found = true);
+                static_cast<void>((found = true));
             }
         }
         if (!found) {
@@ -151,17 +151,17 @@ std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_pt
             }
             auto promoted = ::app_src_checker_types_::numericResult(a, b);
             if (((operator_ == std::string("<<")) || (operator_ == std::string(">>"))) || (operator_ == std::string(">>>"))) {
-                (promoted = ::app_src_checker_types_::numericResult(a, a));
+                static_cast<void>((promoted = ::app_src_checker_types_::numericResult(a, a)));
             }
             if ((operator_ == std::string("**")) && (isIntegerOperand(a) || isIntegerOperand(b))) {
-                (promoted = ::app_src_checker_types_::primitive(std::string("double")));
+                static_cast<void>((promoted = ::app_src_checker_types_::primitive(std::string("double"))));
             }
-            (static_cast<void>(results->push_back(promoted)), std::monostate{});
+            results->push_back(promoted);
             if (!::app_src_checker_types_::sameType(promoted, a)) {
-                (preservesLeft = false);
+                static_cast<void>((preservesLeft = false));
             }
             if (!::app_src_checker_types_::sameType(promoted, b)) {
-                (preservesRight = false);
+                static_cast<void>((preservesRight = false));
             }
         }
     }

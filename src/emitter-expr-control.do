@@ -5,7 +5,7 @@ import { JsonValueResolvedType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitCaseTypePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { emitBlock } from "./emitter-stmt"
+import { emitBlock, emitCondition } from "./emitter-stmt"
 import { exprModuleNamespaceFor, hasNoneMember } from "./emitter-expr-utils"
 import { emitContextType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { sameType } from "./checker-types"
@@ -47,7 +47,7 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
     if expected != none && sameType(resultType, specializeEmitType(expected!, context)) {
       resultType = specializeEmitType(expected!, context)
     }
-    return "[&]() -> " + emitContextType(resultType, context) + " { if (" + emitExpression(expression.condition, context) + ") { return " + emitExpression(expression.then_, context, resultType) + "; } return " + emitExpression(expression.else_, context, resultType) + "; }()"
+    return "[&]() -> " + emitContextType(resultType, context) + " { if (" + emitCondition(expression.condition, context) + ") { return " + emitExpression(expression.then_, context, resultType) + "; } return " + emitExpression(expression.else_, context, resultType) + "; }()"
   }
   return "(" + emitExpression(expression.condition, context) + " ? " + emitExpression(expression.then_, context) + " : " + emitExpression(expression.else_, context) + ")"
 }
@@ -127,11 +127,7 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
         }
         bodyExpression: Expression -> {
           emittedBody := emitExpression(bodyExpression, context, resultType)
-          if resultType!.kind == "none" {
-            output = output + "        " + emittedBody + ";\n        return std::monostate{};\n"
-          } else {
-            output = output + "        return " + emittedBody + ";\n"
-          }
+          output = output + "        return " + emittedBody + ";\n"
         }
       }
       output = output + "    }\n"

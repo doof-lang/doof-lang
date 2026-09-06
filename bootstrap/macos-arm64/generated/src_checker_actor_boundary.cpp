@@ -29,7 +29,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> v
                             continue;
                         }
                         const auto name = ((static_cast<int32_t>((field->names)->size()) == 0) ? std::string("<field>") : doof::array_at(field->names, 0, "src/checker-actor-boundary", 35));
-                        (static_cast<void>(diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (((((std::string("Readonly field \"") + class_->name) + std::string(".")) + name) + std::string("\" must be deeply immutable: ")) + violation->reason), semanticSpan(field->span), module->path, std::string("")))), std::monostate{});
+                        diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (((((std::string("Readonly field \"") + class_->name) + std::string(".")) + name) + std::string("\" must be deeply immutable: ")) + violation->reason), semanticSpan(field->span), module->path, std::string("")));
                     }
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
@@ -43,7 +43,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> v
                         if (doof::is_null(violation)) {
                             continue;
                         }
-                        (static_cast<void>(diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (((((std::string("Readonly field \"") + interface_->name) + std::string(".")) + field->name) + std::string("\" must be deeply immutable: ")) + violation->reason), semanticSpan(field->span), module->path, std::string("")))), std::monostate{});
+                        diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (((((std::string("Readonly field \"") + interface_->name) + std::string(".")) + field->name) + std::string("\" must be deeply immutable: ")) + violation->reason), semanticSpan(field->span), module->path, std::string("")));
                     }
             }
             else {
@@ -173,9 +173,9 @@ std::shared_ptr<ActorBoundaryViolation> findClassViolation(const std::shared_ptr
     std::shared_ptr<std::vector<std::string>> nextSeen = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_16 = seen;
     for (const auto& item : *_iterable_16) {
-        (static_cast<void>(nextSeen->push_back(item)), std::monostate{});
+        nextSeen->push_back(item);
     }
-    (static_cast<void>(nextSeen->push_back(key)), std::monostate{});
+    nextSeen->push_back(key);
     const auto declaration = classDeclaration(result, type_->symbol->module, type_->symbol->name);
     if (doof::is_null(declaration)) {
         return nullptr;
@@ -210,9 +210,9 @@ std::shared_ptr<ActorBoundaryViolation> findInterfaceViolation(const std::shared
     std::shared_ptr<std::vector<std::string>> nextSeen = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_20 = seen;
     for (const auto& item : *_iterable_20) {
-        (static_cast<void>(nextSeen->push_back(item)), std::monostate{});
+        nextSeen->push_back(item);
     }
-    (static_cast<void>(nextSeen->push_back(key)), std::monostate{});
+    nextSeen->push_back(key);
     const auto declaration = interfaceDeclaration(result, type_->symbol->module, type_->symbol->name);
     if (doof::is_null(declaration)) {
         return nullptr;

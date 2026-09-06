@@ -61,14 +61,14 @@ doof::Result<std::string, std::string> relative(const std::string& fromPath, con
     const auto caseInsensitive = isWindowsRoot(fromPrefix);
     auto shared = 0;
     while (((shared < static_cast<int32_t>((fromSegments)->size())) && (shared < static_cast<int32_t>((toSegments)->size()))) && segmentsEqual(doof::array_at(fromSegments, shared, "index", 74), doof::array_at(toSegments, shared, "index", 74), caseInsensitive)) {
-        (shared += 1);
+        static_cast<void>((shared += 1));
     }
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     for (int32_t _discard_2_0 = shared; _discard_2_0 < static_cast<int32_t>((fromSegments)->size()); ++_discard_2_0) {
-        (static_cast<void>(result->push_back(std::string(".."))), std::monostate{});
+        result->push_back(std::string(".."));
     }
     for (int32_t index = shared; index < static_cast<int32_t>((toSegments)->size()); ++index) {
-        (static_cast<void>(result->push_back(doof::array_at(toSegments, index, "index", 83))), std::monostate{});
+        result->push_back(doof::array_at(toSegments, index, "index", 83));
     }
     return doof::Success<std::string>{ join(result) };
 }
@@ -107,14 +107,14 @@ std::string join(const std::shared_ptr<std::vector<std::string>>& parts) {
         const auto normalizedPart = doof::string_replaceAll(part, std::string("\\"), std::string("/"));
         const auto partPrefix = rootPrefix(normalizedPart);
         if (partPrefix != std::string("")) {
-            (prefix = partPrefix);
-            (segments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+            static_cast<void>((prefix = partPrefix));
+            static_cast<void>((segments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})));
         }
         auto segmentSource = normalizedPart;
         if (partPrefix != std::string("")) {
-            (segmentSource = doof::string_slice(normalizedPart, static_cast<int32_t>(partPrefix.size())));
+            static_cast<void>((segmentSource = doof::string_slice(normalizedPart, static_cast<int32_t>(partPrefix.size()))));
             if (doof::string_startsWith(segmentSource, std::string("/"))) {
-                (segmentSource = doof::string_slice(segmentSource, 1));
+                static_cast<void>((segmentSource = doof::string_slice(segmentSource, 1)));
             }
         }
         const auto rawSegments = doof::string_split(segmentSource, std::string("/"));
@@ -125,13 +125,13 @@ std::string join(const std::shared_ptr<std::vector<std::string>>& parts) {
             }
             if (rawSegment == std::string("..")) {
                 if ((static_cast<int32_t>((segments)->size()) > 0) && (doof::array_at(segments, (static_cast<int32_t>((segments)->size()) - 1), "index", 148) != std::string(".."))) {
-                    (segments = doof::array_slice(segments, 0, (static_cast<int32_t>((segments)->size()) - 1), "", 0));
+                    static_cast<void>((segments = doof::array_slice(segments, 0, (static_cast<int32_t>((segments)->size()) - 1), "", 0)));
                 } else if (prefix == std::string("")) {
-                    (static_cast<void>(segments->push_back(std::string(".."))), std::monostate{});
+                    segments->push_back(std::string(".."));
                 }
                 continue;
             }
-            (static_cast<void>(segments->push_back(rawSegment)), std::monostate{});
+            segments->push_back(rawSegment);
         }
     }
     return renderPath(segments, prefix);
@@ -221,9 +221,9 @@ bool segmentsEqual(const std::string& left, const std::string& right, bool caseI
 std::shared_ptr<std::vector<std::string>> pathSegments(const std::string& path, const std::string& prefix) {
     auto source = path;
     if (prefix != std::string("")) {
-        (source = doof::string_slice(path, static_cast<int32_t>(prefix.size())));
+        static_cast<void>((source = doof::string_slice(path, static_cast<int32_t>(prefix.size()))));
         if (doof::string_startsWith(source, std::string("/"))) {
-            (source = doof::string_slice(source, 1));
+            static_cast<void>((source = doof::string_slice(source, 1)));
         }
     }
     if ((source == std::string("")) || (source == std::string("."))) {
@@ -237,7 +237,7 @@ std::string renderPath(const std::shared_ptr<std::vector<std::string>>& segments
     }
     auto output = doof::array_at(segments, 0, "index", 279);
     for (int32_t index = 1; index < static_cast<int32_t>((segments)->size()); ++index) {
-        (output += (std::string("/") + doof::array_at(segments, index, "index", 281)));
+        static_cast<void>((output += (std::string("/") + doof::array_at(segments, index, "index", 281))));
     }
     if (prefix == std::string("/")) {
         return (std::string("/") + output);
@@ -253,7 +253,7 @@ int32_t lastSeparatorIndex(const std::string& path) {
         if (doof::string_at(path, index, "", 0) == U'\u002F') {
             return index;
         }
-        (index -= 1);
+        static_cast<void>((index -= 1));
     }
     return -1;
 }
@@ -263,7 +263,7 @@ int32_t lastDotIndex(const std::string& path) {
         if (doof::string_at(path, index, "", 0) == U'\u002E') {
             return index;
         }
-        (index -= 1);
+        static_cast<void>((index -= 1));
     }
     return -1;
 }

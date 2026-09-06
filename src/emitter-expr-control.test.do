@@ -2,6 +2,16 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+export function testContextualIfUsesSharedConditionEmission(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function choose(value: int): int | string => if value == 1 then 7 else \"other\"",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "if (value == 1)")
+  Assert.stringNotContains(source, "if ((value == 1))")
+}
+
 function chooseMixed(flag: bool, calls: int[]): int | string {
   calls[0] += 1
   return if flag then 7 else "seven"
@@ -83,4 +93,13 @@ export function testRestrictedPathRuntimeCarriers(): none {
   Assert.equal((fallback as string)!, "fallback")
   chosen := case flag { true -> none, false -> 4 }
   Assert.isTrue(chosen == none)
+}
+export function testUnitCaseArmReturnsCarrierDirectly(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function effect(): none {}\nfunction run(flag: bool): none => case flag { true -> effect(), _ -> none }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "return (static_cast<void>(effect()), std::monostate{});")
+  Assert.stringContains(source, "return std::monostate{};")
 }

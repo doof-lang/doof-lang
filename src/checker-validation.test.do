@@ -1,9 +1,11 @@
+import { compile } from "./compiler"
+import { arrayType, primitive, unionType } from "./checker-types"
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
-import { validateCheckedTypes } from "./checker-validation"
+import { validateCheckedTypes, validateResolved } from "./checker-validation"
 import { CallExpression, FunctionDeclaration, MemberExpression } from "./ast"
-import { SourceFile } from "./semantic"
+import { Diagnostic, SourceFile } from "./semantic"
 
 export function testCheckerConsolidationRequiresMemberTargetDecoration(): none {
   analysis := createAnalyzer([SourceFile { path: "/main.do", source:
@@ -52,4 +54,30 @@ export function testSecondConsolidationRequiresConstructionPlan(): none {
   Assert.equal(diagnostics.length, 1)
   Assert.stringContains(diagnostics[0].message, "no checked plan")
   Assert.equal(diagnostics[0].span.start.line, 2)
+}
+
+export function testUnionMutabilityValidation(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function good(value: int[] | readonly string[]): none {}" }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  Assert.equal(validateCheckedTypes(analysis).length, 0)
+  let diagnostics: Diagnostic[] = []
+  validateResolved(arrayType(unionType([arrayType(primitive("int")), arrayType(primitive("int"), true)])), analysis.modules[0].program.statements[0].span, "/main.do", "substituted type", diagnostics)
+  Assert.equal(diagnostics.length, 1)
+  Assert.stringContains(diagnostics[0].message, "cannot be distinguished at runtime")
+  Assert.equal(diagnostics[0].span.start.line, 1)
+}
+
+export function testUnionMutabilityInferredMember(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Mutable { values: int[] }\nclass Frozen { values: readonly int[] }\nfunction read(value: Mutable | Frozen): none { items := value.values }\nfunction main(): none {}",
+  }], "/main.do")
+  Assert.equal(result.emission, none)
+  let found = false
+  for diagnostic of result.diagnostics {
+    if diagnostic.message.contains("differ only in collection mutability") {
+      Assert.equal(diagnostic.span.start.line, 3)
+      found = true
+    }
+  }
+  Assert.isTrue(found)
 }

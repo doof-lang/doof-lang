@@ -12,7 +12,7 @@ export function testNoneCarrierJsonPatternBindsUnit(): none {
   Assert.isTrue(result.emission != none)
   source := result.emission!.modules[0].source
   Assert.stringContains(source, "const auto n = std::monostate{};")
-  Assert.stringContains(source, "(static_cast<void>(take(n)), std::monostate{});")
+  Assert.stringContains(source, "take(n);")
   Assert.stringNotContains(source, "const auto n = nullptr;")
 }
 

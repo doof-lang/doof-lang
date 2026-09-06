@@ -9,17 +9,17 @@ using namespace ::app_src_parser_expressions_;
 using namespace ::app_src_ast_;
 
 std::shared_ptr<::app_src_ast_::Program> Parser::parse() {
-    (this->errorMessage = std::string(""));
-    (this->errorLine = 0);
-    (this->errorColumn = 0);
-    (this->errorOffset = 0);
+    static_cast<void>((this->errorMessage = std::string("")));
+    static_cast<void>((this->errorLine = 0));
+    static_cast<void>((this->errorColumn = 0));
+    static_cast<void>((this->errorOffset = 0));
     const auto lexer = std::make_shared<::app_src_lexer_::Lexer>(this->source, 0, 1, 1, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), std::make_shared<std::vector<::app_src_lexer_::LexerDiagnostic>>(std::vector<::app_src_lexer_::LexerDiagnostic>{}), std::make_shared<std::vector<char32_t>>(std::vector<char32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::string("code"), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), 0, 0);
-    (this->tokens = lexer->tokenize());
-    (this->pos = 0);
+    static_cast<void>((this->tokens = lexer->tokenize()));
+    static_cast<void>((this->pos = 0));
     auto start = location();
     std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>> statements = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>{});
     while (!atEnd()) {
-        (static_cast<void>(statements->push_back(parseStatement())), std::monostate{});
+        statements->push_back(parseStatement());
     }
     return std::make_shared<::app_src_ast_::Program>(std::string("program"), statements, span(start));
 }
@@ -40,13 +40,13 @@ bool Parser::atEnd() {
     auto token = current();
     if (this->inTagAttribute) {
         if (((token.kind == ::app_src_lexer_::TokenType::LeftParen) || (token.kind == ::app_src_lexer_::TokenType::LeftBracket)) || (token.kind == ::app_src_lexer_::TokenType::LeftBrace)) {
-            (this->tagAttributeDelimiterDepth = (this->tagAttributeDelimiterDepth + 1));
+            static_cast<void>((this->tagAttributeDelimiterDepth = (this->tagAttributeDelimiterDepth + 1)));
         } else if (((token.kind == ::app_src_lexer_::TokenType::RightParen) || (token.kind == ::app_src_lexer_::TokenType::RightBracket)) || (token.kind == ::app_src_lexer_::TokenType::RightBrace)) {
-            (this->tagAttributeDelimiterDepth = (this->tagAttributeDelimiterDepth - 1));
+            static_cast<void>((this->tagAttributeDelimiterDepth = (this->tagAttributeDelimiterDepth - 1)));
         }
     }
     if (!atEnd()) {
-        (this->pos = (this->pos + 1));
+        static_cast<void>((this->pos = (this->pos + 1)));
     }
     return token;
 }
@@ -67,30 +67,30 @@ bool Parser::match(::app_src_lexer_::TokenType kind) {
         for (int32_t index = 0; index < static_cast<int32_t>((this->tokens)->size()); ++index) {
             if (index == this->pos) {
                 for (int32_t part = 0; part < token.length; ++part) {
-                    (static_cast<void>(expanded->push_back(::app_src_lexer_::Token{::app_src_lexer_::TokenType::Greater, 1, (token.offset + part), 1, false, token.line, (token.column + part), (token.offset + part)})), std::monostate{});
+                    expanded->push_back(::app_src_lexer_::Token{::app_src_lexer_::TokenType::Greater, 1, (token.offset + part), 1, false, token.line, (token.column + part), (token.offset + part)});
                 }
             } else {
-                (static_cast<void>(expanded->push_back(doof::array_at(this->tokens, index, "src/parser", 100))), std::monostate{});
+                expanded->push_back(doof::array_at(this->tokens, index, "src/parser", 100));
             }
         }
-        (this->tokens = expanded);
+        static_cast<void>((this->tokens = expanded));
     }
     if (check(kind)) {
         return advance();
     }
     auto expectedMessage = message;
     if (expectedMessage == std::string("")) {
-        (expectedMessage = ((((std::string("Expected ") + expectedLabel(kind)) + std::string(" before '")) + currentText()) + std::string("'")));
+        static_cast<void>((expectedMessage = ((((std::string("Expected ") + expectedLabel(kind)) + std::string(" before '")) + currentText()) + std::string("'"))));
     }
-    (static_cast<void>(fail(expectedMessage)), std::monostate{});
+    fail(expectedMessage);
     return current();
 }
 void Parser::fail(const std::string& message) {
     auto token = current();
-    (this->errorMessage = message);
-    (this->errorLine = token.line);
-    (this->errorColumn = token.column);
-    (this->errorOffset = token.offset);
+    static_cast<void>((this->errorMessage = message));
+    static_cast<void>((this->errorLine = token.line));
+    static_cast<void>((this->errorColumn = token.column));
+    static_cast<void>((this->errorOffset = token.offset));
     doof::panic((((((std::string("Parse error at ") + doof::to_string(token.line)) + std::string(":")) + doof::to_string(token.column)) + std::string(": ")) + message));
 }
 std::string Parser::expectedLabel(::app_src_lexer_::TokenType kind) {

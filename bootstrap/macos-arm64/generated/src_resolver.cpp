@@ -19,17 +19,17 @@ std::shared_ptr<::app_src_semantic_::SourceFile> ModuleResolver::find(const std:
             return nullptr;
         }
     }
-    (static_cast<void>(this->loadedPaths->push_back(path)), std::monostate{});
+    this->loadedPaths->push_back(path);
     auto _binding_value_5 = this->loader.call(path);
     if (doof::is_failure(_binding_value_5)) {
         const auto diagnostic = doof::failure_error(_binding_value_5);
-        (static_cast<void>(this->failedPaths->push_back(path)), std::monostate{});
-        (static_cast<void>(this->diagnostics->push_back(diagnostic)), std::monostate{});
+        this->failedPaths->push_back(path);
+        this->diagnostics->push_back(diagnostic);
         return nullptr;
     }
     const auto loaded = doof::success_value(_binding_value_5);
     if (!doof::is_null(loaded)) {
-        (static_cast<void>(this->sources->push_back(doof::unwrap_optional(loaded))), std::monostate{});
+        this->sources->push_back(doof::unwrap_optional(loaded));
         return doof::unwrap_optional(loaded);
     }
     return nullptr;
@@ -68,11 +68,11 @@ std::string relativeBase(const std::string& importer, const std::string& specifi
     auto directory = parentDirectory(importer);
     auto remaining = specifier;
     while (doof::string_startsWith(remaining, std::string("../"))) {
-        (directory = parentDirectory(directory));
-        (remaining = doof::string_substring(remaining, 3, static_cast<int32_t>(remaining.size())));
+        static_cast<void>((directory = parentDirectory(directory)));
+        static_cast<void>((remaining = doof::string_substring(remaining, 3, static_cast<int32_t>(remaining.size()))));
     }
     while (doof::string_startsWith(remaining, std::string("./"))) {
-        (remaining = doof::string_substring(remaining, 2, static_cast<int32_t>(remaining.size())));
+        static_cast<void>((remaining = doof::string_substring(remaining, 2, static_cast<int32_t>(remaining.size()))));
     }
     if (directory == std::string("/")) {
         return (std::string("/") + remaining);
@@ -82,10 +82,10 @@ std::string relativeBase(const std::string& importer, const std::string& specifi
 std::string parentDirectory(const std::string& path) {
     auto end = (static_cast<int32_t>(path.size()) - 1);
     while ((end >= 0) && (doof::string_at(path, end, "src/resolver", 77) == U'\u002F')) {
-        (end = (end - 1));
+        static_cast<void>((end = (end - 1)));
     }
     while ((end >= 0) && (doof::string_at(path, end, "src/resolver", 78) != U'\u002F')) {
-        (end = (end - 1));
+        static_cast<void>((end = (end - 1)));
     }
     if (end <= 0) {
         return std::string("/");

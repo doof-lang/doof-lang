@@ -16,7 +16,7 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject)) {
-                (usesMocks = true);
+                static_cast<void>((usesMocks = true));
         }
         else {
         }
@@ -29,7 +29,7 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
                 const auto& fn = std::get<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject);
                 if (fn->exported && doof::string_startsWith(fn->name, std::string("test"))) {
-                    (static_cast<void>(addDiscoveredTest(result, fn, fn->name, modulePath, rootDirectory, usesMocks)), std::monostate{});
+                    addDiscoveredTest(result, fn, fn->name, modulePath, rootDirectory, usesMocks);
                 }
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExportList>>(_case_subject)) {
@@ -45,7 +45,7 @@ std::shared_ptr<TestDiscovery> discoverModuleTests(const std::shared_ptr<::app_s
                     }
                     const auto declaration = findFunction(program->statements, specifier->name);
                     if (!doof::is_null(declaration)) {
-                        (static_cast<void>(addDiscoveredTest(result, doof::unwrap_optional(declaration), exportedName, modulePath, rootDirectory, usesMocks)), std::monostate{});
+                        addDiscoveredTest(result, doof::unwrap_optional(declaration), exportedName, modulePath, rootDirectory, usesMocks);
                     }
                 }
         }
@@ -61,30 +61,30 @@ std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> groupTestsFo
     const auto& _iterable_10 = tests;
     for (const auto& test : *_iterable_10) {
         if (!test->usesMocks) {
-            (static_cast<void>(shared->tests->push_back(test)), std::monostate{});
+            shared->tests->push_back(test);
             continue;
         }
         std::shared_ptr<TestCompilationGroup> group = nullptr;
         const auto& _iterable_8 = mocked;
         for (const auto& existing : *_iterable_8) {
             if ((static_cast<int32_t>((existing->tests)->size()) > 0) && (doof::array_at(existing->tests, 0, "src/test-runner", 97)->modulePath == test->modulePath)) {
-                (group = existing);
+                static_cast<void>((group = existing));
                 break;
             }
         }
         if (doof::is_null(group)) {
-            (group = std::make_shared<TestCompilationGroup>((std::string("mock-") + safeGroupName(test->moduleDisplayPath)), std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{})));
-            (static_cast<void>(mocked->push_back(doof::unwrap_optional(group))), std::monostate{});
+            static_cast<void>((group = std::make_shared<TestCompilationGroup>((std::string("mock-") + safeGroupName(test->moduleDisplayPath)), std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{}))));
+            mocked->push_back(doof::unwrap_optional(group));
         }
-        (static_cast<void>(group->tests->push_back(test)), std::monostate{});
+        group->tests->push_back(test);
     }
     std::shared_ptr<std::vector<std::shared_ptr<TestCompilationGroup>>> result = std::make_shared<std::vector<std::shared_ptr<TestCompilationGroup>>>(std::vector<std::shared_ptr<TestCompilationGroup>>{});
     if (static_cast<int32_t>((shared->tests)->size()) > 0) {
-        (static_cast<void>(result->push_back(shared)), std::monostate{});
+        result->push_back(shared);
     }
     const auto& _iterable_12 = mocked;
     for (const auto& group : *_iterable_12) {
-        (static_cast<void>(result->push_back(group)), std::monostate{});
+        result->push_back(group);
     }
     return result;
 }
@@ -97,7 +97,7 @@ std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> filterDiscoveredTe
     const auto& _iterable_14 = tests;
     for (const auto& test : *_iterable_14) {
         if (doof::string_contains(doof::string_toLowerCase(test->id), needle)) {
-            (static_cast<void>(selected->push_back(test)), std::monostate{});
+            selected->push_back(test);
         }
     }
     return selected;
@@ -109,7 +109,7 @@ std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> selectedTestsForEx
         const auto& _iterable_16 = selectedTests;
         for (const auto& selected : *_iterable_16) {
             if (test->id == selected->id) {
-                (static_cast<void>(result->push_back(test)), std::monostate{});
+                result->push_back(test);
                 break;
             }
         }
@@ -120,25 +120,25 @@ std::string generateTestHarness(const std::string& harnessPath, const std::share
     auto source = std::string("");
     for (int32_t index = 0; index < static_cast<int32_t>((tests)->size()); ++index) {
         const auto test = doof::array_at(tests, index, "src/test-runner", 140);
-        (source = (((((((source + std::string("import { ")) + test->name) + std::string(" as __doof_test_")) + doof::to_string(index)) + std::string(" } from \"")) + relativeImportSpecifier(harnessPath, test->modulePath)) + std::string("\"\n")));
+        static_cast<void>((source = (((((((source + std::string("import { ")) + test->name) + std::string(" as __doof_test_")) + doof::to_string(index)) + std::string(" } from \"")) + relativeImportSpecifier(harnessPath, test->modulePath)) + std::string("\"\n"))));
     }
-    (source = (source + std::string("\nfunction main(args: string[]): int {\n")));
-    (source = (source + std::string("    if args.length < 1 {\n")));
-    (source = (source + std::string("        println(\"missing test id\")\n")));
-    (source = (source + std::string("        return 2\n")));
-    (source = (source + std::string("    }\n\n")));
-    (source = (source + std::string("    testId := args[0]\n")));
+    static_cast<void>((source = (source + std::string("\nfunction main(args: string[]): int {\n"))));
+    static_cast<void>((source = (source + std::string("    if args.length < 1 {\n"))));
+    static_cast<void>((source = (source + std::string("        println(\"missing test id\")\n"))));
+    static_cast<void>((source = (source + std::string("        return 2\n"))));
+    static_cast<void>((source = (source + std::string("    }\n\n"))));
+    static_cast<void>((source = (source + std::string("    testId := args[0]\n"))));
     for (int32_t index = 0; index < static_cast<int32_t>((tests)->size()); ++index) {
         const auto id = escapeDoofString(doof::array_at(tests, index, "src/test-runner", 150)->id);
-        (source = (((source + std::string("    if testId == \"")) + id) + std::string("\" {\n")));
-        (source = (((source + std::string("        __doof_test_")) + doof::to_string(index)) + std::string("()\n")));
-        (source = (source + std::string("        return 0\n")));
-        (source = (source + std::string("    }\n")));
+        static_cast<void>((source = (((source + std::string("    if testId == \"")) + id) + std::string("\" {\n"))));
+        static_cast<void>((source = (((source + std::string("        __doof_test_")) + doof::to_string(index)) + std::string("()\n"))));
+        static_cast<void>((source = (source + std::string("        return 0\n"))));
+        static_cast<void>((source = (source + std::string("    }\n"))));
     }
-    (source = (source + std::string("\n")));
-    (source = ((source + std::string("    println(\"unknown test id: $")) + std::string("{testId}\")\n")));
-    (source = (source + std::string("    return 2\n")));
-    (source = (source + std::string("}\n")));
+    static_cast<void>((source = (source + std::string("\n"))));
+    static_cast<void>((source = ((source + std::string("    println(\"unknown test id: $")) + std::string("{testId}\")\n"))));
+    static_cast<void>((source = (source + std::string("    return 2\n"))));
+    static_cast<void>((source = (source + std::string("}\n"))));
     return source;
 }
 std::string safeGroupName(const std::string& value) {
@@ -181,9 +181,9 @@ void mergeCoverageOutput(const std::string& output, const std::shared_ptr<std::v
         for (int32_t index = 0; index < static_cast<int32_t>((modules)->size()); ++index) {
             if (doof::array_at(modules, index, "src/test-runner", 206)->moduleId == moduleId) {
                 while (static_cast<int32_t>((hitsByModule)->size()) <= index) {
-                    (static_cast<void>(hitsByModule->push_back(std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}))), std::monostate{});
+                    hitsByModule->push_back(std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
                 }
-                (static_cast<void>(appendUniqueLine(doof::array_at(hitsByModule, index, "src/test-runner", 208), sourceLine)), std::monostate{});
+                appendUniqueLine(doof::array_at(hitsByModule, index, "src/test-runner", 208), sourceLine);
             }
         }
     }
@@ -196,9 +196,9 @@ std::string stripCoverageLines(const std::string& output) {
             continue;
         }
         if (result != std::string("")) {
-            (result = (result + std::string("\n")));
+            static_cast<void>((result = (result + std::string("\n"))));
         }
-        (result = (result + line));
+        static_cast<void>((result = (result + line)));
     }
     return doof::string_trim(result);
 }
@@ -211,39 +211,39 @@ std::shared_ptr<CoverageReport> buildCoverageReport(const std::shared_ptr<std::v
         }
         std::shared_ptr<std::vector<int32_t>> hits = std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{});
         if (index < static_cast<int32_t>((hitsByModule)->size())) {
-            (hits = doof::array_at(hitsByModule, index, "src/test-runner", 236));
+            static_cast<void>((hits = doof::array_at(hitsByModule, index, "src/test-runner", 236)));
         }
         const auto file = std::make_shared<CoverageFileReport>(testDisplayPath(rootDirectory, module->modulePath), 0, static_cast<int32_t>((module->instrumentedLines)->size()), 0, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}), std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
         const auto& _iterable_27 = module->instrumentedLines;
         for (const auto& line : *_iterable_27) {
             if (containsLine(hits, line)) {
-                (static_cast<void>(file->hitLines->push_back(line)), std::monostate{});
-                (file->covered += 1);
+                file->hitLines->push_back(line);
+                static_cast<void>((file->covered += 1));
             } else {
-                (static_cast<void>(file->missedLines->push_back(line)), std::monostate{});
+                file->missedLines->push_back(line);
             }
         }
-        (file->percentTenths = coveragePercentTenths(file->covered, file->total));
-        (static_cast<void>(report->files->push_back(file)), std::monostate{});
-        (report->totalCovered += file->covered);
-        (report->totalLines += file->total);
+        static_cast<void>((file->percentTenths = coveragePercentTenths(file->covered, file->total)));
+        report->files->push_back(file);
+        static_cast<void>((report->totalCovered += file->covered));
+        static_cast<void>((report->totalLines += file->total));
     }
-    (report->totalPercentTenths = coveragePercentTenths(report->totalCovered, report->totalLines));
+    static_cast<void>((report->totalPercentTenths = coveragePercentTenths(report->totalCovered, report->totalLines)));
     return report;
 }
 std::string renderCoverageJson(const std::shared_ptr<CoverageReport>& report) {
     auto output = (std::string("{\n  \"timestamp\": \"\",\n  \"totals\": { \"covered\": ") + doof::to_string(report->totalCovered));
-    (output = (((((output + std::string(", \"total\": ")) + doof::to_string(report->totalLines)) + std::string(", \"percent\": ")) + coveragePercentText(report->totalPercentTenths)) + std::string(" },\n")));
-    (output = (output + std::string("  \"files\": [")));
+    static_cast<void>((output = (((((output + std::string(", \"total\": ")) + doof::to_string(report->totalLines)) + std::string(", \"percent\": ")) + coveragePercentText(report->totalPercentTenths)) + std::string(" },\n"))));
+    static_cast<void>((output = (output + std::string("  \"files\": ["))));
     for (int32_t index = 0; index < static_cast<int32_t>((report->files)->size()); ++index) {
         const auto file = doof::array_at(report->files, index, "src/test-runner", 262);
-        (output = (output + ((index == 0) ? std::string("\n") : std::string(",\n"))));
-        (output = (((output + std::string("    {\n      \"path\": \"")) + escapeJson(file->path)) + std::string("\",\n")));
-        (output = (((output + std::string("      \"covered\": ")) + doof::to_string(file->covered)) + std::string(",\n")));
-        (output = (((output + std::string("      \"total\": ")) + doof::to_string(file->total)) + std::string(",\n")));
-        (output = (((output + std::string("      \"percent\": ")) + coveragePercentText(file->percentTenths)) + std::string(",\n")));
-        (output = (((output + std::string("      \"hitLines\": ")) + renderLineArray(file->hitLines)) + std::string(",\n")));
-        (output = (((output + std::string("      \"missedLines\": ")) + renderLineArray(file->missedLines)) + std::string("\n    }")));
+        static_cast<void>((output = (output + ((index == 0) ? std::string("\n") : std::string(",\n")))));
+        static_cast<void>((output = (((output + std::string("    {\n      \"path\": \"")) + escapeJson(file->path)) + std::string("\",\n"))));
+        static_cast<void>((output = (((output + std::string("      \"covered\": ")) + doof::to_string(file->covered)) + std::string(",\n"))));
+        static_cast<void>((output = (((output + std::string("      \"total\": ")) + doof::to_string(file->total)) + std::string(",\n"))));
+        static_cast<void>((output = (((output + std::string("      \"percent\": ")) + coveragePercentText(file->percentTenths)) + std::string(",\n"))));
+        static_cast<void>((output = (((output + std::string("      \"hitLines\": ")) + renderLineArray(file->hitLines)) + std::string(",\n"))));
+        static_cast<void>((output = (((output + std::string("      \"missedLines\": ")) + renderLineArray(file->missedLines)) + std::string("\n    }"))));
     }
     return (output + ((static_cast<int32_t>((report->files)->size()) == 0) ? std::string("]\n}\n") : std::string("\n  ]\n}\n")));
 }
@@ -252,9 +252,9 @@ std::string renderCoverageHtml(const std::shared_ptr<CoverageReport>& report, co
     const auto& _iterable_31 = report->files;
     for (const auto& file : *_iterable_31) {
         const auto href = escapeHtml(((fileDirectoryName + std::string("/")) + coverageFileRelativePath(file->path)));
-        (rows = (((((rows + std::string("<tr><td><a href=\"")) + href) + std::string("\">")) + escapeHtml(file->path)) + std::string("</a></td>")));
-        (rows = (((((rows + std::string("<td>")) + doof::to_string(file->covered)) + std::string("/")) + doof::to_string(file->total)) + std::string("</td>")));
-        (rows = (((rows + std::string("<td>")) + coveragePercentText(file->percentTenths)) + std::string("%</td></tr>\n")));
+        static_cast<void>((rows = (((((rows + std::string("<tr><td><a href=\"")) + href) + std::string("\">")) + escapeHtml(file->path)) + std::string("</a></td>"))));
+        static_cast<void>((rows = (((((rows + std::string("<td>")) + doof::to_string(file->covered)) + std::string("/")) + doof::to_string(file->total)) + std::string("</td>"))));
+        static_cast<void>((rows = (((rows + std::string("<td>")) + coveragePercentText(file->percentTenths)) + std::string("%</td></tr>\n"))));
     }
     const auto overall = coveragePercentText(report->totalPercentTenths);
     return (((((((((std::string("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>Doof Coverage Report</title><style>body{font:16px system-ui;max-width:960px;margin:2rem auto;padding:0 1rem;color:#1f2933}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:.65rem;border-bottom:1px solid #ddd}a{color:#9a3412}.summary{font-size:1.3rem}</style></head><body><h1>Doof Coverage</h1><p class=\"summary\">Overall: ") + doof::to_string(report->totalCovered)) + std::string("/")) + doof::to_string(report->totalLines)) + std::string(" lines (")) + overall) + std::string("%)</p>")) + std::string("<table><thead><tr><th>File</th><th>Lines</th><th>Coverage</th></tr></thead><tbody>")) + rows) + std::string("</tbody></table></body></html>\n"));
@@ -265,12 +265,40 @@ std::string renderCoverageFileHtml(const std::shared_ptr<CoverageFileReport>& fi
     for (int32_t index = 0; index < static_cast<int32_t>((sourceLines)->size()); ++index) {
         const auto line = (index + 1);
         const auto className = (containsLine(file->hitLines, line) ? std::string("covered") : (containsLine(file->missedLines, line) ? std::string("missed") : std::string("neutral")));
-        (lines = (((((((lines + std::string("<div class=\"line ")) + className) + std::string("\"><span>")) + doof::to_string(line)) + std::string("</span><code>")) + escapeHtml(doof::array_at(sourceLines, index, "src/test-runner", 300))) + std::string("</code></div>\n")));
+        static_cast<void>((lines = (((((((lines + std::string("<div class=\"line ")) + className) + std::string("\"><span>")) + doof::to_string(line)) + std::string("</span><code>")) + escapeHtml(doof::array_at(sourceLines, index, "src/test-runner", 300))) + std::string("</code></div>\n"))));
     }
     return (((((((((((std::string("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>") + escapeHtml(file->path)) + std::string(" — Doof Coverage</title><style>body{font:15px system-ui;margin:2rem;color:#1f2933}")) + std::string(".line{display:grid;grid-template-columns:4rem 1fr;font-family:monospace;white-space:pre}.line span{text-align:right;padding-right:1rem;color:#6b7280}")) + std::string(".covered{background:#dcfce7}.missed{background:#fee2e2}.neutral{background:#f8fafc}a{color:#9a3412}</style></head><body>")) + std::string("<a href=\"")) + escapeHtml(indexHref)) + std::string("\">Back to coverage summary</a><h1>")) + escapeHtml(file->path)) + std::string("</h1>")) + lines) + std::string("</body></html>\n"));
 }
 std::string coverageFileRelativePath(const std::string& path) {
-    return (doof::string_replaceAll(doof::string_replaceAll(path, std::string("\\"), std::string("/")), std::string("../"), std::string("_external/")) + std::string(".html"));
+    const auto normalized = doof::string_replaceAll(path, std::string("\\"), std::string("/"));
+    auto result = (doof::string_startsWith(normalized, std::string("/")) ? std::string("_absolute") : std::string(""));
+    const auto& _iterable_34 = doof::string_split(normalized, std::string("/"));
+    for (const auto& component : *_iterable_34) {
+        if ((component == std::string("")) || (component == std::string("."))) {
+            continue;
+        }
+        const auto safe = ((component == std::string("..")) ? std::string("_external") : coveragePathComponent(component));
+        if (result != std::string("")) {
+            static_cast<void>((result = (result + std::string("/"))));
+        }
+        static_cast<void>((result = (result + safe)));
+    }
+    return (((result == std::string("")) ? std::string("_empty") : result) + std::string(".html"));
+}
+std::string coveragePathComponent(const std::string& value) {
+    if (((value == std::string("_absolute")) || (value == std::string("_external"))) || (value == std::string("_empty"))) {
+        return (std::string("~95~") + doof::string_substring(value, 1, static_cast<int32_t>(value.size())));
+    }
+    auto result = std::string("");
+    for (int32_t index = 0; index < static_cast<int32_t>(value.size()); ++index) {
+        const auto character = doof::string_at(value, index, "src/test-runner", 331);
+        if (((((((character >= U'\u0061') && (character <= U'\u007A')) || ((character >= U'\u0041') && (character <= U'\u005A'))) || ((character >= U'\u0030') && (character <= U'\u0039'))) || (character == U'\u005F')) || (character == U'\u002D')) || (character == U'\u002E')) {
+            static_cast<void>((result = (result + doof::to_string(character))));
+        } else {
+            static_cast<void>((result = (((result + std::string("~")) + doof::to_string(static_cast<int32_t>(character))) + std::string("~"))));
+        }
+    }
+    return result;
 }
 int32_t parseCoverageInteger(const std::string& value) {
     if (value == std::string("")) {
@@ -278,44 +306,44 @@ int32_t parseCoverageInteger(const std::string& value) {
     }
     auto result = 0;
     for (int32_t index = 0; index < static_cast<int32_t>(value.size()); ++index) {
-        const auto char_ = doof::string_at(value, index, "src/test-runner", 319);
+        const auto char_ = doof::string_at(value, index, "src/test-runner", 344);
         auto digit = -1;
         if (char_ == U'\u0030') {
-            (digit = 0);
+            static_cast<void>((digit = 0));
         } else if (char_ == U'\u0031') {
-            (digit = 1);
+            static_cast<void>((digit = 1));
         } else if (char_ == U'\u0032') {
-            (digit = 2);
+            static_cast<void>((digit = 2));
         } else if (char_ == U'\u0033') {
-            (digit = 3);
+            static_cast<void>((digit = 3));
         } else if (char_ == U'\u0034') {
-            (digit = 4);
+            static_cast<void>((digit = 4));
         } else if (char_ == U'\u0035') {
-            (digit = 5);
+            static_cast<void>((digit = 5));
         } else if (char_ == U'\u0036') {
-            (digit = 6);
+            static_cast<void>((digit = 6));
         } else if (char_ == U'\u0037') {
-            (digit = 7);
+            static_cast<void>((digit = 7));
         } else if (char_ == U'\u0038') {
-            (digit = 8);
+            static_cast<void>((digit = 8));
         } else if (char_ == U'\u0039') {
-            (digit = 9);
+            static_cast<void>((digit = 9));
         }
         if (digit < 0) {
             return -1;
         }
-        (result = ((result * 10) + digit));
+        static_cast<void>((result = ((result * 10) + digit)));
     }
     return result;
 }
 void appendUniqueLine(const std::shared_ptr<std::vector<int32_t>>& lines, int32_t line) {
     if (!containsLine(lines, line)) {
-        (static_cast<void>(lines->push_back(line)), std::monostate{});
+        lines->push_back(line);
     }
 }
 bool containsLine(const std::shared_ptr<std::vector<int32_t>>& lines, int32_t line) {
-    const auto& _iterable_35 = lines;
-    for (const auto& existing : *_iterable_35) {
+    const auto& _iterable_38 = lines;
+    for (const auto& existing : *_iterable_38) {
         if (existing == line) {
             return true;
         }
@@ -335,9 +363,9 @@ std::string renderLineArray(const std::shared_ptr<std::vector<int32_t>>& lines) 
     auto result = std::string("[");
     for (int32_t index = 0; index < static_cast<int32_t>((lines)->size()); ++index) {
         if (index > 0) {
-            (result = (result + std::string(", ")));
+            static_cast<void>((result = (result + std::string(", "))));
         }
-        (result = (result + doof::to_string(doof::array_at(lines, index, "src/test-runner", 359))));
+        static_cast<void>((result = (result + doof::to_string(doof::array_at(lines, index, "src/test-runner", 384)))));
     }
     return (result + std::string("]"));
 }
@@ -350,19 +378,19 @@ std::string escapeHtml(const std::string& value) {
 void addDiscoveredTest(const std::shared_ptr<TestDiscovery>& result, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& declaration, const std::string& exportedName, const std::string& modulePath, const std::string& rootDirectory, bool usesMocks) {
     const auto location = ((((modulePath + std::string(":")) + doof::to_string(declaration->span.start.line)) + std::string(":")) + doof::to_string(declaration->span.start.column));
     if (static_cast<int32_t>((declaration->params)->size()) > 0) {
-        (static_cast<void>(result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must not declare parameters")))), std::monostate{});
+        result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must not declare parameters")));
         return;
     }
     if (static_cast<int32_t>((declaration->typeParams)->size()) > 0) {
-        (static_cast<void>(result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must not declare type parameters")))), std::monostate{});
+        result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must not declare type parameters")));
         return;
     }
     if (!returnsNone(declaration)) {
-        (static_cast<void>(result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must return none")))), std::monostate{});
+        result->errors->push_back((((location + std::string(": error: test \"")) + exportedName) + std::string("\" must return none")));
         return;
     }
     const auto displayPath = testDisplayPath(rootDirectory, modulePath);
-    (static_cast<void>(result->tests->push_back(std::make_shared<DiscoveredTest>(((displayPath + std::string("::")) + exportedName), exportedName, modulePath, displayPath, usesMocks))), std::monostate{});
+    result->tests->push_back(std::make_shared<DiscoveredTest>(((displayPath + std::string("::")) + exportedName), exportedName, modulePath, displayPath, usesMocks));
 }
 bool returnsNone(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& declaration) {
     if (doof::is_null(declaration->returnType)) {
@@ -390,8 +418,8 @@ bool returnsNone(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& dec
     doof::unreachable();
 }
 std::shared_ptr<::app_src_ast_::FunctionDeclaration> findFunction(const std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>>>& statements, const std::string& name) {
-    const auto& _iterable_38 = statements;
-    for (const auto& statement : *_iterable_38) {
+    const auto& _iterable_41 = statements;
+    for (const auto& statement : *_iterable_41) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
@@ -408,9 +436,9 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> findFunction(const std::sha
 }
 std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> copyTests(const std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>>& tests) {
     std::shared_ptr<std::vector<std::shared_ptr<DiscoveredTest>>> result = std::make_shared<std::vector<std::shared_ptr<DiscoveredTest>>>(std::vector<std::shared_ptr<DiscoveredTest>>{});
-    const auto& _iterable_40 = tests;
-    for (const auto& test : *_iterable_40) {
-        (static_cast<void>(result->push_back(test)), std::monostate{});
+    const auto& _iterable_43 = tests;
+    for (const auto& test : *_iterable_43) {
+        result->push_back(test);
     }
     return result;
 }
@@ -418,18 +446,18 @@ std::string relativeImportSpecifier(const std::string& harnessPath, const std::s
     const auto sourceComponents = parentComponents(doof::string_replaceAll(harnessPath, std::string("\\"), std::string("/")));
     const auto to = doof::string_split(withoutExtension(doof::string_replaceAll(modulePath, std::string("\\"), std::string("/"))), std::string("/"));
     auto common = 0;
-    while (((common < static_cast<int32_t>((sourceComponents)->size())) && (common < static_cast<int32_t>((to)->size()))) && (doof::array_at(sourceComponents, common, "src/test-runner", 436) == doof::array_at(to, common, "src/test-runner", 436))) {
-        (common = (common + 1));
+    while (((common < static_cast<int32_t>((sourceComponents)->size())) && (common < static_cast<int32_t>((to)->size()))) && (doof::array_at(sourceComponents, common, "src/test-runner", 461) == doof::array_at(to, common, "src/test-runner", 461))) {
+        static_cast<void>((common = (common + 1)));
     }
     auto result = std::string("");
     for (int32_t ignored = common; ignored < static_cast<int32_t>((sourceComponents)->size()); ++ignored) {
-        (result = (result + std::string("../")));
+        static_cast<void>((result = (result + std::string("../"))));
     }
     for (int32_t index = common; index < static_cast<int32_t>((to)->size()); ++index) {
         if ((result != std::string("")) && !doof::string_endsWith(result, std::string("/"))) {
-            (result = (result + std::string("/")));
+            static_cast<void>((result = (result + std::string("/"))));
         }
-        (result = (result + doof::array_at(to, index, "src/test-runner", 443)));
+        static_cast<void>((result = (result + doof::array_at(to, index, "src/test-runner", 468))));
     }
     if (!doof::string_startsWith(result, std::string("."))) {
         return (std::string("./") + result);
@@ -439,7 +467,7 @@ std::string relativeImportSpecifier(const std::string& harnessPath, const std::s
 std::shared_ptr<std::vector<std::string>> parentComponents(const std::string& path) {
     const auto components = doof::array_cloneMutable(doof::string_split(path, std::string("/")), "", 0);
     if (static_cast<int32_t>((components)->size()) > 0) {
-        auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/test-runner", 451, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
+        auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(components); if (doof::is_failure(_try_value)) doof::panic_at("src/test-runner", 476, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
     }
     return components;
 }
@@ -451,8 +479,8 @@ std::string withoutExtension(const std::string& path) {
 }
 std::string trimTrailingSlashes(const std::string& path) {
     auto end = static_cast<int32_t>(path.size());
-    while ((end > 1) && (doof::string_at(path, (end - 1), "src/test-runner", 462) == U'\u002F')) {
-        (end = (end - 1));
+    while ((end > 1) && (doof::string_at(path, (end - 1), "src/test-runner", 487) == U'\u002F')) {
+        static_cast<void>((end = (end - 1)));
     }
     return doof::string_substring(path, 0, end);
 }

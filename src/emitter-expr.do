@@ -84,6 +84,14 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
   return value
 }
 
+/** Calls need no result carrier when discarded; other values are explicitly ignored. */
+export function emitDiscardedExpression(expression: Expression, context: EmitContext): string {
+  case expression {
+    call: CallExpression -> { return emitCall(call, context) }
+    _ -> { return "static_cast<void>(" + emitExpression(expression, context) + ")" }
+  }
+}
+
 // Literal collection emitters already construct JsonValue directly. Other
 // expressions need an explicit runtime wrapper when contextual typing widens a
 // primitive or an exact JSON carrier into JsonValue.

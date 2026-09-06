@@ -67,7 +67,7 @@ doof::Result<std::string, std::string> decodeBase64UrlToString(const std::string
 }
 std::shared_ptr<std::vector<uint8_t>> stringToBytes(const std::string& text) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
-    (static_cast<void>(builder->writeString(text)), std::monostate{});
+    builder->writeString(text);
     return builder->build();
 }
 doof::Result<std::shared_ptr<Jwt>, JwtError> parseJwt(const std::string& token) {

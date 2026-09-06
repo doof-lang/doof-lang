@@ -356,7 +356,7 @@ export function testEmitsArrayCollectionConversionsAndEnumFromValue(): none {
 
 export function testEmitsCStyleForInitializerWithoutExtraSemicolon(): none {
   result := emit("function sum(limit: int): int { let total = 0\nfor let i = 0; i < limit; i += 1 { total += i }\nreturn total }")
-  Assert.stringContains(result.source, "for (auto i = 0; i < limit; (i += 1))")
+  Assert.stringContains(result.source, "for (auto i = 0; i < limit; static_cast<void>((i += 1)))")
   Assert.equal(result.source.contains("for (auto i = 0;;"), false)
 }
 
@@ -683,7 +683,7 @@ export function testEmitsIsolatedAsyncFunctionCalls(): none {
   Assert.stringContains(result.source, "doof::submit_async<int32_t>([=]() -> int32_t { return compute(value); })")
 
   noneResult := emit("function notify(value: int): none { println(value) }\nfunction run(value: int): Promise<none> => async notify(value)")
-  Assert.stringContains(noneResult.source, "doof::submit_async<void>([=]() { (static_cast<void>(notify(value)), std::monostate{}); })")
+  Assert.stringContains(noneResult.source, "doof::submit_async<void>([=]() { notify(value); })")
 }
 
 export function testTryBangPanicIncludesOriginAndStringFailure(): none {
@@ -1249,8 +1249,8 @@ export function testEmitsYieldingCaseExpressionBlocks(): none {
 
 export function testEmitsNoneReturningCaseExpressionArms(): none {
   result := emit("function verify(condition: bool): none {}\nfunction check(condition: bool): none => case condition { true -> verify(true), _ -> verify(false) }\nfunction checkReturned(condition: bool): none { return case condition { true -> verify(true), _ -> verify(false) } }")
-  Assert.stringContains(result.source, "(static_cast<void>(verify(true)), std::monostate{});\n        return std::monostate{};")
-  Assert.stringContains(result.source, "(static_cast<void>(verify(false)), std::monostate{});\n        return std::monostate{};")
+  Assert.stringContains(result.source, "return (static_cast<void>(verify(true)), std::monostate{});")
+  Assert.stringContains(result.source, "return (static_cast<void>(verify(false)), std::monostate{});")
   Assert.equal(result.source.contains("return [&]() -> std::monostate"), false)
 }
 
@@ -1290,7 +1290,7 @@ export function testEmitsClassDestructorBody(): none {
   Assert.equal(result.header.contains("~Resource();"), true)
   Assert.equal(result.header.contains("doof::println(std::string(\"closed\"));"), false)
   Assert.equal(result.source.contains("Resource::~Resource()"), true)
-  Assert.equal(result.source.contains("(static_cast<void>(doof::println(std::string(\"closed\"))), std::monostate{});"), true)
+  Assert.equal(result.source.contains("doof::println(std::string(\"closed\"));"), true)
   Assert.equal(result.source.contains("std::make_shared<Resource>(1)"), true)
   Assert.equal(result.source.contains("std::make_shared<Resource>(Resource{"), false)
 }

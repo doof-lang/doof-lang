@@ -94,31 +94,31 @@ std::string Duration::toISOString() {
     auto remaining = ((this->nanos < 0LL) ? -this->nanos : this->nanos);
     auto sign = ((this->nanos < 0LL) ? std::string("-") : std::string(""));
     auto days = (remaining / 86400000000000LL);
-    (remaining = (remaining % 86400000000000LL));
+    static_cast<void>((remaining = (remaining % 86400000000000LL)));
     auto hours = (remaining / 3600000000000LL);
-    (remaining = (remaining % 3600000000000LL));
+    static_cast<void>((remaining = (remaining % 3600000000000LL)));
     auto minutes = (remaining / 60000000000LL);
-    (remaining = (remaining % 60000000000LL));
+    static_cast<void>((remaining = (remaining % 60000000000LL)));
     auto seconds = (remaining / 1000000000LL);
     auto subsecNanos = (remaining % 1000000000LL);
     auto result = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(sign); _interpolation += "P"; return _interpolation; }());
     if (days != 0LL) {
-        (result = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(result); _interpolation += ""; _interpolation += doof::to_string(days); _interpolation += "D"; return _interpolation; }()));
+        static_cast<void>((result = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(result); _interpolation += ""; _interpolation += doof::to_string(days); _interpolation += "D"; return _interpolation; }())));
     }
     auto timePart = std::string("");
     if (hours != 0LL) {
-        (timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(hours); _interpolation += "H"; return _interpolation; }()));
+        static_cast<void>((timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(hours); _interpolation += "H"; return _interpolation; }())));
     }
     if (minutes != 0LL) {
-        (timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(minutes); _interpolation += "M"; return _interpolation; }()));
+        static_cast<void>((timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(minutes); _interpolation += "M"; return _interpolation; }())));
     }
     if (subsecNanos != 0LL) {
-        (timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(seconds); _interpolation += "."; _interpolation += doof::to_string(doof::string_trimEnd(doof::string_padStart(doof::to_string(subsecNanos), 9, U'\u0030'), U'\u0030')); _interpolation += "S"; return _interpolation; }()));
+        static_cast<void>((timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(seconds); _interpolation += "."; _interpolation += doof::to_string(doof::string_trimEnd(doof::string_padStart(doof::to_string(subsecNanos), 9, U'\u0030'), U'\u0030')); _interpolation += "S"; return _interpolation; }())));
     } else if ((seconds != 0LL) || (((days == 0LL) && (hours == 0LL)) && (minutes == 0LL))) {
-        (timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(seconds); _interpolation += "S"; return _interpolation; }()));
+        static_cast<void>((timePart = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(timePart); _interpolation += ""; _interpolation += doof::to_string(seconds); _interpolation += "S"; return _interpolation; }())));
     }
     if (static_cast<int32_t>(timePart.size()) > 0) {
-        (result = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(result); _interpolation += "T"; _interpolation += doof::to_string(timePart); _interpolation += ""; return _interpolation; }()));
+        static_cast<void>((result = ([&]() -> std::string { std::string _interpolation = ""; _interpolation += doof::to_string(result); _interpolation += "T"; _interpolation += doof::to_string(timePart); _interpolation += ""; return _interpolation; }())));
     }
     return result;
 }
@@ -129,15 +129,15 @@ doof::Result<std::shared_ptr<Duration>, std::string> parseDuration(const std::st
     auto index = 0;
     auto sign = 1LL;
     if (doof::string_at(s, index, "", 0) == U'\u002D') {
-        (sign = -1LL);
-        (index = (index + 1));
+        static_cast<void>((sign = -1LL));
+        static_cast<void>((index = (index + 1)));
     } else if (doof::string_at(s, index, "", 0) == U'\u002B') {
-        (index = (index + 1));
+        static_cast<void>((index = (index + 1)));
     }
     if ((index >= static_cast<int32_t>(s.size())) || (doof::string_at(s, index, "", 0) != U'\u0050')) {
         return doof::Failure<std::string>{ std::string("Duration must start with 'P'") };
     }
-    (index = (index + 1));
+    static_cast<void>((index = (index + 1)));
     auto total = 0LL;
     auto inTime = false;
     auto sawComponent = false;
@@ -147,8 +147,8 @@ doof::Result<std::shared_ptr<Duration>, std::string> parseDuration(const std::st
             if (inTime) {
                 return doof::Failure<std::string>{ std::string("Duration contains duplicate time marker") };
             }
-            (inTime = true);
-            (index = (index + 1));
+            static_cast<void>((inTime = true));
+            static_cast<void>((index = (index + 1)));
             if (index >= static_cast<int32_t>(s.size())) {
                 return doof::Failure<std::string>{ std::string("Duration time marker must be followed by a component") };
             }
@@ -159,74 +159,74 @@ doof::Result<std::shared_ptr<Duration>, std::string> parseDuration(const std::st
         }
         auto whole = 0LL;
         while ((index < static_cast<int32_t>(s.size())) && isDigit(doof::string_at(s, index, "", 0))) {
-            (whole = ((whole * 10LL) + static_cast<int64_t>(digitValue(doof::string_at(s, index, "", 0)))));
-            (index = (index + 1));
+            static_cast<void>((whole = ((whole * 10LL) + static_cast<int64_t>(digitValue(doof::string_at(s, index, "", 0))))));
+            static_cast<void>((index = (index + 1)));
         }
         auto fractionNanos = 0LL;
         auto hasFraction = false;
         if ((index < static_cast<int32_t>(s.size())) && (doof::string_at(s, index, "", 0) == U'\u002E')) {
-            (hasFraction = true);
-            (index = (index + 1));
+            static_cast<void>((hasFraction = true));
+            static_cast<void>((index = (index + 1)));
             auto digits = 0;
             while ((index < static_cast<int32_t>(s.size())) && isDigit(doof::string_at(s, index, "", 0))) {
                 if (digits >= 9) {
                     return doof::Failure<std::string>{ std::string("Duration fractional seconds must use at most 9 digits") };
                 }
-                (fractionNanos = ((fractionNanos * 10LL) + static_cast<int64_t>(digitValue(doof::string_at(s, index, "", 0)))));
-                (digits = (digits + 1));
-                (index = (index + 1));
+                static_cast<void>((fractionNanos = ((fractionNanos * 10LL) + static_cast<int64_t>(digitValue(doof::string_at(s, index, "", 0))))));
+                static_cast<void>((digits = (digits + 1)));
+                static_cast<void>((index = (index + 1)));
             }
             if (digits == 0) {
                 return doof::Failure<std::string>{ std::string("Duration fraction must contain digits") };
             }
             while (digits < 9) {
-                (fractionNanos = (fractionNanos * 10LL));
-                (digits = (digits + 1));
+                static_cast<void>((fractionNanos = (fractionNanos * 10LL)));
+                static_cast<void>((digits = (digits + 1)));
             }
         }
         if (index >= static_cast<int32_t>(s.size())) {
             return doof::Failure<std::string>{ std::string("Duration component missing designator") };
         }
         auto designator = doof::string_at(s, index, "", 0);
-        (index = (index + 1));
+        static_cast<void>((index = (index + 1)));
         auto order = 0;
         auto multiplier = 0LL;
         if (designator == U'\u0044') {
             if (inTime || hasFraction) {
                 return doof::Failure<std::string>{ std::string("Invalid duration day component") };
             }
-            (order = 1);
-            (multiplier = 86400000000000LL);
+            static_cast<void>((order = 1));
+            static_cast<void>((multiplier = 86400000000000LL));
         } else if (designator == U'\u0048') {
             if (!inTime || hasFraction) {
                 return doof::Failure<std::string>{ std::string("Invalid duration hour component") };
             }
-            (order = 2);
-            (multiplier = 3600000000000LL);
+            static_cast<void>((order = 2));
+            static_cast<void>((multiplier = 3600000000000LL));
         } else if (designator == U'\u004D') {
             if (!inTime || hasFraction) {
                 return doof::Failure<std::string>{ std::string("Invalid duration minute component") };
             }
-            (order = 3);
-            (multiplier = 60000000000LL);
+            static_cast<void>((order = 3));
+            static_cast<void>((multiplier = 60000000000LL));
         } else if (designator == U'\u0053') {
             if (!inTime) {
                 return doof::Failure<std::string>{ std::string("Invalid duration second component") };
             }
-            (order = 4);
-            (multiplier = 1000000000LL);
+            static_cast<void>((order = 4));
+            static_cast<void>((multiplier = 1000000000LL));
         } else {
             return doof::Failure<std::string>{ std::string("Invalid duration component designator") };
         }
         if (order <= lastOrder) {
             return doof::Failure<std::string>{ std::string("Duration components must be in ISO order") };
         }
-        (lastOrder = order);
-        (total = (total + (whole * multiplier)));
+        static_cast<void>((lastOrder = order));
+        static_cast<void>((total = (total + (whole * multiplier))));
         if (hasFraction) {
-            (total = (total + fractionNanos));
+            static_cast<void>((total = (total + fractionNanos)));
         }
-        (sawComponent = true);
+        static_cast<void>((sawComponent = true));
     }
     if (!sawComponent) {
         return doof::Failure<std::string>{ std::string("Duration must contain at least one component") };
@@ -268,7 +268,7 @@ int32_t digitValue(char32_t c) {
 }
 
 void Thread::sleep(const std::shared_ptr<Duration>& duration) {
-    (static_cast<void>(::doof_time::thread_sleep_nanos(duration->toNanos())), std::monostate{});
+    ::doof_time::thread_sleep_nanos(duration->toNanos());
 }
 
 void __doof_initialize_module() {

@@ -17,8 +17,8 @@ export function testModuleMutableBindingsRemainNamespaceStorageInLambda(): none 
   Assert.isTrue(result.emission != none)
   source := result.emission!.modules[0].source
   Assert.stringContains(source, "doof::callback<void()>([]() -> void")
-  Assert.stringContains(source, "(static_cast<void>(values->push_back(1)), std::monostate{});")
-  Assert.stringContains(source, "(count += 1);")
+  Assert.stringContains(source, "values->push_back(1);")
+  Assert.stringContains(source, "static_cast<void>((count += 1));")
   Assert.stringNotContains(source, "[values, count]")
   Assert.stringNotContains(source, "(*values)")
   Assert.stringNotContains(source, "(*count)")

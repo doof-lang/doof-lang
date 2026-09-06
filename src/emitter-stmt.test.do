@@ -2,6 +2,38 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+export function testDiscardedExpressionValuesAreExplicit(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function effect(): none {}\n" +
+    "function main(): none { effect()\nnone\n42\nlet count = 0\ncount += 1\nvalue := effect() }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "effect();")
+  Assert.stringContains(source, "static_cast<void>(std::monostate{});")
+  Assert.stringContains(source, "static_cast<void>(42);")
+  Assert.stringContains(source, "static_cast<void>((count += 1));")
+  Assert.stringContains(source, "value = (static_cast<void>(effect()), std::monostate{});")
+}
+
+export function testUnitAsyncYieldExplicitlyDiscardsCarrier(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function effect(): none {}\nfunction main(): none { task := async { yield effect() } }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.stringContains(result.emission!.modules[0].source,
+    "effect();\n    return;")
+}
+
+export function testLoopUpdatesExplicitlyDiscardEachValue(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function effect(): none {}\nfunction main(): none { for let i = 0; i < 2; effect(), i += 1 {} }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.stringContains(result.emission!.modules[0].source,
+    "effect(), static_cast<void>((i += 1))")
+}
+
 export function testCapturedOptionalGenericLocalUsesConcreteStorageType(): none {
   result := compile([
     SourceFile {

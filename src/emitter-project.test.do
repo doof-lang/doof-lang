@@ -20,6 +20,27 @@ function packageInput(logicalPrefix: string, diskRoot: string): NativePackageInp
   }
 }
 
+export function testNativePackageOrderIsIndependentOfAcquisitionOrder(): none {
+  alpha := packageInput("/vendor/alpha", "/cache/alpha")
+  beta := packageInput("/vendor/beta", "/cache/beta")
+  root := NativePackageInput { logicalPrefix: "/root", outputRoot: "", manifest: packageInput("/root", "/root").manifest }
+  root.manifest.nativeBuild.includePaths.push("/root/second")
+  root.manifest.nativeBuild.includePaths.push("/root/first")
+  graph := ModuleGraphEmission {}
+  cold := planProjectEmission(graph, [root, beta, alpha])
+  warm := planProjectEmission(graph, [alpha, root, beta])
+  Assert.equal(cold.nativeBuild.includePaths.length, warm.nativeBuild.includePaths.length)
+  for index of 0..<cold.nativeBuild.includePaths.length {
+    Assert.equal(cold.nativeBuild.includePaths[index], warm.nativeBuild.includePaths[index])
+  }
+  Assert.equal(cold.nativeBuild.includePaths[0], "second")
+  Assert.equal(cold.nativeBuild.includePaths[1], "first")
+  Assert.equal(cold.nativeBuild.sourceFiles[0], "native.cpp")
+  Assert.equal(cold.nativeBuild.sourceFiles[1], "vendor/alpha/native.cpp")
+  Assert.equal(cold.nativeBuild.sourceFiles[2], "vendor/beta/native.cpp")
+  Assert.equal(planProjectEmission(graph, []).nativeBuild.includePaths.length, 0)
+}
+
 export function testPlansPackageRelativeNativeCopiesWithoutFilenameCollisions(): none {
   graph := ModuleGraphEmission { modules: [
     ModuleEmission {

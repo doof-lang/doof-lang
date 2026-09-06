@@ -146,19 +146,19 @@ std::string canonicalBundleDigest(const std::shared_ptr<StdlibBundleIndex>& inde
     auto canonical = std::string("schema=4\n");
     const auto& _iterable_6 = index->targets;
     for (const auto& target : *_iterable_6) {
-        (canonical += ((std::string("target=") + target) + std::string("\n")));
+        static_cast<void>((canonical += ((std::string("target=") + target) + std::string("\n"))));
     }
     const auto& _iterable_8 = index->packages;
     for (const auto& packageName : *_iterable_8) {
-        (canonical += ((std::string("package=") + packageName) + std::string("\n")));
+        static_cast<void>((canonical += ((std::string("package=") + packageName) + std::string("\n"))));
     }
     const auto& _iterable_10 = index->members;
     for (const auto& member : *_iterable_10) {
-        (canonical += ((((((((((((((std::string("member=") + member->kind) + std::string("u0000")) + member->packageName) + std::string("u0000")) + member->path) + std::string("u0000")) + member->member) + std::string("u0000")) + doof::to_string(member->sourceBytes)) + std::string("u0000")) + doof::to_string(member->compressedBytes)) + std::string("u0000")) + member->sha256) + std::string("\n")));
+        static_cast<void>((canonical += ((((((((((((((std::string("member=") + member->kind) + std::string("u0000")) + member->packageName) + std::string("u0000")) + member->path) + std::string("u0000")) + member->member) + std::string("u0000")) + doof::to_string(member->sourceBytes)) + std::string("u0000")) + doof::to_string(member->compressedBytes)) + std::string("u0000")) + member->sha256) + std::string("\n"))));
     }
     const auto& _iterable_12 = index->licenseFiles;
     for (const auto& license : *_iterable_12) {
-        (canonical += ((((((std::string("license=") + license->packageName) + std::string("u0000")) + license->path) + std::string("u0000")) + license->member) + std::string("\n")));
+        static_cast<void>((canonical += ((((((std::string("license=") + license->packageName) + std::string("u0000")) + license->path) + std::string("u0000")) + license->member) + std::string("\n"))));
     }
     return ::std_::crypto::index::sha256HexString(canonical);
 }
@@ -207,7 +207,7 @@ doof::Result<void, std::string> validateBundleIndex(const std::shared_ptr<Stdlib
         if (!doof::array_contains(supportedTargets, target, "", 0) || ((previousTarget != std::string("")) && (target <= previousTarget))) {
             return doof::Failure<std::string>{ std::string("Stdlib bundle target list must contain sorted unique supported targets") };
         }
-        (previousTarget = target);
+        static_cast<void>((previousTarget = target));
     }
     if ((static_cast<int32_t>(index->bundleDigest.size()) != 64) || (canonicalBundleDigest(index) != index->bundleDigest)) {
         return doof::Failure<std::string>{ std::string("Stdlib bundle digest is invalid") };
@@ -218,7 +218,7 @@ doof::Result<void, std::string> validateBundleIndex(const std::shared_ptr<Stdlib
         if ((!doof::string_startsWith(packageName, std::string("std/")) || doof::string_contains(doof::string_substring(packageName, 4, static_cast<int32_t>(packageName.size())), std::string("/"))) || ((previousPackage != std::string("")) && (packageName <= previousPackage))) {
             return doof::Failure<std::string>{ std::string("Stdlib bundle package list must contain sorted unique std package names") };
         }
-        (previousPackage = packageName);
+        static_cast<void>((previousPackage = packageName));
     }
     std::shared_ptr<std::vector<std::string>> seenOuter = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_18 = entries;
@@ -229,7 +229,7 @@ doof::Result<void, std::string> validateBundleIndex(const std::shared_ptr<Stdlib
         if (doof::array_contains(seenOuter, entry->name, "", 0)) {
             return doof::Failure<std::string>{ (std::string("Stdlib bundle has duplicate outer member ") + entry->name) };
         }
-        (static_cast<void>(seenOuter->push_back(entry->name)), std::monostate{});
+        seenOuter->push_back(entry->name);
     }
     if (((static_cast<int32_t>((entries)->size()) != (static_cast<int32_t>((index->members)->size()) + 1)) || (static_cast<int32_t>((entries)->size()) == 0)) || (doof::array_at(entries, 0, "src/stdlib-bundle", 148)->name != std::string("bundle-index.json"))) {
         return doof::Failure<std::string>{ std::string("Stdlib bundle outer archive does not match its index") };
@@ -241,7 +241,7 @@ doof::Result<void, std::string> validateBundleIndex(const std::shared_ptr<Stdlib
         const auto& _iterable_20 = index->members;
         for (const auto& member : *_iterable_20) {
             if ((member->packageName == packageName) && (member->kind == std::string("manifest"))) {
-                (manifestCount += 1);
+                static_cast<void>((manifestCount += 1));
             }
         }
         if (manifestCount != 1) {
@@ -255,7 +255,7 @@ doof::Result<void, std::string> validateBundleIndex(const std::shared_ptr<Stdlib
         if (doof::array_contains(seenMembers, member->member, "", 0)) {
             return doof::Failure<std::string>{ (std::string("Stdlib bundle index duplicates member ") + member->member) };
         }
-        (static_cast<void>(seenMembers->push_back(member->member)), std::monostate{});
+        seenMembers->push_back(member->member);
         const auto entry = memberArchiveEntry(std::make_shared<StdlibBundleProvider>(std::string(""), index, entries), member->member);
         if (doof::is_null(entry) || (entry->size != member->compressedBytes)) {
             return doof::Failure<std::string>{ (std::string("Stdlib bundle member is missing or has the wrong size: ") + member->member) };
@@ -271,12 +271,12 @@ doof::Result<void, std::string> validateBundleIndex(const std::shared_ptr<Stdlib
         if (doof::array_contains(seenLicenses, licenseKey, "", 0)) {
             return doof::Failure<std::string>{ (std::string("Stdlib bundle duplicates required license ") + license->path) };
         }
-        (static_cast<void>(seenLicenses->push_back(licenseKey)), std::monostate{});
+        seenLicenses->push_back(licenseKey);
         auto hasNativeMember = false;
         const auto& _iterable_27 = index->members;
         for (const auto& member : *_iterable_27) {
             if (((member->packageName == license->packageName) && (member->kind == std::string("native"))) && (member->member == license->member)) {
-                (hasNativeMember = true);
+                static_cast<void>((hasNativeMember = true));
             }
         }
         if (!hasNativeMember) {
@@ -431,9 +431,9 @@ bool receiptMatches(const std::string& path, const std::shared_ptr<StdlibBundleP
 }
 std::string receiptSource(const std::shared_ptr<StdlibBundleProvider>& provider, const std::string& packageName) {
     std::shared_ptr<doof::ordered_map<std::string, doof::JsonValue>> value = std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{});
-    (static_cast<void>(doof::map_set<std::string, doof::JsonValue>(value, std::string("schemaVersion"), doof::json_value(1), "", 0)), std::monostate{});
-    (static_cast<void>(doof::map_set<std::string, doof::JsonValue>(value, std::string("bundleDigest"), doof::json_value(provider->index->bundleDigest), "", 0)), std::monostate{});
-    (static_cast<void>(doof::map_set<std::string, doof::JsonValue>(value, std::string("packageName"), doof::json_value(packageName), "", 0)), std::monostate{});
+    doof::map_set<std::string, doof::JsonValue>(value, std::string("schemaVersion"), doof::json_value(1), "", 0);
+    doof::map_set<std::string, doof::JsonValue>(value, std::string("bundleDigest"), doof::json_value(provider->index->bundleDigest), "", 0);
+    doof::map_set<std::string, doof::JsonValue>(value, std::string("packageName"), doof::json_value(packageName), "", 0);
     return (::doof_json::format(doof::json_value(value)) + std::string("\n"));
 }
 doof::Result<std::shared_ptr<std::vector<uint8_t>>, std::string> readCompressedMember(const std::shared_ptr<StdlibBundleProvider>& provider, const std::shared_ptr<StdlibBundleMember>& member) {
@@ -483,8 +483,8 @@ doof::Result<void, std::string> materializeInnerArchive(const std::shared_ptr<St
         if (doof::array_contains(writtenPaths, entry->name, "", 0)) {
             return doof::Failure<std::string>{ (std::string("Bundled stdlib package duplicates path ") + entry->name) };
         }
-        (sourceBytes += entry->size);
-        (static_cast<void>(writtenPaths->push_back(entry->name)), std::monostate{});
+        static_cast<void>((sourceBytes += entry->size));
+        writtenPaths->push_back(entry->name);
         const auto outputPath = bundlePath(staging, entry->name);
         auto _try_value_54 = ensureDirectory(::std_::path::index::dirname(outputPath));
         if (doof::is_failure(_try_value_54)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_54))};
@@ -553,7 +553,7 @@ doof::Result<std::shared_ptr<MaterializedStdlibPackage>, std::string> materializ
         if (member->packageName != packageName) {
             continue;
         }
-        (selectedMembers += 1);
+        static_cast<void>((selectedMembers += 1));
         auto _binding_value_65 = materializeInnerArchive(provider, member, staging, writtenPaths);
         if (doof::is_failure(_binding_value_65)) {
             const auto error = doof::failure_error(_binding_value_65);

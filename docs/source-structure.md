@@ -48,7 +48,7 @@ modules own the following decisions:
 | --- | --- |
 | `checker-state.do` | Mutable per-run and per-module checker state |
 | `checker-symbols.do` | Scope/binding operations, builtins, shared declaration signatures, symbol/declaration lookup |
-| `checker-types.do` | Resolved-type construction, comparison, assignability, substitution, interface-bound receiver views, and display |
+| `checker-types.do` | Resolved-type construction, comparison, union mutability conflict detection, assignability, substitution, interface-bound receiver views, and display |
 | `checker-annotations.do` | One annotation resolver for provisional signatures and checked types; builtin arity, alias expansion, constraints, and annotation decoration |
 | `checker-resolution.do` | Bound-aware member selections (type, declaration, owner, static/field flags), assignment bindings, indexing, and annotation API forwarding |
 | `checker-common.do` | State-aware diagnostics, expression type decoration, and centralized assignment-binding validation |
@@ -76,6 +76,11 @@ modules own the following decisions:
 When a check produces information needed for lowering, add an explicit
 decoration to `ast.do`, populate it in the owning checker module, require it in
 `checker-validation.do`, and consume it in the focused emitter.
+
+Union arms that differ only in collection mutability are rejected by annotation
+resolution and checked again by final resolved-type validation, including nested
+and substituted types. The pure comparison lives in `checker-types.do`; emission
+continues to consume checked types without reconstructing this rule.
 
 Annotation predeclaration and full checking run the same resolver. Provisional
 signatures use a disposable diagnostic context and do not decorate the AST or
@@ -125,14 +130,14 @@ emitter or individual expression branch.
 | `emitter-header.do` | Multi-namespace worldview declaration ordering, enum identity/helper generation, and rendering |
 | `string-builder.do` | Runtime-backed append-only construction for large generated text |
 | `emitter-decl.do` | Shared function/method body and return boundaries, signatures, class declarations, top-level definitions, and field equality operators for structs |
-| `emitter-stmt.do` | Blocks and statement/control-flow lowering |
-| `emitter-expr.do` | Single expression dispatch façade; contextual conversion of checked unit expressions and native void calls to stored unit values while preserving evaluation |
+| `emitter-stmt.do` | Blocks and statement/control-flow lowering, routing discarded statement, loop-update, and void-yield values through expression discard emission |
+| `emitter-expr.do` | Single expression dispatch façade; contextual conversion of checked unit expressions and native void calls to stored unit values; discarded calls bypass unused carrier conversion |
 | `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as`; equality uses checked none types and unit unwraps produce stored unit values |
 | `emitter-expr-calls.do` | Call target selection, runtime member dispatch, and positional Result payload construction |
 | `emitter-call-arguments.do` | Shared named/positional argument ordering, checked contextual argument types, and call-site default emission for direct and dispatched calls |
 | `emitter-construction.do` | Positional, named, contextual, and actor construction from checked plans; shared argument/default lowering, owner specialization, and spread handling |
 | `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering; shared contextual absence values for literals and catch initialization |
-| `emitter-expr-control.do` | Conditional, case, catch, dot-shorthand, and yield-block expressions |
+| `emitter-expr-control.do` | Conditional, case, catch, dot-shorthand, and yield-block expressions; shares statement condition formatting for lowered C++ if branches |
 | `emitter-expr-lambda.do` | Lambda capture analysis, mutable capture boxing, and callback lowering |
 | `emitter-expr-actor.do` | Actors, promises, async calls, and retirement |
 | `emitter-expr-utils.do` | Decorated-type requirements, shared shorthand property emission, specialized expression-return boundaries, and model-backed nullable queries |
@@ -144,7 +149,7 @@ emitter or individual expression branch.
 | `emitter-json.do` | Demand-gated generated JSON reads, writes, enum backing values, paths, and interface dispatch; unit decoding validates null and all nested containers validate shape before access |
 | `emitter-metadata.do` | Reflection metadata, backing-value JSON Schema, and JSON invocation |
 | `emitter-wasm.do` | JSON-over-C-ABI WebAssembly wrapper generation |
-| `emitter-project.do` | Generated project shape and reached-package native input collation |
+| `emitter-project.do` | Generated project shape and reached-package native input collation; root-first, logical-prefix package ordering stabilizes native build arguments while preserving manifest input order |
 
 Function and method definitions share capture/context setup and a specialized return
 boundary. Both expression and block bodies of `never` callables retain the

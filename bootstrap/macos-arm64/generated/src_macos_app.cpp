@@ -10,32 +10,32 @@ std::string macOSPackageArchiveName(const std::string& executableName, const std
     const auto allowed = std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-");
     for (int32_t index = 0; index < static_cast<int32_t>(version.size()); ++index) {
         const auto character = doof::string_substring(version, index, (index + 1));
-        (safeVersion = (safeVersion + (doof::string_contains(allowed, character) ? character : std::string("-"))));
+        static_cast<void>((safeVersion = (safeVersion + (doof::string_contains(allowed, character) ? character : std::string("-")))));
     }
     return (((executableName + std::string("-")) + safeVersion) + std::string("-macos.zip"));
 }
 std::string renderMacOSInfoPlist(const std::shared_ptr<MacOSAppConfig>& config) {
     auto body = std::string("");
-    (body = (body + plistString(std::string("CFBundleDevelopmentRegion"), std::string("en"))));
-    (body = (body + plistString(std::string("CFBundleDisplayName"), config->displayName)));
-    (body = (body + plistString(std::string("CFBundleExecutable"), config->executableName)));
+    static_cast<void>((body = (body + plistString(std::string("CFBundleDevelopmentRegion"), std::string("en")))));
+    static_cast<void>((body = (body + plistString(std::string("CFBundleDisplayName"), config->displayName))));
+    static_cast<void>((body = (body + plistString(std::string("CFBundleExecutable"), config->executableName))));
     if (config->iconPath != std::string("")) {
-        (body = (body + plistString(std::string("CFBundleIconFile"), (config->executableName + std::string(".icns")))));
+        static_cast<void>((body = (body + plistString(std::string("CFBundleIconFile"), (config->executableName + std::string(".icns"))))));
     }
-    (body = (body + plistString(std::string("CFBundleIdentifier"), config->bundleId)));
-    (body = (body + plistString(std::string("CFBundleInfoDictionaryVersion"), std::string("6.0"))));
-    (body = (body + plistString(std::string("CFBundleName"), config->displayName)));
-    (body = (body + plistString(std::string("CFBundlePackageType"), std::string("APPL"))));
-    (body = (body + plistString(std::string("CFBundleShortVersionString"), config->version)));
-    (body = (body + plistString(std::string("CFBundleVersion"), config->version)));
-    (body = (body + plistString(std::string("LSApplicationCategoryType"), config->category)));
-    (body = (body + plistString(std::string("LSMinimumSystemVersion"), config->minimumSystemVersion)));
-    (body = (body + std::string("\t<key>NSHighResolutionCapable</key>\n\t<true/>\n")));
-    (body = (body + plistString(std::string("NSPrincipalClass"), std::string("NSApplication"))));
+    static_cast<void>((body = (body + plistString(std::string("CFBundleIdentifier"), config->bundleId))));
+    static_cast<void>((body = (body + plistString(std::string("CFBundleInfoDictionaryVersion"), std::string("6.0")))));
+    static_cast<void>((body = (body + plistString(std::string("CFBundleName"), config->displayName))));
+    static_cast<void>((body = (body + plistString(std::string("CFBundlePackageType"), std::string("APPL")))));
+    static_cast<void>((body = (body + plistString(std::string("CFBundleShortVersionString"), config->version))));
+    static_cast<void>((body = (body + plistString(std::string("CFBundleVersion"), config->version))));
+    static_cast<void>((body = (body + plistString(std::string("LSApplicationCategoryType"), config->category))));
+    static_cast<void>((body = (body + plistString(std::string("LSMinimumSystemVersion"), config->minimumSystemVersion))));
+    static_cast<void>((body = (body + std::string("\t<key>NSHighResolutionCapable</key>\n\t<true/>\n"))));
+    static_cast<void>((body = (body + plistString(std::string("NSPrincipalClass"), std::string("NSApplication")))));
     if (!doof::is_null(config->infoPlist)) {
         const auto& _iterable_3 = doof::unwrap_optional(config->infoPlist);
         for (const auto& [key, value] : *_iterable_3) {
-            (body = ((((body + std::string("\t<key>")) + escapePlistText(key)) + std::string("</key>\n")) + renderPlistValue(value, 1)));
+            static_cast<void>((body = ((((body + std::string("\t<key>")) + escapePlistText(key)) + std::string("</key>\n")) + renderPlistValue(value, 1))));
         }
     }
     return ((std::string("<\?xml version=\"1.0\" encoding=\"UTF-8\"\?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n") + body) + std::string("</dict>\n</plist>\n"));
@@ -43,15 +43,15 @@ std::string renderMacOSInfoPlist(const std::shared_ptr<MacOSAppConfig>& config) 
 std::shared_ptr<std::vector<std::string>> macOSCodesignArguments(const std::string& targetPath, const std::string& identity, const std::string& signing, const std::string& entitlementsPath) {
     auto arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("--force"), std::string("--sign"), identity});
     if (signing != std::string("ad-hoc")) {
-        (static_cast<void>(arguments->push_back(std::string("--options"))), std::monostate{});
-        (static_cast<void>(arguments->push_back(std::string("runtime"))), std::monostate{});
+        arguments->push_back(std::string("--options"));
+        arguments->push_back(std::string("runtime"));
     }
-    (static_cast<void>(arguments->push_back(((signing == std::string("ad-hoc")) ? std::string("--timestamp=none") : std::string("--timestamp")))), std::monostate{});
+    arguments->push_back(((signing == std::string("ad-hoc")) ? std::string("--timestamp=none") : std::string("--timestamp")));
     if (entitlementsPath != std::string("")) {
-        (static_cast<void>(arguments->push_back(std::string("--entitlements"))), std::monostate{});
-        (static_cast<void>(arguments->push_back(entitlementsPath)), std::monostate{});
+        arguments->push_back(std::string("--entitlements"));
+        arguments->push_back(entitlementsPath);
     }
-    (static_cast<void>(arguments->push_back(targetPath)), std::monostate{});
+    arguments->push_back(targetPath);
     return arguments;
 }
 std::string plistString(const std::string& key, const std::string& value) {
@@ -60,7 +60,7 @@ std::string plistString(const std::string& key, const std::string& value) {
 std::string plistIndent(int32_t depth) {
     auto result = std::string("");
     for (int32_t ignored = 0; ignored < depth; ++ignored) {
-        (result = (result + std::string("\t")));
+        static_cast<void>((result = (result + std::string("\t"))));
     }
     return result;
 }
@@ -100,7 +100,7 @@ std::string renderPlistValue(const doof::JsonValue& value, int32_t depth) {
             auto result = (indent + std::string("<array>\n"));
             const auto& _iterable_6 = array;
             for (const auto& item : *_iterable_6) {
-                (result = (result + renderPlistValue(item, (depth + 1))));
+                static_cast<void>((result = (result + renderPlistValue(item, (depth + 1)))));
             }
             return ((result + indent) + std::string("</array>\n"));
     }
@@ -109,8 +109,8 @@ std::string renderPlistValue(const doof::JsonValue& value, int32_t depth) {
             auto result = (indent + std::string("<dict>\n"));
             const auto& _iterable_8 = object;
             for (const auto& [key, item] : *_iterable_8) {
-                (result = ((((result + plistIndent((depth + 1))) + std::string("<key>")) + escapePlistText(key)) + std::string("</key>\n")));
-                (result = (result + renderPlistValue(item, (depth + 1))));
+                static_cast<void>((result = ((((result + plistIndent((depth + 1))) + std::string("<key>")) + escapePlistText(key)) + std::string("</key>\n"))));
+                static_cast<void>((result = (result + renderPlistValue(item, (depth + 1)))));
             }
             return ((result + indent) + std::string("</dict>\n"));
     }

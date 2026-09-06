@@ -50,7 +50,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types:
         if (entry->localHeaderOffset > (fileSize - ZIP_LOCAL_HEADER_SIZE)) {
             return doof::Failure<std::string>{ (std::string("zip read failed: local file header is out of bounds for ") + entry->name) };
         }
-        (static_cast<void>(entries->push_back(entry)), std::monostate{});
+        entries->push_back(entry);
     }
     if (reader->getPosition() > directory->size) {
         return doof::Failure<std::string>{ std::string("zip read failed: central directory entries exceed declared size") };

@@ -4,6 +4,7 @@ import { ActorType, ArrayResolvedType, ClassType, Diagnostic, FunctionType, MapR
 import { AnalysisResult } from "./analyzer"
 import { CheckedConstruction, ArrayLiteral, ArrayType, AsExpression, AssignmentExpression, BinaryExpression, Block, CallExpression, ClassDeclaration, ConstructExpression, ConstDeclaration, DestructuringStatement, EnumDeclaration, ExportDeclaration, Expression, ExpressionStatement, ForOfStatement, ForStatement, FunctionDeclaration, AstFunctionType, IfExpression, IfStatement, ImmutableBinding, Identifier, IndexExpression, InterfaceDeclaration, LetDeclaration, LambdaExpression, MemberExpression, NamedType, ObjectLiteral, ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral, TupleLiteral, TypeAliasDeclaration, TypeAnnotation, UnaryExpression, UnionType, WhileStatement, WithStatement, YieldStatement, YieldBlockExpression, YieldBlockAssignmentStatement, CatchExpression, CaseExpression, CasePattern, CaseStatement, RangePattern, TypePattern, ValuePattern, WildcardPattern, TryStatement, AsyncExpression, RetireExpression, ActorCreationExpression, WeakType, TypeParameterConstraint } from "./ast"
 
+import { unionMutabilityConflict } from "./checker-types"
 import { optionalResolvedType } from "./checker-symbols"
 
 export function validateCheckedTypes(result: AnalysisResult): Diagnostic[] {
@@ -347,6 +348,8 @@ export function validateResolved(resolvedType: ResolvedType | none, span: Source
     weak_: WeakResolvedType -> { validateResolved(weak_.inner, span, module, owner + " weak target", diagnostics) }
     tuple: TupleResolvedType -> { for item of tuple.elements { validateResolved(item, span, module, owner + " tuple element", diagnostics) } }
     union_: UnionResolvedType -> {
+      conflict := unionMutabilityConflict(union_)
+      if conflict != none { addValidationError(module, span, conflict!, diagnostics) }
       if union_.types.length == 0 { addValidationError(module, span, "Empty resolved union for " + owner, diagnostics) }
       for member of union_.types { validateResolved(member, span, module, owner + " union member", diagnostics) }
     }

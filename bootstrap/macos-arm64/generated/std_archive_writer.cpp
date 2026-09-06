@@ -12,42 +12,42 @@ int32_t ZIP_VERSION_MADE_BY = 20;
 int32_t ZIP_UTF8_FLAG = 2048;
 std::shared_ptr<std::vector<uint8_t>> encodedName(const std::string& name) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
-    (static_cast<void>(builder->writeString(name)), std::monostate{});
+    builder->writeString(name);
     return builder->build();
 }
 void writeLocalHeader(const std::shared_ptr<::doof_blob::NativeBlobBuilder>& builder, const std::shared_ptr<::std_::archive::types::ZipEntry>& entry, const std::shared_ptr<std::vector<uint8_t>>& nameBytes, const std::shared_ptr<std::vector<uint8_t>>& compressed) {
-    (static_cast<void>(builder->writeUnsignedInt(LOCAL_FILE_HEADER_SIGNATURE)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(ZIP_VERSION_NEEDED)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(ZIP_UTF8_FLAG)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(::std_::archive::types::ZipCompression_value(entry->compression))), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(entry->crc32)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(static_cast<int64_t>(static_cast<int32_t>((compressed)->size())))), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(static_cast<int64_t>(static_cast<int32_t>((entry->data)->size())))), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(static_cast<int32_t>((nameBytes)->size()))), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeBytes(nameBytes)), std::monostate{});
+    builder->writeUnsignedInt(LOCAL_FILE_HEADER_SIGNATURE);
+    builder->writeUnsignedShort(ZIP_VERSION_NEEDED);
+    builder->writeUnsignedShort(ZIP_UTF8_FLAG);
+    builder->writeUnsignedShort(::std_::archive::types::ZipCompression_value(entry->compression));
+    builder->writeUnsignedShort(0);
+    builder->writeUnsignedShort(0);
+    builder->writeUnsignedInt(entry->crc32);
+    builder->writeUnsignedInt(static_cast<int64_t>(static_cast<int32_t>((compressed)->size())));
+    builder->writeUnsignedInt(static_cast<int64_t>(static_cast<int32_t>((entry->data)->size())));
+    builder->writeUnsignedShort(static_cast<int32_t>((nameBytes)->size()));
+    builder->writeUnsignedShort(0);
+    builder->writeBytes(nameBytes);
 }
 void writeCentralHeader(const std::shared_ptr<::doof_blob::NativeBlobBuilder>& builder, const std::shared_ptr<::std_::archive::types::ZipEntry>& entry, const std::shared_ptr<std::vector<uint8_t>>& nameBytes, int64_t localHeaderOffset) {
-    (static_cast<void>(builder->writeUnsignedInt(CENTRAL_DIRECTORY_SIGNATURE)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(ZIP_VERSION_MADE_BY)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(ZIP_VERSION_NEEDED)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(ZIP_UTF8_FLAG)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(::std_::archive::types::ZipCompression_value(entry->compression))), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(entry->crc32)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(entry->compressedSize)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(static_cast<int64_t>(static_cast<int32_t>((entry->data)->size())))), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(static_cast<int32_t>((nameBytes)->size()))), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(0LL)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(localHeaderOffset)), std::monostate{});
-    (static_cast<void>(builder->writeBytes(nameBytes)), std::monostate{});
+    builder->writeUnsignedInt(CENTRAL_DIRECTORY_SIGNATURE);
+    builder->writeUnsignedShort(ZIP_VERSION_MADE_BY);
+    builder->writeUnsignedShort(ZIP_VERSION_NEEDED);
+    builder->writeUnsignedShort(ZIP_UTF8_FLAG);
+    builder->writeUnsignedShort(::std_::archive::types::ZipCompression_value(entry->compression));
+    builder->writeUnsignedShort(0);
+    builder->writeUnsignedShort(0);
+    builder->writeUnsignedInt(entry->crc32);
+    builder->writeUnsignedInt(entry->compressedSize);
+    builder->writeUnsignedInt(static_cast<int64_t>(static_cast<int32_t>((entry->data)->size())));
+    builder->writeUnsignedShort(static_cast<int32_t>((nameBytes)->size()));
+    builder->writeUnsignedShort(0);
+    builder->writeUnsignedShort(0);
+    builder->writeUnsignedShort(0);
+    builder->writeUnsignedShort(0);
+    builder->writeUnsignedInt(0LL);
+    builder->writeUnsignedInt(localHeaderOffset);
+    builder->writeBytes(nameBytes);
 }
 std::shared_ptr<std::vector<uint8_t>> compressEntry(const std::shared_ptr<::std_::archive::types::ZipEntry>& entry) {
     if ((entry->kind == ::std_::archive::types::ArchiveEntryKind::Directory) || (entry->compression == ::std_::archive::types::ZipCompression::Store)) {
@@ -65,21 +65,21 @@ std::shared_ptr<std::vector<uint8_t>> writeZip(const std::shared_ptr<std::vector
         const auto compressed = compressEntry(source);
         const ::std_::archive::types::ZipCompression compression = ((source->kind == ::std_::archive::types::ArchiveEntryKind::Directory) ? ::std_::archive::types::ZipCompression::Store : source->compression);
         const auto entry = std::make_shared<::std_::archive::types::ZipEntry>(source->name, source->kind, static_cast<int64_t>(static_cast<int32_t>((source->data)->size())), static_cast<int64_t>(static_cast<int32_t>((compressed)->size())), ::doof_gzip::crc32Bytes(source->data), compression, source->data);
-        (static_cast<void>(writeLocalHeader(builder, entry, nameBytes, compressed)), std::monostate{});
-        (static_cast<void>(builder->writeBytes(compressed)), std::monostate{});
-        (static_cast<void>(writeCentralHeader(centralBuilder, entry, nameBytes, localHeaderOffset)), std::monostate{});
+        writeLocalHeader(builder, entry, nameBytes, compressed);
+        builder->writeBytes(compressed);
+        writeCentralHeader(centralBuilder, entry, nameBytes, localHeaderOffset);
     }
     const auto centralDirectory = centralBuilder->build();
     const auto centralDirectoryOffset = builder->length();
-    (static_cast<void>(builder->writeBytes(centralDirectory)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(END_OF_CENTRAL_DIRECTORY_SIGNATURE)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(static_cast<int32_t>((entries)->size()))), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(static_cast<int32_t>((entries)->size()))), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(static_cast<int64_t>(static_cast<int32_t>((centralDirectory)->size())))), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedInt(centralDirectoryOffset)), std::monostate{});
-    (static_cast<void>(builder->writeUnsignedShort(0)), std::monostate{});
+    builder->writeBytes(centralDirectory);
+    builder->writeUnsignedInt(END_OF_CENTRAL_DIRECTORY_SIGNATURE);
+    builder->writeUnsignedShort(0);
+    builder->writeUnsignedShort(0);
+    builder->writeUnsignedShort(static_cast<int32_t>((entries)->size()));
+    builder->writeUnsignedShort(static_cast<int32_t>((entries)->size()));
+    builder->writeUnsignedInt(static_cast<int64_t>(static_cast<int32_t>((centralDirectory)->size())));
+    builder->writeUnsignedInt(centralDirectoryOffset);
+    builder->writeUnsignedShort(0);
     return builder->build();
 }
 }

@@ -17,7 +17,7 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
         if (doof::is_null(declaration) || !canGenerateJsonDeserialization(doof::unwrap_optional(declaration), programs, cache)) {
             return nullptr;
         }
-        (static_cast<void>(implementations->push_back(doof::unwrap_optional(declaration))), std::monostate{});
+        implementations->push_back(doof::unwrap_optional(declaration));
     }
     if (static_cast<int32_t>((implementations)->size()) == 0) {
         return nullptr;
@@ -36,10 +36,10 @@ std::shared_ptr<JsonDiscriminator> interfaceJsonDiscriminator(const std::shared_
                 for (const auto& implementation : *_iterable_4) {
                     const auto matching = fixedStringField(implementation, discriminator->fieldName);
                     if (doof::is_null(matching) || discriminatorHasValue(discriminator, matching.value())) {
-                        (discriminator->entries = std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{}));
+                        static_cast<void>((discriminator->entries = std::make_shared<std::vector<std::shared_ptr<JsonDiscriminatorEntry>>>(std::vector<std::shared_ptr<JsonDiscriminatorEntry>>{})));
                         break;
                     }
-                    (static_cast<void>(discriminator->entries->push_back(std::make_shared<JsonDiscriminatorEntry>(matching.value(), implementation))), std::monostate{});
+                    discriminator->entries->push_back(std::make_shared<JsonDiscriminatorEntry>(matching.value(), implementation));
                 }
                 if (static_cast<int32_t>((discriminator->entries)->size()) == static_cast<int32_t>((implementations)->size())) {
                     return discriminator;
@@ -61,7 +61,7 @@ std::optional<std::string> fixedStringField(const std::shared_ptr<::app_src_ast_
         const auto& _iterable_8 = field->names;
         for (const auto& fieldName : *_iterable_8) {
             if (fieldName == name) {
-                (matches = true);
+                static_cast<void>((matches = true));
             }
         }
         if (!matches) {
@@ -98,7 +98,7 @@ bool canGenerateJsonSerialization(const std::shared_ptr<::app_src_ast_::ClassDec
     std::shared_ptr<std::vector<std::string>> visited = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto result = canGenerateJsonSerializationInner(owner, programs, visited);
     if (!doof::is_null(cache)) {
-        (static_cast<void>(doof::map_set<std::string, bool>(cache->serialization, key, result, "", 0)), std::monostate{});
+        doof::map_set<std::string, bool>(cache->serialization, key, result, "", 0);
     }
     return result;
 }
@@ -128,7 +128,7 @@ bool canGenerateJsonDeserialization(const std::shared_ptr<::app_src_ast_::ClassD
     std::shared_ptr<std::vector<std::string>> visited = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto result = canGenerateJsonDeserializationInner(owner, programs, visited);
     if (!doof::is_null(cache)) {
-        (static_cast<void>(doof::map_set<std::string, bool>(cache->deserialization, key, result, "", 0)), std::monostate{});
+        doof::map_set<std::string, bool>(cache->deserialization, key, result, "", 0);
     }
     return result;
 }
@@ -338,13 +338,13 @@ std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>
         {
             auto _case_subject = member;
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::NoneType>>(_case_subject)) {
-                (nullCount = (nullCount + 1));
+                static_cast<void>((nullCount = (nullCount + 1)));
         }
         else {
                 if (!doof::is_null(value)) {
                     return std::monostate{};
                 }
-                (value = doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(member));
+                static_cast<void>((value = doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(member)));
         }
         }
     }
@@ -480,9 +480,9 @@ bool isGeneratedJsonDeserializationAnnotation(const std::variant<std::shared_ptr
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
                         const auto& named = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
                         if (named->name == std::string("null")) {
-                            (hasNull = true);
+                            static_cast<void>((hasNull = true));
                         } else if ((named->name != std::string("JsonValue")) && isGeneratedJsonDeserializationAnnotation(member, programs, visited)) {
-                            (hasPrimitive = true);
+                            static_cast<void>((hasPrimitive = true));
                         } else {
                             return false;
                         }
@@ -616,7 +616,7 @@ bool markJsonOwnerVisited(const std::shared_ptr<::app_src_ast_::ClassDeclaration
             return true;
         }
     }
-    (static_cast<void>(visited->push_back(key)), std::monostate{});
+    visited->push_back(key);
     return false;
 }
 std::string jsonOwnerKey(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& owner) {

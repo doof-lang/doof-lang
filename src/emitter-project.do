@@ -46,11 +46,33 @@ export function planProjectEmission(
     project.nativeBuild.sourceFiles.push("doof_wasm.cpp")
     project.wasmExportNames = graph.wasmExportNames
   }
-  for package_ of packages {
+  for package_ of orderedNativePackages(packages) {
     planPackageSupportFiles(project, graph, package_)
     planPackageNativeBuild(project, package_)
   }
   return project
+}
+
+// Package acquisition can finish in a different order on warm source loads.
+// Keep the root first and dependencies in logical-prefix order so native
+// arguments stay stable, preserving each manifest's declared input order.
+function orderedNativePackages(packages: NativePackageInput[]): NativePackageInput[] {
+  let result: NativePackageInput[] = []
+  for package_ of packages {
+    result.push(package_)
+    let index = result.length - 1
+    key := nativePackageOrderKey(package_)
+    while index > 0 && nativePackageOrderKey(result[index - 1]) > key {
+      result[index] = result[index - 1]
+      index -= 1
+    }
+    result[index] = package_
+  }
+  return result
+}
+
+function nativePackageOrderKey(package_: NativePackageInput): string {
+  return if package_.outputRoot == "" then "" else package_.logicalPrefix
 }
 
 function planPackageSupportFiles(

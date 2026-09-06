@@ -72,7 +72,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types:
                 if (!::std_::archive::tar_reader::isZeroRange(trailing, 0LL, TAR_BLOCK_SIZE)) {
                     return doof::Failure<std::string>{ std::string("tar read failed: non-zero data follows archive terminator") };
                 }
-                (trailingOffset = (trailingOffset + TAR_BLOCK_SIZE));
+                static_cast<void>((trailingOffset = (trailingOffset + TAR_BLOCK_SIZE)));
             }
             return doof::Success<std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types::TarEntry>>>>{ doof::array_drainToReadonly(entries, "", 0) };
         }
@@ -108,7 +108,7 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types:
             const auto target = ((typeFlag == 103) ? globalPax : localPax);
             auto _try_value_12 = ::std_::archive::tar_reader::parsePaxRecords(paxPayload, 0LL, baseSize, target);
             if (doof::is_failure(_try_value_12)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_12))};
-            (offset = nextOffset);
+            static_cast<void>((offset = nextOffset));
             continue;
         }
         const auto pathValue = ::std_::archive::tar_reader::paxValue(localPax, globalPax, std::string("path"));
@@ -124,14 +124,14 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types:
             auto _try_value_14 = ::std_::archive::tar_reader::parseDecimal(sizeText.value(), std::string("size"));
             if (doof::is_failure(_try_value_14)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_14))};
             const auto parsedSize = doof::success_value(_try_value_14);
-            (resolvedSize = parsedSize);
+            static_cast<void>((resolvedSize = parsedSize));
         }
         auto resolvedNextOffset = nextOffset;
         if (resolvedSize != baseSize) {
             auto _try_value_15 = ::std_::archive::tar_reader::alignedPayloadEnd(contentOffset, resolvedSize, fileSize);
             if (doof::is_failure(_try_value_15)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_15))};
             const auto updatedOffset = doof::success_value(_try_value_15);
-            (resolvedNextOffset = updatedOffset);
+            static_cast<void>((resolvedNextOffset = updatedOffset));
         }
         const auto mtimeText = ::std_::archive::tar_reader::paxValue(localPax, globalPax, std::string("mtime"));
         auto resolvedMtime = ::std_::time::temporal::Instant::ofEpochSeconds(baseMtime);
@@ -139,19 +139,19 @@ doof::Result<std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types:
             auto _try_value_16 = ::std_::archive::tar_reader::parsePaxMtime(mtimeText.value());
             if (doof::is_failure(_try_value_16)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_16))};
             const auto parsedMtime = doof::success_value(_try_value_16);
-            (resolvedMtime = parsedMtime);
+            static_cast<void>((resolvedMtime = parsedMtime));
         }
         auto kind = ::std_::archive::types::TarEntryKind::File;
         if (typeFlag == 53) {
-            (kind = ::std_::archive::types::TarEntryKind::Directory);
+            static_cast<void>((kind = ::std_::archive::types::TarEntryKind::Directory));
         } else if (typeFlag == 50) {
-            (kind = ::std_::archive::types::TarEntryKind::SymbolicLink);
+            static_cast<void>((kind = ::std_::archive::types::TarEntryKind::SymbolicLink));
         } else if ((typeFlag != 0) && (typeFlag != 48)) {
             return doof::Failure<std::string>{ (std::string("tar read failed: unsupported entry type ") + doof::to_string(typeFlag)) };
         }
-        (static_cast<void>(entries->push_back(std::make_shared<::std_::archive::types::TarEntry>(resolvedName, kind, contentOffset, resolvedSize, static_cast<int32_t>(baseMode), resolvedMtime, resolvedLinkName))), std::monostate{});
-        (localPax = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}));
-        (offset = resolvedNextOffset);
+        entries->push_back(std::make_shared<::std_::archive::types::TarEntry>(resolvedName, kind, contentOffset, resolvedSize, static_cast<int32_t>(baseMode), resolvedMtime, resolvedLinkName));
+        static_cast<void>((localPax = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{})));
+        static_cast<void>((offset = resolvedNextOffset));
     }
     return doof::Failure<std::string>{ std::string("tar read failed: archive terminator not found") };
 }

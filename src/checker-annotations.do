@@ -4,7 +4,7 @@ import { memberType } from "./checker-resolution"
 import { ClassType, FunctionParamType, ResolvedType, Scope, Symbol, TypeParameterType, ResolvedTypeConstraint } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { ArrayType, ClassDeclaration, AstFunctionType, InterfaceDeclaration, NamedType, SourceSpan, TypeAliasDeclaration, TypeAnnotation, UnionType, WeakType, TypeParameterConstraint } from "./ast"
-import { actorType, arrayType, classType, enumType, functionType, interfaceType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
+import { actorType, arrayType, classType, enumType, functionType, interfaceType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionMutabilityConflict, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
 
 import { CheckerState } from "./checker-state"
 import { isNumericConstraint, satisfiesNumericConstraint } from "./checker-numeric"
@@ -32,7 +32,11 @@ export function resolveProvisionalAnnotation(annotation: TypeAnnotation, info: M
 }
 
 function finishAnnotation(resolution: AnnotationResolution, annotation: TypeAnnotation, type_: ResolvedType): ResolvedType {
-  if resolution.commit { annotation.resolvedType = optionalResolvedType(type_) }
+  if resolution.commit {
+    conflict := unionMutabilityConflict(type_)
+    if conflict != none { typeError(resolution.state, conflict!, annotation.span) }
+    annotation.resolvedType = optionalResolvedType(type_)
+  }
   return type_
 }
 

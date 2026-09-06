@@ -164,13 +164,13 @@ std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::strin
     for (int32_t index = 0; index < static_cast<int32_t>(flattened.size()); ++index) {
         const auto char_ = doof::string_at(flattened, index, "src/native-build-state", 49);
         if (!escaped && (char_ == U'\u003A')) {
-            (colon = index);
+            static_cast<void>((colon = index));
             break;
         }
         if ((char_ == U'\\') && !escaped) {
-            (escaped = true);
+            static_cast<void>((escaped = true));
         } else {
-            (escaped = false);
+            static_cast<void>((escaped = false));
         }
     }
     if (colon < 0) {
@@ -178,32 +178,32 @@ std::shared_ptr<std::vector<std::string>> parseMakeDependencies(const std::strin
     }
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     auto current = std::string("");
-    (escaped = false);
+    static_cast<void>((escaped = false));
     for (int32_t index = (colon + 1); index < static_cast<int32_t>(flattened.size()); ++index) {
         const auto char_ = doof::string_at(flattened, index, "src/native-build-state", 58);
         if (escaped) {
-            (current = (current + doof::to_string(char_)));
-            (escaped = false);
+            static_cast<void>((current = (current + doof::to_string(char_))));
+            static_cast<void>((escaped = false));
             continue;
         }
         if (char_ == U'\\') {
-            (escaped = true);
+            static_cast<void>((escaped = true));
             continue;
         }
         if ((((char_ == U'\u0020') || (char_ == U'\t')) || (char_ == U'\r')) || (char_ == U'\n')) {
             if (current != std::string("")) {
-                (static_cast<void>(appendUnique(result, current)), std::monostate{});
-                (current = std::string(""));
+                appendUnique(result, current);
+                static_cast<void>((current = std::string("")));
             }
             continue;
         }
-        (current = (current + doof::to_string(char_)));
+        static_cast<void>((current = (current + doof::to_string(char_))));
     }
     if (escaped) {
-        (current = (current + std::string("\\")));
+        static_cast<void>((current = (current + std::string("\\"))));
     }
     if (current != std::string("")) {
-        (static_cast<void>(appendUnique(result, current)), std::monostate{});
+        appendUnique(result, current);
     }
     return result;
 }
@@ -253,7 +253,7 @@ std::shared_ptr<std::vector<std::string>> parseMsvcDependencies(const std::strin
             continue;
         }
         const auto path = doof::success_value(_binding_value_11);
-        (static_cast<void>(appendUnique(result, path)), std::monostate{});
+        appendUnique(result, path);
     }
     return result;
 }
@@ -264,6 +264,6 @@ void appendUnique(const std::shared_ptr<std::vector<std::string>>& values, const
             return;
         }
     }
-    (static_cast<void>(values->push_back(value)), std::monostate{});
+    values->push_back(value);
 }
 }

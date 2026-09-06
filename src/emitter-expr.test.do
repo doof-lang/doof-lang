@@ -2,6 +2,19 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+export function testDiscardedCallsSkipOnlyUnusedCarrierConversion(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function effect(): none {}\nfunction number(): int => 7\n" +
+    "function main(): none { effect()\nnumber()\nvalue := effect() }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "    effect();")
+  Assert.stringContains(source, "    number();")
+  Assert.stringContains(source, "value = (static_cast<void>(effect()), std::monostate{});")
+  Assert.stringNotContains(source, "    (static_cast<void>(effect()), std::monostate{});")
+}
+
 export function testGenericNoneLiteralWithoutContextUsesUnitCarrier(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function unitTuple(): Tuple<none, int> => (none, 7)\n" +

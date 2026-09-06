@@ -2,6 +2,15 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+export function testAsyncUnitCallOmitsUnusedCarrier(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "isolated function effect(): none {}\nfunction main(): none { task := async effect() }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.stringContains(result.emission!.modules[0].source,
+    "doof::submit_async<void>([=]() { effect(); })")
+}
+
 export function testRestrictedAsyncYieldCarrier(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function run(flag: bool): Promise<int | none> => async { if flag { yield 1 } else { yield none } }\nfunction main(): none { run(true) }",

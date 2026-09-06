@@ -35,13 +35,13 @@ std::shared_ptr<IsolationGraph> collectGraph(const std::shared_ptr<::app_src_ana
                 auto _case_subject = unwrapExport(raw);
                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
                     const auto& fn = std::get<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject);
-                    (static_cast<void>(graph->nodes->push_back(std::make_shared<IsolationNode>(fn, module->path, std::string(""), std::make_shared<std::vector<std::shared_ptr<IsolationCall>>>(std::vector<std::shared_ptr<IsolationCall>>{}), nullptr, nullptr))), std::monostate{});
+                    graph->nodes->push_back(std::make_shared<IsolationNode>(fn, module->path, std::string(""), std::make_shared<std::vector<std::shared_ptr<IsolationCall>>>(std::vector<std::shared_ptr<IsolationCall>>{}), nullptr, nullptr));
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
                     const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
                     const auto& _iterable_2 = class_->methods;
                     for (const auto& method : *_iterable_2) {
-                        (static_cast<void>(graph->nodes->push_back(std::make_shared<IsolationNode>(method, module->path, class_->name, std::make_shared<std::vector<std::shared_ptr<IsolationCall>>>(std::vector<std::shared_ptr<IsolationCall>>{}), nullptr, nullptr))), std::monostate{});
+                        graph->nodes->push_back(std::make_shared<IsolationNode>(method, module->path, class_->name, std::make_shared<std::vector<std::shared_ptr<IsolationCall>>>(std::vector<std::shared_ptr<IsolationCall>>{}), nullptr, nullptr));
                     }
             }
             else {
@@ -198,7 +198,7 @@ std::shared_ptr<IsolationReason> staticFieldReason(const std::shared_ptr<::app_s
             }
             auto mutable_ = (field->let_ || doof::is_null(field->resolvedType));
             if (!mutable_) {
-                (mutable_ = (!doof::is_null(::app_src_checker_actor_boundary_::findActorBoundaryViolation(result, doof::unwrap_optional(field->resolvedType)))));
+                static_cast<void>((mutable_ = (!doof::is_null(::app_src_checker_actor_boundary_::findActorBoundaryViolation(result, doof::unwrap_optional(field->resolvedType))))));
             }
             if (!mutable_) {
                 return nullptr;
@@ -212,36 +212,27 @@ std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLite
     std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>> result = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>{});
     const auto& _iterable_18 = roots;
     for (const auto& root : *_iterable_18) {
-        (static_cast<void>(collectExpressionTree(root, result)), std::monostate{});
+        ::app_src_ast_walk_::collectExpressionTree(root, result);
     }
     return result;
 }
-void collectExpressionTree(const std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>& expression, const std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>>& result) {
-    (static_cast<void>(result->push_back(expression)), std::monostate{});
-    std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>> nested = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>{});
-    (static_cast<void>(::app_src_ast_walk_::collectNestedExpressions(expression, nested)), std::monostate{});
-    const auto& _iterable_20 = nested;
-    for (const auto& child : *_iterable_20) {
-        (static_cast<void>(collectExpressionTree(child, result)), std::monostate{});
-    }
-}
 std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>> functionExpressionRoots(const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn) {
     std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>> roots = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>{});
-    const auto& _iterable_22 = fn->params;
-    for (const auto& parameter : *_iterable_22) {
+    const auto& _iterable_20 = fn->params;
+    for (const auto& parameter : *_iterable_20) {
         if (!doof::is_null(parameter->defaultValue)) {
-            (static_cast<void>(roots->push_back(doof::unwrap_optional(parameter->defaultValue))), std::monostate{});
+            roots->push_back(doof::unwrap_optional(parameter->defaultValue));
         }
     }
     {
         auto _case_subject = fn->body;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
             const auto& block = std::get<std::shared_ptr<::app_src_ast_::Block>>(_case_subject);
-            (static_cast<void>(::app_src_ast_walk_::collectBlockExpressions(block, roots)), std::monostate{});
+            ::app_src_ast_walk_::collectBlockExpressions(block, roots);
     }
     else if (doof::variant_is<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(_case_subject)) {
             const auto expression = doof::variant_narrow<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(_case_subject);
-            (static_cast<void>(roots->push_back(expression)), std::monostate{});
+            roots->push_back(expression);
     }
     }
     return roots;
@@ -250,8 +241,8 @@ std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLite
     return allExpressions(functionExpressionRoots(fn));
 }
 std::shared_ptr<IsolationNode> nodeForDeclaration(const std::shared_ptr<IsolationGraph>& graph, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& declaration) {
-    const auto& _iterable_24 = graph->nodes;
-    for (const auto& node : *_iterable_24) {
+    const auto& _iterable_22 = graph->nodes;
+    for (const auto& node : *_iterable_22) {
         if (node->declaration == declaration) {
             return node;
         }
@@ -264,26 +255,26 @@ std::shared_ptr<std::vector<std::shared_ptr<IsolationNode>>> nodesForDeclaration
         return std::make_shared<std::vector<std::shared_ptr<IsolationNode>>>(std::vector<std::shared_ptr<IsolationNode>>{doof::unwrap_optional(direct)});
     }
     std::shared_ptr<std::vector<std::shared_ptr<IsolationNode>>> targets = std::make_shared<std::vector<std::shared_ptr<IsolationNode>>>(std::vector<std::shared_ptr<IsolationNode>>{});
-    const auto& _iterable_34 = result->modules;
-    for (const auto& module : *_iterable_34) {
-        const auto& _iterable_32 = module->program->statements;
-        for (const auto& raw : *_iterable_32) {
+    const auto& _iterable_32 = result->modules;
+    for (const auto& module : *_iterable_32) {
+        const auto& _iterable_30 = module->program->statements;
+        for (const auto& raw : *_iterable_30) {
             {
                 auto _case_subject = unwrapExport(raw);
                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
                     const auto& interface_ = std::get<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject);
                     auto ownsMethod = false;
-                    const auto& _iterable_26 = interface_->methods;
-                    for (const auto& method : *_iterable_26) {
+                    const auto& _iterable_24 = interface_->methods;
+                    for (const auto& method : *_iterable_24) {
                         if (((method->name == declaration->name) && (method->span.start.offset == declaration->span.start.offset)) && (method->span.end.offset == declaration->span.end.offset)) {
-                            (ownsMethod = true);
+                            static_cast<void>((ownsMethod = true));
                         }
                     }
                     if (!ownsMethod || doof::is_null(interface_->resolvedSymbol)) {
                         continue;
                     }
-                    const auto& _iterable_30 = interface_->resolvedSymbol->implementations;
-                    for (const auto& implementation : *_iterable_30) {
+                    const auto& _iterable_28 = interface_->resolvedSymbol->implementations;
+                    for (const auto& implementation : *_iterable_28) {
                         const auto candidate = ::app_src_checker_symbols_::declarationFor(result, implementation);
                         if (doof::is_null(candidate)) {
                             continue;
@@ -292,12 +283,12 @@ std::shared_ptr<std::vector<std::shared_ptr<IsolationNode>>> nodesForDeclaration
                             auto _case_subject = doof::unwrap_optional(candidate);
                             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
                                 const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-                                const auto& _iterable_28 = class_->methods;
-                                for (const auto& method : *_iterable_28) {
+                                const auto& _iterable_26 = class_->methods;
+                                for (const auto& method : *_iterable_26) {
                                     if ((method->name == declaration->name) && (method->static_ == declaration->static_)) {
                                         const auto node = nodeForDeclaration(graph, method);
                                         if (!doof::is_null(node)) {
-                                            (static_cast<void>(targets->push_back(doof::unwrap_optional(node))), std::monostate{});
+                                            targets->push_back(doof::unwrap_optional(node));
                                         }
                                     }
                                 }
@@ -337,8 +328,8 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> callDeclaration(const std::
                         auto _case_subject = doof::unwrap_optional(declaration);
                         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
                             const auto& interfaceDeclaration = std::get<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject);
-                            const auto& _iterable_36 = interfaceDeclaration->methods;
-                            for (const auto& method : *_iterable_36) {
+                            const auto& _iterable_34 = interfaceDeclaration->methods;
+                            for (const auto& method : *_iterable_34) {
                                 if (method->name == member->property) {
                                     return method;
                                 }
@@ -359,15 +350,15 @@ std::shared_ptr<::app_src_ast_::FunctionDeclaration> callDeclaration(const std::
 }
 void analyzeNode(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<IsolationGraph>& graph, const std::shared_ptr<IsolationNode>& node) {
     if (node->declaration->bodyless && !node->declaration->isolated_) {
-        (node->directReason = std::make_shared<IsolationReason>(std::string("bodyless"), node->declaration->name, node->declaration->span));
+        static_cast<void>((node->directReason = std::make_shared<IsolationReason>(std::string("bodyless"), node->declaration->name, node->declaration->span)));
         return;
     }
-    const auto& _iterable_38 = functionExpressions(node->declaration);
-    for (const auto& expression : *_iterable_38) {
+    const auto& _iterable_36 = functionExpressions(node->declaration);
+    for (const auto& expression : *_iterable_36) {
         if (doof::is_null(node->directReason)) {
-            (node->directReason = mutableModuleReason(result, expression));
+            static_cast<void>((node->directReason = mutableModuleReason(result, expression)));
             if (doof::is_null(node->directReason)) {
-                (node->directReason = mutableStaticReason(result, expression));
+                static_cast<void>((node->directReason = mutableStaticReason(result, expression)));
             }
         }
         {
@@ -376,7 +367,7 @@ void analyzeNode(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& res
                 const auto& call = std::get<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject);
                 const auto declaration = callDeclaration(result, call);
                 if (!doof::is_null(declaration)) {
-                    (static_cast<void>(node->calls->push_back(std::make_shared<IsolationCall>(doof::unwrap_optional(declaration), call->span))), std::monostate{});
+                    node->calls->push_back(std::make_shared<IsolationCall>(doof::unwrap_optional(declaration), call->span));
                 }
         }
         else {
@@ -385,26 +376,26 @@ void analyzeNode(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& res
     }
 }
 void inferIsolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<IsolationGraph>& graph) {
-    const auto& _iterable_40 = graph->nodes;
-    for (const auto& node : *_iterable_40) {
-        (static_cast<void>(analyzeNode(result, graph, node)), std::monostate{});
-        (node->reason = node->directReason);
+    const auto& _iterable_38 = graph->nodes;
+    for (const auto& node : *_iterable_38) {
+        analyzeNode(result, graph, node);
+        static_cast<void>((node->reason = node->directReason));
     }
     auto changed = true;
     while (changed) {
-        (changed = false);
-        const auto& _iterable_46 = graph->nodes;
-        for (const auto& node : *_iterable_46) {
+        static_cast<void>((changed = false));
+        const auto& _iterable_44 = graph->nodes;
+        for (const auto& node : *_iterable_44) {
             if (!doof::is_null(node->reason)) {
                 continue;
             }
-            const auto& _iterable_44 = node->calls;
-            for (const auto& call : *_iterable_44) {
-                const auto& _iterable_42 = nodesForDeclaration(result, graph, call->declaration);
-                for (const auto& target : *_iterable_42) {
+            const auto& _iterable_42 = node->calls;
+            for (const auto& call : *_iterable_42) {
+                const auto& _iterable_40 = nodesForDeclaration(result, graph, call->declaration);
+                for (const auto& target : *_iterable_40) {
                     if (!doof::is_null(target->reason)) {
-                        (node->reason = std::make_shared<IsolationReason>(std::string("call"), target->declaration->name, call->span));
-                        (changed = true);
+                        static_cast<void>((node->reason = std::make_shared<IsolationReason>(std::string("call"), target->declaration->name, call->span)));
+                        static_cast<void>((changed = true));
                         break;
                     }
                 }
@@ -414,9 +405,9 @@ void inferIsolation(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& 
             }
         }
     }
-    const auto& _iterable_48 = graph->nodes;
-    for (const auto& node : *_iterable_48) {
-        (node->declaration->resolvedIsolated = doof::is_null(node->reason));
+    const auto& _iterable_46 = graph->nodes;
+    for (const auto& node : *_iterable_46) {
+        static_cast<void>((node->declaration->resolvedIsolated = doof::is_null(node->reason)));
     }
 }
 std::string reasonText(const std::shared_ptr<IsolationReason>& reason) {
@@ -435,14 +426,14 @@ std::string reasonText(const std::shared_ptr<IsolationReason>& reason) {
     return ::app_src_semantic_::SemanticSpan{::app_src_semantic_::SemanticLocation{span.start.line, span.start.column, span.start.offset}, ::app_src_semantic_::SemanticLocation{span.end.line, span.end.column, span.end.offset}};
 }
 void pushDiagnostic(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics, const std::string& module, ::app_src_ast_::SourceSpan span, const std::string& message) {
-    (static_cast<void>(diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, semanticSpan(span), module, std::string("")))), std::monostate{});
+    diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, semanticSpan(span), module, std::string("")));
 }
 std::shared_ptr<IsolationReason> probeReason(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<IsolationGraph>& graph, const std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>& expression) {
-    const auto& _iterable_52 = allExpressions(std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>{expression}));
-    for (const auto& nested : *_iterable_52) {
+    const auto& _iterable_50 = allExpressions(std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>{expression}));
+    for (const auto& nested : *_iterable_50) {
         auto reason = mutableModuleReason(result, nested);
         if (doof::is_null(reason)) {
-            (reason = mutableStaticReason(result, nested));
+            static_cast<void>((reason = mutableStaticReason(result, nested)));
         }
         if (!doof::is_null(reason)) {
             return reason;
@@ -453,8 +444,8 @@ std::shared_ptr<IsolationReason> probeReason(const std::shared_ptr<::app_src_ana
                 const auto& call = std::get<std::shared_ptr<::app_src_ast_::CallExpression>>(_case_subject);
                 const auto declaration = callDeclaration(result, call);
                 if (!doof::is_null(declaration)) {
-                    const auto& _iterable_50 = nodesForDeclaration(result, graph, doof::unwrap_optional(declaration));
-                    for (const auto& target : *_iterable_50) {
+                    const auto& _iterable_48 = nodesForDeclaration(result, graph, doof::unwrap_optional(declaration));
+                    for (const auto& target : *_iterable_48) {
                         if (!doof::is_null(target->reason)) {
                             return std::make_shared<IsolationReason>(std::string("call"), target->declaration->name, call->span);
                         }
@@ -482,7 +473,7 @@ std::shared_ptr<IsolationReason> actorConstructionReason(const std::shared_ptr<:
                     auto _case_subject = doof::unwrap_optional(declaration);
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
                         const auto& resolved = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-                        (class_ = resolved);
+                        static_cast<void>((class_ = resolved));
                 }
                 else {
                 }
@@ -495,8 +486,8 @@ std::shared_ptr<IsolationReason> actorConstructionReason(const std::shared_ptr<:
     if (doof::is_null(class_)) {
         return nullptr;
     }
-    const auto& _iterable_54 = class_->methods;
-    for (const auto& method : *_iterable_54) {
+    const auto& _iterable_52 = class_->methods;
+    for (const auto& method : *_iterable_52) {
         if (method->static_ && (method->name == std::string("constructor"))) {
             const auto node = nodeForDeclaration(graph, method);
             if ((!doof::is_null(node)) && (!doof::is_null(node->reason))) {
@@ -506,8 +497,8 @@ std::shared_ptr<IsolationReason> actorConstructionReason(const std::shared_ptr<:
         }
     }
     auto positionalIndex = 0;
-    const auto& _iterable_56 = class_->fields;
-    for (const auto& field : *_iterable_56) {
+    const auto& _iterable_54 = class_->fields;
+    for (const auto& field : *_iterable_54) {
         if (field->static_) {
             continue;
         }
@@ -517,59 +508,59 @@ std::shared_ptr<IsolationReason> actorConstructionReason(const std::shared_ptr<:
                 return reason;
             }
         }
-        (positionalIndex = (positionalIndex + 1));
+        static_cast<void>((positionalIndex = (positionalIndex + 1)));
     }
     return nullptr;
 }
 std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>> moduleExpressions(const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& module) {
     std::shared_ptr<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>> roots = std::make_shared<std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>>(std::vector<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>{});
-    const auto& _iterable_66 = module->program->statements;
-    for (const auto& raw : *_iterable_66) {
+    const auto& _iterable_64 = module->program->statements;
+    for (const auto& raw : *_iterable_64) {
         const auto statement = unwrapExport(raw);
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
                 const auto& fn = std::get<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject);
-                const auto& _iterable_58 = functionExpressionRoots(fn);
-                for (const auto& expression : *_iterable_58) {
-                    (static_cast<void>(roots->push_back(expression)), std::monostate{});
+                const auto& _iterable_56 = functionExpressionRoots(fn);
+                for (const auto& expression : *_iterable_56) {
+                    roots->push_back(expression);
                 }
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
                 const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-                const auto& _iterable_60 = class_->fields;
-                for (const auto& field : *_iterable_60) {
+                const auto& _iterable_58 = class_->fields;
+                for (const auto& field : *_iterable_58) {
                     if (!doof::is_null(field->defaultValue)) {
-                        (static_cast<void>(roots->push_back(doof::unwrap_optional(field->defaultValue))), std::monostate{});
+                        roots->push_back(doof::unwrap_optional(field->defaultValue));
                     }
                 }
-                const auto& _iterable_64 = class_->methods;
-                for (const auto& method : *_iterable_64) {
-                    const auto& _iterable_62 = functionExpressionRoots(method);
-                    for (const auto& expression : *_iterable_62) {
-                        (static_cast<void>(roots->push_back(expression)), std::monostate{});
+                const auto& _iterable_62 = class_->methods;
+                for (const auto& method : *_iterable_62) {
+                    const auto& _iterable_60 = functionExpressionRoots(method);
+                    for (const auto& expression : *_iterable_60) {
+                        roots->push_back(expression);
                     }
                 }
         }
         else {
-                (static_cast<void>(::app_src_ast_walk_::collectStatementExpressions(statement, roots)), std::monostate{});
+                ::app_src_ast_walk_::collectStatementExpressions(statement, roots);
         }
         }
     }
     return allExpressions(roots);
 }
 void validateModuleIsolationEffects(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<IsolationGraph>& graph, const std::shared_ptr<::app_src_analyzer_::ModuleInfo>& module, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics) {
-    const auto& _iterable_68 = graph->nodes;
-    for (const auto& node : *_iterable_68) {
+    const auto& _iterable_66 = graph->nodes;
+    for (const auto& node : *_iterable_66) {
         if (((node->module != module->path) || !node->declaration->isolated_) || doof::is_null(node->reason)) {
             continue;
         }
         const auto owner = ((node->owner == std::string("")) ? ((std::string("function \"") + node->declaration->name) + std::string("\"")) : ((((std::string("method \"") + node->owner) + std::string(".")) + node->declaration->name) + std::string("\"")));
         const auto message = ((node->reason->kind == std::string("call")) ? ((((std::string("Isolated ") + owner) + std::string(" cannot call non-isolated function \"")) + node->reason->name) + std::string("\"")) : (((std::string("Isolated ") + owner) + std::string(" is not isolated: ")) + reasonText(doof::unwrap_optional(node->reason))));
-        (static_cast<void>(pushDiagnostic(diagnostics, module->path, node->reason->span, message)), std::monostate{});
+        pushDiagnostic(diagnostics, module->path, node->reason->span, message);
     }
-    const auto& _iterable_70 = moduleExpressions(module);
-    for (const auto& expression : *_iterable_70) {
+    const auto& _iterable_68 = moduleExpressions(module);
+    for (const auto& expression : *_iterable_68) {
         {
             auto _case_subject = expression;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::AsyncExpression>>(_case_subject)) {
@@ -577,10 +568,10 @@ void validateModuleIsolationEffects(const std::shared_ptr<::app_src_analyzer_::A
                 {
                     auto _case_subject = async_->expression;
                     if (std::holds_alternative<std::shared_ptr<::app_src_ast_::Block>>(_case_subject)) {
-                        (static_cast<void>(::app_src_checker_async_::validateAsyncBlock(result, async_, module->path, diagnostics)), std::monostate{});
+                        ::app_src_checker_async_::validateAsyncBlock(result, async_, module->path, diagnostics);
                         const auto reason = probeReason(result, graph, doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(async_));
                         if (!doof::is_null(reason)) {
-                            (static_cast<void>(pushDiagnostic(diagnostics, module->path, reason->span, (std::string("Async block is not isolated: ") + reasonText(doof::unwrap_optional(reason))))), std::monostate{});
+                            pushDiagnostic(diagnostics, module->path, reason->span, (std::string("Async block is not isolated: ") + reasonText(doof::unwrap_optional(reason))));
                         }
                 }
                 else if (doof::variant_is<std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>>(_case_subject)) {
@@ -598,7 +589,7 @@ void validateModuleIsolationEffects(const std::shared_ptr<::app_src_analyzer_::A
                                             {
                                                 auto _case_subject = doof::unwrap_optional(std::visit([](auto&& _obj) { return _obj->resolvedType; }, member->object));
                                                 if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ActorType>>(_case_subject)) {
-                                                    (actorCall = true);
+                                                    static_cast<void>((actorCall = true));
                                             }
                                             else {
                                             }
@@ -615,7 +606,7 @@ void validateModuleIsolationEffects(const std::shared_ptr<::app_src_analyzer_::A
                         if (!actorCall) {
                             const auto reason = probeReason(result, graph, inner);
                             if (!doof::is_null(reason)) {
-                                (static_cast<void>(pushDiagnostic(diagnostics, module->path, reason->span, (std::string("Async call is not isolated: ") + reasonText(doof::unwrap_optional(reason))))), std::monostate{});
+                                pushDiagnostic(diagnostics, module->path, reason->span, (std::string("Async call is not isolated: ") + reasonText(doof::unwrap_optional(reason))));
                             }
                         }
                 }
@@ -634,7 +625,7 @@ void validateModuleIsolationEffects(const std::shared_ptr<::app_src_analyzer_::A
                                     if (!doof::is_null(call->resolvedFunction)) {
                                         const auto target = nodeForDeclaration(graph, doof::unwrap_optional(call->resolvedFunction));
                                         if ((!doof::is_null(target)) && (!doof::is_null(target->reason))) {
-                                            (static_cast<void>(pushDiagnostic(diagnostics, module->path, call->span, (((std::string("Actor method \"") + target->declaration->name) + std::string("\" is not isolated: ")) + reasonText(doof::unwrap_optional(target->reason))))), std::monostate{});
+                                            pushDiagnostic(diagnostics, module->path, call->span, (((std::string("Actor method \"") + target->declaration->name) + std::string("\" is not isolated: ")) + reasonText(doof::unwrap_optional(target->reason))));
                                         }
                                     }
                             }
@@ -651,7 +642,7 @@ void validateModuleIsolationEffects(const std::shared_ptr<::app_src_analyzer_::A
                 const auto& actor = std::get<std::shared_ptr<::app_src_ast_::ActorCreationExpression>>(_case_subject);
                 const auto reason = actorConstructionReason(result, graph, actor);
                 if (!doof::is_null(reason)) {
-                    (static_cast<void>(pushDiagnostic(diagnostics, module->path, actor->span, (((std::string("Actor<") + actor->className) + std::string("> construction is not isolated: ")) + reasonText(doof::unwrap_optional(reason))))), std::monostate{});
+                    pushDiagnostic(diagnostics, module->path, actor->span, (((std::string("Actor<") + actor->className) + std::string("> construction is not isolated: ")) + reasonText(doof::unwrap_optional(reason))));
                 }
         }
         else {
@@ -661,10 +652,10 @@ void validateModuleIsolationEffects(const std::shared_ptr<::app_src_analyzer_::A
 }
 void validateIsolationEffects(const std::shared_ptr<::app_src_analyzer_::AnalysisResult>& result, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics) {
     const auto graph = collectGraph(result);
-    (static_cast<void>(inferIsolation(result, graph)), std::monostate{});
-    const auto& _iterable_72 = result->modules;
-    for (const auto& module : *_iterable_72) {
-        (static_cast<void>(validateModuleIsolationEffects(result, graph, module, diagnostics)), std::monostate{});
+    inferIsolation(result, graph);
+    const auto& _iterable_70 = result->modules;
+    for (const auto& module : *_iterable_70) {
+        validateModuleIsolationEffects(result, graph, module, diagnostics);
     }
 }
 }

@@ -55,9 +55,12 @@ namespace app_src_ast_ {
     struct BinaryExpression;
     struct UnaryExpression;
     struct AssignmentExpression;
+    struct CheckedMember;
     struct MemberExpression;
     struct IndexExpression;
     struct CallArgument;
+    struct CheckedConstruction;
+    struct ConstructionDefault;
     struct CallExpression;
     struct ArrayLiteral;
     struct ObjectProperty;
@@ -135,10 +138,10 @@ namespace app_src_semantic_ {
 }
 
 namespace app_src_ast_ {
-    using doof_header_type_2 = std::variant<std::monostate, std::shared_ptr<NamedType>, std::shared_ptr<ArrayType>, std::shared_ptr<UnionType>, std::shared_ptr<AstFunctionType>, std::shared_ptr<WeakType>>;
-    using doof_header_type_3 = std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
-    using doof_header_type_4 = std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
-    using doof_header_type_5 = std::variant<std::monostate, std::shared_ptr<IntLiteral>, std::shared_ptr<LongLiteral>, std::shared_ptr<FloatLiteral>, std::shared_ptr<DoubleLiteral>, std::shared_ptr<StringLiteral>, std::shared_ptr<CharLiteral>, std::shared_ptr<BoolLiteral>, std::shared_ptr<NoneLiteral>, std::shared_ptr<Identifier>, std::shared_ptr<BinaryExpression>, std::shared_ptr<UnaryExpression>, std::shared_ptr<AssignmentExpression>, std::shared_ptr<MemberExpression>, std::shared_ptr<IndexExpression>, std::shared_ptr<CallExpression>, std::shared_ptr<ArrayLiteral>, std::shared_ptr<ObjectLiteral>, std::shared_ptr<TupleLiteral>, std::shared_ptr<LambdaExpression>, std::shared_ptr<IfExpression>, std::shared_ptr<CaseExpression>, std::shared_ptr<ConstructExpression>, std::shared_ptr<DotShorthand>, std::shared_ptr<ThisExpression>, std::shared_ptr<CallerExpression>, std::shared_ptr<AsyncExpression>, std::shared_ptr<RetireExpression>, std::shared_ptr<AsExpression>, std::shared_ptr<ActorCreationExpression>, std::shared_ptr<YieldBlockExpression>, std::shared_ptr<CatchExpression>>;
+    using doof_header_type_2 = std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
+    using doof_header_type_3 = std::variant<std::monostate, std::shared_ptr<IntLiteral>, std::shared_ptr<LongLiteral>, std::shared_ptr<FloatLiteral>, std::shared_ptr<DoubleLiteral>, std::shared_ptr<StringLiteral>, std::shared_ptr<CharLiteral>, std::shared_ptr<BoolLiteral>, std::shared_ptr<NoneLiteral>, std::shared_ptr<Identifier>, std::shared_ptr<BinaryExpression>, std::shared_ptr<UnaryExpression>, std::shared_ptr<AssignmentExpression>, std::shared_ptr<MemberExpression>, std::shared_ptr<IndexExpression>, std::shared_ptr<CallExpression>, std::shared_ptr<ArrayLiteral>, std::shared_ptr<ObjectLiteral>, std::shared_ptr<TupleLiteral>, std::shared_ptr<LambdaExpression>, std::shared_ptr<IfExpression>, std::shared_ptr<CaseExpression>, std::shared_ptr<ConstructExpression>, std::shared_ptr<DotShorthand>, std::shared_ptr<ThisExpression>, std::shared_ptr<CallerExpression>, std::shared_ptr<AsyncExpression>, std::shared_ptr<RetireExpression>, std::shared_ptr<AsExpression>, std::shared_ptr<ActorCreationExpression>, std::shared_ptr<YieldBlockExpression>, std::shared_ptr<CatchExpression>>;
+    using doof_header_type_4 = std::variant<std::monostate, std::shared_ptr<NamedType>, std::shared_ptr<ArrayType>, std::shared_ptr<UnionType>, std::shared_ptr<AstFunctionType>, std::shared_ptr<WeakType>>;
+    using doof_header_type_5 = std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>;
     using doof_header_type_6 = std::variant<std::shared_ptr<IntLiteral>, std::shared_ptr<LongLiteral>, std::shared_ptr<FloatLiteral>, std::shared_ptr<DoubleLiteral>, std::shared_ptr<StringLiteral>, std::shared_ptr<CharLiteral>, std::shared_ptr<BoolLiteral>, std::shared_ptr<NoneLiteral>, std::shared_ptr<Identifier>, std::shared_ptr<BinaryExpression>, std::shared_ptr<UnaryExpression>, std::shared_ptr<AssignmentExpression>, std::shared_ptr<MemberExpression>, std::shared_ptr<IndexExpression>, std::shared_ptr<CallExpression>, std::shared_ptr<ArrayLiteral>, std::shared_ptr<ObjectLiteral>, std::shared_ptr<TupleLiteral>, std::shared_ptr<LambdaExpression>, std::shared_ptr<IfExpression>, std::shared_ptr<CaseExpression>, std::shared_ptr<ConstructExpression>, std::shared_ptr<DotShorthand>, std::shared_ptr<ThisExpression>, std::shared_ptr<CallerExpression>, std::shared_ptr<AsyncExpression>, std::shared_ptr<RetireExpression>, std::shared_ptr<AsExpression>, std::shared_ptr<ActorCreationExpression>, std::shared_ptr<YieldBlockExpression>, std::shared_ptr<CatchExpression>, std::shared_ptr<Block>>;
     using doof_header_type_7 = std::variant<std::monostate, std::shared_ptr<ConstDeclaration>, std::shared_ptr<ReadonlyDeclaration>, std::shared_ptr<ImmutableBinding>, std::shared_ptr<LetDeclaration>, std::shared_ptr<FunctionDeclaration>, std::shared_ptr<ClassDeclaration>, std::shared_ptr<InterfaceDeclaration>, std::shared_ptr<EnumDeclaration>, std::shared_ptr<TypeAliasDeclaration>, std::shared_ptr<ImportDeclaration>, std::shared_ptr<MockImportDirective>, std::shared_ptr<ExportDeclaration>, std::shared_ptr<ExportList>, std::shared_ptr<IfStatement>, std::shared_ptr<CaseStatement>, std::shared_ptr<WhileStatement>, std::shared_ptr<ForStatement>, std::shared_ptr<ForOfStatement>, std::shared_ptr<WithStatement>, std::shared_ptr<ReturnStatement>, std::shared_ptr<YieldStatement>, std::shared_ptr<BreakStatement>, std::shared_ptr<ContinueStatement>, std::shared_ptr<ExpressionStatement>, std::shared_ptr<DestructuringStatement>, std::shared_ptr<TryStatement>, std::shared_ptr<YieldBlockAssignmentStatement>, std::shared_ptr<Block>>;
     using doof_header_type_8 = std::variant<std::shared_ptr<ConstDeclaration>, std::shared_ptr<ReadonlyDeclaration>, std::shared_ptr<ImmutableBinding>, std::shared_ptr<LetDeclaration>, std::shared_ptr<ExpressionStatement>, std::shared_ptr<DestructuringStatement>>;
@@ -346,9 +349,31 @@ namespace app_src_ast_ {
     template <typename _DoofOther = AstLocation>
     bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }
 };
-    struct TypeParameterConstraint : public std::enable_shared_from_this<TypeParameterConstraint> {
+    struct CheckedMember : public std::enable_shared_from_this<CheckedMember> {
     doof_header_type_2 type_;
-    TypeParameterConstraint(doof_header_type_2 type_) : type_(type_) {}
+    std::shared_ptr<FunctionDeclaration> function_;
+    std::string modulePath;
+    doof_header_type_2 owner;
+    std::shared_ptr<ClassDeclaration> staticOwner;
+    bool instance;
+    bool field;
+    CheckedMember(doof_header_type_2 type_, std::shared_ptr<FunctionDeclaration> function_, std::string modulePath, doof_header_type_2 owner, std::shared_ptr<ClassDeclaration> staticOwner, bool instance, bool field) : type_(type_), function_(function_), modulePath(modulePath), owner(owner), staticOwner(staticOwner), instance(instance), field(field) {}
+};
+    struct CheckedConstruction : public std::enable_shared_from_this<CheckedConstruction> {
+    std::shared_ptr<::app_src_semantic_::ClassType> owner;
+    std::shared_ptr<ClassDeclaration> declaration;
+    std::shared_ptr<FunctionDeclaration> factory;
+    std::shared_ptr<::app_src_semantic_::FunctionType> signature;
+    std::shared_ptr<std::vector<std::shared_ptr<ConstructionDefault>>> defaults;
+    CheckedConstruction(std::shared_ptr<::app_src_semantic_::ClassType> owner, std::shared_ptr<ClassDeclaration> declaration, std::shared_ptr<FunctionDeclaration> factory, std::shared_ptr<::app_src_semantic_::FunctionType> signature, std::shared_ptr<std::vector<std::shared_ptr<ConstructionDefault>>> defaults) : owner(owner), declaration(declaration), factory(factory), signature(signature), defaults(defaults) {}
+};
+    struct ConstructionDefault : public std::enable_shared_from_this<ConstructionDefault> {
+    doof_header_type_3 value;
+    ConstructionDefault(doof_header_type_3 value) : value(value) {}
+};
+    struct TypeParameterConstraint : public std::enable_shared_from_this<TypeParameterConstraint> {
+    doof_header_type_4 type_;
+    TypeParameterConstraint(doof_header_type_4 type_) : type_(type_) {}
 };
 }
 
@@ -425,39 +450,39 @@ namespace app_src_ast_ {
     std::string name;
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    NamedType(std::string kind, std::string name, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), typeArgs(typeArgs), resolvedSymbol(resolvedSymbol), resolvedType(resolvedType), span(span) {}
+    NamedType(std::string kind, std::string name, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<::app_src_semantic_::Symbol> resolvedSymbol, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), name(name), typeArgs(typeArgs), resolvedSymbol(resolvedSymbol), resolvedType(resolvedType), span(span) {}
 };
     struct ArrayType : public std::enable_shared_from_this<ArrayType> {
     std::string kind;
     TypeAnnotation elementType;
     bool readonly_;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    ArrayType(std::string kind, TypeAnnotation elementType, bool readonly_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), elementType(elementType), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
+    ArrayType(std::string kind, TypeAnnotation elementType, bool readonly_, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), elementType(elementType), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
 };
     struct UnionType : public std::enable_shared_from_this<UnionType> {
     std::string kind;
     std::shared_ptr<std::vector<TypeAnnotation>> types;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    UnionType(std::string kind, std::shared_ptr<std::vector<TypeAnnotation>> types, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), types(types), resolvedType(resolvedType), span(span) {}
+    UnionType(std::string kind, std::shared_ptr<std::vector<TypeAnnotation>> types, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), types(types), resolvedType(resolvedType), span(span) {}
 };
     struct AstFunctionType : public std::enable_shared_from_this<AstFunctionType> {
     std::string kind;
     std::shared_ptr<std::vector<std::shared_ptr<FunctionTypeParam>>> params;
     TypeAnnotation returnType;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    AstFunctionType(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<FunctionTypeParam>>> params, TypeAnnotation returnType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), params(params), returnType(returnType), resolvedType(resolvedType), span(span) {}
+    AstFunctionType(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<FunctionTypeParam>>> params, TypeAnnotation returnType, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), params(params), returnType(returnType), resolvedType(resolvedType), span(span) {}
 };
     struct WeakType : public std::enable_shared_from_this<WeakType> {
     std::string kind;
     TypeAnnotation type_;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    WeakType(std::string kind, TypeAnnotation type_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), resolvedType(resolvedType), span(span) {}
+    WeakType(std::string kind, TypeAnnotation type_, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), type_(type_), resolvedType(resolvedType), span(span) {}
 };
     struct FunctionTypeParam : public std::enable_shared_from_this<FunctionTypeParam> {
     std::string name;
@@ -468,97 +493,97 @@ namespace app_src_ast_ {
     struct IntLiteral : public std::enable_shared_from_this<IntLiteral> {
     std::string kind;
     int32_t value;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    IntLiteral(std::string kind, int32_t value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
+    IntLiteral(std::string kind, int32_t value, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct LongLiteral : public std::enable_shared_from_this<LongLiteral> {
     std::string kind;
     int64_t value;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    LongLiteral(std::string kind, int64_t value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
+    LongLiteral(std::string kind, int64_t value, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct FloatLiteral : public std::enable_shared_from_this<FloatLiteral> {
     std::string kind;
     float value;
     std::string raw;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    FloatLiteral(std::string kind, float value, std::string raw, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), raw(raw), resolvedType(resolvedType), span(span) {}
+    FloatLiteral(std::string kind, float value, std::string raw, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), value(value), raw(raw), resolvedType(resolvedType), span(span) {}
 };
     struct DoubleLiteral : public std::enable_shared_from_this<DoubleLiteral> {
     std::string kind;
     double value;
     std::string raw;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    DoubleLiteral(std::string kind, double value, std::string raw, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), raw(raw), resolvedType(resolvedType), span(span) {}
+    DoubleLiteral(std::string kind, double value, std::string raw, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), value(value), raw(raw), resolvedType(resolvedType), span(span) {}
 };
     struct StringLiteral : public std::enable_shared_from_this<StringLiteral> {
     std::string kind;
     std::string value;
     std::shared_ptr<std::vector<std::string>> parts;
     std::shared_ptr<std::vector<Expression>> interpolations;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    StringLiteral(std::string kind, std::string value, std::shared_ptr<std::vector<std::string>> parts, std::shared_ptr<std::vector<Expression>> interpolations, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), parts(parts), interpolations(interpolations), resolvedType(resolvedType), span(span) {}
+    StringLiteral(std::string kind, std::string value, std::shared_ptr<std::vector<std::string>> parts, std::shared_ptr<std::vector<Expression>> interpolations, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), value(value), parts(parts), interpolations(interpolations), resolvedType(resolvedType), span(span) {}
 };
     struct CharLiteral : public std::enable_shared_from_this<CharLiteral> {
     std::string kind;
     char32_t value;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    CharLiteral(std::string kind, char32_t value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
+    CharLiteral(std::string kind, char32_t value, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct BoolLiteral : public std::enable_shared_from_this<BoolLiteral> {
     std::string kind;
     bool value;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    BoolLiteral(std::string kind, bool value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
+    BoolLiteral(std::string kind, bool value, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct NoneLiteral : public std::enable_shared_from_this<NoneLiteral> {
     std::string kind;
     std::string sourceSpelling;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    NoneLiteral(std::string kind, std::string sourceSpelling, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), sourceSpelling(sourceSpelling), resolvedType(resolvedType), span(span) {}
+    NoneLiteral(std::string kind, std::string sourceSpelling, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), sourceSpelling(sourceSpelling), resolvedType(resolvedType), span(span) {}
 };
     struct Identifier : public std::enable_shared_from_this<Identifier> {
     std::string kind;
     std::string name;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding;
     SourceSpan span;
-    Identifier(std::string kind, std::string name, doof_header_type_3 resolvedType, std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding, SourceSpan span) : kind(kind), name(name), resolvedType(resolvedType), resolvedBinding(resolvedBinding), span(span) {}
+    Identifier(std::string kind, std::string name, doof_header_type_2 resolvedType, std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding, SourceSpan span) : kind(kind), name(name), resolvedType(resolvedType), resolvedBinding(resolvedBinding), span(span) {}
 };
     struct BinaryExpression : public std::enable_shared_from_this<BinaryExpression> {
     std::string kind;
     std::string operator_;
     Expression left;
     Expression right;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    BinaryExpression(std::string kind, std::string operator_, Expression left, Expression right, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), left(left), right(right), resolvedType(resolvedType), span(span) {}
+    BinaryExpression(std::string kind, std::string operator_, Expression left, Expression right, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), left(left), right(right), resolvedType(resolvedType), span(span) {}
 };
     struct UnaryExpression : public std::enable_shared_from_this<UnaryExpression> {
     std::string kind;
     std::string operator_;
     Expression operand;
     bool prefix;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    UnaryExpression(std::string kind, std::string operator_, Expression operand, bool prefix, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), operand(operand), prefix(prefix), resolvedType(resolvedType), span(span) {}
+    UnaryExpression(std::string kind, std::string operator_, Expression operand, bool prefix, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), operand(operand), prefix(prefix), resolvedType(resolvedType), span(span) {}
 };
     struct AssignmentExpression : public std::enable_shared_from_this<AssignmentExpression> {
     std::string kind;
     std::string operator_;
     Expression target;
     Expression value;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    AssignmentExpression(std::string kind, std::string operator_, Expression target, Expression value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), target(target), value(value), resolvedType(resolvedType), span(span) {}
+    AssignmentExpression(std::string kind, std::string operator_, Expression target, Expression value, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), operator_(operator_), target(target), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct MemberExpression : public std::enable_shared_from_this<MemberExpression> {
     std::string kind;
@@ -569,19 +594,20 @@ namespace app_src_ast_ {
     std::shared_ptr<ClassDeclaration> resolvedStaticOwner;
     bool resolvedNamespaceAccess;
     std::shared_ptr<::app_src_semantic_::Symbol> resolvedNamespaceSymbol;
+    std::shared_ptr<CheckedMember> resolvedMember;
     bool resolvedCallableField;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    MemberExpression(std::string kind, Expression object, std::string property, bool optional, bool force, std::shared_ptr<ClassDeclaration> resolvedStaticOwner, bool resolvedNamespaceAccess, std::shared_ptr<::app_src_semantic_::Symbol> resolvedNamespaceSymbol, bool resolvedCallableField, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), object(object), property(property), optional(optional), force(force), resolvedStaticOwner(resolvedStaticOwner), resolvedNamespaceAccess(resolvedNamespaceAccess), resolvedNamespaceSymbol(resolvedNamespaceSymbol), resolvedCallableField(resolvedCallableField), resolvedType(resolvedType), span(span) {}
+    MemberExpression(std::string kind, Expression object, std::string property, bool optional, bool force, std::shared_ptr<ClassDeclaration> resolvedStaticOwner, bool resolvedNamespaceAccess, std::shared_ptr<::app_src_semantic_::Symbol> resolvedNamespaceSymbol, std::shared_ptr<CheckedMember> resolvedMember, bool resolvedCallableField, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), object(object), property(property), optional(optional), force(force), resolvedStaticOwner(resolvedStaticOwner), resolvedNamespaceAccess(resolvedNamespaceAccess), resolvedNamespaceSymbol(resolvedNamespaceSymbol), resolvedMember(resolvedMember), resolvedCallableField(resolvedCallableField), resolvedType(resolvedType), span(span) {}
 };
     struct IndexExpression : public std::enable_shared_from_this<IndexExpression> {
     std::string kind;
     Expression object;
     Expression index;
     bool optional;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    IndexExpression(std::string kind, Expression object, Expression index, bool optional, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), object(object), index(index), optional(optional), resolvedType(resolvedType), span(span) {}
+    IndexExpression(std::string kind, Expression object, Expression index, bool optional, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), object(object), index(index), optional(optional), resolvedType(resolvedType), span(span) {}
 };
     struct CallArgument : public std::enable_shared_from_this<CallArgument> {
     std::optional<std::string> name;
@@ -590,87 +616,90 @@ namespace app_src_ast_ {
     CallArgument(std::optional<std::string> name, Expression value, SourceSpan span) : name(name), value(value), span(span) {}
 };
     struct CallExpression : public std::enable_shared_from_this<CallExpression> {
+    std::shared_ptr<CheckedConstruction> resolvedConstruction;
     std::string kind;
     Expression callee;
     std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args;
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
-    std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs;
+    std::shared_ptr<std::vector<doof_header_type_5>> resolvedGenericTypeArgs;
     std::shared_ptr<FunctionDeclaration> resolvedFunction;
     std::string resolvedFunctionModule;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
     std::shared_ptr<ClassDeclaration> resolvedClass;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    CallExpression(std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_4>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::string resolvedFunctionModule, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedFunctionModule(resolvedFunctionModule), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
+    CallExpression(std::shared_ptr<CheckedConstruction> resolvedConstruction, std::string kind, Expression callee, std::shared_ptr<std::vector<std::shared_ptr<CallArgument>>> args, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<doof_header_type_5>> resolvedGenericTypeArgs, std::shared_ptr<FunctionDeclaration> resolvedFunction, std::string resolvedFunctionModule, std::shared_ptr<FunctionDeclaration> resolvedConstructor, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_2 resolvedType, SourceSpan span) : resolvedConstruction(resolvedConstruction), kind(kind), callee(callee), args(args), typeArgs(typeArgs), resolvedGenericTypeArgs(resolvedGenericTypeArgs), resolvedFunction(resolvedFunction), resolvedFunctionModule(resolvedFunctionModule), resolvedConstructor(resolvedConstructor), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
 };
     struct ArrayLiteral : public std::enable_shared_from_this<ArrayLiteral> {
     std::string kind;
     std::shared_ptr<std::vector<Expression>> elements;
     bool readonly_;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    ArrayLiteral(std::string kind, std::shared_ptr<std::vector<Expression>> elements, bool readonly_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), elements(elements), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
+    ArrayLiteral(std::string kind, std::shared_ptr<std::vector<Expression>> elements, bool readonly_, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), elements(elements), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
 };
     struct ObjectProperty : public std::enable_shared_from_this<ObjectProperty> {
     std::string name;
-    doof_header_type_5 key;
-    doof_header_type_5 value;
-    doof_header_type_3 resolvedType;
+    doof_header_type_3 key;
+    doof_header_type_3 value;
+    doof_header_type_2 resolvedType;
     std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding;
     SourceSpan span;
-    ObjectProperty(std::string name, doof_header_type_5 key, doof_header_type_5 value, doof_header_type_3 resolvedType, std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding, SourceSpan span) : name(name), key(key), value(value), resolvedType(resolvedType), resolvedBinding(resolvedBinding), span(span) {}
+    ObjectProperty(std::string name, doof_header_type_3 key, doof_header_type_3 value, doof_header_type_2 resolvedType, std::shared_ptr<::app_src_semantic_::Binding> resolvedBinding, SourceSpan span) : name(name), key(key), value(value), resolvedType(resolvedType), resolvedBinding(resolvedBinding), span(span) {}
 };
     struct ObjectLiteral : public std::enable_shared_from_this<ObjectLiteral> {
+    std::shared_ptr<CheckedConstruction> resolvedConstruction;
     std::string kind;
     std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> properties;
-    doof_header_type_5 spread;
+    doof_header_type_3 spread;
     std::shared_ptr<ClassDeclaration> resolvedClass;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    ObjectLiteral(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> properties, doof_header_type_5 spread, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), properties(properties), spread(spread), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
+    ObjectLiteral(std::shared_ptr<CheckedConstruction> resolvedConstruction, std::string kind, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> properties, doof_header_type_3 spread, std::shared_ptr<ClassDeclaration> resolvedClass, doof_header_type_2 resolvedType, SourceSpan span) : resolvedConstruction(resolvedConstruction), kind(kind), properties(properties), spread(spread), resolvedClass(resolvedClass), resolvedType(resolvedType), span(span) {}
 };
     struct TupleLiteral : public std::enable_shared_from_this<TupleLiteral> {
     std::string kind;
     std::shared_ptr<std::vector<Expression>> elements;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    TupleLiteral(std::string kind, std::shared_ptr<std::vector<Expression>> elements, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), elements(elements), resolvedType(resolvedType), span(span) {}
+    TupleLiteral(std::string kind, std::shared_ptr<std::vector<Expression>> elements, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), elements(elements), resolvedType(resolvedType), span(span) {}
 };
     struct LambdaExpression : public std::enable_shared_from_this<LambdaExpression> {
     std::string kind;
     std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params;
-    doof_header_type_2 returnType;
+    doof_header_type_4 returnType;
     doof_header_type_6 body;
     bool parameterless;
     bool trailing;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    LambdaExpression(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, doof_header_type_2 returnType, doof_header_type_6 body, bool parameterless, bool trailing, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), params(params), returnType(returnType), body(body), parameterless(parameterless), trailing(trailing), resolvedType(resolvedType), span(span) {}
+    LambdaExpression(std::string kind, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, doof_header_type_4 returnType, doof_header_type_6 body, bool parameterless, bool trailing, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), params(params), returnType(returnType), body(body), parameterless(parameterless), trailing(trailing), resolvedType(resolvedType), span(span) {}
 };
     struct IfExpression : public std::enable_shared_from_this<IfExpression> {
     std::string kind;
     Expression condition;
     Expression then_;
     Expression else_;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    IfExpression(std::string kind, Expression condition, Expression then_, Expression else_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), condition(condition), then_(then_), else_(else_), resolvedType(resolvedType), span(span) {}
+    IfExpression(std::string kind, Expression condition, Expression then_, Expression else_, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), condition(condition), then_(then_), else_(else_), resolvedType(resolvedType), span(span) {}
 };
     struct ConstructExpression : public std::enable_shared_from_this<ConstructExpression> {
+    std::shared_ptr<CheckedConstruction> resolvedConstruction;
     std::string kind;
     std::string type_;
     std::shared_ptr<std::vector<TypeAnnotation>> typeArgs;
     std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args;
-    doof_header_type_5 spread;
+    doof_header_type_3 spread;
     std::shared_ptr<std::vector<std::string>> spreadFields;
-    doof_header_type_3 resolvedSpreadType;
+    doof_header_type_2 resolvedSpreadType;
     bool named;
     std::shared_ptr<ClassDeclaration> resolvedClass;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
-    doof_header_type_3 resolvedConstructedType;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedConstructedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    ConstructExpression(std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, doof_header_type_5 spread, std::shared_ptr<std::vector<std::string>> spreadFields, doof_header_type_3 resolvedSpreadType, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedConstructedType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), type_(type_), typeArgs(typeArgs), args(args), spread(spread), spreadFields(spreadFields), resolvedSpreadType(resolvedSpreadType), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
+    ConstructExpression(std::shared_ptr<CheckedConstruction> resolvedConstruction, std::string kind, std::string type_, std::shared_ptr<std::vector<TypeAnnotation>> typeArgs, std::shared_ptr<std::vector<std::shared_ptr<ObjectProperty>>> args, doof_header_type_3 spread, std::shared_ptr<std::vector<std::string>> spreadFields, doof_header_type_2 resolvedSpreadType, bool named, std::shared_ptr<ClassDeclaration> resolvedClass, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_2 resolvedConstructedType, doof_header_type_2 resolvedType, SourceSpan span) : resolvedConstruction(resolvedConstruction), kind(kind), type_(type_), typeArgs(typeArgs), args(args), spread(spread), spreadFields(spreadFields), resolvedSpreadType(resolvedSpreadType), named(named), resolvedClass(resolvedClass), resolvedConstructor(resolvedConstructor), resolvedConstructedType(resolvedConstructedType), resolvedType(resolvedType), span(span) {}
 };
     struct DotShorthand : public std::enable_shared_from_this<DotShorthand> {
     std::string kind;
@@ -680,76 +709,77 @@ namespace app_src_ast_ {
     std::string resolvedShorthandOwnerModule;
     bool resolvedShorthandOwnerNative;
     std::string resolvedShorthandOwnerCppName;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    DotShorthand(std::string kind, std::string name, std::string resolvedShorthandOwnerName, std::string resolvedShorthandOwnerKind, std::string resolvedShorthandOwnerModule, bool resolvedShorthandOwnerNative, std::string resolvedShorthandOwnerCppName, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), resolvedShorthandOwnerName(resolvedShorthandOwnerName), resolvedShorthandOwnerKind(resolvedShorthandOwnerKind), resolvedShorthandOwnerModule(resolvedShorthandOwnerModule), resolvedShorthandOwnerNative(resolvedShorthandOwnerNative), resolvedShorthandOwnerCppName(resolvedShorthandOwnerCppName), resolvedType(resolvedType), span(span) {}
+    DotShorthand(std::string kind, std::string name, std::string resolvedShorthandOwnerName, std::string resolvedShorthandOwnerKind, std::string resolvedShorthandOwnerModule, bool resolvedShorthandOwnerNative, std::string resolvedShorthandOwnerCppName, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), name(name), resolvedShorthandOwnerName(resolvedShorthandOwnerName), resolvedShorthandOwnerKind(resolvedShorthandOwnerKind), resolvedShorthandOwnerModule(resolvedShorthandOwnerModule), resolvedShorthandOwnerNative(resolvedShorthandOwnerNative), resolvedShorthandOwnerCppName(resolvedShorthandOwnerCppName), resolvedType(resolvedType), span(span) {}
 };
     struct ThisExpression : public std::enable_shared_from_this<ThisExpression> {
     std::string kind;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    ThisExpression(std::string kind, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), resolvedType(resolvedType), span(span) {}
+    ThisExpression(std::string kind, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), resolvedType(resolvedType), span(span) {}
 };
     struct CallerExpression : public std::enable_shared_from_this<CallerExpression> {
     std::string kind;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    CallerExpression(std::string kind, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), resolvedType(resolvedType), span(span) {}
+    CallerExpression(std::string kind, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), resolvedType(resolvedType), span(span) {}
 };
     struct AsyncExpression : public std::enable_shared_from_this<AsyncExpression> {
     std::string kind;
     doof_header_type_6 expression;
     std::shared_ptr<std::vector<std::string>> resolvedCaptureNames;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    AsyncExpression(std::string kind, doof_header_type_6 expression, std::shared_ptr<std::vector<std::string>> resolvedCaptureNames, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), expression(expression), resolvedCaptureNames(resolvedCaptureNames), resolvedType(resolvedType), span(span) {}
+    AsyncExpression(std::string kind, doof_header_type_6 expression, std::shared_ptr<std::vector<std::string>> resolvedCaptureNames, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), expression(expression), resolvedCaptureNames(resolvedCaptureNames), resolvedType(resolvedType), span(span) {}
 };
     struct RetireExpression : public std::enable_shared_from_this<RetireExpression> {
     std::string kind;
     Expression actor;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    RetireExpression(std::string kind, Expression actor, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), actor(actor), resolvedType(resolvedType), span(span) {}
+    RetireExpression(std::string kind, Expression actor, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), actor(actor), resolvedType(resolvedType), span(span) {}
 };
     struct AsExpression : public std::enable_shared_from_this<AsExpression> {
     std::string kind;
     Expression expression;
     TypeAnnotation targetType;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    AsExpression(std::string kind, Expression expression, TypeAnnotation targetType, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), expression(expression), targetType(targetType), resolvedType(resolvedType), span(span) {}
+    AsExpression(std::string kind, Expression expression, TypeAnnotation targetType, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), expression(expression), targetType(targetType), resolvedType(resolvedType), span(span) {}
 };
     struct ActorCreationExpression : public std::enable_shared_from_this<ActorCreationExpression> {
+    std::shared_ptr<CheckedConstruction> resolvedConstruction;
     std::string kind;
     std::string className;
     std::shared_ptr<std::vector<Expression>> args;
     std::shared_ptr<FunctionDeclaration> resolvedConstructor;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    ActorCreationExpression(std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), className(className), args(args), resolvedConstructor(resolvedConstructor), resolvedType(resolvedType), span(span) {}
+    ActorCreationExpression(std::shared_ptr<CheckedConstruction> resolvedConstruction, std::string kind, std::string className, std::shared_ptr<std::vector<Expression>> args, std::shared_ptr<FunctionDeclaration> resolvedConstructor, doof_header_type_2 resolvedType, SourceSpan span) : resolvedConstruction(resolvedConstruction), kind(kind), className(className), args(args), resolvedConstructor(resolvedConstructor), resolvedType(resolvedType), span(span) {}
 };
     struct YieldBlockExpression : public std::enable_shared_from_this<YieldBlockExpression> {
     std::string kind;
     std::shared_ptr<Block> body;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    YieldBlockExpression(std::string kind, std::shared_ptr<Block> body, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), body(body), resolvedType(resolvedType), span(span) {}
+    YieldBlockExpression(std::string kind, std::shared_ptr<Block> body, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), body(body), resolvedType(resolvedType), span(span) {}
 };
     struct CatchExpression : public std::enable_shared_from_this<CatchExpression> {
     std::string kind;
     std::shared_ptr<Block> body;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    CatchExpression(std::string kind, std::shared_ptr<Block> body, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), body(body), resolvedType(resolvedType), span(span) {}
+    CatchExpression(std::string kind, std::shared_ptr<Block> body, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), body(body), resolvedType(resolvedType), span(span) {}
 };
     struct Parameter : public std::enable_shared_from_this<Parameter> {
     std::string name;
     std::string description;
-    doof_header_type_2 type_;
-    doof_header_type_5 defaultValue;
-    doof_header_type_3 resolvedType;
+    doof_header_type_4 type_;
+    doof_header_type_3 defaultValue;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    Parameter(std::string name, std::string description, doof_header_type_2 type_, doof_header_type_5 defaultValue, doof_header_type_3 resolvedType, SourceSpan span) : name(name), description(description), type_(type_), defaultValue(defaultValue), resolvedType(resolvedType), span(span) {}
+    Parameter(std::string name, std::string description, doof_header_type_4 type_, doof_header_type_3 defaultValue, doof_header_type_2 resolvedType, SourceSpan span) : name(name), description(description), type_(type_), defaultValue(defaultValue), resolvedType(resolvedType), span(span) {}
 };
     struct Block : public std::enable_shared_from_this<Block> {
     std::string kind;
@@ -761,48 +791,48 @@ namespace app_src_ast_ {
     std::string kind;
     std::string name;
     std::string description;
-    doof_header_type_2 type_;
+    doof_header_type_4 type_;
     Expression value;
     bool exported;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     bool moduleInitializerChecked;
     SourceSpan span;
-    ConstDeclaration(std::string kind, std::string name, std::string description, doof_header_type_2 type_, Expression value, bool exported, doof_header_type_3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), value(value), exported(exported), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
+    ConstDeclaration(std::string kind, std::string name, std::string description, doof_header_type_4 type_, Expression value, bool exported, doof_header_type_2 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), value(value), exported(exported), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
 };
     struct ReadonlyDeclaration : public std::enable_shared_from_this<ReadonlyDeclaration> {
     std::string kind;
     std::string name;
     std::string description;
-    doof_header_type_2 type_;
+    doof_header_type_4 type_;
     Expression value;
     bool exported;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     bool moduleInitializerChecked;
     SourceSpan span;
-    ReadonlyDeclaration(std::string kind, std::string name, std::string description, doof_header_type_2 type_, Expression value, bool exported, doof_header_type_3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), value(value), exported(exported), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
+    ReadonlyDeclaration(std::string kind, std::string name, std::string description, doof_header_type_4 type_, Expression value, bool exported, doof_header_type_2 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), value(value), exported(exported), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
 };
     struct ImmutableBinding : public std::enable_shared_from_this<ImmutableBinding> {
     std::string kind;
     std::string name;
-    doof_header_type_2 type_;
+    doof_header_type_4 type_;
     Expression value;
     bool exported;
     std::shared_ptr<Block> else_;
     std::optional<std::string> failureName;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     bool moduleInitializerChecked;
     SourceSpan span;
-    ImmutableBinding(std::string kind, std::string name, doof_header_type_2 type_, Expression value, bool exported, std::shared_ptr<Block> else_, std::optional<std::string> failureName, doof_header_type_3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), type_(type_), value(value), exported(exported), else_(else_), failureName(failureName), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
+    ImmutableBinding(std::string kind, std::string name, doof_header_type_4 type_, Expression value, bool exported, std::shared_ptr<Block> else_, std::optional<std::string> failureName, doof_header_type_2 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), type_(type_), value(value), exported(exported), else_(else_), failureName(failureName), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
 };
     struct LetDeclaration : public std::enable_shared_from_this<LetDeclaration> {
     std::string kind;
     std::string name;
-    doof_header_type_2 type_;
+    doof_header_type_4 type_;
     Expression value;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     bool moduleInitializerChecked;
     SourceSpan span;
-    LetDeclaration(std::string kind, std::string name, doof_header_type_2 type_, Expression value, doof_header_type_3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), type_(type_), value(value), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
+    LetDeclaration(std::string kind, std::string name, doof_header_type_4 type_, Expression value, doof_header_type_2 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), name(name), type_(type_), value(value), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
 };
     struct FunctionDeclaration : public std::enable_shared_from_this<FunctionDeclaration> {
     std::string kind;
@@ -811,7 +841,7 @@ namespace app_src_ast_ {
     std::shared_ptr<std::vector<std::string>> typeParams;
     std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints;
     std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params;
-    doof_header_type_2 returnType;
+    doof_header_type_4 returnType;
     doof_header_type_6 body;
     bool exported;
     bool static_;
@@ -823,16 +853,16 @@ namespace app_src_ast_ {
     std::string nativeHeader;
     std::string nativeCppName;
     std::optional<SourceSpan> legacyMethodFunctionSpan;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    FunctionDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, doof_header_type_2 returnType, doof_header_type_6 body, bool exported, bool static_, bool isolated_, bool resolvedIsolated, bool private_, bool bodyless, bool native_, std::string nativeHeader, std::string nativeCppName, std::optional<SourceSpan> legacyMethodFunctionSpan, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), params(params), returnType(returnType), body(body), exported(exported), static_(static_), isolated_(isolated_), resolvedIsolated(resolvedIsolated), private_(private_), bodyless(bodyless), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), legacyMethodFunctionSpan(legacyMethodFunctionSpan), resolvedType(resolvedType), span(span) {}
+    FunctionDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, std::shared_ptr<std::vector<std::shared_ptr<Parameter>>> params, doof_header_type_4 returnType, doof_header_type_6 body, bool exported, bool static_, bool isolated_, bool resolvedIsolated, bool private_, bool bodyless, bool native_, std::string nativeHeader, std::string nativeCppName, std::optional<SourceSpan> legacyMethodFunctionSpan, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), params(params), returnType(returnType), body(body), exported(exported), static_(static_), isolated_(isolated_), resolvedIsolated(resolvedIsolated), private_(private_), bodyless(bodyless), native_(native_), nativeHeader(nativeHeader), nativeCppName(nativeCppName), legacyMethodFunctionSpan(legacyMethodFunctionSpan), resolvedType(resolvedType), span(span) {}
 };
     struct ReturnStatement : public std::enable_shared_from_this<ReturnStatement> {
     std::string kind;
-    doof_header_type_5 value;
-    doof_header_type_3 resolvedExpectedType;
+    doof_header_type_3 value;
+    doof_header_type_2 resolvedExpectedType;
     SourceSpan span;
-    ReturnStatement(std::string kind, doof_header_type_5 value, doof_header_type_3 resolvedExpectedType, SourceSpan span) : kind(kind), value(value), resolvedExpectedType(resolvedExpectedType), span(span) {}
+    ReturnStatement(std::string kind, doof_header_type_3 value, doof_header_type_2 resolvedExpectedType, SourceSpan span) : kind(kind), value(value), resolvedExpectedType(resolvedExpectedType), span(span) {}
 };
     struct YieldStatement : public std::enable_shared_from_this<YieldStatement> {
     std::string kind;
@@ -844,9 +874,9 @@ namespace app_src_ast_ {
     std::string kind;
     std::string name;
     std::shared_ptr<YieldBlockExpression> value;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    YieldBlockAssignmentStatement(std::string kind, std::string name, std::shared_ptr<YieldBlockExpression> value, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), value(value), resolvedType(resolvedType), span(span) {}
+    YieldBlockAssignmentStatement(std::string kind, std::string name, std::shared_ptr<YieldBlockExpression> value, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), name(name), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct IfStatement : public std::enable_shared_from_this<IfStatement> {
     std::string kind;
@@ -861,9 +891,9 @@ namespace app_src_ast_ {
     std::string kind;
     Expression subject;
     std::shared_ptr<std::vector<std::shared_ptr<CaseExpressionArm>>> arms;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    CaseExpression(std::string kind, Expression subject, std::shared_ptr<std::vector<std::shared_ptr<CaseExpressionArm>>> arms, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), subject(subject), arms(arms), resolvedType(resolvedType), span(span) {}
+    CaseExpression(std::string kind, Expression subject, std::shared_ptr<std::vector<std::shared_ptr<CaseExpressionArm>>> arms, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), subject(subject), arms(arms), resolvedType(resolvedType), span(span) {}
 };
     struct CaseStatement : public std::enable_shared_from_this<CaseStatement> {
     std::string kind;
@@ -891,9 +921,9 @@ namespace app_src_ast_ {
     std::string kind;
     std::string name;
     TypeAnnotation type_;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    TypePattern(std::string kind, std::string name, TypeAnnotation type_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), type_(type_), resolvedType(resolvedType), span(span) {}
+    TypePattern(std::string kind, std::string name, TypeAnnotation type_, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), name(name), type_(type_), resolvedType(resolvedType), span(span) {}
 };
     struct WildcardPattern : public std::enable_shared_from_this<WildcardPattern> {
     std::string kind;
@@ -908,11 +938,11 @@ namespace app_src_ast_ {
 };
     struct RangePattern : public std::enable_shared_from_this<RangePattern> {
     std::string kind;
-    doof_header_type_5 start;
-    doof_header_type_5 end;
+    doof_header_type_3 start;
+    doof_header_type_3 end;
     bool inclusive;
     SourceSpan span;
-    RangePattern(std::string kind, doof_header_type_5 start, doof_header_type_5 end, bool inclusive, SourceSpan span) : kind(kind), start(start), end(end), inclusive(inclusive), span(span) {}
+    RangePattern(std::string kind, doof_header_type_3 start, doof_header_type_3 end, bool inclusive, SourceSpan span) : kind(kind), start(start), end(end), inclusive(inclusive), span(span) {}
 };
     struct IfBranch : public std::enable_shared_from_this<IfBranch> {
     Expression condition;
@@ -932,13 +962,13 @@ namespace app_src_ast_ {
     struct ForStatement : public std::enable_shared_from_this<ForStatement> {
     std::string kind;
     doof_header_type_7 init;
-    doof_header_type_5 condition;
+    doof_header_type_3 condition;
     std::shared_ptr<std::vector<Expression>> update;
     std::shared_ptr<Block> body;
     std::optional<std::string> label;
     std::shared_ptr<Block> then_;
     SourceSpan span;
-    ForStatement(std::string kind, doof_header_type_7 init, doof_header_type_5 condition, std::shared_ptr<std::vector<Expression>> update, std::shared_ptr<Block> body, std::optional<std::string> label, std::shared_ptr<Block> then_, SourceSpan span) : kind(kind), init(init), condition(condition), update(update), body(body), label(label), then_(then_), span(span) {}
+    ForStatement(std::string kind, doof_header_type_7 init, doof_header_type_3 condition, std::shared_ptr<std::vector<Expression>> update, std::shared_ptr<Block> body, std::optional<std::string> label, std::shared_ptr<Block> then_, SourceSpan span) : kind(kind), init(init), condition(condition), update(update), body(body), label(label), then_(then_), span(span) {}
 };
     struct ForOfStatement : public std::enable_shared_from_this<ForOfStatement> {
     std::string kind;
@@ -952,11 +982,11 @@ namespace app_src_ast_ {
 };
     struct WithBinding : public std::enable_shared_from_this<WithBinding> {
     std::string name;
-    doof_header_type_2 type_;
+    doof_header_type_4 type_;
     Expression value;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    WithBinding(std::string name, doof_header_type_2 type_, Expression value, doof_header_type_3 resolvedType, SourceSpan span) : name(name), type_(type_), value(value), resolvedType(resolvedType), span(span) {}
+    WithBinding(std::string name, doof_header_type_4 type_, Expression value, doof_header_type_2 resolvedType, SourceSpan span) : name(name), type_(type_), value(value), resolvedType(resolvedType), span(span) {}
 };
     struct WithStatement : public std::enable_shared_from_this<WithStatement> {
     std::string kind;
@@ -1029,18 +1059,18 @@ namespace app_src_ast_ {
     std::string kind;
     std::shared_ptr<std::vector<std::string>> names;
     std::shared_ptr<std::vector<std::string>> descriptions;
-    doof_header_type_2 type_;
-    doof_header_type_5 defaultValue;
+    doof_header_type_4 type_;
+    doof_header_type_3 defaultValue;
     bool static_;
     bool const_;
     bool let_;
     bool readonly_;
     bool weak_;
     bool private_;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     bool moduleInitializerChecked;
     SourceSpan span;
-    ClassField(std::string kind, std::shared_ptr<std::vector<std::string>> names, std::shared_ptr<std::vector<std::string>> descriptions, doof_header_type_2 type_, doof_header_type_5 defaultValue, bool static_, bool const_, bool let_, bool readonly_, bool weak_, bool private_, doof_header_type_3 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), names(names), descriptions(descriptions), type_(type_), defaultValue(defaultValue), static_(static_), const_(const_), let_(let_), readonly_(readonly_), weak_(weak_), private_(private_), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
+    ClassField(std::string kind, std::shared_ptr<std::vector<std::string>> names, std::shared_ptr<std::vector<std::string>> descriptions, doof_header_type_4 type_, doof_header_type_3 defaultValue, bool static_, bool const_, bool let_, bool readonly_, bool weak_, bool private_, doof_header_type_2 resolvedType, bool moduleInitializerChecked, SourceSpan span) : kind(kind), names(names), descriptions(descriptions), type_(type_), defaultValue(defaultValue), static_(static_), const_(const_), let_(let_), readonly_(readonly_), weak_(weak_), private_(private_), resolvedType(resolvedType), moduleInitializerChecked(moduleInitializerChecked), span(span) {}
 };
     struct InterfaceDeclaration : public std::enable_shared_from_this<InterfaceDeclaration> {
     std::string kind;
@@ -1063,9 +1093,9 @@ namespace app_src_ast_ {
     TypeAnnotation type_;
     bool let_;
     bool readonly_;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    InterfaceField(std::string kind, std::string name, std::string description, TypeAnnotation type_, bool let_, bool readonly_, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), let_(let_), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
+    InterfaceField(std::string kind, std::string name, std::string description, TypeAnnotation type_, bool let_, bool readonly_, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), type_(type_), let_(let_), readonly_(readonly_), resolvedType(resolvedType), span(span) {}
 };
     struct EnumDeclaration : public std::enable_shared_from_this<EnumDeclaration> {
     std::string kind;
@@ -1081,11 +1111,11 @@ namespace app_src_ast_ {
     std::string kind;
     std::string name;
     std::string description;
-    doof_header_type_5 value;
+    doof_header_type_3 value;
     std::optional<int32_t> resolvedIntValue;
     std::optional<std::string> resolvedStringValue;
     SourceSpan span;
-    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_5 value, std::optional<int32_t> resolvedIntValue, std::optional<std::string> resolvedStringValue, SourceSpan span) : kind(kind), name(name), description(description), value(value), resolvedIntValue(resolvedIntValue), resolvedStringValue(resolvedStringValue), span(span) {}
+    EnumVariant(std::string kind, std::string name, std::string description, doof_header_type_3 value, std::optional<int32_t> resolvedIntValue, std::optional<std::string> resolvedStringValue, SourceSpan span) : kind(kind), name(name), description(description), value(value), resolvedIntValue(resolvedIntValue), resolvedStringValue(resolvedStringValue), span(span) {}
 };
     struct TypeAliasDeclaration : public std::enable_shared_from_this<TypeAliasDeclaration> {
     std::string kind;
@@ -1095,9 +1125,9 @@ namespace app_src_ast_ {
     std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints;
     TypeAnnotation type_;
     bool exported;
-    doof_header_type_3 resolvedType;
+    doof_header_type_2 resolvedType;
     SourceSpan span;
-    TypeAliasDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, TypeAnnotation type_, bool exported, doof_header_type_3 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), type_(type_), exported(exported), resolvedType(resolvedType), span(span) {}
+    TypeAliasDeclaration(std::string kind, std::string name, std::string description, std::shared_ptr<std::vector<std::string>> typeParams, std::shared_ptr<std::vector<std::shared_ptr<TypeParameterConstraint>>> typeParamConstraints, TypeAnnotation type_, bool exported, doof_header_type_2 resolvedType, SourceSpan span) : kind(kind), name(name), description(description), typeParams(typeParams), typeParamConstraints(typeParamConstraints), type_(type_), exported(exported), resolvedType(resolvedType), span(span) {}
 };
     struct NamedImport : public std::enable_shared_from_this<NamedImport> {
     std::string kind;
@@ -1160,6 +1190,10 @@ namespace app_src_ast_ {
 };
 }
 
+namespace app_src_checker_types_ {
+    std::optional<std::string> unionMutabilityConflict(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& type_);
+}
+
 namespace app_src_checker_symbols_ {
     std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>> optionalResolvedType(const std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& value);
 }
@@ -1173,8 +1207,7 @@ namespace app_src_checker_validation_ {
     void validateBlock(const std::shared_ptr<::app_src_ast_::Block>& block, const std::string& module, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
     void validatePattern(const std::variant<std::shared_ptr<::app_src_ast_::TypePattern>, std::shared_ptr<::app_src_ast_::WildcardPattern>, std::shared_ptr<::app_src_ast_::ValuePattern>, std::shared_ptr<::app_src_ast_::RangePattern>>& pattern, const std::string& module, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
     void validateExpression(const std::variant<std::shared_ptr<::app_src_ast_::IntLiteral>, std::shared_ptr<::app_src_ast_::LongLiteral>, std::shared_ptr<::app_src_ast_::FloatLiteral>, std::shared_ptr<::app_src_ast_::DoubleLiteral>, std::shared_ptr<::app_src_ast_::StringLiteral>, std::shared_ptr<::app_src_ast_::CharLiteral>, std::shared_ptr<::app_src_ast_::BoolLiteral>, std::shared_ptr<::app_src_ast_::NoneLiteral>, std::shared_ptr<::app_src_ast_::Identifier>, std::shared_ptr<::app_src_ast_::BinaryExpression>, std::shared_ptr<::app_src_ast_::UnaryExpression>, std::shared_ptr<::app_src_ast_::AssignmentExpression>, std::shared_ptr<::app_src_ast_::MemberExpression>, std::shared_ptr<::app_src_ast_::IndexExpression>, std::shared_ptr<::app_src_ast_::CallExpression>, std::shared_ptr<::app_src_ast_::ArrayLiteral>, std::shared_ptr<::app_src_ast_::ObjectLiteral>, std::shared_ptr<::app_src_ast_::TupleLiteral>, std::shared_ptr<::app_src_ast_::LambdaExpression>, std::shared_ptr<::app_src_ast_::IfExpression>, std::shared_ptr<::app_src_ast_::CaseExpression>, std::shared_ptr<::app_src_ast_::ConstructExpression>, std::shared_ptr<::app_src_ast_::DotShorthand>, std::shared_ptr<::app_src_ast_::ThisExpression>, std::shared_ptr<::app_src_ast_::CallerExpression>, std::shared_ptr<::app_src_ast_::AsyncExpression>, std::shared_ptr<::app_src_ast_::RetireExpression>, std::shared_ptr<::app_src_ast_::AsExpression>, std::shared_ptr<::app_src_ast_::ActorCreationExpression>, std::shared_ptr<::app_src_ast_::YieldBlockExpression>, std::shared_ptr<::app_src_ast_::CatchExpression>>& expression, const std::string& module, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
-    std::shared_ptr<::app_src_ast_::FunctionDeclaration> classConstructor(const std::shared_ptr<::app_src_ast_::ClassDeclaration>& class_);
-    bool spanInsideFunction(::app_src_ast_::SourceSpan span, const std::shared_ptr<::app_src_ast_::FunctionDeclaration>& fn);
+    void validateConstructionPlan(const std::shared_ptr<::app_src_ast_::CheckedConstruction>& plan, ::app_src_ast_::SourceSpan span, const std::string& module, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
     void validateTypeAnnotation(const std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>& annotation, const std::string& module, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
     void validateResolved(const doof_header_type_10& resolvedType, ::app_src_ast_::SourceSpan span, const std::string& module, const std::string& owner, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);
     void addValidationError(const std::string& module, ::app_src_ast_::SourceSpan span, const std::string& message, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>& diagnostics);

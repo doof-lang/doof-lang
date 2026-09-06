@@ -13,8 +13,8 @@ bool TarChunkStream::next() {
     if (this->index >= static_cast<int32_t>((this->chunks)->size())) {
         return false;
     }
-    (this->currentValue = doof::array_at(this->chunks, this->index, "tar_writer", 23)->data);
-    (this->index = (this->index + 1));
+    static_cast<void>((this->currentValue = doof::array_at(this->chunks, this->index, "tar_writer", 23)->data));
+    static_cast<void>((this->index = (this->index + 1)));
     return true;
 }
 std::shared_ptr<std::vector<uint8_t>> TarChunkStream::value() {
@@ -70,7 +70,7 @@ bool isGzipTarPath(const std::string& path) {
 }
 std::shared_ptr<std::vector<uint8_t>> encodeText(const std::string& value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
-    (static_cast<void>(builder->writeString(value)), std::monostate{});
+    builder->writeString(value);
     return builder->build();
 }
 std::string octal(int64_t value) {
@@ -80,39 +80,39 @@ std::string octal(int64_t value) {
     auto remaining = value;
     auto result = std::string("");
     while (remaining > 0LL) {
-        (result = (doof::to_string((remaining % 8LL)) + result));
-        (remaining = (remaining / 8LL));
+        static_cast<void>((result = (doof::to_string((remaining % 8LL)) + result)));
+        static_cast<void>((remaining = (remaining / 8LL)));
     }
     return result;
 }
 void writeTextAt(const std::shared_ptr<::doof_blob::NativeBlobBuilder>& builder, int64_t offset, const std::string& value) {
-    (static_cast<void>(builder->setPosition(offset)), std::monostate{});
-    (static_cast<void>(builder->writeString(value)), std::monostate{});
+    builder->setPosition(offset);
+    builder->writeString(value);
 }
 void writeOctalAt(const std::shared_ptr<::doof_blob::NativeBlobBuilder>& builder, int64_t offset, int32_t width, int64_t value) {
     const auto digits = octal(value);
     auto padded = digits;
     while (static_cast<int32_t>(padded.size()) < (width - 1)) {
-        (padded = (std::string("0") + padded));
+        static_cast<void>((padded = (std::string("0") + padded)));
     }
-    (static_cast<void>(writeTextAt(builder, offset, padded)), std::monostate{});
-    (static_cast<void>(builder->writeByte(0)), std::monostate{});
+    writeTextAt(builder, offset, padded);
+    builder->writeByte(0);
 }
 std::shared_ptr<std::vector<uint8_t>> patchChecksum(const std::shared_ptr<std::vector<uint8_t>>& header) {
     auto checksum = 0LL;
     for (int32_t index = 0; index < static_cast<int32_t>((header)->size()); ++index) {
-        (checksum = (checksum + (((index >= 148) && (index < 156)) ? 32LL : static_cast<int64_t>(doof::array_at(header, index, "tar_writer", 90)))));
+        static_cast<void>((checksum = (checksum + (((index >= 148) && (index < 156)) ? 32LL : static_cast<int64_t>(doof::array_at(header, index, "tar_writer", 90))))));
     }
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
-    (static_cast<void>(builder->writeBytes(header)), std::monostate{});
+    builder->writeBytes(header);
     const auto digits = octal(checksum);
     auto padded = digits;
     while (static_cast<int32_t>(padded.size()) < 6) {
-        (padded = (std::string("0") + padded));
+        static_cast<void>((padded = (std::string("0") + padded)));
     }
-    (static_cast<void>(writeTextAt(builder, 148LL, padded)), std::monostate{});
-    (static_cast<void>(builder->writeByte(0)), std::monostate{});
-    (static_cast<void>(builder->writeByte(32)), std::monostate{});
+    writeTextAt(builder, 148LL, padded);
+    builder->writeByte(0);
+    builder->writeByte(32);
     return builder->build();
 }
 
@@ -142,22 +142,22 @@ std::shared_ptr<UstarPath> ustarPath(const std::string& path) {
 }
 std::shared_ptr<std::vector<uint8_t>> buildHeader(const std::shared_ptr<UstarPath>& path, int64_t size, int32_t mode, const std::shared_ptr<::std_::time::temporal::Instant>& mtime, uint8_t typeFlag, const std::string& linkName) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
-    (static_cast<void>(builder->writeZeroes(TAR_BLOCK_SIZE)), std::monostate{});
-    (static_cast<void>(writeTextAt(builder, 0LL, path->name)), std::monostate{});
-    (static_cast<void>(writeOctalAt(builder, 100LL, 8, static_cast<int64_t>(mode))), std::monostate{});
-    (static_cast<void>(writeOctalAt(builder, 108LL, 8, 0LL)), std::monostate{});
-    (static_cast<void>(writeOctalAt(builder, 116LL, 8, 0LL)), std::monostate{});
-    (static_cast<void>(writeOctalAt(builder, 124LL, 12, size)), std::monostate{});
-    (static_cast<void>(writeOctalAt(builder, 136LL, 12, mtime->toEpochSeconds())), std::monostate{});
-    (static_cast<void>(writeTextAt(builder, 148LL, std::string("        "))), std::monostate{});
-    (static_cast<void>(builder->setPosition(156LL)), std::monostate{});
-    (static_cast<void>(builder->writeByte(typeFlag)), std::monostate{});
-    (static_cast<void>(writeTextAt(builder, 157LL, linkName)), std::monostate{});
-    (static_cast<void>(writeTextAt(builder, 257LL, std::string("ustar"))), std::monostate{});
-    (static_cast<void>(builder->setPosition(262LL)), std::monostate{});
-    (static_cast<void>(builder->writeByte(0)), std::monostate{});
-    (static_cast<void>(writeTextAt(builder, 263LL, std::string("00"))), std::monostate{});
-    (static_cast<void>(writeTextAt(builder, 345LL, path->prefix)), std::monostate{});
+    builder->writeZeroes(TAR_BLOCK_SIZE);
+    writeTextAt(builder, 0LL, path->name);
+    writeOctalAt(builder, 100LL, 8, static_cast<int64_t>(mode));
+    writeOctalAt(builder, 108LL, 8, 0LL);
+    writeOctalAt(builder, 116LL, 8, 0LL);
+    writeOctalAt(builder, 124LL, 12, size);
+    writeOctalAt(builder, 136LL, 12, mtime->toEpochSeconds());
+    writeTextAt(builder, 148LL, std::string("        "));
+    builder->setPosition(156LL);
+    builder->writeByte(typeFlag);
+    writeTextAt(builder, 157LL, linkName);
+    writeTextAt(builder, 257LL, std::string("ustar"));
+    builder->setPosition(262LL);
+    builder->writeByte(0);
+    writeTextAt(builder, 263LL, std::string("00"));
+    writeTextAt(builder, 345LL, path->prefix);
     return patchChecksum(builder->build());
 }
 std::shared_ptr<std::vector<uint8_t>> paxRecord(const std::string& key, const std::string& value) {
@@ -169,7 +169,7 @@ std::shared_ptr<std::vector<uint8_t>> paxRecord(const std::string& key, const st
         if (actualLength == length) {
             return encodeText(record);
         }
-        (length = actualLength);
+        static_cast<void>((length = actualLength));
     }
 }
 std::string paxMtime(const std::shared_ptr<::std_::time::temporal::Instant>& value) {
@@ -180,7 +180,7 @@ std::string paxMtime(const std::shared_ptr<::std_::time::temporal::Instant>& val
         return doof::to_string(seconds);
     }
     if (remainder < 0LL) {
-        (remainder = -remainder);
+        static_cast<void>((remainder = -remainder));
     }
     const auto fraction = doof::string_trimEnd(doof::string_padStart(doof::to_string(remainder), 9, U'\u0030'), U'\u0030');
     if ((nanos < 0LL) && (seconds == 0LL)) {
@@ -194,16 +194,16 @@ std::shared_ptr<std::vector<uint8_t>> padding(int64_t size) {
         return std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
     }
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
-    (static_cast<void>(builder->writeZeroes(static_cast<int64_t>(length))), std::monostate{});
+    builder->writeZeroes(static_cast<int64_t>(length));
     return builder->build();
 }
 void appendPayload(const std::shared_ptr<std::vector<std::shared_ptr<TarChunk>>>& chunks, const std::shared_ptr<std::vector<uint8_t>>& data) {
     if (static_cast<int32_t>((data)->size()) > 0) {
-        (static_cast<void>(chunks->push_back(std::make_shared<TarChunk>(data))), std::monostate{});
+        chunks->push_back(std::make_shared<TarChunk>(data));
     }
     const auto paddingBytes = padding(static_cast<int64_t>(static_cast<int32_t>((data)->size())));
     if (static_cast<int32_t>((paddingBytes)->size()) > 0) {
-        (static_cast<void>(chunks->push_back(std::make_shared<TarChunk>(paddingBytes))), std::monostate{});
+        chunks->push_back(std::make_shared<TarChunk>(paddingBytes));
     }
 }
 std::shared_ptr<std::vector<std::shared_ptr<TarChunk>>> buildTarChunks(const std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types::TarWriteEntry>>>& entries) {
@@ -215,7 +215,7 @@ std::shared_ptr<std::vector<std::shared_ptr<TarChunk>>> buildTarChunks(const std
         const std::shared_ptr<std::vector<uint8_t>> payload = ((isDirectory || isSymbolicLink) ? std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{}) : entry->data);
         auto mode = (isSymbolicLink ? 511 : (isDirectory ? 493 : 420));
         if (!doof::is_null(entry->mode)) {
-            (mode = doof::unwrap_optional(entry->mode));
+            static_cast<void>((mode = doof::unwrap_optional(entry->mode)));
         }
         const auto directPath = ustarPath(entry->name);
         const auto requiresPaxSize = (static_cast<int64_t>(static_cast<int32_t>((payload)->size())) > TAR_MAX_BASE_SIZE);
@@ -229,40 +229,40 @@ std::shared_ptr<std::vector<std::shared_ptr<TarChunk>>> buildTarChunks(const std
             std::shared_ptr<std::vector<uint8_t>> paxPayload = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
             const auto paxBuilder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
             if (doof::is_null(directPath)) {
-                (static_cast<void>(paxBuilder->writeBytes(paxRecord(std::string("path"), entry->name))), std::monostate{});
+                paxBuilder->writeBytes(paxRecord(std::string("path"), entry->name));
             }
             if (requiresPaxSize) {
-                (static_cast<void>(paxBuilder->writeBytes(paxRecord(std::string("size"), doof::to_string(static_cast<int32_t>((payload)->size()))))), std::monostate{});
+                paxBuilder->writeBytes(paxRecord(std::string("size"), doof::to_string(static_cast<int32_t>((payload)->size()))));
             }
             if (requiresPaxMtime) {
-                (static_cast<void>(paxBuilder->writeBytes(paxRecord(std::string("mtime"), paxMtime(entry->mtime)))), std::monostate{});
+                paxBuilder->writeBytes(paxRecord(std::string("mtime"), paxMtime(entry->mtime)));
             }
             if (requiresPaxLinkPath) {
-                (static_cast<void>(paxBuilder->writeBytes(paxRecord(std::string("linkpath"), entry->linkName))), std::monostate{});
+                paxBuilder->writeBytes(paxRecord(std::string("linkpath"), entry->linkName));
             }
-            (paxPayload = paxBuilder->build());
+            static_cast<void>((paxPayload = paxBuilder->build()));
             const auto paxName = (std::string("PaxHeaders/") + doof::to_string(index));
-            (static_cast<void>(chunks->push_back(std::make_shared<TarChunk>(buildHeader(std::make_shared<UstarPath>(paxName, std::string("")), static_cast<int64_t>(static_cast<int32_t>((paxPayload)->size())), 420, ::std_::time::temporal::Instant::EPOCH, 120, std::string(""))))), std::monostate{});
-            (static_cast<void>(appendPayload(chunks, paxPayload)), std::monostate{});
-            (headerPath = std::make_shared<UstarPath>((std::string("PaxEntry/") + doof::to_string(index)), std::string("")));
+            chunks->push_back(std::make_shared<TarChunk>(buildHeader(std::make_shared<UstarPath>(paxName, std::string("")), static_cast<int64_t>(static_cast<int32_t>((paxPayload)->size())), 420, ::std_::time::temporal::Instant::EPOCH, 120, std::string(""))));
+            appendPayload(chunks, paxPayload);
+            static_cast<void>((headerPath = std::make_shared<UstarPath>((std::string("PaxEntry/") + doof::to_string(index)), std::string(""))));
         }
         const auto storedSize = (requiresPaxSize ? 0LL : static_cast<int64_t>(static_cast<int32_t>((payload)->size())));
         const auto storedMtime = (requiresPaxMtime ? ::std_::time::temporal::Instant::EPOCH : entry->mtime);
         const uint8_t typeFlag = (isDirectory ? 53 : (isSymbolicLink ? 50 : 48));
         const auto storedLinkName = ((isSymbolicLink && !requiresPaxLinkPath) ? entry->linkName : std::string(""));
-        (static_cast<void>(chunks->push_back(std::make_shared<TarChunk>(buildHeader(doof::unwrap_optional(headerPath), storedSize, mode, storedMtime, typeFlag, storedLinkName)))), std::monostate{});
-        (static_cast<void>(appendPayload(chunks, payload)), std::monostate{});
+        chunks->push_back(std::make_shared<TarChunk>(buildHeader(doof::unwrap_optional(headerPath), storedSize, mode, storedMtime, typeFlag, storedLinkName)));
+        appendPayload(chunks, payload);
     }
     const auto terminator = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
-    (static_cast<void>(terminator->writeZeroes((TAR_BLOCK_SIZE * 2LL))), std::monostate{});
-    (static_cast<void>(chunks->push_back(std::make_shared<TarChunk>(terminator->build()))), std::monostate{});
+    terminator->writeZeroes((TAR_BLOCK_SIZE * 2LL));
+    chunks->push_back(std::make_shared<TarChunk>(terminator->build()));
     return chunks;
 }
 std::shared_ptr<std::vector<uint8_t>> writeTarBlob(const std::shared_ptr<std::vector<std::shared_ptr<::std_::archive::types::TarWriteEntry>>>& entries) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, ::std_::blob::types::Endian::LittleEndian);
     const auto& _iterable_7 = buildTarChunks(entries);
     for (const auto& chunk : *_iterable_7) {
-        (static_cast<void>(builder->writeBytes(chunk->data)), std::monostate{});
+        builder->writeBytes(chunk->data);
     }
     return builder->build();
 }

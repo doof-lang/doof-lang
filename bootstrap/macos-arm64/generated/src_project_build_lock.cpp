@@ -34,7 +34,7 @@ doof::Result<std::shared_ptr<::std_::fs::file::File>, std::string> acquireProjec
         if (error != ::std_::fs::types::IoError::WouldBlock) {
             return doof::Failure<std::string>{ (std::string("Could not acquire project build lock: ") + path) };
         }
-        (static_cast<void>(::doof::print_flushed(((std::string("Waiting for project build lock: ") + path) + std::string("\n")))), std::monostate{});
+        ::doof::print_flushed(((std::string("Waiting for project build lock: ") + path) + std::string("\n")));
         while (true) {
             auto _binding_value_5 = ::std_::fs::file::File::constructor(path, ::std_::fs::types::FileMode::ReadWrite, true, ::std_::fs::types::FileLock::Exclusive, true, ::std_::blob::types::Endian::LittleEndian);
             if (doof::is_failure(_binding_value_5)) {

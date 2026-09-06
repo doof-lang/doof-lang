@@ -79,7 +79,7 @@ bool isZeroRange(const std::shared_ptr<std::vector<uint8_t>>& data, int64_t offs
         if (doof::array_at(data, static_cast<int32_t>(index), "tar_reader", 53) != 0) {
             return false;
         }
-        (index = (index + 1LL));
+        static_cast<void>((index = (index + 1LL)));
     }
     return true;
 }
@@ -89,7 +89,7 @@ int64_t fieldEnd(const std::shared_ptr<std::vector<uint8_t>>& data, int64_t offs
         if (doof::array_at(data, static_cast<int32_t>(index), "tar_reader", 64) == 0) {
             return index;
         }
-        (index = (index + 1LL));
+        static_cast<void>((index = (index + 1LL)));
     }
     return (offset + length);
 }
@@ -113,9 +113,9 @@ doof::Result<int64_t, std::string> parseOctalField(const std::shared_ptr<std::ve
         const auto character = doof::array_at(data, static_cast<int32_t>(index), "tar_reader", 88);
         if ((character == 0) || (character == 32)) {
             if (sawDigit) {
-                (ended = true);
+                static_cast<void>((ended = true));
             }
-            (index = (index + 1LL));
+            static_cast<void>((index = (index + 1LL)));
             continue;
         }
         if ((ended || (character < 48)) || (character > 55)) {
@@ -125,9 +125,9 @@ doof::Result<int64_t, std::string> parseOctalField(const std::shared_ptr<std::ve
         if (value > ((9223372036854775807LL - digit) / 8LL)) {
             return doof::Failure<std::string>{ (std::string("tar read failed: overflowing octal ") + context) };
         }
-        (value = ((value * 8LL) + digit));
-        (sawDigit = true);
-        (index = (index + 1LL));
+        static_cast<void>((value = ((value * 8LL) + digit)));
+        static_cast<void>((sawDigit = true));
+        static_cast<void>((index = (index + 1LL)));
     }
     if (!sawDigit) {
         return doof::Success<int64_t>{ 0LL };
@@ -139,11 +139,11 @@ int64_t headerChecksum(const std::shared_ptr<std::vector<uint8_t>>& data, int64_
     auto relative = 0LL;
     while (relative < TAR_BLOCK_SIZE) {
         if ((relative >= TAR_CHECKSUM_OFFSET) && (relative < (TAR_CHECKSUM_OFFSET + TAR_CHECKSUM_LENGTH))) {
-            (sum = (sum + 32LL));
+            static_cast<void>((sum = (sum + 32LL)));
         } else {
-            (sum = (sum + static_cast<int64_t>(doof::array_at(data, static_cast<int32_t>((offset + relative)), "tar_reader", 121))));
+            static_cast<void>((sum = (sum + static_cast<int64_t>(doof::array_at(data, static_cast<int32_t>((offset + relative)), "tar_reader", 121)))));
         }
-        (relative = (relative + 1LL));
+        static_cast<void>((relative = (relative + 1LL)));
     }
     return sum;
 }
@@ -188,7 +188,7 @@ doof::Result<int64_t, std::string> parseDecimal(const std::string& value, const 
         if (result > ((9223372036854775807LL - digit) / 10LL)) {
             return doof::Failure<std::string>{ (std::string("tar read failed: overflowing PAX ") + context) };
         }
-        (result = ((result * 10LL) + digit));
+        static_cast<void>((result = ((result * 10LL) + digit)));
     }
     return doof::Success<int64_t>{ result };
 }
@@ -200,12 +200,12 @@ doof::Result<std::shared_ptr<::std_::time::temporal::Instant>, std::string> pars
     auto start = 0;
     const auto first = doof::string_at(value, 0, "", 0);
     if ((first == U'\u002D') || (first == U'\u002B')) {
-        (negative = (first == U'\u002D'));
-        (start = 1);
+        static_cast<void>((negative = (first == U'\u002D')));
+        static_cast<void>((start = 1));
     }
     auto decimal = doof::string_indexOf(value, std::string("."));
     if (decimal < 0) {
-        (decimal = static_cast<int32_t>(value.size()));
+        static_cast<void>((decimal = static_cast<int32_t>(value.size())));
     }
     if ((start >= static_cast<int32_t>(value.size())) || (decimal == start)) {
         return doof::Failure<std::string>{ std::string("tar read failed: invalid PAX mtime") };
@@ -222,11 +222,11 @@ doof::Result<std::shared_ptr<::std_::time::temporal::Instant>, std::string> pars
         auto _try_value_7 = parseDecimal(fraction, std::string("mtime fraction"));
         if (doof::is_failure(_try_value_7)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_7))};
         const auto fractionValue = doof::success_value(_try_value_7);
-        (nanos = fractionValue);
+        static_cast<void>((nanos = fractionValue));
         auto fractionDigits = static_cast<int32_t>(fraction.size());
         while (fractionDigits < 9) {
-            (nanos = (nanos * 10LL));
-            (fractionDigits = (fractionDigits + 1));
+            static_cast<void>((nanos = (nanos * 10LL)));
+            static_cast<void>((fractionDigits = (fractionDigits + 1)));
         }
     }
     if ((seconds > 9223372036LL) || ((seconds == 9223372036LL) && (nanos > 854775807LL))) {
@@ -246,7 +246,7 @@ doof::Result<void, std::string> parsePaxRecords(const std::shared_ptr<std::vecto
             if ((character < 48) || (character > 57)) {
                 return doof::Failure<std::string>{ std::string("tar read failed: invalid PAX record length") };
             }
-            (lengthEnd = (lengthEnd + 1LL));
+            static_cast<void>((lengthEnd = (lengthEnd + 1LL)));
         }
         if ((lengthEnd == position) || (lengthEnd >= end)) {
             return doof::Failure<std::string>{ std::string("tar read failed: invalid PAX record length") };
@@ -267,7 +267,7 @@ doof::Result<void, std::string> parsePaxRecords(const std::shared_ptr<std::vecto
         const auto contentStart = (lengthEnd + 1LL);
         auto equals = contentStart;
         while ((equals < (recordEnd - 1LL)) && (doof::array_at(data, static_cast<int32_t>(equals), "tar_reader", 256) != 61)) {
-            (equals = (equals + 1LL));
+            static_cast<void>((equals = (equals + 1LL)));
         }
         if ((equals == contentStart) || (equals >= (recordEnd - 1LL))) {
             return doof::Failure<std::string>{ std::string("tar read failed: invalid PAX key/value record") };
@@ -286,8 +286,8 @@ doof::Result<void, std::string> parsePaxRecords(const std::shared_ptr<std::vecto
             return doof::Failure<std::string>{ std::string("tar read failed: invalid UTF-8 in PAX value") };
         }
         const auto value = doof::success_value(_binding_value_11);
-        (static_cast<void>(doof::map_set<std::string, std::string>(values, key, value, "", 0)), std::monostate{});
-        (position = recordEnd);
+        doof::map_set<std::string, std::string>(values, key, value, "", 0);
+        static_cast<void>((position = recordEnd));
     }
     return doof::Success<void>{};
 }
@@ -372,7 +372,7 @@ doof::Result<std::shared_ptr<::std_::archive::types::TarArchive>, std::string> r
             const auto target = ((typeFlag == 103) ? globalPax : localPax);
             auto _try_value_18 = parsePaxRecords(data, contentOffset, baseSize, target);
             if (doof::is_failure(_try_value_18)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_18))};
-            (offset = nextOffset);
+            static_cast<void>((offset = nextOffset));
             continue;
         }
         const auto pathValue = paxValue(localPax, globalPax, std::string("path"));
@@ -388,14 +388,14 @@ doof::Result<std::shared_ptr<::std_::archive::types::TarArchive>, std::string> r
             auto _try_value_20 = parseDecimal(sizeText.value(), std::string("size"));
             if (doof::is_failure(_try_value_20)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_20))};
             const auto parsedSize = doof::success_value(_try_value_20);
-            (resolvedSize = parsedSize);
+            static_cast<void>((resolvedSize = parsedSize));
         }
         auto resolvedNextOffset = nextOffset;
         if (resolvedSize != baseSize) {
             auto _try_value_21 = alignedPayloadEnd(contentOffset, resolvedSize, static_cast<int64_t>(static_cast<int32_t>((data)->size())));
             if (doof::is_failure(_try_value_21)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_21))};
             const auto updatedOffset = doof::success_value(_try_value_21);
-            (resolvedNextOffset = updatedOffset);
+            static_cast<void>((resolvedNextOffset = updatedOffset));
         }
         const auto mtimeText = paxValue(localPax, globalPax, std::string("mtime"));
         auto resolvedMtime = ::std_::time::temporal::Instant::ofEpochSeconds(baseMtime);
@@ -403,19 +403,19 @@ doof::Result<std::shared_ptr<::std_::archive::types::TarArchive>, std::string> r
             auto _try_value_22 = parsePaxMtime(mtimeText.value());
             if (doof::is_failure(_try_value_22)) return doof::Failure<std::string>{doof::variant_promote<std::string>(doof::failure_error(_try_value_22))};
             const auto parsedMtime = doof::success_value(_try_value_22);
-            (resolvedMtime = parsedMtime);
+            static_cast<void>((resolvedMtime = parsedMtime));
         }
         auto kind = ::std_::archive::types::TarEntryKind::File;
         if (typeFlag == 53) {
-            (kind = ::std_::archive::types::TarEntryKind::Directory);
+            static_cast<void>((kind = ::std_::archive::types::TarEntryKind::Directory));
         } else if (typeFlag == 50) {
-            (kind = ::std_::archive::types::TarEntryKind::SymbolicLink);
+            static_cast<void>((kind = ::std_::archive::types::TarEntryKind::SymbolicLink));
         } else if ((typeFlag != 0) && (typeFlag != 48)) {
             return doof::Failure<std::string>{ (std::string("tar read failed: unsupported entry type ") + doof::to_string(typeFlag)) };
         }
-        (static_cast<void>(entries->push_back(std::make_shared<::std_::archive::types::TarEntry>(resolvedName, kind, contentOffset, resolvedSize, static_cast<int32_t>(baseMode), resolvedMtime, resolvedLinkName))), std::monostate{});
-        (localPax = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{}));
-        (offset = resolvedNextOffset);
+        entries->push_back(std::make_shared<::std_::archive::types::TarEntry>(resolvedName, kind, contentOffset, resolvedSize, static_cast<int32_t>(baseMode), resolvedMtime, resolvedLinkName));
+        static_cast<void>((localPax = std::make_shared<doof::ordered_map<std::string, std::string>>(std::initializer_list<std::pair<std::string, std::string>>{})));
+        static_cast<void>((offset = resolvedNextOffset));
     }
     return doof::Failure<std::string>{ std::string("tar read failed: archive terminator not found") };
 }

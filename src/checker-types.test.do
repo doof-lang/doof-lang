@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { FunctionParamType, Symbol } from "./semantic"
-import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, functionType, isAssignable, mapType, noneType, primitive, promiseType, sameType, streamType, substituteTypeParams, typeParameter, unionType, weakType } from "./checker-types"
+import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, functionType, isAssignable, mapType, noneType, primitive, promiseType, sameType, streamType, substituteTypeParams, typeParameter, unionMutabilityConflict, unionType, weakType } from "./checker-types"
 
 export function testGenericNoneLiteralReadonlyUnionNormalization(): none {
   mutableArray := arrayType(primitive("int"))
@@ -129,4 +129,18 @@ export function testRequiresRecordedStructuralStreamConformance(): none {
 export function testInterfaceBoundReceiverPreservesUnboundedParameters(): none {
   parameter := typeParameter("T")
   Assert.isTrue(sameType(interfaceBoundReceiver(parameter), parameter))
+}
+
+export function testUnionMutabilityConflicts(): none {
+  mutable := arrayType(primitive("int"))
+  frozen := arrayType(primitive("int"), true)
+  Assert.isFalse(sameType(mutable, frozen))
+  Assert.isTrue(unionMutabilityConflict(unionType([mutable, frozen])) != none)
+  Assert.isTrue(unionMutabilityConflict(unionType([arrayType(mutable), arrayType(frozen)])) != none)
+  Assert.isTrue(unionMutabilityConflict(unionType([promiseType(mutable), promiseType(frozen)])) != none)
+  Assert.isTrue(unionMutabilityConflict(unionType([weakType(mutable), weakType(frozen)])) != none)
+  Assert.equal(unionMutabilityConflict(unionType([mutable, mutable])), none)
+  Assert.equal(unionMutabilityConflict(unionType([mutable, noneType()])), none)
+  Assert.equal(unionMutabilityConflict(unionType([mutable, arrayType(primitive("string"), true)])), none)
+  Assert.equal(unionMutabilityConflict(unionType([classType("A", symbol("A", "/a.do")), classType("A", symbol("A", "/b.do"))])), none)
 }

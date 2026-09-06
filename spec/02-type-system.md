@@ -601,6 +601,14 @@ x = "hello"  // ✅ Valid reassignment within union
 x = true     // ❌ Error: bool not in union
 ```
 
+Union arms must not differ only in collection mutability: `int[] | readonly int[]`,
+`Map<string, int> | ReadonlyMap<string, int>`, and `Set<int> | ReadonlySet<int>`
+are rejected because runtime type checks cannot distinguish them. This restriction
+also applies through aliases, generic substitution, and nested types such as
+`Map<string, int[]> | Map<string, readonly int[]>`. Use a single mutability or distinct wrapper
+types. Duplicate identical arms, optional collections, and arms with different
+element types remain valid.
+
 ### Shared Member Access
 
 Members may be accessed directly on a multi-member union only when every present

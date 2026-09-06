@@ -20,43 +20,43 @@ bool ZstdCompressStream::next() {
                     auto _case_subject = this->native->update(std::visit([&](auto&& _obj) { return _obj->value(); }, this->source));
                     if (std::holds_alternative<doof::Success<std::shared_ptr<std::vector<uint8_t>>>>(_case_subject)) {
                         const auto& s = std::get<doof::Success<std::shared_ptr<std::vector<uint8_t>>>>(_case_subject);
-                        (compressed = s.value);
+                        static_cast<void>((compressed = s.value));
                 }
                 else if (std::holds_alternative<doof::Failure<std::string>>(_case_subject)) {
                         const auto& f = std::get<doof::Failure<std::string>>(_case_subject);
-                        (this->failed = f.error);
+                        static_cast<void>((this->failed = f.error));
                         doof::panic(f.error);
                 }
                 }
                 if (static_cast<int32_t>((compressed)->size()) > 0) {
-                    (this->currentValue = compressed);
+                    static_cast<void>((this->currentValue = compressed));
                     return true;
                 }
                 continue;
             }
-            (this->sourceDone = true);
+            static_cast<void>((this->sourceDone = true));
         }
         if (this->finished) {
             return false;
         }
-        (this->finished = true);
+        static_cast<void>((this->finished = true));
         std::shared_ptr<std::vector<uint8_t>> finalChunk = std::make_shared<std::vector<uint8_t>>(std::vector<uint8_t>{});
         {
             auto _case_subject = this->native->finish();
             if (std::holds_alternative<doof::Success<std::shared_ptr<std::vector<uint8_t>>>>(_case_subject)) {
                 const auto& s = std::get<doof::Success<std::shared_ptr<std::vector<uint8_t>>>>(_case_subject);
-                (finalChunk = s.value);
+                static_cast<void>((finalChunk = s.value));
         }
         else if (std::holds_alternative<doof::Failure<std::string>>(_case_subject)) {
                 const auto& f = std::get<doof::Failure<std::string>>(_case_subject);
-                (this->failed = f.error);
+                static_cast<void>((this->failed = f.error));
                 doof::panic(f.error);
         }
         }
         if (static_cast<int32_t>((finalChunk)->size()) == 0) {
             return false;
         }
-        (this->currentValue = finalChunk);
+        static_cast<void>((this->currentValue = finalChunk));
         return true;
     }
 }

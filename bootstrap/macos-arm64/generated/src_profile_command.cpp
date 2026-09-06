@@ -8,21 +8,21 @@ std::shared_ptr<::app_src_run_command_::RunInvocation> planProfileSymbols(const 
 std::shared_ptr<::app_src_run_command_::RunInvocation> planProfileCapture(const std::string& targetPath, const std::shared_ptr<std::vector<std::string>>& programArguments, const std::string& packageRoot, const std::string& tracePath, const std::string& timeLimit, bool consoleTarget) {
     const auto arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("xctrace"), std::string("record"), std::string("--template"), std::string("Time Profiler"), std::string("--output"), tracePath});
     if (timeLimit != std::string("")) {
-        (static_cast<void>(arguments->push_back(std::string("--time-limit"))), std::monostate{});
-        (static_cast<void>(arguments->push_back(timeLimit)), std::monostate{});
+        arguments->push_back(std::string("--time-limit"));
+        arguments->push_back(timeLimit);
     }
     if (consoleTarget) {
-        (static_cast<void>(arguments->push_back(std::string("--target-stdin"))), std::monostate{});
-        (static_cast<void>(arguments->push_back(std::string("-"))), std::monostate{});
-        (static_cast<void>(arguments->push_back(std::string("--target-stdout"))), std::monostate{});
-        (static_cast<void>(arguments->push_back(std::string("-"))), std::monostate{});
+        arguments->push_back(std::string("--target-stdin"));
+        arguments->push_back(std::string("-"));
+        arguments->push_back(std::string("--target-stdout"));
+        arguments->push_back(std::string("-"));
     }
-    (static_cast<void>(arguments->push_back(std::string("--launch"))), std::monostate{});
-    (static_cast<void>(arguments->push_back(std::string("--"))), std::monostate{});
-    (static_cast<void>(arguments->push_back(targetPath)), std::monostate{});
+    arguments->push_back(std::string("--launch"));
+    arguments->push_back(std::string("--"));
+    arguments->push_back(targetPath);
     const auto& _iterable_2 = programArguments;
     for (const auto& argument : *_iterable_2) {
-        (static_cast<void>(arguments->push_back(argument)), std::monostate{});
+        arguments->push_back(argument);
     }
     return std::make_shared<::app_src_run_command_::RunInvocation>(std::string("xcrun"), arguments, packageRoot);
 }

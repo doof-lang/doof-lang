@@ -2,13 +2,13 @@
 
 namespace app_src_emitter_expr_literals_ {
 using namespace ::app_src_emitter_carrier_values_;
+using namespace ::app_src_emitter_construction_;
 using namespace ::app_src_ast_;
 using namespace ::app_src_semantic_;
 using namespace ::app_src_emitter_context_;
 using namespace ::app_src_emitter_expr_;
 using namespace ::app_src_emitter_expr_utils_;
 using namespace ::app_src_emitter_types_;
-using namespace ::app_src_checker_types_;
 std::string emitNoneLiteral(const std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>& expected, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (doof::is_null(expected)) {
         doof::panic((std::string("None literal has no checked type in ") + context->modulePath));
@@ -55,9 +55,9 @@ std::string emitArray(const std::shared_ptr<::app_src_ast_::ArrayLiteral>& expre
                 auto values = std::string("");
                 for (int32_t i = 0; i < static_cast<int32_t>((expression->elements)->size()); ++i) {
                     if (i > 0) {
-                        (values = (values + std::string(", ")));
+                        static_cast<void>((values = (values + std::string(", "))));
                     }
-                    (values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 45), context, doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(array->elementType))));
+                    static_cast<void>((values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 45), context, doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(array->elementType)))));
                 }
                 return ((((((std::string("std::make_shared<std::vector<") + elementType) + std::string(">>(std::vector<")) + elementType) + std::string(">{")) + values) + std::string("})"));
         }
@@ -67,9 +67,9 @@ std::string emitArray(const std::shared_ptr<::app_src_ast_::ArrayLiteral>& expre
                 auto values = std::string("");
                 for (int32_t i = 0; i < static_cast<int32_t>((expression->elements)->size()); ++i) {
                     if (i > 0) {
-                        (values = (values + std::string(", ")));
+                        static_cast<void>((values = (values + std::string(", "))));
                     }
-                    (values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 54), context, std::monostate{})));
+                    static_cast<void>((values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 54), context, std::monostate{}))));
                 }
                 return ((((((std::string("std::make_shared<doof::ordered_set<") + elementType) + std::string(">>(doof::ordered_set<")) + elementType) + std::string(">{")) + values) + std::string("})"));
         }
@@ -77,9 +77,9 @@ std::string emitArray(const std::shared_ptr<::app_src_ast_::ArrayLiteral>& expre
                 auto values = std::string("");
                 for (int32_t i = 0; i < static_cast<int32_t>((expression->elements)->size()); ++i) {
                     if (i > 0) {
-                        (values = (values + std::string(", ")));
+                        static_cast<void>((values = (values + std::string(", "))));
                     }
-                    (values = (((values + std::string("doof::json_value(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 62), context, std::monostate{})) + std::string(")")));
+                    static_cast<void>((values = (((values + std::string("doof::json_value(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 62), context, std::monostate{})) + std::string(")"))));
                 }
                 return ((std::string("doof::json_value(std::make_shared<std::vector<doof::JsonValue>>(std::initializer_list<doof::JsonValue>{") + values) + std::string("}))"));
         }
@@ -96,7 +96,7 @@ std::string emitObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>& exp
             auto _case_subject = doof::unwrap_optional(expression->resolvedType);
             if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                 const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-                return emitClassObject(expression, context, class_);
+                return ::app_src_emitter_construction_::emitClassObject(expression, context, class_);
         }
         else {
         }
@@ -120,7 +120,7 @@ std::string emitObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>& exp
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
                 const auto& class_ = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-                return emitClassObject(expression, context, class_);
+                return ::app_src_emitter_construction_::emitClassObject(expression, context, class_);
         }
         else {
         }
@@ -142,85 +142,25 @@ std::string emitObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>& exp
     const auto& _iterable_5 = expression->properties;
     for (const auto& property : *_iterable_5) {
         if (!first) {
-            (values = (values + std::string(", ")));
+            static_cast<void>((values = (values + std::string(", "))));
         }
-        (first = false);
+        static_cast<void>((first = false));
         const auto key = quote(property->name);
-        const auto value = (doof::is_null(property->value) ? std::string("doof::json_value(nullptr)") : ((std::string("doof::json_value(") + ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(property->value), context, std::monostate{})) + std::string(")")));
-        (values = (((((values + std::string("{")) + key) + std::string(", ")) + value) + std::string("}")));
-    }
-    if (!doof::is_null(expected)) {
-        {
-            auto _case_subject = doof::unwrap_optional(expected);
-            if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>>(_case_subject)) {
-                return ((std::string("doof::json_value(std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{") + values) + std::string("}))"));
-        }
-        else {
-        }
-        }
+        const auto value = ((std::string("doof::json_value(") + ::app_src_emitter_expr_utils_::emitPropertyValue(property, context, std::monostate{})) + std::string(")"));
+        static_cast<void>((values = (((((values + std::string("{")) + key) + std::string(", ")) + value) + std::string("}"))));
     }
     return ((std::string("doof::json_value(std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{") + values) + std::string("}))"));
-}
-std::string emitClassObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_semantic_::ClassType>& resolved) {
-    const auto class_ = expression->resolvedClass;
-    if (doof::is_null(class_)) {
-        doof::panic((std::string("Object literal has no resolved class in ") + context->modulePath));
-    }
-    const auto specialized = ::app_src_emitter_types_::specializeEmitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(resolved), context);
-    std::shared_ptr<::app_src_semantic_::ClassType> concrete = nullptr;
-    {
-        auto _case_subject = specialized;
-        if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject)) {
-            const auto& classType = std::get<std::shared_ptr<::app_src_semantic_::ClassType>>(_case_subject);
-            (concrete = classType);
-    }
-    else {
-            doof::panic((std::string("Object literal has a non-class specialized type in ") + context->modulePath));
-    }
-    }
-    const auto cppName = ::app_src_emitter_types_::emitContextClassInnerType(resolved, context);
-    auto values = std::string("");
-    auto first = true;
-    const auto& _iterable_9 = class_->fields;
-    for (const auto& field : *_iterable_9) {
-        if (field->static_) {
-            continue;
-        }
-        const auto& _iterable_7 = field->names;
-        for (const auto& name : *_iterable_7) {
-            if (!first) {
-                (values = (values + std::string(", ")));
-            }
-            (first = false);
-            const auto property = ::app_src_emitter_expr_utils_::findProperty(expression->properties, name);
-            const auto fieldType = ::app_src_checker_types_::substituteTypeParams(doof::unwrap_optional(field->resolvedType), class_->typeParams, concrete->typeArgs);
-            auto value = std::string("{}");
-            if (!doof::is_null(property)) {
-                (value = ::app_src_emitter_expr_utils_::emitPropertyValue(doof::unwrap_optional(property), context, doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(fieldType)));
-            } else if (!doof::is_null(field->defaultValue)) {
-                const auto previousSubstitution = context->substitution;
-                (context->substitution = std::make_shared<::app_src_semantic_::TypeSubstitution>(class_->typeParams, concrete->typeArgs));
-                (value = ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(field->defaultValue), context, doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(fieldType)));
-                (context->substitution = previousSubstitution);
-            }
-            (values = (values + value));
-        }
-    }
-    if (resolved->symbol->kind == std::string("struct")) {
-        return (((cppName + std::string("{")) + values) + std::string("}"));
-    }
-    return ((((std::string("std::make_shared<") + cppName) + std::string(">(")) + values) + std::string(")"));
 }
 std::string emitMapObject(const std::shared_ptr<::app_src_ast_::ObjectLiteral>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context, const std::shared_ptr<::app_src_semantic_::MapResolvedType>& map) {
     auto values = std::string("");
     for (int32_t i = 0; i < static_cast<int32_t>((expression->properties)->size()); ++i) {
         if (i > 0) {
-            (values = (values + std::string(", ")));
+            static_cast<void>((values = (values + std::string(", "))));
         }
-        const auto property = doof::array_at(expression->properties, i, "src/emitter-expr-literals", 161);
+        const auto property = doof::array_at(expression->properties, i, "src/emitter-expr-literals", 120);
         const auto value = ::app_src_emitter_expr_utils_::emitPropertyValue(property, context, doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(map->valueType));
         const auto key = (doof::is_null(property->key) ? quote(property->name) : ::app_src_emitter_expr_::emitExpression(doof::unwrap_optional(property->key), context, doof::variant_promote<std::variant<std::monostate, std::shared_ptr<::app_src_semantic_::PrimitiveType>, std::shared_ptr<::app_src_semantic_::ClassType>, std::shared_ptr<::app_src_semantic_::EnumType>, std::shared_ptr<::app_src_semantic_::InterfaceType>, std::shared_ptr<::app_src_semantic_::FunctionType>, std::shared_ptr<::app_src_semantic_::ActorType>, std::shared_ptr<::app_src_semantic_::PromiseType>, std::shared_ptr<::app_src_semantic_::ArrayResolvedType>, std::shared_ptr<::app_src_semantic_::MapResolvedType>, std::shared_ptr<::app_src_semantic_::SetResolvedType>, std::shared_ptr<::app_src_semantic_::StreamResolvedType>, std::shared_ptr<::app_src_semantic_::RangeResolvedType>, std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>, std::shared_ptr<::app_src_semantic_::ResultResolvedType>, std::shared_ptr<::app_src_semantic_::TupleResolvedType>, std::shared_ptr<::app_src_semantic_::UnionResolvedType>, std::shared_ptr<::app_src_semantic_::WeakResolvedType>, std::shared_ptr<::app_src_semantic_::NoneType>, std::shared_ptr<::app_src_semantic_::NeverType>, std::shared_ptr<::app_src_semantic_::UnknownType>, std::shared_ptr<::app_src_semantic_::TypeParameterType>, std::shared_ptr<::app_src_semantic_::ClassMetadataResolvedType>, std::shared_ptr<::app_src_semantic_::MethodReflectionResolvedType>>>(map->keyType)));
-        (values = (((((values + std::string("{")) + key) + std::string(", ")) + value) + std::string("}")));
+        static_cast<void>((values = (((((values + std::string("{")) + key) + std::string(", ")) + value) + std::string("}"))));
     }
     const auto keyType = ::app_src_emitter_types_::emitContextType(map->keyType, context);
     const auto valueType = ::app_src_emitter_types_::emitContextType(map->valueType, context);
@@ -230,22 +170,22 @@ std::string emitTuple(const std::shared_ptr<::app_src_ast_::TupleLiteral>& expre
     auto values = std::string("");
     for (int32_t i = 0; i < static_cast<int32_t>((expression->elements)->size()); ++i) {
         if (i > 0) {
-            (values = (values + std::string(", ")));
+            static_cast<void>((values = (values + std::string(", "))));
         }
-        (values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 175), context, std::monostate{})));
+        static_cast<void>((values = (values + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->elements, i, "src/emitter-expr-literals", 134), context, std::monostate{}))));
     }
     return ((std::string("std::make_tuple(") + values) + std::string(")"));
 }
 std::string emitString(const std::shared_ptr<::app_src_ast_::StringLiteral>& expression, const std::shared_ptr<::app_src_emitter_context_::EmitContext>& context) {
     if (static_cast<int32_t>((expression->interpolations)->size()) == 0) {
-        return emitStringConstant(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 181));
+        return emitStringConstant(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 140));
     }
-    auto result = ((std::string("([&]() -> std::string { std::string _interpolation = ") + emitInterpolationPart(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 182))) + std::string("; "));
+    auto result = ((std::string("([&]() -> std::string { std::string _interpolation = ") + emitInterpolationPart(doof::array_at(expression->parts, 0, "src/emitter-expr-literals", 141))) + std::string("; "));
     for (int32_t i = 0; i < static_cast<int32_t>((expression->interpolations)->size()); ++i) {
-        (result = (((result + std::string("_interpolation += doof::to_string(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->interpolations, i, "src/emitter-expr-literals", 184), context, std::monostate{})) + std::string("); ")));
+        static_cast<void>((result = (((result + std::string("_interpolation += doof::to_string(")) + ::app_src_emitter_expr_::emitExpression(doof::array_at(expression->interpolations, i, "src/emitter-expr-literals", 143), context, std::monostate{})) + std::string("); "))));
         const auto partIndex = ((i * 2) + 2);
         if (partIndex < static_cast<int32_t>((expression->parts)->size())) {
-            (result = (((result + std::string("_interpolation += ")) + emitInterpolationPart(doof::array_at(expression->parts, partIndex, "src/emitter-expr-literals", 186))) + std::string("; ")));
+            static_cast<void>((result = (((result + std::string("_interpolation += ")) + emitInterpolationPart(doof::array_at(expression->parts, partIndex, "src/emitter-expr-literals", 145))) + std::string("; "))));
         }
     }
     return (result + std::string("return _interpolation; }())"));

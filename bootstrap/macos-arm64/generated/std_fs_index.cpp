@@ -37,7 +37,7 @@ bool BlockReadStream::next() {
     if (doof::is_null(chunk)) {
         return false;
     }
-    (this->currentValue = doof::unwrap_optional(chunk));
+    static_cast<void>((this->currentValue = doof::unwrap_optional(chunk)));
     return true;
 }
 std::shared_ptr<std::vector<uint8_t>> BlockReadStream::value() {

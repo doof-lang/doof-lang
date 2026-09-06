@@ -312,9 +312,11 @@ namespace app_src_checker_types_ {
     std::shared_ptr<::app_src_semantic_::InterfaceType> interfaceType(const std::string& name, const std::shared_ptr<::app_src_semantic_::Symbol>& symbol, const std::shared_ptr<std::vector<doof_header_type_3>>& typeArgs);
     std::string typeName(const doof_header_type_3& resolvedType);
     bool sameType(const doof_header_type_3& left, const doof_header_type_3& right);
+    std::optional<std::string> unionMutabilityConflict(const doof_header_type_3& type_);
+    bool compareTypes(const doof_header_type_3& left, const doof_header_type_3& right, bool ignoreMutability);
     bool isAssignable(const doof_header_type_3& value, const doof_header_type_3& target);
     bool isWeakReferenceTarget(const doof_header_type_3& type_);
-    bool sameTypeArguments(const std::shared_ptr<std::vector<doof_header_type_3>>& left, const std::shared_ptr<std::vector<doof_header_type_3>>& right);
+    bool sameTypeArguments(const std::shared_ptr<std::vector<doof_header_type_3>>& left, const std::shared_ptr<std::vector<doof_header_type_3>>& right, bool ignoreMutability);
     bool isJsonValueAssignable(const doof_header_type_3& value);
     doof_header_type_3 joinTypes(const doof_header_type_3& left, const doof_header_type_3& right);
     bool isNumeric(const doof_header_type_3& resolvedType);

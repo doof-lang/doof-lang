@@ -205,6 +205,8 @@ namespace app_src_emitter_project_ {
 
 namespace app_src_emitter_project_ {
     std::shared_ptr<ProjectEmission> planProjectEmission(const std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission>& graph, const std::shared_ptr<std::vector<std::shared_ptr<NativePackageInput>>>& packages);
+    std::shared_ptr<std::vector<std::shared_ptr<NativePackageInput>>> orderedNativePackages(const std::shared_ptr<std::vector<std::shared_ptr<NativePackageInput>>>& packages);
+    std::string nativePackageOrderKey(const std::shared_ptr<NativePackageInput>& package_);
     void planPackageSupportFiles(const std::shared_ptr<ProjectEmission>& project, const std::shared_ptr<::app_src_emitter_module_::ModuleGraphEmission>& graph, const std::shared_ptr<NativePackageInput>& package_);
     void planPackageNativeBuild(const std::shared_ptr<ProjectEmission>& project, const std::shared_ptr<NativePackageInput>& package_);
     std::string addNativeCopy(const std::shared_ptr<std::vector<std::shared_ptr<ProjectNativeCopy>>>& copies, const std::shared_ptr<NativePackageInput>& package_, const std::string& sourcePath);

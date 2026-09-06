@@ -12,7 +12,7 @@ bool isMsvcCompiler(const std::string& compiler) {
     auto slash = -1;
     for (int32_t index = 0; index < static_cast<int32_t>(normalized.size()); ++index) {
         if (doof::string_at(normalized, index, "src/native-build", 50) == U'\u002F') {
-            (slash = index);
+            static_cast<void>((slash = index));
         }
     }
     const auto name = ((slash < 0) ? normalized : doof::string_substring(normalized, (slash + 1), static_cast<int32_t>(normalized.size())));
@@ -27,37 +27,37 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
     const auto swiftLink = hasSwiftSource(native->sourceFiles);
     std::shared_ptr<std::vector<std::string>> compileArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-std=c++17")});
     if (release || profile) {
-        (static_cast<void>(compileArguments->push_back(std::string("-O2"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("-DNDEBUG"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("-ffunction-sections"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("-fdata-sections"))), std::monostate{});
+        compileArguments->push_back(std::string("-O2"));
+        compileArguments->push_back(std::string("-DNDEBUG"));
+        compileArguments->push_back(std::string("-ffunction-sections"));
+        compileArguments->push_back(std::string("-fdata-sections"));
         if ((release && !wasm) && !swiftLink) {
-            (static_cast<void>(compileArguments->push_back(std::string("-flto"))), std::monostate{});
+            compileArguments->push_back(std::string("-flto"));
         }
     }
     if (profile) {
-        (static_cast<void>(compileArguments->push_back(std::string("-g"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("-fno-omit-frame-pointer"))), std::monostate{});
+        compileArguments->push_back(std::string("-g"));
+        compileArguments->push_back(std::string("-fno-omit-frame-pointer"));
     }
     if (wasm) {
-        (static_cast<void>(compileArguments->push_back(std::string("-Oz"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("-flto"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("-fwasm-exceptions"))), std::monostate{});
+        compileArguments->push_back(std::string("-Oz"));
+        compileArguments->push_back(std::string("-flto"));
+        compileArguments->push_back(std::string("-fwasm-exceptions"));
     }
     const auto& _iterable_3 = native->defines;
     for (const auto& define : *_iterable_3) {
-        (static_cast<void>(compileArguments->push_back((std::string("-D") + define))), std::monostate{});
+        compileArguments->push_back((std::string("-D") + define));
     }
-    (static_cast<void>(compileArguments->push_back(std::string("-I"))), std::monostate{});
-    (static_cast<void>(compileArguments->push_back(outputDirectory)), std::monostate{});
+    compileArguments->push_back(std::string("-I"));
+    compileArguments->push_back(outputDirectory);
     const auto& _iterable_5 = native->includePaths;
     for (const auto& includePath : *_iterable_5) {
-        (static_cast<void>(compileArguments->push_back(std::string("-I"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(resolveBuildPath(outputDirectory, includePath))), std::monostate{});
+        compileArguments->push_back(std::string("-I"));
+        compileArguments->push_back(resolveBuildPath(outputDirectory, includePath));
     }
     const auto& _iterable_7 = native->compilerFlags;
     for (const auto& flag : *_iterable_7) {
-        (static_cast<void>(compileArguments->push_back(flag)), std::monostate{});
+        compileArguments->push_back(flag);
     }
     std::shared_ptr<NativeCompileTask> precompiledHeaderTask = nullptr;
     auto clangPchPath = std::string("");
@@ -68,20 +68,20 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
         std::shared_ptr<std::vector<std::string>> pchArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
         const auto& _iterable_9 = compileArguments;
         for (const auto& argument : *_iterable_9) {
-            (static_cast<void>(pchArguments->push_back(argument)), std::monostate{});
+            pchArguments->push_back(argument);
         }
         const auto dependencyFile = (pchPath + std::string(".d"));
-        (static_cast<void>(pchArguments->push_back(std::string("-MMD"))), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(std::string("-MF"))), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(dependencyFile)), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(std::string("-x"))), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(std::string("c++-header"))), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(runtimeHeader)), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(std::string("-o"))), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(pchPath)), std::monostate{});
-        (precompiledHeaderTask = std::make_shared<NativeCompileTask>((std::string("pch:") + pchPath), compiler, runtimeHeader, pchPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, doof::array_drainToReadonly(pchArguments, "", 0)));
+        pchArguments->push_back(std::string("-MMD"));
+        pchArguments->push_back(std::string("-MF"));
+        pchArguments->push_back(dependencyFile);
+        pchArguments->push_back(std::string("-x"));
+        pchArguments->push_back(std::string("c++-header"));
+        pchArguments->push_back(runtimeHeader);
+        pchArguments->push_back(std::string("-o"));
+        pchArguments->push_back(pchPath);
+        static_cast<void>((precompiledHeaderTask = std::make_shared<NativeCompileTask>((std::string("pch:") + pchPath), compiler, runtimeHeader, pchPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, doof::array_drainToReadonly(pchArguments, "", 0))));
         if (clangPch) {
-            (clangPchPath = pchPath);
+            static_cast<void>((clangPchPath = pchPath));
         }
     }
     std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>> compileTasks = std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(std::vector<std::shared_ptr<NativeCompileTask>>{});
@@ -92,15 +92,15 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
         const auto dependencyFile = (objectPath + std::string(".d"));
         const auto arguments = copyArguments(compileArguments);
         if (clangPchPath != std::string("")) {
-            (static_cast<void>(arguments->push_back(std::string("-include-pch"))), std::monostate{});
-            (static_cast<void>(arguments->push_back(clangPchPath)), std::monostate{});
+            arguments->push_back(std::string("-include-pch"));
+            arguments->push_back(clangPchPath);
         }
-        (static_cast<void>(arguments->push_back(std::string("-MMD"))), std::monostate{});
-        (static_cast<void>(arguments->push_back(std::string("-MF"))), std::monostate{});
-        (static_cast<void>(arguments->push_back(dependencyFile)), std::monostate{});
-        (static_cast<void>(appendObjectArguments(arguments, sourcePath, objectPath)), std::monostate{});
-        (static_cast<void>(compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), (!doof::is_null(precompiledHeaderTask)), doof::array_drainToReadonly(arguments, "", 0)))), std::monostate{});
-        (static_cast<void>(objectPaths->push_back(objectPath)), std::monostate{});
+        arguments->push_back(std::string("-MMD"));
+        arguments->push_back(std::string("-MF"));
+        arguments->push_back(dependencyFile);
+        appendObjectArguments(arguments, sourcePath, objectPath);
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), (!doof::is_null(precompiledHeaderTask)), doof::array_drainToReadonly(arguments, "", 0)));
+        objectPaths->push_back(objectPath);
     }
     for (int32_t index = 0; index < static_cast<int32_t>((native->sourceFiles)->size()); ++index) {
         const auto sourcePath = resolveBuildPath(outputDirectory, doof::array_at(native->sourceFiles, index, "src/native-build", 174));
@@ -110,69 +110,69 @@ std::shared_ptr<NativeCompilePlan> planNativeCompile(const std::string& compiler
         const auto cSource = isCSource(sourcePath);
         const auto arguments = (swiftSource ? swiftObjectArguments(sourcePath, objectPath, mode) : copyNativeCompileArguments(compileArguments, cSource));
         if (!swiftSource) {
-            (static_cast<void>(arguments->push_back(std::string("-MMD"))), std::monostate{});
-            (static_cast<void>(arguments->push_back(std::string("-MF"))), std::monostate{});
-            (static_cast<void>(arguments->push_back(dependencyFile)), std::monostate{});
-            (static_cast<void>(appendObjectArguments(arguments, sourcePath, objectPath)), std::monostate{});
+            arguments->push_back(std::string("-MMD"));
+            arguments->push_back(std::string("-MF"));
+            arguments->push_back(dependencyFile);
+            appendObjectArguments(arguments, sourcePath, objectPath);
         }
         const auto taskCompiler = (swiftSource ? std::string("swiftc") : (cSource ? deriveCCompiler(compiler) : compiler));
-        (static_cast<void>(compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), taskCompiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, doof::array_drainToReadonly(arguments, "", 0)))), std::monostate{});
-        (static_cast<void>(objectPaths->push_back(objectPath)), std::monostate{});
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), taskCompiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, doof::array_drainToReadonly(arguments, "", 0)));
+        objectPaths->push_back(objectPath);
     }
     std::shared_ptr<std::vector<std::string>> linkArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_13 = objectPaths;
     for (const auto& objectPath : *_iterable_13) {
-        (static_cast<void>(linkArguments->push_back(objectPath)), std::monostate{});
+        linkArguments->push_back(objectPath);
     }
     const auto& _iterable_15 = native->libraryPaths;
     for (const auto& libraryPath : *_iterable_15) {
-        (static_cast<void>(linkArguments->push_back((std::string("-L") + resolveBuildPath(outputDirectory, libraryPath)))), std::monostate{});
+        linkArguments->push_back((std::string("-L") + resolveBuildPath(outputDirectory, libraryPath)));
     }
     const auto& _iterable_17 = native->linkLibraries;
     for (const auto& library : *_iterable_17) {
-        (static_cast<void>(linkArguments->push_back((std::string("-l") + library))), std::monostate{});
+        linkArguments->push_back((std::string("-l") + library));
     }
     const auto& _iterable_19 = native->frameworks;
     for (const auto& framework : *_iterable_19) {
-        (static_cast<void>(linkArguments->push_back(std::string("-framework"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(framework)), std::monostate{});
+        linkArguments->push_back(std::string("-framework"));
+        linkArguments->push_back(framework);
     }
     if (swiftLink && (platform == std::string("macos"))) {
-        (static_cast<void>(linkArguments->push_back(std::string("-Xlinker"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(std::string("-lc++"))), std::monostate{});
+        linkArguments->push_back(std::string("-Xlinker"));
+        linkArguments->push_back(std::string("-lc++"));
     }
     if ((release || profile) && !wasm) {
         if (release && !swiftLink) {
-            (static_cast<void>(linkArguments->push_back(std::string("-flto"))), std::monostate{});
+            linkArguments->push_back(std::string("-flto"));
         }
-        (static_cast<void>(appendOptimizedLinkerArguments(linkArguments, platform, swiftLink, release)), std::monostate{});
+        appendOptimizedLinkerArguments(linkArguments, platform, swiftLink, release);
     }
     if (!wasm) {
         const auto& _iterable_21 = native->linkerFlags;
         for (const auto& flag : *_iterable_21) {
-            (static_cast<void>(linkArguments->push_back(flag)), std::monostate{});
+            linkArguments->push_back(flag);
         }
     }
     if (wasm) {
-        (static_cast<void>(linkArguments->push_back(std::string("-Oz"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(std::string("-flto"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(std::string("--strip-debug"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(std::string("-sASSERTIONS=0"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(std::string("-sMALLOC=emmalloc"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(std::string("-sSTANDALONE_WASM=1"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(std::string("-sFILESYSTEM=0"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(std::string("-fwasm-exceptions"))), std::monostate{});
+        linkArguments->push_back(std::string("-Oz"));
+        linkArguments->push_back(std::string("-flto"));
+        linkArguments->push_back(std::string("--strip-debug"));
+        linkArguments->push_back(std::string("-sASSERTIONS=0"));
+        linkArguments->push_back(std::string("-sMALLOC=emmalloc"));
+        linkArguments->push_back(std::string("-sSTANDALONE_WASM=1"));
+        linkArguments->push_back(std::string("-sFILESYSTEM=0"));
+        linkArguments->push_back(std::string("-fwasm-exceptions"));
         if (!wasmCommand) {
-            (static_cast<void>(linkArguments->push_back(std::string("--no-entry"))), std::monostate{});
-            (static_cast<void>(linkArguments->push_back((std::string("-sEXPORTED_FUNCTIONS=") + wasmExportList(wasmExportNames)))), std::monostate{});
+            linkArguments->push_back(std::string("--no-entry"));
+            linkArguments->push_back((std::string("-sEXPORTED_FUNCTIONS=") + wasmExportList(wasmExportNames)));
         }
         const auto& _iterable_23 = native->linkerFlags;
         for (const auto& flag : *_iterable_23) {
-            (static_cast<void>(linkArguments->push_back(flag)), std::monostate{});
+            linkArguments->push_back(flag);
         }
     }
-    (static_cast<void>(linkArguments->push_back(std::string("-o"))), std::monostate{});
-    (static_cast<void>(linkArguments->push_back(outputPath)), std::monostate{});
+    linkArguments->push_back(std::string("-o"));
+    linkArguments->push_back(outputPath);
     return std::make_shared<NativeCompilePlan>(compiler, (swiftLink ? std::string("swiftc") : compiler), std::make_shared<std::vector<std::shared_ptr<NativeBuildSupportFile>>>(std::vector<std::shared_ptr<NativeBuildSupportFile>>{}), precompiledHeaderTask, compileTasks, linkArguments, outputPath);
 }
 std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& compiler, const std::string& outputDirectory, const std::string& outputPath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_emitter_module_::ModuleEmission>>>& modules, const std::shared_ptr<::app_src_package_manifest_::NativeBuildPlan>& native, NativeBuildMode mode) {
@@ -180,30 +180,30 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
     const auto profile = (mode == NativeBuildMode::Profile);
     std::shared_ptr<std::vector<std::string>> compileArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("/nologo"), std::string("/std:c++17"), std::string("/EHsc"), std::string("/utf-8"), std::string("/Zc:__cplusplus"), std::string("/permissive-")});
     if (release || profile) {
-        (static_cast<void>(compileArguments->push_back(std::string("/O2"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("/DNDEBUG"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("/Gy"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("/Gw"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("/GL"))), std::monostate{});
+        compileArguments->push_back(std::string("/O2"));
+        compileArguments->push_back(std::string("/DNDEBUG"));
+        compileArguments->push_back(std::string("/Gy"));
+        compileArguments->push_back(std::string("/Gw"));
+        compileArguments->push_back(std::string("/GL"));
     }
     if (profile) {
-        (static_cast<void>(compileArguments->push_back(std::string("/Zi"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(std::string("/Oy-"))), std::monostate{});
+        compileArguments->push_back(std::string("/Zi"));
+        compileArguments->push_back(std::string("/Oy-"));
     }
     const auto& _iterable_25 = native->defines;
     for (const auto& define : *_iterable_25) {
-        (static_cast<void>(compileArguments->push_back((std::string("/D") + define))), std::monostate{});
+        compileArguments->push_back((std::string("/D") + define));
     }
-    (static_cast<void>(compileArguments->push_back(std::string("/I"))), std::monostate{});
-    (static_cast<void>(compileArguments->push_back(outputDirectory)), std::monostate{});
+    compileArguments->push_back(std::string("/I"));
+    compileArguments->push_back(outputDirectory);
     const auto& _iterable_27 = native->includePaths;
     for (const auto& includePath : *_iterable_27) {
-        (static_cast<void>(compileArguments->push_back(std::string("/I"))), std::monostate{});
-        (static_cast<void>(compileArguments->push_back(resolveBuildPath(outputDirectory, includePath))), std::monostate{});
+        compileArguments->push_back(std::string("/I"));
+        compileArguments->push_back(resolveBuildPath(outputDirectory, includePath));
     }
     const auto& _iterable_29 = native->compilerFlags;
     for (const auto& flag : *_iterable_29) {
-        (static_cast<void>(compileArguments->push_back(flag)), std::monostate{});
+        compileArguments->push_back(flag);
     }
     std::shared_ptr<std::vector<std::shared_ptr<NativeBuildSupportFile>>> supportFiles = std::make_shared<std::vector<std::shared_ptr<NativeBuildSupportFile>>>(std::vector<std::shared_ptr<NativeBuildSupportFile>>{});
     std::shared_ptr<NativeCompileTask> precompiledHeaderTask = nullptr;
@@ -211,29 +211,29 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
     auto pchPath = std::string("");
     auto pchObjectPath = std::string("");
     if (static_cast<int32_t>((modules)->size()) > 1) {
-        (pchHeaderName = std::string("doof_msvc_pch.hpp"));
+        static_cast<void>((pchHeaderName = std::string("doof_msvc_pch.hpp")));
         const auto pchHeaderPath = resolveBuildPath(outputDirectory, pchHeaderName);
         const auto pchSourcePath = resolveBuildPath(outputDirectory, std::string("doof_msvc_pch.cpp"));
-        (pchPath = resolveBuildPath(outputDirectory, std::string(".doof-objects/pch/doof_msvc.pch")));
-        (pchObjectPath = resolveBuildPath(outputDirectory, std::string(".doof-objects/pch/doof_msvc_pch.obj")));
+        static_cast<void>((pchPath = resolveBuildPath(outputDirectory, std::string(".doof-objects/pch/doof_msvc.pch"))));
+        static_cast<void>((pchObjectPath = resolveBuildPath(outputDirectory, std::string(".doof-objects/pch/doof_msvc_pch.obj"))));
         const auto pchDependencyPath = (pchPath + std::string(".json"));
-        (static_cast<void>(supportFiles->push_back(std::make_shared<NativeBuildSupportFile>(pchHeaderPath, msvcPchHeaderSource()))), std::monostate{});
-        (static_cast<void>(supportFiles->push_back(std::make_shared<NativeBuildSupportFile>(pchSourcePath, ((std::string("#include \"") + pchHeaderName) + std::string("\"\n"))))), std::monostate{});
+        supportFiles->push_back(std::make_shared<NativeBuildSupportFile>(pchHeaderPath, msvcPchHeaderSource()));
+        supportFiles->push_back(std::make_shared<NativeBuildSupportFile>(pchSourcePath, ((std::string("#include \"") + pchHeaderName) + std::string("\"\n"))));
         const auto pchArguments = copyArguments(compileArguments);
-        (static_cast<void>(pchArguments->push_back(std::string("/TP"))), std::monostate{});
-        (static_cast<void>(pchArguments->push_back((std::string("/Yc") + pchHeaderName))), std::monostate{});
-        (static_cast<void>(pchArguments->push_back((std::string("/Fp") + pchPath))), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(std::string("/sourceDependencies"))), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(pchDependencyPath)), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(std::string("/c"))), std::monostate{});
-        (static_cast<void>(pchArguments->push_back(pchSourcePath)), std::monostate{});
-        (static_cast<void>(pchArguments->push_back((std::string("/Fo") + pchObjectPath))), std::monostate{});
-        (precompiledHeaderTask = std::make_shared<NativeCompileTask>((std::string("pch:") + pchPath), compiler, pchSourcePath, pchPath, pchDependencyPath, std::make_shared<std::vector<std::string>>(std::vector<std::string>{pchObjectPath}), false, doof::array_drainToReadonly(pchArguments, "", 0)));
+        pchArguments->push_back(std::string("/TP"));
+        pchArguments->push_back((std::string("/Yc") + pchHeaderName));
+        pchArguments->push_back((std::string("/Fp") + pchPath));
+        pchArguments->push_back(std::string("/sourceDependencies"));
+        pchArguments->push_back(pchDependencyPath);
+        pchArguments->push_back(std::string("/c"));
+        pchArguments->push_back(pchSourcePath);
+        pchArguments->push_back((std::string("/Fo") + pchObjectPath));
+        static_cast<void>((precompiledHeaderTask = std::make_shared<NativeCompileTask>((std::string("pch:") + pchPath), compiler, pchSourcePath, pchPath, pchDependencyPath, std::make_shared<std::vector<std::string>>(std::vector<std::string>{pchObjectPath}), false, doof::array_drainToReadonly(pchArguments, "", 0))));
     }
     std::shared_ptr<std::vector<std::shared_ptr<NativeCompileTask>>> compileTasks = std::make_shared<std::vector<std::shared_ptr<NativeCompileTask>>>(std::vector<std::shared_ptr<NativeCompileTask>>{});
     std::shared_ptr<std::vector<std::string>> objectPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     if (pchObjectPath != std::string("")) {
-        (static_cast<void>(objectPaths->push_back(pchObjectPath)), std::monostate{});
+        objectPaths->push_back(pchObjectPath);
     }
     const auto& _iterable_31 = modules;
     for (const auto& module : *_iterable_31) {
@@ -242,13 +242,13 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
         const auto dependencyFile = (objectPath + std::string(".json"));
         const auto arguments = copyArguments(compileArguments);
         if (!doof::is_null(precompiledHeaderTask)) {
-            (static_cast<void>(arguments->push_back((std::string("/FI") + pchHeaderName))), std::monostate{});
-            (static_cast<void>(arguments->push_back((std::string("/Yu") + pchHeaderName))), std::monostate{});
-            (static_cast<void>(arguments->push_back((std::string("/Fp") + pchPath))), std::monostate{});
+            arguments->push_back((std::string("/FI") + pchHeaderName));
+            arguments->push_back((std::string("/Yu") + pchHeaderName));
+            arguments->push_back((std::string("/Fp") + pchPath));
         }
-        (static_cast<void>(appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, false)), std::monostate{});
-        (static_cast<void>(compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), (!doof::is_null(precompiledHeaderTask)), doof::array_drainToReadonly(arguments, "", 0)))), std::monostate{});
-        (static_cast<void>(objectPaths->push_back(objectPath)), std::monostate{});
+        appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, false);
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), (!doof::is_null(precompiledHeaderTask)), doof::array_drainToReadonly(arguments, "", 0)));
+        objectPaths->push_back(objectPath);
     }
     const auto& _iterable_33 = native->sourceFiles;
     for (const auto& sourceFile : *_iterable_33) {
@@ -256,69 +256,69 @@ std::shared_ptr<NativeCompilePlan> planMsvcNativeCompile(const std::string& comp
         const auto objectPath = resolveBuildPath(outputDirectory, ((std::string(".doof-objects/native/") + ::std_::crypto::index::sha1HexString(sourceFile)) + std::string(".obj")));
         const auto dependencyFile = (objectPath + std::string(".json"));
         const auto arguments = copyArguments(compileArguments);
-        (static_cast<void>(appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, isCSource(sourcePath))), std::monostate{});
-        (static_cast<void>(compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, doof::array_drainToReadonly(arguments, "", 0)))), std::monostate{});
-        (static_cast<void>(objectPaths->push_back(objectPath)), std::monostate{});
+        appendMsvcObjectArguments(arguments, sourcePath, objectPath, dependencyFile, isCSource(sourcePath));
+        compileTasks->push_back(std::make_shared<NativeCompileTask>((std::string("object:") + objectPath), compiler, sourcePath, objectPath, dependencyFile, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, doof::array_drainToReadonly(arguments, "", 0)));
+        objectPaths->push_back(objectPath);
     }
     std::shared_ptr<std::vector<std::string>> linkArguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("/nologo")});
     const auto& _iterable_35 = objectPaths;
     for (const auto& objectPath : *_iterable_35) {
-        (static_cast<void>(linkArguments->push_back(objectPath)), std::monostate{});
+        linkArguments->push_back(objectPath);
     }
     const auto& _iterable_37 = native->libraryPaths;
     for (const auto& libraryPath : *_iterable_37) {
-        (static_cast<void>(linkArguments->push_back((std::string("/LIBPATH:") + resolveBuildPath(outputDirectory, libraryPath)))), std::monostate{});
+        linkArguments->push_back((std::string("/LIBPATH:") + resolveBuildPath(outputDirectory, libraryPath)));
     }
     const auto& _iterable_39 = native->linkLibraries;
     for (const auto& library : *_iterable_39) {
-        (static_cast<void>(linkArguments->push_back((doof::string_endsWith(doof::string_toLowerCase(library), std::string(".lib")) ? library : (library + std::string(".lib"))))), std::monostate{});
+        linkArguments->push_back((doof::string_endsWith(doof::string_toLowerCase(library), std::string(".lib")) ? library : (library + std::string(".lib"))));
     }
     if (release || profile) {
-        (static_cast<void>(linkArguments->push_back(std::string("/LTCG"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(std::string("/OPT:REF"))), std::monostate{});
-        (static_cast<void>(linkArguments->push_back(std::string("/OPT:ICF"))), std::monostate{});
+        linkArguments->push_back(std::string("/LTCG"));
+        linkArguments->push_back(std::string("/OPT:REF"));
+        linkArguments->push_back(std::string("/OPT:ICF"));
     }
     if (profile) {
-        (static_cast<void>(linkArguments->push_back(std::string("/DEBUG"))), std::monostate{});
+        linkArguments->push_back(std::string("/DEBUG"));
     }
     const auto& _iterable_41 = native->linkerFlags;
     for (const auto& flag : *_iterable_41) {
-        (static_cast<void>(linkArguments->push_back(flag)), std::monostate{});
+        linkArguments->push_back(flag);
     }
-    (static_cast<void>(linkArguments->push_back((std::string("/OUT:") + outputPath))), std::monostate{});
+    linkArguments->push_back((std::string("/OUT:") + outputPath));
     return std::make_shared<NativeCompilePlan>(compiler, std::string("link.exe"), supportFiles, precompiledHeaderTask, compileTasks, linkArguments, outputPath);
 }
 std::string msvcPchHeaderSource() {
     return std::string("#pragma once\n#include \"doof_runtime.hpp\"\n#if defined(_WIN32)\n#ifndef WIN32_LEAN_AND_MEAN\n#define WIN32_LEAN_AND_MEAN\n#endif\n#ifndef NOMINMAX\n#define NOMINMAX\n#endif\n#include <windows.h>\n#ifdef small\n#undef small\n#endif\n#endif\n");
 }
 void appendMsvcObjectArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& sourcePath, const std::string& outputPath, const std::string& dependencyFilePath, bool cSource) {
-    (static_cast<void>(arguments->push_back((cSource ? std::string("/TC") : std::string("/TP")))), std::monostate{});
-    (static_cast<void>(arguments->push_back(std::string("/sourceDependencies"))), std::monostate{});
-    (static_cast<void>(arguments->push_back(dependencyFilePath)), std::monostate{});
-    (static_cast<void>(arguments->push_back(std::string("/c"))), std::monostate{});
-    (static_cast<void>(arguments->push_back(sourcePath)), std::monostate{});
-    (static_cast<void>(arguments->push_back((std::string("/Fo") + outputPath))), std::monostate{});
+    arguments->push_back((cSource ? std::string("/TC") : std::string("/TP")));
+    arguments->push_back(std::string("/sourceDependencies"));
+    arguments->push_back(dependencyFilePath);
+    arguments->push_back(std::string("/c"));
+    arguments->push_back(sourcePath);
+    arguments->push_back((std::string("/Fo") + outputPath));
 }
 void appendOptimizedLinkerArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& platform, bool swiftLink, bool stripSymbols) {
     if ((platform == std::string("macos")) || doof::string_startsWith(platform, std::string("ios-"))) {
-        (static_cast<void>(appendLinkerOption(arguments, std::string("-dead_strip"), swiftLink)), std::monostate{});
+        appendLinkerOption(arguments, std::string("-dead_strip"), swiftLink);
         if (stripSymbols) {
-            (static_cast<void>(appendLinkerOption(arguments, std::string("-S"), swiftLink)), std::monostate{});
-            (static_cast<void>(appendLinkerOption(arguments, std::string("-x"), swiftLink)), std::monostate{});
+            appendLinkerOption(arguments, std::string("-S"), swiftLink);
+            appendLinkerOption(arguments, std::string("-x"), swiftLink);
         }
         return;
     }
-    (static_cast<void>(appendLinkerOption(arguments, std::string("--gc-sections"), swiftLink)), std::monostate{});
+    appendLinkerOption(arguments, std::string("--gc-sections"), swiftLink);
     if (stripSymbols) {
-        (static_cast<void>(appendLinkerOption(arguments, std::string("--strip-all"), swiftLink)), std::monostate{});
+        appendLinkerOption(arguments, std::string("--strip-all"), swiftLink);
     }
 }
 void appendLinkerOption(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& option, bool swiftLink) {
     if (swiftLink) {
-        (static_cast<void>(arguments->push_back(std::string("-Xlinker"))), std::monostate{});
-        (static_cast<void>(arguments->push_back(option)), std::monostate{});
+        arguments->push_back(std::string("-Xlinker"));
+        arguments->push_back(option);
     } else {
-        (static_cast<void>(arguments->push_back((std::string("-Wl,") + option))), std::monostate{});
+        arguments->push_back((std::string("-Wl,") + option));
     }
 }
 std::string replaceSourceExtension(const std::string& path, const std::string& extension) {
@@ -331,7 +331,7 @@ std::shared_ptr<std::vector<std::string>> copyArguments(const std::shared_ptr<st
     std::shared_ptr<std::vector<std::string>> result = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_43 = source;
     for (const auto& argument : *_iterable_43) {
-        (static_cast<void>(result->push_back(argument)), std::monostate{});
+        result->push_back(argument);
     }
     return result;
 }
@@ -340,7 +340,7 @@ std::shared_ptr<std::vector<std::string>> copyNativeCompileArguments(const std::
     const auto& _iterable_45 = source;
     for (const auto& argument : *_iterable_45) {
         if (!cSource || (argument != std::string("-std=c++17"))) {
-            (static_cast<void>(result->push_back(argument)), std::monostate{});
+            result->push_back(argument);
         }
     }
     return result;
@@ -363,14 +363,14 @@ bool hasSwiftSource(const std::shared_ptr<std::vector<std::string>>& paths) {
 std::shared_ptr<std::vector<std::string>> swiftObjectArguments(const std::string& sourcePath, const std::string& objectPath, NativeBuildMode mode) {
     auto arguments = std::make_shared<std::vector<std::string>>(std::vector<std::string>{std::string("-parse-as-library"), std::string("-emit-object")});
     if ((mode == NativeBuildMode::Release) || (mode == NativeBuildMode::Profile)) {
-        (static_cast<void>(arguments->push_back(std::string("-O"))), std::monostate{});
+        arguments->push_back(std::string("-O"));
     }
     if (mode == NativeBuildMode::Profile) {
-        (static_cast<void>(arguments->push_back(std::string("-g"))), std::monostate{});
+        arguments->push_back(std::string("-g"));
     }
-    (static_cast<void>(arguments->push_back(sourcePath)), std::monostate{});
-    (static_cast<void>(arguments->push_back(std::string("-o"))), std::monostate{});
-    (static_cast<void>(arguments->push_back(objectPath)), std::monostate{});
+    arguments->push_back(sourcePath);
+    arguments->push_back(std::string("-o"));
+    arguments->push_back(objectPath);
     return arguments;
 }
 std::string deriveCCompiler(const std::string& compiler) {
@@ -392,15 +392,15 @@ std::string wasmExportList(const std::shared_ptr<std::vector<std::string>>& name
     auto result = std::string("[\"_malloc\",\"_free\",\"_doof_free\"");
     const auto& _iterable_49 = names;
     for (const auto& name : *_iterable_49) {
-        (result = (((result + std::string(",\"_")) + name) + std::string("\"")));
+        static_cast<void>((result = (((result + std::string(",\"_")) + name) + std::string("\""))));
     }
     return (result + std::string("]"));
 }
 void appendObjectArguments(const std::shared_ptr<std::vector<std::string>>& arguments, const std::string& sourcePath, const std::string& outputPath) {
-    (static_cast<void>(arguments->push_back(std::string("-c"))), std::monostate{});
-    (static_cast<void>(arguments->push_back(sourcePath)), std::monostate{});
-    (static_cast<void>(arguments->push_back(std::string("-o"))), std::monostate{});
-    (static_cast<void>(arguments->push_back(outputPath)), std::monostate{});
+    arguments->push_back(std::string("-c"));
+    arguments->push_back(sourcePath);
+    arguments->push_back(std::string("-o"));
+    arguments->push_back(outputPath);
 }
 bool usesClangPrecompiledHeader(const std::string& compiler, const std::string& platform) {
     const auto name = doof::string_toLowerCase(compiler);

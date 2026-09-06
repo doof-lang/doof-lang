@@ -17,22 +17,22 @@ bool GzipStream::next() {
             if (std::visit([&](auto&& _obj) { return _obj->next(); }, this->source)) {
                 const auto compressed = this->native->update(std::visit([&](auto&& _obj) { return _obj->value(); }, this->source));
                 if (static_cast<int32_t>((compressed)->size()) > 0) {
-                    (this->currentValue = compressed);
+                    static_cast<void>((this->currentValue = compressed));
                     return true;
                 }
                 continue;
             }
-            (this->sourceDone = true);
+            static_cast<void>((this->sourceDone = true));
         }
         if (this->finished) {
             return false;
         }
-        (this->finished = true);
+        static_cast<void>((this->finished = true));
         const auto finalChunk = this->native->finish();
         if (static_cast<int32_t>((finalChunk)->size()) == 0) {
             return false;
         }
-        (this->currentValue = finalChunk);
+        static_cast<void>((this->currentValue = finalChunk));
         return true;
     }
 }

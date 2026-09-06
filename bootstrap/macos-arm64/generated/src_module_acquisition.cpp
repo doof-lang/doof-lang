@@ -9,7 +9,7 @@ std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(const std::string& l
     }
     auto suffix = doof::string_substring(logicalPath, static_cast<int32_t>(selected->logicalPrefix.size()), static_cast<int32_t>(logicalPath.size()));
     while (doof::string_startsWith(suffix, std::string("/"))) {
-        (suffix = doof::string_substring(suffix, 1, static_cast<int32_t>(suffix.size())));
+        static_cast<void>((suffix = doof::string_substring(suffix, 1, static_cast<int32_t>(suffix.size()))));
     }
     if (suffix == std::string("")) {
         return selected;
@@ -18,10 +18,10 @@ std::shared_ptr<ModuleAcquisition> acquiredPackageForModule(const std::string& l
     auto index = 0;
     while (index < static_cast<int32_t>(suffix.size())) {
         if (doof::string_at(suffix, index, "src/module-acquisition", 26) == U'\u002F') {
-            (separator = index);
+            static_cast<void>((separator = index));
             break;
         }
-        (index = (index + 1));
+        static_cast<void>((index = (index + 1)));
     }
     if (separator < 0) {
         return selected;
@@ -39,7 +39,7 @@ std::optional<std::string> acquiredModuleDiskPath(const std::string& logicalPath
     }
     auto suffix = doof::string_substring(logicalPath, static_cast<int32_t>(selected->logicalPrefix.size()), static_cast<int32_t>(logicalPath.size()));
     if (doof::string_startsWith(suffix, std::string("/"))) {
-        (suffix = doof::string_substring(suffix, 1, static_cast<int32_t>(suffix.size())));
+        static_cast<void>((suffix = doof::string_substring(suffix, 1, static_cast<int32_t>(suffix.size()))));
     }
     return acquisitionJoinPath(selected->diskRoot, suffix);
 }
@@ -55,7 +55,7 @@ std::shared_ptr<ModuleAcquisition> selectedAcquisition(const std::string& logica
     for (const auto& acquisition : *_iterable_2) {
         if (acquisitionMatches(acquisition->logicalPrefix, logicalPath)) {
             if (doof::is_null(selected) || (static_cast<int32_t>(acquisition->logicalPrefix.size()) > static_cast<int32_t>(selected->logicalPrefix.size()))) {
-                (selected = acquisition);
+                static_cast<void>((selected = acquisition));
             }
         }
     }

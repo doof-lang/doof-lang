@@ -45,10 +45,10 @@ std::shared_ptr<CaseTypePatternEmission> emitResultPattern(const std::shared_ptr
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject)) {
             const auto& named = std::get<std::shared_ptr<::app_src_ast_::NamedType>>(_case_subject);
             if (named->name == std::string("Success")) {
-                (armType = ((std::string("doof::Success<") + ::app_src_emitter_types_::emitResultPayloadType(result->valueType, currentModulePath)) + std::string(">")));
+                static_cast<void>((armType = ((std::string("doof::Success<") + ::app_src_emitter_types_::emitResultPayloadType(result->valueType, currentModulePath)) + std::string(">"))));
             }
             if (named->name == std::string("Failure")) {
-                (armType = ((std::string("doof::Failure<") + ::app_src_emitter_types_::emitResultPayloadType(result->errorType, currentModulePath)) + std::string(">")));
+                static_cast<void>((armType = ((std::string("doof::Failure<") + ::app_src_emitter_types_::emitResultPayloadType(result->errorType, currentModulePath)) + std::string(">"))));
             }
     }
     else {
@@ -67,38 +67,38 @@ std::shared_ptr<CaseTypePatternEmission> emitJsonValuePattern(const std::variant
         if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject)) {
             const auto& primitive = std::get<std::shared_ptr<::app_src_semantic_::PrimitiveType>>(_case_subject);
             if (primitive->name == std::string("bool")) {
-                (condition = ((std::string("doof::json_is_boolean(") + subject) + std::string(")")));
-                (value = ((std::string("doof::json_as_bool(") + subject) + std::string(")")));
+                static_cast<void>((condition = ((std::string("doof::json_is_boolean(") + subject) + std::string(")"))));
+                static_cast<void>((value = ((std::string("doof::json_as_bool(") + subject) + std::string(")"))));
             } else if (primitive->name == std::string("string")) {
-                (condition = ((std::string("doof::json_is_string(") + subject) + std::string(")")));
-                (value = ((std::string("doof::json_as_string(") + subject) + std::string(")")));
+                static_cast<void>((condition = ((std::string("doof::json_is_string(") + subject) + std::string(")"))));
+                static_cast<void>((value = ((std::string("doof::json_as_string(") + subject) + std::string(")"))));
             } else if (primitive->name == std::string("int")) {
-                (condition = ((std::string("doof::json_is_number(") + subject) + std::string(")")));
-                (value = ((std::string("doof::json_as_int(") + subject) + std::string(")")));
+                static_cast<void>((condition = ((std::string("doof::json_is_number(") + subject) + std::string(")"))));
+                static_cast<void>((value = ((std::string("doof::json_as_int(") + subject) + std::string(")"))));
             } else if (primitive->name == std::string("long")) {
-                (condition = ((std::string("doof::json_is_number(") + subject) + std::string(")")));
-                (value = ((std::string("doof::json_as_long(") + subject) + std::string(")")));
+                static_cast<void>((condition = ((std::string("doof::json_is_number(") + subject) + std::string(")"))));
+                static_cast<void>((value = ((std::string("doof::json_as_long(") + subject) + std::string(")"))));
             } else if (primitive->name == std::string("float")) {
-                (condition = ((std::string("doof::json_is_number(") + subject) + std::string(")")));
-                (value = ((std::string("doof::json_as_float(") + subject) + std::string(")")));
+                static_cast<void>((condition = ((std::string("doof::json_is_number(") + subject) + std::string(")"))));
+                static_cast<void>((value = ((std::string("doof::json_as_float(") + subject) + std::string(")"))));
             } else if (primitive->name == std::string("double")) {
-                (condition = ((std::string("doof::json_is_number(") + subject) + std::string(")")));
-                (value = ((std::string("doof::json_as_double(") + subject) + std::string(")")));
+                static_cast<void>((condition = ((std::string("doof::json_is_number(") + subject) + std::string(")"))));
+                static_cast<void>((value = ((std::string("doof::json_as_double(") + subject) + std::string(")"))));
             } else {
                 doof::panic((std::string("Unsupported primitive JsonValue case pattern ") + primitive->name));
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::ArrayResolvedType>>(_case_subject)) {
-            (condition = ((std::string("doof::json_is_array(") + subject) + std::string(")")));
-            (value = ((std::string("std::get<doof::JsonArray>(doof::json_storage(") + subject) + std::string("))")));
+            static_cast<void>((condition = ((std::string("doof::json_is_array(") + subject) + std::string(")"))));
+            static_cast<void>((value = ((std::string("std::get<doof::JsonArray>(doof::json_storage(") + subject) + std::string("))"))));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::MapResolvedType>>(_case_subject)) {
-            (condition = ((std::string("doof::json_is_object(") + subject) + std::string(")")));
-            (value = ((std::string("doof::json_object(") + subject) + std::string(")")));
+            static_cast<void>((condition = ((std::string("doof::json_is_object(") + subject) + std::string(")"))));
+            static_cast<void>((value = ((std::string("doof::json_object(") + subject) + std::string(")"))));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::NoneType>>(_case_subject)) {
-            (condition = ((std::string("doof::json_is_null(") + subject) + std::string(")")));
-            (value = ::app_src_emitter_carrier_values_::emitCarrierAbsence(patternType, std::make_shared<::app_src_emitter_context_::EmitContext>(std::string(""), std::string(""), std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>>(std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>{}), std::make_shared<::app_src_json_semantics_::JsonEligibilityCache>(std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{}), std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{})), std::string(""), false, false, false, std::string(""), std::string(""), false, false, std::monostate{}, std::string(""), std::monostate{}, nullptr, nullptr, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), 0, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, false, false, -1, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}))));
+            static_cast<void>((condition = ((std::string("doof::json_is_null(") + subject) + std::string(")"))));
+            static_cast<void>((value = ::app_src_emitter_carrier_values_::emitCarrierAbsence(patternType, std::make_shared<::app_src_emitter_context_::EmitContext>(std::string(""), std::string(""), std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>>(std::vector<std::shared_ptr<::app_src_emitter_context_::EmitModuleSurface>>{}), std::make_shared<::app_src_json_semantics_::JsonEligibilityCache>(std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{}), std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{})), std::string(""), false, false, false, std::string(""), std::string(""), false, false, std::monostate{}, std::string(""), std::monostate{}, nullptr, nullptr, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), 0, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, false, false, -1, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{})))));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_semantic_::JsonValueResolvedType>>(_case_subject)) {
     }

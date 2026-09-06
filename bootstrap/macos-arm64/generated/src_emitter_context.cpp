@@ -22,7 +22,7 @@ void recordCoverageLine(const std::shared_ptr<EmitContext>& context, int32_t lin
             return;
         }
     }
-    (static_cast<void>(context->coverageInstrumentedLines->push_back(line)), std::monostate{});
+    context->coverageInstrumentedLines->push_back(line);
 }
 bool isCapturedMutable(const std::shared_ptr<EmitContext>& context, const std::string& name) {
     const auto& _iterable_4 = context->capturedMutables;
@@ -36,11 +36,11 @@ bool isCapturedMutable(const std::shared_ptr<EmitContext>& context, const std::s
 std::shared_ptr<EmitContext> createEmitContextForModule(const std::shared_ptr<::app_src_ast_::Program>& program, const std::string& modulePath, const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::Program>>>& allPrograms) {
     auto programs = allPrograms;
     if (static_cast<int32_t>((programs)->size()) == 0) {
-        (programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{program}));
+        static_cast<void>((programs = std::make_shared<std::vector<std::shared_ptr<::app_src_ast_::Program>>>(std::vector<std::shared_ptr<::app_src_ast_::Program>>{program})));
     }
     const auto context = std::make_shared<EmitContext>(std::string(""), std::string(""), programs, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{}), std::make_shared<std::vector<std::shared_ptr<EmitModuleSurface>>>(std::vector<std::shared_ptr<EmitModuleSurface>>{}), std::make_shared<::app_src_json_semantics_::JsonEligibilityCache>(std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{}), std::make_shared<doof::ordered_map<std::string, bool>>(std::initializer_list<std::pair<std::string, bool>>{})), std::string(""), false, false, false, std::string(""), std::string(""), false, false, std::monostate{}, std::string(""), std::monostate{}, nullptr, nullptr, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), 0, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), false, false, false, -1, std::make_shared<std::vector<int32_t>>(std::vector<int32_t>{}));
-    (context->modulePath = modulePath);
-    (context->sourcePath = modulePath);
+    static_cast<void>((context->modulePath = modulePath));
+    static_cast<void>((context->sourcePath = modulePath));
     return context;
 }
 }

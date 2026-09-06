@@ -27,4 +27,6 @@ namespace app_src_emitter_names_ {
     std::string namespaceComponent(const std::string& value);
     std::string moduleHeaderName(const std::string& path);
     std::string moduleSourceName(const std::string& path);
+    std::string cppIdentifier(const std::string& name);
+    bool isCppKeyword(const std::string& name);
 }

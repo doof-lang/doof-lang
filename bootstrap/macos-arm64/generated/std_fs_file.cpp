@@ -60,7 +60,7 @@ doof::Result<uint8_t, ::std_::fs::types::IoError> File::readByte() {
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeByte(uint8_t value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeByte(value)), std::monostate{});
+    builder->writeByte(value);
     return writeBytes(builder->build());
 }
 doof::Result<int32_t, ::std_::fs::types::IoError> File::readSignedByte() {
@@ -71,7 +71,7 @@ doof::Result<int32_t, ::std_::fs::types::IoError> File::readSignedByte() {
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeSignedByte(int32_t value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeSignedByte(value)), std::monostate{});
+    builder->writeSignedByte(value);
     return writeBytes(builder->build());
 }
 doof::Result<bool, ::std_::fs::types::IoError> File::readBool() {
@@ -82,7 +82,7 @@ doof::Result<bool, ::std_::fs::types::IoError> File::readBool() {
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeBool(bool value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeBool(value)), std::monostate{});
+    builder->writeBool(value);
     return writeBytes(builder->build());
 }
 doof::Result<int32_t, ::std_::fs::types::IoError> File::readShort() {
@@ -93,7 +93,7 @@ doof::Result<int32_t, ::std_::fs::types::IoError> File::readShort() {
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeShort(int32_t value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeShort(value)), std::monostate{});
+    builder->writeShort(value);
     return writeBytes(builder->build());
 }
 doof::Result<int32_t, ::std_::fs::types::IoError> File::readUnsignedShort() {
@@ -104,7 +104,7 @@ doof::Result<int32_t, ::std_::fs::types::IoError> File::readUnsignedShort() {
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeUnsignedShort(int32_t value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeUnsignedShort(value)), std::monostate{});
+    builder->writeUnsignedShort(value);
     return writeBytes(builder->build());
 }
 doof::Result<int32_t, ::std_::fs::types::IoError> File::readInt() {
@@ -115,7 +115,7 @@ doof::Result<int32_t, ::std_::fs::types::IoError> File::readInt() {
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeInt(int32_t value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeInt(value)), std::monostate{});
+    builder->writeInt(value);
     return writeBytes(builder->build());
 }
 doof::Result<int64_t, ::std_::fs::types::IoError> File::readUnsignedInt() {
@@ -126,7 +126,7 @@ doof::Result<int64_t, ::std_::fs::types::IoError> File::readUnsignedInt() {
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeUnsignedInt(int64_t value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeUnsignedInt(value)), std::monostate{});
+    builder->writeUnsignedInt(value);
     return writeBytes(builder->build());
 }
 doof::Result<int64_t, ::std_::fs::types::IoError> File::readLong() {
@@ -137,7 +137,7 @@ doof::Result<int64_t, ::std_::fs::types::IoError> File::readLong() {
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeLong(int64_t value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeLong(value)), std::monostate{});
+    builder->writeLong(value);
     return writeBytes(builder->build());
 }
 doof::Result<float, ::std_::fs::types::IoError> File::readFloat() {
@@ -148,7 +148,7 @@ doof::Result<float, ::std_::fs::types::IoError> File::readFloat() {
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeFloat(float value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeFloat(value)), std::monostate{});
+    builder->writeFloat(value);
     return writeBytes(builder->build());
 }
 doof::Result<double, ::std_::fs::types::IoError> File::readDouble() {
@@ -159,7 +159,7 @@ doof::Result<double, ::std_::fs::types::IoError> File::readDouble() {
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeDouble(double value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeDouble(value)), std::monostate{});
+    builder->writeDouble(value);
     return writeBytes(builder->build());
 }
 doof::Result<std::string, ::std_::fs::types::IoError> File::readString(int64_t length) {
@@ -170,7 +170,7 @@ doof::Result<std::string, ::std_::fs::types::IoError> File::readString(int64_t l
 }
 doof::Result<void, ::std_::fs::types::IoError> File::writeString(const std::string& value) {
     const auto builder = ::doof_blob::NativeBlobBuilder::constructor(0LL, this->endianness);
-    (static_cast<void>(builder->writeString(value)), std::monostate{});
+    builder->writeString(value);
     return writeBytes(builder->build());
 }
 doof::Result<std::string, std::variant<::std_::fs::types::IoError, ::std_::blob::types::EncodingError>> File::readText(int64_t length, ::std_::blob::types::TextEncoding encoding) {

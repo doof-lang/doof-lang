@@ -12,25 +12,25 @@ using namespace ::std_::crypto::index;
 std::shared_ptr<std::vector<std::string>> BUILTIN_TYPES;
 
 std::shared_ptr<AnalysisResult> ModuleAnalyzer::analyze(const std::string& entry) {
-    (this->modules = std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{}));
-    (this->diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}));
-    (this->inProgress = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
-    (this->resolvedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
-    (this->resolver->loadedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
-    (this->resolver->diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}));
-    (this->resolver->failedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
+    static_cast<void>((this->modules = std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{})));
+    static_cast<void>((this->diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{})));
+    static_cast<void>((this->inProgress = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})));
+    static_cast<void>((this->resolvedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})));
+    static_cast<void>((this->resolver->loadedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})));
+    static_cast<void>((this->resolver->diagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{})));
+    static_cast<void>((this->resolver->failedPaths = std::make_shared<std::vector<std::string>>(std::vector<std::string>{})));
     const auto entryPath = (doof::string_endsWith(entry, std::string(".do")) ? entry : (entry + std::string(".do")));
-    (static_cast<void>(parseReachableModules(entryPath)), std::monostate{});
-    (static_cast<void>(orderModules(entryPath)), std::monostate{});
+    parseReachableModules(entryPath);
+    orderModules(entryPath);
     const auto ignored = resolveModule(entryPath);
     std::shared_ptr<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>> orderedDiagnostics = std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{});
     const auto& _iterable_2 = this->resolver->diagnostics;
     for (const auto& diagnostic : *_iterable_2) {
-        (static_cast<void>(orderedDiagnostics->push_back(diagnostic)), std::monostate{});
+        orderedDiagnostics->push_back(diagnostic);
     }
     const auto& _iterable_4 = this->diagnostics;
     for (const auto& diagnostic : *_iterable_4) {
-        (static_cast<void>(orderedDiagnostics->push_back(diagnostic)), std::monostate{});
+        orderedDiagnostics->push_back(diagnostic);
     }
     return std::make_shared<AnalysisResult>(this->modules, orderedDiagnostics);
 }
@@ -38,11 +38,11 @@ void ModuleAnalyzer::queueModuleParse(const std::string& path, const std::option
     if (contains(scheduled, path)) {
         return;
     }
-    (static_cast<void>(scheduled->push_back(path)), std::monostate{});
+    scheduled->push_back(path);
     const auto source = this->resolver->find(path);
     if (doof::is_null(source)) {
         if (!this->resolver->failed(path)) {
-            (static_cast<void>(this->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (std::string("Module not found: ") + path), emptySemanticSpan(), path, std::string("")))), std::monostate{});
+            this->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), (std::string("Module not found: ") + path), emptySemanticSpan(), path, std::string("")));
         }
         return;
     }
@@ -50,7 +50,7 @@ void ModuleAnalyzer::queueModuleParse(const std::string& path, const std::option
     const auto physicalPath = ((source->physicalPath == std::string("")) ? source->path : source->physicalPath);
     const auto modulePath = path;
     const auto mockRootPath = inheritedMockRootPath;
-    (static_cast<void>(pending->push_back(doof::submit_async<std::shared_ptr<ModuleParseResult>>([sourceText, modulePath, physicalPath, mockRootPath]() -> std::shared_ptr<ModuleParseResult> {
+    pending->push_back(doof::submit_async<std::shared_ptr<ModuleParseResult>>([sourceText, modulePath, physicalPath, mockRootPath]() -> std::shared_ptr<ModuleParseResult> {
     const auto parser = std::make_shared<::app_src_parser_::Parser>(sourceText, std::make_shared<std::vector<::app_src_lexer_::Token>>(std::vector<::app_src_lexer_::Token>{}), 0, false, false, 0, std::string(""), 0, 0, 0);
     const auto parsed = [&]() -> doof::Result<std::shared_ptr<::app_src_ast_::Program>, std::string> { try { return doof::Success<std::shared_ptr<::app_src_ast_::Program>>{doof::callback<std::shared_ptr<::app_src_ast_::Program>()>([parser]() -> std::shared_ptr<::app_src_ast_::Program> { return parser->parse(); }).call()}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }();
     auto _binding_value_5 = parsed;
@@ -63,12 +63,12 @@ void ModuleAnalyzer::queueModuleParse(const std::string& path, const std::option
     }
     const auto program = doof::success_value(_binding_value_5);
     return std::make_shared<ModuleParseResult>(modulePath, physicalPath, sourceText, mockRootPath, program, std::string(""), 0, 0, 0);
-}))), std::monostate{});
+}));
 }
 void ModuleAnalyzer::parseReachableModules(const std::string& entryPath) {
     std::shared_ptr<std::vector<std::string>> scheduled = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     std::shared_ptr<std::vector<doof::Promise<std::shared_ptr<ModuleParseResult>>>> pending = std::make_shared<std::vector<doof::Promise<std::shared_ptr<ModuleParseResult>>>>(std::vector<doof::Promise<std::shared_ptr<ModuleParseResult>>>{});
-    (static_cast<void>(queueModuleParse(entryPath, std::nullopt, scheduled, pending)), std::monostate{});
+    queueModuleParse(entryPath, std::nullopt, scheduled, pending);
     while (static_cast<int32_t>((pending)->size()) > 0) {
         auto _binding_value_6 = doof::promise_take_first_completed(pending);
         if (doof::is_failure(_binding_value_6)) {
@@ -78,19 +78,19 @@ void ModuleAnalyzer::parseReachableModules(const std::string& entryPath) {
         const auto completed = doof::success_value(_binding_value_6);
         if (doof::is_null(completed->program)) {
             auto location = ::app_src_semantic_::SemanticLocation{completed->errorLine, completed->errorColumn, completed->errorOffset};
-            (static_cast<void>(this->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), completed->errorMessage, ::app_src_semantic_::SemanticSpan{location, location}, completed->path, std::string("")))), std::monostate{});
+            this->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), completed->errorMessage, ::app_src_semantic_::SemanticSpan{location, location}, completed->path, std::string("")));
             continue;
         }
         const auto program = doof::unwrap_optional(completed->program);
         const auto mockImportDirectives = collectMockImportDirectives(program);
         auto mockRootPath = completed->inheritedMockRootPath;
         if ((doof::is_null(mockRootPath) && (static_cast<int32_t>((mockImportDirectives)->size()) > 0)) && doof::string_endsWith(completed->path, std::string(".test.do"))) {
-            (mockRootPath = completed->path);
+            static_cast<void>((mockRootPath = completed->path));
         }
         const auto info = std::make_shared<ModuleInfo>(completed->path, completed->physicalPath, ::std_::crypto::index::sha256HexString(completed->source), program, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>(std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>>(std::vector<std::shared_ptr<::app_src_semantic_::Symbol>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::ImportBinding>>{}), std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>>(std::vector<std::shared_ptr<::app_src_semantic_::NamespaceBinding>>{}), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}), mockImportDirectives, mockRootPath, std::make_shared<std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>>(std::vector<std::shared_ptr<::app_src_semantic_::Diagnostic>>{}));
-        (static_cast<void>(this->modules->push_back(info)), std::monostate{});
-        (static_cast<void>(validateMockImportDirectives(info, completed->inheritedMockRootPath)), std::monostate{});
-        (static_cast<void>(collectSymbols(info)), std::monostate{});
+        this->modules->push_back(info);
+        validateMockImportDirectives(info, completed->inheritedMockRootPath);
+        collectSymbols(info);
         const auto& _iterable_8 = program->statements;
         for (const auto& statement : *_iterable_8) {
             {
@@ -98,13 +98,13 @@ void ModuleAnalyzer::parseReachableModules(const std::string& entryPath) {
                 if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject)) {
                     const auto& import_ = std::get<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject);
                     const auto sourcePath = resolveImportPath(info, import_->source);
-                    (static_cast<void>(queueModuleParse(sourcePath, info->mockRootPath, scheduled, pending)), std::monostate{});
+                    queueModuleParse(sourcePath, info->mockRootPath, scheduled, pending);
             }
             else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExportList>>(_case_subject)) {
                     const auto& list = std::get<std::shared_ptr<::app_src_ast_::ExportList>>(_case_subject);
                     if (!doof::is_null(list->source)) {
                         const auto sourcePath = resolveImportPath(info, doof::unwrap_optional(list->source));
-                        (static_cast<void>(queueModuleParse(sourcePath, info->mockRootPath, scheduled, pending)), std::monostate{});
+                        queueModuleParse(sourcePath, info->mockRootPath, scheduled, pending);
                     }
             }
             else {
@@ -116,31 +116,31 @@ void ModuleAnalyzer::parseReachableModules(const std::string& entryPath) {
 void ModuleAnalyzer::orderModules(const std::string& entryPath) {
     std::shared_ptr<std::vector<std::shared_ptr<ModuleInfo>>> ordered = std::make_shared<std::vector<std::shared_ptr<ModuleInfo>>>(std::vector<std::shared_ptr<ModuleInfo>>{});
     std::shared_ptr<std::vector<std::string>> visited = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
-    (static_cast<void>(appendModuleOrder(entryPath, ordered, visited)), std::monostate{});
-    (this->modules = ordered);
+    appendModuleOrder(entryPath, ordered, visited);
+    static_cast<void>((this->modules = ordered));
 }
 void ModuleAnalyzer::appendModuleOrder(const std::string& path, const std::shared_ptr<std::vector<std::shared_ptr<ModuleInfo>>>& ordered, const std::shared_ptr<std::vector<std::string>>& visited) {
     if (contains(visited, path)) {
         return;
     }
-    (static_cast<void>(visited->push_back(path)), std::monostate{});
+    visited->push_back(path);
     const auto info = findModule(path);
     if (doof::is_null(info)) {
         return;
     }
-    (static_cast<void>(ordered->push_back(doof::unwrap_optional(info))), std::monostate{});
+    ordered->push_back(doof::unwrap_optional(info));
     const auto& _iterable_10 = info->program->statements;
     for (const auto& statement : *_iterable_10) {
         {
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject)) {
                 const auto& import_ = std::get<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject);
-                (static_cast<void>(appendModuleOrder(resolveImportPath(doof::unwrap_optional(info), import_->source), ordered, visited)), std::monostate{});
+                appendModuleOrder(resolveImportPath(doof::unwrap_optional(info), import_->source), ordered, visited);
         }
         else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ExportList>>(_case_subject)) {
                 const auto& list = std::get<std::shared_ptr<::app_src_ast_::ExportList>>(_case_subject);
                 if (!doof::is_null(list->source)) {
-                    (static_cast<void>(appendModuleOrder(resolveImportPath(doof::unwrap_optional(info), doof::unwrap_optional(list->source)), ordered, visited)), std::monostate{});
+                    appendModuleOrder(resolveImportPath(doof::unwrap_optional(info), doof::unwrap_optional(list->source)), ordered, visited);
                 }
         }
         else {
@@ -159,16 +159,16 @@ std::shared_ptr<ModuleInfo> ModuleAnalyzer::resolveModule(const std::string& pat
     if (contains(this->inProgress, path)) {
         return existing;
     }
-    (static_cast<void>(this->inProgress->push_back(path)), std::monostate{});
+    this->inProgress->push_back(path);
     const auto info = doof::unwrap_optional(existing);
-    (static_cast<void>(resolveImports(info)), std::monostate{});
-    (static_cast<void>(resolveExportLists(info)), std::monostate{});
-    (static_cast<void>(resolveNamedTypes(info)), std::monostate{});
+    resolveImports(info);
+    resolveExportLists(info);
+    resolveNamedTypes(info);
     const auto ignored = [&]() -> std::string { auto _try_value = doof::array_pop(this->inProgress); if (doof::is_failure(_try_value)) doof::panic_at("src/analyzer", 207, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
-    (static_cast<void>(this->resolvedPaths->push_back(path)), std::monostate{});
+    this->resolvedPaths->push_back(path);
     const auto& _iterable_12 = info->diagnostics;
     for (const auto& item : *_iterable_12) {
-        (static_cast<void>(this->diagnostics->push_back(item)), std::monostate{});
+        this->diagnostics->push_back(item);
     }
     return info;
 }
@@ -179,14 +179,14 @@ void ModuleAnalyzer::collectSymbols(const std::shared_ptr<ModuleInfo>& info) {
         if (doof::is_null(symbol)) {
             continue;
         }
-        (static_cast<void>(decorateDeclarationSymbol(statement, doof::unwrap_optional(symbol))), std::monostate{});
+        decorateDeclarationSymbol(statement, doof::unwrap_optional(symbol));
         if (!doof::is_null(findSymbol(info, symbol->name))) {
-            (static_cast<void>(addError(info, ((std::string("Duplicate module binding '") + symbol->name) + std::string("'")), std::visit([](auto&& _obj) { return _obj->span; }, statement))), std::monostate{});
+            addError(info, ((std::string("Duplicate module binding '") + symbol->name) + std::string("'")), std::visit([](auto&& _obj) { return _obj->span; }, statement));
             continue;
         }
-        (static_cast<void>(info->symbols->push_back(doof::unwrap_optional(symbol))), std::monostate{});
+        info->symbols->push_back(doof::unwrap_optional(symbol));
         if (symbol->exported) {
-            (static_cast<void>(info->exports->push_back(doof::unwrap_optional(symbol))), std::monostate{});
+            info->exports->push_back(doof::unwrap_optional(symbol));
         }
     }
 }
@@ -195,11 +195,11 @@ void ModuleAnalyzer::decorateDeclarationSymbol(const std::variant<std::shared_pt
         auto _case_subject = statement;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-            (class_->resolvedSymbol = symbol);
+            static_cast<void>((class_->resolvedSymbol = symbol));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
             const auto& interface_ = std::get<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject);
-            (interface_->resolvedSymbol = symbol);
+            static_cast<void>((interface_->resolvedSymbol = symbol));
     }
     else {
     }
@@ -259,7 +259,7 @@ void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
                 const auto& import_ = std::get<std::shared_ptr<::app_src_ast_::ImportDeclaration>>(_case_subject);
                 const auto sourcePath = resolveImportPath(info, import_->source);
                 if (doof::string_endsWith(info->path, std::string(".test.do")) && doof::string_endsWith(sourcePath, std::string(".test.do"))) {
-                    (static_cast<void>(addError(info, ((((std::string("Test file \"") + info->path) + std::string("\" cannot import another test file \"")) + sourcePath) + std::string("\"")), import_->span)), std::monostate{});
+                    addError(info, ((((std::string("Test file \"") + info->path) + std::string("\" cannot import another test file \"")) + sourcePath) + std::string("\"")), import_->span);
                     continue;
                 }
                 const auto source = resolveModule(sourcePath);
@@ -271,29 +271,29 @@ void ModuleAnalyzer::resolveImports(const std::shared_ptr<ModuleInfo>& info) {
                             const auto& named = std::get<std::shared_ptr<::app_src_ast_::NamedImport>>(_case_subject);
                             std::shared_ptr<::app_src_semantic_::Symbol> imported = nullptr;
                             if (!doof::is_null(source)) {
-                                (imported = findExport(doof::unwrap_optional(source), named->name));
+                                static_cast<void>((imported = findExport(doof::unwrap_optional(source), named->name)));
                             }
                             if ((!doof::is_null(source)) && doof::is_null(imported)) {
-                                (static_cast<void>(addError(info, ((((std::string("Module '") + import_->source) + std::string("' does not export '")) + named->name) + std::string("'")), named->span)), std::monostate{});
+                                addError(info, ((((std::string("Module '") + import_->source) + std::string("' does not export '")) + named->name) + std::string("'")), named->span);
                             }
                             const auto localName = (doof::is_null(named->alias) ? named->name : doof::unwrap_optional(named->alias));
                             if (hasModuleBinding(info, localName)) {
-                                (static_cast<void>(addError(info, ((std::string("Duplicate module binding '") + localName) + std::string("'")), named->span)), std::monostate{});
+                                addError(info, ((std::string("Duplicate module binding '") + localName) + std::string("'")), named->span);
                                 continue;
                             }
                             if (doof::is_null(imported)) {
-                                (static_cast<void>(info->imports->push_back(std::make_shared<::app_src_semantic_::ImportBinding>(localName, named->name, sourcePath, import_->typeOnly, nullptr))), std::monostate{});
+                                info->imports->push_back(std::make_shared<::app_src_semantic_::ImportBinding>(localName, named->name, sourcePath, import_->typeOnly, nullptr));
                             } else {
-                                (static_cast<void>(info->imports->push_back(std::make_shared<::app_src_semantic_::ImportBinding>(localName, named->name, sourcePath, import_->typeOnly, imported))), std::monostate{});
+                                info->imports->push_back(std::make_shared<::app_src_semantic_::ImportBinding>(localName, named->name, sourcePath, import_->typeOnly, imported));
                             }
                     }
                     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::NamespaceImport>>(_case_subject)) {
                             const auto& namespace_ = std::get<std::shared_ptr<::app_src_ast_::NamespaceImport>>(_case_subject);
                             if (hasModuleBinding(info, namespace_->alias)) {
-                                (static_cast<void>(addError(info, ((std::string("Duplicate module binding '") + namespace_->alias) + std::string("'")), namespace_->span)), std::monostate{});
+                                addError(info, ((std::string("Duplicate module binding '") + namespace_->alias) + std::string("'")), namespace_->span);
                                 continue;
                             }
-                            (static_cast<void>(info->namespaceImports->push_back(std::make_shared<::app_src_semantic_::NamespaceBinding>(namespace_->alias, sourcePath, import_->typeOnly))), std::monostate{});
+                            info->namespaceImports->push_back(std::make_shared<::app_src_semantic_::NamespaceBinding>(namespace_->alias, sourcePath, import_->typeOnly));
                     }
                     }
                 }
@@ -313,19 +313,19 @@ void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info)
                 if (!doof::is_null(list->source)) {
                     const auto sourcePath = resolveImportPath(info, doof::unwrap_optional(list->source));
                     const auto source = resolveModule(sourcePath);
-                    (static_cast<void>(info->reExports->push_back(sourcePath)), std::monostate{});
+                    info->reExports->push_back(sourcePath);
                     const auto& _iterable_20 = list->specifiers;
                     for (const auto& specifier : *_iterable_20) {
                         std::shared_ptr<::app_src_semantic_::Symbol> exported = nullptr;
                         if (!doof::is_null(source)) {
-                            (exported = findExport(doof::unwrap_optional(source), specifier->name));
+                            static_cast<void>((exported = findExport(doof::unwrap_optional(source), specifier->name)));
                         }
                         if ((!doof::is_null(source)) && doof::is_null(exported)) {
-                            (static_cast<void>(addError(info, ((((std::string("Module '") + doof::unwrap_optional(list->source)) + std::string("' does not export '")) + specifier->name) + std::string("'")), specifier->span)), std::monostate{});
+                            addError(info, ((((std::string("Module '") + doof::unwrap_optional(list->source)) + std::string("' does not export '")) + specifier->name) + std::string("'")), specifier->span);
                         } else {
                             if (!doof::is_null(exported)) {
                                 const auto exportedName = (doof::is_null(specifier->alias) ? specifier->name : doof::unwrap_optional(specifier->alias));
-                                (static_cast<void>(info->exports->push_back(exportedSymbol(doof::unwrap_optional(exported), exportedName))), std::monostate{});
+                                info->exports->push_back(exportedSymbol(doof::unwrap_optional(exported), exportedName));
                             }
                         }
                     }
@@ -337,10 +337,10 @@ void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info)
                     if (!doof::is_null(local)) {
                         const auto exportedName = (doof::is_null(specifier->alias) ? specifier->name : doof::unwrap_optional(specifier->alias));
                         if (doof::is_null(findExport(info, exportedName))) {
-                            (static_cast<void>(info->exports->push_back(exportedSymbol(doof::unwrap_optional(local), exportedName))), std::monostate{});
+                            info->exports->push_back(exportedSymbol(doof::unwrap_optional(local), exportedName));
                         }
                     } else {
-                        (static_cast<void>(addError(info, ((std::string("Cannot export unknown symbol '") + specifier->name) + std::string("'")), specifier->span)), std::monostate{});
+                        addError(info, ((std::string("Cannot export unknown symbol '") + specifier->name) + std::string("'")), specifier->span);
                     }
                 }
         }
@@ -352,7 +352,7 @@ void ModuleAnalyzer::resolveExportLists(const std::shared_ptr<ModuleInfo>& info)
 void ModuleAnalyzer::resolveNamedTypes(const std::shared_ptr<ModuleInfo>& info) {
     const auto& _iterable_26 = info->program->statements;
     for (const auto& statement : *_iterable_26) {
-        (static_cast<void>(visitStatementTypes(statement, info)), std::monostate{});
+        visitStatementTypes(statement, info);
     }
 }
 void ModuleAnalyzer::visitStatementTypes(const std::variant<std::shared_ptr<::app_src_ast_::ConstDeclaration>, std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>, std::shared_ptr<::app_src_ast_::ImmutableBinding>, std::shared_ptr<::app_src_ast_::LetDeclaration>, std::shared_ptr<::app_src_ast_::FunctionDeclaration>, std::shared_ptr<::app_src_ast_::ClassDeclaration>, std::shared_ptr<::app_src_ast_::InterfaceDeclaration>, std::shared_ptr<::app_src_ast_::EnumDeclaration>, std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>, std::shared_ptr<::app_src_ast_::ImportDeclaration>, std::shared_ptr<::app_src_ast_::MockImportDirective>, std::shared_ptr<::app_src_ast_::ExportDeclaration>, std::shared_ptr<::app_src_ast_::ExportList>, std::shared_ptr<::app_src_ast_::IfStatement>, std::shared_ptr<::app_src_ast_::CaseStatement>, std::shared_ptr<::app_src_ast_::WhileStatement>, std::shared_ptr<::app_src_ast_::ForStatement>, std::shared_ptr<::app_src_ast_::ForOfStatement>, std::shared_ptr<::app_src_ast_::WithStatement>, std::shared_ptr<::app_src_ast_::ReturnStatement>, std::shared_ptr<::app_src_ast_::YieldStatement>, std::shared_ptr<::app_src_ast_::BreakStatement>, std::shared_ptr<::app_src_ast_::ContinueStatement>, std::shared_ptr<::app_src_ast_::ExpressionStatement>, std::shared_ptr<::app_src_ast_::DestructuringStatement>, std::shared_ptr<::app_src_ast_::TryStatement>, std::shared_ptr<::app_src_ast_::YieldBlockAssignmentStatement>, std::shared_ptr<::app_src_ast_::Block>>& statement, const std::shared_ptr<ModuleInfo>& info) {
@@ -360,65 +360,65 @@ void ModuleAnalyzer::visitStatementTypes(const std::variant<std::shared_ptr<::ap
         auto _case_subject = statement;
         if (std::holds_alternative<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject)) {
             const auto& fn = std::get<std::shared_ptr<::app_src_ast_::FunctionDeclaration>>(_case_subject);
-            (static_cast<void>(visitFunctionTypes(fn, info, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}))), std::monostate{});
+            visitFunctionTypes(fn, info, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject)) {
             const auto& class_ = std::get<std::shared_ptr<::app_src_ast_::ClassDeclaration>>(_case_subject);
-            (static_cast<void>(visitTypeParameterConstraints(class_->typeParamConstraints, info, class_->typeParams)), std::monostate{});
+            visitTypeParameterConstraints(class_->typeParamConstraints, info, class_->typeParams);
             const auto& _iterable_28 = class_->implements_;
             for (const auto& annotation : *_iterable_28) {
-                (static_cast<void>(visitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(annotation), info, class_->typeParams)), std::monostate{});
+                visitType(doof::variant_promote<std::variant<std::shared_ptr<::app_src_ast_::NamedType>, std::shared_ptr<::app_src_ast_::ArrayType>, std::shared_ptr<::app_src_ast_::UnionType>, std::shared_ptr<::app_src_ast_::AstFunctionType>, std::shared_ptr<::app_src_ast_::WeakType>>>(annotation), info, class_->typeParams);
             }
             const auto& _iterable_30 = class_->fields;
             for (const auto& field : *_iterable_30) {
                 if (!doof::is_null(field->type_)) {
-                    (static_cast<void>(visitType(doof::unwrap_optional(field->type_), info, class_->typeParams)), std::monostate{});
+                    visitType(doof::unwrap_optional(field->type_), info, class_->typeParams);
                 }
             }
             const auto& _iterable_32 = class_->methods;
             for (const auto& method : *_iterable_32) {
-                (static_cast<void>(visitFunctionTypes(method, info, class_->typeParams)), std::monostate{});
+                visitFunctionTypes(method, info, class_->typeParams);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject)) {
             const auto& interface_ = std::get<std::shared_ptr<::app_src_ast_::InterfaceDeclaration>>(_case_subject);
-            (static_cast<void>(visitTypeParameterConstraints(interface_->typeParamConstraints, info, interface_->typeParams)), std::monostate{});
+            visitTypeParameterConstraints(interface_->typeParamConstraints, info, interface_->typeParams);
             const auto& _iterable_34 = interface_->fields;
             for (const auto& field : *_iterable_34) {
-                (static_cast<void>(visitType(field->type_, info, interface_->typeParams)), std::monostate{});
+                visitType(field->type_, info, interface_->typeParams);
             }
             const auto& _iterable_36 = interface_->methods;
             for (const auto& method : *_iterable_36) {
-                (static_cast<void>(visitFunctionTypes(method, info, interface_->typeParams)), std::monostate{});
+                visitFunctionTypes(method, info, interface_->typeParams);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>>(_case_subject)) {
             const auto& alias = std::get<std::shared_ptr<::app_src_ast_::TypeAliasDeclaration>>(_case_subject);
-            (static_cast<void>(visitTypeParameterConstraints(alias->typeParamConstraints, info, alias->typeParams)), std::monostate{});
-            (static_cast<void>(visitType(alias->type_, info, alias->typeParams)), std::monostate{});
+            visitTypeParameterConstraints(alias->typeParamConstraints, info, alias->typeParams);
+            visitType(alias->type_, info, alias->typeParams);
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject)) {
             const auto& const_ = std::get<std::shared_ptr<::app_src_ast_::ConstDeclaration>>(_case_subject);
             if (!doof::is_null(const_->type_)) {
-                (static_cast<void>(visitType(doof::unwrap_optional(const_->type_), info, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}))), std::monostate{});
+                visitType(doof::unwrap_optional(const_->type_), info, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject)) {
             const auto& readonly_ = std::get<std::shared_ptr<::app_src_ast_::ReadonlyDeclaration>>(_case_subject);
             if (!doof::is_null(readonly_->type_)) {
-                (static_cast<void>(visitType(doof::unwrap_optional(readonly_->type_), info, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}))), std::monostate{});
+                visitType(doof::unwrap_optional(readonly_->type_), info, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject)) {
             const auto& binding = std::get<std::shared_ptr<::app_src_ast_::ImmutableBinding>>(_case_subject);
             if (!doof::is_null(binding->type_)) {
-                (static_cast<void>(visitType(doof::unwrap_optional(binding->type_), info, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}))), std::monostate{});
+                visitType(doof::unwrap_optional(binding->type_), info, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject)) {
             const auto& let_ = std::get<std::shared_ptr<::app_src_ast_::LetDeclaration>>(_case_subject);
             if (!doof::is_null(let_->type_)) {
-                (static_cast<void>(visitType(doof::unwrap_optional(let_->type_), info, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}))), std::monostate{});
+                visitType(doof::unwrap_optional(let_->type_), info, std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
             }
     }
     else {
@@ -429,28 +429,28 @@ void ModuleAnalyzer::visitFunctionTypes(const std::shared_ptr<::app_src_ast_::Fu
     std::shared_ptr<std::vector<std::string>> typeParams = std::make_shared<std::vector<std::string>>(std::vector<std::string>{});
     const auto& _iterable_38 = ownerTypeParams;
     for (const auto& parameter : *_iterable_38) {
-        (static_cast<void>(typeParams->push_back(parameter)), std::monostate{});
+        typeParams->push_back(parameter);
     }
     const auto& _iterable_40 = fn->typeParams;
     for (const auto& parameter : *_iterable_40) {
-        (static_cast<void>(typeParams->push_back(parameter)), std::monostate{});
+        typeParams->push_back(parameter);
     }
-    (static_cast<void>(visitTypeParameterConstraints(fn->typeParamConstraints, info, typeParams)), std::monostate{});
+    visitTypeParameterConstraints(fn->typeParamConstraints, info, typeParams);
     const auto& _iterable_42 = fn->params;
     for (const auto& parameter : *_iterable_42) {
         if (!doof::is_null(parameter->type_)) {
-            (static_cast<void>(visitType(doof::unwrap_optional(parameter->type_), info, typeParams)), std::monostate{});
+            visitType(doof::unwrap_optional(parameter->type_), info, typeParams);
         }
     }
     if (!doof::is_null(fn->returnType)) {
-        (static_cast<void>(visitType(doof::unwrap_optional(fn->returnType), info, typeParams)), std::monostate{});
+        visitType(doof::unwrap_optional(fn->returnType), info, typeParams);
     }
 }
 void ModuleAnalyzer::visitTypeParameterConstraints(const std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::TypeParameterConstraint>>>& constraints, const std::shared_ptr<ModuleInfo>& info, const std::shared_ptr<std::vector<std::string>>& typeParams) {
     const auto& _iterable_44 = constraints;
     for (const auto& constraint : *_iterable_44) {
         if (!doof::is_null(constraint->type_)) {
-            (static_cast<void>(visitType(doof::unwrap_optional(constraint->type_), info, typeParams)), std::monostate{});
+            visitType(doof::unwrap_optional(constraint->type_), info, typeParams);
         }
     }
 }
@@ -465,49 +465,49 @@ void ModuleAnalyzer::visitType(const std::variant<std::shared_ptr<::app_src_ast_
                     const auto& _iterable_46 = info->imports;
                     for (const auto& imported : *_iterable_46) {
                         if (imported->localName == named->name) {
-                            (symbol = imported->symbol);
+                            static_cast<void>((symbol = imported->symbol));
                             break;
                         }
                     }
                 }
                 if (doof::is_null(symbol)) {
-                    (symbol = findExport(info, named->name));
+                    static_cast<void>((symbol = findExport(info, named->name)));
                 }
                 if (doof::is_null(symbol)) {
-                    (static_cast<void>(addError(info, ((std::string("Unknown type '") + named->name) + std::string("'")), named->span)), std::monostate{});
+                    addError(info, ((std::string("Unknown type '") + named->name) + std::string("'")), named->span);
                 } else if (!isTypeSymbol(doof::unwrap_optional(symbol))) {
-                    (static_cast<void>(addError(info, ((std::string("Symbol '") + named->name) + std::string("' is not a type")), named->span)), std::monostate{});
-                    (symbol = nullptr);
+                    addError(info, ((std::string("Symbol '") + named->name) + std::string("' is not a type")), named->span);
+                    static_cast<void>((symbol = nullptr));
                 }
-                (named->resolvedSymbol = symbol);
+                static_cast<void>((named->resolvedSymbol = symbol));
             }
             const auto& _iterable_48 = named->typeArgs;
             for (const auto& argument : *_iterable_48) {
-                (static_cast<void>(visitType(argument, info, typeParams)), std::monostate{});
+                visitType(argument, info, typeParams);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::ArrayType>>(_case_subject)) {
             const auto& array = std::get<std::shared_ptr<::app_src_ast_::ArrayType>>(_case_subject);
-            (static_cast<void>(visitType(array->elementType, info, typeParams)), std::monostate{});
+            visitType(array->elementType, info, typeParams);
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::UnionType>>(_case_subject)) {
             const auto& union_ = std::get<std::shared_ptr<::app_src_ast_::UnionType>>(_case_subject);
             const auto& _iterable_50 = union_->types;
             for (const auto& member : *_iterable_50) {
-                (static_cast<void>(visitType(member, info, typeParams)), std::monostate{});
+                visitType(member, info, typeParams);
             }
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::AstFunctionType>>(_case_subject)) {
             const auto& function_ = std::get<std::shared_ptr<::app_src_ast_::AstFunctionType>>(_case_subject);
             const auto& _iterable_52 = function_->params;
             for (const auto& parameter : *_iterable_52) {
-                (static_cast<void>(visitType(parameter->type_, info, typeParams)), std::monostate{});
+                visitType(parameter->type_, info, typeParams);
             }
-            (static_cast<void>(visitType(function_->returnType, info, typeParams)), std::monostate{});
+            visitType(function_->returnType, info, typeParams);
     }
     else if (std::holds_alternative<std::shared_ptr<::app_src_ast_::WeakType>>(_case_subject)) {
             const auto& weak_ = std::get<std::shared_ptr<::app_src_ast_::WeakType>>(_case_subject);
-            (static_cast<void>(visitType(weak_->type_, info, typeParams)), std::monostate{});
+            visitType(weak_->type_, info, typeParams);
     }
     }
 }
@@ -565,13 +565,13 @@ void ModuleAnalyzer::validateMockImportDirectives(const std::shared_ptr<ModuleIn
     if (!doof::string_endsWith(info->path, std::string(".test.do"))) {
         const auto& _iterable_62 = info->mockImportDirectives;
         for (const auto& directive : *_iterable_62) {
-            (static_cast<void>(addError(info, std::string("mock import directives are only valid in .test.do files"), directive->span)), std::monostate{});
+            addError(info, std::string("mock import directives are only valid in .test.do files"), directive->span);
         }
     }
     if ((!doof::is_null(inheritedMockRootPath)) && (inheritedMockRootPath != info->path)) {
         const auto& _iterable_64 = info->mockImportDirectives;
         for (const auto& directive : *_iterable_64) {
-            (static_cast<void>(addError(info, std::string("mock import directives are only valid in the root test file"), directive->span)), std::monostate{});
+            addError(info, std::string("mock import directives are only valid in the root test file"), directive->span);
         }
     }
     auto sawOrdinaryStatement = false;
@@ -582,11 +582,11 @@ void ModuleAnalyzer::validateMockImportDirectives(const std::shared_ptr<ModuleIn
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject)) {
                 const auto& directive = std::get<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject);
                 if (sawOrdinaryStatement) {
-                    (static_cast<void>(addError(info, std::string("mock import directives must appear at the top of the file before other statements"), directive->span)), std::monostate{});
+                    addError(info, std::string("mock import directives must appear at the top of the file before other statements"), directive->span);
                 }
         }
         else {
-                (sawOrdinaryStatement = true);
+                static_cast<void>((sawOrdinaryStatement = true));
         }
         }
     }
@@ -595,7 +595,7 @@ void ModuleAnalyzer::validateMockImportDirectives(const std::shared_ptr<ModuleIn
         const auto& _iterable_68 = directive->mappings;
         for (const auto& mapping : *_iterable_68) {
             if (mapping->dependency == mapping->replacement) {
-                (static_cast<void>(addError(info, ((std::string("mock import cannot substitute \"") + mapping->dependency) + std::string("\" with itself")), mapping->span)), std::monostate{});
+                addError(info, ((std::string("mock import cannot substitute \"") + mapping->dependency) + std::string("\" with itself")), mapping->span);
             }
         }
     }
@@ -608,7 +608,7 @@ std::shared_ptr<std::vector<std::shared_ptr<::app_src_ast_::MockImportDirective>
             auto _case_subject = statement;
             if (std::holds_alternative<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject)) {
                 const auto& directive = std::get<std::shared_ptr<::app_src_ast_::MockImportDirective>>(_case_subject);
-                (static_cast<void>(directives->push_back(directive)), std::monostate{});
+                directives->push_back(directive);
         }
         else {
         }
@@ -683,7 +683,7 @@ bool contains(const std::shared_ptr<std::vector<std::string>>& values, const std
     return false;
 }
 void addError(const std::shared_ptr<ModuleInfo>& info, const std::string& message, ::app_src_ast_::SourceSpan span) {
-    (static_cast<void>(info->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, semanticSpan(span), info->path, std::string("")))), std::monostate{});
+    info->diagnostics->push_back(std::make_shared<::app_src_semantic_::Diagnostic>(std::string("error"), message, semanticSpan(span), info->path, std::string("")));
 }
 ::app_src_semantic_::SemanticSpan semanticSpan(::app_src_ast_::SourceSpan span) {
     return ::app_src_semantic_::SemanticSpan{::app_src_semantic_::SemanticLocation{span.start.line, span.start.column, span.start.offset}, ::app_src_semantic_::SemanticLocation{span.end.line, span.end.column, span.end.offset}};

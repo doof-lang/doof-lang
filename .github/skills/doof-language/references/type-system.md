@@ -213,6 +213,13 @@ age := user!.age
 
 ## Union Types
 
+Union arms that differ only in collection mutability are rejected because runtime
+type checks cannot distinguish them. This includes `int[] | readonly int[]`,
+mutable/readonly maps and sets, aliases, generic substitutions, and nested types
+such as `Map<string, int[]> | Map<string, readonly int[]>`. Use one mutability or distinct
+wrapper types. Identical duplicate arms, optional collections, and different
+element types remain valid.
+
 ```doof
 type Value = int | string | bool
 type Optional<T> = T | none

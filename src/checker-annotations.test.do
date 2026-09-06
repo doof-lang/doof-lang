@@ -39,3 +39,41 @@ export function testSecondConsolidationProvisionalArityMatchesChecking(): none {
   }
   Assert.isTrue(found)
 }
+
+export function testUnionMutabilityAnnotations(): none {
+  for annotation of [
+    "int[] | readonly int[]",
+    "readonly int[] | int[]",
+    "Map<string, int> | ReadonlyMap<string, int>",
+    "Set<int> | ReadonlySet<int>",
+    "Map<string, int[]> | Map<string, readonly int[]>",
+    "Tuple<int[]> | Tuple<readonly int[]>",
+    "Promise<int[]> | Promise<readonly int[]>",
+  ] {
+    source := "function bad(value: " + annotation + "): none {}"
+    analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+    for diagnostic of analysis.diagnostics { println(source + ": " + diagnostic.message) }
+    Assert.equal(analysis.diagnostics.length, 0)
+    checked := createChecker(analysis, "/main.do").check("/main.do")
+    Assert.isTrue(checked.diagnostics.length > 0)
+    Assert.stringContains(checked.diagnostics[0].message, "differ only in collection mutability")
+    Assert.stringContains(checked.diagnostics[0].message, "use a single mutability or distinct wrapper types")
+    Assert.equal(checked.diagnostics[0].span.start.line, 1)
+  }
+  for source of [
+    "type Mutable = int[]\ntype Frozen = readonly int[]\nfunction bad(value: Mutable | Frozen): none {}",
+    "type Choice<T, U> = T | U\nfunction bad(value: Choice<int[], readonly int[]>): none {}",
+  ] {
+    analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
+    for diagnostic of analysis.diagnostics { println(source + ": " + diagnostic.message) }
+    Assert.equal(analysis.diagnostics.length, 0)
+    checked := createChecker(analysis, "/main.do").check("/main.do")
+    Assert.isTrue(checked.diagnostics.length > 0)
+    Assert.stringContains(checked.diagnostics[0].message, "differ only in collection mutability")
+  }
+  for annotation of ["int[] | int[]", "int[] | none", "readonly int[] | none", "int[] | readonly string[]"] {
+    analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function good(value: " + annotation + "): none {}" }]).analyze("/main.do")
+    Assert.equal(analysis.diagnostics.length, 0)
+    Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  }
+}

@@ -9,7 +9,7 @@ std::string cliUsage() {
 bool validProfileTimeLimit(const std::string& value) {
     auto unitLength = 1;
     if (doof::string_endsWith(value, std::string("ms"))) {
-        (unitLength = 2);
+        static_cast<void>((unitLength = 2));
     } else if ((!doof::string_endsWith(value, std::string("s")) && !doof::string_endsWith(value, std::string("m"))) && !doof::string_endsWith(value, std::string("h"))) {
         return false;
     }
@@ -35,7 +35,7 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
     if (doof::string_endsWith(doof::array_at(args, 0, "src/cli", 94), std::string(".do"))) {
         const auto request = std::make_shared<CliRequest>(std::string("run"), doof::array_at(args, 0, "src/cli", 95), std::string(""), std::string(""), std::string(""), false, false, std::string(""), std::string(""), std::string(""), false, std::string(""), std::string(""), std::string(""), false, std::string(""), std::string("simulator"), std::string(""), std::string(""), std::string(""), std::string(""), std::make_shared<std::vector<std::string>>(std::vector<std::string>{}));
         for (int32_t index = 1; index < static_cast<int32_t>((args)->size()); ++index) {
-            (static_cast<void>(request->programArguments->push_back(doof::array_at(args, index, "src/cli", 96))), std::monostate{});
+            request->programArguments->push_back(doof::array_at(args, index, "src/cli", 96));
         }
         return std::make_shared<CliParseResult>(request, std::string(""), false);
     }
@@ -51,10 +51,10 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((command != std::string("run")) && (command != std::string("profile"))) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("-- is only supported with the run and profile commands"), false);
             }
-            (index += 1);
+            static_cast<void>((index += 1));
             while (index < static_cast<int32_t>((args)->size())) {
-                (static_cast<void>(request->programArguments->push_back(doof::array_at(args, index, "src/cli", 114))), std::monostate{});
-                (index += 1);
+                request->programArguments->push_back(doof::array_at(args, index, "src/cli", 114));
+                static_cast<void>((index += 1));
             }
             continue;
         }
@@ -65,16 +65,16 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, (std::string("missing value for ") + argument), false);
             }
-            (request->outputDirectory = doof::array_at(args, (index + 1), "src/cli", 124));
-            (index = (index + 2));
+            static_cast<void>((request->outputDirectory = doof::array_at(args, (index + 1), "src/cli", 124)));
+            static_cast<void>((index = (index + 2)));
             continue;
         }
         if (argument == std::string("--compiler")) {
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --compiler"), false);
             }
-            (request->compiler = doof::array_at(args, (index + 1), "src/cli", 130));
-            (index = (index + 2));
+            static_cast<void>((request->compiler = doof::array_at(args, (index + 1), "src/cli", 130)));
+            static_cast<void>((index = (index + 2)));
             continue;
         }
         if (argument == std::string("--target")) {
@@ -85,16 +85,16 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if (((value != std::string("macos-app")) && (value != std::string("ios-app"))) && (value != std::string("wasm"))) {
                 return std::make_shared<CliParseResult>(nullptr, (std::string("invalid value for --target: ") + value), false);
             }
-            (request->targetOverride = value);
-            (index = (index + 2));
+            static_cast<void>((request->targetOverride = value));
+            static_cast<void>((index = (index + 2)));
             continue;
         }
         if (argument == std::string("--distdir")) {
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --distdir"), false);
             }
-            (request->distDirectory = doof::array_at(args, (index + 1), "src/cli", 146));
-            (index = (index + 2));
+            static_cast<void>((request->distDirectory = doof::array_at(args, (index + 1), "src/cli", 146)));
+            static_cast<void>((index = (index + 2)));
             continue;
         }
         if (argument == std::string("--macos-signing")) {
@@ -105,29 +105,29 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((value != std::string("developer-id")) && (value != std::string("ad-hoc"))) {
                 return std::make_shared<CliParseResult>(nullptr, (std::string("invalid value for --macos-signing: ") + value), false);
             }
-            (request->macosSigning = value);
-            (index = (index + 2));
+            static_cast<void>((request->macosSigning = value));
+            static_cast<void>((index = (index + 2)));
             continue;
         }
         if (argument == std::string("--macos-sign-identity")) {
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --macos-sign-identity"), false);
             }
-            (request->macosSignIdentity = doof::array_at(args, (index + 1), "src/cli", 162));
-            (index = (index + 2));
+            static_cast<void>((request->macosSignIdentity = doof::array_at(args, (index + 1), "src/cli", 162)));
+            static_cast<void>((index = (index + 2)));
             continue;
         }
         if (argument == std::string("--macos-sandbox")) {
-            (request->macosSandbox = true);
-            (index = (index + 1));
+            static_cast<void>((request->macosSandbox = true));
+            static_cast<void>((index = (index + 1)));
             continue;
         }
         if (argument == std::string("--macos-entitlements")) {
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --macos-entitlements"), false);
             }
-            (request->macosEntitlements = doof::array_at(args, (index + 1), "src/cli", 173));
-            (index = (index + 2));
+            static_cast<void>((request->macosEntitlements = doof::array_at(args, (index + 1), "src/cli", 173)));
+            static_cast<void>((index = (index + 2)));
             continue;
         }
         if (argument == std::string("--ios-destination")) {
@@ -138,58 +138,58 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if ((value != std::string("simulator")) && (value != std::string("device"))) {
                 return std::make_shared<CliParseResult>(nullptr, (std::string("invalid value for --ios-destination: ") + value), false);
             }
-            (request->iosDestination = value);
-            (index += 2);
+            static_cast<void>((request->iosDestination = value));
+            static_cast<void>((index += 2));
             continue;
         }
         if (argument == std::string("--ios-sign-identity")) {
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --ios-sign-identity"), false);
             }
-            (request->iosSignIdentity = doof::array_at(args, (index + 1), "src/cli", 189));
-            (index += 2);
+            static_cast<void>((request->iosSignIdentity = doof::array_at(args, (index + 1), "src/cli", 189)));
+            static_cast<void>((index += 2));
             continue;
         }
         if (argument == std::string("--ios-device")) {
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --ios-device"), false);
             }
-            (request->iosDevice = doof::array_at(args, (index + 1), "src/cli", 195));
-            (index += 2);
+            static_cast<void>((request->iosDevice = doof::array_at(args, (index + 1), "src/cli", 195)));
+            static_cast<void>((index += 2));
             continue;
         }
         if (argument == std::string("--ios-provisioning-profile")) {
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --ios-provisioning-profile"), false);
             }
-            (request->iosProvisioningProfile = doof::array_at(args, (index + 1), "src/cli", 201));
-            (index += 2);
+            static_cast<void>((request->iosProvisioningProfile = doof::array_at(args, (index + 1), "src/cli", 201)));
+            static_cast<void>((index += 2));
             continue;
         }
         if (argument == std::string("--filter")) {
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --filter"), false);
             }
-            (request->filter = doof::array_at(args, (index + 1), "src/cli", 207));
-            (index = (index + 2));
+            static_cast<void>((request->filter = doof::array_at(args, (index + 1), "src/cli", 207)));
+            static_cast<void>((index = (index + 2)));
             continue;
         }
         if (argument == std::string("--list")) {
-            (request->listOnly = true);
-            (index = (index + 1));
+            static_cast<void>((request->listOnly = true));
+            static_cast<void>((index = (index + 1)));
             continue;
         }
         if (argument == std::string("--coverage")) {
-            (request->coverage = true);
-            (index = (index + 1));
+            static_cast<void>((request->coverage = true));
+            static_cast<void>((index = (index + 1)));
             continue;
         }
         if (argument == std::string("--coverage-output")) {
             if ((index + 1) >= static_cast<int32_t>((args)->size())) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("missing value for --coverage-output"), false);
             }
-            (request->coverageOutput = doof::array_at(args, (index + 1), "src/cli", 223));
-            (index = (index + 2));
+            static_cast<void>((request->coverageOutput = doof::array_at(args, (index + 1), "src/cli", 223)));
+            static_cast<void>((index = (index + 2)));
             continue;
         }
         if (argument == std::string("--trace-output")) {
@@ -203,8 +203,8 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if (!doof::string_endsWith(value, std::string(".trace"))) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("--trace-output must end with .trace"), false);
             }
-            (request->traceOutput = value);
-            (index += 2);
+            static_cast<void>((request->traceOutput = value));
+            static_cast<void>((index += 2));
             continue;
         }
         if (argument == std::string("--time-limit")) {
@@ -218,16 +218,16 @@ std::shared_ptr<CliParseResult> parseCli(const std::shared_ptr<std::vector<std::
             if (!validProfileTimeLimit(value)) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("invalid --time-limit; expected Nms, Ns, Nm, or Nh"), false);
             }
-            (request->profileTimeLimit = value);
-            (index += 2);
+            static_cast<void>((request->profileTimeLimit = value));
+            static_cast<void>((index += 2));
             continue;
         }
         if (argument == std::string("--no-open")) {
             if (command != std::string("profile")) {
                 return std::make_shared<CliParseResult>(nullptr, std::string("--no-open is only supported with the profile command"), false);
             }
-            (request->profileNoOpen = true);
-            (index += 1);
+            static_cast<void>((request->profileNoOpen = true));
+            static_cast<void>((index += 1));
             continue;
         }
         return std::make_shared<CliParseResult>(nullptr, ((std::string("unknown option '") + argument) + std::string("'")), false);

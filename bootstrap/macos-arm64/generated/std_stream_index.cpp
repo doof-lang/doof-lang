@@ -12,11 +12,11 @@ bool DecodedLineStream::loadNextChunk() {
         return false;
     }
     if (!std::visit([&](auto&& _obj) { return _obj->next(); }, this->source)) {
-        (this->sourceDone = true);
+        static_cast<void>((this->sourceDone = true));
         return false;
     }
     const auto chunk = std::visit([&](auto&& _obj) { return _obj->value(); }, this->source);
-    (this->current = ::doof_blob::NativeBlobReader::constructor(chunk, ::std_::blob::types::Endian::LittleEndian));
+    static_cast<void>((this->current = ::doof_blob::NativeBlobReader::constructor(chunk, ::std_::blob::types::Endian::LittleEndian)));
     return true;
 }
 void DecodedLineStream::skipLeadingLineFeed() {
@@ -25,9 +25,9 @@ void DecodedLineStream::skipLeadingLineFeed() {
     }
     const auto nextPosition = this->current->getPosition();
     if (this->current->readByte() != 10) {
-        (static_cast<void>(this->current->setPosition(nextPosition)), std::monostate{});
+        this->current->setPosition(nextPosition);
     }
-    (this->skipLeadingLf = false);
+    static_cast<void>((this->skipLeadingLf = false));
 }
 std::string DecodedLineStream::finishPendingLine() {
     const auto lineBytes = this->pendingLine->build();
@@ -40,7 +40,7 @@ std::optional<std::string> DecodedLineStream::flushTrailingLine() {
         if (this->pendingLine->length() == 0LL) {
             return this->current->readString(remaining);
         }
-        (static_cast<void>(this->pendingLine->writeBytes(this->current->readBytes(remaining))), std::monostate{});
+        this->pendingLine->writeBytes(this->current->readBytes(remaining));
     }
     if (this->pendingLine->length() == 0LL) {
         return std::nullopt;
@@ -62,31 +62,31 @@ std::optional<std::string> DecodedLineStream::tryTakeCurrentLine() {
     if (this->pendingLine->length() == 0LL) {
         const auto line = this->current->readString(lineLength);
         if (this->current->readByte() == 13) {
-            (this->skipLeadingLf = true);
+            static_cast<void>((this->skipLeadingLf = true));
         }
         return line;
     }
     if (lineLength > 0LL) {
-        (static_cast<void>(this->pendingLine->writeBytes(this->current->readBytes(lineLength))), std::monostate{});
+        this->pendingLine->writeBytes(this->current->readBytes(lineLength));
     }
     const auto line = finishPendingLine();
     if (this->current->readByte() == 13) {
-        (this->skipLeadingLf = true);
+        static_cast<void>((this->skipLeadingLf = true));
     }
     return line;
 }
 void DecodedLineStream::moveCurrentRemainderToPending() {
     const auto remaining = this->current->remaining();
     if (remaining > 0LL) {
-        (static_cast<void>(this->pendingLine->writeBytes(this->current->readBytes(remaining))), std::monostate{});
+        this->pendingLine->writeBytes(this->current->readBytes(remaining));
     }
 }
 bool DecodedLineStream::next() {
     while (true) {
-        (static_cast<void>(skipLeadingLineFeed()), std::monostate{});
+        skipLeadingLineFeed();
         const auto candidate = tryTakeCurrentLine();
         if (!doof::is_null(candidate)) {
-            (this->currentValue = candidate);
+            static_cast<void>((this->currentValue = candidate));
             return true;
         }
         if (this->sourceDone) {
@@ -94,16 +94,16 @@ bool DecodedLineStream::next() {
             if (doof::is_null(trailing)) {
                 return false;
             }
-            (this->currentValue = trailing);
+            static_cast<void>((this->currentValue = trailing));
             return true;
         }
-        (static_cast<void>(moveCurrentRemainderToPending()), std::monostate{});
+        moveCurrentRemainderToPending();
         if (!loadNextChunk()) {
             const auto trailing = flushTrailingLine();
             if (doof::is_null(trailing)) {
                 return false;
             }
-            (this->currentValue = trailing);
+            static_cast<void>((this->currentValue = trailing));
             return true;
         }
     }

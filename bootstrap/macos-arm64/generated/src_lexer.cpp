@@ -48,13 +48,13 @@ std::string tokenValue(Token token, const std::string& source) {
     auto index = 0;
     while (index < static_cast<int32_t>(raw.size())) {
         if ((doof::string_at(raw, index, "src/lexer", 175) == U'\\') && ((index + 1) < static_cast<int32_t>(raw.size()))) {
-            (index = (index + 1));
-            (value = (value + decodeEscapeCharacter(doof::string_at(raw, index, "src/lexer", 177))));
-            (index = (index + 1));
+            static_cast<void>((index = (index + 1)));
+            static_cast<void>((value = (value + decodeEscapeCharacter(doof::string_at(raw, index, "src/lexer", 177)))));
+            static_cast<void>((index = (index + 1)));
         } else {
             const auto width = utf8SequenceLength(doof::string_at(raw, index, "src/lexer", 180));
-            (value = (value + doof::string_substring(raw, index, (index + width))));
-            (index = (index + width));
+            static_cast<void>((value = (value + doof::string_substring(raw, index, (index + width)))));
+            static_cast<void>((index = (index + width)));
         }
     }
     return value;
@@ -223,7 +223,7 @@ TokenType keywordType(const std::string& word) {
 }
 
 std::shared_ptr<std::vector<Token>> Lexer::tokenize() {
-    (static_cast<void>(this->tokens->reserve(((static_cast<int32_t>(this->source.size()) / 2) + 16))), std::monostate{});
+    this->tokens->reserve(((static_cast<int32_t>(this->source.size()) / 2) + 16));
     if (((static_cast<int32_t>(this->source.size()) >= 2) && (doof::string_at(this->source, 0, "src/lexer", 283) == U'\u0023')) && (doof::string_at(this->source, 1, "src/lexer", 283) == U'\u0021')) {
         while ((this->pos < static_cast<int32_t>(this->source.size())) && (peek(0) != U'\n')) {
             advance();
@@ -232,67 +232,67 @@ std::shared_ptr<std::vector<Token>> Lexer::tokenize() {
     while (this->pos < static_cast<int32_t>(this->source.size())) {
         if (this->tagMode == std::string("children")) {
             if ((peek(0) == U'\u003C') && (peek(1) == U'\u002F')) {
-                (static_cast<void>(emit(TokenType::Less, this->line, this->column, this->pos, 1)), std::monostate{});
-                (static_cast<void>(emit(TokenType::Slash, this->line, this->column, this->pos, 1)), std::monostate{});
-                (this->tagMode = std::string("closing-tag"));
+                emit(TokenType::Less, this->line, this->column, this->pos, 1);
+                emit(TokenType::Slash, this->line, this->column, this->pos, 1);
+                static_cast<void>((this->tagMode = std::string("closing-tag")));
                 continue;
             }
             if ((peek(0) == U'\u003C') && isIdentStart(peek(1))) {
-                (static_cast<void>(beginTag()), std::monostate{});
+                beginTag();
                 continue;
             }
             if (peek(0) == U'\u007B') {
-                (static_cast<void>(beginTagExpression()), std::monostate{});
+                beginTagExpression();
                 continue;
             }
-            (static_cast<void>(readTagText()), std::monostate{});
+            readTagText();
             continue;
         }
         if ((this->tagMode == std::string("opening-tag")) || (this->tagMode == std::string("closing-tag"))) {
-            (static_cast<void>(skipWhitespaceAndComments()), std::monostate{});
+            skipWhitespaceAndComments();
             if (this->pos >= static_cast<int32_t>(this->source.size())) {
                 break;
             }
             if ((this->tagMode == std::string("opening-tag")) && (peek(0) == U'\u007B')) {
-                (static_cast<void>(beginTagExpression()), std::monostate{});
+                beginTagExpression();
                 continue;
             }
             if (((this->tagMode == std::string("opening-tag")) && (this->tagAttributeDelimiterDepth == 0)) && (peek(0) == U'\u003C')) {
-                (this->tagGenericDepth = (this->tagGenericDepth + 1));
-                (static_cast<void>(emit(TokenType::Less, this->line, this->column, this->pos, 1)), std::monostate{});
+                static_cast<void>((this->tagGenericDepth = (this->tagGenericDepth + 1)));
+                emit(TokenType::Less, this->line, this->column, this->pos, 1);
                 continue;
             }
             if (((peek(0) == U'\u003E') && (this->tagAttributeDelimiterDepth == 0)) && (this->tagGenericDepth > 0)) {
-                (this->tagGenericDepth = (this->tagGenericDepth - 1));
-                (static_cast<void>(emit(TokenType::Greater, this->line, this->column, this->pos, 1)), std::monostate{});
+                static_cast<void>((this->tagGenericDepth = (this->tagGenericDepth - 1)));
+                emit(TokenType::Greater, this->line, this->column, this->pos, 1);
                 continue;
             }
             if ((peek(0) == U'\u003E') && (this->tagAttributeDelimiterDepth == 0)) {
-                (static_cast<void>(emit(TokenType::Greater, this->line, this->column, this->pos, 1)), std::monostate{});
-                (this->tagAttributeDelimiterDepth = 0);
+                emit(TokenType::Greater, this->line, this->column, this->pos, 1);
+                static_cast<void>((this->tagAttributeDelimiterDepth = 0));
                 if (this->tagMode == std::string("closing-tag")) {
-                    (this->tagMode = [&]() -> std::string { auto _try_value = doof::array_pop(this->tagModeStack); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 327, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }());
+                    static_cast<void>((this->tagMode = [&]() -> std::string { auto _try_value = doof::array_pop(this->tagModeStack); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 327, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }()));
                 } else if ((static_cast<int32_t>((this->tokens)->size()) >= 2) && (doof::array_at(this->tokens, (static_cast<int32_t>((this->tokens)->size()) - 2), "src/lexer", 328).kind == TokenType::Slash)) {
-                    (this->tagMode = [&]() -> std::string { auto _try_value = doof::array_pop(this->tagModeStack); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 329, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }());
+                    static_cast<void>((this->tagMode = [&]() -> std::string { auto _try_value = doof::array_pop(this->tagModeStack); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 329, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }()));
                 } else {
-                    (this->tagMode = std::string("children"));
+                    static_cast<void>((this->tagMode = std::string("children")));
                 }
                 continue;
             }
             if (this->tagMode == std::string("opening-tag")) {
                 if ((peek(0) == U'\u0028') || (peek(0) == U'\u005B')) {
-                    (this->tagAttributeDelimiterDepth = (this->tagAttributeDelimiterDepth + 1));
+                    static_cast<void>((this->tagAttributeDelimiterDepth = (this->tagAttributeDelimiterDepth + 1)));
                 } else if (((peek(0) == U'\u0029') || (peek(0) == U'\u005D')) && (this->tagAttributeDelimiterDepth > 0)) {
-                    (this->tagAttributeDelimiterDepth = (this->tagAttributeDelimiterDepth - 1));
+                    static_cast<void>((this->tagAttributeDelimiterDepth = (this->tagAttributeDelimiterDepth - 1)));
                 }
             }
         }
-        (static_cast<void>(skipWhitespaceAndComments()), std::monostate{});
+        skipWhitespaceAndComments();
         if (this->pos >= static_cast<int32_t>(this->source.size())) {
             break;
         }
         if (((((this->tagMode == std::string("code")) || (this->tagMode == std::string("tag-expression"))) && (peek(0) == U'\u003C')) && isIdentStart(peek(1))) && canStartTag()) {
-            (static_cast<void>(beginTag()), std::monostate{});
+            beginTag();
             continue;
         }
         if (((static_cast<int32_t>((this->templateDelimiters)->size()) > 0) && (peek(0) == U'\u007D')) && (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 352) == 0)) {
@@ -300,53 +300,53 @@ std::shared_ptr<std::vector<Token>> Lexer::tokenize() {
             const auto ignoredBrace = [&]() -> int32_t { auto _try_value = doof::array_pop(this->braceDepth); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 354, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
             const auto ignoredLine = [&]() -> int32_t { auto _try_value = doof::array_pop(this->interpolationLines); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 355, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
             const auto ignoredColumn = [&]() -> int32_t { auto _try_value = doof::array_pop(this->interpolationColumns); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 356, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
-            (static_cast<void>(readTemplateContinuation()), std::monostate{});
+            readTemplateContinuation();
             continue;
         }
         if ((this->tagMode == std::string("tag-expression")) && (peek(0) == U'\u007D')) {
             const auto index = (static_cast<int32_t>((this->tagExpressionDepths)->size()) - 1);
             if (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 363) == 0) {
-                (static_cast<void>(emit(TokenType::RightBrace, this->line, this->column, this->pos, 1)), std::monostate{});
+                emit(TokenType::RightBrace, this->line, this->column, this->pos, 1);
                 const auto ignoredDepth = [&]() -> int32_t { auto _try_value = doof::array_pop(this->tagExpressionDepths); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 365, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
-                (this->tagMode = [&]() -> std::string { auto _try_value = doof::array_pop(this->tagModeStack); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 366, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }());
+                static_cast<void>((this->tagMode = [&]() -> std::string { auto _try_value = doof::array_pop(this->tagModeStack); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 366, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }()));
                 continue;
             }
-            (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 369) = (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 369) - 1));
+            static_cast<void>((doof::array_at(this->tagExpressionDepths, index, "src/lexer", 369) = (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 369) - 1)));
         } else if ((this->tagMode == std::string("tag-expression")) && (peek(0) == U'\u007B')) {
             const auto index = (static_cast<int32_t>((this->tagExpressionDepths)->size()) - 1);
-            (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 372) = (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 372) + 1));
+            static_cast<void>((doof::array_at(this->tagExpressionDepths, index, "src/lexer", 372) = (doof::array_at(this->tagExpressionDepths, index, "src/lexer", 372) + 1)));
         }
         const auto ch = peek(0);
         if ((ch == U'\u0022') || (ch == U'\u0060')) {
-            (static_cast<void>(readQuoted(ch)), std::monostate{});
+            readQuoted(ch);
         } else if (ch == U'\'') {
-            (static_cast<void>(readChar()), std::monostate{});
+            readChar();
         } else if (isDigit(ch)) {
-            (static_cast<void>(readNumber()), std::monostate{});
+            readNumber();
         } else if (isIdentStart(ch)) {
-            (static_cast<void>(readIdentifier()), std::monostate{});
+            readIdentifier();
         } else {
-            (static_cast<void>(readOperatorOrPunctuation()), std::monostate{});
+            readOperatorOrPunctuation();
         }
     }
     if (static_cast<int32_t>((this->braceDepth)->size()) > 0) {
-        (static_cast<void>(diagnostic(std::string("Unterminated string interpolation"), doof::array_at(this->interpolationLines, (static_cast<int32_t>((this->interpolationLines)->size()) - 1), "src/lexer", 390), doof::array_at(this->interpolationColumns, (static_cast<int32_t>((this->interpolationColumns)->size()) - 1), "src/lexer", 390))), std::monostate{});
+        diagnostic(std::string("Unterminated string interpolation"), doof::array_at(this->interpolationLines, (static_cast<int32_t>((this->interpolationLines)->size()) - 1), "src/lexer", 390), doof::array_at(this->interpolationColumns, (static_cast<int32_t>((this->interpolationColumns)->size()) - 1), "src/lexer", 390));
     }
-    (static_cast<void>(addToken(TokenType::EndOfFile, this->pos, 0, this->pos, 0, false, this->line, this->column)), std::monostate{});
+    addToken(TokenType::EndOfFile, this->pos, 0, this->pos, 0, false, this->line, this->column);
     return this->tokens;
 }
 void Lexer::beginTag() {
-    (static_cast<void>(this->tagModeStack->push_back(this->tagMode)), std::monostate{});
-    (static_cast<void>(emit(TokenType::TagOpen, this->line, this->column, this->pos, 1)), std::monostate{});
-    (this->tagMode = std::string("opening-tag"));
-    (this->tagGenericDepth = 0);
-    (this->tagAttributeDelimiterDepth = 0);
+    this->tagModeStack->push_back(this->tagMode);
+    emit(TokenType::TagOpen, this->line, this->column, this->pos, 1);
+    static_cast<void>((this->tagMode = std::string("opening-tag")));
+    static_cast<void>((this->tagGenericDepth = 0));
+    static_cast<void>((this->tagAttributeDelimiterDepth = 0));
 }
 void Lexer::beginTagExpression() {
-    (static_cast<void>(this->tagModeStack->push_back(this->tagMode)), std::monostate{});
-    (static_cast<void>(this->tagExpressionDepths->push_back(0)), std::monostate{});
-    (static_cast<void>(emit(TokenType::LeftBrace, this->line, this->column, this->pos, 1)), std::monostate{});
-    (this->tagMode = std::string("tag-expression"));
+    this->tagModeStack->push_back(this->tagMode);
+    this->tagExpressionDepths->push_back(0);
+    emit(TokenType::LeftBrace, this->line, this->column, this->pos, 1);
+    static_cast<void>((this->tagMode = std::string("tag-expression")));
 }
 void Lexer::readTagText() {
     const auto start = this->pos;
@@ -356,7 +356,7 @@ void Lexer::readTagText() {
         advance();
     }
     if (this->pos > start) {
-        (static_cast<void>(addToken(TokenType::TagText, start, (this->pos - start), start, (this->pos - start), false, tokenLine, tokenColumn)), std::monostate{});
+        addToken(TokenType::TagText, start, (this->pos - start), start, (this->pos - start), false, tokenLine, tokenColumn);
     }
 }
 bool Lexer::canStartTag() {
@@ -377,20 +377,20 @@ char32_t Lexer::peek(int32_t offset) {
 }
 char32_t Lexer::advance() {
     const auto ch = doof::string_at(this->source, this->pos, "src/lexer", 443);
-    (this->pos = (this->pos + 1));
+    static_cast<void>((this->pos = (this->pos + 1)));
     if (ch == U'\n') {
-        (this->line = (this->line + 1));
-        (this->column = 1);
+        static_cast<void>((this->line = (this->line + 1)));
+        static_cast<void>((this->column = 1));
     } else {
-        (this->column = (this->column + 1));
+        static_cast<void>((this->column = (this->column + 1)));
     }
     return ch;
 }
 void Lexer::addToken(TokenType kind, int32_t tokenOffset, int32_t tokenLength, int32_t valueOffset, int32_t valueLength, bool needsDecode, int32_t tokenLine, int32_t tokenColumn) {
-    (static_cast<void>(this->tokens->push_back(Token{kind, tokenLength, valueOffset, valueLength, needsDecode, tokenLine, tokenColumn, tokenOffset})), std::monostate{});
+    this->tokens->push_back(Token{kind, tokenLength, valueOffset, valueLength, needsDecode, tokenLine, tokenColumn, tokenOffset});
 }
 void Lexer::diagnostic(const std::string& message, int32_t diagnosticLine, int32_t diagnosticColumn) {
-    (static_cast<void>(this->diagnostics->push_back(LexerDiagnostic{std::string("error"), message, diagnosticLine, diagnosticColumn})), std::monostate{});
+    this->diagnostics->push_back(LexerDiagnostic{std::string("error"), message, diagnosticLine, diagnosticColumn});
 }
 void Lexer::skipWhitespaceAndComments() {
     while (this->pos < static_cast<int32_t>(this->source.size())) {
@@ -411,13 +411,13 @@ void Lexer::skipWhitespaceAndComments() {
                 if ((peek(0) == U'\u002A') && (peek(1) == U'\u002F')) {
                     advance();
                     advance();
-                    (terminated = true);
+                    static_cast<void>((terminated = true));
                     break;
                 }
                 advance();
             }
             if (!terminated) {
-                (static_cast<void>(diagnostic(std::string("Unterminated block comment"), commentLine, commentColumn)), std::monostate{});
+                diagnostic(std::string("Unterminated block comment"), commentLine, commentColumn);
             }
         } else {
             break;
@@ -451,7 +451,7 @@ void Lexer::readDigits(int32_t base) {
         const auto ch = peek(0);
         if (isBaseDigit(ch, base)) {
             advance();
-            (sawDigit = true);
+            static_cast<void>((sawDigit = true));
         } else if (ch == U'\u005F') {
             if (sawDigit && isBaseDigit(peek(1), base)) {
                 advance();
@@ -461,7 +461,7 @@ void Lexer::readDigits(int32_t base) {
                 while (peek(0) == U'\u005F') {
                     advance();
                 }
-                (static_cast<void>(diagnostic(std::string("Numeric separators must appear between digits"), separatorLine, separatorColumn)), std::monostate{});
+                diagnostic(std::string("Numeric separators must appear between digits"), separatorLine, separatorColumn);
             }
         } else {
             break;
@@ -475,41 +475,41 @@ void Lexer::readNumber() {
     if ((peek(0) == U'\u0030') && ((peek(1) == U'\u0078') || (peek(1) == U'\u0058'))) {
         advance();
         advance();
-        (static_cast<void>(readDigits(16)), std::monostate{});
-        (static_cast<void>(readNumericSuffix(start, this->pos, tokenLine, tokenColumn)), std::monostate{});
+        readDigits(16);
+        readNumericSuffix(start, this->pos, tokenLine, tokenColumn);
         return;
     }
     if ((peek(0) == U'\u0030') && ((peek(1) == U'\u0062') || (peek(1) == U'\u0042'))) {
         advance();
         advance();
-        (static_cast<void>(readDigits(2)), std::monostate{});
-        (static_cast<void>(readNumericSuffix(start, this->pos, tokenLine, tokenColumn)), std::monostate{});
+        readDigits(2);
+        readNumericSuffix(start, this->pos, tokenLine, tokenColumn);
         return;
     }
-    (static_cast<void>(readDigits(10)), std::monostate{});
+    readDigits(10);
     if (((peek(0) == U'\u002E') && (peek(1) != U'\u002E')) && (peek(1) != U'\u003C')) {
         advance();
-        (static_cast<void>(readDigits(10)), std::monostate{});
+        readDigits(10);
         const auto valueEnd = this->pos;
         if ((peek(0) == U'\u0066') || (peek(0) == U'\u0046')) {
             advance();
-            (static_cast<void>(addToken(TokenType::FloatLiteral, start, (this->pos - start), start, (valueEnd - start), false, tokenLine, tokenColumn)), std::monostate{});
+            addToken(TokenType::FloatLiteral, start, (this->pos - start), start, (valueEnd - start), false, tokenLine, tokenColumn);
         } else {
-            (static_cast<void>(addToken(TokenType::DoubleLiteral, start, (this->pos - start), start, (valueEnd - start), false, tokenLine, tokenColumn)), std::monostate{});
+            addToken(TokenType::DoubleLiteral, start, (this->pos - start), start, (valueEnd - start), false, tokenLine, tokenColumn);
         }
         return;
     }
-    (static_cast<void>(readNumericSuffix(start, this->pos, tokenLine, tokenColumn)), std::monostate{});
+    readNumericSuffix(start, this->pos, tokenLine, tokenColumn);
 }
 void Lexer::readNumericSuffix(int32_t valueStart, int32_t valueEnd, int32_t tokenLine, int32_t tokenColumn) {
     if ((peek(0) == U'\u004C') || (peek(0) == U'\u006C')) {
         advance();
-        (static_cast<void>(addToken(TokenType::LongLiteral, valueStart, (this->pos - valueStart), valueStart, (valueEnd - valueStart), false, tokenLine, tokenColumn)), std::monostate{});
+        addToken(TokenType::LongLiteral, valueStart, (this->pos - valueStart), valueStart, (valueEnd - valueStart), false, tokenLine, tokenColumn);
     } else if ((peek(0) == U'\u0066') || (peek(0) == U'\u0046')) {
         advance();
-        (static_cast<void>(addToken(TokenType::FloatLiteral, valueStart, (this->pos - valueStart), valueStart, (valueEnd - valueStart), false, tokenLine, tokenColumn)), std::monostate{});
+        addToken(TokenType::FloatLiteral, valueStart, (this->pos - valueStart), valueStart, (valueEnd - valueStart), false, tokenLine, tokenColumn);
     } else {
-        (static_cast<void>(addToken(TokenType::IntLiteral, valueStart, (this->pos - valueStart), valueStart, (valueEnd - valueStart), false, tokenLine, tokenColumn)), std::monostate{});
+        addToken(TokenType::IntLiteral, valueStart, (this->pos - valueStart), valueStart, (valueEnd - valueStart), false, tokenLine, tokenColumn);
     }
 }
 void Lexer::readIdentifier() {
@@ -522,13 +522,13 @@ void Lexer::readIdentifier() {
     auto value = doof::string_substring(this->source, start, this->pos);
     if ((value == std::string("try")) && ((peek(0) == U'\u0021') || (peek(0) == U'\u003F'))) {
         advance();
-        (static_cast<void>(addToken(TokenType::Identifier, start, (this->pos - start), start, (this->pos - start), false, tokenLine, tokenColumn)), std::monostate{});
+        addToken(TokenType::Identifier, start, (this->pos - start), start, (this->pos - start), false, tokenLine, tokenColumn);
         return;
     }
     if (value == std::string("_")) {
-        (static_cast<void>(addToken(TokenType::Underscore, start, (this->pos - start), start, (this->pos - start), false, tokenLine, tokenColumn)), std::monostate{});
+        addToken(TokenType::Underscore, start, (this->pos - start), start, (this->pos - start), false, tokenLine, tokenColumn);
     } else {
-        (static_cast<void>(addToken(keywordType(value), start, (this->pos - start), start, (this->pos - start), false, tokenLine, tokenColumn)), std::monostate{});
+        addToken(keywordType(value), start, (this->pos - start), start, (this->pos - start), false, tokenLine, tokenColumn);
     }
 }
 void Lexer::readQuoted(char32_t delimiter) {
@@ -541,17 +541,17 @@ void Lexer::readQuoted(char32_t delimiter) {
     auto closed = false;
     while ((this->pos < static_cast<int32_t>(this->source.size())) && (peek(0) != delimiter)) {
         if ((peek(0) == U'\u0024') && (peek(1) == U'\u007B')) {
-            (static_cast<void>(addToken(TokenType::TemplateLiteralStart, start, (this->pos - start), contentStart, (this->pos - contentStart), needsDecode, tokenLine, tokenColumn)), std::monostate{});
-            (static_cast<void>(this->interpolationLines->push_back(this->line)), std::monostate{});
-            (static_cast<void>(this->interpolationColumns->push_back(this->column)), std::monostate{});
+            addToken(TokenType::TemplateLiteralStart, start, (this->pos - start), contentStart, (this->pos - contentStart), needsDecode, tokenLine, tokenColumn);
+            this->interpolationLines->push_back(this->line);
+            this->interpolationColumns->push_back(this->column);
             advance();
             advance();
-            (static_cast<void>(this->templateDelimiters->push_back(delimiter)), std::monostate{});
-            (static_cast<void>(this->braceDepth->push_back(0)), std::monostate{});
+            this->templateDelimiters->push_back(delimiter);
+            this->braceDepth->push_back(0);
             return;
         }
         if (peek(0) == U'\\') {
-            (needsDecode = true);
+            static_cast<void>((needsDecode = true));
             advance();
             advance();
         } else {
@@ -560,15 +560,15 @@ void Lexer::readQuoted(char32_t delimiter) {
     }
     if (this->pos < static_cast<int32_t>(this->source.size())) {
         advance();
-        (closed = true);
+        static_cast<void>((closed = true));
     } else {
-        (static_cast<void>(diagnostic(std::string("Unterminated string literal"), tokenLine, tokenColumn)), std::monostate{});
+        diagnostic(std::string("Unterminated string literal"), tokenLine, tokenColumn);
     }
     auto valueEnd = this->pos;
     if (closed) {
-        (valueEnd = (this->pos - 1));
+        static_cast<void>((valueEnd = (this->pos - 1)));
     }
-    (static_cast<void>(addToken(TokenType::StringLiteral, start, (this->pos - start), contentStart, (valueEnd - contentStart), needsDecode, tokenLine, tokenColumn)), std::monostate{});
+    addToken(TokenType::StringLiteral, start, (this->pos - start), contentStart, (valueEnd - contentStart), needsDecode, tokenLine, tokenColumn);
 }
 void Lexer::readTemplateContinuation() {
     const auto start = this->pos;
@@ -580,16 +580,16 @@ void Lexer::readTemplateContinuation() {
     auto closed = false;
     while ((this->pos < static_cast<int32_t>(this->source.size())) && (peek(0) != delimiter)) {
         if ((peek(0) == U'\u0024') && (peek(1) == U'\u007B')) {
-            (static_cast<void>(addToken(TokenType::TemplateLiteralMiddle, start, (this->pos - start), contentStart, (this->pos - contentStart), needsDecode, tokenLine, tokenColumn)), std::monostate{});
-            (static_cast<void>(this->interpolationLines->push_back(this->line)), std::monostate{});
-            (static_cast<void>(this->interpolationColumns->push_back(this->column)), std::monostate{});
+            addToken(TokenType::TemplateLiteralMiddle, start, (this->pos - start), contentStart, (this->pos - contentStart), needsDecode, tokenLine, tokenColumn);
+            this->interpolationLines->push_back(this->line);
+            this->interpolationColumns->push_back(this->column);
             advance();
             advance();
-            (static_cast<void>(this->braceDepth->push_back(0)), std::monostate{});
+            this->braceDepth->push_back(0);
             return;
         }
         if (peek(0) == U'\\') {
-            (needsDecode = true);
+            static_cast<void>((needsDecode = true));
             advance();
             advance();
         } else {
@@ -598,16 +598,16 @@ void Lexer::readTemplateContinuation() {
     }
     if (this->pos < static_cast<int32_t>(this->source.size())) {
         advance();
-        (closed = true);
+        static_cast<void>((closed = true));
     } else {
-        (static_cast<void>(diagnostic(std::string("Unterminated template literal"), tokenLine, tokenColumn)), std::monostate{});
+        diagnostic(std::string("Unterminated template literal"), tokenLine, tokenColumn);
     }
     auto valueEnd = this->pos;
     if (closed) {
-        (valueEnd = (this->pos - 1));
+        static_cast<void>((valueEnd = (this->pos - 1)));
     }
     const auto ignoredDelimiter = [&]() -> char32_t { auto _try_value = doof::array_pop(this->templateDelimiters); if (doof::is_failure(_try_value)) doof::panic_at("src/lexer", 685, std::string("try! failed") + std::string(": ") + doof::failure_error(_try_value)); return std::move(doof::success_value(_try_value)); }();
-    (static_cast<void>(addToken(TokenType::TemplateLiteralEnd, start, (this->pos - start), contentStart, (valueEnd - contentStart), needsDecode, tokenLine, tokenColumn)), std::monostate{});
+    addToken(TokenType::TemplateLiteralEnd, start, (this->pos - start), contentStart, (valueEnd - contentStart), needsDecode, tokenLine, tokenColumn);
 }
 void Lexer::readChar() {
     const auto start = this->pos;
@@ -617,7 +617,7 @@ void Lexer::readChar() {
     const auto valueStart = this->pos;
     auto needsDecode = false;
     if (peek(0) == U'\\') {
-        (needsDecode = true);
+        static_cast<void>((needsDecode = true));
         advance();
         advance();
     } else if (this->pos < static_cast<int32_t>(this->source.size())) {
@@ -625,14 +625,14 @@ void Lexer::readChar() {
         auto consumed = 0;
         while ((consumed < width) && (this->pos < static_cast<int32_t>(this->source.size()))) {
             advance();
-            (consumed = (consumed + 1));
+            static_cast<void>((consumed = (consumed + 1)));
         }
     }
     const auto valueEnd = this->pos;
     if ((this->pos < static_cast<int32_t>(this->source.size())) && (peek(0) == U'\'')) {
         advance();
     }
-    (static_cast<void>(addToken(TokenType::CharLiteral, start, (this->pos - start), valueStart, (valueEnd - valueStart), needsDecode, tokenLine, tokenColumn)), std::monostate{});
+    addToken(TokenType::CharLiteral, start, (this->pos - start), valueStart, (valueEnd - valueStart), needsDecode, tokenLine, tokenColumn);
 }
 void Lexer::emit(TokenType kind, int32_t tokenLine, int32_t tokenColumn, int32_t start, int32_t count) {
     if (count > 0) {
@@ -656,7 +656,7 @@ void Lexer::emit(TokenType kind, int32_t tokenLine, int32_t tokenColumn, int32_t
     if (count > 6) {
         advance();
     }
-    (static_cast<void>(addToken(kind, start, count, start, count, false, tokenLine, tokenColumn)), std::monostate{});
+    addToken(kind, start, count, start, count, false, tokenLine, tokenColumn);
 }
 void Lexer::readOperatorOrPunctuation() {
     const auto start = this->pos;
@@ -664,222 +664,222 @@ void Lexer::readOperatorOrPunctuation() {
     const auto tokenColumn = this->column;
     const auto ch = peek(0);
     if (ch == U'\u0028') {
-        (static_cast<void>(emit(TokenType::LeftParen, tokenLine, tokenColumn, start, 1)), std::monostate{});
+        emit(TokenType::LeftParen, tokenLine, tokenColumn, start, 1);
         return;
     }
     if (ch == U'\u0029') {
-        (static_cast<void>(emit(TokenType::RightParen, tokenLine, tokenColumn, start, 1)), std::monostate{});
+        emit(TokenType::RightParen, tokenLine, tokenColumn, start, 1);
         return;
     }
     if (ch == U'\u007B') {
         advance();
         if (static_cast<int32_t>((this->braceDepth)->size()) > 0) {
-            (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 736) = (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 736) + 1));
+            static_cast<void>((doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 736) = (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 736) + 1)));
         }
-        (static_cast<void>(addToken(TokenType::LeftBrace, start, 1, start, 1, false, tokenLine, tokenColumn)), std::monostate{});
+        addToken(TokenType::LeftBrace, start, 1, start, 1, false, tokenLine, tokenColumn);
         return;
     }
     if (ch == U'\u007D') {
         advance();
         if (static_cast<int32_t>((this->braceDepth)->size()) > 0) {
-            (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 742) = (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 742) - 1));
+            static_cast<void>((doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 742) = (doof::array_at(this->braceDepth, (static_cast<int32_t>((this->braceDepth)->size()) - 1), "src/lexer", 742) - 1)));
         }
-        (static_cast<void>(addToken(TokenType::RightBrace, start, 1, start, 1, false, tokenLine, tokenColumn)), std::monostate{});
+        addToken(TokenType::RightBrace, start, 1, start, 1, false, tokenLine, tokenColumn);
         return;
     }
     if (ch == U'\u005B') {
-        (static_cast<void>(emit(TokenType::LeftBracket, tokenLine, tokenColumn, start, 1)), std::monostate{});
+        emit(TokenType::LeftBracket, tokenLine, tokenColumn, start, 1);
         return;
     }
     if (ch == U'\u005D') {
-        (static_cast<void>(emit(TokenType::RightBracket, tokenLine, tokenColumn, start, 1)), std::monostate{});
+        emit(TokenType::RightBracket, tokenLine, tokenColumn, start, 1);
         return;
     }
     if (ch == U'\u002C') {
-        (static_cast<void>(emit(TokenType::Comma, tokenLine, tokenColumn, start, 1)), std::monostate{});
+        emit(TokenType::Comma, tokenLine, tokenColumn, start, 1);
         return;
     }
     if (ch == U'\u003B') {
-        (static_cast<void>(emit(TokenType::Semicolon, tokenLine, tokenColumn, start, 1)), std::monostate{});
+        emit(TokenType::Semicolon, tokenLine, tokenColumn, start, 1);
         return;
     }
     if (ch == U'\u007E') {
-        (static_cast<void>(emit(TokenType::Tilde, tokenLine, tokenColumn, start, 1)), std::monostate{});
+        emit(TokenType::Tilde, tokenLine, tokenColumn, start, 1);
         return;
     }
     if (ch == U'\u002E') {
         if ((peek(1) == U'\u002E') && (peek(2) == U'\u002E')) {
-            (static_cast<void>(emit(TokenType::Ellipsis, tokenLine, tokenColumn, start, 3)), std::monostate{});
+            emit(TokenType::Ellipsis, tokenLine, tokenColumn, start, 3);
         } else if ((peek(1) == U'\u002E') && (peek(2) == U'\u003C')) {
-            (static_cast<void>(emit(TokenType::DotDotLess, tokenLine, tokenColumn, start, 3)), std::monostate{});
+            emit(TokenType::DotDotLess, tokenLine, tokenColumn, start, 3);
         } else if (peek(1) == U'\u002E') {
-            (static_cast<void>(emit(TokenType::DotDot, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::DotDot, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Dot, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Dot, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u003A') {
         if (peek(1) == U'\u003A') {
-            (static_cast<void>(emit(TokenType::DoubleColon, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::DoubleColon, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::ColonEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::ColonEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Colon, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Colon, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u003D') {
         if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::EqualEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::EqualEqual, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u003E') {
-            (static_cast<void>(emit(TokenType::Arrow, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::Arrow, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Equal, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Equal, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u002B') {
         if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::PlusEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::PlusEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Plus, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Plus, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u002D') {
         if (peek(1) == U'\u003E') {
-            (static_cast<void>(emit(TokenType::RightArrow, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::RightArrow, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::MinusEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::MinusEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Minus, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Minus, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u002A') {
         if ((peek(1) == U'\u002A') && (peek(2) == U'\u003D')) {
-            (static_cast<void>(emit(TokenType::StarStarEqual, tokenLine, tokenColumn, start, 3)), std::monostate{});
+            emit(TokenType::StarStarEqual, tokenLine, tokenColumn, start, 3);
         } else if (peek(1) == U'\u002A') {
-            (static_cast<void>(emit(TokenType::StarStar, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::StarStar, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::StarEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::StarEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Star, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Star, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u002F') {
         if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::SlashEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::SlashEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Slash, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Slash, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u0025') {
         if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::PercentEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::PercentEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Percent, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Percent, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\\') {
         if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::BackslashEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::BackslashEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Backslash, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Backslash, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u0026') {
         if (peek(1) == U'\u0026') {
-            (static_cast<void>(emit(TokenType::AmpersandAmpersand, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::AmpersandAmpersand, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::AmpersandEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::AmpersandEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Ampersand, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Ampersand, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u007C') {
         if (peek(1) == U'\u007C') {
-            (static_cast<void>(emit(TokenType::PipePipe, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::PipePipe, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::PipeEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::PipeEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Pipe, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Pipe, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u005E') {
         if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::CaretEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::CaretEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Caret, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Caret, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u003C') {
         if ((peek(1) == U'\u003C') && (peek(2) == U'\u003D')) {
-            (static_cast<void>(emit(TokenType::LessLessEqual, tokenLine, tokenColumn, start, 3)), std::monostate{});
+            emit(TokenType::LessLessEqual, tokenLine, tokenColumn, start, 3);
         } else if (peek(1) == U'\u003C') {
-            (static_cast<void>(emit(TokenType::LessLess, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::LessLess, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u002D') {
-            (static_cast<void>(emit(TokenType::LeftArrow, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::LeftArrow, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::LessEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::LessEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Less, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Less, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u003E') {
         if (((peek(1) == U'\u003E') && (peek(2) == U'\u003E')) && (peek(3) == U'\u003D')) {
-            (static_cast<void>(emit(TokenType::GreaterGreaterEqual, tokenLine, tokenColumn, start, 4)), std::monostate{});
+            emit(TokenType::GreaterGreaterEqual, tokenLine, tokenColumn, start, 4);
         } else if ((peek(1) == U'\u003E') && (peek(2) == U'\u003E')) {
-            (static_cast<void>(emit(TokenType::GreaterGreaterGreater, tokenLine, tokenColumn, start, 3)), std::monostate{});
+            emit(TokenType::GreaterGreaterGreater, tokenLine, tokenColumn, start, 3);
         } else if ((peek(1) == U'\u003E') && (peek(2) == U'\u003D')) {
-            (static_cast<void>(emit(TokenType::GreaterGreaterEqual, tokenLine, tokenColumn, start, 3)), std::monostate{});
+            emit(TokenType::GreaterGreaterEqual, tokenLine, tokenColumn, start, 3);
         } else if (peek(1) == U'\u003E') {
-            (static_cast<void>(emit(TokenType::GreaterGreater, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::GreaterGreater, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::GreaterEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::GreaterEqual, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Greater, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Greater, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u0021') {
         if (peek(1) == U'\u003D') {
-            (static_cast<void>(emit(TokenType::BangEqual, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::BangEqual, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u002E') {
-            (static_cast<void>(emit(TokenType::BangDot, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::BangDot, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Bang, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Bang, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if (ch == U'\u003F') {
         if ((peek(1) == U'\u003F') && (peek(2) == U'\u003D')) {
-            (static_cast<void>(emit(TokenType::QuestionQuestionEqual, tokenLine, tokenColumn, start, 3)), std::monostate{});
+            emit(TokenType::QuestionQuestionEqual, tokenLine, tokenColumn, start, 3);
         } else if (peek(1) == U'\u003F') {
-            (static_cast<void>(emit(TokenType::QuestionQuestion, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::QuestionQuestion, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u002E') {
-            (static_cast<void>(emit(TokenType::QuestionDot, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::QuestionDot, tokenLine, tokenColumn, start, 2);
         } else if (peek(1) == U'\u005B') {
-            (static_cast<void>(emit(TokenType::QuestionBracket, tokenLine, tokenColumn, start, 2)), std::monostate{});
+            emit(TokenType::QuestionBracket, tokenLine, tokenColumn, start, 2);
         } else {
-            (static_cast<void>(emit(TokenType::Identifier, tokenLine, tokenColumn, start, 1)), std::monostate{});
+            emit(TokenType::Identifier, tokenLine, tokenColumn, start, 1);
         }
         return;
     }
     if ((((ch == U'\u0040') && ((this->pos + 7) <= static_cast<int32_t>(this->source.size()))) && (doof::string_substring(this->source, this->pos, (this->pos + 7)) == std::string("@caller"))) && !isIdentPart(peek(7))) {
-        (static_cast<void>(emit(TokenType::CallerIntrinsic, tokenLine, tokenColumn, start, 7)), std::monostate{});
+        emit(TokenType::CallerIntrinsic, tokenLine, tokenColumn, start, 7);
         return;
     }
-    (static_cast<void>(diagnostic(((std::string("Unexpected character: '") + doof::to_string(ch)) + std::string("'")), this->line, this->column)), std::monostate{});
+    diagnostic(((std::string("Unexpected character: '") + doof::to_string(ch)) + std::string("'")), this->line, this->column);
     advance();
 }
 }
