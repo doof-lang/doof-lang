@@ -40,47 +40,6 @@ namespace doof {
 
 [[noreturn]] inline void panic(const std::string& msg);
 
-// ============================================================================
-// Metrics — process-local counters
-// ============================================================================
-
-namespace metrics {
-
-inline std::unordered_map<std::string, int64_t> _counters;
-inline std::mutex _counters_mutex;
-
-inline void increment_counter(const std::string& key, int64_t value) {
-    std::lock_guard<std::mutex> lock(_counters_mutex);
-    _counters[key] += value;
-}
-
-inline std::vector<std::pair<std::string, int64_t>> snapshot_pairs() {
-    std::vector<std::pair<std::string, int64_t>> snapshot;
-    {
-        std::lock_guard<std::mutex> lock(_counters_mutex);
-        snapshot.reserve(_counters.size());
-        for (const auto& item : _counters) {
-            snapshot.push_back(item);
-        }
-    }
-
-    std::sort(snapshot.begin(), snapshot.end(), [](const auto& a, const auto& b) {
-        return a.first < b.first;
-    });
-    return snapshot;
-}
-
-inline std::string snapshot_prometheus() {
-    const auto snapshot = snapshot_pairs();
-    std::ostringstream out;
-    for (const auto& item : snapshot) {
-        out << item.first << " " << item.second << "\n";
-    }
-    return out.str();
-}
-
-} // namespace metrics
-
 /* __DOOF_OBSERVER_RUNTIME_SUPPORT__ */
 
 // ============================================================================
@@ -132,12 +91,6 @@ public:
 inline void assert_(bool condition, const std::string& message) {
     if (!condition) {
         panic("Assertion failed: " + message);
-    }
-}
-
-inline void assert_at(const char* file, int32_t line, bool condition, const std::string& message) {
-    if (!condition) {
-        panic_at(file, line, "Assertion failed: " + message);
     }
 }
 
@@ -1488,13 +1441,6 @@ T json_decode_value(Result<T, std::string> result) {
     return std::move(success_value(result));
 }
 
-template <typename T>
-T json_decode_optional(std::optional<T> value, std::string message) {
-    if (!value.has_value()) throw JsonDecodeError(std::move(message));
-    return std::move(value.value());
-}
-
-
 // ============================================================================
 // String utilities
 // ============================================================================
@@ -1753,15 +1699,6 @@ inline std::string string_toLowerCase(const std::string& s) {
     return result;
 }
 
-inline std::string string_replace(const std::string& s, const std::string& search, const std::string& replacement) {
-    if (search.empty()) return s;
-    auto pos = s.find(search);
-    if (pos == std::string::npos) return s;
-    std::string result = s;
-    result.replace(pos, search.size(), replacement);
-    return result;
-}
-
 inline std::string string_replaceAll(const std::string& s, const std::string& search, const std::string& replacement) {
     if (search.empty()) return s;
     std::string result = s;
@@ -1946,16 +1883,6 @@ void array_require_min_size(const std::shared_ptr<std::vector<T>>& arr, int32_t 
 }
 
 template <typename T>
-void array_reserve(const std::shared_ptr<std::vector<T>>& arr, int32_t capacity) {
-    if (!arr) {
-        panic("Attempted to reserve capacity on a null array");
-    }
-    if (capacity > 0) {
-        arr->reserve(static_cast<size_t>(capacity));
-    }
-}
-
-template <typename T>
 Result<T, std::string> array_pop(const std::shared_ptr<std::vector<T>>& arr) {
     if (!arr) {
         return Failure<std::string>{"Attempted to pop from null array"};
@@ -2080,11 +2007,6 @@ std::shared_ptr<std::vector<T>> array_drainToReadonly(const std::shared_ptr<std:
 }
 
 template <typename T>
-std::shared_ptr<std::vector<T>> array_buildReadonly(const std::shared_ptr<std::vector<T>>& arr, const char* file, int32_t line) {
-    return array_drainToReadonly(arr, file, line);
-}
-
-template <typename T>
 std::shared_ptr<std::vector<T>> array_cloneReadonly(const std::shared_ptr<std::vector<T>>& arr, const char* file, int32_t line) {
     if (!arr) {
         panic_at(file, line, "Attempted to cloneReadonly from null array");
@@ -2179,11 +2101,6 @@ std::shared_ptr<ordered_map<K, V>> map_drainToReadonly(const std::shared_ptr<ord
 }
 
 template <typename K, typename V>
-std::shared_ptr<ordered_map<K, V>> map_buildReadonly(const std::shared_ptr<ordered_map<K, V>>& m, const char* file, int32_t line) {
-    return map_drainToReadonly(m, file, line);
-}
-
-template <typename K, typename V>
 std::shared_ptr<ordered_map<K, V>> map_cloneReadonly(const std::shared_ptr<ordered_map<K, V>>& m, const char* file, int32_t line) {
     if (!m) {
         panic_at(file, line, "Attempted to cloneReadonly from null map");
@@ -2223,11 +2140,6 @@ std::shared_ptr<ordered_set<T>> set_drainToReadonly(const std::shared_ptr<ordere
     s->clear();
     result->validate_invariants("set_drainToReadonly result");
     return result;
-}
-
-template <typename T>
-std::shared_ptr<ordered_set<T>> set_buildReadonly(const std::shared_ptr<ordered_set<T>>& s, const char* file, int32_t line) {
-    return set_drainToReadonly(s, file, line);
 }
 
 template <typename T>
@@ -2728,11 +2640,6 @@ struct ClassMetadata {
         return invoke(*instance, methodName, params);
     }
 };
-
-template <typename T>
-const doof::ClassMetadata<metadata_inner_t<T>>& metadata_for(const T&) {
-    return metadata_inner_t<T>::_metadata;
-}
 
 template <typename T>
 const doof::ClassMetadata<metadata_inner_t<T>>& metadata_for_type() {
