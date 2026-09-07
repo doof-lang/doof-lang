@@ -1,3 +1,5 @@
+import { Assert as EditorAssert } from "std/assert"
+import { Parser as EditorParser } from "./parser"
 import { Assert } from "std/assert"
 import { CallExpression, ConstructExpression, ExpressionStatement } from "./ast"
 import { parse } from "./parser"
@@ -22,4 +24,11 @@ export function testUppercaseSpacedConstructionParsing(): none {
     construction := statement.expression as ConstructExpression else { panic("expected construction") }
     Assert.equal(construction.type_, "View")
   }
+}
+
+export function testEditorPostfixRecoveryKeepsLiteralReceiver(): none {
+  parser := EditorParser { source: "function main(): none {\n\"name\".\n}", editorMode: true }
+  program := parser.parse()
+  EditorAssert.equal(program.statements.length, 1)
+  EditorAssert.equal(parser.issues.length, 1)
 }

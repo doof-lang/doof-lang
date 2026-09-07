@@ -394,3 +394,19 @@ export function testPhaseTimingsAnalyzerRecordsDiscoveryAndResolution(): none {
   Assert.equal(timings.entries[0].name, "analysis.load-parse-discover")
   Assert.equal(timings.entries[1].name, "analysis.resolve")
 }
+
+export function testSerialAnalyzerResetsDiscoveryAndPreservesPhysicalPaths(): none {
+  analyzer := createAnalyzer([
+    SourceFile { path: "/first.do", physicalPath: "/workspace/first.do", source: "export function first(): int => 1" },
+    SourceFile { path: "/second.do", source: "export function second(): int => 2" },
+  ])
+  analyzer.serialParsing = true
+  first := analyzer.analyze("/first.do")
+  Assert.equal(first.diagnostics.length, 0)
+  Assert.equal(first.modules.length, 1)
+  Assert.equal(first.modules[0].physicalPath, "/workspace/first.do")
+  second := analyzer.analyze("/second.do")
+  Assert.equal(second.diagnostics.length, 0)
+  Assert.equal(second.modules.length, 1)
+  Assert.equal(second.modules[0].path, "/second.do")
+}

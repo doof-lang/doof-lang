@@ -1,3 +1,4 @@
+import { Assert as EditorAssert } from "std/assert"
 import { Assert } from "std/assert"
 import { Lexer, TokenType, charTokenValue, tokenValue } from "./lexer"
 import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
@@ -219,4 +220,14 @@ export function testDiagnostics(): none {
   lexer.tokenize()
   Assert.equal(lexer.diagnostics.length, 1)
   Assert.equal(lexer.diagnostics[0].message, "Unterminated block comment")
+}
+
+export function testEditorLexerRetainsCommentTriviaWithoutChangingTokens(): none {
+  source := "/* preserve\n * indentation */\nfunction main(): none {} // tail"
+  ordinary := Lexer { source }.tokenize()
+  editor := Lexer { source, retainTrivia: true }
+  tokens := editor.tokenize()
+  EditorAssert.equal(tokens.length, ordinary.length)
+  EditorAssert.equal(editor.trivia.length, 2)
+  EditorAssert.equal(source.substring(editor.trivia[0].start, editor.trivia[0].end), "/* preserve\n * indentation */")
 }

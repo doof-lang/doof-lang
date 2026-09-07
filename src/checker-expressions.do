@@ -1,3 +1,4 @@
+import { retainEditorScope } from "./checker-common"
 // Expression dispatch, operators, narrowing, and assignment checking.
 
 import { checkArguments, positionalArguments } from "./checker-arguments"
@@ -298,6 +299,8 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
 }
 
 export function checkExpression(state: CheckerState, expression: Expression, scope: Scope, expected: ResolvedType | none): ResolvedType {
+  retainEditorScope(state, scope, expression.span)
+  if state.editorMode { state.info!.editorExpressions.push(expression) }
   case expression {
     yieldBlock: YieldBlockExpression -> {
       yieldScope := Scope {
@@ -419,6 +422,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         }
         _ -> { objectType = checkExpression(state, member.object, scope, none) }
       }
+      if member.completionPoint { return finish(state, expression, unknownType()) }
       if namespaceMember != none {
         selected := CheckedMember { type_: namespaceMember }
         if member.resolvedNamespaceSymbol != none {

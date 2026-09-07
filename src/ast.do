@@ -176,6 +176,7 @@ export class CheckedMember {
 }
 
 export class MemberExpression {
+  completionPoint: bool = false
   kind: string
   object: Expression
   property: string

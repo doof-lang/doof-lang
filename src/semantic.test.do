@@ -1,3 +1,6 @@
+import { Assert as EditorAssert } from "std/assert"
+import { analyzeEditor as editorAnalysis } from "./editor-incremental"
+import { SourceFile as EditorSource } from "./semantic"
 import { SemanticTypeIdentities } from "./semantic-type-identities"
 import { Assert } from "std/assert"
 import { Scope } from "./semantic"
@@ -20,4 +23,11 @@ export function testTypeLoweringMetadataDoesNotChangeSemanticEquality(): none {
   identities.identify(first)
   Assert.isTrue(sameType(first, second))
   Assert.equal(second.emissionIdentity, none)
+}
+
+export function testEditorSemanticRetainsCheckedGraphWithScopes(): none {
+  result := editorAnalysis([EditorSource { path: "/main.do", source: "function main(): int { value := 42; return value }" }], "/main.do")
+  EditorAssert.equal(result.diagnostics.length, 0)
+  EditorAssert.isTrue(result.analysis.modules[0].editorScopes.length > 0)
+  EditorAssert.isTrue(result.analysis.modules[0].editorExpressions.length > 0)
 }

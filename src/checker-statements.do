@@ -1,3 +1,4 @@
+import { retainEditorScope } from "./checker-common"
 // Statement, declaration, scope, and control-flow checking.
 
 import {
@@ -47,6 +48,7 @@ import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterfac
 import { checkerSemanticSpan } from "./checker-validation"
 
 export function checkStatement(state: CheckerState, statement: Statement, scope: Scope, inLoop: bool = false): bool {
+  retainEditorScope(state, scope, statement.span)
   case statement {
     const_: ConstDeclaration -> { return checkValueDeclaration(state, const_, scope, "const", false, inLoop) }
     readonly_: ReadonlyDeclaration -> { return checkValueDeclaration(state, readonly_, scope, "readonly", false, inLoop) }
@@ -828,6 +830,7 @@ export function checkReturn(state: CheckerState, statement: ReturnStatement, sco
 
 export function checkBlock(state: CheckerState, block: Block, parent: Scope, inLoop: bool = false): bool {
   scope := Scope { parent }
+  retainEditorScope(state, scope, block.span)
   let completes = true
   let retiredActors: Binding[] = []
   for statement of block.statements {

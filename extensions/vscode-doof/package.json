@@ -1,0 +1,115 @@
+{
+  "name": "doof-language",
+  "displayName": "Doof",
+  "description": "Compiler-powered language intelligence and development tools for Doof",
+  "version": "0.2.6",
+  "publisher": "doof-lang",
+  "license": "ISC",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters",
+    "Testing"
+  ],
+  "main": "./out/extension.cjs",
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Language intelligence is available; native build, run, and tests require trust."
+    }
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "doof",
+        "aliases": [
+          "Doof",
+          "doof"
+        ],
+        "extensions": [
+          ".do"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "doof",
+        "scopeName": "source.doof",
+        "path": "./syntaxes/doof.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "doof.build",
+        "title": "Doof: Build Project"
+      },
+      {
+        "command": "doof.run",
+        "title": "Doof: Run Project"
+      },
+      {
+        "command": "doof.restart",
+        "title": "Doof: Restart Language Service"
+      },
+      {
+        "command": "doof.versions",
+        "title": "Doof: Show Toolchain Versions"
+      },
+      {
+        "command": "doof.selectCompiler",
+        "title": "Doof: Select Native Compiler"
+      }
+    ],
+    "configuration": {
+      "title": "Doof",
+      "properties": {
+        "doof.compilerPath": {
+          "type": "string",
+          "default": "doof",
+          "scope": "machine-overridable",
+          "description": "Native Doof compiler used for build, run, and tests."
+        },
+        "doof.indentSize": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 8,
+          "description": "Spaces per indentation level for explicit formatting."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "node scripts/build-extension.ts",
+    "build:service": "node scripts/build-service.ts",
+    "check": "tsc --noEmit",
+    "test": "node --test src/*.test.ts",
+    "package": "node scripts/verify-artifacts.ts && npm run compile && vsce package --allow-missing-repository",
+    "test:extension": "node scripts/test-extension.ts",
+    "test:parity": "node scripts/test-parity.ts",
+    "benchmark": "node src/wasm-benchmark.ts artifacts/service.wasm",
+    "test:server": "npm run compile && node scripts/test-server.ts",
+    "test:native": "node scripts/test-native.ts"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12",
+    "vscode-uri": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.100.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.6.1",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.3"
+  },
+  "type": "module"
+}

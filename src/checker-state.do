@@ -4,6 +4,7 @@ import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { Diagnostic, Scope } from "./semantic"
 
 export class CheckerState {
+  let editorMode: bool = false
   result: AnalysisResult
   entry: string = ""
   entryMode: string = "executable"

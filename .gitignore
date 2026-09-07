@@ -8,3 +8,11 @@ dist/
 .doof/
 .reckon/
 
+
+# VS Code extension build products
+extensions/vscode-doof/node_modules/
+extensions/vscode-doof/out/
+extensions/vscode-doof/artifacts/
+extensions/vscode-doof/*.vsix
+
+extensions/vscode-doof/.vscode-test/

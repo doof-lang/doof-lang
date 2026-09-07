@@ -204,8 +204,10 @@ isolated function parsePostfix(parser: Parser): Expression {
       optional := parser.check(TokenType.QuestionDot)
       force := parser.check(TokenType.BangDot)
       parser.advance()
-      property := parser.text(parser.expect(TokenType.Identifier, "Expected member name"))
-      expression = MemberExpression { kind: "member-expression", object: expression, property, optional, force, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
+      completionPoint := parser.editorMode && !parser.check(TokenType.Identifier)
+      property := if completionPoint then "" else parser.text(parser.expect(TokenType.Identifier, "Expected member name"))
+      if completionPoint { parser.reportIssue("Expected member name") }
+      expression = MemberExpression { kind: "member-expression", object: expression, property, optional, force, completionPoint, span: SourceSpan { start: expression.span.start, end: parser.previousEnd() } }
       typeArgs = []
     } else if (parser.check(TokenType.LeftBracket) || parser.check(TokenType.QuestionBracket)) && parser.sameLineAsPrevious() {
       optional := parser.check(TokenType.QuestionBracket)
@@ -327,8 +329,10 @@ isolated function parsePrimary(parser: Parser): Expression {
     }
     if parser.check(TokenType.Dot) {
       parser.advance()
-      property := parser.text(parser.expect(TokenType.Identifier, "Expected member name"))
-      return MemberExpression { kind: "member-expression", object: Identifier { kind: "identifier", name, span: identifierSpan }, property, optional: false, force: false, span: parser.span(start) }
+      completionPoint := parser.editorMode && !parser.check(TokenType.Identifier)
+      property := if completionPoint then "" else parser.text(parser.expect(TokenType.Identifier, "Expected member name"))
+      if completionPoint { parser.reportIssue("Expected member name") }
+      return MemberExpression { kind: "member-expression", object: Identifier { kind: "identifier", name, span: identifierSpan }, property, optional: false, force: false, completionPoint, span: parser.span(start) }
     }
     let typeArgs: TypeAnnotation[] = []
     if startsWithUppercase(name) && parser.check(TokenType.Less) && looksLikeGenericTypeArguments(parser) {

@@ -249,3 +249,30 @@ Coverage source-page paths are mapped component by component inside the report's
 components become `_external`, and punctuation or marker-name collisions are
 escaped. The same mapping drives summary links and filesystem writes; the driver
 creates the index directory even for an empty report.
+
+## Editor service and desktop extension
+
+- `frontend.do`: shared analysis/checking orchestration and retained graph;
+  no emission or driver dependencies.
+- `editor-incremental.do`: conservative invalidation and module ownership transfer.
+- `editor-model.do`, `editor-index.do`: ABI records, precise name spans, binding
+  identities, checked references, scopes, and declaration documentation.
+- `editor-query.do`, `editor-completion.do`, `editor-signature.do`,
+  `editor-symbols.do`: semantic queries over checked snapshots and workspace
+  declaration search, including incomplete editor contexts.
+- `editor-autoimport.do`: cached exported declarations, stdlib/workspace
+  auto-import candidates, and collision-checked import insertion/merging.
+- `editor-rename.do`, `editor-actions.do`, `editor-format.do`: validated rename,
+  unique missing-import fixes, and token/trivia-preserving indentation.
+- `editor-wasm.do`: JSON reactor facade and single-worker snapshot ownership.
+- `test-discovery.do`: shared parser-based test discovery; `test-runner.do` owns
+  harnesses and execution support. `driver.do` exposes JSON discovery/results and
+  exact-ID selection for native workflows.
+- `extensions/vscode-doof`: TypeScript LSP/VS Code adapters, worker hosting,
+  packaging scripts, language registration, and desktop integration tests. This
+  is the scoped exception to the repository's JavaScript tooling prohibition.
+- `tools/editor-parity.do`: native oracle for identical Wasm ABI fixtures.
+
+Generated Wasm, bundled matching stdlib sources, JavaScript output, npm packages,
+VSIX files, and development profiles remain ignored. The extension build never
+changes the reviewed bootstrap snapshot.

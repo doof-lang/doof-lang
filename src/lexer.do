@@ -258,8 +258,15 @@ function keywordType(word: string): TokenType {
   return TokenType.Identifier
 }
 
+export class LexerTrivia {
+  start: int
+  end: int
+}
+
 export class Lexer {
   readonly source: string
+  retainTrivia: bool = false
+  trivia: LexerTrivia[] = []
   let pos: int = 0
   let line: int = 1
   let column: int = 1
@@ -470,8 +477,11 @@ export class Lexer {
       if ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n' {
         advance()
       } else if ch == '/' && peek(1) == '/' {
+        start := pos
         while pos < source.length && peek() != '\n' { advance() }
+        if retainTrivia { trivia.push(LexerTrivia { start, end: pos }) }
       } else if ch == '/' && peek(1) == '*' {
+        start := pos
         commentLine := line
         commentColumn := column
         advance()
@@ -486,6 +496,7 @@ export class Lexer {
           }
           advance()
         }
+        if retainTrivia { trivia.push(LexerTrivia { start, end: pos }) }
         if !terminated {
           diagnostic("Unterminated block comment", commentLine, commentColumn)
         }

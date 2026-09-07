@@ -1,3 +1,4 @@
+import { Assert as EditorAssert } from "std/assert"
 import { Assert } from "std/assert"
 import { parseCli } from "./cli"
 
@@ -225,4 +226,22 @@ export function testRecognizesHelp(): none {
     Assert.equal(result.error, "")
     Assert.equal(result.request == none, true)
   }
+}
+
+export function testEditorCliStructuredTestOptions(): none {
+  parsed := parseCli(["test", "src", "--exact-filter", "file.test.do::testOne", "--report-json", "report.json"])
+  EditorAssert.equal(parsed.error, "")
+  EditorAssert.isTrue(parsed.request!.exactFilter)
+  EditorAssert.equal(parsed.request!.reportJson, "report.json")
+  EditorAssert.isTrue(parseCli(["--version"]).version)
+  EditorAssert.isTrue(parseCli(["build", ".", "--json"]).request == none)
+}
+
+export function testBatchSelectionCli(): none {
+  parsed := parseCli(["test", "src", "--selection-json", "selected.json", "--report-json", "results.json"])
+  Assert.equal(parsed.error, "")
+  Assert.equal(parsed.request!.selectionJson, "selected.json")
+  Assert.equal(parseCli(["test", "src", "--selection-json"]).error, "missing value for --selection-json")
+  Assert.isTrue(parseCli(["build", ".", "--selection-json", "ids.json"]).request == none)
+  Assert.isTrue(parseCli(["test", "src", "--selection-json", "ids.json", "--filter", "one"]).request == none)
 }

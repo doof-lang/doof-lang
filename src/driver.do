@@ -1,3 +1,5 @@
+import { compilerVersion } from "./version"
+import { formatJsonValue } from "std/json"
 // Runnable Doof compiler driver.
 //
 // The driver keeps filesystem access at the native-runtime boundary.  The
@@ -49,7 +51,7 @@ import {
 import { StdlibPreparationTarget, prepareStdlibPackage } from "./stdlib-preparation"
 import {
   CoverageModuleMetadata, CoverageReport, DiscoveredTest, buildCoverageReport, discoverModuleTests,
-  coverageFileRelativePath, filterDiscoveredTests, formatParseFailure, generateTestHarness, groupTestsForCompilation,
+  coverageFileRelativePath, selectTestsFromJson, filterDiscoveredTests, formatParseFailure, generateTestHarness, groupTestsForCompilation,
   mergeCoverageOutput, renderCoverageFileHtml, renderCoverageHtml, renderCoverageJson, selectedTestsForExecution,
   stripCoverageLines, testDisplayPath,
 } from "./test-runner"
@@ -1166,7 +1168,24 @@ function testRequest(request: CliRequest): int {
     for test of discovery.tests { discovered.push(test) }
   }
   discovered = sortedDiscoveredTests(discovered)
-  selected := filterDiscoveredTests(discovered, request.filter)
+  let selected = filterDiscoveredTests(discovered, request.filter, request.exactFilter)
+  if request.selectionJson != "" {
+    selectionSource := readText(request.selectionJson) else {
+      println("error: Could not read test selection: " + request.selectionJson)
+      return 1
+    }
+    exactSelection := selectTestsFromJson(discovered, selectionSource) else error {
+      println("error: " + error)
+      return 1
+    }
+    selected = exactSelection
+  }
+  if request.listOnly && request.jsonOutput {
+    let values: JsonValue[] = []
+    for test of selected { values.push(test.toJsonObject()) }
+    println(formatJsonValue(values))
+    return 0
+  }
   if selected.length == 0 {
     suffix := if request.filter == "" then "" else " matching \"" + request.filter + "\""
     println("error: No tests found under " + target + suffix)
@@ -1194,6 +1213,7 @@ function testRequest(request: CliRequest): int {
     projectLocks.push(projectLock)
   }
 
+  let resultValues: JsonValue[] = []
   let passed = 0
   let failed = 0
   let coverageModules: CoverageModuleMetadata[] = []
@@ -1241,7 +1261,16 @@ function testRequest(request: CliRequest): int {
       println("error: " + error)
       return 1
     }
-    result := compileWithLoader([], driverRootLogicalPath(harnessPath, project.rootDirectory, project.name), loader, namespaceMappings, "executable", request.coverage)
+    entry := driverRootLogicalPath(harnessPath, project.rootDirectory, project.name)
+    configuration := frontendConfigurationFingerprint(entry, "executable", project.target, project.manifest, stdlibRoot, hostPlatform(), testPreparationTarget)
+    cachePath := frontendCachePath(outputDirectory, "emission")
+    previous := readFrontendState(cachePath)
+    cacheAllowed := !request.coverage && frontendEmissionCacheSupported(project.target)
+    cached := if cacheAllowed && previous != none && frontendStateMatches(previous, configuration, loader)
+      then cachedModuleGraph(previous!, outputDirectory) else none
+    result := if cached != none then Compilation { emission: cached!, diagnostics: [] }
+      else compileWithLoader([], entry, loader, namespaceMappings, "executable", request.coverage)
+    if cached != none { println("REUSE frontend " + group.outputName) }
     if result.diagnostics.length > 0 { printDiagnostics(result.diagnostics) }
     if hasErrorDiagnostics(result.diagnostics) { return 1 }
     if result.emission == none { panic("test compiler produced no emission") }
@@ -1254,6 +1283,11 @@ function testRequest(request: CliRequest): int {
     if request.coverage { emission.nativeBuild.defines.push("DOOF_COVERAGE") }
     materializeProject(outputDirectory, emission)
     materializeRuntimeHeader(outputDirectory)
+    if cacheAllowed && cached == none && result.diagnostics.length == 0 {
+      next := frontendStateForCompilation(result, configuration, rootManifest)
+      removeStaleFrontendOutputs(previous, next, outputDirectory)
+      writeFrontendState(cachePath, next)
+    }
     binary := joinPath(outputDirectory, if wasmTests then "doof-tests.wasm" else "doof-tests")
     println("BUILD " + group.outputName)
     buildExitCode := buildNativeProject(
@@ -1332,12 +1366,22 @@ function testRequest(request: CliRequest): int {
         if testResult.truncated { println("... test output capture truncated after " + string(MAX_NATIVE_COMPILER_OUTPUT_BYTES) + " bytes") }
       }
       exitCode := testResult.exitCode
+      if request.reportJson != "" {
+        value := structuredTestResult(test.id, exitCode, BlobReader(testResult.output).readString(long(testResult.output.length)))
+        resultValues.push(value)
+      }
       if exitCode == 0 {
         passed = passed + 1
       } else {
         failed = failed + 1
         println("FAIL " + test.id)
       }
+    }
+  }
+  if request.reportJson != "" {
+    _ := writeText(request.reportJson, formatJsonValue(resultValues)) else error {
+      println("error: Could not write test report: " + request.reportJson)
+      return 1
     }
   }
   println("Tests finished: " + string(passed) + " passed, " + string(failed) + " failed")
@@ -1677,6 +1721,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
 
 function main(args: string[]): int {
   parsed := parseCli(args)
+  if parsed.version { println("doof " + compilerVersion); return 0 }
   if parsed.help {
     println(cliUsage())
     return 0
@@ -1689,3 +1734,5 @@ function main(args: string[]): int {
   if parsed.request!.command == "test" { return testRequest(parsed.request!) }
   return emitRequest(parsed.request!)
 }
+
+export function structuredTestResult(id: string, exitCode: int, output: string): Map<string, JsonValue> => { "id": id, "exitCode": exitCode, "output": output }

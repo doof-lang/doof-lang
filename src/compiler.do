@@ -6,15 +6,14 @@ import { discoverInstantiations } from "./checked-instantiations"
 // the project emitter would turn a front-end omission into a C++ failure.
 
 import { PhaseTimings } from "./phase-timings"
-import { AnalysisResult, ModuleInfo, createAnalyzerWithLoader } from "./analyzer"
+import { analyzeWithLoader } from "./frontend"
 import { emitModuleGraph, ModuleEmissionCacheKey, ModuleGraphEmission } from "./emitter-module"
 import { nameInstantiations } from "./emitter-monomorphize"
 import { emitWasmSupport, WasmEmission } from "./emitter-wasm"
 import { ModuleNamespaceMapping, prepareModuleNames } from "./emitter-names"
-import { createChecker, ModuleChecker, validateCheckedTypes, validateDeepReadonlyFields, validateIsolationEffects } from "./checker"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { SourceLoader, noSourceLoader } from "./resolver"
-import { CheckResult, Diagnostic, SemanticLocation, SemanticSpan, SourceFile } from "./semantic"
+import { Diagnostic, SemanticLocation, SemanticSpan, SourceFile } from "./semantic"
 
 export class Compilation {
   emission: ModuleGraphEmission | none
@@ -69,42 +68,12 @@ function compileInternal(
   physicalSourcePaths: bool = false,
   timings: PhaseTimings = PhaseTimings {},
 ): Compilation {
-  analyzer := createAnalyzerWithLoader(sources, loader)
-  analysisStart := timings.start()
-  analysis := analyzer.analyze(entry, timings)
-  timings.finish("compiler.analysis", analysisStart)
-  checkingStart := timings.start()
-  let diagnostics: Diagnostic[] = []
-  for diagnostic of analysis.diagnostics { diagnostics.push(diagnostic) }
-
-  if !hasErrorDiagnostics(diagnostics) {
-    moduleCheckStart := timings.start()
-    checker := createChecker(analysis, entry, entryMode)
-    let checkedPaths: string[] = []
-    let visitingPaths: string[] = []
-    for module of analysis.modules {
-      checkModuleDependencies(module.path, analysis, checker, checkedPaths, visitingPaths, diagnostics)
-    }
-    timings.finish("checking.modules", moduleCheckStart)
-    readonlyStart := timings.start()
-    for diagnostic of validateDeepReadonlyFields(analysis) { diagnostics.push(diagnostic) }
-    timings.finish("checking.deep-readonly", readonlyStart)
-    isolationStart := timings.start()
-    for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
-    timings.finish("checking.isolation", isolationStart)
+  frontend := analyzeWithLoader(sources, entry, loader, entryMode, timings)
+  analysis := frontend.analysis
+  diagnostics := frontend.diagnostics
+  if hasErrorDiagnostics(diagnostics) || !emit {
+    return Compilation { emission: none, diagnostics, sourceFiles: frontend.sourceFiles, resolutionProbes: frontend.resolutionProbes }
   }
-
-  timings.finish("compiler.checking", checkingStart)
-  if hasErrorDiagnostics(diagnostics) {
-    return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
-  }
-  validationStart := timings.start()
-  for diagnostic of validateCheckedTypes(analysis) { diagnostics.push(diagnostic) }
-  timings.finish("compiler.checked-type-validation", validationStart)
-  if hasErrorDiagnostics(diagnostics) {
-    return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
-  }
-  if !emit { return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths } }
   paths: string[] := []
   for module of analysis.modules { paths.push(module.path) }
   names := prepareModuleNames(namespaceMappings, paths)
@@ -126,7 +95,7 @@ function compileInternal(
       span: SemanticSpan { start: zero, end: zero },
       module: entry,
     })
-    return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
+    return Compilation { emission: none, diagnostics, sourceFiles: frontend.sourceFiles, resolutionProbes: frontend.resolutionProbes }
   }
   let wasmEmission: WasmEmission | none = none
   if entryMode == "wasm" {
@@ -135,7 +104,7 @@ function compileInternal(
       timings.finish("compiler.wasm", wasmStart)
       zero := SemanticLocation { line: 0, column: 0, offset: 0 }
       diagnostics.push(Diagnostic { severity: "error", message, span: SemanticSpan { start: zero, end: zero }, module: entry })
-      return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
+      return Compilation { emission: none, diagnostics, sourceFiles: frontend.sourceFiles, resolutionProbes: frontend.resolutionProbes }
     }
     timings.finish("compiler.wasm", wasmStart)
     wasmEmission = wasm
@@ -150,42 +119,5 @@ function compileInternal(
     emission.wasmSupportSource = wasmEmission!.source
     emission.wasmExportNames = wasmEmission!.exportNames
   }
-  return Compilation { emission, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
-}
-
-// Analyzer discovery order is driven by import syntax, not by a fixed source
-// list.  Check dependencies first so imported class declarations are fully
-// decorated before callers construct or inspect them.
-function checkModuleDependencies(
-  path: string,
-  analysis: AnalysisResult,
-  checker: ModuleChecker,
-  checkedPaths: string[],
-  visitingPaths: string[],
-  diagnostics: Diagnostic[],
-): none {
-  if containsPath(checkedPaths, path) || containsPath(visitingPaths, path) { return }
-  module := findAnalysisModule(analysis, path)
-  if module == none { return }
-  visitingPaths.push(path)
-  for imported of module!.imports {
-    checkModuleDependencies(imported.sourceModule, analysis, checker, checkedPaths, visitingPaths, diagnostics)
-  }
-  for reExport of module!.reExports {
-    checkModuleDependencies(reExport, analysis, checker, checkedPaths, visitingPaths, diagnostics)
-  }
-  let ignored = try! visitingPaths.pop()
-  checked := checker.check(path)
-  for diagnostic of checked.diagnostics { diagnostics.push(diagnostic) }
-  checkedPaths.push(path)
-}
-
-function containsPath(paths: string[], path: string): bool {
-  for existing of paths { if existing == path { return true } }
-  return false
-}
-
-function findAnalysisModule(result: AnalysisResult, path: string): ModuleInfo | none {
-  for module of result.modules { if module.path == path { return module } }
-  return none
+  return Compilation { emission, diagnostics, sourceFiles: frontend.sourceFiles, resolutionProbes: frontend.resolutionProbes }
 }

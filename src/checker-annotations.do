@@ -33,6 +33,7 @@ export function resolveProvisionalAnnotation(annotation: TypeAnnotation, info: M
 
 function finishAnnotation(resolution: AnnotationResolution, annotation: TypeAnnotation, type_: ResolvedType): ResolvedType {
   if resolution.commit {
+    if resolution.state.editorMode { resolution.state.info!.editorAnnotations.push(annotation) }
     conflict := unionMutabilityConflict(type_)
     if conflict != none { typeError(resolution.state, conflict!, annotation.span) }
     annotation.resolvedType = optionalResolvedType(type_)

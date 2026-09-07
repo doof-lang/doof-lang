@@ -801,3 +801,21 @@ function manifestString(value: JsonValue, manifestPath: string, fieldPath: strin
     _ -> return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must be a string")
   }
 }
+
+/** Source-only package settings for editor hosts; shares dependency validation. */
+export class PackageSourceInputs {
+  entry: string
+  dependencies: PackageDependency[]
+}
+
+export function parsePackageSourceInputs(source: string, manifestPath: string, rootDirectory: string): Result<PackageSourceInputs, string> {
+  try parsed := parseJsonValue(source)
+  try root := manifestObject(parsed, manifestPath, "root")
+  try dependencies := parsePackageDependencies(root, manifestPath, rootDirectory)
+  let entry = "main.do"
+  if manifestJsonHas(root, "build") {
+    try build := manifestObject(manifestJsonField(root, "build"), manifestPath, "build")
+    if manifestJsonHas(build, "entry") { try parsedEntry := manifestString(manifestJsonField(build, "entry"), manifestPath, "build.entry"); entry = parsedEntry }
+  }
+  return Success(PackageSourceInputs { entry, dependencies })
+}

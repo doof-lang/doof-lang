@@ -1,3 +1,4 @@
+import { Assert as EditorAssert } from "std/assert"
 import { Assert } from "std/assert"
 import { Parser, parse } from "./parser"
 import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
@@ -1539,4 +1540,16 @@ export function testParsesTryDestructuringForms(): none {
 export function testInterfaceBoundAdjacentGenericClosers(): none {
   program := parse("interface Reader<V> { read(): V }\nfunction readOne<T: Reader<int>>(value: T): int => value.read()\nfunction shifted(value: int): int => value >> 1")
   Assert.equal(program.statements.length, 3)
+}
+
+export function testEditorParserRecoversMissingClosingBraceButStrictRejects(): none {
+  source := "function main(): none { println(\"x\")"
+  strict := catchPanic(=> Parser { source }.parse())
+  let rejected = false
+  _ := strict else { rejected = true }
+  EditorAssert.isTrue(rejected)
+  editor := Parser { source, editorMode: true }
+  program := editor.parse()
+  EditorAssert.equal(program.statements.length, 1)
+  EditorAssert.equal(editor.issues.length, 1)
 }

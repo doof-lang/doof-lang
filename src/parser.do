@@ -27,8 +27,15 @@ import {
   Statement, Expression, TypeAnnotation, AstLocation, SourceSpan,
 } from "./ast"
 
+export class ParserIssue {
+  message: string
+  span: SourceSpan
+}
+
 export class Parser {
   readonly source: string
+  editorMode: bool = false
+  let issues: ParserIssue[] = []
   let tokens: Token[] = []
   let pos: int = 0
   let inForIterable: bool = false
@@ -40,17 +47,59 @@ export class Parser {
   let errorOffset: int = 0
 
   parse(): Program {
+    issues = []
     errorMessage = ""
     errorLine = 0
     errorColumn = 0
     errorOffset = 0
     lexer := Lexer { source }
     tokens = lexer.tokenize()
+    if editorMode {
+      for diagnostic of lexer.diagnostics {
+        let offset = 0
+        let sourceLine = 1
+        while offset < source.length && sourceLine < diagnostic.line {
+          if source[offset] == '\n' { sourceLine += 1 }
+          offset += 1
+        }
+        offset += diagnostic.column - 1
+        if offset > source.length { offset = source.length }
+        location := AstLocation { line: diagnostic.line, column: diagnostic.column, offset }
+        issues.push(ParserIssue { message: diagnostic.message, span: SourceSpan { start: location, end: location } })
+      }
+    }
     pos = 0
     start := location()
     let statements: Statement[] = []
-    while !atEnd() { statements.push(parseStatement()) }
+    while !atEnd() { appendStatement(statements) }
     return Program { kind: "program", statements, span: span(start) }
+  }
+
+  // Recovery is opt-in. Strict callers retain the fail-fast parser contract.
+  appendStatement(statements: Statement[], inBlock: bool = false): none {
+    if !editorMode { statements.push(parseStatement()); return }
+    start := pos
+    parsed := catchPanic(=> parseStatement())
+    statement := parsed else failure {
+      if errorMessage == "" { panic(failure) }
+      reportIssue(errorMessage)
+      errorMessage = ""
+      // Make progress, then synchronize at a delimiter or a later source line.
+      if pos == start && !atEnd() { advance() }
+      while !atEnd() {
+        if inBlock && check(TokenType.RightBrace) { break }
+        if match(TokenType.Semicolon) { break }
+        if pos > start && current().line > tokens[start].line { break }
+        advance()
+      }
+      return
+    }
+    statements.push(statement)
+  }
+
+  reportIssue(message: string): none {
+    start := location()
+    issues.push(ParserIssue { message, span: SourceSpan { start, end: start } })
   }
 
   // Shared parser state operations are public to the focused parser modules;
@@ -104,6 +153,10 @@ export class Parser {
     if check(kind) { return advance() }
     let expectedMessage = message
     if expectedMessage == "" { expectedMessage = "Expected " + expectedLabel(kind) + " before '" + currentText() + "'" }
+    if editorMode && atEnd() && (kind == TokenType.RightBrace || kind == TokenType.RightParen || kind == TokenType.RightBracket) {
+      reportIssue(expectedMessage)
+      return current()
+    }
     fail(expectedMessage)
     return current()
   }

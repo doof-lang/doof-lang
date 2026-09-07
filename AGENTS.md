@@ -13,7 +13,9 @@ root, not a second implementation.
 - Treat decorated AST types and bindings as the emitter's semantic input. Do
   not reconstruct checker decisions during emission.
 - Prefer collected diagnostics with source spans over panics for user errors.
-- Use `.js` nowhere in this repository; Doof imports omit file extensions.
+- Doof imports omit file extensions. JavaScript is prohibited outside
+  `extensions/vscode-doof`, where TypeScript tooling and untracked generated
+  JavaScript bundles are permitted for the VS Code extension.
 - Update `spec/` and the Doof language skill when syntax or semantics change.
 - Update architecture/source-structure docs when ownership or lowering changes.
 

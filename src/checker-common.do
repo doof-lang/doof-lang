@@ -1,3 +1,4 @@
+import { EditorScope, Scope } from "./semantic"
 // State-aware diagnostics and expression decoration helpers.
 
 import {
@@ -55,4 +56,8 @@ export function requireBool(state: CheckerState, resolvedType: ResolvedType, spa
     _ -> { }
   }
   if typeName(resolvedType) != "bool" && typeName(resolvedType) != "unknown" { typeError(state, "Expected bool, got " + typeName(resolvedType), span) }
+}
+
+export function retainEditorScope(state: CheckerState, scope: Scope, span: SourceSpan): none {
+  if state.editorMode { state.info!.editorScopes.push(EditorScope { scope, span: checkerSemanticSpan(span) }) }
 }

@@ -11,6 +11,10 @@ export class CliRequest {
   let compiler: string = ""
   let filter: string = ""
   let listOnly: bool = false
+  let exactFilter: bool = false
+  let jsonOutput: bool = false
+  let reportJson: string = ""
+  let selectionJson: string = ""
   let coverage: bool = false
   let coverageOutput: string = ""
   let traceOutput: string = ""
@@ -33,6 +37,7 @@ export class CliParseResult {
   request: CliRequest | none
   error: string = ""
   help: bool = false
+  version: bool = false
 }
 
 export function cliUsage(): string {
@@ -63,6 +68,10 @@ export function cliUsage(): string {
     "  --ios-provisioning-profile <path> provisioning profile for device/package builds\n" +
     "  --filter <text>             run tests whose id contains text\n" +
     "  --list                      list tests without building or running\n" +
+    "  --exact-filter <id>         select one exact test id\n" +
+    "  --json                     output test discovery as JSON (with --list)\n" +
+    "  --selection-json <path>     select exact test ids from a JSON array file\n" +
+    "  --report-json <path>        write structured test results\n" +
     "  --coverage                  collect line coverage while running tests\n" +
     "  --coverage-output <path>    write coverage JSON to this path\n" +
     "  --trace-output <path>       write the profile trace to this .trace path\n" +
@@ -86,6 +95,7 @@ function validProfileTimeLimit(value: string): bool {
 }
 
 export function parseCli(args: string[]): CliParseResult {
+  if args.length == 1 && args[0] == "--version" { return CliParseResult { request: none, version: true } }
   if args.length == 0 { return CliParseResult { request: none, error: "missing command" } }
   if args[0] == "help" || args[0] == "-h" || args[0] == "--help" {
     return CliParseResult { request: none, help: true }
@@ -202,7 +212,17 @@ export function parseCli(args: string[]): CliParseResult {
       index += 2
       continue
     }
-    if argument == "--filter" {
+    if argument == "--json" { request.jsonOutput = true; index += 1; continue }
+    if argument == "--selection-json" {
+      if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --selection-json" } }
+      request.selectionJson = args[index + 1]; index += 2; continue
+    }
+    if argument == "--report-json" {
+      if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --report-json" } }
+      request.reportJson = args[index + 1]; index += 2; continue
+    }
+    if argument == "--exact-filter" { request.exactFilter = true }
+    if argument == "--filter" || argument == "--exact-filter" {
       if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --filter" } }
       request.filter = args[index + 1]
       index = index + 2
@@ -251,5 +271,8 @@ export function parseCli(args: string[]): CliParseResult {
     return CliParseResult { request: none, error: "unknown option '" + argument + "'" }
   }
 
+  if request.jsonOutput && (command != "test" || !request.listOnly) { return CliParseResult { request: none, error: "--json requires test --list" } }
+  if request.selectionJson != "" && (request.filter != "" || request.exactFilter) { return CliParseResult { request: none, error: "--selection-json cannot be combined with --filter or --exact-filter" } }
+  if (request.exactFilter || request.reportJson != "" || request.selectionJson != "") && command != "test" { return CliParseResult { request: none, error: "Exact selection and JSON test reports require the test command" } }
   return CliParseResult { request }
 }

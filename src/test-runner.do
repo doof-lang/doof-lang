@@ -1,3 +1,6 @@
+import { parseJsonValue } from "std/json"
+import { DiscoveredTest, TestDiscovery, discoverModuleTests, testDisplayPath } from "./test-discovery"
+export { DiscoveredTest, TestDiscovery, discoverModuleTests, testDisplayPath } from "./test-discovery"
 // Static test discovery and harness generation for the Doof CLI.
 //
 // Filesystem traversal, native compilation, and process isolation remain in
@@ -27,60 +30,9 @@ export class CoverageReport {
   files: CoverageFileReport[] = []
 }
 
-export class DiscoveredTest {
-  id: string
-  name: string
-  modulePath: string
-  moduleDisplayPath: string
-  usesMocks: bool = false
-}
-
 export class TestCompilationGroup {
   outputName: string
   tests: DiscoveredTest[] = []
-}
-
-export class TestDiscovery {
-  tests: DiscoveredTest[] = []
-  errors: string[] = []
-}
-
-/** Discovers locally defined exported test functions in source order. */
-export function discoverModuleTests(
-  program: Program,
-  modulePath: string,
-  rootDirectory: string,
-): TestDiscovery {
-  result := TestDiscovery {}
-  let usesMocks = false
-  for statement of program.statements {
-    case statement {
-      _: MockImportDirective -> { usesMocks = true }
-      _ -> { }
-    }
-  }
-  for statement of program.statements {
-    case statement {
-      fn: FunctionDeclaration -> {
-        if fn.exported && fn.name.startsWith("test") {
-          addDiscoveredTest(result, fn, fn.name, modulePath, rootDirectory, usesMocks)
-        }
-      }
-      list: ExportList -> {
-        if list.source != none { continue }
-        for specifier of list.specifiers {
-          exportedName := if specifier.alias == none then specifier.name else specifier.alias!
-          if !exportedName.startsWith("test") { continue }
-          declaration := findFunction(program.statements, specifier.name)
-          if declaration != none {
-            addDiscoveredTest(result, declaration!, exportedName, modulePath, rootDirectory, usesMocks)
-          }
-        }
-      }
-      _ -> { }
-    }
-  }
-  return result
 }
 
 /** Shares one graph for ordinary roots while retaining one graph per mock root. */
@@ -109,12 +61,12 @@ export function groupTestsForCompilation(tests: DiscoveredTest[]): TestCompilati
 }
 
 /** Applies the runner's case-insensitive substring filter to ids. */
-export function filterDiscoveredTests(tests: DiscoveredTest[], filter: string): DiscoveredTest[] {
+export function filterDiscoveredTests(tests: DiscoveredTest[], filter: string, exact: bool = false): DiscoveredTest[] {
   if filter == "" { return copyTests(tests) }
   needle := filter.toLowerCase()
   let selected: DiscoveredTest[] = []
   for test of tests {
-    if test.id.toLowerCase().contains(needle) { selected.push(test) }
+    if (exact && test.id == filter) || (!exact && test.id.toLowerCase().contains(needle)) { selected.push(test) }
   }
   return selected
 }
@@ -165,14 +117,6 @@ function safeGroupName(value: string): string {
 }
 
 /** Returns a stable slash-separated path beneath the requested test root. */
-export function testDisplayPath(rootDirectory: string, modulePath: string): string {
-  root := trimTrailingSlashes(rootDirectory.replaceAll("\\", "/"))
-  module := modulePath.replaceAll("\\", "/")
-  prefix := root + "/"
-  if module.startsWith(prefix) { return module.substring(prefix.length, module.length) }
-  return module
-}
-
 /** Renders a source-oriented parse diagnostic without requiring compiler IO. */
 export function formatParseFailure(
   modulePath: string,
@@ -394,60 +338,6 @@ function escapeHtml(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;").replaceAll("'", "&#39;")
 }
 
-function addDiscoveredTest(
-  result: TestDiscovery,
-  declaration: FunctionDeclaration,
-  exportedName: string,
-  modulePath: string,
-  rootDirectory: string,
-  usesMocks: bool,
-): none {
-  location := modulePath + ":" + string(declaration.span.start.line) + ":" + string(declaration.span.start.column)
-  if declaration.params.length > 0 {
-    result.errors.push(location + ": error: test \"" + exportedName + "\" must not declare parameters")
-    return
-  }
-  if declaration.typeParams.length > 0 {
-    result.errors.push(location + ": error: test \"" + exportedName + "\" must not declare type parameters")
-    return
-  }
-  if !returnsNone(declaration) {
-    result.errors.push(location + ": error: test \"" + exportedName + "\" must return none")
-    return
-  }
-  displayPath := testDisplayPath(rootDirectory, modulePath)
-  result.tests.push(DiscoveredTest {
-    id: displayPath + "::" + exportedName,
-    name: exportedName,
-    modulePath,
-    moduleDisplayPath: displayPath,
-    usesMocks,
-  })
-}
-
-function returnsNone(declaration: FunctionDeclaration): bool {
-  if declaration.returnType == none {
-    case declaration.body {
-      _: Block -> { return true }
-      _ -> { return false }
-    }
-  }
-  case declaration.returnType! {
-    named: NamedType -> { return named.name == "none" || named.name == "void" }
-    _ -> { return false }
-  }
-}
-
-function findFunction(statements: Statement[], name: string): FunctionDeclaration | none {
-  for statement of statements {
-    case statement {
-      fn: FunctionDeclaration -> { if fn.name == name { return fn } }
-      _ -> { }
-    }
-  }
-  return none
-}
-
 function copyTests(tests: DiscoveredTest[]): DiscoveredTest[] {
   let result: DiscoveredTest[] = []
   for test of tests { result.push(test) }
@@ -490,4 +380,22 @@ function trimTrailingSlashes(path: string): string {
 
 function escapeDoofString(value: string): string {
   return value.replaceAll("\\", "\\\\").replaceAll("\"", "\\\"")
+}
+
+/** Selects execution ids without changing the compound harness's compilation set. */
+export function selectTestsFromJson(tests: DiscoveredTest[], source: string): Result<DiscoveredTest[], string> {
+  parsed := parseJsonValue(source) else { return Failure("Test selection must be a JSON array of exact test ids") }
+  values := parsed as JsonValue[] else { return Failure("Test selection must be a JSON array of exact test ids") }
+  let ids: Set<string> = []
+  for value of values {
+    id := value as string else { return Failure("Test selection ids must be strings") }
+    if id == "" { return Failure("Test selection ids must not be empty") }
+    ids.add(id)
+  }
+  let selected: DiscoveredTest[] = []
+  for test of tests {
+    if ids.has(test.id) { selected.push(test); ids.delete(test.id) }
+  }
+  for missing of ids { return Failure("Selected test no longer exists: " + missing) }
+  return Success(selected)
 }

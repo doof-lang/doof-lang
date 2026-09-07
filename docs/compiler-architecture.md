@@ -33,7 +33,9 @@ The important hand-offs are:
 | `native-build.do` | deterministic PCH/compile/link tasks | `native-build-driver.do` |
 | `frontend-cache.do` | exact source/configuration fingerprints and emitted-module names | `driver.do` cache validation and materialization |
 
-`compiler.do` coordinates the pure graph pipeline. `driver.do` adapts CLI,
+`frontend.do` owns the shared analysis/checking pipeline and returns the
+semantic graph, diagnostics, loaded sources, and resolution probes. It imports
+no emitter or driver. `compiler.do` consumes that result and coordinates lowering. `driver.do` adapts CLI,
 filesystem, acquired-package, test, app, and process boundaries to it. It also
 selects the command-aware native-build output mode: successful `run`
 compilation is silent, while `build`, `test`, and `package` request concise
@@ -479,3 +481,50 @@ Per-module `module.prepare:<path>` and `module.render:<path>` timing entries exp
 candidate worker costs. They are nested inside existing phase timings and must not
 be added to their parents. `scripts/model-emission.py` models cold serial runs;
 [the modelling report](archive/emission-2026-09-07.md#instantiation-catalogue-modelling) explains its limits.
+
+## Editor frontend boundary
+
+`frontend.do` owns shared analysis/checking orchestration without importing
+emission or the native driver. Strict compiler checking uses the same entry
+point. `serialParsing` selects synchronous module parsing for Wasm; native
+compilation retains parallel scheduling around the same parse operation.
+
+Editor mode is explicit. Parser recovery records source diagnostics, preserves
+surviving statements/declarations, and represents an unfinished member expression
+as a completion point. Strict parsing still rejects malformed programs. The
+checker retains lexical scopes, reference bindings, annotations, and checked
+member targets only for editor analysis. Index construction visits each scope
+once and uses binary search to narrow token spans. Semantic queries consume
+checker decisions; the TypeScript adapter contains no semantic lexer or checker.
+
+`editor-incremental.do` transfers reusable module ownership only when source and
+conservative dependency checks prove it safe. Changes involving nominal types,
+import changes, or existing errors force fresh analysis. Reusable checked ASTs
+are never shared between concurrently active workers. The VS Code server holds
+two independent Wasm workers per active project graph: one answers queries from
+the published snapshot while the other analyzes new source overlays. Results
+carry generation/document checks; superseded analyses are discarded. Test/mock
+graphs are isolated. Source positions cross the ABI as byte offsets and the LSP
+adapter converts them to UTF-16, including CRLF and astral characters.
+
+The reactor uses the compiler's JSON ABI and explicit allocation/free ownership.
+Its dedicated profile has a 1 MiB stack and bounded heap growth. Decorated graph
+reference cycles can retain allocations across edits, so the host recycles the
+spare worker above 192 MiB and replays sources. Worker failure recovery is bounded
+to three automatic attempts; manual service restart remains available.
+
+Doof owns formatting, fixes, import specifiers, package source settings, and test
+discovery. TypeScript owns disk access, overlays, URI mapping, LSP transport,
+VS Code tasks/tests, cancellation, and trust gates. Test execution has an exact-ID
+filter and JSON reports; the extension never parses human test output. Wasm and
+stdlib source content are packaged together with artifact identity metadata.
+
+See `extensions/vscode-doof/README.md` for installation, development checks,
+measured latency, and the conservative limits of this first desktop extension.
+
+VS Code test selections use `--selection-json`, a JSON array of exact ids, in one
+native invocation per workspace/compiler group. Selection is applied only to
+execution; `groupTestsForCompilation(discovered)` retains the full compound
+harness. Native non-coverage test builds reuse the ordinary frontend emission
+cache, including compiler/configuration, manifest, source and missing-import
+probe validation. Coverage and Wasm tests retain full frontend compilation.

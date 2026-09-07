@@ -1,0 +1,10 @@
+node_modules/**
+src/**
+scripts/**
+tsconfig.json
+package-lock.json
+out/*.map
+artifacts/**/*.test.do
+out/*-tests.cjs
+
+.vscode-test/**

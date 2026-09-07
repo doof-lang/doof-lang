@@ -1,3 +1,4 @@
+import { Assert as EditorAssert } from "std/assert"
 import { Assert } from "std/assert"
 import { Parser } from "./parser"
 import { compile } from "./compiler"
@@ -212,5 +213,28 @@ export function testQuarkFixCoveragePagesStayRelative(): none {
     Assert.equal(page.contains("?"), false)
     for previous of pages { Assert.isTrue(previous != page) }
     pages.push(page)
+  }
+}
+
+export function testEditorExactFilterDoesNotSelectLongerTestNames(): none {
+  tests := [DiscoveredTest { id: "a::testOne", name: "testOne", modulePath: "a", moduleDisplayPath: "a" }, DiscoveredTest { id: "a::testOneMore", name: "testOneMore", modulePath: "a", moduleDisplayPath: "a" }]
+  selected := filterDiscoveredTests(tests, "a::testOne", true)
+  EditorAssert.equal(selected.length, 1)
+  EditorAssert.equal(selected[0].name, "testOne")
+}
+
+import { selectTestsFromJson } from "./test-runner"
+export function testBatchSelectionKeepsExactIdsAndHarness(): none {
+  tests := [DiscoveredTest { id: "a::one", name: "one", modulePath: "a", moduleDisplayPath: "a" }, DiscoveredTest { id: "a::oneMore", name: "oneMore", modulePath: "a", moduleDisplayPath: "a" }, DiscoveredTest { id: "a::two", name: "two", modulePath: "a", moduleDisplayPath: "a" }]
+  selected := try! selectTestsFromJson(tests, "[\"a::two\",\"a::one\",\"a::one\"]")
+  Assert.equal(selected.length, 2)
+  Assert.equal(selected[0].id, "a::one")
+  Assert.equal(selected[1].id, "a::two")
+  Assert.equal(tests.length, 3)
+  Assert.equal((try! selectTestsFromJson(tests, "[]")).length, 0)
+  for invalid of ["{", "{}", "[1]", "[\"\"]", "[\"missing\"]"] {
+    result := selectTestsFromJson(tests, invalid)
+    unexpected := result else error { Assert.isTrue(error != ""); continue }
+    Assert.isTrue(false)
   }
 }

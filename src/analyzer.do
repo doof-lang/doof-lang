@@ -9,7 +9,7 @@ import { Parser } from "./parser"
 import { ModuleResolver, SourceLoader, noSourceLoader } from "./resolver"
 import {
   Diagnostic, ImportBinding, NamespaceBinding, SemanticLocation, SemanticSpan,
-  SourceFile, Symbol,
+  SourceFile, Symbol, EditorScope,
 } from "./semantic"
 import {
   ArrayType, AstLocation, ClassDeclaration, ConstDeclaration, EnumDeclaration,
@@ -17,7 +17,7 @@ import {
   NamedImport, NamedType, NamespaceImport, ReadonlyDeclaration, ImportDeclaration, TypeAliasDeclaration, UnionType,
   MockImportDirective, WeakType, YieldBlockAssignmentStatement, TypeParameterConstraint,
 } from "./ast"
-import type { Program, SourceSpan, Statement, TryStatement, TypeAnnotation } from "./ast"
+import type { Program, SourceSpan, Statement, TryStatement, TypeAnnotation, Expression } from "./ast"
 import { sha256HexString } from "std/crypto"
 
 export class ModuleInfo {
@@ -25,6 +25,9 @@ export class ModuleInfo {
   physicalPath: string = ""
   sourceHash: string = ""
   program: Program
+  editorScopes: EditorScope[] = []
+  editorExpressions: Expression[] = []
+  editorAnnotations: TypeAnnotation[] = []
   symbols: Symbol[] = []
   exports: Symbol[] = []
   imports: ImportBinding[] = []
@@ -41,21 +44,54 @@ export class AnalysisResult {
 }
 
 class ModuleParseResult {
+  reused: ModuleInfo | none = none
   path: string
   physicalPath: string = ""
   source: string
   inheritedMockRootPath: string | none = none
   program: Program | none = none
+  issues: Diagnostic[] = []
   errorMessage: string = ""
   errorLine: int = 0
   errorColumn: int = 0
   errorOffset: int = 0
 }
 
-readonly BUILTIN_TYPES = ["byte", "int", "long", "float", "double", "string", "char", "bool", "none", "never", "void", "null", "JsonValue", "JsonObject", "SourceLocation", "WeakReferenceError", "Map", "ReadonlyMap", "Set", "ReadonlySet", "Result", "Stream", "Range", "Tuple", "Actor", "Promise"]
+// One parse operation, shared by native worker scheduling and serial Wasm analysis.
+function parseModuleSource(source: SourceFile, path: string, mockRootPath: string | none, editorMode: bool): ModuleParseResult {
+  parser := Parser { source: source.source, editorMode }
+  parsed := catchPanic(=> parser.parse())
+  program := parsed else failure {
+    if parser.errorMessage == "" { panic(failure) }
+    return ModuleParseResult {
+      path, physicalPath: if source.physicalPath == "" then source.path else source.physicalPath,
+      source: source.source, inheritedMockRootPath: mockRootPath,
+      errorMessage: parser.errorMessage, errorLine: parser.errorLine,
+      errorColumn: parser.errorColumn, errorOffset: parser.errorOffset,
+    }
+  }
+  let issues: Diagnostic[] = []
+  for issue of parser.issues {
+    start := SemanticLocation { line: issue.span.start.line, column: issue.span.start.column, offset: issue.span.start.offset }
+    end := SemanticLocation { line: issue.span.end.line, column: issue.span.end.column, offset: issue.span.end.offset }
+    issues.push(Diagnostic { severity: "error", message: issue.message, span: SemanticSpan { start, end }, module: path })
+  }
+  return ModuleParseResult {
+    issues, path, physicalPath: if source.physicalPath == "" then source.path else source.physicalPath,
+    source: source.source, inheritedMockRootPath: mockRootPath, program,
+  }
+}
+
+export readonly BUILTIN_TYPES = ["byte", "int", "long", "float", "double", "string", "char", "bool", "none", "never", "void", "null", "JsonValue", "JsonObject", "SourceLocation", "WeakReferenceError", "Map", "ReadonlyMap", "Set", "ReadonlySet", "Result", "Stream", "Range", "Tuple", "Actor", "Promise"]
 
 export class ModuleAnalyzer {
   resolver: ModuleResolver
+  let reusableModules: ModuleInfo[] = []
+  let reusedPaths: string[] = []
+  let editorMode: bool = false
+  let additionalEntries: string[] = []
+  let serialParsing: bool = false
+  let completedParses: ModuleParseResult[] = []
   let modules: ModuleInfo[] = []
   let diagnostics: Diagnostic[] = []
   let inProgress: string[] = []
@@ -63,6 +99,8 @@ export class ModuleAnalyzer {
 
   analyze(entry: string, timings: PhaseTimings = PhaseTimings {}): AnalysisResult {
     modules = []
+    completedParses = []
+    reusedPaths = []
     diagnostics = []
     inProgress = []
     resolvedPaths = []
@@ -74,8 +112,11 @@ export class ModuleAnalyzer {
     parseReachableModules(entryPath)
     timings.finish("analysis.load-parse-discover", parseStart)
     resolveStart := timings.start()
+    completedParses = []
     orderModules(entryPath)
+    for path of reusedPaths { resolvedPaths.push(path) }
     ignored := resolveModule(entryPath)
+    if editorMode { for path of additionalEntries { ignoredAdditional := resolveModule(path) } }
     // Loader failures explain why later resolution and type checking cascaded.
     // Keep them ahead of derived "module not found" and binding diagnostics so
     // a bounded CLI diagnostic display still includes the actionable cause.
@@ -107,31 +148,31 @@ export class ModuleAnalyzer {
       return
     }
 
-    sourceText := source.source
-    physicalPath := if source.physicalPath == "" then source.path else source.physicalPath
-    modulePath := path
-    mockRootPath := inheritedMockRootPath
-    pending.push(async {
-      parser := Parser { source: sourceText }
-      parsed := catchPanic(=> parser.parse())
-      program := parsed else failure {
-        if parser.errorMessage == "" { panic(failure) }
-        yield ModuleParseResult {
-          path: modulePath, physicalPath: physicalPath, source: sourceText, inheritedMockRootPath: mockRootPath,
-          errorMessage: parser.errorMessage,
-          errorLine: parser.errorLine, errorColumn: parser.errorColumn, errorOffset: parser.errorOffset,
-        }
+    for reusable of reusableModules {
+      if !serialParsing || !editorMode { break }
+      if reusable.path == path && reusable.sourceHash == sha256HexString(source!.source) {
+        completedParses.push(ModuleParseResult { path, source: source!.source, program: reusable.program, reused: reusable, physicalPath: reusable.physicalPath, inheritedMockRootPath })
+        reusedPaths.push(path)
+        return
       }
-      yield ModuleParseResult { path: modulePath, physicalPath: physicalPath, source: sourceText, inheritedMockRootPath: mockRootPath, program }
-    })
+    }
+    recover := editorMode
+    if serialParsing {
+      completedParses.push(parseModuleSource(source!, path, inheritedMockRootPath, recover))
+    } else {
+      pending.push(async { yield parseModuleSource(source!, path, inheritedMockRootPath, recover) })
+    }
   }
 
   private parseReachableModules(entryPath: string): none {
     let scheduled: string[] = []
     let pending: Promise<ModuleParseResult>[] = []
     queueModuleParse(entryPath, none, scheduled, pending)
-    while pending.length > 0 {
-      completed := pending.takeFirstCompleted() else failure { panic("Parser worker failed: " + failure) }
+    if editorMode { for path of additionalEntries { queueModuleParse(path, none, scheduled, pending) } }
+    let completedIndex = 0
+    while pending.length > 0 || completedIndex < completedParses.length {
+      completed := if serialParsing then completedParses[completedIndex] else try! pending.takeFirstCompleted()
+      if serialParsing { completedIndex += 1 }
       if completed.program == none {
         location := SemanticLocation { line: completed.errorLine, column: completed.errorColumn, offset: completed.errorOffset }
         diagnostics.push(Diagnostic {
@@ -142,13 +183,14 @@ export class ModuleAnalyzer {
         })
         continue
       }
+      for issue of completed.issues { diagnostics.push(issue) }
       program := completed.program!
       mockImportDirectives := collectMockImportDirectives(program)
       let mockRootPath = completed.inheritedMockRootPath
       if mockRootPath == none && mockImportDirectives.length > 0 && completed.path.endsWith(".test.do") {
         mockRootPath = completed.path
       }
-      info := ModuleInfo {
+      info := if completed.reused != none then completed.reused! else ModuleInfo {
         path: completed.path,
         physicalPath: completed.physicalPath,
         sourceHash: sha256HexString(completed.source),
@@ -157,8 +199,10 @@ export class ModuleAnalyzer {
         mockRootPath,
       }
       modules.push(info)
-      validateMockImportDirectives(info, completed.inheritedMockRootPath)
-      collectSymbols(info)
+      if completed.reused == none {
+        validateMockImportDirectives(info, completed.inheritedMockRootPath)
+        collectSymbols(info)
+      }
       for statement of program.statements {
         case statement {
           import_: ImportDeclaration -> {
@@ -181,6 +225,7 @@ export class ModuleAnalyzer {
     let ordered: ModuleInfo[] = []
     let visited: string[] = []
     appendModuleOrder(entryPath, ordered, visited)
+    if editorMode { for path of additionalEntries { appendModuleOrder(path, ordered, visited) } }
     modules = ordered
   }
 

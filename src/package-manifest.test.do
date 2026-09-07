@@ -1,3 +1,5 @@
+import { Assert as EditorAssert } from "std/assert"
+import { parsePackageSourceInputs } from "./package-manifest"
 import { Assert } from "std/assert"
 import { NativeBuildPlan, parsePackageManifest } from "./package-manifest"
 
@@ -259,4 +261,10 @@ export function testRejectsMacOSPackagePathsOutsidePackageRoot(): none {
     return
   }
   panic("expected invalid dist directory failure")
+}
+
+export function testEditorPackageSourceInputsShareLocalDependencyRules(): none {
+  result := try! parsePackageSourceInputs("{\"build\":{\"entry\":\"src/main.do\"},\"dependencies\":{\"lib\":{\"path\":\"../lib\"}}}", "/project/doof.json", "/project")
+  EditorAssert.equal(result.entry, "src/main.do")
+  EditorAssert.equal(result.dependencies[0].name, "lib")
 }

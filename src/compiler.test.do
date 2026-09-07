@@ -893,3 +893,13 @@ export function testRepeatedCompilationPreservesCoverageAndOutput(): none {
     Assert.equal(after.fingerprint, before.fingerprint)
   }
 }
+
+export function testCheckOnlySharedFrontendPreservesTypeDiagnostics(): none {
+  result := checkWithLoader([
+    SourceFile { path: "/main.do", source: "function main(): int => \"wrong\"" },
+  ], "/main.do", noSourceLoader)
+  Assert.equal(result.emission, none)
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.equal(result.sourceFiles.length, 1)
+  Assert.equal(result.diagnostics[0].module, "/main.do")
+}

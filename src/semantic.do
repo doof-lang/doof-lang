@@ -254,6 +254,7 @@ export class Binding {
 }
 
 export class Scope {
+  let editorIndexed: bool = false
   parent: Scope | none
   bindings: Binding[] = []
   typeParams: string[] = []
@@ -278,4 +279,10 @@ export class ResolvedTypeConstraint {
 
 export class CheckResult {
   diagnostics: Diagnostic[] = []
+}
+
+// Optional editor observations retain checker scopes without changing bindings.
+export class EditorScope {
+  span: SemanticSpan
+  scope: Scope
 }

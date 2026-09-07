@@ -334,7 +334,7 @@ export function parseBlock(parser: Parser): Block {
   start := parser.location()
   parser.expect(TokenType.LeftBrace)
   let statements: Statement[] = []
-  while !parser.check(TokenType.RightBrace) && !parser.atEnd() { statements.push(parseStatement(parser)) }
+  while !parser.check(TokenType.RightBrace) && !parser.atEnd() { parser.appendStatement(statements, true) }
   parser.expect(TokenType.RightBrace)
   return Block { kind: "block", statements, span: parser.span(start) }
 }
