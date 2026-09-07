@@ -177,7 +177,7 @@ function emitAssignmentTarget(target: Expression, context: EmitContext): string 
       if objectType != none {
         case objectType! {
           _: MapResolvedType -> {
-            return "doof::map_index(" + emitExpression(index.object, context) + ", " + emitExpression(index.index, context) + ", " + quote(moduleDiagnosticPath(context.modulePath, true)) + ", " + string(index.span.start.line) + ")"
+            return "doof::map_index(" + emitExpression(index.object, context) + ", " + emitExpression(index.index, context) + ", " + quote(moduleDiagnosticPath(context.modulePath, true, context.names)) + ", " + string(index.span.start.line) + ")"
           }
           _ -> { }
         }
@@ -221,7 +221,7 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
       if imported.symbol!.native_ {
         return "::" + (if imported.symbol!.nativeCppName == "" then imported.symbol!.name else imported.symbol!.nativeCppName)
       }
-      return "::" + exprModuleNamespaceFor(imported.symbol!.module) + "::" + cppIdentifier(emittedSymbolName(imported.symbol!))
+      return "::" + exprModuleNamespaceFor(imported.symbol!.module, context.names) + "::" + cppIdentifier(emittedSymbolName(imported.symbol!))
     }
   }
   if expression.resolvedBinding != none && expression.resolvedBinding!.symbol != none {
@@ -230,13 +230,13 @@ export function emitIdentifier(expression: Identifier, context: EmitContext): st
       return "::" + (if symbol.nativeCppName == "" then symbol.name else symbol.nativeCppName)
     }
     if context.modulePath != "" && symbol.module != "" && symbol.module != context.modulePath {
-      return "::" + exprModuleNamespaceFor(symbol.module) + "::" + cppIdentifier(emittedSymbolName(symbol))
+      return "::" + exprModuleNamespaceFor(symbol.module, context.names) + "::" + cppIdentifier(emittedSymbolName(symbol))
     }
   }
   if expression.resolvedBinding != none && expression.resolvedBinding!.kind == "import" {
     for imported of context.imports {
       if imported.localName == expression.name && imported.symbol != none {
-        return "::" + exprModuleNamespaceFor(imported.symbol!.module) + "::" + cppIdentifier(emittedSymbolName(imported.symbol!))
+        return "::" + exprModuleNamespaceFor(imported.symbol!.module, context.names) + "::" + cppIdentifier(emittedSymbolName(imported.symbol!))
       }
     }
   }
@@ -271,7 +271,7 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
           }
           _ -> { }
         }
-        sourcePath := moduleDiagnosticPath(context.modulePath, true)
+        sourcePath := moduleDiagnosticPath(context.modulePath, true, context.names)
         body := "auto _try_value = " + operand + "; if (doof::is_failure(_try_value)) doof::panic_at(" + quote(sourcePath) + ", " + string(expression.span.start.line) + ", " + failureMessage + "); "
         if carrierOf(result.valueType, .Payload).kind == .Void { return "[&]() -> std::monostate { " + body + " return {}; }()" }
         return "[&]() -> " + valueType + " { " + body + "return std::move(doof::success_value(_try_value)); }()"
@@ -285,7 +285,7 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
     if operandType != none {
       case operandType! {
         result: ResultResolvedType -> {
-          valueType := emitType(result.valueType, context.modulePath)
+          valueType := emitType(result.valueType, context.modulePath, context.names)
           body := "auto _assert_value = " + operand + "; if (doof::is_failure(_assert_value)) doof::panic(\"! failed\"); "
           if carrierOf(specializeEmitType(result.valueType, context), .Payload).kind == .Void { return "[&]() -> std::monostate { " + body + "return {}; }()" }
           return "[&]() -> " + valueType + " { " + body + "return std::move(doof::success_value(_assert_value)); }()"
@@ -301,7 +301,7 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
               if usesVariantRepresentation(union_) {
                 let nonNullMembers: ResolvedType[] = []
                 for member of union_.types { if member.kind != "none" { nonNullMembers.push(member) } }
-                if nonNullMembers.length == 1 { return "std::get<" + emitType(nonNullMembers[0], context.modulePath) + ">(" + operand + ")" }
+                if nonNullMembers.length == 1 { return "std::get<" + emitType(nonNullMembers[0], context.modulePath, context.names) + ">(" + operand + ")" }
               }
             }
             _ -> { }
@@ -316,7 +316,7 @@ export function emitUnary(expression: UnaryExpression, context: EmitContext): st
           if usesVariantRepresentation(union_) {
             let nonNullMembers: ResolvedType[] = []
             for member of union_.types { if member.kind != "none" { nonNullMembers.push(member) } }
-            if nonNullMembers.length == 1 { return "std::get<" + emitType(nonNullMembers[0], context.modulePath) + ">(" + operand + ")" }
+            if nonNullMembers.length == 1 { return "std::get<" + emitType(nonNullMembers[0], context.modulePath, context.names) + ">(" + operand + ")" }
           }
           if isNullableVariantType(operandType) { return "doof::unwrap_optional(" + operand + ")" }
         }
@@ -358,10 +358,10 @@ export function emitBinary(expression: BinaryExpression, context: EmitContext): 
     temporary := "_coalesce_" + string(context.tryCounter)
     case leftType {
       _: ResultResolvedType -> {
-        return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + temporary + " = " + left + "; if (doof::is_failure(" + temporary + ")) " + fallback + " return std::move(doof::success_value(" + temporary + ")); }()"
+        return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + temporary + " = " + left + "; if (doof::is_failure(" + temporary + ")) " + fallback + " return std::move(doof::success_value(" + temporary + ")); }()"
       }
       _ -> {
-        return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + temporary + " = " + left + "; if (doof::is_null(" + temporary + ")) " + fallback + " return doof::unwrap_optional(" + temporary + "); }()"
+        return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + temporary + " = " + left + "; if (doof::is_null(" + temporary + ")) " + fallback + " return doof::unwrap_optional(" + temporary + "); }()"
       }
     }
   }
@@ -429,8 +429,8 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
         case inner! {
           enum_: EnumType -> {
             unwrapped := "doof::unwrap_optional(" + object + ")"
-            if expression.property == "value" { return emitType(enum_, context.modulePath) + "_value(" + unwrapped + ")" }
-            if expression.property == "name" { return emitType(enum_, context.modulePath) + "_name(" + unwrapped + ")" }
+            if expression.property == "value" { return emitType(enum_, context.modulePath, context.names) + "_value(" + unwrapped + ")" }
+            if expression.property == "name" { return emitType(enum_, context.modulePath, context.names) + "_name(" + unwrapped + ")" }
           }
           _ -> { }
         }
@@ -462,7 +462,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     identifier: Identifier -> {
       for namespace of context.namespaceImports {
         if namespace.localName == identifier.name {
-          return "::" + exprModuleNamespaceFor(namespace.sourceModule) + "::" + cppIdentifier(expression.property)
+          return "::" + exprModuleNamespaceFor(namespace.sourceModule, context.names) + "::" + cppIdentifier(expression.property)
         }
       }
     }
@@ -473,10 +473,10 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     case staticObjectType! {
       parameter: TypeParameterType -> {
         specialized := specializeEmitType(parameter, context)
-        if parameter.constraintName == "Reflectable" && expression.property == "metadata" { return "doof::metadata_for_type<" + emitType(specialized, context.modulePath) + ">()" }
+        if parameter.constraintName == "Reflectable" && expression.property == "metadata" { return "doof::metadata_for_type<" + emitType(specialized, context.modulePath, context.names) + ">()" }
         if parameter.constraintName == "JsonSerializable" && expression.property == "fromJsonValue" {
           case specialized {
-            concrete: ClassType -> { return emitType(concrete, context.modulePath) + "::element_type::fromJsonValue" }
+            concrete: ClassType -> { return emitType(concrete, context.modulePath, context.names) + "::element_type::fromJsonValue" }
             unresolved: TypeParameterType -> { return cppIdentifier(unresolved.name) + "::element_type::fromJsonValue" }
             _ -> { }
           }
@@ -489,7 +489,7 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
           if owner.native_ {
             ownerName = "::" + (if owner.nativeCppName == "" then owner.name else owner.nativeCppName)
           } else if owner.resolvedSymbol != none && owner.resolvedSymbol!.module != context.modulePath && context.modulePath != "" {
-            ownerName = "::" + exprModuleNamespaceFor(owner.resolvedSymbol!.module) + "::" + owner.name
+            ownerName = "::" + exprModuleNamespaceFor(owner.resolvedSymbol!.module, context.names) + "::" + owner.name
           }
           return ownerName + "::" + (if expression.property == "metadata" then "_metadata" else if owner.native_ then expression.property else cppIdentifier(expression.property))
         }
@@ -551,8 +551,8 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       _: ClassMetadataResolvedType -> { return object + "." + cppIdentifier(expression.property) }
       _: MethodReflectionResolvedType -> { return object + "." + cppIdentifier(expression.property) }
       enum_: EnumType -> {
-        if expression.property == "value" { return emitType(enum_, context.modulePath) + "_value(" + object + ")" }
-        if expression.property == "name" { return emitType(enum_, context.modulePath) + "_name(" + object + ")" }
+        if expression.property == "value" { return emitType(enum_, context.modulePath, context.names) + "_value(" + object + ")" }
+        if expression.property == "name" { return emitType(enum_, context.modulePath, context.names) + "_name(" + object + ")" }
         return object + "::" + cppIdentifier(expression.property)
       }
       _ -> { }
@@ -581,15 +581,15 @@ function emitWeakFieldAccess(expression: MemberExpression, object: string, conte
     _ -> { }
   }
   if expression.force {
-    resultType := emitType(expression.resolvedType!, context.modulePath)
+    resultType := emitType(expression.resolvedType!, context.modulePath, context.names)
     noneCheck := if nullable then "if (!" + storage + ".has_value()) doof::panic(\"Weak reference is none\"); " else ""
     return "[&]() -> " + resultType + " { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); return " + access + "; }()"
   }
   case expression.resolvedType! {
     result: ResultResolvedType -> {
-      resultCpp := emitType(result, context.modulePath)
-      payloadCpp := emitResultPayloadType(result.valueType, context.modulePath)
-      errorCpp := emitResultPayloadType(result.errorType, context.modulePath)
+      resultCpp := emitType(result, context.modulePath, context.names)
+      payloadCpp := emitResultPayloadType(result.valueType, context.modulePath, context.names)
+      errorCpp := emitResultPayloadType(result.errorType, context.modulePath, context.names)
       failure := weakFailureValue(result.errorType, errorCpp, context)
       noneReturn := if nullable then "if (!" + storage + ".has_value()) return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{}}; " else ""
       return "[&]() -> " + resultCpp + " { auto " + storage + " = " + object + "; " + noneReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return doof::Failure<" + errorCpp + ">{" + failure + "}; auto " + temporary + " = std::move(_weak_locked.value()); return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{" + access + "}}; }()"
@@ -610,7 +610,7 @@ function weakFailureValue(errorType: ResolvedType, errorCpp: string, context: Em
 export function emitIndex(expression: IndexExpression, context: EmitContext): string {
   object := emitExpression(expression.object, context)
   index := emitExpression(expression.index, context)
-  sourcePath := quote(moduleDiagnosticPath(context.modulePath, true))
+  sourcePath := quote(moduleDiagnosticPath(context.modulePath, true, context.names))
   sourceLine := string(expression.span.start.line)
   objectType := decoratedExpressionType(expression.object)
   if objectType != none {

@@ -14,7 +14,8 @@ compiler.compileInternal
   -> ModuleChecker.check for every module, dependency first
   -> graph-wide actor and isolation validation
   -> validateCheckedTypes
-  -> buildInstantiationPlan
+  -> discoverInstantiations
+  -> nameInstantiations
   -> emitWasmSupport when requested
   -> emitModuleGraph
 ```
@@ -33,11 +34,12 @@ sharp prevents a second type checker from growing in the backend.
 | Question | Authoritative owner | Persisted result |
 | --- | --- | --- |
 | What declaration or binding does this syntax name? | analyzer and `checker-symbols.do` | `Symbol` or `Binding` decorations |
-| What type does an annotation or expression have? | `checker-resolution.do` and the focused expression/statement checker | `resolvedType` decorations |
-| Which callable or constructor was selected, and where is it defined? | `checker-calls.do` and `checker-generics.do` | `resolvedFunction`, `resolvedFunctionModule`, `resolvedConstructor`, and `resolvedClass` |
+| What type does an annotation or expression have? | `checker-annotations.do` and the focused expression/statement checker | `resolvedType` decorations |
+| Which callable or constructor was selected, and where is it defined? | `checker-resolution.do` and `checker-construction.do`, consumed by call checking | `CheckedMember` / `CheckedConstruction` selections and resolved call decorations |
 | What concrete generic arguments did this call infer? | `checker-calls.do` and `checker-generics.do` | `resolvedGenericTypeArgs` |
 | Is one type assignable to another? | `checker-types.do` for pure type relations; `checker-interfaces.do` for graph-aware structural relations | a checker decision; symbol registries cache closed-world facts |
-| Which concrete declarations are reached? | `emitter-monomorphize.do` | `InstantiationPlan` |
+| Which concrete declarations are reached? | `checked-instantiations.do` | `CheckedInstantiations` |
+| What C++ names do those declarations receive? | `emitter-monomorphize.do` | `InstantiationPlan` |
 | Which declarations must a consumer header see? | `emitter-worldview.do` | `WorldviewPlan` |
 | How is a checked operation represented in C++? | focused emitter modules | generated header/source text |
 
@@ -66,8 +68,8 @@ crosses these layers:
    `checker-symbols.do` decorates identifiers and namespace members with that
    identity.
 3. `checker-calls.do` checks the callee and arguments. It obtains the selected
-   declaration through `functionDeclarationForCallee` in
-   `checker-generics.do`.
+   declaration through `resolveCalleeTarget` in
+   `checker-resolution.do`.
 4. Explicit arguments are resolved, or `inferTypeArgument` structurally
    matches parameter types against argument types. Conflicting candidates are
    rejected rather than silently selecting one.
@@ -78,13 +80,14 @@ crosses these layers:
    named imports, and namespace members. The effective function type and call
    result are obtained with `substituteTypeParams`.
 7. `checker-validation.do` verifies the syntactic and resolved type arguments.
-8. `buildInstantiationPlan` scans the checked graph. A concrete generic call
-   adds a `FunctionInstantiation`, keyed directly from
+8. `discoverInstantiations` scans the checked graph. A concrete generic call
+   adds a `DiscoveredFunction`, keyed directly from
    `resolvedFunctionModule`, declaration name, and canonical concrete type
    keys. It does not rediscover ownership from callee syntax.
 9. The fixed-point loop scans the specialized body. Calls and nominal types
    reached from that body can append more work.
-10. `emitter-module.do` registers key-to-name mappings in each `EmitContext`,
+10. `nameInstantiations` assigns C++ names. `emitter-module.do` then registers
+    key-to-name mappings in each `EmitContext`,
     declares the concrete function in the projected header, and emits its body
     in the defining module.
 11. `emitter-expr-calls.do` recomputes the same instantiation key from checked
@@ -98,13 +101,13 @@ overload resolution is not used to finish either job.
 
 For `Box<int>`:
 
-1. `checker-resolution.do` resolves the nominal symbol, validates arity and
+1. `checker-annotations.do` resolves the nominal symbol, validates arity and
    constraints, and creates a `ClassType` containing the concrete `typeArgs`.
 2. Construction checking records `resolvedClass`, `resolvedConstructor`, and
    `resolvedConstructedType` where applicable. Field values are checked against
    owner-substituted field types.
 3. Any checked occurrence of the concrete nominal type reaches `collectType`
-   in `emitter-monomorphize.do`, which creates a `ClassInstantiation` for a
+   in `checked-instantiations.do`, which creates a `DiscoveredClass` for a
    Doof-owned generic declaration. Native-owned generic types stay native.
 4. Scanning that instantiation substitutes owner parameters through fields,
    defaults, ordinary methods, and the destructor. Generic methods are queued
@@ -113,8 +116,8 @@ For `Box<int>`:
    `EmitContext.substitution`. All focused emitters see specialized types
    through that context.
 
-Concrete C++ names are allocated per generated C++ scope. A readable mangled
-base is used first; deterministic numeric suffixes resolve collisions between
+After semantic discovery, `nameInstantiations` allocates concrete C++ names per
+generated C++ scope. A readable mangled base is used first; deterministic numeric suffixes resolve collisions between
 nominal types that share the same short spelling.
 
 ## Slice: a generic method
@@ -243,7 +246,7 @@ Several post-parse walks are active, not legacy alternatives:
 | async capture walker | capture names and worker-boundary validation | `resolvedCaptureNames` and diagnostics |
 | isolation graph walker | transitive mutable-global effects | graph diagnostics |
 | checker validation walker | emission-readiness proof | diagnostics only |
-| monomorphisation walker | concrete generic and JSON demand reachability | `InstantiationPlan` |
+| monomorphisation walker | concrete generic and JSON demand reachability | `CheckedInstantiations` |
 | worldview walker | consumer declaration closure | `WorldviewPlan` |
 | focused emitter walkers | C++ rendering and local capture details | generated text |
 

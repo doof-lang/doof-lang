@@ -1,9 +1,19 @@
+import { SemanticTypeIdentities, SemanticTypeIdentitySnapshot } from "./semantic-type-identities"
+import { ModuleNames } from "./emitter-names"
+import { TypeLoweringGraph, TypeLoweringSession } from "./emitter-type-cache"
 // Module-level orchestration for the Doof C++ emitter.
 //
 // Worldview planning stays at this boundary so expression and statement
 // emitters remain independent of module layout. Every analyzed module becomes
 // its own self-contained header/source pair.
 
+import { CppType, CppTypeRegistry, CppTypeSnapshot } from "./cpp-type"
+import { CppDeclarationBuilder } from "./cpp-declaration"
+import { HeaderPlanBuilder, freezeHeaderPlan } from "./emitter-header-plan"
+import { planClassDeclaration, planFunctionDeclaration } from "./emitter-decl"
+import { typeNamespace } from "./emitter-types"
+import { HeaderPlanCache, projectedHeaderKey } from "./emitter-header-cache"
+import { PhaseTimings } from "./phase-timings"
 import {
   BoolLiteral, CharLiteral, ClassDeclaration, ConstDeclaration, DotShorthand, DoubleLiteral, EnumDeclaration, ExportDeclaration, ExportList, Expression, FloatLiteral, FunctionDeclaration,
   ImmutableBinding, ImportDeclaration, InterfaceDeclaration, LetDeclaration, MockImportDirective, Program,
@@ -17,7 +27,7 @@ import { emitMetadataDefinition } from "./emitter-metadata"
 import { emitStatement } from "./emitter-stmt"
 import { emitContextType } from "./emitter-types"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
-import { HeaderPlan, HeaderSection, planHeader, renderProjectedHeader, reserveHeaderNamespaceName } from "./emitter-header"
+import { HeaderPlan, HeaderSection, HeaderRenderCache, renderProjectedHeader, planHeader, reserveHeaderNamespaceName } from "./emitter-header"
 import { indexWorldviewGraph, planWorldview, WorldviewModule } from "./emitter-worldview"
 import { buildInstantiationPlan, classInstantiationKey, InstantiationPlan, MethodInstantiation } from "./emitter-monomorphize"
 import { moduleHeaderName, moduleNamespace, moduleSourceName } from "./emitter-names"
@@ -41,14 +51,14 @@ export class ModuleGraphPlan {
 }
 
 // Plan stable output names before split-module emission.
-export function planModuleGraph(result: AnalysisResult): ModuleGraphPlan {
+export function planModuleGraph(result: AnalysisResult, names: ModuleNames = ModuleNames {}): ModuleGraphPlan {
   plan := ModuleGraphPlan {}
   for info of result.modules {
     module := ModulePlan {
       path: info.path,
-      namespaceName: moduleNamespace(info.path),
-      headerName: moduleHeaderName(info.path),
-      sourceName: moduleSourceName(info.path),
+      namespaceName: moduleNamespace(info.path, names),
+      headerName: moduleHeaderName(info.path, names),
+      sourceName: moduleSourceName(info.path, names),
     }
     plan.modules.push(module)
   }
@@ -87,7 +97,33 @@ export class ModuleGraphEmission {
   let wasmExportNames: string[] = []
 }
 
+// Header preparation is complete before source rendering.
+class PreparedModuleHeader {
+  readonly text: string = ""
+  readonly plan: HeaderPlan
+}
+
+class PendingModuleEmission {
+  modulePath: string
+  headerName: string
+  sourceName: string
+  namespaceName: string
+  coverageModuleId: int
+  program: Program
+  header: PreparedModuleHeader
+  entryMode: string
+  fingerprint: string
+  outputIndex: int
+  readonly visibleModulePaths: readonly string[]
+}
+
 class CxxModuleEmitter {
+  names: ModuleNames = ModuleNames {}
+  timings: PhaseTimings = PhaseTimings {}
+  headerPlans: HeaderPlanCache = HeaderPlanCache {}
+  headerRenders: HeaderRenderCache = HeaderRenderCache {}
+  cppTypes: CppTypeRegistry = CppTypeRegistry {}
+  typeLowering: TypeLoweringGraph | none = none
   headerNameOverride: string = ""
   sourceNameOverride: string = ""
   namespaceNameOverride: string = ""
@@ -97,6 +133,7 @@ class CxxModuleEmitter {
   imports: ImportBinding[] = []
   moduleSurfaces: EmitModuleSurface[] = []
   let worldviewModules: WorldviewModule[] = []
+  readonly visibleModulePaths: readonly string[] = []
   let worldviewInterfaceKeys: string[] = []
   instantiations: InstantiationPlan | none = none
   coverageModuleId: int = -1
@@ -104,54 +141,91 @@ class CxxModuleEmitter {
   jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}
   sourcePaths: Map<string, string> = {}
 
-  emit(program: Program, entryMode: string = "executable"): ModuleEmission {
-    context := createEmitContextForModule(program, modulePath, allPrograms)
-    context.namespaceImports = namespaceImports
-    context.sourcePath = sourcePathFor(sourcePaths, context.modulePath)
-    context.imports = imports
-    context.moduleSurfaces = moduleSurfaces
-    context.jsonEligibility = jsonEligibility
-    if coverageModuleId >= 0 {
-      context.coverageEnabled = true
-      context.coverageModuleId = coverageModuleId
-    }
-    if instantiations != none { configureInstantiationRegistry(context, instantiations!) }
+  prepare(program: Program): PreparedModuleHeader {
+    headerStart := timings.start()
     let sections: HeaderSection[] = []
     let plan: HeaderPlan | none = none
     let views = worldviewModules
     if views.length == 0 { views = [WorldviewModule { path: modulePath, program }] }
     for view of views {
-      sectionContext := createEmitContextForModule(view.program, view.path, allPrograms)
-      sectionContext.imports = surfaceImports(moduleSurfaces, view.path)
-      sectionContext.sourcePath = sourcePathFor(sourcePaths, view.path)
-      sectionContext.moduleSurfaces = moduleSurfaces
-      sectionContext.jsonEligibility = jsonEligibility
-      if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
-      sectionPlan := planHeader(
-        view.program,
-        sectionContext,
-        if instantiations == none then [] else instantiations!.methods,
-        if instantiations == none then [] else instantiations!.classes,
-      )
-      if instantiations != none {
-        addConcreteHeaderDeclarations(sectionPlan, sectionContext, instantiations!, view.program, worldviewInterfaceKeys)
-      }
+      sectionPlan := planSection(view)
       sectionNamespace := if view.path == modulePath
         then namespaceNameOverride
-        else moduleNamespace(view.path)
+        else moduleNamespace(view.path, names)
       sections.push(HeaderSection { namespaceName: sectionNamespace, plan: sectionPlan })
       if view.path == modulePath { plan = sectionPlan }
     }
     if plan == none { panic("worldview omitted root module " + modulePath) }
-    context.scriptEntry = (entryMode == "executable" || entryMode == "ios-app") && hasScriptStatements([program])
-    return emitPlanned([program], context, plan!, sections, entryMode)
+    timings.finish("emission.header-planning", headerStart)
+    renderStart := timings.start()
+    text := renderProjectedHeader(sections, cppTypes, headerRenders)
+    timings.finish("emission.header-rendering", renderStart)
+    return PreparedModuleHeader { plan: plan!, text }
   }
 
-  private emitPlanned(programs: Program[], context: EmitContext, plan: HeaderPlan, sections: HeaderSection[], entryMode: string): ModuleEmission {
+  render(program: Program, header: PreparedModuleHeader, text: string, preparedTypes: CppTypeSnapshot, identities: SemanticTypeIdentitySnapshot, entryMode: string): ModuleEmission {
+    contextStart := timings.start()
+    context := createEmitContextForModule(program, modulePath, allPrograms)
+    context.names = names
+    context.namespaceImports = namespaceImports
+    context.sourcePath = sourcePathFor(sourcePaths, context.modulePath)
+    context.imports = imports
+    context.cppTypes = CppTypeRegistry { base: preparedTypes, names }
+    context.moduleSurfaces = moduleSurfaces
+    context.jsonEligibility = JsonEligibilityCache {}
+    if coverageModuleId >= 0 {
+      context.coverageEnabled = true
+      context.coverageModuleId = coverageModuleId
+    }
+    if instantiations != none { configureInstantiationRegistry(context, instantiations!) }
+    context.typeLowering = TypeLoweringSession { graph: TypeLoweringGraph { registry: context.cppTypes, identities } }
+    context.scriptEntry = (entryMode == "executable" || entryMode == "ios-app") && hasScriptStatements([program])
+    timings.finish("header.root-context", contextStart)
+    return emitPlanned([program], context, header.plan, text, entryMode)
+  }
+
+  private planSection(view: WorldviewModule): HeaderPlan {
+    lookupStart := timings.start()
+    key := projectedHeaderKey(view.path, view.program, worldviewInterfaceKeys)
+    cached := headerPlans.get(key)
+    timings.finish("header.cache-lookup-copy", lookupStart)
+    if cached != none { return cached! }
+    contextStart := timings.start()
+    sectionContext := createEmitContextForModule(view.program, view.path, allPrograms)
+    sectionContext.names = names
+    sectionContext.imports = surfaceImports(moduleSurfaces, view.path)
+    sectionContext.sourcePath = sourcePathFor(sourcePaths, view.path)
+    sectionContext.cppTypes = cppTypes
+    sectionContext.moduleSurfaces = moduleSurfaces
+    sectionContext.jsonEligibility = jsonEligibility
+    if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
+    if typeLowering != none { sectionContext.typeLowering = TypeLoweringSession { graph: typeLowering! } }
+    timings.finish("header.section-context", contextStart)
+    declarationsStart := timings.start()
+    sectionPlan := planHeader(
+      view.program,
+      sectionContext,
+      if instantiations == none then [] else instantiations!.methods,
+      if instantiations == none then [] else instantiations!.classes,
+    )
+    timings.finish("header.declarations", declarationsStart)
+    concreteStart := timings.start()
+    if instantiations != none {
+      addConcreteHeaderDeclarations(sectionPlan, sectionContext, instantiations!, view.program, worldviewInterfaceKeys)
+    }
+    timings.finish("header.concrete-declarations", concreteStart)
+    cacheStart := timings.start()
+    frozen := freezeHeaderPlan(sectionPlan, key)
+    headerPlans.store(key, frozen)
+    timings.finish("header.cache-store", cacheStart)
+    return frozen
+  }
+
+  private emitPlanned(programs: Program[], context: EmitContext, plan: HeaderPlan, header: string, entryMode: string): ModuleEmission {
     headerName := headerNameOverride
     sourceName := sourceNameOverride
     namespaceName := namespaceNameOverride
-    header := renderProjectedHeader(sections)
+    sourceStart := timings.start()
     sourceBuilder := StringBuilder()
     sourceBuilder.append("#include \"" + headerName + "\"\n\n")
     for namespace of initializationModuleNamespaces {
@@ -159,7 +233,7 @@ class CxxModuleEmitter {
     }
     if initializationModuleNamespaces.length > 0 { sourceBuilder.append("\n") }
     sourceBuilder.append("namespace " + namespaceName + " {\n")
-    sourceBuilder.append(emitImportedNamespaces(context, worldviewModules))
+    sourceBuilder.append(emitImportedNamespaces(context, visibleModulePaths))
     if context.scriptEntry { sourceBuilder.append(emitScriptStorage(programs, context)) }
     for program of programs {
       for statement of program.statements {
@@ -185,6 +259,7 @@ class CxxModuleEmitter {
     if entryMode == "executable" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(generatedLineDirective() + emitMainWrapper(namespaceName, plan, context.scriptEntry, initializationCall)) }
     if entryMode == "ios-app" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(generatedLineDirective() + emitAppEntryWrapper(namespaceName, plan, context.scriptEntry, initializationCall)) }
     source := sourceBuilder.drainToString()
+    timings.finish("emission.source-rendering", sourceStart)
     return ModuleEmission {
       modulePath: context.modulePath, header, source, headerName, sourceName,
       coverageModuleId: context.coverageModuleId,
@@ -318,16 +393,16 @@ function containsString(values: string[], value: string): bool {
   return false
 }
 
-function emitImportedNamespaces(context: EmitContext, worldviewModules: WorldviewModule[]): string {
+function emitImportedNamespaces(context: EmitContext, worldviewModules: readonly string[]): string {
   let namespaces: string[] = []
   for imported of context.imports {
     if !worldviewContainsModule(worldviewModules, imported.sourceModule) { continue }
-    namespace := moduleNamespace(imported.sourceModule)
+    namespace := moduleNamespace(imported.sourceModule, context.names)
     addNamespace(namespaces, namespace)
   }
   for imported of context.namespaceImports {
     if !worldviewContainsModule(worldviewModules, imported.sourceModule) { continue }
-    namespace := moduleNamespace(imported.sourceModule)
+    namespace := moduleNamespace(imported.sourceModule, context.names)
     addNamespace(namespaces, namespace)
   }
   let result = ""
@@ -335,8 +410,8 @@ function emitImportedNamespaces(context: EmitContext, worldviewModules: Worldvie
   return result
 }
 
-function worldviewContainsModule(modules: WorldviewModule[], path: string): bool {
-  for module of modules { if module.path == path { return true } }
+function worldviewContainsModule(modules: readonly string[], path: string): bool {
+  for module of modules { if module == path { return true } }
   return false
 }
 
@@ -355,10 +430,13 @@ export function emitModuleGraph(
   reusableModules: ModuleEmissionCacheKey[] = [],
   configurationFingerprint: string = "",
   physicalSourcePaths: bool = false,
+  timings: PhaseTimings = PhaseTimings {},
+  names: ModuleNames = ModuleNames {},
 ): ModuleGraphEmission {
+  planningStart := timings.start()
   graph := ModuleGraphEmission {}
-  concretePlan := instantiations ?? buildInstantiationPlan(result)
-  plan := planModuleGraph(result)
+  concretePlan := instantiations ?? buildInstantiationPlan(result, names)
+  plan := planModuleGraph(result, names)
   initializationOrder := planModuleInitializationOrder(result, entry, entryMode)
   graphPrograms := allPrograms(result)
   graphSurfaces := emitModuleSurfaces(result)
@@ -366,11 +444,18 @@ export function emitModuleGraph(
   reusableFingerprints := indexReusableModuleFingerprints(reusableModules)
   instantiationFingerprintInput := moduleInstantiationFingerprintInput(concretePlan)
   jsonEligibility := JsonEligibilityCache {}
-  worldviewGraphIndex := indexWorldviewGraph(result)
+  headerPlans := HeaderPlanCache {}
+  headerRenders := HeaderRenderCache {}
+  cppTypes := CppTypeRegistry { names }
+  identities := SemanticTypeIdentities {}
+  typeLowering := TypeLoweringGraph { registry: cppTypes, identities }
+  worldviewGraphIndex := indexWorldviewGraph(result, identities)
   let sourcePaths: Map<string, string> = {}
   for info of result.modules {
     sourcePaths.set(info.path, if physicalSourcePaths && info.physicalPath != "" then info.physicalPath else info.path)
   }
+  timings.finish("emission.graph-planning", planningStart)
+  pending: (PendingModuleEmission | none)[] := []
   let nextCoverageModuleId = 0
   for module of plan.modules {
     info := indexedGraphModule(moduleIndex, module.path)
@@ -380,18 +465,23 @@ export function emitModuleGraph(
       coverageModuleId = nextCoverageModuleId
       nextCoverageModuleId += 1
     }
+    moduleStart := timings.start()
+    fingerprintStart := timings.start()
     fingerprint := moduleEmissionFingerprint(
       result, moduleIndex, module.path, entry, entryMode, coverage,
       initializationOrder, configurationFingerprint + "\nphysical-source-paths:" + string(physicalSourcePaths), instantiationFingerprintInput,
     )
+    timings.finish("emission.fingerprints", fingerprintStart)
     if !coverage && reusableModuleMatches(reusableFingerprints, module.path, fingerprint) {
       graph.modules.push(ModuleEmission {
         modulePath: module.path, headerName: module.headerName, sourceName: module.sourceName,
         header: "", source: "", reused: true, fingerprint,
       })
+      timings.finish("module.reuse:" + module.path, moduleStart)
       continue
     }
     emitter := CxxModuleEmitter {
+      names, timings, headerPlans, headerRenders, cppTypes, typeLowering,
       headerNameOverride: module.headerName,
       sourceNameOverride: module.sourceName,
       namespaceNameOverride: module.namespaceName,
@@ -402,20 +492,66 @@ export function emitModuleGraph(
       moduleSurfaces: graphSurfaces,
       instantiations: concretePlan,
       coverageModuleId,
-      initializationModuleNamespaces: if module.path == entry then moduleInitializationNamespaces(initializationOrder) else [],
+      initializationModuleNamespaces: if module.path == entry then moduleInitializationNamespaces(initializationOrder, names) else [],
       jsonEligibility,
       sourcePaths,
     }
+    worldviewStart := timings.start()
     worldview := planWorldview(result, module.path, concretePlan, worldviewGraphIndex)
+    timings.finish("emission.worldviews", worldviewStart)
     emitter.worldviewModules = worldview.modules
     emitter.worldviewInterfaceKeys = worldview.interfaceKeys
-    emitted := emitter.emit(info!.program, if module.path == entry then entryMode else "none")
-    emitted.fingerprint = fingerprint
-    graph.modules.push(emitted)
-    if coverageModuleId >= 0 {
+    header := emitter.prepare(info!.program)
+    visiblePaths: string[] := []
+    for view of worldview.modules { visiblePaths.push(view.path) }
+    pending.push(PendingModuleEmission {
+      modulePath: module.path, headerName: module.headerName, sourceName: module.sourceName,
+      namespaceName: module.namespaceName, coverageModuleId, program: info!.program, header,
+      entryMode: if module.path == entry then entryMode else "none",
+      fingerprint, outputIndex: graph.modules.length,
+      visibleModulePaths: visiblePaths.drainToReadonly(),
+    })
+    graph.modules.push(ModuleEmission {
+      modulePath: module.path, headerName: module.headerName, sourceName: module.sourceName,
+      header: "", source: "", fingerprint,
+    })
+    timings.finish("module.prepare:" + module.path, moduleStart)
+  }
+  freezeStart := timings.start()
+  preparedTypes := cppTypes.snapshot()
+  preparedIdentities := identities.snapshot()
+  timings.finish("emission.freeze-types", freezeStart)
+  // All shared header construction finishes before a source renderer starts.
+  // Fork-local IDs and memo tables must never flow back into preparation caches.
+  for index of 0..<pending.length {
+    job := pending[index]!
+    // Release prepared text/configuration as each result takes its place.
+    pending[index] = none
+    moduleRenderStart := timings.start()
+    renderer := CxxModuleEmitter {
+      names, timings,
+      visibleModulePaths: job.visibleModulePaths,
+      headerNameOverride: job.headerName,
+      sourceNameOverride: job.sourceName,
+      namespaceNameOverride: job.namespaceName,
+      modulePath: job.modulePath,
+      allPrograms: graphPrograms,
+      namespaceImports: infoNamespaceImports(result, job.modulePath),
+      imports: infoImports(result, job.modulePath),
+      moduleSurfaces: graphSurfaces,
+      instantiations: concretePlan,
+      coverageModuleId: job.coverageModuleId,
+      initializationModuleNamespaces: if job.modulePath == entry then moduleInitializationNamespaces(initializationOrder, names) else [],
+      sourcePaths,
+    }
+    emitted := renderer.render(job.program, job.header, job.header.text, preparedTypes, preparedIdentities, job.entryMode)
+    timings.finish("module.render:" + job.modulePath, moduleRenderStart)
+    emitted.fingerprint = job.fingerprint
+    graph.modules[job.outputIndex] = emitted
+    if emitted.coverageModuleId >= 0 {
       graph.coverageModules.push(CoverageModuleMetadata {
-        moduleId: coverageModuleId,
-        modulePath: module.path,
+        moduleId: emitted.coverageModuleId,
+        modulePath: emitted.modulePath,
         instrumentedLines: emitted.instrumentedLines,
       })
     }
@@ -476,23 +612,24 @@ function moduleEmissionFingerprint(
   configurationFingerprint: string,
   instantiationFingerprintInput: string,
 ): string {
-  let value = "doof-module-emission-2\n" + configurationFingerprint + "\n" + path + "\n" +
-    entryMode + "\n" + string(coverage)
+  value := StringBuilder()
+  value.append("doof-module-emission-2\n" + configurationFingerprint + "\n" + path + "\n" +
+    entryMode + "\n" + string(coverage))
   let reachable: Set<string> = []
   collectModuleDependencyClosure(moduleIndex, path, reachable)
   for candidate of result.modules {
     if reachable.has(candidate.path) {
-      value = value + "\nsource:" + candidate.path + ":" + candidate.sourceHash
+      value.append("\nsource:" + candidate.path + ":" + candidate.sourceHash)
     }
   }
   // Concrete specialization ownership can flow opposite to import edges: a
   // caller may add code to a generic declaration's module. Include the global
   // plan conservatively so such changes can never retain stale C++.
-  value = value + instantiationFingerprintInput
+  value.append(instantiationFingerprintInput)
   if path == entry {
-    for initialized of initializationOrder { value = value + "\ninitialize:" + initialized }
+    for initialized of initializationOrder { value.append("\ninitialize:" + initialized) }
   }
-  return sha256HexString(value)
+  return sha256HexString(value.drainToString())
 }
 
 function collectModuleDependencyClosure(moduleIndex: Map<string, ModuleInfo>, path: string, reachable: Set<string>): none {
@@ -546,7 +683,7 @@ function configureInstantiationRegistry(context: EmitContext, plan: Instantiatio
 }
 
 function addConcreteHeaderDeclarations(
-  plan: HeaderPlan,
+  plan: HeaderPlanBuilder,
   context: EmitContext,
   instantiations: InstantiationPlan,
   program: Program,
@@ -561,20 +698,21 @@ function addConcreteHeaderDeclarations(
     if !containsString(interfaceKeys, interface_.key) { continue }
     if interface_.name != "Stream" && interface_.modulePath != context.modulePath { continue }
     if interface_.name != "Stream" && !programDeclares(program, interface_.name) { continue }
-    let alternatives = ""
+    let alternatives: CppType[] = []
     for implementation of interface_.implementations {
-      if alternatives != "" { alternatives = alternatives + ", " }
-      let typeName = implementation.typeName
       if implementation.modulePath != context.modulePath {
-        namespace := moduleNamespace(implementation.modulePath)
+        namespace := moduleNamespace(implementation.modulePath, context.names)
         plan.typeOnlyForwardDeclarations.push("namespace " + namespace + " { struct " + implementation.typeName + "; }\n")
-        typeName = "::" + namespace + "::" + typeName
       }
-      alternatives = alternatives + "std::shared_ptr<" + typeName + ">"
+      alternatives.push(context.cppTypes.templateType("std::shared_ptr", [context.cppTypes.atom(implementation.typeName, typeNamespace(implementation.modulePath, context.names))]))
     }
-    if alternatives == "" { alternatives = "std::monostate" }
+    if alternatives.length == 0 { alternatives.push(context.cppTypes.atom("std::monostate")) }
     reserveHeaderNamespaceName(plan, interface_.emittedName)
-    plan.interfaceAliases.push("using " + interface_.emittedName + " = std::variant<" + alternatives + ">;\n")
+    alias := CppDeclarationBuilder {}
+    alias.text("using " + interface_.emittedName + " = ")
+    alias.type_(context.cppTypes.templateType("std::variant", alternatives))
+    alias.text(";\n")
+    plan.interfaceAliases.push(alias.finish())
   }
   for instantiation of instantiations.classes {
     if instantiation.modulePath != context.modulePath { continue }
@@ -585,7 +723,7 @@ function addConcreteHeaderDeclarations(
     context.substitution = instantiation.substitution
     let methods: MethodInstantiation[] = []
     for method of instantiations.methods { if method.ownerKey == instantiation.key { methods.push(method) } }
-    plan.classDefinitions.push(emitClassDeclaration(instantiation.declaration, context, instantiation.emittedName, methods))
+    plan.classDefinitions.push(planClassDeclaration(instantiation.declaration, context, instantiation.emittedName, methods))
     clearInstantiation(context)
   }
   for instantiation of instantiations.functions {
@@ -593,7 +731,7 @@ function addConcreteHeaderDeclarations(
     if !programDeclares(program, instantiation.declaration.name) { continue }
     for argument of instantiation.substitution.arguments { addConcreteTypeForwardDeclarations(plan, context, argument) }
     context.substitution = instantiation.substitution
-    signature := emitFunctionDeclaration(instantiation.declaration, instantiation.emittedName, context.modulePath, context)
+    signature := planFunctionDeclaration(instantiation.declaration, instantiation.emittedName, context.modulePath, context)
     reserveHeaderNamespaceName(plan, instantiation.emittedName)
     if instantiation.declaration.native_ { plan.nativeAdapterSignatures.push(signature) }
     else { plan.functionSignatures.push(signature) }
@@ -617,19 +755,19 @@ function headerDeclarationName(statement: Statement): string {
   return ""
 }
 
-function addConcreteTypeForwardDeclarations(plan: HeaderPlan, context: EmitContext, type_: ResolvedType): none {
+function addConcreteTypeForwardDeclarations(plan: HeaderPlanBuilder, context: EmitContext, type_: ResolvedType): none {
   case type_ {
     class_: ClassType -> {
       if class_.symbol.module != "" && class_.symbol.module != context.modulePath {
         typeName := concreteClassTypeName(context, class_)
-        declaration := "namespace " + moduleNamespace(class_.symbol.module) + " { struct " + typeName + "; }\n"
+        declaration := "namespace " + moduleNamespace(class_.symbol.module, context.names) + " { struct " + typeName + "; }\n"
         if !containsString(plan.typeOnlyForwardDeclarations, declaration) { plan.typeOnlyForwardDeclarations.push(declaration) }
       }
       for argument of class_.typeArgs { addConcreteTypeForwardDeclarations(plan, context, argument) }
     }
     enum_: EnumType -> {
       if enum_.symbol.module != "" && enum_.symbol.module != context.modulePath {
-        declaration := "namespace " + moduleNamespace(enum_.symbol.module) + " { enum class " + enum_.name + "; }\n"
+        declaration := "namespace " + moduleNamespace(enum_.symbol.module, context.names) + " { enum class " + enum_.name + "; }\n"
         if !containsString(plan.typeOnlyForwardDeclarations, declaration) { plan.typeOnlyForwardDeclarations.push(declaration) }
       }
     }
@@ -794,9 +932,9 @@ function visitInitializationModule(
   if !scriptEntry && moduleHasDeferredInitialization(info!.program) { order.push(path) }
 }
 
-function moduleInitializationNamespaces(paths: string[]): string[] {
+function moduleInitializationNamespaces(paths: string[], names: ModuleNames): string[] {
   let result: string[] = []
-  for path of paths { result.push(moduleNamespace(path)) }
+  for path of paths { result.push(moduleNamespace(path, names)) }
   return result
 }
 

@@ -7,6 +7,7 @@
 // import is encountered. Bare modules come from doof.json dependencies, while
 // local and std/* paths are resolved from their acquired roots.
 
+import { PhaseTimings } from "./phase-timings"
 import { checkWithLoader, Compilation, compileWithLoader } from "./compiler"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { CliRequest, cliUsage, parseCli } from "./cli"
@@ -1360,7 +1361,22 @@ function findTestExecutionResult(results: TestExecutionResult[], id: string): Te
   return none
 }
 
+/** Keeps timing reports available on early diagnostic and cache-hit returns. */
 function emitRequest(request: CliRequest): int {
+  timings := PhaseTimings { enabled: phaseTimingsEnabled(request.command, environmentValue("DOOF_TIMINGS")) }
+  started := timings.start()
+  result := emitRequestTimed(request, timings)
+  timings.finish("command.total", started)
+  if timings.enabled { printFlushed(timings.render()) }
+  return result
+}
+
+export function phaseTimingsEnabled(command: string, value: string): bool {
+  return (command == "emit" || command == "check") && value == "1"
+}
+
+function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
+  setupStart := timings.start()
   if request.command == "profile" && hostPlatform() != "macos" {
     println("error: doof profile is currently supported only on macOS")
     return 1
@@ -1419,8 +1435,11 @@ function emitRequest(request: CliRequest): int {
   frontendConfiguration := frontendConfigurationFingerprint(
     entry, entryMode, project.target, rootManifest, stdlibRoot, nativePlatform, preparationTarget,
   )
+  timings.finish("command.setup", setupStart)
+  cacheStart := timings.start()
   checkCachePath := frontendCachePath(cacheDirectory, "check")
   if request.command == "check" && frontendStateMatches(readFrontendState(checkCachePath), frontendConfiguration, loader) {
+    timings.finish("command.cache-lookup", cacheStart)
     return 0
   }
   emissionCachePath := frontendCachePath(cacheDirectory, "emission")
@@ -1434,19 +1453,23 @@ function emitRequest(request: CliRequest): int {
         then cachedModuleGraph(previousEmissionState!, outputDirectory)
         else none
     else none
+  timings.finish("command.cache-lookup", cacheStart)
+  compilerStart := timings.start()
   if cachedGraph != none {
     result = Compilation { emission: cachedGraph!, diagnostics: [] }
     reusedFrontend = true
   } else {
     result = if request.command == "check"
-      then checkWithLoader([], entry, loader, entryMode)
+      then checkWithLoader([], entry, loader, entryMode, timings)
       else compileWithLoader(
         [], entry, loader, namespaceMappings, entryMode, false,
         if request.command == "package" || frontendConfiguration == "" then [] else reusableEmissionKeys(previousEmissionState, outputDirectory),
         frontendConfiguration,
-        request.command == "profile",
+        request.command == "profile", timings,
       )
   }
+  timings.finish("command.compiler", compilerStart)
+  diagnosticsStart := timings.start()
   hasCompilationErrors := hasErrorDiagnostics(result.diagnostics)
   if result.diagnostics.length > 0 && (request.command != "run" || hasCompilationErrors) {
     printDiagnostics(result.diagnostics)
@@ -1455,6 +1478,7 @@ function emitRequest(request: CliRequest): int {
   if request.command != "check" && request.command != "package" && !reusedFrontend && result.diagnostics.length == 0 {
     writeFrontendState(checkCachePath, frontendStateForCompilation(result, frontendConfiguration, rootManifest))
   }
+  timings.finish("command.diagnostics-check-cache", diagnosticsStart)
   if request.command == "check" {
     if result.diagnostics.length == 0 {
       writeFrontendState(checkCachePath, frontendStateForCompilation(result, frontendConfiguration, rootManifest))
@@ -1462,15 +1486,20 @@ function emitRequest(request: CliRequest): int {
     return 0
   }
   if result.emission == none { panic("compiler produced no emission") }
+  preparationStart := timings.start()
   _ := prepareReachedStdlibPackages(preparationTarget) else error {
     println("error: " + error)
     return 1
   }
 
+  timings.finish("command.stdlib-preparation", preparationStart)
+  projectStart := timings.start()
   emission := planProjectEmission(
     result.emission!,
     projectNativePackages(project.rootDirectory, rootManifest, stdlibRoot),
   )
+  timings.finish("command.project-planning", projectStart)
+  materializationStart := timings.start()
   materializeProject(outputDirectory, emission)
   materializeRuntimeHeader(outputDirectory)
   legacyProvenance := driverOutputPath(outputDirectory, "provenance.json")
@@ -1480,6 +1509,7 @@ function emitRequest(request: CliRequest): int {
     removeStaleFrontendOutputs(previousEmissionState, nextEmissionState, outputDirectory)
     writeFrontendState(emissionCachePath, nextEmissionState)
   }
+  timings.finish("command.materialization-cache", materializationStart)
   if project.iosApp != none {
     _ := configureIOSNativeBuild(outputDirectory, project.iosApp!, iosDestination, emission.nativeBuild) else error {
       println("error: " + error)

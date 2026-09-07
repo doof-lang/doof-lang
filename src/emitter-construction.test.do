@@ -1,3 +1,6 @@
+import { ModuleNamespaceMapping } from "./emitter-names"
+import { noSourceLoader } from "./resolver"
+import { compileWithLoader } from "./compiler"
 // Native tests compile the current source emitter's output, never a stale
 // installed compiler. Their build directory is separate from shared test builds.
 import { Assert } from "std/assert"
@@ -66,4 +69,17 @@ export function testSecondConsolidationGenericStoredDefaults(): none {
   source := result.emission!.modules[0].source
   Assert.stringContains(source, "std::make_shared<Box__int>(std::make_shared<std::vector<int32_t>>" )
   Assert.equal(source.contains("std::vector<T>"), false)
+}
+
+export function testReadonlyEmissionConstructionUsesExplicitNames(): none {
+  result := compileWithLoader([
+    SourceFile { path: "/vendor/types.do", source: "export class Item { value: int = 1 }\nexport class Other {}\nexport enum Choice { One, Two }\nexport function make(): Item => Item {}" },
+    SourceFile { path: "/main.do", source: "import { Item, Other, Choice, make } from \"./vendor/types\"\nfunction build(): Item => Item {}" },
+  ], "/main.do", noSourceLoader, [ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "mapped" }])
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let output = ""
+  for module of result.emission!.modules { if module.modulePath == "/main.do" { output = module.header + module.source } }
+  Assert.stringContains(output, "::mapped::types::Item")
+  Assert.stringNotContains(output, "app_vendor_types_")
 }

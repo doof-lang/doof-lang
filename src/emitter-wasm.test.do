@@ -1,3 +1,4 @@
+import { ModuleNamespaceMapping } from "./emitter-names"
 import { Assert } from "std/assert"
 import { compileWithLoader } from "./compiler"
 import { noSourceLoader } from "./resolver"
@@ -69,4 +70,11 @@ export function testIncludesFunctionsExportedByASeparateList(): none {
 
   Assert.equal(result.diagnostics.length, 0)
   Assert.equal(result.emission!.wasmExportNames[1], "doof_export_add")
+}
+
+export function testReadonlyEmissionWasmUsesExplicitPackageNames(): none {
+  result := compileWithLoader([SourceFile { path: "/vendor/main.do", source: "export function add(value: int): int => value + 1" }], "/vendor/main.do", noSourceLoader, [ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "mapped" }], "wasm")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.stringContains(result.emission!.wasmSupportSource, "::mapped::main_::add(")
+  Assert.stringContains(result.emission!.wasmSupportSource, "mapped_main.hpp")
 }

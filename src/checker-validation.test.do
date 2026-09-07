@@ -1,11 +1,11 @@
 import { compile } from "./compiler"
-import { arrayType, primitive, unionType } from "./checker-types"
+import { arrayType, classType, primitive, unionType } from "./checker-types"
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
 import { validateCheckedTypes, validateResolved } from "./checker-validation"
 import { CallExpression, FunctionDeclaration, MemberExpression } from "./ast"
-import { Diagnostic, SourceFile } from "./semantic"
+import { Diagnostic, SourceFile, Symbol } from "./semantic"
 
 export function testCheckerConsolidationRequiresMemberTargetDecoration(): none {
   analysis := createAnalyzer([SourceFile { path: "/main.do", source:
@@ -80,4 +80,24 @@ export function testUnionMutabilityInferredMember(): none {
     }
   }
   Assert.isTrue(found)
+}
+
+export function testUnionMutabilityNominalGuardPreservesNestedDiagnostics(): none {
+  valid := compile([SourceFile { path: "/main.do", source:
+    "class Mutable { values: int[] }\nclass Frozen { values: readonly int[] }\n" +
+    "function keep(value: Mutable | Frozen): Mutable | Frozen => value" }], "/main.do")
+  Assert.equal(valid.diagnostics.length, 0)
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "class Node {}\nfunction main(): int => 0" }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  span := analysis.modules[0].program.statements[1].span
+  nested := arrayType(unionType([arrayType(primitive("int")), arrayType(primitive("int"), true)]))
+  diagnostics: Diagnostic[] := []
+  nominal := classType("Node", Symbol { kind: "class", name: "Node", module: "/main.do", exported: false })
+  mixed := unionType([nominal, nested])
+  validateResolved(mixed, span, "/main.do", "first", diagnostics)
+  validateResolved(mixed, span, "/main.do", "second", diagnostics)
+  Assert.equal(diagnostics.length, 2)
+  Assert.equal(diagnostics[0].message, diagnostics[1].message)
+  Assert.equal(diagnostics[0].span.start.line, 2)
+  Assert.stringContains(diagnostics[0].message, "cannot be distinguished at runtime")
 }

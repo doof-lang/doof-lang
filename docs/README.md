@@ -11,7 +11,7 @@ The compiler documentation has three complementary views:
   **detailed semantic slice**. Start there to trace decorated calls, generic
   reachability, structural interfaces, JSON demand, and projected emission.
 
-Neither document defines the language. User-visible syntax and semantics belong
+These documents do not define the language. User-visible syntax and semantics belong
 in the [language specification](../spec/01-overview.md); the architecture docs
 explain how this compiler implements that contract.
 
@@ -28,6 +28,7 @@ explain how this compiler implements that contract.
 | Where does a CLI command route? | [CLI](cli.md) |
 | Where should a test live and how does the runner work? | [Testing](testing.md) |
 | How is the compiler bootstrapped and released? | [Bootstrap and release](bootstrap-and-release.md) |
+| What did the emission experiments establish? | [Emission work archive](archive/emission-2026-09-07.md) (historical measurements and rejected approaches) |
 | What is knowingly incomplete? | [Known limitations](known-limitations.md) and [roadmap](../ROADMAP.md) |
 
 ## Change routes

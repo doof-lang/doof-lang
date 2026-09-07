@@ -1,3 +1,5 @@
+import { ModuleNamespaceMapping } from "./emitter-names"
+import { PhaseTimings } from "./phase-timings"
 import { Assert } from "std/assert"
 import { readText } from "std/fs"
 import { createAnalyzer } from "./analyzer"
@@ -552,7 +554,7 @@ export function testDiagnosesExpandingGenericInstantiations(): none {
   Assert.equal(result.emission == none, true)
   Assert.equal(result.diagnostics.length, 1)
   Assert.equal(result.diagnostics[0].message.contains("Generic instantiation did not converge"), true)
-  Assert.equal(result.diagnostics[0].message.contains("grow__array"), true)
+  Assert.equal(result.diagnostics[0].message.contains("::function::grow::[array:"), true)
   Assert.equal(result.diagnostics[0].message.contains("->"), true)
 }
 
@@ -831,4 +833,63 @@ export function testDoesNotBoxUncapturedMutableLambdaLocal(): none {
   Assert.equal(source.contains("auto value = 1;"), true)
   Assert.equal(source.contains("std::make_shared<int32_t>(1)"), false)
   Assert.equal(source.contains("doof::callback<int32_t()>([]() -> int32_t"), true)
+}
+
+export function testPhaseTimingsCompilerPreservesOutputAndDiagnostics(): none {
+  sources := [SourceFile { path: "/main.do", source: "function main(): int => 1" }]
+  timings := PhaseTimings { enabled: true }
+  measured := compileWithLoader(sources, "/main.do", noSourceLoader, [], "executable", false, [], "", false, timings)
+  baseline := compile(sources, "/main.do")
+  Assert.equal(measured.diagnostics.length, baseline.diagnostics.length)
+  Assert.equal(measured.emission!.modules[0].header, baseline.emission!.modules[0].header)
+  Assert.equal(measured.emission!.modules[0].source, baseline.emission!.modules[0].source)
+  Assert.stringContains(timings.render(), "compiler.checking ms=")
+  Assert.stringContains(timings.render(), "compiler.instantiations ms=")
+  Assert.stringContains(timings.render(), "compiler.instantiation-discovery ms=")
+  Assert.stringContains(timings.render(), "compiler.instantiation-naming ms=")
+  Assert.stringContains(timings.render(), "compiler.emission ms=")
+  checkTimings := PhaseTimings { enabled: true }
+  checked := checkWithLoader(sources, "/main.do", noSourceLoader, "executable", checkTimings)
+  Assert.equal(checked.emission, none)
+  Assert.isFalse(checkTimings.render().contains("compiler.emission"))
+  invalid := [SourceFile { path: "/main.do", source: "function main(): int => missing" }]
+  errorTimings := PhaseTimings { enabled: true }
+  errorResult := checkWithLoader(invalid, "/main.do", noSourceLoader, "executable", errorTimings)
+  Assert.isTrue(errorResult.diagnostics.length > 0)
+  Assert.stringContains(errorResult.diagnostics[0].message, "missing")
+  Assert.stringContains(errorTimings.render(), "compiler.checking ms=")
+  Assert.isFalse(errorTimings.render().contains("compiler.emission"))
+}
+
+export function testReadonlyEmissionCompilationNamesDoNotLeak(): none {
+  sources := [SourceFile { path: "/vendor/main.do", source: "function main(): int => 0" }]
+  first := compileWithLoader(sources, "/vendor/main.do", noSourceLoader, [ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "first" }])
+  second := compileWithLoader(sources, "/vendor/main.do", noSourceLoader, [ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "second" }])
+  repeated := compileWithLoader(sources, "/vendor/main.do", noSourceLoader, [ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "first" }])
+  Assert.equal(first.diagnostics.length, 0)
+  Assert.equal(second.diagnostics.length, 0)
+  Assert.equal(repeated.diagnostics.length, 0)
+  Assert.stringContains(first.emission!.modules[0].source, "namespace first::main_")
+  Assert.stringContains(second.emission!.modules[0].source, "namespace second::main_")
+  Assert.equal(first.emission!.modules[0].source, repeated.emission!.modules[0].source)
+}
+
+export function testRepeatedCompilationPreservesCoverageAndOutput(): none {
+  sources := [
+    SourceFile { path: "/types.do", source: "export class Left {}\nexport class Right {}\nexport type Choice = Left | Right" },
+    SourceFile { path: "/main.do", source: "import { Choice } from \"./types\"\nfunction pass(value: Choice): Choice => value\nfunction main(): int => 0" },
+  ]
+  serial := compileWithLoader{ sources, entry: "/main.do", loader: noSourceLoader, coverage: true }
+  repeated := compileWithLoader{ sources, entry: "/main.do", loader: noSourceLoader, coverage: true }
+  Assert.equal(serial.diagnostics.length, 0)
+  Assert.equal(repeated.diagnostics.length, 0)
+  Assert.equal(serial.emission!.modules.length, repeated.emission!.modules.length)
+  for index of 0..<serial.emission!.modules.length {
+    before := serial.emission!.modules[index]
+    after := repeated.emission!.modules[index]
+    Assert.equal(after.modulePath, before.modulePath)
+    Assert.equal(after.header, before.header)
+    Assert.equal(after.source, before.source)
+    Assert.equal(after.fingerprint, before.fingerprint)
+  }
 }

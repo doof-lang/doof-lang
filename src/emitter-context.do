@@ -1,9 +1,12 @@
+import { ModuleNames } from "./emitter-names"
+import { TypeLoweringSession } from "./emitter-type-cache"
 // Shared state for the Doof emitter's nominal lowering.
 //
 // This intentionally owns only graph-wide nominal and method context. It owns
 // only the declarations needed by class construction and method field access;
 // module dependency state belongs to the module/header planner.
 
+import { CppTypeRegistry } from "./cpp-type"
 import { Program, SourceSpan } from "./ast"
 import { JsonEligibilityCache } from "./json-semantics"
 import {
@@ -22,6 +25,9 @@ export class SourceLocationSpanOverride {
 }
 
 export class EmitContext {
+  let names: ModuleNames = ModuleNames {}
+  let typeLowering: TypeLoweringSession | none = none
+  let cppTypes: CppTypeRegistry = CppTypeRegistry {}
   let modulePath: string = ""
   let sourcePath: string = ""
   allPrograms: Program[] = []

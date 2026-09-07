@@ -9,7 +9,7 @@ import { SourceFile } from "./semantic"
 import { ModuleEmission, emitModuleGraph, ModuleGraphPlan, planModuleGraph } from "./emitter-module"
 import { InstantiationPlan } from "./emitter-monomorphize"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, JsonEligibilityCache } from "./json-semantics"
-import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
+import { ModuleNamespaceMapping, prepareModuleNames } from "./emitter-names"
 import { hasErrorDiagnostics } from "./diagnostics"
 
 function emit(source: string): ModuleEmission {
@@ -533,11 +533,10 @@ export function testMaterializesCallerDefaultsAtPackageRelativeCallSite(): none 
   Assert.equal(analysis.diagnostics.length, 0)
   checked := createChecker(analysis).check(path)
   Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
-  configureModuleNamespaces([
+  names := prepareModuleNames([
     ModuleNamespaceMapping { logicalPrefix: "/workspace/assert", packageName: "std/assert" },
   ])
-  emitted := emitModuleGraph(analysis, path).modules[0].source
-  configureModuleNamespaces([])
+  emitted := emitModuleGraph{ result: analysis, entry: path, names }.modules[0].source
 
   Assert.equal(emitted.contains("SourceLocation>(std::string(\"tests/caller.test\"), 7, std::string(\"wrapper\"))"), true)
   Assert.equal(emitted.contains("SourceLocation>(std::string(\"tests/caller.test\"), 8, std::string(\"wrapper\"))"), true)
@@ -1856,15 +1855,14 @@ export function testResolvesNestedSourceRelativeNativeHeaderIntoPackageOutput():
   analysis := createAnalyzer([SourceFile { path, source }]).analyze(path)
   Assert.equal(analysis.diagnostics.length, 0)
   Assert.equal(hasErrorDiagnostics(createChecker(analysis).check(path).diagnostics), false)
-  configureModuleNamespaces([
+  names := prepareModuleNames([
     ModuleNamespaceMapping {
       logicalPrefix: "/workspace/http-server",
       packageName: "std/http-server",
       outputRoot: "",
     },
   ])
-  header := emitModuleGraph(analysis, path).modules[0].header
-  configureModuleNamespaces([])
+  header := emitModuleGraph{ result: analysis, entry: path, names }.modules[0].header
 
   Assert.equal(header.contains("#include \"native_http_server_test_support.hpp\""), true)
   Assert.equal(header.contains("#include \"../native_http_server_test_support.hpp\""), false)

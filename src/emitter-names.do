@@ -11,18 +11,26 @@ export class ModuleNamespaceMapping {
   outputRoot: string = ""
 }
 
-let configuredModuleNamespaceMappings: ModuleNamespaceMapping[] = []
-let cachedModuleNamespaces: Map<string, string> = {}
-
-/** Replaces the package ownership used by the next module-graph emission. */
-export function configureModuleNamespaces(mappings: ModuleNamespaceMapping[]): none {
-  configuredModuleNamespaceMappings = mappings
-  cachedModuleNamespaces = {}
+export class ModuleNames {
+  readonly mappings: readonly ModuleNamespaceMapping[] = []
+  readonly namespaces: readonly Map<string, string> = {}
 }
 
-export function moduleStem(path: string): string {
+export function prepareModuleNames(mappings: ModuleNamespaceMapping[], paths: string[] = []): ModuleNames {
+  // Copy mapping records as well as the container before publishing the snapshot.
+  records: ModuleNamespaceMapping[] := []
+  for mapping of mappings {
+    records.push(ModuleNamespaceMapping { logicalPrefix: mapping.logicalPrefix, packageName: mapping.packageName, outputRoot: mapping.outputRoot })
+  }
+  base := ModuleNames { mappings: records.drainToReadonly() }
+  namespaces: Map<string, string> := {}
+  for path of paths { namespaces.set(path, computeModuleNamespace(path, base)) }
+  return ModuleNames { mappings: base.mappings, namespaces: namespaces.drainToReadonly() }
+}
+
+export function moduleStem(path: string, names: ModuleNames = ModuleNames {}): string {
   let normalized = path.replaceAll("\\", "/")
-  mapping := namespaceMappingForPath(normalized)
+  mapping := namespaceMappingForPath(normalized, names)
   if mapping != none {
     let relativePath = normalized.substring(mapping!.logicalPrefix.length, normalized.length)
     while relativePath.startsWith("/") {
@@ -40,13 +48,13 @@ export function moduleStem(path: string): string {
   return if result == "" then "module" else result
 }
 
-export function moduleNamespace(path: string): string {
-  cached := cachedModuleNamespaces.get(path) else { return cacheModuleNamespace(path) }
+export function moduleNamespace(path: string, names: ModuleNames = ModuleNames {}): string {
+  cached := names.namespaces.get(path) else { return computeModuleNamespace(path, names) }
   return cached
 }
 
-function cacheModuleNamespace(path: string): string {
-  mapping := namespaceMappingForPath(path)
+function computeModuleNamespace(path: string, names: ModuleNames = ModuleNames {}): string {
+  mapping := namespaceMappingForPath(path, names)
   if mapping != none {
     let relativePath = path.substring(mapping!.logicalPrefix.length, path.length)
     while relativePath.startsWith("/") {
@@ -57,18 +65,16 @@ function cacheModuleNamespace(path: string): string {
     }
     let namespace = namespacePath(mapping!.packageName)
     if relativePath != "" { namespace = namespace + "::" + namespacePath(relativePath) }
-    cachedModuleNamespaces.set(path, namespace)
     return namespace
   }
-  namespace := "app_" + moduleStem(path) + "_"
-  cachedModuleNamespaces.set(path, namespace)
+  namespace := "app_" + moduleStem(path, names) + "_"
   return namespace
 }
 
 /** Formats source paths embedded in runtime diagnostics and @caller values. */
-export function moduleDiagnosticPath(path: string, stripExtension: bool): string {
+export function moduleDiagnosticPath(path: string, stripExtension: bool, names: ModuleNames = ModuleNames {}): string {
   let normalized = path.replaceAll("\\", "/")
-  mapping := namespaceMappingForPath(normalized)
+  mapping := namespaceMappingForPath(normalized, names)
   if mapping != none {
     normalized = normalized.substring(mapping!.logicalPrefix.length, normalized.length)
   }
@@ -82,9 +88,9 @@ export function moduleDiagnosticPath(path: string, stripExtension: bool): string
 }
 
 /** Resolves a quoted source-relative native header into the emitted package tree. */
-export function moduleNativeHeaderPath(modulePath: string, headerPath: string): string {
+export function moduleNativeHeaderPath(modulePath: string, headerPath: string, names: ModuleNames = ModuleNames {}): string {
   if !headerPath.startsWith("./") && !headerPath.startsWith("../") { return headerPath }
-  mapping := namespaceMappingForPath(modulePath)
+  mapping := namespaceMappingForPath(modulePath, names)
   if mapping == none { return headerPath }
 
   let relativeModulePath = modulePath.substring(mapping!.logicalPrefix.length, modulePath.length)
@@ -111,9 +117,9 @@ export function moduleNativeHeaderPath(modulePath: string, headerPath: string): 
   return result
 }
 
-function namespaceMappingForPath(path: string): ModuleNamespaceMapping | none {
+function namespaceMappingForPath(path: string, names: ModuleNames = ModuleNames {}): ModuleNamespaceMapping | none {
   let selected: ModuleNamespaceMapping | none = none
-  for mapping of configuredModuleNamespaceMappings {
+  for mapping of names.mappings {
     if path == mapping.logicalPrefix || path.startsWith(mapping.logicalPrefix + "/") {
       if selected == none || mapping.logicalPrefix.length > selected!.logicalPrefix.length {
         selected = mapping
@@ -141,12 +147,12 @@ function namespaceComponent(value: string): string {
   return cppIdentifier(result)
 }
 
-export function moduleHeaderName(path: string): string {
-  return moduleStem(path) + ".hpp"
+export function moduleHeaderName(path: string, names: ModuleNames = ModuleNames {}): string {
+  return moduleStem(path, names) + ".hpp"
 }
 
-export function moduleSourceName(path: string): string {
-  return moduleStem(path) + ".cpp"
+export function moduleSourceName(path: string, names: ModuleNames = ModuleNames {}): string {
+  return moduleStem(path, names) + ".cpp"
 }
 
 // One keyword policy for namespace components and emitted value identifiers.
@@ -159,19 +165,60 @@ export function cppIdentifier(name: string): string {
 }
 
 function isCppKeyword(name: string): bool {
-  return name == "alignas" || name == "alignof" || name == "and" || name == "and_eq" || name == "asm" || name == "auto" ||
-    name == "bitand" || name == "bitor" || name == "bool" || name == "break" || name == "case" || name == "catch" ||
-    name == "char" || name == "char8_t" || name == "char16_t" || name == "char32_t" || name == "class" || name == "compl" ||
-    name == "concept" || name == "const" || name == "consteval" || name == "constexpr" || name == "constinit" || name == "const_cast" ||
-    name == "continue" || name == "co_await" || name == "co_return" || name == "co_yield" || name == "decltype" || name == "default" ||
-    name == "delete" || name == "do" || name == "double" || name == "dynamic_cast" || name == "else" || name == "enum" ||
-    name == "explicit" || name == "export" || name == "extern" || name == "false" || name == "float" || name == "for" ||
-    name == "friend" || name == "goto" || name == "if" || name == "inline" || name == "int" || name == "long" ||
-    name == "mutable" || name == "namespace" || name == "new" || name == "noexcept" || name == "not" || name == "not_eq" ||
-    name == "nullptr" || name == "operator" || name == "or" || name == "or_eq" || name == "private" || name == "protected" ||
-    name == "public" || name == "register" || name == "reinterpret_cast" || name == "requires" || name == "return" || name == "short" ||
-    name == "signed" || name == "sizeof" || name == "static" || name == "static_assert" || name == "struct" || name == "switch" ||
-    name == "template" || name == "this" || name == "thread_local" || name == "throw" || name == "true" || name == "try" ||
-    name == "typedef" || name == "typeid" || name == "typename" || name == "union" || name == "unsigned" || name == "using" ||
-    name == "virtual" || name == "void" || name == "volatile" || name == "wchar_t" || name == "while" || name == "xor" || name == "xor_eq"
+  // Most identifiers are not keywords; only compare words of the same length.
+  case name.length {
+    2 -> {
+      return name == "do" || name == "if" || name == "or"
+    }
+    3 -> {
+      return name == "and" || name == "asm" || name == "for" || name == "int" ||
+        name == "new" || name == "not" || name == "try" || name == "xor"
+    }
+    4 -> {
+      return name == "auto" || name == "bool" || name == "case" || name == "char" ||
+        name == "else" || name == "enum" || name == "goto" || name == "long" ||
+        name == "this" || name == "true" || name == "void"
+    }
+    5 -> {
+      return name == "bitor" || name == "break" || name == "catch" || name == "class" ||
+        name == "compl" || name == "const" || name == "false" || name == "float" ||
+        name == "or_eq" || name == "short" || name == "throw" || name == "union" ||
+        name == "using" || name == "while"
+    }
+    6 -> {
+      return name == "and_eq" || name == "bitand" || name == "delete" || name == "double" ||
+        name == "export" || name == "extern" || name == "friend" || name == "inline" ||
+        name == "not_eq" || name == "public" || name == "return" || name == "signed" ||
+        name == "sizeof" || name == "static" || name == "struct" || name == "switch" ||
+        name == "typeid" || name == "xor_eq"
+    }
+    7 -> {
+      return name == "alignas" || name == "alignof" || name == "char8_t" || name == "concept" ||
+        name == "default" || name == "mutable" || name == "nullptr" || name == "private" ||
+        name == "typedef" || name == "virtual" || name == "wchar_t"
+    }
+    8 -> {
+      return name == "char16_t" || name == "char32_t" || name == "continue" || name == "co_await" ||
+        name == "co_yield" || name == "decltype" || name == "explicit" || name == "noexcept" ||
+        name == "operator" || name == "register" || name == "requires" || name == "template" ||
+        name == "typename" || name == "unsigned" || name == "volatile"
+    }
+    9 -> {
+      return name == "consteval" || name == "constexpr" || name == "constinit" || name == "co_return" ||
+        name == "namespace" || name == "protected"
+    }
+    10 -> {
+      return name == "const_cast"
+    }
+    12 -> {
+      return name == "dynamic_cast" || name == "thread_local"
+    }
+    13 -> {
+      return name == "static_assert"
+    }
+    16 -> {
+      return name == "reinterpret_cast"
+    }
+    _ -> { return false }
+  }
 }

@@ -1,3 +1,5 @@
+import { ModuleNames } from "./emitter-names"
+import { CppTypeRegistry } from "./cpp-type"
 // JSON-over-C-ABI support generation for Doof WebAssembly libraries.
 //
 // The ABI intentionally matches the reference compiler: each exported entry
@@ -24,10 +26,10 @@ export class WasmEmission {
   exportNames: string[] = []
 }
 
-export function emitWasmSupport(result: AnalysisResult, entry: string, instantiations: InstantiationPlan | none = none): Result<WasmEmission, string> {
+export function emitWasmSupport(result: AnalysisResult, entry: string, instantiations: InstantiationPlan | none = none, moduleNames: ModuleNames = ModuleNames {}): Result<WasmEmission, string> {
   info := findModule(result, entry)
   if info == none { return Failure("Module not found: " + entry) }
-  jsonPlan := instantiations ?? buildInstantiationPlan(result)
+  jsonPlan := instantiations ?? buildInstantiationPlan(result, moduleNames)
   let exports: FunctionDeclaration[] = []
   collectExportedFunctions(info!, exports)
   let names: string[] = ["doof_initialize"]
@@ -47,9 +49,11 @@ export function emitWasmSupport(result: AnalysisResult, entry: string, instantia
 
   programs := allPrograms(result)
   context := createEmitContextForModule(info!.program, entry, programs)
+  context.names = moduleNames
+  context.cppTypes = CppTypeRegistry { names: moduleNames }
   context.imports = info!.imports
   context.namespaceImports = info!.namespaceImports
-  let source = wasmPreamble(info!, result, entry)
+  let source = wasmPreamble(info!, result, entry, moduleNames)
   let exportIndex = 0
   for fn of exports {
     if fn.name == "main" { continue }
@@ -155,15 +159,15 @@ function isWasmJsonType(type_: ResolvedType, analysis: AnalysisResult): bool {
   return false
 }
 
-function wasmPreamble(info: ModuleInfo, result: AnalysisResult, entry: string): string {
+function wasmPreamble(info: ModuleInfo, result: AnalysisResult, entry: string, moduleNames: ModuleNames): string {
   let declarations = ""
   let calls = ""
   for path of planModuleInitializationOrder(result, entry, "wasm") {
-    namespace := moduleNamespace(path)
+    namespace := moduleNamespace(path, moduleNames)
     declarations = declarations + "namespace " + namespace + " { void __doof_initialize_module(); }\n"
     calls = calls + "        ::" + namespace + "::__doof_initialize_module();\n"
   }
-  return "#include \"" + moduleHeaderName(info.path) + "\"\n" +
+  return "#include \"" + moduleHeaderName(info.path, moduleNames) + "\"\n" +
     "#include \"doof_runtime.hpp\"\n#include \"std/json/native_json.hpp\"\n#include <cstring>\n\n" +
     declarations + "\n" +
     "namespace {\n" +
@@ -207,7 +211,7 @@ function emitWasmWrapper(fn: FunctionDeclaration, exportName: string, context: E
     if arguments != "" { arguments = arguments + ", " }
     arguments = arguments + cppIdentifier(parameter.name)
   }
-  call := "::" + moduleNamespace(context.modulePath) + "::" + cppIdentifier(fn.name) + "(" + arguments + ")"
+  call := "::" + moduleNamespace(context.modulePath, context.names) + "::" + cppIdentifier(fn.name) + "(" + arguments + ")"
   case type_.returnType {
     _: NoneType -> { source = source + "        " + call + ";\n        return __doof_wasm_success(doof::json_value(nullptr));\n" }
     result: ResultResolvedType -> {

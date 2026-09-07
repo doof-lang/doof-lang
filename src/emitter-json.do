@@ -32,7 +32,7 @@ export function emitInterfaceJsonDefinition(owner: InterfaceDeclaration, context
   for i of 0..<discriminator!.entries.length {
     entry := discriminator!.entries[i]
     classType_ := ClassType { name: entry.declaration.name, symbol: entry.declaration.resolvedSymbol! }
-    className := emitClassInnerType(classType_, context.modulePath)
+    className := emitClassInnerType(classType_, context.modulePath, context.names)
     result = result + "    " + (if i == 0 then "if" else "else if") + " (_discriminator == \"" + entry.value + "\") {\n"
     result = result + "        auto _result = " + className + "::fromJsonValue(_json, _lenient);\n"
     result = result + "        if (doof::is_success(_result)) { return " + successType + "{" + owner.name + "{doof::success_value(_result)}}; }\n"
@@ -209,7 +209,7 @@ export function emitJsonRead(json: string, type_: ResolvedType, context: EmitCon
     _: NoneType -> { return "[&]() -> std::monostate { if (!doof::json_is_null(" + json + ")) throw doof::JsonDecodeError(\"Expected null\"); return {}; }()" }
     _: JsonValueResolvedType -> { return json }
     class_: ClassType -> {
-      return "doof::json_decode_value(" + emitClassInnerType(class_, context.modulePath) + "::fromJsonValue(" + json + ", _lenient))"
+      return "doof::json_decode_value(" + emitClassInnerType(class_, context.modulePath, context.names) + "::fromJsonValue(" + json + ", _lenient))"
     }
     enum_: EnumType -> {
       return "doof::json_decode_value(" + emitContextType(enum_, context) + "_fromJsonValue(" + json + ", false))"

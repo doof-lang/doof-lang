@@ -1,8 +1,12 @@
+import { ModuleNames } from "./emitter-names"
 // Function and top-level declaration rendering for the Doof emitter.
 //
 // Function signatures are shared by header planning and source rendering so
 // the two halves cannot silently drift apart.
 
+import { CppType } from "./cpp-type"
+import { CppDeclaration, CppDeclarationBuilder, renderDeclaration } from "./cpp-declaration"
+import { canBorrowParameter, lowerCppType, lowerCppClassInnerType, lowerContextCppType, lowerContextCppReturnType, typeNamespace } from "./emitter-types"
 import { emitExpressionReturn } from "./emitter-expr-utils"
 import {
   Block, ClassDeclaration, ClassField, ConstDeclaration, Expression, FunctionDeclaration, InterfaceDeclaration,
@@ -15,7 +19,7 @@ import {
 import { EmitContext, recordCoverageLine, sourceLineDirective } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock } from "./emitter-stmt"
-import { borrowParameterType, emitClassInnerType, emitContextReturnType, emitContextType, emitParameterType, emitReturnType, specializeEmitType } from "./emitter-types"
+import { emitContextType, specializeEmitType } from "./emitter-types"
 import { scanCapturedMutablesInBlock, scanCapturedMutablesInExpression } from "./emitter-expr-lambda"
 import { moduleNamespace } from "./emitter-names"
 import { ClassInstantiation, MethodInstantiation } from "./emitter-monomorphize"
@@ -23,27 +27,32 @@ import { emitGeneratedJsonDeclarations } from "./emitter-json"
 import { emitMetadataDeclaration } from "./emitter-metadata"
 
 export function emitFunctionSignature(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none): string {
+  return renderDeclaration(planFunctionSignature(fn, name, modulePath, context), typeNamespace(modulePath, if context == none then ModuleNames {} else context!.names), {}, if context == none then none else context!.cppTypes)
+}
+
+export function planFunctionSignature(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none): CppDeclaration {
+  active := context ?? EmitContext { modulePath }
   let functionType = checkedFunctionType(fn)
-  if context != none {
-    case specializeEmitType(functionType, context!) {
-      specialized: FunctionType -> { functionType = specialized }
-      _ -> { }
-    }
+  case specializeEmitType(functionType, active) {
+    specialized: FunctionType -> { functionType = specialized }
+    _ -> { }
   }
   functionName := cppIdentifier(if name == "" then fn.name else name)
-  returnType := if context == none then emitReturnType(functionType.returnType, modulePath) else emitContextReturnType(functionType.returnType, context!)
+  result := CppDeclarationBuilder {}
+  if functionType.returnType.kind == "never" { result.text("[[noreturn]] ") }
+  result.type_(lowerContextCppReturnType(functionType.returnType, active))
   ensureKnown(functionType.returnType, fn.name + " return type")
-  let result = (if functionType.returnType.kind == "never" then "[[noreturn]] " else "") + returnType + " " + functionName + "("
+  result.text(" " + functionName + "(")
   for i of 0..<fn.params.length {
-    if i > 0 { result = result + ", " }
+    if i > 0 { result.text(", ") }
     parameterType := fn.params[i].resolvedType ?? functionType.params[i].type_
-    parameterText := if context == none
-      then emitParameterType(parameterType, modulePath)
-      else borrowParameterType(parameterType, emitContextType(parameterType, context!))
+    type_ := lowerContextCppType(parameterType, active)
+    result.type_(if canBorrowParameter(parameterType) then active.cppTypes.intern("borrow", "", [type_]) else type_)
     ensureKnown(parameterType, fn.name + " parameter " + fn.params[i].name)
-    result = result + parameterText + " " + cppIdentifier(fn.params[i].name)
+    result.text(" " + cppIdentifier(fn.params[i].name))
   }
-  return result + ")"
+  result.text(")")
+  return result.finish()
 }
 
 export function emitFunctionDefinition(fn: FunctionDeclaration, context: EmitContext, name: string = ""): string {
@@ -95,10 +104,18 @@ function emitCallableDefinition(fn: FunctionDeclaration, context: EmitContext, n
 }
 
 export function emitFunctionDeclaration(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none): string {
+  return renderDeclaration(planFunctionDeclaration(fn, name, modulePath, context), typeNamespace(modulePath, if context == none then ModuleNames {} else context!.names), {}, if context == none then none else context!.cppTypes)
+}
+
+export function planFunctionDeclaration(fn: FunctionDeclaration, name: string = "", modulePath: string = "", context: EmitContext | none = none): CppDeclaration {
   if fn.typeParams.length > 0 && (context == none || context!.substitution == none) {
     panic("Generic function " + fn.name + " reached declaration emission without a concrete instantiation")
   }
-  return emitCallableDescription(fn, "") + emitFunctionSignature(fn, name, modulePath, context) + ";\n"
+  result := CppDeclarationBuilder {}
+  result.text(emitCallableDescription(fn, ""))
+  result.declaration(planFunctionSignature(fn, name, modulePath, context))
+  result.text(";\n")
+  return result.finish()
 }
 
 // A generic native import is a Doof generic declaration, not a promise that
@@ -178,63 +195,71 @@ function ensureKnown(resolvedType: ResolvedType, owner: string): none {
 }
 
 export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContext, emittedName: string = "", concreteMethods: MethodInstantiation[] = []): string {
-  if decl.native_ { return "" }
+  return renderDeclaration(planClassDeclaration(decl, context, emittedName, concreteMethods), typeNamespace(context.modulePath, context.names), {}, context.cppTypes)
+}
+
+export function planClassDeclaration(decl: ClassDeclaration, context: EmitContext, emittedName: string = "", concreteMethods: MethodInstantiation[] = []): CppDeclaration {
+  if decl.native_ { return CppDeclarationBuilder {}.finish() }
   if decl.typeParams.length > 0 && context.substitution == none {
     panic("Generic class " + decl.name + " reached emission without a concrete instantiation")
   }
   className := if emittedName == "" then decl.name else emittedName
   let inheritance = if decl.struct_ then "" else " : public std::enable_shared_from_this<" + className + ">"
-  let result = emitDescriptionComment(decl.description, "") + "struct " + className + inheritance + " {\n"
+  result := CppDeclarationBuilder {}
+  result.text(emitDescriptionComment(decl.description, "") + "struct " + className + inheritance + " {\n")
   for field of decl.fields {
     for index of 0..<field.names.length {
       name := field.names[index]
       description := if index < field.descriptions.length then field.descriptions[index] else ""
       effectiveType := fieldTypeForEmission(field)
-      fieldType := fieldTypeTextForEmission(field, effectiveType, context)
+      fieldType := planFieldType(field, effectiveType, context)
       ensureKnown(effectiveType, decl.name + "." + name)
-      result = result + emitDescriptionComment(description, "    ")
+      result.text(emitDescriptionComment(description, "    "))
       // Doof enforces literal-valued fields semantically. Struct backing fields
       // remain assignable so ordered module initialization can assign a fully
       // constructed struct into its default-created static storage.
-      result = result + "    " + (if field.static_ then "static " else if field.const_ && !decl.struct_ then "const " else "") + fieldType + " " + cppIdentifier(name)
+      result.text("    " + (if field.static_ then "static " else if field.const_ && !decl.struct_ then "const " else ""))
+      result.type_(fieldType)
+      result.text(" " + cppIdentifier(name))
       if field.defaultValue != none && !field.static_ && field.const_ {
         defaultText := emitExpression(field.defaultValue!, context, effectiveType)
-        result = result + " = " + defaultText
+        result.text(" = " + defaultText)
       }
-      result = result + ";\n"
+      result.text(";\n")
     }
   }
   if hasInstanceFields(decl) {
     // Doof call sites materialize every omitted field. The synthesized C++
     // constructor therefore has an explicit parameter for every stored field.
-    result = result + "    " + className + "("
+    result.text("    " + className + "(")
     let firstParameter = true
     for field of decl.fields {
       if field.static_ || field.const_ { continue }
       for name of field.names {
-        if !firstParameter { result = result + ", " }
+        if !firstParameter { result.text(", ") }
         firstParameter = false
         effectiveType := fieldTypeForEmission(field)
-        fieldType := fieldTypeTextForEmission(field, effectiveType, context)
-        result = result + fieldType + " " + cppIdentifier(name)
+        fieldType := planFieldType(field, effectiveType, context)
+        result.type_(fieldType)
+        result.text(" " + cppIdentifier(name))
       }
     }
-    result = result + ") : "
+    result.text(") : ")
     let firstInitializer = true
     for field of decl.fields {
       if field.static_ || field.const_ { continue }
       for name of field.names {
-        if !firstInitializer { result = result + ", " }
+        if !firstInitializer { result.text(", ") }
         firstInitializer = false
-        result = result + cppIdentifier(name) + "(" + cppIdentifier(name) + ")"
+        result.text(cppIdentifier(name) + "(" + cppIdentifier(name) + ")")
       }
     }
-    result = result + " {}\n"
+    result.text(" {}\n")
     if decl.struct_ {
-      result = result + "    " + className + "() {}\n"
+      result.text("    " + className + "() {}\n")
     }
   } else if !decl.struct_ {
-    result = result + "    " + className + "() {}\n"
+    result.text("    " + className + "() {}\n")
   }
   for method of decl.methods {
     if method.typeParams.length > 0 {
@@ -243,21 +268,25 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
         previousSubstitution := context.substitution
         context.substitution = instantiation.substitution
         staticPrefix := if method.static_ then "static " else ""
-        result = result + emitCallableDescription(method, "    ") + "    " + staticPrefix + emitFunctionSignature(method, instantiation.emittedName, context.modulePath, context) + ";\n"
+        result.text(emitCallableDescription(method, "    ") + "    " + staticPrefix)
+        result.declaration(planFunctionSignature(method, instantiation.emittedName, context.modulePath, context))
+        result.text(";\n")
         context.substitution = previousSubstitution
       }
     } else {
       staticPrefix := if method.static_ then "static " else ""
-      result = result + emitCallableDescription(method, "    ") + "    " + staticPrefix + emitFunctionSignature(method, "", context.modulePath, context) + ";\n"
+      result.text(emitCallableDescription(method, "    ") + "    " + staticPrefix)
+      result.declaration(planFunctionSignature(method, "", context.modulePath, context))
+      result.text(";\n")
     }
   }
   if decl.destructor_ != none {
-    result = result + "    ~" + className + "();\n"
+    result.text("    ~" + className + "();\n")
   }
   if decl.struct_ {
     // Keep field comparisons dependent until equality is used: merely
     // declaring a struct with a non-comparable native field must remain valid.
-    result = result + "    template <typename _DoofOther = " + className + ">\n    bool operator==(const _DoofOther& _doof_other) const { return "
+    result.text("    template <typename _DoofOther = " + className + ">\n    bool operator==(const _DoofOther& _doof_other) const { return ")
     let comparison = ""
     for field of decl.fields {
       if field.static_ { continue }
@@ -267,12 +296,13 @@ export function emitClassDeclaration(decl: ClassDeclaration, context: EmitContex
         comparison = comparison + "(this->" + member + " == _doof_other." + member + ")"
       }
     }
-    result = result + (if comparison == "" then "true" else comparison) + "; }\n"
-    result = result + "    template <typename _DoofOther = " + className + ">\n    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }\n"
+    result.text((if comparison == "" then "true" else comparison) + "; }\n")
+    result.text("    template <typename _DoofOther = " + className + ">\n    bool operator!=(const _DoofOther& _doof_other) const { return !(*this == _doof_other); }\n")
   }
-  result = result + emitGeneratedJsonDeclarations(decl, context)
-  result = result + emitMetadataDeclaration(decl)
-  return result + "};\n"
+  result.text(emitGeneratedJsonDeclarations(decl, context))
+  result.text(emitMetadataDeclaration(decl))
+  result.text("};\n")
+  return result.finish()
 }
 
 function fieldTypeForEmission(field: ClassField): ResolvedType {
@@ -281,21 +311,28 @@ function fieldTypeForEmission(field: ClassField): ResolvedType {
 }
 
 function fieldTypeTextForEmission(field: ClassField, resolvedType: ResolvedType, context: EmitContext): string {
+  return context.cppTypes.render(planFieldType(field, resolvedType, context), typeNamespace(context.modulePath, context.names))
+}
+
+function planFieldType(field: ClassField, resolvedType: ResolvedType, context: EmitContext): CppType {
   if field.weak_ {
     specialized := specializeEmitType(resolvedType, context)
     case specialized {
-      weak_: WeakResolvedType -> { return emitContextType(weak_, context) }
-      class_: ClassType -> { return "std::weak_ptr<" + emitClassInnerType(class_, context.modulePath) + ">" }
-      _ -> { return "std::weak_ptr<" + emitContextType(specialized, context) + ">" }
+      weak_: WeakResolvedType -> { return lowerContextCppType(weak_, context) }
+      class_: ClassType -> { return context.cppTypes.templateType("std::weak_ptr", [lowerCppClassInnerType(class_, context.cppTypes)]) }
+      _ -> { return context.cppTypes.templateType("std::weak_ptr", [lowerContextCppType(specialized, context)]) }
     }
   }
-  typeText := emitContextType(resolvedType, context)
-  if field.defaultValue == none { return typeText }
+  type_ := lowerContextCppType(resolvedType, context)
+  if field.defaultValue == none { return type_ }
   defaultText := emitExpression(field.defaultValue!, context, resolvedType)
-  if defaultText == "std::monostate{}" && typeText.startsWith("std::variant<") && !typeText.startsWith("std::variant<std::monostate") {
-    return "std::variant<std::monostate, " + typeText.substring(13, 1000000)
+  if defaultText == "std::monostate{}" && type_.kind == "template" && type_.name == "std::variant" &&
+    (type_.arguments.length == 0 || type_.arguments[0].name != "std::monostate") {
+    let members = [context.cppTypes.atom("std::monostate")]
+    for member of type_.arguments { members.push(member) }
+    return context.cppTypes.templateType("std::variant", members)
   }
-  return typeText
+  return type_
 }
 
 function hasInstanceFields(decl: ClassDeclaration): bool {
@@ -334,36 +371,32 @@ function emitCallableDescription(fn: FunctionDeclaration, indent: string): strin
 }
 
 export function emitInterfaceAlias(decl: InterfaceDeclaration, context: EmitContext, classes: ClassInstantiation[] = []): string {
+  return renderDeclaration(planInterfaceAlias(decl, context, classes), typeNamespace(context.modulePath, context.names), {}, context.cppTypes)
+}
+
+export function planInterfaceAlias(decl: InterfaceDeclaration, context: EmitContext, classes: ClassInstantiation[] = []): CppDeclaration {
   if decl.resolvedSymbol == none { panic("Interface " + decl.name + " was not analyzed") }
   implementations := decl.resolvedSymbol!.implementations
   if implementations.length == 0 { panic("Interface " + decl.name + " has no implementing classes") }
-  let result = emitDescriptionComment(decl.description, "") + "using " + decl.name + " = std::variant<"
-  let first = true
+  let alternatives: CppType[] = []
   for symbol of implementations {
     if symbol.typeParams.length > 0 && !symbol.native_ {
       for instantiation of classes {
         if instantiation.modulePath != symbol.module || instantiation.declaration.name != symbol.name { continue }
-        if !first { result = result + ", " }
-        first = false
-        concreteName := if symbol.module == context.modulePath
-          then instantiation.emittedName
-          else "::" + moduleNamespace(symbol.module) + "::" + instantiation.emittedName
-        result = result + "std::shared_ptr<" + concreteName + ">"
+        alternatives.push(context.cppTypes.templateType("std::shared_ptr", [context.cppTypes.atom(instantiation.emittedName, typeNamespace(symbol.module, context.names))]))
       }
     } else {
-      if !first { result = result + ", " }
-      first = false
-      className := if symbol.native_ then "::" + (if symbol.nativeCppName == "" then symbol.name else symbol.nativeCppName) else ownedClassName(symbol, context.modulePath)
-      result = result + "std::shared_ptr<" + className + ">"
+      name := if symbol.native_ then "::" + (if symbol.nativeCppName == "" then symbol.name else symbol.nativeCppName)
+        else if symbol.originalName == "" then symbol.name else symbol.originalName
+      alternatives.push(context.cppTypes.templateType("std::shared_ptr", [context.cppTypes.atom(name, if symbol.native_ then "" else typeNamespace(symbol.module, context.names))]))
     }
   }
-  if first { result = result + "std::monostate" }
-  return result + ">;\n"
-}
-
-function ownedClassName(symbol: Symbol, currentModulePath: string): string {
-  if symbol.module == currentModulePath || currentModulePath == "" { return if symbol.originalName == "" then symbol.name else symbol.originalName }
-  return "::" + moduleNamespace(symbol.module) + "::" + (if symbol.originalName == "" then symbol.name else symbol.originalName)
+  if alternatives.length == 0 { alternatives.push(context.cppTypes.atom("std::monostate")) }
+  result := CppDeclarationBuilder {}
+  result.text(emitDescriptionComment(decl.description, "") + "using " + decl.name + " = ")
+  result.type_(context.cppTypes.templateType("std::variant", alternatives))
+  result.text(";\n")
+  return result.finish()
 }
 
 export function emitClassMethodDefinition(owner: ClassDeclaration, method: FunctionDeclaration, context: EmitContext, emittedOwnerName: string = "", emittedMethodName: string = ""): string {

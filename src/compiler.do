@@ -1,14 +1,16 @@
+import { discoverInstantiations } from "./checked-instantiations"
 // Self-hosted compiler orchestration.
 //
 // The compiler deliberately checks every analyzed module before emission.
 // Emission consumes decorated ASTs, so allowing an unchecked dependency into
 // the project emitter would turn a front-end omission into a C++ failure.
 
+import { PhaseTimings } from "./phase-timings"
 import { AnalysisResult, ModuleInfo, createAnalyzerWithLoader } from "./analyzer"
 import { emitModuleGraph, ModuleEmissionCacheKey, ModuleGraphEmission } from "./emitter-module"
-import { buildInstantiationPlan } from "./emitter-monomorphize"
+import { nameInstantiations } from "./emitter-monomorphize"
 import { emitWasmSupport, WasmEmission } from "./emitter-wasm"
-import { ModuleNamespaceMapping, configureModuleNamespaces } from "./emitter-names"
+import { ModuleNamespaceMapping, prepareModuleNames } from "./emitter-names"
 import { createChecker, ModuleChecker, validateCheckedTypes, validateDeepReadonlyFields, validateIsolationEffects } from "./checker"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { SourceLoader, noSourceLoader } from "./resolver"
@@ -35,10 +37,11 @@ export function compileWithLoader(
   reusableModules: ModuleEmissionCacheKey[] = [],
   emissionConfigurationFingerprint: string = "",
   physicalSourcePaths: bool = false,
+  timings: PhaseTimings = PhaseTimings {},
 ): Compilation {
   return compileInternal(
     sources, entry, loader, namespaceMappings, entryMode, coverage, true,
-    reusableModules, emissionConfigurationFingerprint, physicalSourcePaths,
+    reusableModules, emissionConfigurationFingerprint, physicalSourcePaths, timings,
   )
 }
 
@@ -48,8 +51,9 @@ export function checkWithLoader(
   entry: string,
   loader: SourceLoader,
   entryMode: string = "executable",
+  timings: PhaseTimings = PhaseTimings {},
 ): Compilation {
-  return compileInternal(sources, entry, loader, [], entryMode, false, false)
+  return compileInternal(sources, entry, loader, [], entryMode, false, false, [], "", false, timings)
 }
 
 function compileInternal(
@@ -63,33 +67,55 @@ function compileInternal(
   reusableModules: ModuleEmissionCacheKey[] = [],
   emissionConfigurationFingerprint: string = "",
   physicalSourcePaths: bool = false,
+  timings: PhaseTimings = PhaseTimings {},
 ): Compilation {
-  configureModuleNamespaces(namespaceMappings)
   analyzer := createAnalyzerWithLoader(sources, loader)
-  analysis := analyzer.analyze(entry)
+  analysisStart := timings.start()
+  analysis := analyzer.analyze(entry, timings)
+  timings.finish("compiler.analysis", analysisStart)
+  checkingStart := timings.start()
   let diagnostics: Diagnostic[] = []
   for diagnostic of analysis.diagnostics { diagnostics.push(diagnostic) }
 
   if !hasErrorDiagnostics(diagnostics) {
+    moduleCheckStart := timings.start()
     checker := createChecker(analysis, entry, entryMode)
     let checkedPaths: string[] = []
     let visitingPaths: string[] = []
     for module of analysis.modules {
       checkModuleDependencies(module.path, analysis, checker, checkedPaths, visitingPaths, diagnostics)
     }
+    timings.finish("checking.modules", moduleCheckStart)
+    readonlyStart := timings.start()
     for diagnostic of validateDeepReadonlyFields(analysis) { diagnostics.push(diagnostic) }
+    timings.finish("checking.deep-readonly", readonlyStart)
+    isolationStart := timings.start()
     for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
+    timings.finish("checking.isolation", isolationStart)
   }
 
+  timings.finish("compiler.checking", checkingStart)
   if hasErrorDiagnostics(diagnostics) {
     return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
   }
+  validationStart := timings.start()
   for diagnostic of validateCheckedTypes(analysis) { diagnostics.push(diagnostic) }
+  timings.finish("compiler.checked-type-validation", validationStart)
   if hasErrorDiagnostics(diagnostics) {
     return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
   }
   if !emit { return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths } }
-  instantiations := buildInstantiationPlan(analysis)
+  paths: string[] := []
+  for module of analysis.modules { paths.push(module.path) }
+  names := prepareModuleNames(namespaceMappings, paths)
+  instantiationStart := timings.start()
+  discoveryStart := timings.start()
+  checkedInstantiations := discoverInstantiations(analysis)
+  timings.finish("compiler.instantiation-discovery", discoveryStart)
+  namingStart := timings.start()
+  instantiations := nameInstantiations(checkedInstantiations, names)
+  timings.finish("compiler.instantiation-naming", namingStart)
+  timings.finish("compiler.instantiations", instantiationStart)
   if instantiations.overflow {
     let trace = ""
     for item of instantiations.overflowTrace { trace = trace + (if trace == "" then "" else " -> ") + item }
@@ -104,17 +130,22 @@ function compileInternal(
   }
   let wasmEmission: WasmEmission | none = none
   if entryMode == "wasm" {
-    wasm := emitWasmSupport(analysis, entry, instantiations) else message {
+    wasmStart := timings.start()
+    wasm := emitWasmSupport(analysis, entry, instantiations, names) else message {
+      timings.finish("compiler.wasm", wasmStart)
       zero := SemanticLocation { line: 0, column: 0, offset: 0 }
       diagnostics.push(Diagnostic { severity: "error", message, span: SemanticSpan { start: zero, end: zero }, module: entry })
       return Compilation { emission: none, diagnostics, sourceFiles: analyzer.resolver.sources, resolutionProbes: analyzer.resolver.loadedPaths }
     }
+    timings.finish("compiler.wasm", wasmStart)
     wasmEmission = wasm
   }
+  emissionStart := timings.start()
   emission := emitModuleGraph(
     analysis, entry, instantiations, entryMode, coverage,
-    reusableModules, emissionConfigurationFingerprint, physicalSourcePaths,
+    reusableModules, emissionConfigurationFingerprint, physicalSourcePaths, timings, names,
   )
+  timings.finish("compiler.emission", emissionStart)
   if wasmEmission != none {
     emission.wasmSupportSource = wasmEmission!.source
     emission.wasmExportNames = wasmEmission!.exportNames

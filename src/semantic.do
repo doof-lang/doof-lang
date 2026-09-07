@@ -59,12 +59,22 @@ export class SourceFile {
   physicalPath: string = ""
 }
 
+// Non-semantic identity metadata, assigned lazily by one emission graph.
+// The owner token contains no graph/cache references, avoiding ownership cycles.
+export class SemanticTypeIdentityOwner {}
+export class SemanticTypeIdentity {
+  owner: SemanticTypeIdentityOwner
+  id: int
+}
+
 export class PrimitiveType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "primitive"
   name: string
 }
 
 export class ClassType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "class"
   name: string
   symbol: Symbol
@@ -72,12 +82,14 @@ export class ClassType {
 }
 
 export class EnumType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "enum"
   name: string
   symbol: Symbol
 }
 
 export class InterfaceType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "interface"
   name: string
   symbol: Symbol
@@ -85,6 +97,7 @@ export class InterfaceType {
 }
 
 export class FunctionType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "function"
   params: FunctionParamType[]
   returnType: ResolvedType
@@ -98,22 +111,26 @@ export class FunctionParamType {
 }
 
 export class ActorType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "actor"
   innerClass: ClassType
 }
 
 export class PromiseType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "promise"
   valueType: ResolvedType
 }
 
 export class ArrayResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "array"
   elementType: ResolvedType
   readonly_: bool
 }
 
 export class MapResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "map"
   keyType: ResolvedType
   valueType: ResolvedType
@@ -121,12 +138,14 @@ export class MapResolvedType {
 }
 
 export class SetResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "set"
   elementType: ResolvedType
   readonly_: bool
 }
 
 export class StreamResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "stream"
   elementType: ResolvedType
 }
@@ -134,47 +153,56 @@ export class StreamResolvedType {
 // Finite integer ranges are immutable runtime values with an exclusive upper
 // bound. Keep them distinct from arrays so signatures retain Range semantics.
 export class RangeResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "range"
 }
 
 // JsonValue is recursive, so it is represented as a dedicated intrinsic
 // semantic type rather than expanding into a finite union of containers.
 export class JsonValueResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "json-value"
 }
 
 export class ResultResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "result"
   valueType: ResolvedType
   errorType: ResolvedType
 }
 
 export class TupleResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "tuple"
   elements: ResolvedType[]
 }
 
 export class UnionResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "union"
   types: ResolvedType[]
 }
 
 export class WeakResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "weak"
   inner: ResolvedType
 }
 
 export class NoneType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "none"
 }
 
 // The uninhabited bottom type. Expressions of this type never produce a
 // runtime value and may therefore be used wherever a value is expected.
 export class NeverType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "never"
 }
 
 export class UnknownType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "unknown"
 }
 
@@ -182,6 +210,7 @@ export class UnknownType {
 // Keeping it explicit lets the checker prove generic declarations before the
 // emitter sees them while preserving the parameter spelling for C++ templates.
 export class TypeParameterType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "type-parameter"
   name: string
   constraintName: string = ""
@@ -190,12 +219,14 @@ export class TypeParameterType {
 
 /** Compiler-known reflection value returned by `Type.metadata`. */
 export class ClassMetadataResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "class-metadata"
   classType: ResolvedType
 }
 
 /** Compiler-known element type of `ClassMetadata.methods`. */
 export class MethodReflectionResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "method-reflection"
   classType: ResolvedType
 }

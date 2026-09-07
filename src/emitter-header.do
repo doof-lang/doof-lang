@@ -9,7 +9,7 @@ import {
   ImmutableBinding, LetDeclaration, Program, ReadonlyDeclaration, Statement, TypeAliasDeclaration,
 } from "./ast"
 import { EmitContext, EmitModuleSurface } from "./emitter-context"
-import { emitClassDeclaration, emitDescriptionComment, emitFunctionDeclaration, emitInterfaceAlias } from "./emitter-decl"
+import { planClassDeclaration, emitDescriptionComment, planFunctionDeclaration, planInterfaceAlias } from "./emitter-decl"
 import { cppIdentifier } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
 import { emitInterfaceJsonDeclaration } from "./emitter-json"
@@ -23,40 +23,14 @@ import { moduleNamespace, moduleNativeHeaderPath } from "./emitter-names"
 import { StringBuilder } from "./string-builder"
 import { ClassInstantiation, classInstantiationKey, MethodInstantiation } from "./emitter-monomorphize"
 
-export class HeaderPlan {
-  functionSignatures: string[] = []
-  nativeAdapterSignatures: string[] = []
-  earlyModuleValueDeclarations: string[] = []
-  moduleValueDeclarations: string[] = []
-  earlyClassDefinitions: string[] = []
-  classDefinitions: string[] = []
-  interfaceAliases: string[] = []
-  enumDefinitions: string[] = []
-  // Namespace-local structural aliases deduplicate long, reference-only
-  // variant spellings. They are a C++ rendering detail, not Doof aliases.
-  ephemeralTypeAliases: string[] = []
-  preferredTypeAliasNames: string[] = []
-  preferredTypeAliasSpellings: string[] = []
-  earlyTypeAliases: string[] = []
-  typeAliases: string[] = []
-  classForwardDeclarations: string[] = []
-  typeOnlyForwardDeclarations: string[] = []
-  nativeIncludes: string[] = []
-  nativeAliases: string[] = []
-  nativeNamespaces: string[] = []
-  reservedNamespaceNames: string[] = []
-  let hasMain: bool = false
-  let mainReturnsInt: bool = false
-  let mainAcceptsArgs: bool = false
-}
+export { HeaderPlan, HeaderSection } from "./emitter-header-plan"
+import { HeaderPlanBuilder } from "./emitter-header-plan"
+import { CppDeclaration, CppDeclarationBuilder, textDeclaration } from "./cpp-declaration"
+import { CppTypeRegistry, isReferenceVariant } from "./cpp-type"
+import { lowerContextCppType } from "./emitter-types"
 
-export class HeaderSection {
-  namespaceName: string
-  plan: HeaderPlan
-}
-
-export function planHeader(program: Program, context: EmitContext, methods: MethodInstantiation[] = [], classes: ClassInstantiation[] = []): HeaderPlan {
-  plan := HeaderPlan {}
+export function planHeader(program: Program, context: EmitContext, methods: MethodInstantiation[] = [], classes: ClassInstantiation[] = []): HeaderPlanBuilder {
+  plan := HeaderPlanBuilder {}
   for statement of program.statements { collect(statement, plan, context, methods, classes) }
   // Native headers are opaque to the Doof compiler. Give each selected native
   // namespace the nominal names visible in its defining module, while keeping
@@ -67,17 +41,17 @@ export function planHeader(program: Program, context: EmitContext, methods: Meth
   return plan
 }
 
-function collectNativeModuleTypeAliases(modulePath: string, namespace: string, plan: HeaderPlan, context: EmitContext): none {
+function collectNativeModuleTypeAliases(modulePath: string, namespace: string, plan: HeaderPlanBuilder, context: EmitContext): none {
   for surface of context.moduleSurfaces {
     if surface.path != modulePath { continue }
     for symbol of surface.exports {
       if isNativeAliasType(symbol) && !surfaceTypeIsGeneric(surface, symbol.name) {
-        addNativeSymbolAlias(symbol, namespace, plan)
+        addNativeSymbolAlias(symbol, namespace, plan, context)
       }
     }
     for imported of surface.imports {
       if imported.symbol != none && isNativeAliasType(imported.symbol!) && !surfaceSymbolIsGeneric(context, imported.symbol!) {
-        addNativeSymbolAlias(imported.symbol!, namespace, plan)
+        addNativeSymbolAlias(imported.symbol!, namespace, plan, context)
       }
     }
     return
@@ -93,13 +67,13 @@ function isNativeAliasType(symbol: Symbol): bool {
   return symbol.kind == "class" || symbol.kind == "struct" || symbol.kind == "enum" || symbol.kind == "interface" || symbol.kind == "type-alias"
 }
 
-function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, methods: MethodInstantiation[], classes: ClassInstantiation[]): none {
+function collect(statement: Statement, plan: HeaderPlanBuilder, context: EmitContext, methods: MethodInstantiation[], classes: ClassInstantiation[]): none {
   case statement {
     class_: ClassDeclaration -> {
       reserveHeaderNamespaceName(plan, class_.name)
       if class_.native_ {
         rawInclude := if class_.nativeHeader == "" then class_.name + ".hpp" else class_.nativeHeader
-        include := moduleNativeHeaderPath(context.modulePath, rawInclude)
+        include := moduleNativeHeaderPath(context.modulePath, rawInclude, context.names)
         addUnique(plan.nativeIncludes, include)
         namespace := nativeNamespace(class_.nativeCppName)
         addUnique(plan.nativeNamespaces, namespace)
@@ -109,7 +83,7 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, m
         let concreteMethods: MethodInstantiation[] = []
         ownerKey := classInstantiationKey(context.modulePath, class_.name, [])
         for method of methods { if method.ownerKey == ownerKey { concreteMethods.push(method) } }
-        definition := emitClassDeclaration(class_, context, "", concreteMethods)
+        definition := planClassDeclaration(class_, context, "", concreteMethods)
         if classCanEmitBeforeModuleIncludes(class_) { plan.earlyClassDefinitions.push(definition) }
         else { plan.classDefinitions.push(definition) }
       }
@@ -122,12 +96,12 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, m
             if implementation.native_ { addNativeClassForwardDeclaration(implementation, plan) }
           }
         }
-        plan.interfaceAliases.push(emitInterfaceAlias(interface_, context, classes))
+        plan.interfaceAliases.push(planInterfaceAlias(interface_, context, classes))
         declaration := emitInterfaceJsonDeclaration(interface_)
-        if declaration != "" { plan.functionSignatures.push(declaration) }
+        if declaration != "" { plan.functionSignatures.push(textDeclaration(declaration)) }
       }
     }
-    enum_: EnumDeclaration -> { reserveHeaderNamespaceName(plan, enum_.name); plan.enumDefinitions.push(emitEnumDeclaration(enum_, context)) }
+    enum_: EnumDeclaration -> { reserveHeaderNamespaceName(plan, enum_.name); plan.enumDefinitions.push(textDeclaration(emitEnumDeclaration(enum_, context))) }
     // Generic aliases are erased after checker substitution. Concrete uses
     // lower directly to their substituted concrete type.
     alias: TypeAliasDeclaration -> {
@@ -136,10 +110,10 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, m
         emitted := emitTypeAlias(alias, context)
         if alias.resolvedType != none && !typeNeedsCompleteNominalDefinition(alias.resolvedType!) {
           plan.earlyTypeAliases.push(emitted)
-          spelling := emitType(alias.resolvedType!, context.modulePath)
-          if referenceOnlyVariant(spelling) {
+          type_ := lowerContextCppType(alias.resolvedType!, context)
+          if isReferenceVariant(type_) {
             plan.preferredTypeAliasNames.push(alias.name)
-            plan.preferredTypeAliasSpellings.push(spelling)
+            plan.preferredTypeAliasTypes.push(type_)
           }
         }
         else { plan.typeAliases.push(emitted) }
@@ -149,7 +123,7 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, m
       reserveHeaderNamespaceName(plan, const_.name)
       collectModuleValueDeclaration(
         plan,
-        emitDescriptionComment(const_.description, "") + emitModuleValueDeclaration(const_.name, const_.resolvedType!, context),
+        planModuleValueDeclaration(const_.name, const_.resolvedType!, context, const_.description),
         const_.resolvedType!,
       )
     }
@@ -157,22 +131,22 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, m
       reserveHeaderNamespaceName(plan, readonly_.name)
       collectModuleValueDeclaration(
         plan,
-        emitDescriptionComment(readonly_.description, "") + emitModuleValueDeclaration(readonly_.name, readonly_.resolvedType!, context),
+        planModuleValueDeclaration(readonly_.name, readonly_.resolvedType!, context, readonly_.description),
         readonly_.resolvedType!,
       )
     }
     binding: ImmutableBinding -> {
       reserveHeaderNamespaceName(plan, binding.name)
-      collectModuleValueDeclaration(plan, emitModuleValueDeclaration(binding.name, binding.resolvedType!, context), binding.resolvedType!)
+      collectModuleValueDeclaration(plan, planModuleValueDeclaration(binding.name, binding.resolvedType!, context), binding.resolvedType!)
     }
     let_: LetDeclaration -> {
       reserveHeaderNamespaceName(plan, let_.name)
-      collectModuleValueDeclaration(plan, emitModuleValueDeclaration(let_.name, let_.resolvedType!, context), let_.resolvedType!)
+      collectModuleValueDeclaration(plan, planModuleValueDeclaration(let_.name, let_.resolvedType!, context), let_.resolvedType!)
     }
     fn: FunctionDeclaration -> {
       reserveHeaderNamespaceName(plan, if fn.name == "main" then "doof_main" else fn.name)
       if fn.native_ {
-        if fn.nativeHeader != "" { addUnique(plan.nativeIncludes, moduleNativeHeaderPath(context.modulePath, fn.nativeHeader)) }
+        if fn.nativeHeader != "" { addUnique(plan.nativeIncludes, moduleNativeHeaderPath(context.modulePath, fn.nativeHeader, context.names)) }
         namespace := nativeNamespace(fn.nativeCppName)
         addUnique(plan.nativeNamespaces, namespace)
         if fn.resolvedType != none { collectNativeTypeAliases(fn.resolvedType!, namespace, plan, context) }
@@ -182,12 +156,12 @@ function collect(statement: Statement, plan: HeaderPlan, context: EmitContext, m
         plan.hasMain = true
         plan.mainReturnsInt = functionReturnsInt(fn)
         plan.mainAcceptsArgs = fn.params.length == 1
-        plan.functionSignatures.push(emitFunctionDeclaration(fn, "doof_main", context.modulePath, context))
+        plan.functionSignatures.push(planFunctionDeclaration(fn, "doof_main", context.modulePath, context))
       } else if fn.typeParams.length > 0 {
         // Concrete definitions are added by the whole-program instantiation
         // plan; never expose a Doof generic as a C++ template.
       } else {
-        plan.functionSignatures.push(emitFunctionDeclaration(fn, "", context.modulePath, context))
+        plan.functionSignatures.push(planFunctionDeclaration(fn, "", context.modulePath, context))
       }
     }
     export_: ExportDeclaration -> { collect(export_.declaration, plan, context, methods, classes) }
@@ -244,19 +218,19 @@ function typeNeedsCompleteNominalDefinition(type_: ResolvedType): bool {
   }
 }
 
-function collectNativeClassAliases(class_: ClassDeclaration, namespace: string, plan: HeaderPlan, context: EmitContext): none {
+function collectNativeClassAliases(class_: ClassDeclaration, namespace: string, plan: HeaderPlanBuilder, context: EmitContext): none {
   for field of class_.fields { if field.resolvedType != none { collectNativeTypeAliases(field.resolvedType!, namespace, plan, context) } }
   for method of class_.methods { if method.resolvedType != none { collectNativeTypeAliases(method.resolvedType!, namespace, plan, context) } }
 }
 
-function collectNativeTypeAliases(type_: ResolvedType, namespace: string, plan: HeaderPlan, context: EmitContext): none {
+function collectNativeTypeAliases(type_: ResolvedType, namespace: string, plan: HeaderPlanBuilder, context: EmitContext): none {
   case type_ {
     class_: ClassType -> {
-      if !surfaceSymbolIsGeneric(context, class_.symbol) { addNativeSymbolAlias(class_.symbol, namespace, plan) }
+      if !surfaceSymbolIsGeneric(context, class_.symbol) { addNativeSymbolAlias(class_.symbol, namespace, plan, context) }
       for argument of class_.typeArgs { collectNativeTypeAliases(argument, namespace, plan, context) }
     }
-    enum_: EnumType -> { addNativeSymbolAlias(enum_.symbol, namespace, plan) }
-    interface_: InterfaceType -> { if !surfaceSymbolIsGeneric(context, interface_.symbol) { addNativeSymbolAlias(interface_.symbol, namespace, plan) } }
+    enum_: EnumType -> { addNativeSymbolAlias(enum_.symbol, namespace, plan, context) }
+    interface_: InterfaceType -> { if !surfaceSymbolIsGeneric(context, interface_.symbol) { addNativeSymbolAlias(interface_.symbol, namespace, plan, context) } }
     array: ArrayResolvedType -> { collectNativeTypeAliases(array.elementType, namespace, plan, context) }
     map: MapResolvedType -> {
       collectNativeTypeAliases(map.keyType, namespace, plan, context)
@@ -288,272 +262,26 @@ function surfaceSymbolIsGeneric(context: EmitContext, symbol: Symbol): bool {
   return false
 }
 
-function addNativeSymbolAlias(symbol: Symbol, namespace: string, plan: HeaderPlan): none {
+function addNativeSymbolAlias(symbol: Symbol, namespace: string, plan: HeaderPlanBuilder, context: EmitContext): none {
   if symbol.native_ || symbol.module == "" { return }
   if symbol.kind == "class" || symbol.kind == "struct" {
-    addUnique(plan.typeOnlyForwardDeclarations, "namespace " + moduleNamespace(symbol.module) + " { struct " + symbol.name + "; }\n")
+    addUnique(plan.typeOnlyForwardDeclarations, "namespace " + moduleNamespace(symbol.module, context.names) + " { struct " + symbol.name + "; }\n")
   } else if symbol.kind == "enum" {
-    addUnique(plan.typeOnlyForwardDeclarations, "namespace " + moduleNamespace(symbol.module) + " { enum class " + symbol.name + "; }\n")
+    addUnique(plan.typeOnlyForwardDeclarations, "namespace " + moduleNamespace(symbol.module, context.names) + " { enum class " + symbol.name + "; }\n")
   }
-  alias := "using " + symbol.name + " = ::" + moduleNamespace(symbol.module) + "::" + symbol.name + ";"
+  alias := "using " + symbol.name + " = ::" + moduleNamespace(symbol.module, context.names) + "::" + symbol.name + ";"
   addUnique(plan.nativeAliases, if namespace == "" then alias + "\n" else "namespace " + namespace + " { " + alias + " }\n")
 }
 
-export function renderProjectedHeader(sections: HeaderSection[]): string {
-  compression := HeaderCompressionState {}
-  for section of sections { compressRepeatedHeaderVariants(section.plan, compression) }
-  result := StringBuilder()
-  result.append("#pragma once\n")
-  // The runtime owns the generated C++ standard-library baseline. Keep it as
-  // the first header so GCC can consume its adjacent .gch without reparsing
-  // those headers in every generated translation unit.
-  result.append("#include \"doof_runtime.hpp\"\n")
-  let emittedForward = false
-  for section of sections {
-    for declaration of section.plan.typeOnlyForwardDeclarations { result.append(declaration); emittedForward = true }
-  }
-  if emittedForward { result.append("\n") }
-  // Establish every generated namespace and nominal forward declaration
-  // before any worldview definition is completed.
-  for section of sections {
-    if section.plan.classForwardDeclarations.length == 0 &&
-      section.plan.earlyModuleValueDeclarations.length == 0 &&
-      headerPlanEmitsNamespaceContent(section.plan) { continue }
-    result.append("namespace " + section.namespaceName + " {\n")
-    for declaration of section.plan.classForwardDeclarations { result.append("    " + declaration) }
-    // Module bindings are source-private at the Doof level. They may still be
-    // declared in generated C++ because projected declarations can name their
-    // types and generated definitions can reference their storage.
-    for declaration of section.plan.earlyModuleValueDeclarations { result.append("    " + declaration) }
-    result.append("}\n\n")
-  }
-  // Reference-only variants need nominal declarations but not complete class
-  // definitions. Hoist their short structural names once per namespace.
-  for section of sections {
-    if section.plan.ephemeralTypeAliases.length > 0 {
-      result.append("namespace " + section.namespaceName + " {\n")
-      for alias of section.plan.ephemeralTypeAliases { result.append("    " + alias) }
-      result.append("}\n\n")
-    }
-  }
-  // Enums are complete value types and can be referenced by any later class
-  // signature. Emit the whole selected enum layer before class definitions,
-  // regardless of analyzer discovery order.
-  for section of sections {
-    if section.plan.enumDefinitions.length > 0 {
-      result.append("namespace " + section.namespaceName + " {\n")
-      for definition of section.plan.enumDefinitions { result.append("    " + definition) }
-      result.append("}\n\n")
-    }
-  }
-  for section of sections {
-    if section.plan.interfaceAliases.length > 0 {
-      result.append("namespace " + section.namespaceName + " {\n")
-      for alias of section.plan.interfaceAliases { result.append("    " + alias) }
-      result.append("}\n\n")
-    }
-  }
-  for section of sections {
-    if section.plan.earlyTypeAliases.length > 0 {
-      result.append("namespace " + section.namespaceName + " {\n")
-      for alias of section.plan.earlyTypeAliases { result.append("    " + alias) }
-      result.append("}\n\n")
-    }
-  }
-  for section of sections {
-    if section.plan.earlyClassDefinitions.length > 0 {
-      result.append("namespace " + section.namespaceName + " {\n")
-      for definition of section.plan.earlyClassDefinitions { result.append("    " + definition) }
-      result.append("}\n\n")
-    }
-  }
-  // Materialize each dependency section in planner order. A native header is
-  // part of its defining section: its aliases/includes precede declarations
-  // that use its native types, while earlier dependency sections have already
-  // supplied any complete Doof types the native header requires.
-  for section of sections {
-    let emittedNative = false
-    for alias of section.plan.nativeAliases { result.append(alias); emittedNative = true }
-    for include of section.plan.nativeIncludes {
-      if include.startsWith("<") { result.append("#include " + include + "\n") }
-      else { result.append("#include \"" + include + "\"\n") }
-      emittedNative = true
-    }
-    if emittedNative { result.append("\n") }
-    renderFinalSection(result, section)
-  }
-  let rendered = result.drainToString()
-  while rendered.endsWith("\n\n") { rendered = rendered.substring(0, rendered.length - 1) }
-  return rendered
-}
+export { HeaderRenderCache, renderProjectedHeader } from "./emitter-header-render"
 
-function renderFinalSection(result: StringBuilder, section: HeaderSection): none {
-  plan := section.plan
-  if plan.nativeAdapterSignatures.length == 0 &&
-    plan.moduleValueDeclarations.length == 0 &&
-    plan.classDefinitions.length == 0 &&
-    plan.typeAliases.length == 0 &&
-    plan.functionSignatures.length == 0 { return }
-  result.append("namespace " + section.namespaceName + " {\n")
-  // Concrete class methods may call module-owned native adapters.
-  for signature of plan.nativeAdapterSignatures { result.append("    " + signature) }
-  for declaration of plan.moduleValueDeclarations { result.append("    " + declaration) }
-  for definition of plan.classDefinitions { result.append("    " + definition) }
-  for alias of plan.typeAliases { result.append("    " + alias) }
-  for signature of plan.functionSignatures { result.append("    " + signature) }
-  result.append("}\n\n")
-}
-
-function headerPlanEmitsNamespaceContent(plan: HeaderPlan): bool {
-  return plan.ephemeralTypeAliases.length > 0 ||
-    plan.enumDefinitions.length > 0 ||
-    plan.interfaceAliases.length > 0 ||
-    plan.earlyClassDefinitions.length > 0 ||
-    plan.earlyTypeAliases.length > 0 ||
-    plan.nativeAdapterSignatures.length > 0 ||
-    plan.moduleValueDeclarations.length > 0 ||
-    plan.classDefinitions.length > 0 ||
-    plan.typeAliases.length > 0 ||
-    plan.functionSignatures.length > 0
-}
-
-class HeaderTypeUse {
-  spelling: string
-  let count: int = 0
-}
-
-class HeaderCompressionState {
-  let nextAnonymousTypeIndex: int = 1
-}
-
-// Consumer-projected headers can repeat erased union spellings many times.
-// Deduplicate only variants whose alternatives are monostate/shared_ptr: they
-// are valid after forward declarations, so introducing the alias cannot move a
-// value type across its required completeness boundary.
-function compressRepeatedHeaderVariants(plan: HeaderPlan, state: HeaderCompressionState): none {
-  let uses: HeaderTypeUse[] = []
-  collectHeaderTypeUses(plan.functionSignatures, uses)
-  collectHeaderTypeUses(plan.nativeAdapterSignatures, uses)
-  collectHeaderTypeUses(plan.earlyModuleValueDeclarations, uses)
-  collectHeaderTypeUses(plan.moduleValueDeclarations, uses)
-  collectHeaderTypeUses(plan.earlyClassDefinitions, uses)
-  collectHeaderTypeUses(plan.classDefinitions, uses)
-  collectHeaderTypeUses(plan.interfaceAliases, uses)
-  collectHeaderTypeUses(plan.enumDefinitions, uses)
-  collectHeaderTypeUses(plan.earlyTypeAliases, uses)
-  collectHeaderTypeUses(plan.typeAliases, uses)
-
-  for use of uses {
-    if use.count < 2 { continue }
-    let name = preferredHeaderTypeAlias(plan, use.spelling)
-    if name == "" {
-      name = nextHeaderTypeAliasName(plan, state)
-      plan.ephemeralTypeAliases.push("using " + name + " = " + use.spelling + ";\n")
-    }
-    replaceHeaderTypeUses(plan.functionSignatures, use.spelling, name)
-    replaceHeaderTypeUses(plan.nativeAdapterSignatures, use.spelling, name)
-    replaceHeaderTypeUses(plan.earlyModuleValueDeclarations, use.spelling, name)
-    replaceHeaderTypeUses(plan.moduleValueDeclarations, use.spelling, name)
-    replaceHeaderTypeUses(plan.earlyClassDefinitions, use.spelling, name)
-    replaceHeaderTypeUses(plan.classDefinitions, use.spelling, name)
-    replaceHeaderTypeUses(plan.interfaceAliases, use.spelling, name)
-    replaceHeaderTypeUses(plan.enumDefinitions, use.spelling, name)
-    // Keep named alias declarations canonical: replacing their own RHS would
-    // produce `using Expression = Expression`.
-    if preferredHeaderTypeAlias(plan, use.spelling) == "" {
-      replaceHeaderTypeUses(plan.earlyTypeAliases, use.spelling, name)
-      replaceHeaderTypeUses(plan.typeAliases, use.spelling, name)
-    }
-  }
-}
-
-function nextHeaderTypeAliasName(plan: HeaderPlan, state: HeaderCompressionState): string {
-  while true {
-    candidate := "doof_header_type_" + string(state.nextAnonymousTypeIndex)
-    state.nextAnonymousTypeIndex += 1
-    let occupied = false
-    for existing of plan.reservedNamespaceNames { if existing == candidate { occupied = true; break } }
-    if !occupied {
-      plan.reservedNamespaceNames.push(candidate)
-      return candidate
-    }
-  }
-  return ""
-}
-
-export function reserveHeaderNamespaceName(plan: HeaderPlan, name: string): none {
+export function reserveHeaderNamespaceName(plan: HeaderPlanBuilder, name: string): none {
   emitted := cppIdentifier(name)
   for existing of plan.reservedNamespaceNames { if existing == emitted { return } }
   plan.reservedNamespaceNames.push(emitted)
 }
 
-function preferredHeaderTypeAlias(plan: HeaderPlan, spelling: string): string {
-  for index of 0..<plan.preferredTypeAliasSpellings.length {
-    if plan.preferredTypeAliasSpellings[index] == spelling { return plan.preferredTypeAliasNames[index] }
-  }
-  return ""
-}
-
-function collectHeaderTypeUses(values: string[], uses: HeaderTypeUse[]): none {
-  for value of values {
-    let offset = 0
-    prefix := "std::variant<"
-    while offset < value.length {
-      relative := value.substring(offset, value.length).indexOf(prefix)
-      if relative < 0 { break }
-      start := offset + relative
-      end := matchingAngleEnd(value, start + prefix.length - 1)
-      if end < 0 { break }
-      spelling := value.substring(start, end + 1)
-      if referenceOnlyVariant(spelling) { addHeaderTypeUse(uses, spelling) }
-      offset = end + 1
-    }
-  }
-}
-
-function matchingAngleEnd(value: string, opening: int): int {
-  let depth = 0
-  for index of opening..<value.length {
-    if value[index] == '<' { depth += 1 }
-    else if value[index] == '>' {
-      depth -= 1
-      if depth == 0 { return index }
-    }
-  }
-  return -1
-}
-
-function referenceOnlyVariant(spelling: string): bool {
-  inner := spelling.substring(13, spelling.length - 1)
-  let memberStart = 0
-  let depth = 0
-  for index of 0..inner.length {
-    atEnd := index == inner.length
-    if !atEnd {
-      if inner[index] == '<' { depth += 1 }
-      else if inner[index] == '>' { depth -= 1 }
-    }
-    if atEnd || (inner[index] == ',' && depth == 0) {
-      member := inner.substring(memberStart, index).trim()
-      if member != "std::monostate" && !(member.startsWith("std::shared_ptr<") && member.endsWith(">")) { return false }
-      memberStart = index + 1
-    }
-  }
-  return true
-}
-
-function addHeaderTypeUse(uses: HeaderTypeUse[], spelling: string): none {
-  for use of uses {
-    if use.spelling == spelling { use.count += 1; return }
-  }
-  uses.push(HeaderTypeUse { spelling, count: 1 })
-}
-
-function replaceHeaderTypeUses(values: string[], spelling: string, name: string): none {
-  for index of 0..<values.length { values[index] = values[index].replaceAll(spelling, name) }
-}
-
-function collectModuleValueDeclaration(plan: HeaderPlan, declaration: string, type_: ResolvedType): none {
+function collectModuleValueDeclaration(plan: HeaderPlanBuilder, declaration: CppDeclaration, type_: ResolvedType): none {
   if moduleValueDeclarationNeedsIncludes(type_) { plan.moduleValueDeclarations.push(declaration) }
   else { plan.earlyModuleValueDeclarations.push(declaration) }
 }
@@ -598,8 +326,12 @@ function moduleValueDeclarationNeedsIncludes(type_: ResolvedType): bool {
   return false
 }
 
-function emitModuleValueDeclaration(name: string, type_: ResolvedType, context: EmitContext): string {
-  return "extern " + emitContextType(type_, context) + " " + name + ";\n"
+function planModuleValueDeclaration(name: string, type_: ResolvedType, context: EmitContext, description: string = ""): CppDeclaration {
+  result := CppDeclarationBuilder {}
+  result.text(emitDescriptionComment(description, "") + "extern ")
+  result.type_(lowerContextCppType(type_, context))
+  result.text(" " + name + ";\n")
+  return result.finish()
 }
 
 function addUnique(values: string[], value: string): none {
@@ -610,7 +342,7 @@ function addUnique(values: string[], value: string): none {
 // Structural interface aliases are emitted before selected native headers so
 // those headers can consume generated Doof aliases. A native implementation
 // arm therefore needs its own nominal declaration at the earlier alias layer.
-function addNativeClassForwardDeclaration(symbol: Symbol, plan: HeaderPlan): none {
+function addNativeClassForwardDeclaration(symbol: Symbol, plan: HeaderPlanBuilder): none {
   cppName := if symbol.nativeCppName == "" then symbol.name else symbol.nativeCppName
   namespace := nativeNamespace(cppName)
   name := if namespace == "" then cppName else cppName.substring(namespace.length + 2, cppName.length)
@@ -688,9 +420,13 @@ function emitEnumDeclaration(declaration: EnumDeclaration, context: EmitContext)
   return result + "inline std::ostream& operator<<(std::ostream& output, " + declaration.name + " value) { return output << " + declaration.name + "_name(value); }\n"
 }
 
-function emitTypeAlias(alias: TypeAliasDeclaration, context: EmitContext): string {
+function emitTypeAlias(alias: TypeAliasDeclaration, context: EmitContext): CppDeclaration {
   if alias.resolvedType == none { panic("Type alias " + alias.name + " was not checked before emission") }
-  return emitDescriptionComment(alias.description, "") + "using " + alias.name + " = " + emitType(alias.resolvedType!, context.modulePath) + ";\n"
+  result := CppDeclarationBuilder {}
+  result.text(emitDescriptionComment(alias.description, "") + "using " + alias.name + " = ")
+  result.type_(lowerContextCppType(alias.resolvedType!, context))
+  result.text(";\n")
+  return result.finish()
 }
 
 function functionReturnsInt(fn: FunctionDeclaration): bool {

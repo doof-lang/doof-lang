@@ -33,7 +33,8 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
 | `ast.do` | Syntax node shapes, source spans, semantic decoration slots including checked member selections | Resolved-type definitions or checking policy |
 | `resolver.do` | Logical module-path resolution, lazy source loading, source cache | Disk/package acquisition |
 | `analyzer.do` | Main-thread module discovery, parallel parse scheduling, deterministic graph ordering, declaration collection, imports/re-exports, module symbols, named-type decoration | Lexical scopes or expression typing |
-| `semantic.do` | Diagnostics, symbols, bindings, scopes, resolved-type records | Pass orchestration |
+| `semantic.do` | Diagnostics, symbols, bindings, scopes, resolved-type records and non-semantic identity stamps | Pass orchestration |
+| `semantic-type-identities.do` | Serial semantic identity preparation and read-only renderer lookup | Semantic equivalence or type canonicalization |
 | `diagnostics.do` | Shared diagnostic severity queries | Creation of feature-specific diagnostics |
 | `compiler.do` | Analyze → check all modules → graph validations → specialize → emit orchestration | Filesystem, package, or native compiler operations |
 | `frontend-cache.do` | Versioned pointer-free frontend fingerprints, resolution probes, and module-output records | AST/checker serialization or filesystem access |
@@ -123,11 +124,20 @@ emitter or individual expression branch.
 | File | Responsibility |
 | --- | --- |
 | `emitter-context.do` | Graph-wide nominal/method context and per-module emission state |
-| `emitter-names.do` | Stable C++ namespaces, filenames, and diagnostic paths from logical module identity; shared C++ keyword escaping for namespace and value identifiers |
-| `emitter-monomorphize.do` | Fixed-point discovery of concrete generic instantiations and direction-specific generated-JSON demand |
-| `emitter-worldview.do` | Consumer-projected declaration closure from checked symbol/type uses and concrete arguments of module-owned generic specializations |
+| `emitter-names.do` | Immutable per-compilation namespace snapshots; pure stable filenames, diagnostics and native paths; shared C++ keyword escaping |
+| `checked-instantiations.do` | Semantic specialization fixed point and shared JSON demand traversal |
+| `emitter-monomorphize.do` | C++ naming adapter over semantic specialization discovery |
+| `emitter-dependencies.do` | Immutable ordered direct-dependency extraction from checked surfaces, root bodies and concrete argument types |
+| `emitter-worldview.do` | Graph indexing, recursive dependency-summary replay, native closure and consumer-local declaration selection/order |
 | `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, and header/source pairing |
-| `emitter-header.do` | Multi-namespace worldview declaration ordering, enum identity/helper generation, and rendering |
+| `emitter-header-cache.do` | Compilation-local reuse of immutable plans for exact projected declaration selections |
+| `emitter-type-cache.do` | Preparation/renderer-local semantic-to-C++ memo tables with mutable preparation or read-only identity lookup and specialization-scoped sessions |
+| `cpp-type.do` | Immutable C++ type nodes, prepared registry snapshots and renderer-local interning/render overlays |
+| `cpp-declaration.do` | Immutable text/type fragments and declaration rendering |
+| `emitter-header-plan.do` | Mutable header construction and frozen declaration/type snapshots |
+| `emitter-header-aliases.do` | Structural variant-use counting and header-local alias selection |
+| `emitter-header.do` | Checked declaration selection and header-plan construction, including native aliases and enum helpers |
+| `emitter-header-render.do` | Multi-namespace ordering and immutable rendered-section reuse with alias-state restoration |
 | `string-builder.do` | Runtime-backed append-only construction for large generated text |
 | `emitter-decl.do` | Shared function/method body and return boundaries, signatures, class declarations, top-level definitions, and field equality operators for structs |
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering, routing discarded statement, loop-update, and void-yield values through expression discard emission |

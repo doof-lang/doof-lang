@@ -1,3 +1,4 @@
+import { ModuleNames } from "./emitter-names"
 // Shared expression-emission helpers.
 //
 // These helpers carry decorated-type and contextual-promotion logic so the
@@ -84,8 +85,8 @@ export function findProperty(properties: ObjectProperty[], name: string): Object
   return none
 }
 
-export function exprModuleNamespaceFor(path: string): string {
-  return moduleNamespace(path)
+export function exprModuleNamespaceFor(path: string, names: ModuleNames = ModuleNames {}): string {
+  return moduleNamespace(path, names)
 }
 
 export function emittedSymbolName(symbol: Symbol): string {

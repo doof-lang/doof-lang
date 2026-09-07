@@ -99,9 +99,9 @@ function emitWith(statement: WithStatement, level: int, context: EmitContext): s
     value := emitExpression(binding.value, context, resolvedType)
     let declarationType = "auto"
     case resolvedType {
-      _: ClassType -> { declarationType = emitType(resolvedType, context.modulePath) }
+      _: ClassType -> { declarationType = emitType(resolvedType, context.modulePath, context.names) }
       union_: UnionResolvedType -> {
-        if usesVariantRepresentation(union_) { declarationType = emitType(resolvedType, context.modulePath) }
+        if usesVariantRepresentation(union_) { declarationType = emitType(resolvedType, context.modulePath, context.names) }
       }
       _ -> { }
     }
@@ -290,7 +290,7 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
       if hasErrorValue {
         let promoted = "doof::failure_error(" + temporaryName + ")"
         if context.catchResultType != none {
-          promoted = "doof::variant_promote<" + emitType(context.catchResultType!, context.modulePath) + ">(" + promoted + ")"
+          promoted = "doof::variant_promote<" + emitType(context.catchResultType!, context.modulePath, context.names) + ">(" + promoted + ")"
         }
         output = output + context.catchVarName + " = " + promoted + "; "
       }
@@ -415,7 +415,7 @@ function emitCase(statement: CaseStatement, level: int, context: EmitContext): s
       case pattern {
         type_: TypePattern -> {
           bindingName := if type_.name == "_" then "" else cppIdentifier(type_.name)
-          emitted := emitCaseTypePattern(type_, specializeEmitType(subjectType!, context), subject, bindingName, context.modulePath)
+          emitted := emitCaseTypePattern(type_, specializeEmitType(subjectType!, context), subject, bindingName, context.modulePath, context.names)
           condition = emitted.condition
           binding = emitted.binding
         }

@@ -1,3 +1,5 @@
+import { prepareModuleNames, ModuleNamespaceMapping } from "./emitter-names"
+import { exprModuleNamespaceFor } from "./emitter-expr-utils"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 import { Assert } from "std/assert"
@@ -29,4 +31,10 @@ export function testWiderNonePromotionPreservesNullableCarriers(): none {
     Assert.stringContains(source, "if (doof::is_null(_nullable_value)) return std::monostate{};")
     Assert.stringContains(source, "doof::unwrap_optional(_nullable_value)")
   }
+}
+
+export function testReadonlyEmissionExpressionNamespacesAreExplicit(): none {
+  names := prepareModuleNames([ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "first" }])
+  Assert.equal(exprModuleNamespaceFor("/vendor/item.do", names), "first::item")
+  Assert.equal(exprModuleNamespaceFor("/vendor/item.do"), "app_vendor_item_")
 }

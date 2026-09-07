@@ -34,7 +34,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         case expression.resolvedType! {
           result: ResultResolvedType -> {
             callback := emitExpression(expression.args[0].value, context)
-            successType := emitResultPayloadType(result.valueType, context.modulePath)
+            successType := emitResultPayloadType(result.valueType, context.modulePath, context.names)
             if result.valueType.kind == "none" {
               return "[&]() -> doof::Result<void, std::string> { try { " + callback + ".call(); return doof::Success<void>{}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }()"
             }
@@ -80,7 +80,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
               context.tryCounter += 1
               object := emitExpression(member.object, context)
               fallback := emitExpression(expression.args[0].value, context, resultType.valueType)
-              return "[&]() -> " + emitType(resultType.valueType, context.modulePath) + " { auto " + temporaryName + " = " + object + "; if (doof::is_failure(" + temporaryName + ")) return " + fallback + "; return std::move(doof::success_value(" + temporaryName + ")); }()"
+              return "[&]() -> " + emitType(resultType.valueType, context.modulePath, context.names) + " { auto " + temporaryName + " = " + object + "; if (doof::is_failure(" + temporaryName + ")) return " + fallback + "; return std::move(doof::success_value(" + temporaryName + ")); }()"
             }
           }
           _ -> { }
@@ -323,7 +323,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       concreteName := concreteFunctionName(context, key)
       if concreteName != "" {
         usesConcreteInstantiation = true
-        callee = if targetModule != "" && targetModule != context.modulePath then "::" + exprModuleNamespaceFor(targetModule) + "::" + concreteName else concreteName
+        callee = if targetModule != "" && targetModule != context.modulePath then "::" + exprModuleNamespaceFor(targetModule, context.names) + "::" + concreteName else concreteName
       }
     }
   }
@@ -376,21 +376,21 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
     noneCheck := if nullable then "if (!" + storage + ".has_value()) doof::panic(\"Weak reference is none\"); " else ""
     case resultType {
       _: NoneType -> { return "[&]() -> void { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); " + call + "; }()" }
-      _ -> { return "[&]() -> " + emitType(resultType, context.modulePath) + " { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); return " + call + "; }()" }
+      _ -> { return "[&]() -> " + emitType(resultType, context.modulePath, context.names) + " { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); return " + call + "; }()" }
     }
   }
   case expression.resolvedType! {
     result: ResultResolvedType -> {
-      resultCpp := emitType(result, context.modulePath)
-      payloadCpp := emitResultPayloadType(result.valueType, context.modulePath)
-      errorCpp := emitResultPayloadType(result.errorType, context.modulePath)
+      resultCpp := emitType(result, context.modulePath, context.names)
+      payloadCpp := emitResultPayloadType(result.valueType, context.modulePath, context.names)
+      errorCpp := emitResultPayloadType(result.errorType, context.modulePath, context.names)
       failure := if result.errorType.kind == "union" then errorCpp + "{::doof::WeakReferenceError{}}" else "::doof::WeakReferenceError{}"
       noneReturn := if nullable then "if (!" + storage + ".has_value()) return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{}}; " else ""
       prefix := "[&]() -> " + resultCpp + " { auto " + storage + " = " + object + "; " + noneReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return doof::Failure<" + errorCpp + ">{" + failure + "}; auto " + temporary + " = std::move(_weak_locked.value()); "
       if originalReturn != none {
         case originalReturn! {
           nested: ResultResolvedType -> {
-            nestedErrorCpp := emitResultPayloadType(nested.errorType, context.modulePath)
+            nestedErrorCpp := emitResultPayloadType(nested.errorType, context.modulePath, context.names)
             promotedError := if result.errorType.kind == "union" then errorCpp + "{doof::failure_error(_weak_result)}" else "doof::failure_error(_weak_result)"
             if nested.valueType.kind == "none" {
               return prefix + "auto _weak_result = " + call + "; if (doof::is_failure(_weak_result)) return doof::Failure<" + errorCpp + ">{" + promotedError + "}; return doof::Success<void>{}; }()"

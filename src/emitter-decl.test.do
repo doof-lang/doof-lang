@@ -1,3 +1,9 @@
+import { ModuleNamespaceMapping } from "./emitter-names"
+import { noSourceLoader } from "./resolver"
+import { compileWithLoader } from "./compiler"
+import { EmitContext } from "./emitter-context"
+import { renderDeclaration } from "./cpp-declaration"
+import { planClassDeclaration } from "./emitter-decl"
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
@@ -5,7 +11,7 @@ import { compile } from "./compiler"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { emitFunctionDeclaration } from "./emitter-decl"
 import { ModuleEmission } from "./emitter-module"
-import { FunctionDeclaration } from "./ast"
+import { ClassDeclaration, FunctionDeclaration } from "./ast"
 import { SourceFile } from "./semantic"
 
 function emit(source: string): ModuleEmission {
@@ -160,4 +166,33 @@ export function testEmissionCleanupRestoresCallableCaptureAndReturnContext(): no
   Assert.stringContains(result.source, "C::plain(int32_t count) {\n    return count;")
   Assert.stringContains(result.source, "return static_cast<void>(value);")
   Assert.stringContains(result.source, "return value;")
+}
+
+export function testStructuredClassDeclarationContainsTypedSlots(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "class Item { value: int }" }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
+  case analysis.modules[0].program.statements[0] {
+    class_: ClassDeclaration -> {
+      declaration := planClassDeclaration(class_, EmitContext { modulePath: "/main.do" })
+      let types = 0
+      for part of declaration.parts { if part.type_ != none { types += 1 } }
+      Assert.equal(types, 2)
+      Assert.stringContains(renderDeclaration(declaration), "int32_t value;")
+      Assert.stringContains(renderDeclaration(declaration), "Item(int32_t value)")
+    }
+    _ -> { panic("expected class") }
+  }
+}
+
+export function testReadonlyEmissionDeclarationsUsesExplicitNames(): none {
+  result := compileWithLoader([
+    SourceFile { path: "/vendor/types.do", source: "export class Item { value: int = 1 }\nexport class Other {}\nexport enum Choice { One, Two }\nexport function make(): Item => Item {}" },
+    SourceFile { path: "/main.do", source: "import { Item, Other, Choice, make } from \"./vendor/types\"\nfunction identity(value: Item): Item => value" },
+  ], "/main.do", noSourceLoader, [ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "mapped" }])
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let output = ""
+  for module of result.emission!.modules { if module.modulePath == "/main.do" { output = module.header + module.source } }
+  Assert.stringContains(output, "::mapped::types::Item")
+  Assert.stringNotContains(output, "app_vendor_types_")
 }

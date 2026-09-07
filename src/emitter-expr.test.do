@@ -1,3 +1,6 @@
+import { compileWithLoader } from "./compiler"
+import { noSourceLoader } from "./resolver"
+import { ModuleNamespaceMapping } from "./emitter-names"
 import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
@@ -120,4 +123,12 @@ export function testEmissionCleanupThisRetainsClassAndStructCarriers(): none {
   Assert.stringContains(source, "C::self() {\n    return this->shared_from_this();")
   Assert.stringContains(source, "S::self() {\n    return *this;")
   Assert.stringContains(source, "Native::self() {\n    return this->shared_from_this();")
+}
+
+export function testReadonlyEmissionCallerUsesSnapshotDiagnosticPath(): none {
+  source := "function debug(source: SourceLocation = @caller): string => source.fileName\nfunction caller(): string => debug()"
+  result := compileWithLoader([SourceFile { path: "/vendor/tests/caller.do", source }], "/vendor/tests/caller.do", noSourceLoader, [ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "mapped" }])
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.stringContains(result.emission!.modules[0].source, "std::string(\"tests/caller\")")
+  Assert.stringNotContains(result.emission!.modules[0].source, "std::string(\"vendor/tests/caller\")")
 }

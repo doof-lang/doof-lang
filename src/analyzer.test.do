@@ -1,3 +1,4 @@
+import { PhaseTimings } from "./phase-timings"
 import { Assert } from "std/assert"
 import { AnalysisResult, ModuleInfo, createAnalyzer, createAnalyzerWithLoader } from "./analyzer"
 import { Diagnostic, SemanticLocation, SemanticSpan, SourceFile } from "./semantic"
@@ -381,4 +382,15 @@ export function testReportsLoaderFailuresBeforeCascadingMissingModules(): none {
   Assert.equal(result.diagnostics[1].message, "Invalid dependency manifest: /std/random/index.do")
   Assert.equal(result.diagnostics[2].message, "Module not found: /std/game.do")
   Assert.equal(result.diagnostics[3].message, "Module not found: /std/random.do")
+}
+
+export function testPhaseTimingsAnalyzerRecordsDiscoveryAndResolution(): none {
+  timings := PhaseTimings { enabled: true }
+  analyzer := createAnalyzer([SourceFile { path: "/main.do", source: "function main(): int => 1" }])
+  result := analyzer.analyze("/main.do", timings)
+  Assert.equal(result.modules.length, 1)
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.equal(timings.entries.length, 2)
+  Assert.equal(timings.entries[0].name, "analysis.load-parse-discover")
+  Assert.equal(timings.entries[1].name, "analysis.resolve")
 }

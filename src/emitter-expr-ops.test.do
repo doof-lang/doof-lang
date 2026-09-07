@@ -1,3 +1,6 @@
+import { ModuleNamespaceMapping } from "./emitter-names"
+import { noSourceLoader } from "./resolver"
+import { compileWithLoader } from "./compiler"
 import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
@@ -79,4 +82,17 @@ export function testQuarkFixSharedKeywordIdentifierPolicy(): none {
   Assert.equal(result.diagnostics.length, 0)
   Assert.stringContains(result.emission!.modules[0].source, "explicit_(int32_t namespace_)")
   Assert.stringContains(result.emission!.modules[0].source, "explicit_(0)")
+}
+
+export function testReadonlyEmissionOperatorsUsesExplicitNames(): none {
+  result := compileWithLoader([
+    SourceFile { path: "/vendor/types.do", source: "export class Item { value: int = 1 }\nexport class Other {}\nexport enum Choice { One, Two }\nexport function make(): Item => Item {}" },
+    SourceFile { path: "/main.do", source: "import { Item, Other, Choice, make } from \"./vendor/types\"\nfunction name(value: Choice): string => value.name" },
+  ], "/main.do", noSourceLoader, [ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "mapped" }])
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let output = ""
+  for module of result.emission!.modules { if module.modulePath == "/main.do" { output = module.header + module.source } }
+  Assert.stringContains(output, "::mapped::types::Choice")
+  Assert.stringNotContains(output, "app_vendor_types_")
 }

@@ -178,7 +178,7 @@ function concreteClassName(class_: ClassType, context: EmitContext): string {
   for i of 0..<context.concreteClassKeys.length {
     if context.concreteClassKeys[i] == key {
       name := context.concreteClassNames[i]
-      if class_.symbol.module != "" && class_.symbol.module != context.modulePath { return "::" + exprModuleNamespaceFor(class_.symbol.module) + "::" + name }
+      if class_.symbol.module != "" && class_.symbol.module != context.modulePath { return "::" + exprModuleNamespaceFor(class_.symbol.module, context.names) + "::" + name }
       return name
     }
   }
@@ -190,7 +190,7 @@ function constructionClassName(owner: ClassType, context: EmitContext): string {
   if concrete != "" { return concrete }
   if owner.symbol.native_ { return "::" + (if owner.symbol.nativeCppName == "" then owner.symbol.name else owner.symbol.nativeCppName) }
   if owner.symbol.module != "" && owner.symbol.module != context.modulePath {
-    return "::" + exprModuleNamespaceFor(owner.symbol.module) + "::" + emittedSymbolName(owner.symbol)
+    return "::" + exprModuleNamespaceFor(owner.symbol.module, context.names) + "::" + emittedSymbolName(owner.symbol)
   }
   return emittedSymbolName(owner.symbol)
 }

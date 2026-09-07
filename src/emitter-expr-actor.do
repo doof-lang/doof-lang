@@ -93,7 +93,7 @@ export function emitSyncActorCall(expression: CallExpression, member: MemberExpr
 
 function emitActorMethodCall(expression: CallExpression, member: MemberExpression, actor: ActorType, async_: bool, context: EmitContext): string {
   object := emitExpression(member.object, context)
-  className := emitClassInnerType(actor.innerClass, context.modulePath)
+  className := emitClassInnerType(actor.innerClass, context.modulePath, context.names)
   let methodType: FunctionType | none = none
   if member.resolvedType != none {
     case member.resolvedType! {

@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import {
-  compilerCacheIdentity, driverRootLogicalPath, driverRootLogicalPrefix, frontendEmissionCacheSupported, frontendStateMatches, materializeGeneratedText,
+  phaseTimingsEnabled, compilerCacheIdentity, driverRootLogicalPath, driverRootLogicalPrefix, frontendEmissionCacheSupported, frontendStateMatches, materializeGeneratedText,
   nativeBuildOutputModeForCommand, nativeBuildOutputName, parseDependencyManifestForTarget,
   stdlibPackageNameForLogicalPath, synchronizeExecutableResources,
 } from "./driver"
@@ -240,4 +240,13 @@ export function testQuarkFixEmptyCoverageCreatesIndexDirectory(): none {
   index := writeCoverageHtml(CoverageReport {}, join([root, "nested/coverage.json"]), root)
   Assert.isTrue(exists(index))
   removeDriverTestTree(root)
+}
+
+export function testPhaseTimingsDriverRequiresExplicitOptIn(): none {
+  Assert.isTrue(phaseTimingsEnabled("emit", "1"))
+  Assert.isTrue(phaseTimingsEnabled("check", "1"))
+  for value of ["", "0", "true"] { Assert.isFalse(phaseTimingsEnabled("emit", value)) }
+  for command of ["run", "build", "profile", "test", "package"] {
+    Assert.isFalse(phaseTimingsEnabled(command, "1"))
+  }
 }

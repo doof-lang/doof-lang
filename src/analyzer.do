@@ -4,6 +4,7 @@
 // process export lists, then decorate named type annotations.  Keeping these
 // responsibilities separate makes the later checker independent of parsing.
 
+import { PhaseTimings } from "./phase-timings"
 import { Parser } from "./parser"
 import { ModuleResolver, SourceLoader, noSourceLoader } from "./resolver"
 import {
@@ -60,7 +61,7 @@ export class ModuleAnalyzer {
   let inProgress: string[] = []
   let resolvedPaths: string[] = []
 
-  analyze(entry: string): AnalysisResult {
+  analyze(entry: string, timings: PhaseTimings = PhaseTimings {}): AnalysisResult {
     modules = []
     diagnostics = []
     inProgress = []
@@ -69,7 +70,10 @@ export class ModuleAnalyzer {
     resolver.diagnostics = []
     resolver.failedPaths = []
     entryPath := if entry.endsWith(".do") then entry else entry + ".do"
+    parseStart := timings.start()
     parseReachableModules(entryPath)
+    timings.finish("analysis.load-parse-discover", parseStart)
+    resolveStart := timings.start()
     orderModules(entryPath)
     ignored := resolveModule(entryPath)
     // Loader failures explain why later resolution and type checking cascaded.
@@ -78,6 +82,7 @@ export class ModuleAnalyzer {
     let orderedDiagnostics: Diagnostic[] = []
     for diagnostic of resolver.diagnostics { orderedDiagnostics.push(diagnostic) }
     for diagnostic of diagnostics { orderedDiagnostics.push(diagnostic) }
+    timings.finish("analysis.resolve", resolveStart)
     return AnalysisResult { modules, diagnostics: orderedDiagnostics }
   }
 

@@ -20,7 +20,7 @@ export function emitDotShorthand(expression: DotShorthand, context: EmitContext)
     if expression.resolvedShorthandOwnerCppName != "" { owner = "::" + expression.resolvedShorthandOwnerCppName }
     else { owner = "::" + owner }
   } else if context.modulePath != "" && expression.resolvedShorthandOwnerModule != "" && expression.resolvedShorthandOwnerModule != context.modulePath {
-    owner = "::" + exprModuleNamespaceFor(expression.resolvedShorthandOwnerModule) + "::" + owner
+    owner = "::" + exprModuleNamespaceFor(expression.resolvedShorthandOwnerModule, context.names) + "::" + owner
   }
   return owner + "::" + cppIdentifier(expression.name)
 }
@@ -65,7 +65,7 @@ export function emitYieldBlockExpression(expression: YieldBlockExpression, conte
   context.inValueYieldBlock = previousYieldState
   context.valueYieldType = previousYieldType
   context.valueYieldReturnsVoid = previousYieldVoid
-  return "[&]() -> " + emitType(resultType!, context.modulePath) + " {\n" + body + "}()"
+  return "[&]() -> " + emitType(resultType!, context.modulePath, context.names) + " {\n" + body + "}()"
 }
 
 export function emitCatchExpression(expression: CatchExpression, context: EmitContext): string {
@@ -92,7 +92,7 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
   if expected != none { resultType = expected! }
   else if expression.resolvedType != none { resultType = expression.resolvedType! }
   if resultType == none { panic("Case expression has no resolved result type") }
-  let output = "[&]() -> " + emitType(resultType!, context.modulePath) + " {\n"
+  let output = "[&]() -> " + emitType(resultType!, context.modulePath, context.names) + " {\n"
   output = output + "    auto _case_subject = " + emitExpression(expression.subject, context) + ";\n"
   subjectResult := caseSubjectResultType(expression.subject)
   for arm of expression.arms {
@@ -102,7 +102,7 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
       case pattern {
         type_: TypePattern -> {
           bindingName := if type_.name == "_" then "" else cppIdentifier(type_.name)
-          emitted := emitCaseTypePattern(type_, specializeEmitType(subjectResult, context), "_case_subject", bindingName, context.modulePath)
+          emitted := emitCaseTypePattern(type_, specializeEmitType(subjectResult, context), "_case_subject", bindingName, context.modulePath, context.names)
           condition = emitted.condition
           binding = emitted.binding
         }

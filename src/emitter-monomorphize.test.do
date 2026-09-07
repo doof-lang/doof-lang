@@ -1,3 +1,6 @@
+import { ModuleNamespaceMapping } from "./emitter-names"
+import { noSourceLoader } from "./resolver"
+import { compileWithLoader } from "./compiler"
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
@@ -86,4 +89,56 @@ export function testIncludesGenericClassesInConcreteInterfaceVariants(): none {
     "function main(): int => read(Box<int> { value: 7 })",
   )
   Assert.stringContains(result.header, "using Reader__int = std::variant<std::shared_ptr<Box__int>>;")
+}
+
+export function testReadonlyEmissionGenericNamesUsesExplicitNames(): none {
+  result := compileWithLoader([
+    SourceFile { path: "/vendor/types.do", source: "export class Item { value: int = 1 }\nexport class Other {}\nexport enum Choice { One, Two }\nexport function make(): Item => Item {}" },
+    SourceFile { path: "/main.do", source: "import { Item, Other, Choice, make } from \"./vendor/types\"\nfunction identity<T>(value: T): T => value\nfunction build(): Item => identity<Item>(Item {})" },
+  ], "/main.do", noSourceLoader, [ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "mapped" }])
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let output = ""
+  for module of result.emission!.modules { if module.modulePath == "/main.do" { output = module.header + module.source } }
+  Assert.stringContains(output, "identity__mapped__types_Item")
+  Assert.stringNotContains(output, "app_vendor_types_")
+}
+
+import { discoverInstantiations } from "./checked-instantiations"
+import { nameInstantiations } from "./emitter-monomorphize"
+import { prepareModuleNames } from "./emitter-names"
+
+export function testInstantiationDiscoveryNamingDoesNotMutateSemanticDemand(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source:
+    "class Value {}\nfunction identity<T>(value: T): T => value\nfunction main(): none { identity<Value>(Value {}) }" }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  checked := discoverInstantiations(analysis)
+  key := checked.functions[0].key
+  first := nameInstantiations(checked, prepareModuleNames([ModuleNamespaceMapping { logicalPrefix: "/main.do", packageName: "first" }]))
+  second := nameInstantiations(checked, prepareModuleNames([ModuleNamespaceMapping { logicalPrefix: "/main.do", packageName: "second" }]))
+  Assert.equal(checked.functions[0].key, key)
+  Assert.equal(first.functions[0].key, second.functions[0].key)
+  Assert.isFalse(first.functions[0].emittedName == second.functions[0].emittedName)
+}
+
+export function testInstantiationDiscoveryNamingPreservesCollisionOrder(): none {
+  analysis := createAnalyzer([
+    SourceFile { path: "/left.do", source: "export class Item {}" },
+    SourceFile { path: "/right.do", source: "export class Item {}" },
+    SourceFile { path: "/main.do", source:
+      "import { Item as Left } from \"./left\"\nimport { Item as Right } from \"./right\"\n" +
+      "function identity<T>(value: T): T => value\nfunction main(): none { identity<Left>(Left {})\nidentity<Right>(Right {}) }" },
+  ]).analyze("/main.do")
+  checker := createChecker(analysis, "/main.do")
+  for i of 0..<analysis.modules.length {
+    Assert.equal(checker.check(analysis.modules[analysis.modules.length - 1 - i].path).diagnostics.length, 0)
+  }
+  checked := discoverInstantiations(analysis)
+  plan := nameInstantiations(checked, prepareModuleNames([
+    ModuleNamespaceMapping { logicalPrefix: "/left.do", packageName: "same" },
+    ModuleNamespaceMapping { logicalPrefix: "/right.do", packageName: "same" },
+  ]))
+  Assert.equal(plan.functions.length, 2)
+  Assert.isFalse(plan.functions[0].key == plan.functions[1].key)
+  Assert.equal(plan.functions[1].emittedName, plan.functions[0].emittedName + "_2")
 }

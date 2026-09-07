@@ -35,7 +35,7 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     caller: CallerExpression -> {
       functionName := if context.currentFunctionName == "" then "<module>" else context.currentFunctionName
       span := if context.sourceLocationSpanOverride == none then caller.span else context.sourceLocationSpanOverride!.span
-      fileName := moduleDiagnosticPath(context.modulePath, true)
+      fileName := moduleDiagnosticPath(context.modulePath, true, context.names)
       value = "std::make_shared<doof::SourceLocation>(std::string(\"" + fileName + "\"), " + string(span.start.line) + ", std::string(\"" + functionName + "\"))"
     }
     identifier: Identifier -> { value = emitIdentifier(identifier, context) }

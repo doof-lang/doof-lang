@@ -305,10 +305,15 @@ export function unionMutabilityConflict(type_: ResolvedType): string | none {
   case type_ {
     union_: UnionResolvedType -> {
       for i of 0..<union_.types.length {
+        left := union_.types[i]
+        // With no type arguments, nominal equality cannot change when mutability is erased.
+        case left {
+          class_: ClassType -> { if class_.typeArgs.length == 0 { continue } }
+          _ -> { }
+        }
         for j of (i + 1)..<union_.types.length {
-          left := union_.types[i]
           right := union_.types[j]
-          if !sameType(left, right) && compareTypes(left, right, true) {
+          if compareTypes(left, right, true) && !sameType(left, right) {
             return "Union members " + typeName(left) + " and " + typeName(right) +
               " differ only in collection mutability and cannot be distinguished at runtime; use a single mutability or distinct wrapper types"
           }

@@ -144,3 +144,35 @@ export function testUnionMutabilityConflicts(): none {
   Assert.equal(unionMutabilityConflict(unionType([mutable, arrayType(primitive("string"), true)])), none)
   Assert.equal(unionMutabilityConflict(unionType([classType("A", symbol("A", "/a.do")), classType("A", symbol("A", "/b.do"))])), none)
 }
+
+import { UnionResolvedType } from "./semantic"
+
+export function testUnionMutabilityConflictPreservesFirstDiagnostic(): none {
+  mutable := arrayType(primitive("int"))
+  frozen := arrayType(primitive("int"), true)
+  expected := unionMutabilityConflict(unionType([mutable, frozen]))
+  Assert.isTrue(expected != none)
+  // Duplicate and unrelated arms are not conflicts; preserve the first real pair.
+  actual := unionMutabilityConflict(UnionResolvedType { types: [
+    primitive("string"), mutable, mutable, frozen,
+    arrayType(primitive("string")), arrayType(primitive("string"), true),
+  ] })
+  Assert.equal(actual, expected)
+  Assert.equal(unionMutabilityConflict(UnionResolvedType { types: [] }), none)
+  Assert.equal(unionMutabilityConflict(UnionResolvedType { types: [mutable, mutable] }), none)
+}
+
+export function testUnionMutabilityNominalGuardPreservesGenericConflicts(): none {
+  nominal := classType("Node", symbol("Node", "/nodes.do"))
+  other := classType("Other", symbol("Other", "/nodes.do"))
+  Assert.equal(unionMutabilityConflict(UnionResolvedType { types: [nominal, nominal, other] }), none)
+  generic := symbol("Box", "/nodes.do")
+  generic.typeParams.push("T")
+  mutable := classType("Box", generic, [promiseType(arrayType(primitive("int")))])
+  frozen := classType("Box", generic, [promiseType(arrayType(primitive("int"), true))])
+  expected := unionMutabilityConflict(UnionResolvedType { types: [mutable, frozen] })
+  Assert.isTrue(expected != none)
+  Assert.equal(unionMutabilityConflict(UnionResolvedType { types: [nominal, mutable, other, frozen] }), expected)
+  Assert.equal(unionMutabilityConflict(UnionResolvedType { types: [mutable, nominal, frozen, other] }), expected)
+  Assert.equal(unionMutabilityConflict(UnionResolvedType { types: [nominal] }), none)
+}

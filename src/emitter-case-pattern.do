@@ -1,3 +1,4 @@
+import { ModuleNames } from "./emitter-names"
 // Shared type-pattern lowering for statement and expression cases.
 
 import { emitCarrierAbsence } from "./emitter-carrier-values"
@@ -21,16 +22,17 @@ export function emitCaseTypePattern(
   subject: string,
   bindingName: string,
   currentModulePath: string,
+  names: ModuleNames = ModuleNames {},
 ): CaseTypePatternEmission {
   if pattern.resolvedType == none { panic("Case pattern has no resolved type") }
   patternType := pattern.resolvedType!
   case subjectType {
-    result: ResultResolvedType -> { return emitResultPattern(pattern, result, subject, bindingName, currentModulePath) }
+    result: ResultResolvedType -> { return emitResultPattern(pattern, result, subject, bindingName, currentModulePath, names) }
     _: JsonValueResolvedType -> { return emitJsonValuePattern(patternType, subject, bindingName) }
     _ -> { }
   }
   if usesVariantRepresentation(subjectType) {
-    patternCpp := emitType(patternType, currentModulePath)
+    patternCpp := emitType(patternType, currentModulePath, names)
     if usesVariantRepresentation(patternType) {
       return CaseTypePatternEmission {
         condition: "doof::variant_is<" + patternCpp + ">(" + subject + ")",
@@ -46,7 +48,7 @@ export function emitCaseTypePattern(
   if nullable && patternType.kind == "none" {
     return CaseTypePatternEmission {
       condition: "doof::is_null(" + subject + ")",
-      binding: if bindingName == "" then "" else "const auto " + bindingName + " = " + emitCarrierAbsence(patternType, EmitContext { modulePath: currentModulePath }) + ";\n",
+      binding: if bindingName == "" then "" else "const auto " + bindingName + " = " + emitCarrierAbsence(patternType, EmitContext { modulePath: currentModulePath, names }) + ";\n",
     }
   }
   value := if nullable then "doof::unwrap_optional(" + subject + ")" else subject
@@ -62,12 +64,13 @@ function emitResultPattern(
   subject: string,
   bindingName: string,
   currentModulePath: string,
+  names: ModuleNames = ModuleNames {},
 ): CaseTypePatternEmission {
   let armType = ""
   case pattern.type_ {
     named: NamedType -> {
-      if named.name == "Success" { armType = "doof::Success<" + emitResultPayloadType(result.valueType, currentModulePath) + ">" }
-      if named.name == "Failure" { armType = "doof::Failure<" + emitResultPayloadType(result.errorType, currentModulePath) + ">" }
+      if named.name == "Success" { armType = "doof::Success<" + emitResultPayloadType(result.valueType, currentModulePath, names) + ">" }
+      if named.name == "Failure" { armType = "doof::Failure<" + emitResultPayloadType(result.errorType, currentModulePath, names) + ">" }
     }
     _ -> { }
   }
