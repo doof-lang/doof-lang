@@ -682,8 +682,12 @@ function canonicalTypeKey(type_: ResolvedType): string {
     tuple: TupleResolvedType -> { return "tuple:" + concreteTypeListKey(tuple.elements) }
     union_: UnionResolvedType -> { return "union:" + concreteTypeListKey(union_.types) }
     weak_: WeakResolvedType -> { return "weak:" + canonicalTypeKey(weak_.inner) }
+    function_: FunctionType -> {
+      let parameters: ResolvedType[] = []
+      for parameter of function_.params { parameters.push(parameter.type_) }
+      return "function:" + concreteTypeListKey(parameters) + "->" + canonicalTypeKey(function_.returnType)
+    }
     _ -> { return typeName(type_) }
   }
   return typeName(type_)
 }
-

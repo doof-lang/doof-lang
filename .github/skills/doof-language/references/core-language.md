@@ -187,6 +187,16 @@ events.reduce(0, (count, _, _): int => count + 1)
 `_` may discard explicit lambda parameters. It introduces no binding and may
 be repeated. Named function and method parameters still require names.
 
+Block lambdas infer their return type from reachable returns when no concrete
+annotation or context supplies it. Numeric widening and explicit optional
+returns are supported; unrelated return types need an annotation. Nested
+callable returns do not contribute. Empty blocks and bare returns infer `none`;
+blocks that only terminate, such as `{ panic("stopped") }`, infer `never`.
+Non-`none` block lambdas must not fall through, and `never` lambdas must
+terminate on every path.
+Use `return none` for an optional absence value; bare `return` requires a
+final return type of `none`.
+
 Structs captured by value remain owned copies that support checker-approved
 method calls, including in nested or escaping closures. Mutating a copied
 struct's `let` fields changes that closure's copy.

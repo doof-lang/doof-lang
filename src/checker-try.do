@@ -35,7 +35,7 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
     result: ResultResolvedType -> {
       validatePropagation(state, scope, result.errorType, statement.span)
       case statement.binding {
-        _: ExpressionStatement -> { return true }
+        _: ExpressionStatement -> { return result.valueType.kind != "never" }
         _ -> {
           if result.valueType.kind == "none" { typeError(state, "Cannot bind a none success value; use bare 'try expr'", statement.span) }
         }
@@ -69,6 +69,7 @@ export function checkTry(state: CheckerState, statement: TryStatement, scope: Sc
           _ -> { }
         }
       }
+      return result.valueType.kind != "never"
     }
     _ -> { typeError(state, "try requires a Result expression", value!.span) }
   }

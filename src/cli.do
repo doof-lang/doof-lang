@@ -20,6 +20,7 @@ export class CliRequest {
   let traceOutput: string = ""
   let profileTimeLimit: string = ""
   let profileNoOpen: bool = false
+  let debugLaunchJson: string = ""
   let distDirectory: string = ""
   let macosSigning: string = ""
   let macosSignIdentity: string = ""
@@ -41,12 +42,13 @@ export class CliParseResult {
 }
 
 export function cliUsage(): string {
-  return "usage: doof <build|run|profile|package|emit|check|test> [entry.do|package-dir] [options] [-- program-args...]\n" +
+  return "usage: doof <build|run|debug|profile|package|emit|check|test> [entry.do|package-dir] [options] [-- program-args...]\n" +
     "       doof <script.do> [program-args...]\n" +
     "\n" +
     "commands:\n" +
     "  build   emit generated C++ and build the executable\n" +
     "  run     emit, build, and run the executable\n" +
+    "  debug   build with symbols and open Doof Debugger on macOS\n" +
     "  profile emit, build, and record a macOS Time Profiler trace\n" +
     "  package build an optimized executable in the package dist directory\n" +
     "  emit    check the source graph and write generated C++\n" +
@@ -77,8 +79,9 @@ export function cliUsage(): string {
     "  --trace-output <path>       write the profile trace to this .trace path\n" +
     "  --time-limit <duration>     stop profiling after Nms, Ns, Nm, or Nh\n" +
     "  --no-open                   do not open a completed trace in Instruments\n" +
+    "  --launch-json <path>        debug: write a launch descriptor without opening the app\n" +
     "  -h, --help                  show this help\n" +
-    "  --                           pass remaining arguments to doof run/profile"
+    "  --                           pass remaining arguments to doof run/debug/profile"
 }
 
 function validProfileTimeLimit(value: string): bool {
@@ -108,7 +111,7 @@ export function parseCli(args: string[]): CliParseResult {
   }
 
   command := args[0]
-  if command != "build" && command != "run" && command != "profile" && command != "package" && command != "emit" && command != "check" && command != "test" {
+  if command != "build" && command != "run" && command != "debug" && command != "profile" && command != "package" && command != "emit" && command != "check" && command != "test" {
     return CliParseResult { request: none, error: "unknown command '" + command + "'" }
   }
   request := CliRequest { command, entry: if args.length < 2 then "." else args[1] }
@@ -116,8 +119,8 @@ export function parseCli(args: string[]): CliParseResult {
   while index < args.length {
     argument := args[index]
     if argument == "--" {
-      if command != "run" && command != "profile" {
-        return CliParseResult { request: none, error: "-- is only supported with the run and profile commands" }
+      if command != "run" && command != "debug" && command != "profile" {
+        return CliParseResult { request: none, error: "-- is only supported with the run, debug, and profile commands" }
       }
       index += 1
       while index < args.length {
@@ -211,6 +214,14 @@ export function parseCli(args: string[]): CliParseResult {
       request.iosProvisioningProfile = args[index + 1]
       index += 2
       continue
+    }
+    if argument == "--launch-json" {
+      if command != "debug" { return CliParseResult { request: none, error: "--launch-json is only supported with the debug command" } }
+      if index + 1 >= args.length || args[index + 1] == "" || args[index + 1].startsWith("--") {
+        return CliParseResult { request: none, error: "missing value for --launch-json" }
+      }
+      request.debugLaunchJson = args[index + 1]
+      index += 2; continue
     }
     if argument == "--json" { request.jsonOutput = true; index += 1; continue }
     if argument == "--selection-json" {

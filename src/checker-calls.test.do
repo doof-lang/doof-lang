@@ -11,6 +11,27 @@ function checked(source: string): CheckResult {
   return createChecker(analysis, "/main.do").check("/main.do")
 }
 
+export function testBlockLambdaGenericInference(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): none { let count = 0\n" +
+    "result := catchPanic(=> { count += 1\nreturn panic(\"captured\") })\n" +
+    "value := catchPanic(=> { return 42 })\nassert(result.isFailure(), \"failure\") }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::Result<doof::Never, std::string>")
+  Assert.stringContains(source, "doof::Result<int32_t, std::string>")
+  Assert.stringNotContains(source, "doof::Result<T,")
+}
+
+export function testBlockLambdaNeverFallthrough(): none {
+  result := checked("function main(): none { stop := (): never => {} }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "may complete without returning never")
+  Assert.equal(result.diagnostics[0].span.start.line, 1)
+}
+
 export function testResultConstructorShorthandPayloads(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function load(): Result<int, string> => Success { value: 1 }\n" +

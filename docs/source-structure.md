@@ -47,7 +47,7 @@ modules own the following decisions:
 
 | File | Responsibility |
 | --- | --- |
-| `checker-state.do` | Mutable per-run and per-module checker state |
+| `checker-state.do` | Mutable per-run and per-module checker state, including scoped lambda-return observations |
 | `checker-symbols.do` | Scope/binding operations, builtins, shared declaration signatures, symbol/declaration lookup |
 | `checker-types.do` | Resolved-type construction, comparison, union mutability conflict detection, assignability, substitution, interface-bound receiver views, and display |
 | `checker-annotations.do` | One annotation resolver for provisional signatures and checked types; builtin arity, alias expansion, constraints, and annotation decoration |
@@ -58,7 +58,8 @@ modules own the following decisions:
 | `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |
 | `checker-inference.do` | Contextual path validation and common-type inference; only optional unions are synthesized for value paths |
 | `checker-expressions.do` | Expression dispatch, operators, narrowing, assignment, and case expressions |
-| `checker-calls.do` | Calls, lambdas, generic inference/application, and actor-call boundaries |
+| `checker-calls.do` | Calls, generic inference/application, callback inference context, and actor-call boundaries |
+| `checker-lambdas.do` | Lambda signatures, block-return inference, return-site decoration, and completion diagnostics |
 | `checker-arguments.do` | Shared positional/named parameter mapping, contextual value checking, argument diagnostics, and required/default/spread validation |
 | `checker-construction.do` | Retained specialized construction plans for ordinary, named, contextual, and actor construction; shared field validation and visibility |
 | `checker-properties.do` | Shorthand/explicit property decoration, contextual assignability, and fixed literal field validation |
@@ -276,3 +277,27 @@ creates the index directory even for an empty report.
 Generated Wasm, bundled matching stdlib sources, JavaScript output, npm packages,
 VSIX files, and development profiles remain ignored. The extension build never
 changes the reviewed bootstrap snapshot.
+
+## Native debugger
+
+- `src/debug-command.do`: serializable launch contract, target validation, and
+  pure app invocation planning.
+- `src/debug-driver.do`: symbol creation, installed bundle discovery, launch
+  descriptor lifetime, and process execution.
+- `tools/debugger/`: standalone Doof/AppKit application; `protocol.do` frames
+  DAP messages, `session.do` owns request/event state, and `ui.do` presents it.
+  `native_transport.hpp` supplies bounded nonblocking macOS pipes only.
+- `scripts/build-debugger.sh` and `scripts/debugger.test.sh`: toolchain bundle
+  construction and real macOS LLDB-DAP regression verification.
+
+### VS Code debugger launch boundary
+
+- `src/debug-driver.do`: symbol generation, validated launch-file writing, and
+  optional native-app launch. `--launch-json` hands file ownership to the caller.
+- `extensions/vscode-doof/src/native-debug.ts`: compiler subprocess cancellation,
+  output capture, descriptor validation and temporary-file cleanup.
+- `extensions/vscode-doof/src/debug.ts`: launch configuration, trust/save checks,
+  debug command and LLDB-DAP executable registration.
+- `extensions/vscode-doof/src/debug-extension-tests.ts`: real VS Code session
+  coverage for entry/source stops, locals, stepping, arguments, environment,
+  output, panic and termination.

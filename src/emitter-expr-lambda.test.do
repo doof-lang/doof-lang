@@ -2,6 +2,26 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+export function testEmissionFailuresNeverLambdaBodies(): none {
+  for body of ["=> panic(\"stop\")", "(): never => { panic(\"stop\") }", "(): never => { return panic(\"stop\") }"] {
+    result := compile([SourceFile { path: "/main.do", source: "function main(): none { stop := " + body + " }" }], "/main.do")
+    Assert.equal(result.diagnostics.length, 0)
+    source := result.emission!.modules[0].source
+    Assert.stringContains(source, "-> doof::Never {")
+    Assert.stringContains(source, "doof::panic(\"never function returned\");")
+    Assert.stringNotContains(source, "return doof::panic(")
+  }
+}
+
+export function testEmissionFailuresNeverLambdaDiagnostics(): none {
+  for body of ["{ return 1 }", "{ return none }"] {
+    result := compile([SourceFile { path: "/main.do", source: "function main(): none { stop := (): never => " + body + " }" }], "/main.do")
+    Assert.isTrue(result.diagnostics.length > 0)
+    Assert.stringContains(result.diagnostics[0].message, "never")
+    Assert.equal(result.diagnostics[0].span.start.line, 1)
+  }
+}
+
 export function testModuleMutableBindingsRemainNamespaceStorageInLambda(): none {
   result := compile([SourceFile {
     path: "/module-callback.do",

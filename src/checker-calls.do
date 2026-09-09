@@ -1,21 +1,20 @@
-// Call, lambda, construction, generic-call, and actor-boundary checking.
+// Call, construction, generic-call, and actor-boundary checking.
 
 import { checkArguments, callArguments } from "./checker-arguments"
 import { insideConstructorFactory, resolveConstructor, validateConstructorVisibility, validateFieldArguments } from "./checker-construction"
 
 import { ActorType, Binding, ClassType, EnumType, FunctionParamType, FunctionType, PrimitiveType, ResolvedType, ResultResolvedType, Scope, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
 
-import { Block, CallExpression, ClassDeclaration, DotShorthand, Expression, FunctionDeclaration, Identifier, LambdaExpression, MemberExpression, SourceSpan, TypeParameterConstraint, Parameter } from "./ast"
+import { CallExpression, ClassDeclaration, DotShorthand, Expression, FunctionDeclaration, Identifier, LambdaExpression, MemberExpression, SourceSpan, TypeParameterConstraint } from "./ast"
 import { classType, functionType, resultType, neverType, noneType, primitive, sameType, typeName, unionType, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 
 import { CheckerState } from "./checker-state"
-import { checkBlock } from "./checker-statements"
 import { checkExpression } from "./checker-expressions"
 import { resolveType, resolveCalleeTarget, validateTypeArgumentConstraints } from "./checker-resolution"
 import { finish, typeError } from "./checker-common"
-import { decorateAnnotationWithResolved, optionalResolvedType, functionParameterIndex, declare, lookup, isBuiltinPrintlnCall, declarationFor } from "./checker-symbols"
+import { optionalResolvedType, functionParameterIndex, lookup, isBuiltinPrintlnCall, declarationFor } from "./checker-symbols"
 import { inferTypeArgument } from "./checker-generics"
 import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -112,7 +111,17 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
             // types, which are required to type shorthand lambda bindings.
             let inferenceExpected = genericInferenceExpected(parameterType, resolvedFunction.typeParams)
             case expression.args[i].value {
-              _: LambdaExpression -> { inferenceExpected = parameterType }
+              _: LambdaExpression -> {
+                inferenceExpected = parameterType
+                case parameterType {
+                  callback: FunctionType -> {
+                    if genericInferenceExpected(callback.returnType, resolvedFunction.typeParams) == none {
+                      inferenceExpected = functionType(callback.params, unknownType())
+                    }
+                  }
+                  _ -> { }
+                }
+              }
               _: DotShorthand -> { if inferenceExpected == none { continue } }
               _ -> { }
             }
@@ -336,69 +345,4 @@ export function validateActorMethodBoundary(state: CheckerState, expression: Cal
   }
 }
 
-export function checkLambda(state: CheckerState, expression: LambdaExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
-  expectedFunction := contextualFunctionType(expected)
-  // `=> body` inherits the complete callback signature. Materializing those
-  // parameters on the decorated AST keeps checking, generic inference,
-  // capture analysis, and C++ emission aligned on the same representation.
-  if expression.parameterless && expression.params.length == 0 && expectedFunction != none {
-    for expectedParameter of expectedFunction!.params {
-      expression.params.push(Parameter {
-        name: expectedParameter.name,
-        type_: none,
-        defaultValue: none,
-        resolvedType: expectedParameter.type_,
-        span: expression.span,
-      })
-    }
-  }
-  lambdaScope := Scope { parent: scope }
-  let params: FunctionParamType[] = []
-  for i of 0..<expression.params.length {
-    parameter := expression.params[i]
-    parameterType := if parameter.type_ == none then if expectedFunction != none && i < expectedFunction!.params.length then expectedFunction!.params[i].type_ else unknownType() else resolveType(state, parameter.type_!, state.info!, lambdaScope)
-    parameter.resolvedType = optionalResolvedType(parameterType)
-    params.push(FunctionParamType { name: parameter.name, type_: parameterType, hasDefault: parameter.defaultValue != none })
-    if parameter.name != "_" && !declare(lambdaScope, Binding { name: parameter.name, kind: "parameter", type_: parameterType, mutable: false, span: checkerSemanticSpan(parameter.span), module: state.info!.path }) {
-      typeError(state, "Binding '" + parameter.name + "' is already declared in this scope", parameter.span)
-    }
-  }
-  let returnType = if expectedFunction == none then unknownType() else expectedFunction!.returnType
-  if expression.returnType != none {
-    returnType = resolveType(state, expression.returnType!, state.info!, lambdaScope)
-    decorateAnnotationWithResolved(expression.returnType!, returnType)
-  }
-  // A block lambda is its own return target. Without this scope boundary,
-  // returns inside an escaping closure are checked against the enclosing
-  // function's return type.
-  lambdaScope.returnType = returnType
-  case expression.body {
-    block: Block -> { checkBlock(state, block, lambdaScope) }
-    expressionBody: Expression -> { returnType = checkExpression(state, expressionBody, lambdaScope, optionalResolvedType(returnType)) }
-  }
-  return finish(state, expression, functionType(params, returnType))
-}
-
-// A lambda can use the single callable member of an optional or wider union as
-// its contextual signature. More than one callable member is ambiguous, so in
-// that case ordinary lambda checking reports the missing parameter context.
-function contextualFunctionType(expected: ResolvedType | none): FunctionType | none {
-  if expected == none { return none }
-  case expected! {
-    function_: FunctionType -> return function_,
-    union_: UnionResolvedType -> {
-      let found: FunctionType | none = none
-      for member of union_.types {
-        case member {
-          function_: FunctionType -> {
-            if found != none { return none }
-            found = function_
-          }
-          _ -> { }
-        }
-      }
-      return found
-    }
-    _ -> return none,
-  }
-}
+export { checkLambda } from "./checker-lambdas"

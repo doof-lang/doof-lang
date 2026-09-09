@@ -1,0 +1,12 @@
+{
+  "name": "doof-debugger",
+  "version": "0.1.0",
+  "target": "macos-app",
+  "executable": "DoofDebugger",
+  "title": "Doof Debugger",
+  "build": {
+    "entry": "main.do",
+    "macosApp": { "bundleId": "dev.doof.debugger", "category": "public.app-category.developer-tools" },
+    "native": { "extraCopyPaths": ["native_transport.hpp"] }
+  }
+}

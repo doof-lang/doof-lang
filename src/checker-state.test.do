@@ -8,3 +8,13 @@ export function testEditorCheckerStateRetainsCheckedGraphWithScopes(): none {
   EditorAssert.isTrue(result.analysis.modules[0].editorScopes.length > 0)
   EditorAssert.isTrue(result.analysis.modules[0].editorExpressions.length > 0)
 }
+
+export function testBlockLambdaNestedReturnScopes(): none {
+  result := editorAnalysis([EditorSource { path: "/main.do", source:
+    "function main(): none { outer := => { inner := => { return \"nested\" }\n" +
+    "function named(): string { return \"named\" }\nreturn 42 }\n" +
+    "other := => { return true } }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  EditorAssert.equal(result.diagnostics.length, 0)
+}

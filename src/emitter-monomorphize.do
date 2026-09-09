@@ -1,6 +1,6 @@
 import { AnalysisResult } from "./analyzer"
 import { ClassDeclaration, FunctionDeclaration } from "./ast"
-import { ResolvedType, TypeSubstitution, ClassType, InterfaceType, ArrayResolvedType, MapResolvedType, SetResolvedType, StreamResolvedType, ResultResolvedType, ActorType, PromiseType, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ResolvedType, TypeSubstitution, ClassType, InterfaceType, ArrayResolvedType, MapResolvedType, SetResolvedType, StreamResolvedType, ResultResolvedType, ActorType, PromiseType, TupleResolvedType, UnionResolvedType, WeakResolvedType, FunctionType } from "./semantic"
 import { ModuleNames, moduleNamespace } from "./emitter-names"
 import { typeName } from "./checker-types"
 import { CheckedInstantiations, DiscoveredFunction, DiscoveredClass, DiscoveredInterface, DiscoveredMethod, discoverInstantiations, collectJsonDemand } from "./checked-instantiations"
@@ -152,6 +152,11 @@ function mangleType(type_: ResolvedType, moduleNames: ModuleNames): string {
     tuple: TupleResolvedType -> { return "tuple_" + concreteTypeListMangle(tuple.elements, moduleNames) }
     union_: UnionResolvedType -> { return "union_" + concreteTypeListMangle(union_.types, moduleNames) }
     weak_: WeakResolvedType -> { return "weak_" + mangleType(weak_.inner, moduleNames) }
+    function_: FunctionType -> {
+      let parameters: ResolvedType[] = []
+      for parameter of function_.params { parameters.push(parameter.type_) }
+      return "function_" + string(parameters.length) + "_" + concreteTypeListMangle(parameters, moduleNames) + "_returns_" + mangleType(function_.returnType, moduleNames)
+    }
     _ -> { return sanitize(typeName(type_)) }
   }
   return "type"

@@ -8,6 +8,27 @@ import { NoneType, PrimitiveType, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitPropertyValue } from "./emitter-expr-utils"
 
+export function testEmissionFailuresNeverExplicitReturn(): none {
+  result := compile([SourceFile { path: "/main.do", source: "function stop(): never { return panic(\"stop\") }" }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::panic(std::string(\"stop\")); doof::panic(\"never function returned\");")
+  Assert.stringNotContains(source, "return doof::panic(")
+}
+
+export function testBlockLambdaDivergingReturnNeedsNoValueConversion(): none {
+  for target of ["int", "int | string", "none"] {
+    result := compile([SourceFile { path: "/main.do", source:
+      "function main(): none { fn := (): " + target + " => { return panic(\"stop\") } }",
+    }], "/main.do")
+    Assert.equal(result.diagnostics.length, 0)
+    source := result.emission!.modules[0].source
+    Assert.stringNotContains(source, "return doof::panic(")
+    Assert.stringNotContains(source, "doof::variant_promote<")
+    Assert.stringContains(source, "doof::panic(std::string(\"stop\"));")
+  }
+}
+
 export function testNoneCarrierSharedShorthandMatchesExpanded(): none {
   location := AstLocation { line: 1, column: 1, offset: 0 }
   span := SourceSpan { start: location, end: location }

@@ -34,6 +34,8 @@ import { resolveIOSDeviceIdentifier, resolveIOSDeviceSigningOptions, signIOSDevi
 import { Parser } from "./parser"
 import { environmentValue, fileName, joinPath, parentPath, projectEntryRequestError, readProjectSpec } from "./project"
 import { acquireProjectBuildLock } from "./project-build-lock"
+import { launchDebugger } from "./debug-driver"
+import { debugTargetError } from "./debug-command"
 import { planProfileCapture, planProfileOpen, planProfileSymbols } from "./profile-command"
 import {
   MaterializedResource, ResourceState, findMaterializedResource, materializedResourceIsCurrent,
@@ -1425,6 +1427,10 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     println("error: doof profile is currently supported only on macOS")
     return 1
   }
+  if request.command == "debug" && hostPlatform() != "macos" {
+    println("error: doof debug is supported only on macOS")
+    return 1
+  }
   let project = readProjectSpec(request.entry, hostPlatform(), request.targetOverride)
   entryError := projectEntryRequestError(project, request.entry)
   if entryError != "" {
@@ -1438,6 +1444,10 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   if request.command == "profile" && (project.target == "wasm" || project.iosApp != none) {
     println("error: doof profile supports native console executables and macOS applications")
     return 1
+  }
+  if request.command == "debug" {
+    debugError := debugTargetError(hostPlatform(), project.target)
+    if debugError != "" { println("error: " + debugError); return 1 }
   }
   iosDestination := if request.command == "package" then "device" else request.iosDestination
   nativePlatform := if project.iosApp == none then hostPlatform() else "ios-" + iosDestination
@@ -1474,8 +1484,9 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     else try! absolute(request.outputDirectory)
   outputDirectory := if request.command == "package"
     then joinPath(buildDirectory, "release")
-    else if request.command == "profile" then joinPath(buildDirectory, "profile") else buildDirectory
-  cacheDirectory := if request.command == "profile" then outputDirectory else buildDirectory
+    else if request.command == "profile" then joinPath(buildDirectory, "profile")
+    else if request.command == "debug" then joinPath(buildDirectory, "debug") else buildDirectory
+  cacheDirectory := if request.command == "profile" || request.command == "debug" then outputDirectory else buildDirectory
   frontendConfiguration := frontendConfigurationFingerprint(
     entry, entryMode, project.target, rootManifest, stdlibRoot, nativePlatform, preparationTarget,
   )
@@ -1490,7 +1501,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   previousEmissionState := readFrontendState(emissionCachePath)
   let reusedFrontend = false
   let result = Compilation { emission: none, diagnostics: [] }
-  cachedGraph := if request.command == "emit" || request.command == "build" || request.command == "run" || request.command == "profile"
+  cachedGraph := if request.command == "emit" || request.command == "build" || request.command == "run" || request.command == "profile" || request.command == "debug"
     then if !frontendEmissionCacheSupported(project.target)
       then none
       else if frontendStateMatches(previousEmissionState, frontendConfiguration, loader) && previousEmissionState != none
@@ -1509,7 +1520,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
         [], entry, loader, namespaceMappings, entryMode, false,
         if request.command == "package" || frontendConfiguration == "" then [] else reusableEmissionKeys(previousEmissionState, outputDirectory),
         frontendConfiguration,
-        request.command == "profile", timings,
+        request.command == "profile" || request.command == "debug", timings,
       )
   }
   timings.finish("command.compiler", compilerStart)
@@ -1560,7 +1571,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
       return 1
     }
   }
-  if request.command == "build" || request.command == "run" || request.command == "profile" {
+  if request.command == "build" || request.command == "run" || request.command == "profile" || request.command == "debug" {
     if request.command == "run" && project.target == "wasm" {
       println("error: doof run is not supported for --target wasm; instantiate the generated .wasm from your host runtime")
       return 1
@@ -1572,7 +1583,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     }
     exitCode := buildNativeProject(
       request.compiler, outputDirectory, outputPath, emission,
-      if request.command == "profile" then .Profile else .Debug, hostPlatform(),
+      if request.command == "profile" then .Profile else if request.command == "debug" then .InteractiveDebug else .Debug, hostPlatform(),
       nativeBuildOutputModeForCommand(request.command),
     )
     if exitCode != 0 { return exitCode }
@@ -1635,6 +1646,10 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
         return 1
       }
       if request.command == "build" { return 0 }
+      if request.command == "debug" {
+        try! projectLock.close()
+        return launchDebugger(joinPath(joinPath(appPath, "Contents/MacOS"), executableName), entryPath, project.rootDirectory, outputDirectory, request.programArguments, request.debugLaunchJson)
+      }
       if request.command == "profile" {
         return runProfileTarget(
           request, appPath, outputPath, appPath + ".dSYM",
@@ -1648,6 +1663,10 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
       return launchResult.exitCode
     }
     if request.command == "build" { return 0 }
+    if request.command == "debug" {
+      try! projectLock.close()
+      return launchDebugger(outputPath, entryPath, project.rootDirectory, outputDirectory, request.programArguments, request.debugLaunchJson)
+    }
     if request.command == "profile" {
       return runProfileTarget(
         request, outputPath, outputPath, outputPath + ".dSYM",

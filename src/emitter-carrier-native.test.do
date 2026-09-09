@@ -9,10 +9,26 @@ import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
 export function testCarrierModelNativeMatrix(): none {
-  root := join([tempDirectory(), "doof-native-carrier-matrix"])
+  runNativeFixture("none-carriers")
+}
+
+export function testEmissionFailuresSubstringNative(): none {
+  runNativeFixture("substring-default")
+}
+
+export function testEmissionFailuresCatchPanicNative(): none {
+  runNativeFixture("catch-panic-never")
+}
+
+export function testBlockLambdaNative(): none {
+  runNativeFixture("block-lambda-returns")
+}
+
+function runNativeFixture(fixture: string): none {
+  root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)
   try! mkdir(root)
-  source := try! readText("tests/fixtures/none-carriers/main.do")
+  source := try! readText("tests/fixtures/" + fixture + "/main.do")
   compiled := compile([SourceFile { path: "/main.do", source }], "/main.do")
   for diagnostic of compiled.diagnostics { println(diagnostic.message) }
   Assert.equal(compiled.diagnostics.length, 0)
@@ -40,4 +56,12 @@ function clearNativeMatrix(path: string): none {
   if !exists(path) { return }
   if isDirectory(path) { for entry of try! readDir(path) { clearNativeMatrix(join([path, entry.name])) } }
   try! remove(path)
+}
+
+export function testNeverReviewNative(): none {
+  runNativeFixture("never-review")
+}
+
+export function testCallbackEqualityNative(): none {
+  runNativeFixture("callback-equality")
 }

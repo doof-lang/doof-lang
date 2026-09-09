@@ -33,9 +33,16 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if isBuiltinIdentifier(identifier, "catchPanic") && expression.args.length == 1 {
         case expression.resolvedType! {
           result: ResultResolvedType -> {
-            callback := emitExpression(expression.args[0].value, context)
-            successType := emitResultPayloadType(result.valueType, context.modulePath, context.names)
-            if result.valueType.kind == "none" {
+            callbackExpression := expression.args[0].value
+            // A checked callable can also be a named function. Normalize it
+            // to the callback carrier before invoking the actor-affine call.
+            callback := emitContextType(callbackExpression.resolvedType!, context) + "(" + emitExpression(callbackExpression, context) + ")"
+            valueType := specializeEmitType(result.valueType, context)
+            successType := emitResultPayloadType(valueType, context.modulePath, context.names)
+            if valueType.kind == "never" {
+              return "[&]() -> doof::Result<" + successType + ", std::string> { try { " + callback + ".call(); doof::panic(\"never callback returned\"); } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }()"
+            }
+            if valueType.kind == "none" {
               return "[&]() -> doof::Result<void, std::string> { try { " + callback + ".call(); return doof::Success<void>{}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }()"
             }
             return "[&]() -> doof::Result<" + successType + ", std::string> { try { return doof::Success<" + successType + ">{" + callback + ".call()}; } catch (const doof::Panic& _panic) { return doof::Failure<std::string>{_panic.message()}; } }()"
@@ -59,6 +66,9 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
             valueType := if identifier.name == "Success" then result.valueType else result.errorType
             value := emitExpression(expression.args[0].value, context, valueType)
             payloadType := emitContextReturnType(valueType, context)
+            if payloadType == "void" {
+              return "(static_cast<void>(" + value + "), doof::" + identifier.name + "<void>{})"
+            }
             return "doof::" + identifier.name + "<" + payloadType + ">{ " + value + " }"
           }
           _ -> { }
@@ -185,7 +195,12 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       }
       if !nominalReceiver && member.property == "startsWith" { return emitBuiltinCall("doof::string_startsWith", member.object, expression, context) }
       if !nominalReceiver && member.property == "endsWith" { return emitBuiltinCall("doof::string_endsWith", member.object, expression, context) }
-      if !nominalReceiver && member.property == "substring" { return emitBuiltinCall("doof::string_substring", member.object, expression, context) }
+      if !nominalReceiver && member.property == "substring" {
+        // The omitted end means the remaining suffix. Reuse the runtime's
+        // suffix helper so the receiver and start are each evaluated once.
+        helper := if expression.args.length == 1 then "doof::string_slice" else "doof::string_substring"
+        return helper + "(" + emitExpression(member.object, context) + ", " + emitDispatchCallArguments(expression, context) + ")"
+      }
       if !nominalReceiver && member.property == "replaceAll" { return emitBuiltinCall("doof::string_replaceAll", member.object, expression, context) }
       if !nominalReceiver && member.property == "contains" { return emitBuiltinCall("doof::string_contains", member.object, expression, context) }
       if !nominalReceiver && member.property == "indexOf" { return emitBuiltinCall("doof::string_indexOf", member.object, expression, context) }

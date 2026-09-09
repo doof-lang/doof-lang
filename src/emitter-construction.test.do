@@ -83,3 +83,16 @@ export function testReadonlyEmissionConstructionUsesExplicitNames(): none {
   Assert.stringContains(output, "::mapped::types::Item")
   Assert.stringNotContains(output, "app_vendor_types_")
 }
+
+export function testUnitResultPayloadPreservesEffectsInObjects(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function effect(): none { println(\"effect\") }\n" +
+    "function success(): Result<none, string> => Success { value: effect() }\n" +
+    "function failure(): Result<int, none> => Failure { error: none }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::Success<void>{})")
+  Assert.stringContains(source, "effect()")
+  Assert.stringContains(source, "doof::Failure<void>{})")
+}

@@ -220,7 +220,7 @@ Strings support a `.length` property and the following built-in methods:
 | `.contains(s)` | `(string): bool` | Whether the string contains the substring |
 | `.startsWith(s)` | `(string): bool` | Whether the string starts with the prefix |
 | `.endsWith(s)` | `(string): bool` | Whether the string ends with the suffix |
-| `.substring(start, end)` | `(int, int): string` | Extract substring by start/end indices |
+| `.substring(start, end)` | `(start: int, end: int = length): string` | Extract bytes from start (inclusive) to end (exclusive); omitted end uses the string length |
 | `.slice(start)` | `(int): string` | Extract substring from start to end |
 | `.trim()` | `(): string` | Remove leading/trailing whitespace |
 | `.trimStart()` | `(): string` | Remove leading whitespace |

@@ -3,6 +3,12 @@
 #include <atomic>
 #include <iostream>
 
+static_assert(std::is_same_v<decltype(doof::panic(std::declval<const std::string&>())), doof::Never>);
+static_assert(!std::is_default_constructible_v<doof::Never>);
+static_assert(!std::is_aggregate_v<doof::Never>);
+static_assert(std::is_copy_constructible_v<doof::Result<doof::Never, std::string>>);
+static_assert(std::is_move_constructible_v<doof::Result<doof::Never, std::string>>);
+
 namespace {
 
 [[noreturn]] void fail(const std::string& message) {
@@ -405,6 +411,23 @@ void test_string_padding() {
 } // namespace
 
 int main(int argc, char** argv) {
+    {
+        doof::callback<int()> first([count = 0]() mutable { return ++count; });
+        auto copy = first;
+        doof::callback<int()> other([] { return 1; });
+        require(first == copy && first != other, "callback identity was not preserved");
+        require(first.call() == 1 && copy.call() == 2, "callback copies lost shared closure state");
+        auto captured = std::make_shared<int>(7);
+        std::weak_ptr<int> weak = captured;
+        doof::callback<void()> selfClearing;
+        selfClearing = doof::callback<void()>([captured, &selfClearing] {
+            selfClearing = {};
+            require(*captured == 7, "clearing a running callback released its captures early");
+        });
+        captured.reset();
+        selfClearing.call();
+        require(weak.expired(), "completed callback retained its captures");
+    }
     if (argc != 2) {
         fail("expected one test mode");
     }

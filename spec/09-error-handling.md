@@ -185,6 +185,10 @@ Statement-level `try` unwraps the success payload or propagates the failure from
 the current function. In a native entry script's top-level execution scope,
 there is no return channel, so failure raises a source-attributed panic instead.
 
+A statement-level `try` on `Result<never, E>` cannot continue normally: its
+failure propagates to the enclosing function or catch block, and its success
+payload is uninhabited. This applies to both bare and binding forms.
+
 ```doof
 function loadConfig(path: string): Result<Config, string> {
     // readText(), parseJsonValue(), and Config.fromJsonValue() each return
@@ -625,6 +629,10 @@ result := catchPanic(=> {
 If the callback completes normally, `catchPanic` returns a success Result with
 the callback's return value. For a none callback, it returns
 `Result<none, string>`.
+
+A callback inferred or declared to return `never`, such as
+`catchPanic(=> panic("stopped"))`, produces `Result<never, string>`. It cannot
+complete with a success value; a caught panic supplies the failure payload.
 
 Use `catchPanic` sparingly at process, plugin, host, or test boundaries. It is
 not a general exception system.

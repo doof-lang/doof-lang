@@ -57,7 +57,8 @@ for managed_link in \
   "$bin_root/doof" \
   "$bin_root/doof_runtime.h" \
   "$bin_root/doof_wasm_test_runner_apple.swift" \
-  "$bin_root/doof-stdlib.tar"
+  "$bin_root/doof-stdlib.tar" \
+  "$bin_root/Doof Debugger.app"
 do
   if [ -d "$managed_link" ] && [ ! -L "$managed_link" ]; then
     echo "install-artifacts.sh: cannot replace directory at $managed_link" >&2
@@ -100,6 +101,14 @@ install -m 0755 "$artifact_root/doof" "$staging_root/doof"
 install -m 0644 "$artifact_root/doof_runtime.h" "$staging_root/doof_runtime.h"
 install -m 0644 "$artifact_root/doof_wasm_test_runner_apple.swift" "$staging_root/doof_wasm_test_runner_apple.swift"
 install -m 0644 "$artifact_root/doof-stdlib.tar" "$staging_root/doof-stdlib.tar"
+if [ -d "$artifact_root/Doof Debugger.app" ]; then
+  if [ ! -x "$artifact_root/Doof Debugger.app/Contents/MacOS/DoofDebugger" ]; then
+    echo "install-artifacts.sh: invalid debugger application" >&2
+    exit 1
+  fi
+  cp -R "$artifact_root/Doof Debugger.app" "$staging_root/Doof Debugger.app"
+fi
+
 
 if [ -e "$version_root" ] || [ -L "$version_root" ]; then
   if [ -e "$backup_root" ] || [ -L "$backup_root" ]; then
@@ -117,3 +126,9 @@ ln -sfn ../current/doof "$bin_root/doof"
 ln -sfn ../current/doof_runtime.h "$bin_root/doof_runtime.h"
 ln -sfn ../current/doof_wasm_test_runner_apple.swift "$bin_root/doof_wasm_test_runner_apple.swift"
 ln -sfn ../current/doof-stdlib.tar "$bin_root/doof-stdlib.tar"
+
+if [ -d "$version_root/Doof Debugger.app" ]; then
+  ln -sfn "../current/Doof Debugger.app" "$bin_root/Doof Debugger.app"
+elif [ -L "$bin_root/Doof Debugger.app" ]; then
+  rm "$bin_root/Doof Debugger.app"
+fi

@@ -147,3 +147,10 @@ Run `./build.sh` plus `./scripts/test.sh`, or the complete
 required. Once release archives are published, the public installer can put a
 selected downloaded release in `versions/<version>` and switch `current`
 without changing this layout.
+
+On macOS, development installation and final compiler publication also build
+`tools/debugger` with the verified/development compiler and include
+`Doof Debugger.app` in the versioned toolchain artifacts. The app is built once
+at installation, not by individual `doof debug` invocations. Non-macOS compiler
+installs do not require the AppKit bundle. Run `scripts/debugger.test.sh` with
+the compiler being verified to exercise real LLDB-DAP launch and source stepping.

@@ -6,13 +6,13 @@ WebAssembly. No native compiler installation is needed for editor intelligence.
 ## Install
 
 Use **Extensions → … → Install from VSIX…** and select
-`doof-language-0.2.0.vsix`, then open a `.do` file. The extension provides live
+`doof-language-0.2.7.vsix`, then open a `.do` file. The extension provides live
 Problems, completion, hover, definitions/type definitions, references, symbols,
 signature help, semantic colouring, rename, quick fixes, and explicit formatting.
 Completion also suggests unimported workspace and standard-library exports;
 selecting one adds or extends its import. The suggestion shows the source module.
 
-Use **Doof: Build Project**, **Doof: Run Project**, and the Testing sidebar for
+Use **Doof: Build Project**, **Doof: Run Project**, **Doof: Debug Project**, and the Testing sidebar for
 native workflows. Set `doof.compilerPath` to the current compiler executable,
 or put `doof` on PATH. Native workflows require workspace trust and offer to save
 dirty Doof files and manifests. Test discovery uses the bundled parser; execution
@@ -58,7 +58,7 @@ declarations and fresh diagnostics may wait for that background check.
 The language service bounds repeated-edit memory by recycling the spare worker
 above 192 MiB; the published snapshot remains available during replay.
 
-Browser VS Code, debugging, automatic compiler downloads, and Marketplace
+Browser VS Code, automatic compiler downloads, and Marketplace
 publication are outside this version. Windows and Linux desktop smoke tests must
 be run on those hosts before declaring cross-platform release support.
 
@@ -114,3 +114,55 @@ message and the Doof output channel.
 Compiler-provided function ranges for exported `test…` functions in `.test.do`
 files support VS Code's test gutter controls and
 **Run Test at Cursor**, including cursors inside the test body.
+
+## Debug native Doof programs (macOS)
+
+Use **Doof: Debug Project**, or select **Doof** in Run and Debug and press F5.
+The extension builds with the configured `doof.compilerPath`, then runs Xcode's
+`lldb-dap` directly inside VS Code. No additional debugger extension is required.
+The selected compiler must support `debug <entry> --launch-json <path>`; install
+an updated toolchain if the extension reports an unsupported option.
+
+Set breakpoints in `.do` files and use VS Code's Continue, Pause, Step Over,
+Step Into, Step Out, Call Stack, Variables, and Stop controls. By default the
+session stops at Doof `main` and on `doof::panic`, including caught panics.
+Panic stops initially show the native panic frame; select its Doof caller in
+Call Stack to inspect your code. Compilation can be cancelled from its progress
+notification, which terminates the compiler process group. The notification shows
+source-file compilation counts as the compiler reports them, then switches to
+finishing the build and preparing debug symbols. Its bar remains indeterminate
+because linking and symbol generation do not report an overall percentage.
+
+For arguments, a particular entry, or environment overrides, add `.vscode/launch.json`:
+
+```json
+{
+  "version": "0.2.0",
+  "configurations": [{
+    "type": "doof",
+    "request": "launch",
+    "name": "Debug Doof",
+    "entry": "${workspaceFolder}",
+    "args": ["argument with spaces"],
+    "env": { "APP_MODE": "development" },
+    "stopOnEntry": true,
+    "stopOnPanic": true
+  }]
+}
+```
+
+`entry` is a package directory or `.do` file. `cwd` optionally overrides the
+program's working directory; its default comes from the compiler's package
+resolution. Builds retain the ordinary `build/debug` cache and dSYM files.
+The temporary launch JSON is removed once the extension reads it. Each session
+owns its LLDB-DAP process. Builds of the same project use the same output files;
+finish a session before rebuilding that project for another session.
+
+This first integration uses LLDB's native C++ variable and expression display.
+The standalone app's filtered frames, collection presenters, and panic banner
+are not shared with VS Code. Watch expressions, conditional breakpoints, and
+Debug Console evaluation use LLDB/C++ syntax, not Doof expression semantics.
+Attach, Wasm/iOS, and non-macOS debugging are not supported by this launch path.
+
+Architecture references: [VS Code debugger extensions](https://code.visualstudio.com/api/extension-guides/debugger-extension)
+and [LLDB-DAP](https://lldb.llvm.org/use/lldbdap.html).

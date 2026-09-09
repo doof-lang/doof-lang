@@ -68,7 +68,7 @@ export function testDirectScriptArgumentsAreForwardedVerbatim(): none {
 
 export function testRejectsProgramArgumentSeparatorForNonRunCommands(): none {
   result := parseCli(["build", "demo", "--", "--verbose"])
-  Assert.equal(result.error, "-- is only supported with the run and profile commands")
+  Assert.equal(result.error, "-- is only supported with the run, debug, and profile commands")
 }
 
 export function testParsesProfileRequestAndProgramArguments(): none {
@@ -244,4 +244,26 @@ export function testBatchSelectionCli(): none {
   Assert.equal(parseCli(["test", "src", "--selection-json"]).error, "missing value for --selection-json")
   Assert.isTrue(parseCli(["build", ".", "--selection-json", "ids.json"]).request == none)
   Assert.isTrue(parseCli(["test", "src", "--selection-json", "ids.json", "--filter", "one"]).request == none)
+}
+
+export function testParsesDebugCommand(): none {
+  result := parseCli(["debug", "project space", "--", "argument space", "--flag"])
+  Assert.equal(result.error, "")
+  Assert.equal(result.request!.command, "debug")
+  Assert.equal(result.request!.programArguments[0], "argument space")
+  Assert.equal(parseCli(["debug"]).request!.entry, ".")
+  Assert.stringContains(parseCli(["debug", ".", "--no-open"]).error, "profile")
+}
+
+export function testDebugLaunchJsonParsing(): none {
+  request := parseCli(["debug", "project space", "--launch-json", "reports/工具 launch.json", "--", "--launch-json", "a b"])
+  Assert.equal(request.error, "")
+  Assert.equal(request.request!.debugLaunchJson, "reports/工具 launch.json")
+  Assert.equal(request.request!.programArguments[0], "--launch-json")
+  Assert.equal(request.request!.programArguments[1], "a b")
+  Assert.equal(parseCli(["debug"]).request!.debugLaunchJson, "")
+  for args of [["debug", ".", "--launch-json"], ["debug", ".", "--launch-json", ""], ["debug", ".", "--launch-json", "--"]] {
+    Assert.equal(parseCli(args).error, "missing value for --launch-json")
+  }
+  Assert.equal(parseCli(["run", ".", "--launch-json", "a.json"]).error, "--launch-json is only supported with the debug command")
 }

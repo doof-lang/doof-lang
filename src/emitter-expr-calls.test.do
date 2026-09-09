@@ -5,6 +5,40 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+export function testEmissionFailuresSubstringDefaultAndNamedArguments(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function suffix(value: string): string => value.substring(2)\n" +
+    "function named(value: string): string => value.substring{start: 2}\n" +
+    "function range(value: string): string => value.substring{end: 4, start: 1}",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::string_slice(value, 2)")
+  Assert.stringContains(source, "doof::string_substring(value, 1, 4)")
+  Assert.stringNotContains(source, "doof::string_substring(value, 2)")
+}
+
+export function testEmissionFailuresSubstringDiagnostics(): none {
+  for call of ["substring()", "substring(\"bad\")", "substring(0, 1, 2)", "substring{end: 2}"] {
+    result := compile([SourceFile { path: "/main.do", source: "function bad(value: string): string => value." + call }], "/main.do")
+    Assert.isTrue(result.diagnostics.length > 0)
+    Assert.isTrue(result.diagnostics[0].message.contains("argument") || result.diagnostics[0].message.contains("Argument"))
+    Assert.equal(result.diagnostics[0].span.start.line, 1)
+  }
+}
+
+export function testEmissionFailuresCatchPanicKeepsNeverResult(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): none { value := catchPanic(=> panic(\"caught\")) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::Result<doof::Never, std::string>")
+  Assert.stringContains(source, "doof::Failure<std::string>{_panic.message()}")
+  Assert.stringNotContains(source, "return doof::Success<doof::Never>")
+  Assert.stringNotContains(source, "return doof::panic(")
+}
+
 export function testResultConstructorShorthandEmission(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function success(value: int): Result<long, string> => Success { value }\n" +
@@ -129,4 +163,19 @@ export function testReadonlyEmissionCallsUsesExplicitNames(): none {
   for module of result.emission!.modules { if module.modulePath == "/main.do" { output = module.header + module.source } }
   Assert.stringContains(output, "::mapped::types::make")
   Assert.stringNotContains(output, "app_vendor_types_")
+}
+
+export function testUnitResultPayloadPreservesEffectsInCalls(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function effect(): none { println(\"effect\") }\n" +
+    "function success(): Result<none, string> => Success(effect())\n" +
+    "function failure(): Result<int, none> => Failure(none)\n" +
+    "function literal(): Result<none, string> => Success(none)",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::Success<void>{})")
+  Assert.stringContains(source, "effect()")
+  Assert.stringContains(source, "doof::Failure<void>{})")
+  Assert.stringNotContains(source, "doof::Success<void>{ std::monostate")
 }

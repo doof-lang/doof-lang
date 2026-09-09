@@ -2,7 +2,7 @@
   "name": "doof-language",
   "displayName": "Doof",
   "description": "Compiler-powered language intelligence and development tools for Doof",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "publisher": "doof-lang",
   "license": "ISC",
   "engines": {
@@ -11,7 +11,8 @@
   "categories": [
     "Programming Languages",
     "Formatters",
-    "Testing"
+    "Testing",
+    "Debuggers"
   ],
   "main": "./out/extension.cjs",
   "extensionKind": [
@@ -20,7 +21,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Language intelligence is available; native build, run, and tests require trust."
+      "description": "Language intelligence is available; native build, run, debug, and tests require trust."
     }
   },
   "contributes": {
@@ -64,6 +65,10 @@
       {
         "command": "doof.selectCompiler",
         "title": "Doof: Select Native Compiler"
+      },
+      {
+        "command": "doof.debug",
+        "title": "Doof: Debug Project"
       }
     ],
     "configuration": {
@@ -83,7 +88,91 @@
           "description": "Spaces per indentation level for explicit formatting."
         }
       }
-    }
+    },
+    "breakpoints": [
+      {
+        "language": "doof"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "doof",
+        "label": "Doof",
+        "languages": [
+          "doof"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [],
+            "properties": {
+              "entry": {
+                "type": "string",
+                "default": "${workspaceFolder}",
+                "description": "Doof source file or package directory to build."
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": []
+              },
+              "cwd": {
+                "type": "string",
+                "description": "Target working directory; defaults to the package directory."
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Additional target environment variables."
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "default": true,
+                "description": "Stop at Doof main before executing user code."
+              },
+              "stopOnPanic": {
+                "type": "boolean",
+                "default": true,
+                "description": "Stop before a Doof panic unwinds, including caught panics."
+              },
+              "preRunCommands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "default": [],
+                "description": "Additional LLDB commands to execute before launching."
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "name": "Debug Doof",
+            "type": "doof",
+            "request": "launch",
+            "entry": "${workspaceFolder}",
+            "args": [],
+            "stopOnEntry": true,
+            "stopOnPanic": true
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Doof: Debug Project",
+            "body": {
+              "type": "doof",
+              "request": "launch",
+              "name": "Debug Doof",
+              "entry": "^\"\\${workspaceFolder}\""
+            }
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "compile": "node scripts/build-extension.ts",
@@ -111,5 +200,8 @@
     "esbuild": "^0.25.0",
     "typescript": "^5.9.3"
   },
-  "type": "module"
+  "type": "module",
+  "activationEvents": [
+    "onDebugResolve:doof"
+  ]
 }

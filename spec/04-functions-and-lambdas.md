@@ -284,6 +284,21 @@ compute := (x: int) => {
 }
 ```
 
+When no concrete return type is supplied by an annotation or context, a block
+lambda infers a common type from its reachable `return` statements. Numeric
+types may widen, and explicit `none` returns may infer an optional type. Other
+incompatible return types require an explicit annotation. Returns inside nested
+functions or lambdas do not contribute to the enclosing lambda's type.
+
+An empty block or a bare `return` produces `none`. A block with no returning
+path, such as `{ panic("stopped") }`, infers `never`, including when passed to
+a generic function such as `catchPanic`. As with named functions, a block
+lambda returning a non-`none` type must not fall through; a lambda declared or
+contextually typed as returning `never` must terminate on every path.
+Unreachable statements still receive type checking.
+A bare `return` is valid only when the final return type is `none`; use
+`return none` to contribute an explicit absence value to an optional result.
+
 ### Inferred Parameter Types
 
 When the lambda type is known from context, parameter types can be omitted, but **names must match the signature**:

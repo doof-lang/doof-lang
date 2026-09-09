@@ -13,6 +13,15 @@ function checked(source: string): CheckResult {
   return createChecker(analysis, "/main.do").check("/main.do")
 }
 
+export function testBlockLambdaUnreachableReturnsRemainChecked(): none {
+  result := checked("function main(): none { fn := => { panic(\"stop\")\nreturn 42 } }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Cannot return int from lambda returning never")
+  Assert.equal(result.diagnostics[0].span.start.line, 2)
+  nested := checked("function main(): none { fn := => { panic(\"stop\")\ninner := => { return 42 } } }")
+  Assert.equal(nested.diagnostics.length, 0)
+}
+
 export function testInterfaceBoundGenericOwners(): none {
   result := checked("interface Reader<V> { read(): V }\nclass IntReader { read(): int => 7 }\nclass Box<T: Reader<int>> { value: T\nread(): int => value.read()\nmap<U: Reader<int>>(other: U): int => other.read() }\nstruct Holder<T: Reader<int>> { value: T\nread(): int => value.read() }\ntype Alias<T: Reader<int>> = Box<T>\nfunction main(): int { box: Alias<IntReader> := Box(IntReader {})\nreturn box.map(IntReader {}) }")
   for diagnostic of result.diagnostics { println(diagnostic.message) }

@@ -73,7 +73,7 @@ the row from left to right.
 | Actors and isolation | actor/promise types and actor syntax | `checker-actor-boundary.do`, `checker-actor-lifecycle.do`, and `checker-isolation.do` own call boundaries, retirement diagnostics, and graph-wide effects | `emitter-expr-actor.do` and lambda/call emitters lower checked operations; the bounded runtime scheduler executes isolated function calls, async blocks, and serial actor messages |
 | Closures and mutable capture | lambda/binding AST and checker bindings | checker establishes callable types and retains lexical bindings on identifier and shorthand-property nodes, including Result payloads | `emitter-expr-lambda.do` finds escaping captures, including uses nested in shorthand construction, and boxes mutable storage; Result construction emits shorthand through a decorated identifier using the checked binding and type |
 | Construction | `CheckedConstruction` with specialized owner, signature, factory, and defaults | `checker-construction.do` specializes the factory/field plan; `checker-properties.do` shares value decoration after contextual shape selection | `emitter-construction.do` consumes the retained plan and shares argument/default lowering across syntax forms and actors |
-| Callable bodies | checked function/method signatures and bodies | `checker-statements.do` enforces return completion | `emitter-decl.do` shares capture/context management and specialized return boundaries, including `never` |
+| Callable bodies | checked function/method/lambda signatures and bodies | `checker-statements.do` tracks returns and continuation; `checker-lambdas.do` joins lambda return paths, decorates return sites with their final types, and enforces lambda completion | `emitter-decl.do` and lambda/return emitters consume checked return boundaries, including `never` |
 | Module initialization | top-level checked declarations/statements and compiler entry mode | `checker-module-initialization.do` validates construction-only expressions and direct storage | `emitter-module.do`, `emitter-header.do`, and `emitter-decl.do` emit direct storage and graph-ordered execution |
 | Packages and standard inputs | local-path manifests in `package-manifest.do`; authoritative bundled stdlib index in `stdlib-bundle.do` | the driver registers reached local and standard packages | bundle materialization and std-only preparation feed `emitter-project.do` |
 | Incremental native builds | normalized native plan and emitted modules | `native-build.do` creates stable tasks; `pkg-config.do` normalizes flags | `native-build-driver.do` fingerprints arguments/dependencies, persists content fingerprints plus metadata, and runs dirty work |
@@ -528,3 +528,22 @@ execution; `groupTestsForCompilation(discovered)` retains the full compound
 harness. Native non-coverage test builds reuse the ordinary frontend emission
 cache, including compiler/configuration, manifest, source and missing-import
 probe validation. Coverage and Wasm tests retain full frontend compilation.
+
+## Standalone native debugger
+
+`debug-command.do` owns the versioned launch descriptor and pure invocation
+planning. `debug-driver.do` creates symbols and launches the version-matched
+AppKit bundle after the native driver builds an isolated, unoptimized debug
+graph. The application under `tools/debugger/` owns DAP framing, request
+correlation, session state, and presentation. Its native transport only owns
+nonblocking macOS process pipes; it does not interpret debugger messages.
+AppKit and session updates stay on the main event loop. The compiler continues
+to provide decorated semantic input and physical source mappings to emission.
+
+The VS Code extension is a second DAP client. With `debug --launch-json`,
+`debug-driver.do` generates symbols and writes the shared versioned descriptor
+without launching the AppKit bundle. `extensions/vscode-doof/src/native-debug.ts`
+owns cancellable compiler execution and descriptor validation; `debug.ts` owns
+VS Code configuration, trust/save checks, and adapter registration. VS Code
+owns DAP transport and session UI through the unmodified Xcode LLDB-DAP adapter.
+Native-app presentation modules are not duplicated into TypeScript.

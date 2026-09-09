@@ -21,9 +21,18 @@ export function emitPropertyValue(property: ObjectProperty, context: EmitContext
   }, context, expected)
 }
 
-/** Expression-bodied native returns discard unit values at the void boundary. */
+/** Native returns preserve the checked unit and nonreturning boundaries. */
 export function emitExpressionReturn(expression: Expression, context: EmitContext, expected: ResolvedType | none): string {
+  actual := decoratedExpressionType(expression)
+  if actual != none && specializeEmitType(actual!, context).kind == "never" {
+    // A diverging return expression produces no value to convert, even when
+    // other paths give the callable an inhabited return type.
+    return emitExpression(expression, context) + "; doof::panic(\"never function returned\");"
+  }
   value := emitExpression(expression, context, expected)
+  if expected != none && specializeEmitType(expected!, context).kind == "never" {
+    return value + "; doof::panic(\"never function returned\");"
+  }
   if expected != none && carrierOf(specializeEmitType(expected!, context), .Return).kind == .Void {
     return "return static_cast<void>(" + value + ");"
   }

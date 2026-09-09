@@ -80,7 +80,13 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
   returnType := emitContextReturnType(functionType.returnType, context)
   let lambda = "[" + captures + "](" + params + ")" + (if mutableClosure then " mutable" else "") + " -> " + returnType + " {"
   case expression.body {
-    block: Block -> { lambda = lambda + "\n" + emitBlock(block, 1, context) + "}" }
+    block: Block -> {
+      lambda = lambda + "\n" + emitBlock(block, 1, context)
+      if specializeEmitType(functionType.returnType, context).kind == "never" {
+        lambda = lambda + "    doof::panic(\"never function returned\");\n"
+      }
+      lambda = lambda + "}"
+    }
     body: Expression -> { lambda = lambda + " " + emitExpressionReturn(body, context, functionType.returnType) + " }" }
   }
 

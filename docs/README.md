@@ -28,6 +28,7 @@ explain how this compiler implements that contract.
 | Where does a CLI command route? | [CLI](cli.md) |
 | Where should a test live and how does the runner work? | [Testing](testing.md) |
 | How is the compiler bootstrapped and released? | [Bootstrap and release](bootstrap-and-release.md) |
+| How are we building the standalone macOS debugger? | [Native debugger tracking plan](native-debugger-plan.md) |
 | What did the emission experiments establish? | [Emission work archive](archive/emission-2026-09-07.md) (historical measurements and rejected approaches) |
 | What is knowingly incomplete? | [Known limitations](known-limitations.md) and [roadmap](../ROADMAP.md) |
 

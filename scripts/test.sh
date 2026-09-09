@@ -29,3 +29,10 @@ run_step "3/5 Runtime scheduler tests" "$repo_root/scripts/runtime-scheduler.tes
 run_step "4/5 Bootstrap refresh script tests" "$repo_root/scripts/refresh-bootstrap.test.sh"
 run_step "5/5 Installer layout tests" \
   env DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/scripts/install.test.sh" "$stdlib_root"
+
+if [ "$(uname -s)" = Darwin ]; then
+  run_step "Debugger protocol, transport, and session tests" \
+    env DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/dist/doof" test "$repo_root/tools/debugger"
+  run_step "Native LLDB-DAP integration" \
+    env DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/scripts/debugger.test.sh"
+fi

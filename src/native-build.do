@@ -10,6 +10,7 @@ import { sha1HexString } from "std/crypto"
 
 export enum NativeBuildMode {
   Debug,
+  InteractiveDebug,
   Release,
   Profile,
 }
@@ -112,6 +113,13 @@ export function planNativeCompile(
     compileArguments.push(resolveBuildPath(outputDirectory, includePath))
   }
   for flag of native.compilerFlags { compileArguments.push(flag) }
+  if mode == .InteractiveDebug {
+    compileArguments.push("-O0")
+    compileArguments.push("-g")
+    compileArguments.push("-fno-omit-frame-pointer")
+    compileArguments.push("-fno-lto")
+    compileArguments.push("-UNDEBUG")
+  }
   let precompiledHeaderTask: NativeCompileTask | none = none
   let clangPchPath = ""
   // The runtime dominates repeated parsing in larger generated projects. Build
@@ -463,7 +471,8 @@ function hasSwiftSource(paths: string[]): bool {
 function swiftObjectArguments(sourcePath: string, objectPath: string, mode: NativeBuildMode): string[] {
   let arguments = ["-parse-as-library", "-emit-object"]
   if mode == .Release || mode == .Profile { arguments.push("-O") }
-  if mode == .Profile { arguments.push("-g") }
+  if mode == .Profile || mode == .InteractiveDebug { arguments.push("-g") }
+  if mode == .InteractiveDebug { arguments.push("-Onone") }
   arguments.push(sourcePath)
   arguments.push("-o")
   arguments.push(objectPath)

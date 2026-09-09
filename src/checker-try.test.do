@@ -60,3 +60,14 @@ export function testCheckerReviewTryDeclarations(): none {
   valid := checked(save + "function good(): Result<none, string> { try save()\nreturn Success() }")
   Assert.equal(valid.diagnostics.length, 0)
 }
+
+export function testNeverReviewTryCompletion(): none {
+  load := "function load(): Result<never, string> => Failure { error: \"bad\" }\n"
+  for statement of ["try load()", "try x := load()", "try x: int := load()", "try let x: int = load()", "try readonly x: int = load()"] {
+    result := checked(load + "function good(): Result<int, string> { " + statement + " }")
+    Assert.equal(result.diagnostics.length, 0)
+  }
+  rejects(load + "function bad(): Result<int, int> { try load() }", "Cannot propagate error string")
+  rejects(load + "function bad(): int { try load() }", "requires a Result-returning function")
+  rejects("function load(): Result<int, string> => Failure { error: \"bad\" }\nfunction bad(): Result<int, string> { try load() }", "may complete")
+}

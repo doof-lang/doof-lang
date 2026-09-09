@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import assert from 'node:assert/strict';
+import { testDebugger } from './debug-extension-tests.ts';
 async function eventually<T>(operation: () => PromiseLike<T>, accept: (value: T) => boolean): Promise<T> {
     const until = Date.now() + 20000;
     while (true) {
@@ -16,6 +17,11 @@ export async function run() {
     assert.ok(extension);
     const api = await extension.activate() as { controller: vscode.TestController; profile: vscode.TestRunProfile };
     const root = vscode.workspace.workspaceFolders![0].uri;
+    if (process.env.DOOF_TEST_DEBUG_ONLY) {
+        await vscode.workspace.getConfiguration('doof').update('compilerPath', process.env.DOOF_TEST_COMPILER, vscode.ConfigurationTarget.Workspace);
+        await testDebugger(root);
+        return;
+    }
     const uri = vscode.Uri.joinPath(root, 'main.do');
     const document = await vscode.workspace.openTextDocument(uri);
     await vscode.window.showTextDocument(document);
@@ -154,5 +160,6 @@ export async function run() {
             assert.equal(await completed, command === 'build' ? 0 : 42);
         }
     }
+    await testDebugger(root);
     console.log('Doof packaged extension: hover, definition, completion, rename, formatting, unsaved diagnostics, stdlib auto-import, Test Explorer exact pass/fail and incompatible compiler handling, and configured native tasks passed.');
 }

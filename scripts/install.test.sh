@@ -104,6 +104,17 @@ printf '%s\n' \
   'esac' > "$fake_compiler"
 chmod +x "$fake_compiler"
 
+# Isolate install sequencing from the real AppKit build.
+cat > "$install_fixture/scripts/build-debugger.sh" <<'DEBUGGER'
+#!/bin/sh
+set -eu
+if [ "${FAKE_DOOF_DEBUGGER_FAIL:-}" = 1 ]; then exit 11; fi
+mkdir -p "$3/Doof Debugger.app/Contents/MacOS"
+cp "$1" "$3/Doof Debugger.app/Contents/MacOS/DoofDebugger"
+DEBUGGER
+chmod +x "$install_fixture/scripts/build-debugger.sh"
+
+
 expect_failure env DOOF_HOME= DOOF_STDLIB_ROOT="$install_fixture/stdlib" \
   DOOF_DEV_COMPILER="$fake_compiler" FAKE_DOOF_LOG="$test_root/fake.log" \
   "$install_fixture/install.sh"
@@ -126,6 +137,9 @@ env DOOF_HOME="$fallback_home" DOOF_STDLIB_ROOT="$install_fixture/stdlib" \
   FAKE_DOOF_LOG="$test_root/fake.log" PATH=/usr/bin:/bin \
   "$install_fixture/install.sh" >/dev/null
 test -x "$fallback_home/bin/doof"
+if [ "$(uname -s)" = Darwin ]; then
+  test -x "$fallback_home/bin/Doof Debugger.app/Contents/MacOS/DoofDebugger"
+fi
 : > "$test_root/fake.log"
 
 expect_failure env DOOF_HOME="$test_root/missing-stdlib-home" \
@@ -147,6 +161,13 @@ expect_failure env DOOF_HOME="$failed_home" DOOF_STDLIB_ROOT="$install_fixture/s
   FAKE_DOOF_BUNDLE_FAIL=1 "$install_fixture/install.sh"
 grep -q 'stdlib bundle failed' "$test_root/failure-output"
 test "$(cat "$failed_home/versions/dev/marker")" = old
+if [ "$(uname -s)" = Darwin ]; then
+  expect_failure env DOOF_HOME="$failed_home" DOOF_STDLIB_ROOT="$install_fixture/stdlib" \
+    DOOF_DEV_COMPILER="$fake_compiler" FAKE_DOOF_LOG="$test_root/fake.log" \
+    FAKE_DOOF_DEBUGGER_FAIL=1 "$install_fixture/install.sh"
+  grep -q 'debugger build failed' "$test_root/failure-output"
+  test "$(cat "$failed_home/versions/dev/marker")" = old
+fi
 
 mock_home="$test_root/mock-home"
 mock_output=$(env DOOF_HOME="$mock_home" DOOF_STDLIB_ROOT="$install_fixture/stdlib" \
@@ -160,7 +181,9 @@ test -f "$install_fixture/build/dev-install/stdlib-bundle-tool/reused"
 env DOOF_HOME="$mock_home" DOOF_STDLIB_ROOT="$install_fixture/stdlib" \
   DOOF_DEV_COMPILER="$fake_compiler" FAKE_DOOF_LOG="$test_root/fake.log" \
   "$install_fixture/install.sh" >/dev/null
-test "$(grep -c '^package ' "$test_root/fake.log")" -eq 4
+expected_packages=4
+if [ "$(uname -s)" = Darwin ]; then expected_packages=5; fi
+test "$(grep -c '^package ' "$test_root/fake.log")" -eq "$expected_packages"
 test "$(grep '^package ' "$test_root/fake.log" | sort -u | wc -l | tr -d ' ')" -eq 1
 
 real_home="$test_root/real-home"

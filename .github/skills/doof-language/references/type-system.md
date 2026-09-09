@@ -1,5 +1,9 @@
 # Doof Type System Reference
 
+Function values compare by callback identity: copying a callback preserves its
+identity and captured state; separately created callbacks compare unequal.
+Optional callbacks support equality with `none`, including via `Assert.equal`.
+
 ## Primitive Types
 
 | Type | Description |
@@ -78,6 +82,13 @@ codePoint := int('A')
 ```
 
 `int(char)` returns the character's Unicode code point. Checked numeric narrowing uses `as` rather than cast syntax.
+
+### String Ranges
+
+`value.substring(start, end)` extracts bytes from the inclusive start to the
+exclusive end. The end is optional: `value.substring(start)` uses the string
+length, like `value.slice(start)`. Negative starts clamp to zero; starts at or
+beyond the end produce an empty string.
 
 ### String Conversion and Parse Helpers
 

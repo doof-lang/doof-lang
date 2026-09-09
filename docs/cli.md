@@ -12,12 +12,13 @@ doof check <path>
 doof emit <path> [-o <directory>]
 doof build <path> [-o <directory>]
 doof run <path> [build options] [-- program arguments]
+doof debug <path> [build options] [--launch-json <path>] [-- program arguments]
 doof profile <path> [build options] [--trace-output <file.trace>] [--time-limit <duration>] [--no-open] [-- program arguments]
 doof package <path> [-o <build-directory>] [--distdir <directory>]
 doof test <path> [filter] [--list] [--coverage] [--target wasm]
 ```
 
-Commands that write compiler state (`check`, `emit`, `build`, `run`, `profile`,
+Commands that write compiler state (`check`, `emit`, `build`, `run`, `debug`, `profile`,
 `package`, and executing tests) hold an exclusive project lock at
 `<project>/<build.buildDir>/.doof.lock` (normally `build/.doof.lock`). A busy
 command prints a waiting message and blocks until the current command finishes;
@@ -161,3 +162,43 @@ target configuration because vendored build commands may create target-local
 state. Each bundle declares its supported native targets, and releases omit
 vendor inputs that none of those targets use. Missing, target-incompatible,
 incomplete, or corrupt bundles are reported as source diagnostics.
+
+## Native macOS debugger
+
+Run `doof debug [entry.do|package-dir] [-- program-args...]` to build with
+symbols and open the standalone **Doof Debugger** AppKit application. It starts
+stopped at entry. Use Open Source and click the gutter to add breakpoints,
+Continue/Pause and stepping controls to navigate, and select a thread, frame,
+scope, or expandable value to inspect it. Stop or closing the app terminates
+its launch-owned session. The CLI waits for the debugger application to close.
+
+Debug builds use `<build-directory>/debug` (including an `-o` override), physical
+Doof source paths, a dSYM, `-O0 -g`, and frame pointers. Ordinary build/run and
+profile settings are unchanged. Console programs and macOS apps are supported;
+Wasm, iOS, and other debugger hosts are rejected. Xcode must provide `lldb-dap`.
+Install the matching app with `./install.sh`; developers can override discovery
+with `DOOF_DEBUGGER_APP=/absolute/path/DoofDebugger.app`.
+
+The first version is a read-only source debugger with native C++ value
+representations. It does not provide attach, terminal input, Doof watch
+expressions, reverse execution, or logical actor/async stacks. Output is bounded
+and older text is truncated. macOS may request authorization to debug local
+processes; the app reports LLDB launch errors rather than changing system policy.
+
+The native debugger automatically stops on Doof panics, including runtime bounds
+failures, before stack unwinding. It selects the nearest available Doof source
+frame. Panics handled by `catchPanic` also stop; Continue lets recovery proceed.
+
+### External debugger launch descriptors
+
+`doof debug <entry.do|package-dir> --launch-json <path> [-- arguments...]`
+builds the same debug executable and adjacent dSYM, writes a version-1
+`DebugLaunch` JSON file, and exits without opening or requiring Doof Debugger.app.
+The file contains absolute `executable`, `source`, `directory`, and `symbols`
+paths plus the exact `arguments` array. The caller owns and removes this file.
+Relative descriptor paths are relative to the invoking process's directory;
+the parent directory must already exist. A build, symbol, or descriptor-write
+failure returns a nonzero exit code. Environment values are not persisted.
+
+The VS Code extension uses this contract for F5 / **Doof: Debug Project** and
+starts Xcode's LLDB-DAP directly. See the [extension guide](../extensions/vscode-doof/README.md#debug-native-doof-programs-macos).

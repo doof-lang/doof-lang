@@ -248,6 +248,9 @@ recognized as terminating paths and may appear in value-producing expressions.
 
 `catchPanic<T>(f: () => T): Result<T, string>` runs a parameterless callback and returns a success Result when it completes normally. If the callback panics, it returns a failure Result with the panic message as the string error payload.
 
+`catchPanic(=> panic("stopped"))` infers `Result<never, string>`: the callback
+cannot return a success value, and a caught panic provides the failure payload.
+
 Use it only as a controlled escape hatch at process or host boundaries. It is not a general exception system, and expected failures should stay as `Result<T, E>`.
 
 ## When to Use What
@@ -273,3 +276,7 @@ All typed `try` declaration forms validate and store the annotated success type.
 allowed only in bare `try expr`. Propagated errors must fit the enclosing
 function’s error type; catches and native-script handlers do not cross nested
 function, lambda, or value-producing-block boundaries.
+
+A statement-level `try` on `Result<never, E>` cannot continue normally: its
+failure propagates to the enclosing function or catch block, and its success
+payload is uninhabited. This applies to both bare and binding forms.

@@ -37,7 +37,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 
 
 import { pathType } from "./checker-inference"
-import { CheckerState } from "./checker-state"
+import { CheckerState, LambdaReturnObservation } from "./checker-state"
 import { checkTry } from "./checker-try"
 import { casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
@@ -817,13 +817,19 @@ export function checkReturn(state: CheckerState, statement: ReturnStatement, sco
   if target == none { typeError(state, "Return is only valid inside a function", statement.span); return false }
   returnType := target!.returnType!
   statement.resolvedExpectedType = optionalResolvedType(returnType)
+  let actualReturn = noneType()
   if statement.value == none {
     if returnType.kind != "none" && returnType.kind != "unknown" {
       typeError(state, "Expected a return value of type " + typeName(returnType), statement.span)
     }
   } else {
     valueType := checkExpression(state, statement.value!, scope, optionalResolvedType(returnType))
+    actualReturn = valueType
     if !isAssignableWithInterfaces(state.result, valueType, returnType) { typeError(state, "Cannot return " + typeName(valueType) + " from function returning " + typeName(returnType), statement.span) }
+  }
+  inference := state.lambdaReturns
+  if inference != none && inference!.scope == target! {
+    inference!.returns.push(LambdaReturnObservation { statement, type_: actualReturn, reachable: inference!.reachable })
   }
   return false
 }
@@ -834,6 +840,9 @@ export function checkBlock(state: CheckerState, block: Block, parent: Scope, inL
   let completes = true
   let retiredActors: Binding[] = []
   for statement of block.statements {
+    inference := state.lambdaReturns
+    reachable := inference != none && inference!.reachable
+    if !completes && inference != none { inference!.reachable = false }
     if completes {
       completes = checkStatement(state, statement, scope, inLoop)
     } else {
@@ -843,6 +852,7 @@ export function checkBlock(state: CheckerState, block: Block, parent: Scope, inL
       // knows the block cannot complete normally.
       let ignored = checkStatement(state, statement, scope, inLoop)
     }
+    if inference != none { inference!.reachable = reachable }
     reportRetiredActorUses(statement, retiredActors, state.info!.path, state.diagnostics)
     collectRetiredActorBindings(statement, retiredActors)
   }

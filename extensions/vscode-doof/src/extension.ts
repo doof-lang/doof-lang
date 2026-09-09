@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { rangeAt } from './positions.ts';
 import { presentTestFailure } from './test-failure.ts';
 import { testProjectRoot, testCommandFailure } from './test-project.ts';
+import { registerDebugger } from './debug.ts';
 import { verifyTestCompiler } from './native-tests.ts';
 let client: LanguageClient | undefined;
 const execute = promisify(execFile);
@@ -44,7 +45,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }));
     async function savedAndTrusted() {
         if (!vscode.workspace.isTrusted) {
-            void vscode.window.showInformationMessage('Trust this workspace to build, run, or test Doof code.');
+            void vscode.window.showInformationMessage('Trust this workspace to build, run, debug, or test Doof code.');
             return false;
         }
         if (vscode.workspace.textDocuments.some(document => (document.languageId === 'doof' || basename(document.fileName) === 'doof.json') && document.isDirty)) {
@@ -57,6 +58,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }
         return true;
     }
+    registerDebugger(context, output, compiler, savedAndTrusted);
     for (const command of ['build', 'run'])
         context.subscriptions.push(vscode.commands.registerCommand(`doof.${command}`, async () => {
             if (!await savedAndTrusted())

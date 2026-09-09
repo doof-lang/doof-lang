@@ -1,5 +1,11 @@
 # C++ Lowering Notes
 
+Callback instantiation keys and emitted names include recursively resolved
+parameter and return types, including nominal module identities in checked
+keys. Runtime callbacks share callable storage across copies, preserving
+identity and captured state for equality. Invocation retains that storage until
+it returns, even when a native owner clears its callback during the call.
+
 Generated definitions and executable statements carry C++ `#line` directives
 for their originating Doof spans. Ordinary emitted snapshots use stable logical
 module paths. Dedicated profile builds use the physical paths retained by the
@@ -88,6 +94,21 @@ destructuring, JSON serialization, metadata/invoke, and WebAssembly wrappers
 have dedicated lowering modules. Representation changes require focused emitter
 tests and generated-C++ compile/runtime coverage in the release gate.
 
+The call emitter lowers `string.substring(start)` through `string_slice`,
+preserving one evaluation of the receiver and start. Explicit end arguments
+continue through `string_substring`, with named arguments in parameter order.
+For `catchPanic` callbacks returning `never`, it invokes the callback without
+constructing a `Success<Never>` payload and returns a failure if panic is caught.
+Lambda lowering and shared return emission preserve checked `never` boundaries
+by emitting terminating expressions as statements with a nonreturning fallback.
+The runtime `Never` carrier has no initial constructor, but permits copy/move
+operations so the inhabited arms of `Result<never, E>` remain transferable.
+The runtime `panic` function also returns `Never`, preserving bottom conversions
+in arguments, initializers, and payload construction. Formatting has an
+unreachable `Never` overload so compound carriers can format their inhabited
+arms. Statement `try` lowering ends its impossible success path with
+`doof::unreachable()` when the checked success payload is `never`.
+
 Declarative module bindings and static fields use direct typed storage. Scalar
 constant expressions may initialize storage directly; strings, collections,
 classes, and other constructed values are assigned by generated
@@ -103,3 +124,8 @@ struct values while the Doof checker continues to enforce source immutability.
 Native entries containing top-level statements retain a private
 `__doof_run_script` function and checked script storage. The native boundary
 runs declarative module initialization, then the script, then optional `main`.
+
+Interactive debugger builds also use physical Doof source paths. Unit-valued
+`Success`/`Failure` construction evaluates an explicit payload for its effects,
+then constructs the empty native `void` carrier; it never places a
+`std::monostate` field in that empty carrier.

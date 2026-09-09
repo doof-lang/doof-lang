@@ -38,7 +38,8 @@
 
 namespace doof {
 
-[[noreturn]] inline void panic(const std::string& msg);
+class Never;
+[[noreturn]] inline Never panic(const std::string& msg);
 
 /* __DOOF_OBSERVER_RUNTIME_SUPPORT__ */
 
@@ -55,13 +56,16 @@ public:
 };
 
 // Runtime carrier for Doof's uninhabited `never` type. No value can be
-// constructed; the conversion surface exists only so unreachable expressions
-// remain well-typed when C++ checks their surrounding Doof value context.
+// initially constructed. Copy/move operations keep variants containing Never
+// usable when another arm is active; there is no live Never value to copy.
+// The conversion surface keeps unreachable expressions well-typed in C++.
 class Never final {
 public:
-    Never() = delete;
-    Never(const Never&) = delete;
-    Never& operator=(const Never&) = delete;
+    explicit Never() = delete;
+    Never(const Never&) = default;
+    Never(Never&&) = default;
+    Never& operator=(const Never&) = default;
+    Never& operator=(Never&&) = default;
 
     template <typename T>
     [[noreturn]] operator T() const {
@@ -69,7 +73,7 @@ public:
     }
 };
 
-[[noreturn]] inline void panic(const std::string& msg) {
+[[noreturn]] inline Never panic(const std::string& msg) {
     throw Panic(msg);
 }
 
@@ -567,7 +571,8 @@ R call_callback_unchecked(const doof::callback<R(Args...)>& cb, Args... args);
 
 template <typename R, typename... Args>
 class callback<R(Args...)> {
-    std::function<R(Args...)> fn_;
+    // Copies retain the same callable identity and mutable closure state.
+    std::shared_ptr<std::function<R(Args...)>> fn_;
     detail::CallbackDomain* owner_ = nullptr;
 
 public:
@@ -578,24 +583,28 @@ public:
         typename = std::enable_if_t<!std::is_same_v<std::decay_t<F>, callback>>
     >
     callback(F&& f)
-        : fn_(std::forward<F>(f)),
+        : fn_(std::make_shared<std::function<R(Args...)>>(std::forward<F>(f))),
           owner_(doof::current_actor_domain()) {}
 
     explicit operator bool() const {
-        return static_cast<bool>(fn_);
+        return fn_ && static_cast<bool>(*fn_);
     }
 
+    bool operator==(const callback& other) const { return fn_ == other.fn_; }
+    bool operator!=(const callback& other) const { return !(*this == other); }
+
     R call(Args... args) const {
-        if (!fn_) {
+        auto fn = fn_; // A callback may clear its owning native property while running.
+        if (!fn || !*fn) {
             doof::panic("callback invoked before initialization");
         }
         if (owner_ != doof::current_actor_domain()) {
             doof::panic("callback invoked outside owning actor domain");
         }
         if constexpr (std::is_void_v<R>) {
-            fn_(std::forward<Args>(args)...);
+            (*fn)(std::forward<Args>(args)...);
         } else {
-            return fn_(std::forward<Args>(args)...);
+            return (*fn)(std::forward<Args>(args)...);
         }
     }
 
@@ -614,7 +623,7 @@ public:
 
     void dispatch(Args... args) const {
         static_assert(std::is_void_v<R>, "callback.dispatch is only available for void callbacks");
-        if (!fn_) {
+        if (!static_cast<bool>(*this)) {
             doof::panic("callback dispatched before initialization");
         }
 
@@ -637,13 +646,14 @@ private:
     friend CR detail::call_callback_unchecked(const doof::callback<CR(CArgs...)>& cb, CArgs... args);
 
     R call_unchecked(Args... args) const {
-        if (!fn_) {
+        auto fn = fn_;
+        if (!fn || !*fn) {
             doof::panic("callback invoked before initialization");
         }
         if constexpr (std::is_void_v<R>) {
-            fn_(std::forward<Args>(args)...);
+            (*fn)(std::forward<Args>(args)...);
         } else {
-            return fn_(std::forward<Args>(args)...);
+            return (*fn)(std::forward<Args>(args)...);
         }
     }
 };
@@ -1444,6 +1454,11 @@ T json_decode_value(Result<T, std::string> result) {
 // ============================================================================
 // String utilities
 // ============================================================================
+
+// Unreachable payloads still participate in template instantiation.
+[[noreturn]] inline std::string to_string(const Never&) {
+    panic("Cannot format an uninhabited never value");
+}
 
 // Convert any streamable value to string
 template <typename T>
@@ -2339,7 +2354,7 @@ doof::Promise<R> submit_async(F&& f) {
 
 template <typename R, typename... Args>
 doof::Promise<R> callback<R(Args...)>::post(Args... args) const {
-    if (!fn_) {
+    if (!static_cast<bool>(*this)) {
         doof::panic("callback posted before initialization");
     }
     auto owner = owner_ ? owner_ : &doof::detail::ApplicationDomain::shared();

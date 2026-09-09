@@ -120,6 +120,8 @@ p1 == p3   // true  — same reference
 |----------|-----------|
 | `==` on classes | Reference identity — same object in memory |
 | `!=` on classes | Reference non-identity |
+| `==` on function values | Callback identity — copies of the same callback compare equal |
+| `!=` on function values | Different callback identities |
 | `==` on structs | Equality of every instance field, in declaration order |
 | `!=` on structs | Negation of field equality |
 
@@ -129,6 +131,12 @@ reference identity. Static fields do not participate, and two values of the same
 empty struct compare equal. Equality short-circuits at the first unequal field.
 This also applies when structs are passed to generic functions such as
 `Assert.equal`. Distinct nominal struct types cannot be compared.
+
+Creating a function value creates a callback identity. Assigning or passing it
+preserves that identity and its captured state; separately created callbacks
+compare unequal even when their code is identical. Optional function values
+support equality with `none`, including through generic functions such as
+`Assert.equal`. Equality does not invoke the callback.
 
 ---
 

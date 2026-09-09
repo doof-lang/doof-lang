@@ -101,6 +101,7 @@ publish_optimized() {
     -o "$release_root" --distdir "$repo_root/dist"
   test -x "$repo_root/dist/doof"
   cp "$stdlib_bundle" "$repo_root/dist/doof-stdlib.tar"
+  "$repo_root/scripts/build-debugger.sh" "$repo_root/dist/doof" "$stdlib_root" "$repo_root/dist"
 }
 run_step "Build and publish the optimized compiler to dist/" publish_optimized
 

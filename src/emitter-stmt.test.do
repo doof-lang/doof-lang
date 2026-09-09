@@ -180,3 +180,12 @@ export function testReadonlyEmissionStatementsUsesExplicitNames(): none {
   Assert.stringContains(output, "::mapped::types::Item")
   Assert.stringNotContains(output, "app_vendor_types_")
 }
+
+export function testNeverReviewTryEmission(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function load(): Result<never, string> => Failure { error: \"bad\" }\n" +
+    "function propagate(): Result<int, string> { try load() }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.stringContains(result.emission!.modules[0].source, "doof::unreachable();")
+}

@@ -111,3 +111,8 @@ test -x "$verify_root/ios-app/DoofCompilerIOS.app/DoofCompilerIOS"
 test -f "$verify_root/ios-app/DoofCompilerIOS.app/Info.plist"
 
 echo "Release gate passed: $release_root"
+
+if [ "$(uname -s)" = Darwin ]; then
+  test -x "$repo_root/dist/Doof Debugger.app/Contents/MacOS/DoofDebugger"
+  DOOF_STDLIB_ROOT="$stdlib_root" "$repo_root/scripts/debugger.test.sh" "$compiler"
+fi

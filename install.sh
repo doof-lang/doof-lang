@@ -101,6 +101,14 @@ then
   exit 1
 fi
 
+if [ "$host_system" = Darwin ]; then
+  echo "Building Doof Debugger..."
+  if ! "$repo_root/scripts/build-debugger.sh" "$artifact_root/doof" "$stdlib_root" "$artifact_root"; then
+    echo "install.sh: debugger build failed; the existing installation was not changed" >&2
+    exit 1
+  fi
+fi
+
 "$repo_root/scripts/install-artifacts.sh" "$artifact_root" "$doof_home" dev
 
 installed_compiler="$doof_home/bin/doof"

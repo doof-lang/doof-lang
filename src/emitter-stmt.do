@@ -303,7 +303,7 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
         _: ExpressionStatement -> { }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
       }
-      return output
+      return finishTryEmission(output, value, ind, context)
   }
   if context.currentReturnErrorType != "" {
       errorType := context.currentReturnErrorType
@@ -325,7 +325,7 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
         _: ExpressionStatement -> { }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
       }
-      return output
+      return finishTryEmission(output, value, ind, context)
   }
   if context.tryPanics {
       let output = ind + "auto " + temporaryName + " = " + emitExpression(value, context) + ";\n"
@@ -346,10 +346,21 @@ function emitTry(statement: TryStatement, level: int, context: EmitContext): str
         _: ExpressionStatement -> { }
         destructuring: DestructuringStatement -> { output = output + emitTryDestructuring(destructuring, temporaryName, level, context) }
       }
-      return output
+      return finishTryEmission(output, value, ind, context)
   }
   panic("try expression is outside a Result-returning function")
   return ""
+}
+
+// The checked success payload determines whether native control can continue.
+function finishTryEmission(output: string, value: Expression, ind: string, context: EmitContext): string {
+  case specializeEmitType(value.resolvedType!, context) {
+    result: ResultResolvedType -> {
+      if result.valueType.kind == "never" { return output + ind + "doof::unreachable();\n" }
+    }
+    _ -> { }
+  }
+  return output
 }
 
 /** Typed try bindings must store the checked success type instead of inferring it again. */

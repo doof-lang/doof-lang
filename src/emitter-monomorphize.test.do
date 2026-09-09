@@ -8,6 +8,14 @@ import { hasErrorDiagnostics } from "./diagnostics"
 import { emitModuleGraph, ModuleEmission } from "./emitter-module"
 import { SourceFile } from "./semantic"
 
+export function testCallbackGenericNamesIncludeSignatures(): none {
+  result := emit("function keep<T>(value: T): T => value\n" +
+    "function main(): none { a: ((x: int): int) | none := none\n" +
+    "b: ((x: string): int) | none := none\nx := keep(a)\ny := keep(b) }")
+  Assert.stringContains(result.header, "keep__union_function_1_int_returns_int_none")
+  Assert.stringContains(result.header, "keep__union_function_1_string_returns_int_none")
+}
+
 function emit(source: string): ModuleEmission {
   path := "/main.do"
   analysis := createAnalyzer([SourceFile { path, source }]).analyze(path)

@@ -99,6 +99,9 @@ export function emitConstruct(expression: ConstructExpression, context: EmitCont
         payloadType := emitContextReturnType(valueType, context)
         if property == none { return "doof::" + expression.type_ + "<" + payloadType + ">{ }" }
         value := emitPropertyValue(property!, context, valueType)
+        if payloadType == "void" {
+          return "(static_cast<void>(" + value + "), doof::" + expression.type_ + "<void>{})"
+        }
         return "doof::" + expression.type_ + "<" + payloadType + ">{ " + value + " }"
       }
       _ -> { }

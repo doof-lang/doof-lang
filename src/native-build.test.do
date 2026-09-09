@@ -470,3 +470,18 @@ export function testPlansMsvcPrecompiledRuntimeAndWindowsHeadersForGeneratedModu
     Assert.equal(native.arguments.contains("/FIdoof_msvc_pch.hpp"), false)
   }
 }
+
+export function testInteractiveDebugBuildKeepsSymbolsAndDisablesOptimization(): none {
+  plan := planNativeCompile("clang++", "/tmp/out", "/tmp/out/app", [], NativeBuildPlan {
+    sourceFiles: ["bridge.cpp", "bridge.swift"], compilerFlags: ["-O2", "-DNDEBUG", "-flto"],
+  }, .InteractiveDebug, "macos")
+  args := plan.compileTasks[0].arguments
+  Assert.equal(args.contains("-g"), true)
+  Assert.equal(args.contains("-O0"), true)
+  Assert.equal(args.contains("-UNDEBUG"), true)
+  Assert.equal(args.contains("-fno-lto"), true)
+  Assert.equal(plan.linkArguments.contains("-flto"), false)
+  Assert.equal(plan.linkArguments.contains("-S"), false)
+  Assert.equal(plan.compileTasks[1].arguments.contains("-g"), true)
+  Assert.equal(plan.compileTasks[1].arguments.contains("-Onone"), true)
+}
