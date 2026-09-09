@@ -1,5 +1,11 @@
 import { Assert } from "std/assert"
 import { structuredTestResult } from "./driver"
+import { compilerCacheIdentity } from "./driver"
+import { compilerVersion, compilerVersionStamped } from "./version"
+
+export function testDriverUsesStampedCompilerIdentity(): none {
+  Assert.equal(compilerCacheIdentity(), if compilerVersionStamped then compilerVersion else "")
+}
 
 export function testEditorDriverReportsExactIdentityAndExitStatus(): none {
   value := structuredTestResult("example.test.do::testOne", 7, "failure\n")
@@ -20,7 +26,7 @@ import { readText, remove, exists } from "std/fs"
 import { DebugLaunch } from "./debug-command"
 import { parseJsonValue } from "std/json"
 
-// Enabled by scripts/debugger.test.sh with the freshly built compiler.
+// Enabled by tools/repository/verify.do with the freshly built compiler.
 export function testDebugDriverExternalLaunchIntegration(): none {
   compiler := env("DOOF_DEBUG_DRIVER_COMPILER") else { return }
   fixture := env("DOOF_DEBUG_DRIVER_FIXTURE") else { return }

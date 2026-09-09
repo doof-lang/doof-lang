@@ -175,16 +175,16 @@
     ]
   },
   "scripts": {
-    "compile": "node scripts/build-extension.ts",
-    "build:service": "node scripts/build-service.ts",
+    "compile": "../../tools/run.sh extension-build",
+    "build:service": "../../tools/run.sh extension-service",
     "check": "tsc --noEmit",
     "test": "node --test src/*.test.ts",
-    "package": "node scripts/verify-artifacts.ts && npm run compile && vsce package --allow-missing-repository",
+    "package": "../../tools/run.sh extension-verify && npm run compile && vsce package --allow-missing-repository",
     "test:extension": "node scripts/test-extension.ts",
     "test:parity": "node scripts/test-parity.ts",
     "benchmark": "node src/wasm-benchmark.ts artifacts/service.wasm",
     "test:server": "npm run compile && node scripts/test-server.ts",
-    "test:native": "node scripts/test-native.ts"
+    "test:native": "../../tools/run.sh extension-native"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1",

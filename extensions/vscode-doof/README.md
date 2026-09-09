@@ -89,16 +89,16 @@ VS Code test runner obtain a supported editor. On Linux, run it under `xvfb-run`
 when no display is available. `node scripts/test-server.ts --benchmark` measures
 warm LSP queries while the compiler project is being reanalyzed.
 
-Also run repository `./scripts/test.sh` and the release gates. Bootstrap source
-is never edited by the extension build. Wasm, matching stdlib sources, version
+Also run repository `./scripts/test.sh` and the release gates. Release-owned source snapshots are
+never edited by the extension build. Wasm, matching stdlib sources, version
 metadata, TypeScript bundles, and VSIX files are generated and untracked.
 
 Test Explorer needs a native compiler supporting `--selection-json`, `--json`, and
 `--report-json`. Installing the VSIX does not update a compiler already on PATH.
-If Test Explorer reports an incompatible compiler, run `./install.sh` from the
+If Test Explorer reports an incompatible compiler, run `./dev-install.sh` from the
 current compiler checkout, or use **Doof: Select Native Compiler** to choose that
 checkout's `dist/doof`. The extension checks this protocol before running tests;
-older development builds can share the same version number.
+new development builds have unique stamped versions; older toolchains may not.
 
 Test Explorer sends one exact-selection JSON file per workspace/compiler group.
 The native runner builds its existing compound harness (including unselected

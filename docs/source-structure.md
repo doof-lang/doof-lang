@@ -236,7 +236,9 @@ Other maintained inputs:
 - `tools/stdlib-bundle.do` — deterministic curated stdlib bundle builder and strict release verifier
 - `build/doof-stdlib.tar` — generated compiler resource, published beside `doof`
 - `tests/release-fixtures/` — native and platform acceptance packages
-- `bootstrap/macos-arm64/generated/` — shared generated stage-0 trust root in its legacy location; host build scripts own target-native source selection
+- `tools/repository/common.do` / `build.do` — frozen source inputs, version stamping, seed resolution, fixed-point builds
+- `tools/repository/release.do` / `snapshot.do` — release gates, signing, captured native commands, source-only release archives
+- `install.sh` — standalone downloader and shared transactional artifact installation
 
 Primitive string parsing is a standard-library concern owned by `std/parse`.
 The checker provides only an actionable migration diagnostic for removed
@@ -275,8 +277,7 @@ creates the index directory even for an empty report.
 - `tools/editor-parity.do`: native oracle for identical Wasm ABI fixtures.
 
 Generated Wasm, bundled matching stdlib sources, JavaScript output, npm packages,
-VSIX files, and development profiles remain ignored. The extension build never
-changes the reviewed bootstrap snapshot.
+VSIX files, and development profiles remain ignored. Release-owned source snapshots are generated only by the release pipeline.
 
 ## Native debugger
 
@@ -287,7 +288,7 @@ changes the reviewed bootstrap snapshot.
 - `tools/debugger/`: standalone Doof/AppKit application; `protocol.do` frames
   DAP messages, `session.do` owns request/event state, and `ui.do` presents it.
   `native_transport.hpp` supplies bounded nonblocking macOS pipes only.
-- `scripts/build-debugger.sh` and `scripts/debugger.test.sh`: toolchain bundle
+- `tools/repository/build.do` and `tools/repository/verify.do`: toolchain bundle
   construction and real macOS LLDB-DAP regression verification.
 
 ### VS Code debugger launch boundary

@@ -1,4 +1,4 @@
-import { compilerVersion } from "./version"
+import { compilerVersion, compilerVersionStamped, versionCacheIdentity } from "./version"
 import { formatJsonValue } from "std/json"
 // Runnable Doof compiler driver.
 //
@@ -60,10 +60,10 @@ import {
 import { boundedWorkerCount, renderProgressBar } from "./progress"
 import { planAppleWasmTestRun, planAppleWasmTestRunnerBuild } from "./wasm-test-runner"
 import { BlobReader } from "std/blob"
-import { sha256Hex, sha256HexString } from "std/crypto"
+import { sha256HexString } from "std/crypto"
 import { EntryKind, File, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
 import { ExecOptions, ProcessGroupMode, architecture, run, platform } from "std/os"
-import { absolute, executablePath, resourcePath } from "std/path"
+import { absolute, resourcePath } from "std/path"
 import { Instant } from "std/time"
 
 import isolated function printFlushed(value: string): none from "doof_runtime.hpp" as doof::print_flushed
@@ -681,10 +681,9 @@ function frontendCachePath(buildDirectory: string, kind: string): string {
   return driverOutputPath(driverOutputPath(buildDirectory, ".doof-cache/v1"), kind + ".json")
 }
 
-/** Empty identity disables reuse when the running compiler cannot be read. */
-export function compilerCacheIdentity(path: string): string {
-  bytes := readBlob(path) else { return "" }
-  return sha256Hex(bytes)
+/** Unstamped source builds cannot claim a stable compiler cache identity. */
+export function compilerCacheIdentity(): string {
+  return versionCacheIdentity(compilerVersion, compilerVersionStamped)
 }
 
 function frontendConfigurationFingerprint(
@@ -696,8 +695,7 @@ function frontendConfigurationFingerprint(
   nativePlatform: string,
   preparationTarget: StdlibPreparationTarget,
 ): string {
-  compilerPath := executablePath() else { return "" }
-  compilerIdentity := compilerCacheIdentity(compilerPath)
+  compilerIdentity := compilerCacheIdentity()
   if compilerIdentity == "" { return "" }
   manifestSource := readTextOrEmpty(manifest.manifestPath)
   return sha256HexString(

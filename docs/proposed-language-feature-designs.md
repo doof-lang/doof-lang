@@ -20,7 +20,7 @@ models.
 
 Nothing in this document is normative until it is incorporated into `spec/`,
 implemented in `src/`, covered by focused tests, reflected in the Doof language
-skill, and accepted through the normal bootstrap and release process.
+skill, and accepted through the installed-seed fixed-point and release process.
 
 ## Design principles
 

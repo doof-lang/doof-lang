@@ -10,27 +10,23 @@ written in Doof itself.
 
 ## Requirements
 
-The bootstrap supports Apple Silicon macOS with Xcode Command Line Tools and
-Windows x64 with the MSVC C++ workload. Provide the Doof standard-library
-package checkouts through either `DOOF_STDLIB_ROOT` or an adjacent
-`../doof-stdlib` directory.
+Install the latest macOS arm64 release (once published):
 
 ```sh
-export DOOF_STDLIB_ROOT=/path/to/doof-stdlib
-./build.sh
+curl -fsSL https://raw.githubusercontent.com/doof-lang/doof-lang/main/install.sh | bash
+export PATH="$HOME/.doof/bin:$PATH"
+doof --version
 ```
 
-On Windows, run `scripts/bootstrap-compiler.ps1` and subsequent `doof build`
-commands from an MSVC x64 developer environment. Native builds default to
-`cl.exe` and `link.exe` and produce `.exe` outputs.
+Use `bash -s -- --version 0.1.0` to select a release. Releases include the
+standard library and native debugger. Xcode Command Line Tools are required to
+compile native Doof programs. No administrator privileges are required.
 
-On macOS and Linux, the build selects the host stage-0 driver, compiles the
-checked-in generated C++ snapshot, rebuilds the compiler twice, compares the
-B5 and B6 generated sources byte-for-byte, and publishes the verified compiler
-as `dist/doof`. Stage-0 sources compile in parallel using the available CPU
-count; set `DOOF_BUILD_JOBS` to a positive integer to override the number of
-compiler jobs. The Linux path remains experimental until its shared snapshot
-and release gate are verified on a clean host.
+Compiler development requires an installed Doof compiler, rsync,
+Xcode Command Line Tools, and the standard-library checkout at
+`DOOF_STDLIB_ROOT` or adjacent `../doof-stdlib`. There is no checked-in generated
+bootstrap. Each release also supplies a standalone source snapshot that builds
+with Xcode Command Line Tools without an installed Doof compiler.
 
 The published compiler includes `dist/doof-stdlib.tar`. With
 `DOOF_STDLIB_ROOT` unset, standard imports are resolved offline from that
@@ -62,38 +58,24 @@ contracts.
 ## Repository commands
 
 ```sh
-./build.sh                         # bootstrap and fixed-point verification
-./scripts/refresh-bootstrap.sh     # regenerate and verify the bootstrap snapshot
-./scripts/test.sh                  # compiler unit/component tests
-./scripts/bootstrap-compiler-linux.sh # experimental Linux stage-0 compile
-./scripts/release.sh               # full release acceptance gate
-./install.sh                       # quickly package and install a development compiler
+./dev-install.sh                   # incremental, uniquely versioned development install
+./build.sh                         # installed-seed generated-source fixed-point verification
+./scripts/test.sh                  # compiler, orchestration, installer, and debugger tests
+./scripts/release.sh 0.1.0          # verified, signed assets for manual publication
 ```
 
-`./install.sh` is the supported incremental development workflow. It uses an
-existing `doof` compiler to incrementally package the current compiler sources,
-rebuild the adjacent standard-library bundle, and install the result under
-`~/.doof/versions/dev`. Stable links in `~/.doof/bin` point through
-`~/.doof/current`, so put that bin directory at the front of `PATH`:
+Development installs use `~/.doof/versions/dev`, selected by `~/.doof/current`.
+Release installs use `versions/<version>`. `DOOF_HOME` selects another absolute
+installation root; neither installer edits shell profiles or uses `sudo`.
+Set `DOOF_DEV_COMPILER` for a development seed or `DOOF_SEED_COMPILER` for
+fixed-point/release builds. Both otherwise prefer installed `doof`, then
+`dist/doof`. Build scripts never download a seed implicitly.
 
-```sh
-export PATH="$HOME/.doof/bin:$PATH"
-```
-
-Do not use `./build.sh` as an incremental edit-test loop: it intentionally
-rebuilds the bootstrap chain and verifies the B5/B6 fixed point. The development
-installer deliberately skips those release-oriented checks and the compiler
-test suite. Use `./build.sh`, `./scripts/test.sh`, or `./scripts/release.sh` once
-their respective gates are required.
-Set `DOOF_DEV_COMPILER` to select the seed compiler, `DOOF_STDLIB_ROOT` to use a
-non-adjacent stdlib checkout, or `DOOF_HOME` to choose another absolute install
-root. The installer never edits shell startup files and does not require
-`sudo`.
-
-The Linux stage-0 driver selects neutral and `_linux` sources from the shared
-bootstrap graph. It is an experimental portability path, not yet a supported
-clean-bootstrap host or part of the release gate. On Ubuntu, install a C++17
-toolchain and `pkg-config` before building.
+Release builds require clean compiler and stdlib checkouts, `em++`, `xcrun swiftc`,
+`DOOF_SIGN_IDENTITY`, and `DOOF_NOTARY_PROFILE`. They stage the requested version
+without changing tracked files, converge, verify, sign, notarize, and prepare
+assets under `dist/releases/<version>`. See [release strategy](docs/bootstrap-and-release.md)
+for credentials, source rebuilding, and manual GitHub publication.
 
 Language behavior is defined by the [language specification](spec/01-overview.md).
 Compiler contributors should start with the [documentation map](docs/README.md),
@@ -108,7 +90,7 @@ limitations are tracked in [ROADMAP.md](ROADMAP.md).
 - `docs/` — contributor maps, operational contracts, and lowering notes
 - `runtime/` — canonical generated-program runtime header
 - `resources/` — immutable resources embedded in compiler releases
-- `bootstrap/macos-arm64/` — trusted generated-C++ stage-0 source snapshot (legacy location for the shared cross-platform graph)
+- `scripts/` — version stamping, installed-seed builds, release verification and packaging
 - `tests/release-fixtures/` — native and platform release acceptance packages
 - `.github/skills/doof-language/` — Codex/Copilot language guidance
 

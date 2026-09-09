@@ -176,7 +176,7 @@ Debug builds use `<build-directory>/debug` (including an `-o` override), physica
 Doof source paths, a dSYM, `-O0 -g`, and frame pointers. Ordinary build/run and
 profile settings are unchanged. Console programs and macOS apps are supported;
 Wasm, iOS, and other debugger hosts are rejected. Xcode must provide `lldb-dap`.
-Install the matching app with `./install.sh`; developers can override discovery
+Install the matching app with `./install.sh` (release) or `./dev-install.sh` (development); developers can override discovery
 with `DOOF_DEBUGGER_APP=/absolute/path/DoofDebugger.app`.
 
 The first version is a read-only source debugger with native C++ value

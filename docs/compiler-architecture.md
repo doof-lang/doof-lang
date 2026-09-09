@@ -166,11 +166,10 @@ early returns; the stable lock file is never unlinked during normal operation.
 Incrementality deliberately stops at generated artifacts. The persistent
 frontend cache contains source-resolution probes (including missing exact-path
 probes), content hashes, relevant manifests/configuration, module output names,
-and emission fingerprints. Configuration includes a SHA-256 digest of the running
-compiler executable, so replacing its bytes invalidates both checked graph and
-module emission reuse even at the same install path. Identical compiler copies
-retain the same identity. If executable discovery or reading fails, the driver
-disables both reuse paths for that invocation. It never serializes AST, symbol, binding, or checker
+and emission fingerprints. Configuration includes the embedded, stamped compiler version, so installing a
+new version invalidates checked-graph and module-emission reuse even at the same
+path. Copies of one version retain their identity. Unstamped builds disable
+both reuse paths; release versions are immutable and development stamps are unique. It never serializes AST, symbol, binding, or checker
 objects.
 
 An exact graph/configuration hit skips checking and emission. After any input
@@ -479,7 +478,7 @@ input; worker transfer is not an architectural requirement.
 
 Per-module `module.prepare:<path>` and `module.render:<path>` timing entries expose
 candidate worker costs. They are nested inside existing phase timings and must not
-be added to their parents. `scripts/model-emission.py` models cold serial runs;
+be added to their parents. The archived emission report models cold serial runs;
 [the modelling report](archive/emission-2026-09-07.md#instantiation-catalogue-modelling) explains its limits.
 
 ## Editor frontend boundary
@@ -547,3 +546,18 @@ owns cancellable compiler execution and descriptor validation; `debug.ts` owns
 VS Code configuration, trust/save checks, and adapter registration. VS Code
 owns DAP transport and session UI through the unmodified Xcode LLDB-DAP adapter.
 Native-app presentation modules are not duplicated into TypeScript.
+
+## Compiler identity and release boundary
+
+`version.do` owns the embedded compiler version and stamp marker. Build scripts
+stage source inputs and replace only those constants plus package versions.
+`driver.do` uses a stamped version as the compiler contribution to frontend
+cache fingerprints. Unstamped builds disable reuse; semantic ABI, source,
+stdlib/resource, options, and native compiler identities remain independent.
+
+Compiler production code remains Doof. Doof repository tooling only
+stage, build, verify, sign, and package artifacts. Fixed-point generations use
+fresh output roots, so the shared release version cannot mask a non-converged
+compiler through frontend cache reuse. Generated C++ lives in release assets,
+not the maintained source tree. Source-snapshot rebuild scripts replay captured
+native compile/link commands without recreating checker or emitter decisions.

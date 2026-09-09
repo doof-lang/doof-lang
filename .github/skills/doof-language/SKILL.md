@@ -107,3 +107,15 @@ Load the narrowest matching file for the task.
   that combines packages: start with
   [references/stdlib-cookbook.md](./references/stdlib-cookbook.md), then load
   only the package-family reference needed for exact behavior.
+
+## Compiler repository tooling
+
+Repository automation and its tests live in Doof under `tools/repository/`.
+Use `./dev-install.sh` for uniquely stamped development installs, `./build.sh`
+for installed-seed fixed points, `./scripts/test.sh` for normal checks, and
+`./scripts/release.sh <version>` for signed release assets. `./install.sh`
+downloads a published release. Generated compiler/debugger source snapshots
+belong in release assets, never source control.
+
+Keep shell only at pre-Doof installation/source-rebuild boundaries, thin command
+launchers, or native test adapters. Do not add Python repository orchestration.

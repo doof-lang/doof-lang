@@ -49,7 +49,7 @@ export function testAdd(): none {
 Repository unit suites should remain focused and deterministic. Small in-memory
 or filesystem-backed component fixtures are appropriate; toolchain invocation,
 subprocess orchestration, whole-repository compatibility sweeps, packaging, and
-bootstrap workflows belong in an explicit integration or release gate.
+fixed-point and release-source workflows belong in an explicit integration or release gate.
 
 Example:
 

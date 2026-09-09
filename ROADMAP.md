@@ -24,9 +24,8 @@ not a dependency on the retired implementation.
 
 ## Platforms
 
-- The checked-in bootstrap currently supports macOS arm64 only.
-- Add a verified Linux bootstrap snapshot and CI release gate before claiming
-  Linux clean-bootstrap support.
+- Published binary toolchains and standalone source-snapshot rebuilds target macOS arm64.
+- Add Linux source-snapshot rebuilding and a verified release gate before publishing Linux toolchains.
 - Add MSVC planning, discovery, and Windows release fixtures before claiming
   Windows support.
 - Complete iOS embedded-library packaging and signing-order verification.

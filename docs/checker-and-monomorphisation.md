@@ -298,5 +298,5 @@ When changing checking or specialization:
 6. For interfaces, cover the generic/non-generic matrix described above and
    ensure checker acceptance matches the emitted variant alternatives.
 7. Run a focused exact test, then `./scripts/test.sh` serially.
-8. If lowering or bootstrap output changes, follow the bootstrap fixed-point
+8. If lowering or generated output changes, follow the installed-seed fixed-point
    workflow rather than editing generated C++.

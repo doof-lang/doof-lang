@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+[ "$(uname -s)/$(uname -m)" = Darwin/arm64 ] || { echo 'macOS arm64 is required' >&2; exit 1; }
+root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+"$root/compiler/build.sh"
+"$root/debugger/build.sh"
+mkdir -p "$root/dist"
+cp -R "$root/resources/." "$root/dist/"
+cp "$root/compiler/build/program" "$root/dist/doof"
+mkdir -p "$root/dist/Doof Debugger.app/Contents/MacOS"
+cp "$root/debugger/build/program" "$root/dist/Doof Debugger.app/Contents/MacOS/DoofDebugger"
+codesign --force --sign - "$root/dist/doof"
+codesign --force --sign - "$root/dist/Doof Debugger.app"
+[ "$("$root/dist/doof" --version)" = "doof $(cat "$root/VERSION")" ]
+"$root/dist/doof" --help >/dev/null
