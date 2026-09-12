@@ -10,6 +10,7 @@ import {
   ExpressionStatement, DestructuringStatement, DestructureBinding, ConstDeclaration, ReadonlyDeclaration, ImmutableBinding, TryStatement,
   UnaryExpression, Identifier, LetDeclaration, LambdaExpression, CallExpression,
   CallArgument, AstLocation, SourceSpan, YieldBlockExpression, YieldBlockAssignmentStatement,
+  FunctionDeclaration, NamedType,
 } from "./ast"
 import type { Statement, Expression } from "./ast"
 
@@ -337,6 +338,50 @@ export function parseBlock(parser: Parser): Block {
   while !parser.check(TokenType.RightBrace) && !parser.atEnd() { parser.appendStatement(statements, true) }
   parser.expect(TokenType.RightBrace)
   return Block { kind: "block", statements, span: parser.span(start) }
+}
+
+// Local named functions are syntax sugar for immutable lambda bindings. Keep
+// this normalization at the parser boundary so checking, closure capture, and
+// emission have exactly one representation for local callable values.
+export function normalizeLocalFunction(parser: Parser, statement: Statement): Statement {
+  case statement {
+    fn: FunctionDeclaration -> {
+      if fn.typeParams.length > 0 {
+        parser.fail("Nested generic functions are not supported; use a non-generic local function or a top-level generic function")
+      }
+      if fn.isolated_ || fn.private_ || fn.static_ || fn.exported {
+        parser.fail("Nested function modifiers are not supported; local functions use lambda semantics")
+      }
+      for parameter of fn.params {
+        if parameter.defaultValue != none {
+          parser.fail("Nested function default parameters are not supported; handle defaults inside the function body or use a top-level function")
+        }
+      }
+      let returnType = fn.returnType
+      if returnType == none {
+        returnType = NamedType { kind: "named-type", name: "none", typeArgs: [], span: fn.span }
+      }
+      lambda := LambdaExpression {
+        kind: "lambda-expression",
+        params: fn.params,
+        returnType,
+        body: fn.body,
+        parameterless: fn.params.length == 0,
+        trailing: false,
+        span: fn.span,
+      }
+      return ImmutableBinding {
+        kind: "immutable-binding",
+        name: fn.name,
+        type_: none,
+        value: lambda,
+        exported: false,
+        span: fn.span,
+      }
+    }
+    _ -> { return statement }
+  }
+  return statement
 }
 
 export function looksLikePattern(parser: Parser, separator: TokenType): bool {

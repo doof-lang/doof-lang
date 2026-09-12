@@ -150,6 +150,12 @@ bindings remain shared across escaping closures; uncaptured mutable locals keep
 ordinary local lifetime. Function values still use the actor-affine callback
 rules described in the concurrency reference.
 
+Nested named functions use the same implementation and capture semantics as
+immutable local lambda bindings. They are visible only after their declaration
+and cannot recursively reference their own name. Type parameters and function
+modifiers are supported only on module- or class-level functions. Nested
+functions also cannot declare default parameters.
+
 Collection shorthand parameter names are:
 
 - `it` for the current element

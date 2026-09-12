@@ -19,6 +19,7 @@ import {
   parseCaseExpression as parseCaseExpressionImpl,
   looksLikePattern as looksLikePatternImpl,
   parseDestructuring as parseDestructuringImpl,
+  normalizeLocalFunction,
 } from "./parser-statements"
 import { parseOptionalType as parseOptionalTypeImpl, parseTypeAnnotation as parseTypeAnnotationImpl } from "./parser-types"
 import { parseExpression as parseExpressionImpl, parseAdditive as parseAdditiveImpl, parseUnary as parseUnaryImpl } from "./parser-expressions"
@@ -77,9 +78,16 @@ export class Parser {
 
   // Recovery is opt-in. Strict callers retain the fail-fast parser contract.
   appendStatement(statements: Statement[], inBlock: bool = false): none {
-    if !editorMode { statements.push(parseStatement()); return }
+    if !editorMode {
+      statement := parseStatement()
+      statements.push(if inBlock then normalizeLocalFunction(this, statement) else statement)
+      return
+    }
     start := pos
-    parsed := catchPanic(=> parseStatement())
+    parsed := catchPanic(=> {
+      statement := parseStatement()
+      return if inBlock then normalizeLocalFunction(this, statement) else statement
+    })
     statement := parsed else failure {
       if errorMessage == "" { panic(failure) }
       reportIssue(errorMessage)

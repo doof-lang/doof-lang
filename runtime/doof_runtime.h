@@ -77,6 +77,24 @@ public:
     throw Panic(msg);
 }
 
+// The executable entry wrapper calls this only after a Panic has escaped all
+// Doof code. Keep it named so native debuggers can distinguish an unhandled
+// panic from a panic that catchPanic recovers.
+#if defined(_MSC_VER)
+#define DOOF_NOINLINE __declspec(noinline)
+#elif defined(__GNUC__) || defined(__clang__)
+#define DOOF_NOINLINE __attribute__((noinline))
+#else
+#define DOOF_NOINLINE
+#endif
+
+[[noreturn]] DOOF_NOINLINE inline void unhandled_panic(const Panic& panic) {
+    std::cerr << "panic: " << panic.what() << std::endl;
+    std::abort();
+}
+
+#undef DOOF_NOINLINE
+
 [[noreturn]] inline void panic_at(const char* file, int32_t line, const std::string& msg) {
     panic(std::string(file) + ":" + std::to_string(line) + ": " + msg);
 }

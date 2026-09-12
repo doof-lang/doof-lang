@@ -13,6 +13,22 @@ function checked(source: string): CheckResult {
   return createChecker(analysis, "/main.do").check("/main.do")
 }
 
+export function testChecksNestedNamedFunctionsAsSequentialLambdaBindings(): none {
+  valid := checked(
+    "function main(): int { base := 40\n" +
+    "function action(value: int): int => base + value\n" +
+    "return action(1) + action(2) }",
+  )
+  Assert.equal(valid.diagnostics.length, 0)
+
+  beforeDeclaration := checked(
+    "function main(): none { action()\n" +
+    "function action(): none {} }",
+  )
+  Assert.equal(beforeDeclaration.diagnostics.length, 1)
+  Assert.equal(beforeDeclaration.diagnostics[0].message, "Unknown identifier 'action'")
+}
+
 export function testBlockLambdaUnreachableReturnsRemainChecked(): none {
   result := checked("function main(): none { fn := => { panic(\"stop\")\nreturn 42 } }")
   Assert.equal(result.diagnostics.length, 1)

@@ -245,6 +245,17 @@ export function testLambdaCaptureExcludesItsOwnTypedParameters(): none {
   Assert.equal(result.source.contains("[prefix, path]"), false)
 }
 
+export function testNestedNamedFunctionsUseLambdaCaptureLowering(): none {
+  result := emit(
+    "function main(): int { let count = 0\nbase := 10\n" +
+    "function action(step: int): int { count += step\nreturn base + count }\n" +
+    "return action(1) + action(2) }",
+  )
+  Assert.stringContains(result.source, "auto count = std::make_shared<int32_t>(0)")
+  Assert.stringContains(result.source, "const auto action = doof::callback<int32_t(int32_t)>([count, base](int32_t step)")
+  Assert.stringContains(result.source, "action.call(1) + action.call(2)")
+}
+
 export function testNestedTryBangLambdaCapturesShorthandConstructionBindings(): none {
   result := emit(
     "class Box { value: int }\n" +
@@ -775,8 +786,7 @@ export function testMainWrapperReportsPanicsForEverySupportedSignature(): none {
 
   for source of [intMain, voidMain, intArgsMain, voidArgsMain] {
     Assert.equal(source.contains("catch (const doof::Panic& _panic)"), true)
-    Assert.equal(source.contains("std::cerr << \"panic: \" << _panic.what() << std::endl;"), true)
-    Assert.equal(source.contains("std::abort();"), true)
+    Assert.equal(source.contains("doof::unhandled_panic(_panic);"), true)
   }
 }
 

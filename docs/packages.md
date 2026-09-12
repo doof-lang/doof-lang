@@ -19,6 +19,10 @@ path dependencies are declared in `dependencies`; the compiler maps each local
 package to a logical module prefix before source resolution. Doof performs no
 remote package or third-party source acquisition.
 
+A declared dependency owns every source directory beneath its package root.
+Namespace providers such as the standard-library root are distinct: their
+immediate child directories are independently manifested packages.
+
 Standard packages are a separate offline provider boundary. A global
 `DOOF_STDLIB_ROOT` checkout takes precedence when present; otherwise the
 compiler lazily materializes each reached package from its adjacent

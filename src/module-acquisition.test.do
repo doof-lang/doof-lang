@@ -2,14 +2,14 @@ import { Assert } from "std/assert"
 import { ModuleAcquisition, acquiredManifestPath, acquiredModuleDiskPath, acquiredPackageForModule } from "./module-acquisition"
 
 export function testMapsModulesFromAnUmbrellaRoot(): none {
-  acquisitions := [ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib" }]
+  acquisitions := [ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib", containsPackages: true }]
 
   Assert.equal(acquiredModuleDiskPath("/std/time/index.do", acquisitions), "/opt/doof/stdlib/time/index.do")
 }
 
 export function testUsesTheMostSpecificAcquiredFolder(): none {
   acquisitions := [
-    ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib" },
+    ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib", containsPackages: true },
     ModuleAcquisition { logicalPrefix: "/std/time", diskRoot: "/cache/time-v1" },
   ]
 
@@ -18,13 +18,13 @@ export function testUsesTheMostSpecificAcquiredFolder(): none {
 }
 
 export function testDoesNotMatchPartialPrefixSegments(): none {
-  acquisitions := [ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib" }]
+  acquisitions := [ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib", containsPackages: true }]
 
   Assert.equal(acquiredModuleDiskPath("/stdlib/time.do", acquisitions), none)
 }
 
 export function testReturnsNullForAnUnacquiredModule(): none {
-  acquisitions := [ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib" }]
+  acquisitions := [ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib", containsPackages: true }]
 
   Assert.equal(acquiredModuleDiskPath("/vendor/time.do", acquisitions), none)
 }
@@ -36,7 +36,7 @@ export function testBuildsTheAcquiredPackageManifestPath(): none {
 }
 
 export function testIdentifiesThePackageReachedThroughAnUmbrellaRoot(): none {
-  acquisitions := [ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib" }]
+  acquisitions := [ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib", containsPackages: true }]
 
   package := acquiredPackageForModule("/std/time/temporal.do", acquisitions)
   Assert.equal(package != none, true)
@@ -46,7 +46,7 @@ export function testIdentifiesThePackageReachedThroughAnUmbrellaRoot(): none {
 
 export function testKeepsAPackageSpecificAcquisitionAsTheOwner(): none {
   acquisitions := [
-    ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib" },
+    ModuleAcquisition { logicalPrefix: "/std", diskRoot: "/opt/doof/stdlib", containsPackages: true },
     ModuleAcquisition { logicalPrefix: "/std/time", diskRoot: "/cache/time-v1" },
   ]
 
@@ -54,4 +54,13 @@ export function testKeepsAPackageSpecificAcquisitionAsTheOwner(): none {
   Assert.equal(package != none, true)
   Assert.equal(package!.logicalPrefix, "/std/time")
   Assert.equal(package!.diskRoot, "/cache/time-v1")
+}
+
+export function testPackageRootOwnsNestedSourceDirectories(): none {
+  acquisitions := [ModuleAcquisition { logicalPrefix: "/doof", diskRoot: "/work/doof-lang" }]
+
+  package := acquiredPackageForModule("/doof/src/editor-query.do", acquisitions)
+  Assert.equal(package != none, true)
+  Assert.equal(package!.logicalPrefix, "/doof")
+  Assert.equal(package!.diskRoot, "/work/doof-lang")
 }

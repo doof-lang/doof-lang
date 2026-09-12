@@ -3,6 +3,7 @@ import { execFile, type ChildProcess } from 'node:child_process';
 import { promisify } from 'node:util';
 import { dirname, resolve } from 'node:path';
 import { buildDebugLaunch, stopDebugBuild } from './native-debug.ts';
+import { debuggerPreRunCommands } from './debug-configuration.ts';
 const execute = promisify(execFile);
 
 export function registerDebugger(context: vscode.ExtensionContext, output: vscode.OutputChannel,
@@ -10,7 +11,8 @@ export function registerDebugger(context: vscode.ExtensionContext, output: vscod
     const children = new Set<ChildProcess>();
     context.subscriptions.push({ dispose: () => { for (const child of children) stopDebugBuild(child); } });
     const initial = (entry = '${workspaceFolder}') => ({
-        type: 'doof', request: 'launch', name: 'Debug Doof', entry, args: [], stopOnEntry: true, stopOnPanic: true,
+        type: 'doof', request: 'launch', name: 'Debug Doof', entry, args: [], stopOnEntry: false,
+        stopOnUnhandledPanic: true, stopOnPanic: false,
     });
     const provider: vscode.DebugConfigurationProvider = {
         provideDebugConfigurations: () => [initial()],
@@ -33,7 +35,7 @@ export function registerDebugger(context: vscode.ExtensionContext, output: vscod
                 const entry = resolve(base, configuration.entry ?? base);
                 const args = configuration.args ?? [];
                 if (!Array.isArray(args) || !args.every(arg => typeof arg === 'string')) throw new Error('Doof debug args must be an array of strings.');
-                for (const key of ['stopOnEntry', 'stopOnPanic'])
+                for (const key of ['stopOnEntry', 'stopOnUnhandledPanic', 'stopOnPanic'])
                     if (configuration[key] !== undefined && typeof configuration[key] !== 'boolean') throw new Error(`Doof debug ${key} must be a boolean.`);
                 const commands = configuration.preRunCommands ?? [];
                 if (!Array.isArray(commands) || !commands.every(command => typeof command === 'string')) throw new Error('preRunCommands must be an array of LLDB commands.');
@@ -57,10 +59,9 @@ export function registerDebugger(context: vscode.ExtensionContext, output: vscod
                 return {
                     ...configuration, program: launch.executable, cwd: configuration.cwd ? resolve(base, configuration.cwd) : launch.directory,
                     args: launch.arguments, stopOnEntry: false, disableASLR: false,
-                    // Stop at Doof main rather than the native loader entry point.
-                    preRunCommands: [...commands,
-                        ...(configuration.stopOnEntry !== false ? ['breakpoint set --name doof_main --one-shot true'] : []),
-                        ...(configuration.stopOnPanic !== false ? ['breakpoint set --name doof::panic'] : [])],
+                    // LLDB-DAP applies source breakpoints before configurationDone releases the target.
+                    preRunCommands: debuggerPreRunCommands(commands, configuration.stopOnEntry,
+                        configuration.stopOnUnhandledPanic, configuration.stopOnPanic),
                 };
             } catch (error) {
                 output.appendLine(String(error)); output.show(true);

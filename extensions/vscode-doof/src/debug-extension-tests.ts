@@ -33,22 +33,16 @@ export async function testDebugger(root: vscode.Uri) {
     const folder = vscode.workspace.getWorkspaceFolder(root)!;
     let session: vscode.DebugSession | undefined;
     try {
+        vscode.debug.addBreakpoints(breakpoints);
         assert.equal(await vscode.debug.startDebugging(folder, {
             type: 'doof', request: 'launch', name: 'Doof debugger smoke', entry: uri.fsPath,
-            args: ['argument space', '工具'], env: { DOOF_VSCODE_DEBUG_SMOKE: 'vscode-environment' }, stopOnEntry: true,
+            args: ['argument space', '工具'], env: { DOOF_VSCODE_DEBUG_SMOKE: 'vscode-environment' },
         }), true);
         session = vscode.debug.activeDebugSession;
         assert.ok(session);
-        await until(() => stops.length === 1, 'Did not stop in Doof main');
-        const stack = await session.customRequest('stackTrace', { threadId: stops[0].threadId });
-        assert.ok(stack.stackFrames.some((frame: any) => frame.source?.path === uri.fsPath), 'Entry stop must reach Doof source');
-        const previousReplies = breakpointReplies;
-        vscode.debug.addBreakpoints(breakpoints);
-        // Await breakpoint installation through the adapter before continuing.
-        await until(() => breakpointReplies > previousReplies, 'Source breakpoint was not installed');
-        await session.customRequest('continue', { threadId: stops[0].threadId });
-        await until(() => stops.length === 2, 'Source breakpoint was not hit');
-        const frames = await session.customRequest('stackTrace', { threadId: stops[1].threadId });
+        await until(() => breakpointReplies > 0, 'Source breakpoint was not installed before launch');
+        await until(() => stops.length === 1, 'Source breakpoint was not the first stop');
+        const frames = await session.customRequest('stackTrace', { threadId: stops[0].threadId });
         const frame = frames.stackFrames.find((item: any) => item.source?.path === uri.fsPath);
         assert.ok(frame); assert.equal(frame.line, 4);
         const scopes = await session.customRequest('scopes', { frameId: frame.id });
@@ -58,9 +52,9 @@ export async function testDebugger(root: vscode.Uri) {
             variables.push(...response.variables);
         }
         assert.ok(variables.some(variable => variable.name === 'count' && variable.value === '41'), 'Doof local count should be inspectable');
-        await session.customRequest('next', { threadId: stops[1].threadId });
-        await until(() => stops.length === 3, 'Step over did not stop');
-        await session.customRequest('continue', { threadId: stops[2].threadId });
+        await session.customRequest('next', { threadId: stops[0].threadId });
+        await until(() => stops.length === 2, 'Step over did not stop');
+        await session.customRequest('continue', { threadId: stops[1].threadId });
         await until(() => terminated, 'Debug target did not exit');
         assert.match(output, /42/); assert.match(output, /argument space/); assert.match(output, /工具/); assert.match(output, /vscode-environment/);
         await until(() => vscode.debug.activeDebugSession === undefined, 'VS Code did not finish the debug session');
@@ -84,5 +78,5 @@ export async function testDebugger(root: vscode.Uri) {
         vscode.debug.removeBreakpoints(breakpoints);
         tracker.dispose();
     }
-    console.log('Doof VS Code debugger: entry/source breakpoints, locals, stepping, args/environment/output, panic and stop passed.');
+    console.log('Doof VS Code debugger: startup/source breakpoints, locals, stepping, args/environment/output, panic and stop passed.');
 }

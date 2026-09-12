@@ -1112,7 +1112,7 @@ function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool =
     argumentSetup := if plan.mainAcceptsArgs then "std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); " else ""
     call := if plan.mainAcceptsArgs then moduleName + "::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))" else moduleName + "::doof_main()"
     success := if plan.mainReturnsInt then "return " + call + ";" else call + "; return 0;"
-    panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
+    panicHandler := "catch (const doof::Panic& _panic) { doof::unhandled_panic(_panic); }"
     actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
     return "\n" + signature + " { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
   }
@@ -1122,7 +1122,7 @@ function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool =
   scriptCall := if hasScript then moduleName + "::__doof_run_script(arguments); " else ""
   call := if plan.mainAcceptsArgs then moduleName + "::doof_main(arguments)" else moduleName + "::doof_main()"
   success := if !plan.hasMain then scriptCall + "return 0;" else if plan.mainReturnsInt then scriptCall + "return " + call + ";" else scriptCall + call + "; return 0;"
-  panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
+  panicHandler := "catch (const doof::Panic& _panic) { doof::unhandled_panic(_panic); }"
   actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
   return "\n" + signature + " { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
 }
@@ -1133,7 +1133,7 @@ function emitAppEntryWrapper(moduleName: string, plan: HeaderPlan, hasScript: bo
     argumentSetup := if plan.mainAcceptsArgs then "std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); " else "(void)argc; (void)argv; "
     call := if plan.mainAcceptsArgs then moduleName + "::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))" else moduleName + "::doof_main()"
     success := if plan.mainReturnsInt then "return " + call + ";" else call + "; return 0;"
-    panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
+    panicHandler := "catch (const doof::Panic& _panic) { doof::unhandled_panic(_panic); }"
     actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
     return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
   }
@@ -1142,7 +1142,7 @@ function emitAppEntryWrapper(moduleName: string, plan: HeaderPlan, hasScript: bo
   scriptCall := if hasScript then moduleName + "::__doof_run_script(arguments); " else ""
   call := if plan.mainAcceptsArgs then moduleName + "::doof_main(arguments)" else moduleName + "::doof_main()"
   success := if !plan.hasMain then scriptCall + "return 0;" else if plan.mainReturnsInt then scriptCall + "return " + call + ";" else scriptCall + call + "; return 0;"
-  panicHandler := "catch (const doof::Panic& _panic) { std::cerr << \"panic: \" << _panic.what() << std::endl; std::abort(); }"
+  panicHandler := "catch (const doof::Panic& _panic) { doof::unhandled_panic(_panic); }"
   actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
   return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
 }

@@ -9,12 +9,15 @@
 export class ModuleAcquisition {
   logicalPrefix: string
   diskRoot: string
+  /** Namespace roots (for example /std) contain packages; package roots own all nested modules. */
+  containsPackages: bool = false
 }
 
 /** Returns the package-specific acquisition that owns a logical module path. */
 export function acquiredPackageForModule(logicalPath: string, acquisitions: ModuleAcquisition[]): ModuleAcquisition | none {
   selected := selectedAcquisition(logicalPath, acquisitions)
   if selected == none { return none }
+  if !selected!.containsPackages { return selected }
 
   let suffix = logicalPath.substring(selected!.logicalPrefix.length, logicalPath.length)
   while suffix.startsWith("/") { suffix = suffix.substring(1, suffix.length) }

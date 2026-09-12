@@ -124,8 +124,12 @@ The selected compiler must support `debug <entry> --launch-json <path>`; install
 an updated toolchain if the extension reports an unsupported option.
 
 Set breakpoints in `.do` files and use VS Code's Continue, Pause, Step Over,
-Step Into, Step Out, Call Stack, Variables, and Stop controls. By default the
-session stops at Doof `main` and on `doof::panic`, including caught panics.
+Step Into, Step Out, Call Stack, Variables, and Stop controls. The debugger
+applies configured breakpoints and starts running without pausing at entry. By
+default it stops when a panic escapes the program entry point, but not when
+`catchPanic` recovers it. Set `stopOnPanic` to `true` to stop before every Doof
+panic unwinds, or `stopOnEntry` to `true` to opt into a one-time stop at Doof
+`main`.
 Panic stops initially show the native panic frame; select its Doof caller in
 Call Stack to inspect your code. Compilation can be cancelled from its progress
 notification, which terminates the compiler process group. The notification shows
@@ -145,8 +149,9 @@ For arguments, a particular entry, or environment overrides, add `.vscode/launch
     "entry": "${workspaceFolder}",
     "args": ["argument with spaces"],
     "env": { "APP_MODE": "development" },
-    "stopOnEntry": true,
-    "stopOnPanic": true
+    "stopOnEntry": false,
+    "stopOnUnhandledPanic": true,
+    "stopOnPanic": false
   }]
 }
 ```

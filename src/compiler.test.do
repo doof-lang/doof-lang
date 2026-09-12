@@ -240,7 +240,7 @@ export function testLowersTopLevelTryFailureToPanic(): none {
   source := result.emission!.modules[0].source
   Assert.stringContains(source, "doof::panic_at")
   Assert.stringContains(source, "std::string(\"try failed\") + std::string(\": \")")
-  Assert.stringContains(source, "std::abort();")
+  Assert.stringContains(source, "doof::unhandled_panic(_panic)")
 }
 
 export function testValidatesIsolationOnceAfterCheckingImportedGraph(): none {

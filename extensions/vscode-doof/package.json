@@ -130,13 +130,18 @@
               },
               "stopOnEntry": {
                 "type": "boolean",
-                "default": true,
-                "description": "Stop at Doof main before executing user code."
+                "default": false,
+                "description": "Stop at Doof main before executing user code; disabled by default so configured breakpoints run immediately."
               },
               "stopOnPanic": {
                 "type": "boolean",
+                "default": false,
+                "description": "Stop before every Doof panic unwinds, including panics caught by catchPanic."
+              },
+              "stopOnUnhandledPanic": {
+                "type": "boolean",
                 "default": true,
-                "description": "Stop before a Doof panic unwinds, including caught panics."
+                "description": "Stop when a Doof panic escapes the program entry point."
               },
               "preRunCommands": {
                 "type": "array",
@@ -156,8 +161,9 @@
             "request": "launch",
             "entry": "${workspaceFolder}",
             "args": [],
-            "stopOnEntry": true,
-            "stopOnPanic": true
+            "stopOnEntry": false,
+            "stopOnUnhandledPanic": true,
+            "stopOnPanic": false
           }
         ],
         "configurationSnippets": [

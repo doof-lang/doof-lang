@@ -565,6 +565,12 @@ This means:
 - Function declarations and `:=` lambda bindings are immutable — they cannot be reassigned
 - Functions close over their lexical scope like any lambda
 
+A nested named function is syntax sugar for an immutable local lambda binding.
+Its name becomes visible after the declaration has been evaluated, so it is not
+available before the declaration or recursively inside its own body. Nested
+functions cannot declare type parameters, use function modifiers, or declare
+default parameters; put those functions at module or class scope instead.
+
 First-class function values are actor-affine callbacks. Normal Doof call syntax
 still invokes them:
 

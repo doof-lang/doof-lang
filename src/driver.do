@@ -465,7 +465,7 @@ function sourceLoaderForRequest(
   let acquisitions: ModuleAcquisition[] = []
   let stdlibBundle: StdlibBundleProvider | none = none
   if stdlibRoot != "" {
-    acquisition := ModuleAcquisition { logicalPrefix: "/std", diskRoot: try! absolute(stdlibRoot) }
+    acquisition := ModuleAcquisition { logicalPrefix: "/std", diskRoot: try! absolute(stdlibRoot), containsPackages: true }
     acquisitions.push(acquisition)
   } else {
     bundleResourcePath := resourcePath("doof-stdlib.tar") else error {
