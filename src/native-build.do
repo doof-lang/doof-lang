@@ -261,7 +261,7 @@ function planMsvcNativeCompile(
   release := mode == .Release
   profile := mode == .Profile
   let compileArguments: string[] = [
-    "/nologo", "/std:c++17", "/EHsc", "/utf-8", "/Zc:__cplusplus", "/permissive-",
+    "/nologo", "/std:c++17", "/EHsc", "/utf-8", "/Zc:__cplusplus", "/Zc:lambda", "/permissive-",
   ]
   if release || profile {
     compileArguments.push("/O2")
