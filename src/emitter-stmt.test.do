@@ -5,6 +5,17 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+export function testQuarkWeakCaseStatementEmission(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Item {}\nfunction read(item: weak Item): int { case item { _: Success -> { return 1 }\n_: Failure -> { return 0 } } }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::lock_weak(_case_weak)")
+  Assert.stringContains(source, "std::holds_alternative<doof::Success<")
+  Assert.stringContains(source, "std::holds_alternative<doof::Failure<")
+}
+
 export function testDiscardedExpressionValuesAreExplicit(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function effect(): none {}\n" +

@@ -3,7 +3,7 @@
 import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, RangePattern, TypePattern, ValuePattern, WildcardPattern, YieldBlockExpression } from "./ast"
 import { JsonValueResolvedType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
-import { emitCaseTypePattern } from "./emitter-case-pattern"
+import { emitCaseSubjectValue, emitCaseTypePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock, emitCondition } from "./emitter-stmt"
 import { exprModuleNamespaceFor, hasNoneMember } from "./emitter-expr-utils"
@@ -93,8 +93,9 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
   else if expression.resolvedType != none { resultType = expression.resolvedType! }
   if resultType == none { panic("Case expression has no resolved result type") }
   let output = "[&]() -> " + emitType(resultType!, context.modulePath, context.names) + " {\n"
-  output = output + "    auto _case_subject = " + emitExpression(expression.subject, context) + ";\n"
-  subjectResult := caseSubjectResultType(expression.subject)
+  subjectResult := expression.resolvedSubjectType else { panic("Case expression has no checked subject type") }
+  storageType := expression.subject.resolvedType else { panic("Case expression subject has no resolved type") }
+  output = output + "    auto _case_subject = " + emitCaseSubjectValue(emitExpression(expression.subject, context), specializeEmitType(storageType, context), specializeEmitType(subjectResult, context), context) + ";\n"
   for arm of expression.arms {
     for pattern of arm.patterns {
       let condition = "true"
@@ -102,7 +103,7 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
       case pattern {
         type_: TypePattern -> {
           bindingName := if type_.name == "_" then "" else cppIdentifier(type_.name)
-          emitted := emitCaseTypePattern(type_, specializeEmitType(subjectResult, context), "_case_subject", bindingName, context.modulePath, context.names)
+          emitted := emitCaseTypePattern(type_, specializeEmitType(subjectResult, context), "_case_subject", bindingName, context.modulePath, context.names, context)
           condition = emitted.condition
           binding = emitted.binding
         }
@@ -145,11 +146,4 @@ function emitRangePatternCondition(pattern: RangePattern, subject: string, conte
     condition = condition + subject + operator + emitExpression(pattern.end!, context)
   }
   return condition
-}
-
-function caseSubjectResultType(subject: Expression): ResolvedType {
-  if subject.resolvedType == none {
-    panic("Case expression subject has no resolved type")
-  }
-  return subject.resolvedType!
 }

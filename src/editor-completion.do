@@ -3,7 +3,7 @@ import { autoImportSpecifier } from "./editor-autoimport"
 import { EditorIndex, EditorItem } from "./editor-model"
 import { editorTypeName } from "./editor-model"
 import { editorModule, editorScopeAt, bindingItem, symbolItem } from "./editor-index"
-import { Scope, ResolvedType, ClassType, InterfaceType, EnumType, FunctionType } from "./semantic"
+import { Scope, Binding, ResolvedType, ClassType, InterfaceType, EnumType, FunctionType } from "./semantic"
 import { ClassDeclaration, InterfaceDeclaration, EnumDeclaration, ExportDeclaration, Statement, MemberExpression, Identifier, SourceSpan, AstLocation } from "./ast"
 import { declarationFor, lookup } from "./checker-symbols"
 import { CheckerState } from "./checker-state"
@@ -13,6 +13,14 @@ import { Lexer, TokenType, tokenValue } from "./lexer"
 function uniquePush(items: EditorItem[], item: EditorItem): none {
   for existing of items { if existing.label == item.label { return } }
   items.push(item)
+}
+
+function classNameBinding(binding: Binding): bool {
+  if binding.kind == "class" || binding.kind == "struct" { return true }
+  if binding.kind == "import" && binding.symbol != none {
+    return binding.symbol!.kind == "class" || binding.symbol!.kind == "struct"
+  }
+  return false
 }
 
 export function scopeCompletions(index: EditorIndex, scope: Scope, offset: int, items: EditorItem[]): none {
@@ -57,7 +65,12 @@ export function memberCompletions(index: EditorIndex, module: string, offset: in
       _ -> { }
     }
     receiver := member.object.resolvedType else { return true }
-    completeMembers(index, module, offset, receiver, member.span, items)
+    let staticReceiver = false
+    case member.object {
+      identifier: Identifier -> { if identifier.resolvedBinding != none { staticReceiver = classNameBinding(identifier.resolvedBinding!) } }
+      _ -> { }
+    }
+    completeMembers(index, module, offset, receiver, member.span, items, staticReceiver)
     return true
   }
   return false
@@ -65,7 +78,7 @@ export function memberCompletions(index: EditorIndex, module: string, offset: in
 
 export function builtinMemberCandidates(): string[] => ["_", "add", "buildReadonly", "call", "charAt", "cloneMutable", "cloneReadonly", "contains", "defs", "delete", "description", "dispatch", "drainToReadonly", "endsWith", "error", "every", "fileName", "filter", "fromJsonValue", "fromName", "fromValue", "functionName", "get", "has", "indexOf", "inputSchema", "invoke", "isFailure", "isSuccess", "keys", "length", "line", "lowerBound", "map", "metadata", "methods", "name", "next", "outputSchema", "padEnd", "padStart", "pop", "post", "push", "repeat", "replaceAll", "reserve", "set", "size", "slice", "some", "split", "startsWith", "substring", "takeFirstCompleted", "toJsonObject", "toJsonValue", "toLowerCase", "toUpperCase", "trim", "trimEnd", "trimStart", "unwrapOr", "upperBound", "value", "values"]
 
-function completeMembers(index: EditorIndex, module: string, offset: int, receiver: ResolvedType, span: SourceSpan, items: EditorItem[]): none {
+function completeMembers(index: EditorIndex, module: string, offset: int, receiver: ResolvedType, span: SourceSpan, items: EditorItem[], staticReceiver: bool = false): none {
   info := editorModule(index, module) else { return }
   let names: string[] = []
     case receiver {
@@ -90,6 +103,13 @@ function completeMembers(index: EditorIndex, module: string, offset: int, receiv
       state.diagnostics = []
       selected := resolveMember(state, receiver, name, span)
       if selected.type_ == none || selected.type_!.kind == "unknown" || state.diagnostics.length > 0 { continue }
+      case receiver {
+        _: ClassType -> {
+          if staticReceiver && selected.staticOwner == none { continue }
+          if !staticReceiver && selected.staticOwner != none { continue }
+        }
+        _ -> { }
+      }
       uniquePush(items, EditorItem { label: name, detail: editorTypeName(selected.type_!), kind: if selected.function_ == none then "property" else "method", module, start: offset, end: offset })
     }
 
@@ -115,7 +135,7 @@ export function contextualCompletion(index: EditorIndex, module: string, offset:
     binding := lookup(scope, name)
     if binding != none {
       location := AstLocation { line: 1, column: 1, offset }
-      completeMembers(index, module, offset, binding!.type_, SourceSpan { start: location, end: location }, items)
+      completeMembers(index, module, offset, binding!.type_, SourceSpan { start: location, end: location }, items, classNameBinding(binding!))
     } else {
       info := editorModule(index, module) else { return true }
       for namespace of info.namespaceImports {

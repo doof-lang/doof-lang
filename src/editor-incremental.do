@@ -22,8 +22,13 @@ function requiresWholeGraph(source: string): bool {
 }
 
 export function reusableEditorModules(previous: FrontendResult, sources: SourceFile[]): ModuleInfo[] {
-  if previous.diagnostics.length > 0 || previous.sourceFiles.length != sources.length { return [] }
+  if previous.sourceFiles.length != sources.length { return [] }
   let dirty: string[] = []
+  // Recheck modules with errors without throwing away clean dependency graphs.
+  for diagnostic of previous.diagnostics {
+    if diagnostic.module == "" { return [] }
+    if !contains(dirty, diagnostic.module) { dirty.push(diagnostic.module) }
+  }
   for old of previous.sourceFiles {
     let found = false
     for source of sources {
@@ -58,10 +63,10 @@ export function reusableEditorModules(previous: FrontendResult, sources: SourceF
   return reusable
 }
 
-export function analyzeEditor(sources: SourceFile[], entry: string, previous: FrontendResult | none = none, additionalEntries: string[] = []): FrontendResult {
+export function analyzeEditor(sources: SourceFile[], entry: string, previous: FrontendResult | none = none, additionalEntries: string[] = [], timings: PhaseTimings = PhaseTimings {}): FrontendResult {
   reusable: ModuleInfo[] := if previous == none || previous!.entry != entry || !sameEntries(previous!.additionalEntries, additionalEntries) then [] else reusableEditorModules(previous!, sources)
   // Keep the snapshot source list independent of subsequent caller edits.
-  return analyzeWithLoader(sources.cloneMutable(), entry, noSourceLoader, "executable", PhaseTimings {}, true, true, reusable, additionalEntries)
+  return analyzeWithLoader(sources.cloneMutable(), entry, noSourceLoader, "executable", timings, true, true, reusable, additionalEntries, if previous == none then none else previous!.isolation)
 }
 
 function importsFingerprint(source: string): string {

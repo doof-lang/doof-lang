@@ -4,7 +4,46 @@ import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { SourceFile, Symbol, ClassType, InterfaceType } from "./semantic"
-import { DependencyBuilder, DependencySummary, SymbolDependency, InterfaceDependency, collectDependencyType, summarizeDeclaration } from "./emitter-dependencies"
+import { DependencyBuilder, DependencySummary, SymbolDependency, InterfaceDependency, collectDependencySurface, collectDependencyType, summarizeDeclaration } from "./emitter-dependencies"
+import { compile } from "./compiler"
+
+export function testQuarkDestructorOnlyImportDependency(): none {
+  result := compile([
+    SourceFile { path: "/common.do", source: "export function erase(value: int): none {}" },
+    SourceFile { path: "/main.do", source: "import { erase } from \"./common\"\nclass Owner { destructor { erase(7) } }\nfunction main(): none { owner := Owner {} }" },
+  ], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  let found = false
+  for module of result.emission!.modules {
+    if module.modulePath != "/main.do" { continue }
+    found = true
+    Assert.stringContains(module.header, "void erase(int32_t value);")
+    Assert.stringContains(module.source, "::erase(7)")
+  }
+  Assert.isTrue(found)
+}
+
+export function testQuarkDestructorDependenciesStayOutOfForeignSurfaces(): none {
+  analysis := createAnalyzer([
+    SourceFile { path: "/common.do", source: "export function erase(value: int): none {}" },
+    SourceFile { path: "/main.do", source: "import { erase } from \"./common\"\nexport class Owner { destructor { erase(7) } }" },
+  ]).analyze("/main.do")
+  checker := createChecker(analysis)
+  for path of ["/common.do", "/main.do"] { Assert.equal(hasErrorDiagnostics(checker.check(path).diagnostics), false) }
+  let found = false
+  for module of analysis.modules {
+    if module.path != "/main.do" { continue }
+    for statement of module.program.statements {
+      builder := DependencyBuilder {}
+      collectDependencySurface(statement, builder, false)
+      if !summaryNames(builder.finish()).contains("erase,") { continue }
+      found = true
+      Assert.stringNotContains(summaryNames(summarizeDeclaration(statement)), "erase,")
+    }
+  }
+  Assert.isTrue(found)
+}
 
 export function testDependencySummaryKeepsAliasesAndDefaultsWithoutForeignBodies(): none {
   analysis := createAnalyzer([

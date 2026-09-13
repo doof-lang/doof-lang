@@ -133,9 +133,15 @@ function addProperties(index: EditorIndex, properties: ObjectProperty[], module:
   }
 }
 
-export function createEditorIndex(frontend: FrontendResult): EditorIndex {
+/** An optional module list limits occurrences while retaining the full checked graph. */
+export function createEditorIndex(frontend: FrontendResult, modules: string[] = []): EditorIndex {
   index := EditorIndex { frontend }
   for module of frontend.analysis.modules {
+    if modules.length > 0 {
+      let included = false
+      for path of modules { if path == module.path { included = true; break } }
+      if !included { continue }
+    }
     for region of module.editorScopes { addScope(index, region.scope) }
     for statement of module.program.statements { addMemberDeclarations(index, statement, module.path) }
     for statement of module.program.statements {

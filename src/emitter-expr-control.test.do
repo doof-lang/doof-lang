@@ -5,6 +5,17 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+export function testQuarkWeakCaseExpressionEmission(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Item<T> { value: T }\nfunction read<T>(item: weak Item<T>): T | none => case item { found: Success -> found.value.value\n_: Failure -> none }\nfunction main(): none { read<int>(Item<int> { value: 7 }) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  let source = ""
+  for module of result.emission!.modules { source = source + module.source }
+  Assert.stringContains(source, "doof::lock_weak(_case_weak)")
+  Assert.stringContains(source, "std::move(_case_locked.value())")
+}
+
 export function testContextualIfUsesSharedConditionEmission(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function choose(value: int): int | string => if value == 1 then 7 else \"other\"",

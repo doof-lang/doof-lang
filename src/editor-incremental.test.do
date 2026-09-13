@@ -1,6 +1,15 @@
 import { Assert } from "std/assert"
 import { analyzeEditor } from "./editor-incremental"
 import { SourceFile } from "./semantic"
+import { PhaseTimings } from "./phase-timings"
+
+export function testEditorIncrementalExposesFrontendTimings(): none {
+  timings := PhaseTimings { enabled: true }
+  result := analyzeEditor([SourceFile { path: "/main.do", source: "function main(): none {}" }], "/main.do", none, [], timings)
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.stringContains(timings.render(), "analysis.load-parse-discover")
+  Assert.stringContains(timings.render(), "checking.modules")
+}
 
 export function testEditorIncrementalReusesUnaffectedDependency(): none {
   dependency := SourceFile { path: "/dep.do", source: "export function value(): int => 42" }
@@ -34,4 +43,32 @@ export function testEditorIncrementalInvalidatesChangedMockDirectives(): none {
   changed := analyzeEditor(sources, "/tests/value.test.do", first)
   Assert.isTrue(changed.diagnostics.length > 0)
   Assert.equal(changed.reusedModules.length, 0)
+}
+
+export function testEditorIncrementalRetainsIsolationEffectsFromReusedDependency(): none {
+  dependency := SourceFile { path: "/dep.do", source: "let counter = 0\nexport function value(): int => counter" }
+  prefix := "import { value } from \"./dep\"\n"
+  first := analyzeEditor([SourceFile { path: "/main.do", source: prefix + "function main(): int => value()" }, dependency], "/main.do")
+  Assert.equal(first.diagnostics.length, 0)
+  second := analyzeEditor([SourceFile { path: "/main.do", source: prefix + "isolated function main(): int => value()" }, dependency], "/main.do", first)
+  Assert.equal(second.reusedModules.length, 1)
+  Assert.isTrue(second.diagnostics.length > 0)
+  clean := analyzeEditor([SourceFile { path: "/main.do", source: prefix + "isolated function main(): int => value()" }, dependency], "/main.do")
+  Assert.equal(second.diagnostics.length, clean.diagnostics.length)
+  Assert.equal(second.diagnostics[0].message, clean.diagnostics[0].message)
+  repaired := analyzeEditor([SourceFile { path: "/main.do", source: prefix + "function main(): int => value() + 1" }, dependency], "/main.do", second)
+  Assert.equal(repaired.reusedModules.length, 1)
+  Assert.equal(repaired.diagnostics.length, 0)
+}
+
+export function testEditorIncrementalKeepsErrorsInUnchangedDependency(): none {
+  dependency := SourceFile { path: "/dep.do", source: "export function value(): int => missing" }
+  prefix := "import { value } from \"./dep\"\nfunction main(): int => value()"
+  first := analyzeEditor([SourceFile { path: "/main.do", source: prefix }, dependency], "/main.do")
+  second := analyzeEditor([SourceFile { path: "/main.do", source: prefix + " + 1" }, dependency], "/main.do", first)
+  Assert.equal(second.reusedModules.length, 0)
+  Assert.isTrue(second.diagnostics.length > 0)
+  let found = false
+  for diagnostic of second.diagnostics { if diagnostic.module == "/dep.do" && diagnostic.message.contains("missing") { found = true } }
+  Assert.isTrue(found)
 }

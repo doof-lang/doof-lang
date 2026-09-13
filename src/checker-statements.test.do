@@ -13,6 +13,13 @@ function checked(source: string): CheckResult {
   return createChecker(analysis, "/main.do").check("/main.do")
 }
 
+export function testQuarkWeakCaseStatementCompletion(): none {
+  result := checked("class Item {}\nfunction read(item: weak Item): int { case item { _: Success<Item> -> { return 1 }\n_: Failure<WeakReferenceError> -> { return 0 } } }")
+  Assert.equal(result.diagnostics.length, 0)
+  invalid := checked("class Item {}\nfunction read(item: weak Item): int { case item { _: Success<Item> -> { return 1 } } }")
+  Assert.isTrue(invalid.diagnostics.length > 0)
+}
+
 export function testChecksNestedNamedFunctionsAsSequentialLambdaBindings(): none {
   valid := checked(
     "function main(): int { base := 40\n" +

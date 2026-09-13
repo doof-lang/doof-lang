@@ -264,6 +264,8 @@ their payload members are intentionally not shared across the union.
 
 `JsonValue` is an exact recursive JSON carrier.
 
+Narrow with `as` or `case` before comparing a JsonValue with a typed scalar or collection. Direct comparison with `none` tests absence.
+
 ```doof
 payload: JsonValue := { name: "Ada", scores: [1, 2, 3] }
 ```

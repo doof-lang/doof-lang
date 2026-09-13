@@ -517,6 +517,7 @@ export class CaseExpression {
   kind: string
   subject: Expression
   arms: CaseExpressionArm[]
+  let resolvedSubjectType: ResolvedType | none = none
   let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
@@ -525,6 +526,7 @@ export class CaseStatement {
   kind: string
   subject: Expression
   arms: CaseArm[]
+  let resolvedSubjectType: ResolvedType | none = none
   // Checker-owned control-flow fact consumed by statement lowering. `false`
   // means evaluation cannot continue after this case statement.
   let resolvedCompletes: bool | none = none

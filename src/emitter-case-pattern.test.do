@@ -5,6 +5,87 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+class QuarkWeakItem { value: int }
+class QuarkWeakOther { value: int }
+class QuarkWeakObserver { weak item: QuarkWeakItem }
+class QuarkWeakOptional { weak item: QuarkWeakItem | none = none }
+class QuarkWeakUnion { weak item: QuarkWeakItem | QuarkWeakOther }
+class QuarkWeakOptionalUnion { weak item: QuarkWeakItem | QuarkWeakOther | none = none }
+class QuarkWeakArray { weak items: int[] }
+class QuarkWeakTracked {
+  releases: int[]
+  destructor { releases[0] += 1 }
+}
+class QuarkWeakTrackedObserver { weak item: QuarkWeakTracked }
+
+function quarkExpiredObserver(): QuarkWeakObserver => QuarkWeakObserver { item: QuarkWeakItem { value: 7 } }
+function quarkWeakRead(observer: QuarkWeakObserver): int => case observer.item {
+  found: Success -> found.value.value
+  _: Failure -> -1
+}
+function quarkWeakOptionalRead(observer: QuarkWeakOptional): int => case observer.item {
+  found: Success -> { item := found.value as QuarkWeakItem else { yield 0 }
+    yield item.value }
+  _: Failure -> -1
+}
+function quarkExpiredOptional(): QuarkWeakOptional => QuarkWeakOptional { item: QuarkWeakItem { value: 9 } }
+
+export function testQuarkWeakCaseRuntimeAliveExpiredAndAbsent(): none {
+  item := QuarkWeakItem { value: 7 }
+  Assert.equal(quarkWeakRead(QuarkWeakObserver { item }), 7)
+  Assert.equal(quarkWeakRead(quarkExpiredObserver()), -1)
+  Assert.equal(quarkWeakOptionalRead(QuarkWeakOptional {}), 0)
+  Assert.equal(quarkWeakOptionalRead(QuarkWeakOptional { item }), 7)
+  Assert.equal(quarkWeakOptionalRead(quarkExpiredOptional()), -1)
+  array := [2, 3]
+  observer := QuarkWeakArray { items: array }
+  case observer.items {
+    found: Success -> { Assert.equal(found.value.length, 2) }
+    _: Failure -> { Assert.isTrue(false) }
+  }
+  other := QuarkWeakOther { value: 8 }
+  union := QuarkWeakUnion { item: other }
+  case union.item {
+    found: Success -> { value := found.value as QuarkWeakOther else { panic("Wrong weak target") }
+      Assert.equal(value.value, 8) }
+    _: Failure -> { Assert.isTrue(false) }
+  }
+}
+
+export function testQuarkWeakCaseRetainsReferentThroughArm(): none {
+  releases := [0]
+  let item: QuarkWeakTracked | none = QuarkWeakTracked { releases }
+  observer := QuarkWeakTrackedObserver { item: item! }
+  case observer.item {
+    found: Success -> {
+      item = none
+      Assert.equal(releases[0], 0)
+      Assert.equal(found.value.releases[0], 0)
+    }
+    _: Failure -> { Assert.isTrue(false) }
+  }
+  Assert.equal(releases[0], 1)
+}
+
+function quarkOptionalUnionRead(observer: QuarkWeakOptionalUnion): int => case observer.item {
+  found: Success -> case found.value {
+    item: QuarkWeakItem -> item.value
+    other: QuarkWeakOther -> other.value
+    _: none -> 0
+  }
+  _: Failure -> -1
+}
+function quarkExpiredOptionalUnion(): QuarkWeakOptionalUnion => QuarkWeakOptionalUnion { item: QuarkWeakOther { value: 8 } }
+
+export function testQuarkWeakCaseNullableUnion(): none {
+  item := QuarkWeakItem { value: 7 }
+  other := QuarkWeakOther { value: 8 }
+  Assert.equal(quarkOptionalUnionRead(QuarkWeakOptionalUnion {}), 0)
+  Assert.equal(quarkOptionalUnionRead(QuarkWeakOptionalUnion { item }), 7)
+  Assert.equal(quarkOptionalUnionRead(QuarkWeakOptionalUnion { item: other }), 8)
+  Assert.equal(quarkOptionalUnionRead(quarkExpiredOptionalUnion()), -1)
+}
+
 export function testNoneCarrierJsonPatternBindsUnit(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function take(value: none): none {}\n" +

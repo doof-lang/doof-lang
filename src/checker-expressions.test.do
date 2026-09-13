@@ -15,6 +15,35 @@ function checked(source: string): CheckResult {
   return createChecker(analysis, "/main.do").check("/main.do")
 }
 
+export function testQuarkWeakCaseExpressionChecking(): none {
+  prefix := "class Item { value: int }\n"
+  valid := checked(prefix + "function read(item: weak Item): int => case item { value: Success -> value.value.value\n_: Failure -> -1 }")
+  Assert.equal(valid.diagnostics.length, 0)
+  missing := checked(prefix + "function read(item: weak Item): int => case item { _: Success -> 1 }")
+  Assert.isTrue(missing.diagnostics.length > 0)
+  Assert.stringContains(missing.diagnostics[0].message, "exhaustive")
+  wrong := checked(prefix + "function read(item: weak Item): int => case item { _: Success<int> -> 1\n_: Failure -> -1 }")
+  Assert.isTrue(wrong.diagnostics.length > 0)
+  Assert.stringContains(wrong.diagnostics[0].message, "payload must be Item")
+  wrongFailure := checked(prefix + "function read(item: weak Item): int => case item { _: Success -> 1\n_: Failure<string> -> -1 }")
+  Assert.isTrue(wrongFailure.diagnostics.length > 0)
+  Assert.stringContains(wrongFailure.diagnostics[0].message, "payload must be WeakReferenceError")
+  extra := checked(prefix + "function read(item: weak Item): int => case item { _: Success<Item, Item> -> 1\n_: Failure -> -1 }")
+  Assert.isTrue(extra.diagnostics.length > 0)
+  Assert.stringContains(extra.diagnostics[0].message, "one payload type argument")
+}
+
+export function testQuarkJsonEqualityRequiresNarrowing(): none {
+  for source of ["value == 4", "4 != value", "value == true", "value != \"four\""] {
+    result := checked("function compare(value: JsonValue): bool => " + source)
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.stringContains(result.diagnostics[0].message, "Narrow JsonValue")
+  }
+  for source of ["value == none", "none != value", "value == value", "(value as int)! == 4"] {
+    Assert.equal(checked("function compare(value: JsonValue): bool => " + source).diagnostics.length, 0)
+  }
+}
+
 export function testInterfaceBoundImmutableField(): none {
   result := checked("interface View { value: int }\nclass Counter { let value: int }\nfunction update<T: View>(value: T): none { value.value = 1 }")
   let found = false

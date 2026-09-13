@@ -26,9 +26,10 @@ class IsolationNode {
   calls: IsolationCall[] = []
   let directReason: IsolationReason | none = none
   let reason: IsolationReason | none = none
+  let cached: bool = false
 }
 
-class IsolationGraph {
+export class IsolationGraph {
   nodes: IsolationNode[] = []
 }
 
@@ -39,7 +40,7 @@ function unwrapExport(statement: Statement): Statement {
   }
 }
 
-function collectGraph(result: AnalysisResult): IsolationGraph {
+function collectGraph(result: AnalysisResult, previous: IsolationGraph | none, reusedModules: string[]): IsolationGraph {
   graph := IsolationGraph {}
   for module of result.modules {
     for raw of module.program.statements {
@@ -52,6 +53,19 @@ function collectGraph(result: AnalysisResult): IsolationGraph {
         }
         _ -> { }
       }
+    }
+  }
+  if previous != none {
+    for node of graph.nodes {
+      let reused = false
+      for path of reusedModules { if path == node.module { reused = true } }
+      if !reused { continue }
+      old := nodeForDeclaration(previous!, node.declaration)
+      if old == none { continue }
+      for call of old!.calls { node.calls.push(call) }
+      node.directReason = old!.directReason
+      node.reason = old!.reason
+      node.cached = true
     }
   }
   return graph
@@ -259,6 +273,7 @@ function analyzeNode(result: AnalysisResult, graph: IsolationGraph, node: Isolat
 
 function inferIsolation(result: AnalysisResult, graph: IsolationGraph): none {
   for node of graph.nodes {
+    if node.cached { continue }
     analyzeNode(result, graph, node)
     node.reason = node.directReason
   }
@@ -266,7 +281,7 @@ function inferIsolation(result: AnalysisResult, graph: IsolationGraph): none {
   while changed {
     changed = false
     for node of graph.nodes {
-      if node.reason != none { continue }
+      if node.cached || node.reason != none { continue }
       for call of node.calls {
         for target of nodesForDeclaration(result, graph, call.declaration) {
           if target.reason != none {
@@ -462,11 +477,17 @@ function validateModuleIsolationEffects(result: AnalysisResult, graph: Isolation
   }
 }
 
-/** Infers isolation once for the checked graph, then validates every module. */
-export function validateIsolationEffects(result: AnalysisResult, diagnostics: Diagnostic[]): none {
-  graph := collectGraph(result)
+/** Reuses effects only for dependency-closed checked modules whose declarations
+ * are unchanged. The editor invalidates nominal changes across the whole graph
+ * and rechecks every module with diagnostics before permitting this reuse. */
+export function validateIsolationEffects(result: AnalysisResult, diagnostics: Diagnostic[], previous: IsolationGraph | none = none, reusedModules: string[] = []): IsolationGraph {
+  graph := collectGraph(result, previous, reusedModules)
   inferIsolation(result, graph)
   for module of result.modules {
+    let reused = false
+    for path of reusedModules { if path == module.path { reused = true } }
+    if previous != none && reused { continue }
     validateModuleIsolationEffects(result, graph, module, diagnostics)
   }
+  return graph
 }

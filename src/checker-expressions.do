@@ -26,7 +26,8 @@ import { checkerSemanticSpan } from "./checker-validation"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
 
 export function checkCaseExpression(state: CheckerState, expression: CaseExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
-  subjectType := checkExpression(state, expression.subject, scope, none)
+  subjectType := checkedCaseSubjectType(checkExpression(state, expression.subject, scope, none))
+  expression.resolvedSubjectType = optionalResolvedType(subjectType)
   let inferredType: ResolvedType = neverType()
   let armPatterns: CasePattern[][] = []
   for arm of expression.arms {
@@ -56,12 +57,19 @@ export function checkCaseExpression(state: CheckerState, expression: CaseExpress
   return inferredType
 }
 
+export function checkedCaseSubjectType(type_: ResolvedType): ResolvedType {
+  case type_ {
+    weak_: WeakResolvedType -> { return resultType(weak_.inner, weakReferenceErrorType()) }
+    _ -> { return type_ }
+  }
+}
+
 export function casePatternsExhaustive(state: CheckerState, subjectType: ResolvedType, arms: CasePattern[][]): bool {
   for patterns of arms {
     for pattern of patterns {
       case pattern {
         _: WildcardPattern -> { return true }
-        type_: TypePattern -> { if type_.resolvedType != none && sameType(subjectType, type_.resolvedType!) { return true } }
+        type_: TypePattern -> { if subjectType.kind != "result" && type_.resolvedType != none && sameType(subjectType, type_.resolvedType!) { return true } }
         _ -> { }
       }
     }
@@ -247,14 +255,19 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
         let resolved: ResolvedType = unknownType()
         let contextualResultArm = false
         case subjectType {
-          _: ResultResolvedType -> {
+          result: ResultResolvedType -> {
             case type_.type_ {
               named: NamedType -> {
                 if named.name == "Success" || named.name == "Failure" {
                   contextualResultArm = true
                   resolved = subjectType
                   // Explicit payload arguments still need full decoration.
-                  for argument of named.typeArgs { resolveType(state, argument, state.info!, scope) }
+                  if named.typeArgs.length > 1 { typeError(state, named.name + " case pattern accepts one payload type argument", type_.span) }
+                  for argument of named.typeArgs {
+                    payload := resolveType(state, argument, state.info!, scope)
+                    expectedPayload := if named.name == "Success" then result.valueType else result.errorType
+                    if !sameType(payload, expectedPayload) { typeError(state, named.name + " case pattern payload must be " + typeName(expectedPayload), argument.span) }
+                  }
                 }
               }
               _ -> { }
@@ -909,6 +922,10 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   }
   if operator == "==" || operator == "!=" {
     validateNoneComparison(state, operator, left, right, expression.span)
+    if (isJsonValueType(left) && right.kind != "json-value" && right.kind != "none" && right.kind != "unknown" && right.kind != "never") || (isJsonValueType(right) && left.kind != "json-value" && left.kind != "none" && left.kind != "unknown" && left.kind != "never") {
+      typeError(state, "Narrow JsonValue with 'as' or 'case' before comparing it with a typed value", expression.span)
+      return finish(state, expression, primitive("bool"))
+    }
     if left.kind != "none" && right.kind != "none" && !typesOverlap(state, left, right) {
       typeError(state, "Operator '" + operator + "' is not defined for " + typeName(left) + " and " + typeName(right), expression.span)
     }

@@ -101,6 +101,11 @@ row: Map<string, JsonValue> := payload
 
 64-bit integers are preserved as `long` inside `JsonValue`, including values parsed from JSON that do not fit in `int`.
 
+Equality between a `JsonValue` and a typed scalar or collection requires
+explicit narrowing with `as` or `case`. For example, narrow a schema value
+with `schema := value as int else { return false }` before `schema == 4`.
+Comparison with `none` tests JSON absence directly.
+
 When a `Map<string, JsonValue>` or `JsonValue[]` is assigned to `JsonValue`, the runtime preserves reference semantics for the underlying shared container rather than copying it.
 
 `JsonValue` objects preserve insertion order for their string keys. Formatting with `formatJsonValue(...)`, iterating through the underlying map, and generated class/object JSON emission all follow that insertion order.
@@ -1668,6 +1673,11 @@ class Observer {
 ### Access Semantics
 
 Because a weak-referenced object may have been destroyed, accessing a `weak` reference yields `Result<T, WeakReferenceError>`. The standard `?.` and `!.` operators provide lightweight access:
+
+A `case` subject that stores `weak T` reads it once as
+`Result<T, WeakReferenceError>`. `Success` retains the live referent for the
+case; `Failure` reports expiration. For `weak (T | none)`, an absent reference
+is `Success(none)`, while an expired non-absent reference is `Failure`.
 
 ```javascript
 class Node {

@@ -561,3 +561,14 @@ fresh output roots, so the shared release version cannot mask a non-converged
 compiler through frontend cache reuse. Generated C++ lives in release assets,
 not the maintained source tree. Source-snapshot rebuild scripts replay captured
 native compile/link commands without recreating checker or emitter decisions.
+
+## Case subjects and destructor dependencies
+
+The checker decorates statement and expression cases with `resolvedSubjectType`
+separately from the subject expression's storage type. Weak storage is read as a
+Result; shared case lowering locks the reference once and keeps its success
+payload alive through the selected arm. Emitters consume the checked subject
+type for pattern lowering and exhaustiveness remains checker-owned.
+
+Direct dependency extraction includes local destructor bodies alongside method
+bodies. Foreign declaration summaries omit both kinds of body dependencies.

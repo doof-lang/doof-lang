@@ -39,7 +39,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 import { pathType } from "./checker-inference"
 import { CheckerState, LambdaReturnObservation } from "./checker-state"
 import { checkTry } from "./checker-try"
-import { casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
+import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
 import { deprecatedClassMethodFunction, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
@@ -946,7 +946,8 @@ function lookupYieldBinding(scope: Scope, name: string): Binding | none {
 }
 
 export function checkCase(state: CheckerState, statement: CaseStatement, scope: Scope, inLoop: bool = false): bool {
-  subjectType := checkExpression(state, statement.subject, scope, none)
+  subjectType := checkedCaseSubjectType(checkExpression(state, statement.subject, scope, none))
+  statement.resolvedSubjectType = optionalResolvedType(subjectType)
   let armPatterns: CasePattern[][] = []
   let allArmsReturn = statement.arms.length > 0
   for arm of statement.arms {

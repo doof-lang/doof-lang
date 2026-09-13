@@ -187,6 +187,11 @@ export function collectDependencySurface(
         }
         if !foreign { collectFunctionBody(method, index) }
       }
+      if !foreign && class_.destructor_ != none {
+        let expressions: Expression[] = []
+        collectBlockExpressions(class_.destructor_!, expressions)
+        for expression of expressions { collectDependencyExpression(expression, index) }
+      }
       if class_.resolvedSymbol != none {
         for implementation of class_.resolvedSymbol!.implementations {
           recordSymbol(implementation, index)
@@ -264,4 +269,3 @@ function collectFunctionBody(
   }
   for expression of expressions { collectDependencyExpression(expression, index) }
 }
-

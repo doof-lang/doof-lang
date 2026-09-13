@@ -6,8 +6,34 @@ import { createChecker } from "./checker"
 import { SourceFile, FunctionType } from "./semantic"
 import { CallExpression, FunctionDeclaration, MemberExpression } from "./ast"
 import { Assert } from "std/assert"
-import { AstLocation, Block, BoolLiteral, CatchExpression, Expression, SourceSpan } from "./ast"
+import { AstLocation, Block, BoolLiteral, CaseExpression, CaseStatement, CatchExpression, Expression, SourceSpan } from "./ast"
 import { primitive, typeName } from "./checker-types"
+
+export function testQuarkCaseSubjectDecorationIsSeparateFromStorage(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source:
+    "class Item {}\n" +
+    "function expression(item: weak Item): int => case item { _: Success -> 1\n_: Failure -> 0 }\n" +
+    "function statement(item: weak Item): int { case item { _: Success -> { return 1 }\n_: Failure -> { return 0 } } }",
+  }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
+  let inspected = 0
+  for declaration of analysis.modules[0].program.statements {
+    function_ := declaration as FunctionDeclaration else { continue }
+    if function_.name == "expression" {
+      expression := function_.body as CaseExpression else { panic("Expected case expression") }
+      Assert.equal(typeName(expression.subject.resolvedType!), "weak Item")
+      Assert.equal(typeName(expression.resolvedSubjectType!), "Result<Item, WeakReferenceError>")
+      inspected += 1
+    } else if function_.name == "statement" {
+      block := function_.body as Block else { panic("Expected case block") }
+      statement := block.statements[0] as CaseStatement else { panic("Expected case statement") }
+      Assert.equal(typeName(statement.subject.resolvedType!), "weak Item")
+      Assert.equal(typeName(statement.resolvedSubjectType!), "Result<Item, WeakReferenceError>")
+      inspected += 1
+    }
+  }
+  Assert.equal(inspected, 2)
+}
 
 export function testCheckerReviewMutableExpressionDecorations(): none {
   location := AstLocation { line: 1, column: 1, offset: 0 }

@@ -256,6 +256,7 @@ class TreeNode {
 - Use `weak` to break reference cycles.
 - `weak` qualifies the whole type expression.
 - Accessing a weak reference yields `Result<T, WeakReferenceError>`.
+- A `case` weak subject is read once: `Success` retains a live target and `Failure` reports expiration. An absent nullable weak reference is `Success(none)`.
 - `weak` is class-only; structs are value types and cannot be weak targets.
 
 ## Description Metadata
