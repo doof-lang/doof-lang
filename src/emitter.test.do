@@ -2085,12 +2085,12 @@ export function testEmitsContextualSumObjectLiteralsAndPromotions(): none {
 }
 
 export function testEmitsResultPayloadAccessThroughRuntimeHelpers(): none {
-  result := emit("function load(): Result<int, string> => Failure { error: \"bad\" }\nfunction read(): Result<int, string> { value := load() else { return { error: value.error } }\nreturn { value } }")
-  Assert.equal(result.source.contains("doof::failure_error(value)"), true)
+  result := emit("function load(): Result<int, string> => Failure { error: \"bad\" }\nfunction read(): Result<int, string> { value := load() else error { return { error } }\nreturn { value } }")
+  Assert.equal(result.source.contains("const auto error = doof::failure_error(_binding_value_"), true)
 }
 
 export function testEmitsAsNarrowingOverResultValues(): none {
-  result := emit("function parse(): Result<SerialValue, string> => Success { value: \"ok\" }\nfunction read(): Result<string, string> { value := parse() as string else { return { error: value.error } }\nreturn { value } }")
+  result := emit("function parse(): Result<SerialValue, string> => Success { value: \"ok\" }\nfunction read(): Result<string, string> { value := parse() as string else error { return { error } }\nreturn { value } }")
   Assert.equal(result.source.contains("if (doof::is_failure(_as_source))"), true)
   Assert.equal(result.source.contains("auto _as_value = doof::success_value(_as_source)"), true)
   Assert.equal(result.source.contains("doof::serial_as_string(_as_value)"), true)

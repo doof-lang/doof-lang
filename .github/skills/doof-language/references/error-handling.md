@@ -141,7 +141,8 @@ Rules:
 - The `else` block must exit the current scope via `return`, `break`, `continue`, or `panic(...)` when the binding name is used after the block.
 - `_ := result else ...` is a discard handler; it does not introduce a binding after the block, so its `else` block can continue.
 - `else error { ... }` captures the error payload for present `Result<T, E>` subjects.
-- Without capture, inside the `else` block, the binding has the original full type.
+- The success binding is not in scope inside the `else` block. Use `else error`
+  to inspect a Result failure.
 - After the block, the binding has the narrowed happy-path type.
 - Each declaration removes exactly one fallible layer. `Result<T, E> | none`
   becomes `Result<T, E>` and needs a second declaration to unwrap the Result.
@@ -150,11 +151,8 @@ Rules:
 - It applies only to nullable and/or `Result` types.
 
 ```doof
-x := loadConfig() else {
-    return case x {
-        _: Success -> "unexpected",
-        f: Failure -> f.error.message
-    }
+x := loadConfig() else error {
+    return "load failed: " + error.message
 }
 ```
 

@@ -61,6 +61,20 @@ export function testCheckerReviewTryDeclarations(): none {
   Assert.equal(valid.diagnostics.length, 0)
 }
 
+export function testRejectsDeclarationElseBindingForNoneSuccess(): none {
+  save := "function save(): Result<none, string> => Success()\n"
+  rejects(save + "function bad(): none { done := save() else error { println(error) } }", "Cannot bind a none success value")
+  handled := checked(save + "function good(): none { _ := save() else error { println(error) } }")
+  Assert.equal(handled.diagnostics.length, 0)
+}
+
+export function testRequiresFailureCaptureInsideDeclarationElse(): none {
+  load := "function load(): Result<int, string> => Failure(\"bad\")\n"
+  rejects(load + "function bad(): Result<int, string> { value := load() else { return Failure(value.error) }\nreturn Success(value) }", "Unknown identifier 'value'")
+  captured := checked(load + "function good(): Result<int, string> { value := load() else error { return Failure(error) }\nreturn Success(value) }")
+  Assert.equal(captured.diagnostics.length, 0)
+}
+
 export function testNeverReviewTryCompletion(): none {
   load := "function load(): Result<never, string> => Failure { error: \"bad\" }\n"
   for statement of ["try load()", "try x := load()", "try x: int := load()", "try let x: int = load()", "try readonly x: int = load()"] {

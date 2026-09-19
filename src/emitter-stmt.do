@@ -48,6 +48,7 @@ export function emitStatement(statement: Statement, level: int = 1, context: Emi
     readonly_: ReadonlyDeclaration -> { return sourceMark + coverageMark + emitLocalDeclaration(ind, readonly_.name, readonly_.type_, readonly_.resolvedType!, readonly_.value, context, true) }
     binding: ImmutableBinding -> {
       if binding.else_ != none { return sourceMark + coverageMark + emitBindingElse(binding, level, context) }
+      if binding.name == "_" { return sourceMark + coverageMark + ind + emitDiscardedExpression(binding.value, context) + ";\n" }
       return sourceMark + coverageMark + emitLocalDeclaration(ind, binding.name, binding.type_, binding.resolvedType!, binding.value, context, true, true)
     }
     let_: LetDeclaration -> { return sourceMark + coverageMark + emitLocalDeclaration(ind, let_.name, let_.type_, let_.resolvedType!, let_.value, context, false) }

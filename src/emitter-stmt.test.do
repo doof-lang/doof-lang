@@ -30,6 +30,16 @@ export function testDiscardedExpressionValuesAreExplicit(): none {
   Assert.stringContains(source, "value = (static_cast<void>(effect()), std::monostate{});")
 }
 
+export function testStandaloneDiscardBindingEmitsOnlyItsValue(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function effect(): none {}\nfunction main(): none { _ := effect() }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "effect();")
+  Assert.stringNotContains(source, "const auto _ =")
+}
+
 export function testUnitAsyncYieldExplicitlyDiscardsCarrier(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function effect(): none {}\nfunction main(): none { task := async { yield effect() } }",

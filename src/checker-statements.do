@@ -295,6 +295,9 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
       result: ResultResolvedType -> {
         narrowedType = result.valueType
         failureType = optionalResolvedType(result.errorType)
+        if result.valueType.kind == "none" && name != "_" {
+          typeError(state, "Cannot bind a none success value; use a discard binding '_ := expr else ...'", span)
+        }
       }
       union_: UnionResolvedType -> {
         if hasNoneMember(state, union_) {
@@ -317,8 +320,6 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
       } else if failureName! != "_" {
         declare(elseScope, Binding { name: failureName!, kind: "else-failure", type_: failureType!, mutable: false, span: checkerSemanticSpan(span), module: state.info!.path })
       }
-    } else if name != "_" {
-      declare(elseScope, Binding { name, kind: "else-subject", type_: valueType, mutable: false, span: checkerSemanticSpan(span), module: state.info!.path })
     }
     handlerCompletes := checkBlock(state, elseBlock!, elseScope, inLoop)
     if name != "_" && handlerCompletes {

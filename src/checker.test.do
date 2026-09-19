@@ -1824,6 +1824,11 @@ export function testAllowsDiscardDeclarationElseToContinue(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testAllowsStandaloneDiscardBinding(): none {
+  result := checked("function save(): Result<void, string> => Success()\nfunction main(): none { _ := save() }")
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testAcceptsPanicAsDeclarationElseExit(): none {
   result := checked("function load(): Result<int, string> => Success { value: 4 }\nfunction main(): int { value := load() else { panic(\"load failed\") }\nreturn value }")
   Assert.equal(result.diagnostics.length, 0)

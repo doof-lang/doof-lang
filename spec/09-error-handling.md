@@ -156,6 +156,7 @@ Valid ways to acknowledge the result include:
 
 ```doof
 result := readText("config.json")
+_ := readText("config.json")  // explicitly discard the Result
 try text := readText("config.json")
 text := try! readText("config.json")
 text := try? readText("config.json")
@@ -295,8 +296,8 @@ Rules:
   outer none; a second declaration is required to unwrap the Result.
 - If a binding is introduced and used after the `else`, the `else` block must
   exit the current scope with `return`, `break`, `continue`, or `panic(...)`.
-- Without failure capture, the binding name has the original full type inside
-  the `else` block.
+- The success binding is not in scope inside the `else` block. Use
+  `else error { ... }` to inspect a Result failure.
 - `else error { ... }` captures the error payload for present `Result<T, E>`
   subjects.
 - Failure capture is not allowed for nullable-only subjects or
@@ -307,17 +308,18 @@ text := readText(path) else error {
     return Failure("read failed: ${error}")
 }
 
-value := maybeResult() else {
-    return Failure(case value {
-        f: Failure -> f.error
-        _ -> "missing value"
-    })
+value := maybeResult() else error {
+    return Failure(error)
 }
 ```
 
-The discard form has no post-block binding, so the handler may fall through:
+The discard form has no post-block binding. It may be used without an `else`
+block to explicitly discard a value, or with an `else` handler that may fall
+through:
 
 ```doof
+_ := writeText(path, text)
+
 _ := writeText(path, text) else error {
     println("write failed: ${error.message}")
 }

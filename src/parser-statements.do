@@ -619,12 +619,17 @@ function parseDiscardElseBinding(parser: Parser): Statement {
   parser.expect(TokenType.Underscore)
   parser.expect(TokenType.ColonEqual)
   value := parser.parseExpression()
-  if !parser.check(TokenType.Else) { parser.fail("Discard binding '_' requires an else block") }
-  capture := parseElseCaptureAndBlock(parser)
+  let else_: Block | none = none
+  let failureName: string | none = none
+  if parser.check(TokenType.Else) {
+    capture := parseElseCaptureAndBlock(parser)
+    else_ = capture.block
+    failureName = capture.failureName
+  }
   parser.consumeSemicolon()
   return ImmutableBinding {
     kind: "immutable-binding", name: "_", type_: none, value, exported: false,
-    else_: capture.block, failureName: capture.failureName, span: parser.span(start),
+    else_, failureName, span: parser.span(start),
   }
 }
 

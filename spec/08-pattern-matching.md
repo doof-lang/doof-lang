@@ -364,7 +364,7 @@ The `else` narrow form provides a compact "unwrap or bail" pattern for Result an
 
 ```javascript
 name := expression else {
-    // name has the full original type here
+    // name is not in scope here
     ... must exit (return / break / continue) ...
 }
 // name is available here with the narrowed type
@@ -441,27 +441,9 @@ function test(): string {
 }
 ```
 
-### Accessing the Full Type in the Else Block
+### Capturing a Result Failure
 
-Inside the else block, `name` has the **full original type** (before narrowing) when no failure capture is declared. This allows inspecting the failure state:
-
-```javascript
-function loadConfig(): Result<Config, AppError> => Failure { error: AppError { message: "not found" } }
-
-function test(): string {
-    x := loadConfig() else {
-        // x has type Result<Config, AppError> here
-        return case x {
-            _: Success -> "unexpected",
-            f: Failure -> f.error.message
-        }
-    }
-    // x is Config here
-    return x.name
-}
-```
-
-For a `Result<T, E>` subject without an outer `none` member,
+The success binding is available only after the `else` block. For a `Result<T, E>` subject without an outer `none` member,
 `else error { ... }` captures the `Failure<E>.error` payload directly:
 
 ```javascript

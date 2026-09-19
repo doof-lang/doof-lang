@@ -1219,16 +1219,28 @@ export function testParsesDiscardTargetsInLocalBindingContexts(): none {
   }
 }
 
-export function testKeepsDiscardTargetsOutOfNamedParametersAndOrdinaryDeclarations(): none {
+export function testKeepsDiscardTargetsOutOfNamedParameters(): none {
   parameterParser := Parser { source: "function consume(_: int): none {}" }
   parameterResult := catchPanic(=> parameterParser.parse())
   case parameterResult { _: Failure<string> -> { } _ -> { panic("expected named parameter parse failure") } }
   Assert.equal(parameterParser.errorMessage, "Expected named function parameter name")
+}
 
-  declarationParser := Parser { source: "function main(): none { _ := compute() }" }
-  declarationResult := catchPanic(=> declarationParser.parse())
-  case declarationResult { _: Failure<string> -> { } _ -> { panic("expected ordinary discard declaration parse failure") } }
-  Assert.equal(declarationParser.errorMessage, "Discard binding '_' requires an else block")
+export function testParsesStandaloneDiscardBinding(): none {
+  program := parse("function main(): none { _ := compute() }")
+  case program.statements[0] {
+    function_: FunctionDeclaration -> { case function_.body {
+      block: Block -> { case block.statements[0] {
+        binding: ImmutableBinding -> {
+          Assert.equal(binding.name, "_")
+          Assert.equal(binding.else_, none)
+        }
+        _ -> { panic("expected discard binding") }
+      } }
+      _ -> { panic("expected function block") }
+    } }
+    _ -> { panic("expected function declaration") }
+  }
 }
 
 export function testRetainsStructuredParseFailureLocation(): none {
