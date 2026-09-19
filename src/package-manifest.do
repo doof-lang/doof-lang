@@ -788,9 +788,9 @@ function manifestObject(value: SerialValue, manifestPath: string, fieldPath: str
   }
 }
 
-function manifestArray(value: SerialValue, manifestPath: string, fieldPath: string): Result<SerialValue[], string> {
+function manifestArray(value: SerialValue, manifestPath: string, fieldPath: string): Result<readonly SerialValue[], string> {
   case value {
-    array: SerialValue[] -> return Success(array)
+    array: readonly SerialValue[] -> return Success(array)
     _ -> return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must be an array")
   }
 }

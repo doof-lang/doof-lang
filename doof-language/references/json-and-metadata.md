@@ -6,7 +6,7 @@ Classes and structs with all-serializable fields and no dedicated `constructor` 
 
 ### `.toSerialObject()` — Instance Method
 
-Returns a `SerialObject` representation. `SerialObject` is the intrinsic alias for `Map<string, SerialValue>`, so it is still accepted anywhere a `SerialValue` is expected.
+Returns a `SerialObject` representation. `SerialObject` is the intrinsic alias for `readonly Map<string, SerialValue>`, so it is still accepted anywhere a `SerialValue` is expected.
 
 ```doof
 import { formatJsonValue } from "std/json"

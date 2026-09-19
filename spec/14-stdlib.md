@@ -409,6 +409,8 @@ formatJsonValue(value: SerialValue): string
 ```
 
 `formatJsonValue` produces compact JSON with insertion-order key preservation.
+`readonly byte[]` values are emitted as padded standard base64 JSON strings.
+JSON strings remain ordinary `string` values when parsed.
 
 ### Example
 

@@ -330,6 +330,12 @@ export function testEmitsJsonValueAsNarrowing(): none {
   Assert.equal(result.source.contains("doof::serial_as_bool(_as_value)"), true)
 }
 
+export function testEmitsReadonlyBytesJsonNarrowing(): none {
+  result := emit("function read(raw: SerialValue): Result<readonly byte[], string> => raw as readonly byte[]")
+  Assert.stringContains(result.source, "doof::serial_is_bytes(_as_value)")
+  Assert.stringContains(result.source, "std::get<doof::SerialBytes>(doof::serial_storage(_as_value))")
+}
+
 export function testEmitsDotShorthandEnumMapKeys(): none {
   result := emit("enum Suit { Spades, Hearts }\nclass Pile {}\nclass State { foundations: Map<Suit, Pile> = { .Spades: Pile {}, .Hearts: Pile {} } }\nfunction make(): State => State()")
   Assert.stringNotContains(result.header, "{Suit::Spades, std::make_shared<Pile>()}")
@@ -1616,9 +1622,10 @@ export function testEmitsExactClassCaseExpressionWithoutVariantOperations(): non
 }
 
 export function testEmitsJsonValueCaseTypeGuardsAndNarrowing(): none {
-  result := emit("function read(value: SerialValue): int { case value { text: string -> { return text.length } object: SerialObject -> { return object.size } _ -> { return 0 } } }")
+  result := emit("function read(value: SerialValue): int { case value { text: string -> { return text.length } bytes: readonly byte[] -> { return bytes.length } object: SerialObject -> { return object.size } _ -> { return 0 } } }")
   Assert.equal(result.source.contains("if (doof::serial_is_string(_case_subject))"), true)
   Assert.equal(result.source.contains("const auto text = doof::serial_as_string(_case_subject);"), true)
+  Assert.equal(result.source.contains("else if (doof::serial_is_bytes(_case_subject))"), true)
   Assert.equal(result.source.contains("else if (doof::serial_is_object(_case_subject))"), true)
   Assert.equal(result.source.contains("const auto object = doof::serial_object(_case_subject);"), true)
 }

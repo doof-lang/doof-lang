@@ -100,7 +100,7 @@ export function objectField(object: SerialObject, name: string): SerialObject {
   value := field(object, name) as SerialObject else { return {} }
   return value
 }
-export function arrayField(object: SerialObject, name: string): SerialValue[] {
-  value := field(object, name) as SerialValue[] else { return [] }
+export function arrayField(object: SerialObject, name: string): readonly SerialValue[] {
+  value := field(object, name) as readonly SerialValue[] else { return [] }
   return value
 }

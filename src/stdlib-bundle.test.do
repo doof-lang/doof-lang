@@ -41,7 +41,7 @@ function compressedTestMember(path: string, source: string, mode: int = 420): re
 }
 
 function testMemberJson(member: TestBundleMember): SerialObject {
-  let value: SerialObject = {}
+  let value: Map<string, SerialValue> = {}
   value.set("kind", member.kind)
   value.set("packageName", "std/json")
   value.set("path", member.logicalPath)
@@ -49,7 +49,7 @@ function testMemberJson(member: TestBundleMember): SerialObject {
   value.set("sourceBytes", member.sourceBytes)
   value.set("compressedBytes", long(member.data.length))
   value.set("sha256", sha256Hex(member.data))
-  return value
+  return value.cloneReadonly()
 }
 
 function fixtureBundle(customNativeEntries: TarWriteEntry[] | none = none): readonly byte[] {
@@ -88,17 +88,17 @@ function fixtureBundle(customNativeEntries: TarWriteEntry[] | none = none): read
       "\u0000" + sha256Hex(member.data) + "\n"
     memberValues.push(testMemberJson(member))
   }
-  let index: SerialObject = {}
+  let index: Map<string, SerialValue> = {}
   index.set("schemaVersion", 4)
   index.set("format", "doof-stdlib-tar-of-tar-zst")
   index.set("bundleDigest", sha256HexString(canonical))
   index.set("zstdLevel", 3)
   index.set("targets", ["linux", "macos"])
   index.set("packages", ["std/json"])
-  index.set("members", memberValues)
+  index.set("members", memberValues.cloneReadonly())
   index.set("licenseFiles", readonly [])
   let outer: TarWriteEntry[] = [
-    TarWriteEntry { name: "bundle-index.json", data: bundleTestBytes(formatJsonValue(index) + "\n") },
+    TarWriteEntry { name: "bundle-index.json", data: bundleTestBytes(formatJsonValue(index.cloneReadonly()) + "\n") },
   ]
   for member of members { outer.push(TarWriteEntry { name: member.memberPath, data: member.data }) }
   return writeTarBlob(outer.cloneReadonly())

@@ -1,7 +1,7 @@
 import { textField } from "./protocol"
 import { parseJsonValue } from "std/json"
 
-export function panicMessageFromVariables(values: SerialValue[]): string {
+export function panicMessageFromVariables(values: readonly SerialValue[]): string {
   for value of values {
     variable := value as SerialObject else { continue }
     if textField(variable, "name") == "msg" { return readablePanicText(textField(variable, "value")) }

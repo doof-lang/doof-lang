@@ -70,7 +70,7 @@ export class DebugSession {
       let args: SerialValue[] = []
       for argument of launch.arguments { args.push(argument) }
       request("launch", {
-        program: launch.executable, cwd: launch.directory, args,
+        program: launch.executable, cwd: launch.directory, args: args.cloneReadonly(),
         stopOnEntry: true, disableASLR: false,
       }, (body): none => {})
     })
@@ -235,7 +235,7 @@ export class DebugSession {
     if path == launch.source && entryBreakpoint != none { points.push(entryBreakpoint!) }
     let values: SerialValue[] = []
     for point of points { values.push({ line: point.line }) }
-    request("setBreakpoints", { source: { path }, breakpoints: values }, (body): none => {
+    request("setBreakpoints", { source: { path }, breakpoints: values.cloneReadonly() }, (body): none => {
       answers := arrayField(body, "breakpoints")
       for index of 0..<points.length {
         if index < answers.length {
@@ -408,7 +408,7 @@ export class DebugSession {
 
 }
 
-function rows(values: SerialValue[], prefix: string): DebugRow[] {
+function rows(values: readonly SerialValue[], prefix: string): DebugRow[] {
   let result: DebugRow[] = []
   for index of 0..<values.length {
     value := values[index] as SerialObject else { continue }

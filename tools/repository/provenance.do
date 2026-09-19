@@ -3,11 +3,11 @@ import { cleanRevision, jsonFile, jsonString, path, require, sorted } from "./co
 
 // A stdlib workspace may be one checkout or a directory of std/* checkouts.
 export function stdlibRevisions(root: string): Result<SerialObject, string> {
-  result: SerialObject := {}
+  result: Map<string, SerialValue> := {}
   if exists(path(root, ".git")) {
     try revision := cleanRevision(root)
     result.set(".", revision)
-    return Success(result)
+    return Success(result.cloneReadonly())
   }
   entries := readDir(root) else { return Failure("Cannot read stdlib workspace: " + root) }
   names: string[] := []
@@ -27,5 +27,5 @@ export function stdlibRevisions(root: string): Result<SerialObject, string> {
     count += 1
   }
   try require(count > 0, "No standard package checkouts found: " + root)
-  return Success(result)
+  return Success(result.cloneReadonly())
 }

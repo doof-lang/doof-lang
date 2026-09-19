@@ -61,10 +61,10 @@ function jsonObjectValue(value: SerialValue | none): SerialObject | none {
   }
 }
 
-function jsonArrayValue(value: SerialValue | none): SerialValue[] {
+function jsonArrayValue(value: SerialValue | none): readonly SerialValue[] {
   if value == none { return [] }
   case value! {
-    array: SerialValue[] -> return array
+    array: readonly SerialValue[] -> return array
     _ -> return []
   }
 }

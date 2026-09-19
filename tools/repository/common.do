@@ -99,9 +99,10 @@ export function stamp(source: string, destination: string, version: string): Res
   try copyInputs(source, destination)
   for manifestPath of ["doof.json", "tools/debugger/doof.json"] {
     file := path(destination, manifestPath)
-    try manifest := jsonFile(file)
+    try parsed := jsonFile(file)
+    manifest := parsed.cloneMutable()
     manifest.set("version", version)
-    try write(file, formatJsonValue(manifest) + "\n")
+    try write(file, formatJsonValue(manifest.cloneReadonly()) + "\n")
   }
   file := path(destination, "src/version.do")
   try module := read(file)

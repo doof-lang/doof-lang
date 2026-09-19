@@ -83,8 +83,9 @@ payload: SerialValue := { name: "Ada", scores: [1, 2, 3] }
 - `float`
 - `double`
 - `string`
-- `SerialValue[]`
-- `Map<string, SerialValue>`
+- `readonly SerialValue[]`
+- `readonly byte[]` (formatted by `std/json` as a base64 JSON string)
+- `readonly Map<string, SerialValue>`
 - unions composed from the cases above
 
 This has two important consequences:
@@ -92,11 +93,11 @@ This has two important consequences:
 - JSON literals remain ergonomic through contextual typing, so `value: SerialValue := [1, 2, 3]` and `value: SerialValue := { answer: 42 }` are valid.
 - Pre-built typed collections do not implicitly convert to `SerialValue`. For example, `int[]` and `Map<string, int>` are not assignable to `SerialValue`; use SerialValue-shaped collections instead.
 
-`SerialObject` is a built-in intrinsic alias for `Map<string, SerialValue>`. It is interchangeable with that exact map shape in annotations, assignments, and return types:
+`SerialObject` is a built-in intrinsic alias for `readonly Map<string, SerialValue>`. It is interchangeable with that exact map shape in annotations, assignments, and return types:
 
 ```doof
 payload: SerialObject := { "name": "Ada" }
-row: Map<string, SerialValue> := payload
+row: readonly Map<string, SerialValue> := payload
 ```
 
 64-bit integers are preserved as `long` inside `SerialValue`, including values parsed from JSON that do not fit in `int`.
@@ -106,7 +107,11 @@ explicit narrowing with `as` or `case`. For example, narrow a schema value
 with `schema := value as int else { return false }` before `schema == 4`.
 Comparison with `none` tests JSON absence directly.
 
-When a `Map<string, SerialValue>` or `SerialValue[]` is assigned to `SerialValue`, the runtime preserves reference semantics for the underlying shared container rather than copying it.
+When a `readonly Map<string, SerialValue>` or `readonly SerialValue[]` is
+assigned to `SerialValue`, the runtime preserves reference semantics for the
+underlying shared container rather than copying it. A `readonly byte[]` is
+stored as a dedicated byte carrier. `std/json` formats it as a padded standard
+base64 JSON string.
 
 `SerialValue` objects preserve insertion order for their string keys. Formatting with `formatJsonValue(...)`, iterating through the underlying map, and generated class/object JSON emission all follow that insertion order.
 

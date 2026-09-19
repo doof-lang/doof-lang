@@ -112,11 +112,11 @@ export function testStdlibBundleCreatesDeterministicAddressableMembers(): none {
   assert(format == "doof-stdlib-tar-of-tar-zst", "expected bundle format")
   schemaVersion := (try! index.get("schemaVersion")) as int else { panic("expected schema version") }
   assert(schemaVersion == 4, "expected target-aware bundle schema")
-  targets := (try! index.get("targets")) as SerialValue[] else { panic("expected bundle targets") }
+  targets := (try! index.get("targets")) as readonly SerialValue[] else { panic("expected bundle targets") }
   assert(targets.length == 6, "expected default bundle to support every target")
   bundleDigest := (try! index.get("bundleDigest")) as string else { panic("expected bundle digest") }
   assert(bundleDigest == first.bundleDigest && bundleDigest.length == 64, "expected bundle identity")
-  membersValue := (try! index.get("members")) as SerialValue[] else { panic("expected members") }
+  membersValue := (try! index.get("members")) as readonly SerialValue[] else { panic("expected members") }
   firstMember := membersValue[0] as SerialObject else { panic("expected member object") }
   memberHash := (try! firstMember.get("sha256")) as string else { panic("expected member hash") }
   assert(memberHash.length == 64, "expected member SHA-256")

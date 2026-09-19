@@ -120,7 +120,7 @@ function renderPlistValue(value: SerialValue, depth: int): string {
     number: float -> return indent + "<real>" + string(number) + "</real>\n"
     number: double -> return indent + "<real>" + string(number) + "</real>\n"
     text: string -> return indent + "<string>" + escapePlistText(text) + "</string>\n"
-    array: SerialValue[] -> {
+    array: readonly SerialValue[] -> {
       let result = indent + "<array>\n"
       for item of array { result = result + renderPlistValue(item, depth + 1) }
       return result + indent + "</array>\n"

@@ -47,7 +47,21 @@ export function isJsonValueType(resolvedType: ResolvedType): bool {
   return false
 }
 
-export function jsonObjectType(): ResolvedType { return mapType(primitive("string"), jsonValueType()) }
+/** A readonly byte array has a dedicated SerialValue runtime carrier. */
+export function isSerialBytesType(resolvedType: ResolvedType): bool {
+  case resolvedType {
+    array: ArrayResolvedType -> {
+      case array.elementType {
+        primitive: PrimitiveType -> { return array.readonly_ && primitive.name == "byte" }
+        _ -> { }
+      }
+    }
+    _ -> { }
+  }
+  return false
+}
+
+export function jsonObjectType(): ResolvedType { return mapType(primitive("string"), jsonValueType(), true) }
 
 export function classMetadataType(classType_: ResolvedType): ResolvedType { return ClassMetadataResolvedType { classType: classType_ } }
 
@@ -698,10 +712,10 @@ function isJsonValueAssignable(value: ResolvedType): bool {
     _: NoneType -> { return true }
     primitiveValue: PrimitiveType -> {
       return primitiveValue.name == "byte" || primitiveValue.name == "int" || primitiveValue.name == "long" ||
-        primitiveValue.name == "float" || primitiveValue.name == "double" || primitiveValue.name == "string" || primitiveValue.name == "char" || primitiveValue.name == "bool"
+        primitiveValue.name == "float" || primitiveValue.name == "double" || primitiveValue.name == "string" || primitiveValue.name == "bool"
     }
-    array: ArrayResolvedType -> { return isJsonValueType(array.elementType) }
-    map: MapResolvedType -> { return sameType(map.keyType, primitive("string")) && isJsonValueType(map.valueType) }
+    array: ArrayResolvedType -> { return (array.readonly_ && isJsonValueType(array.elementType)) || isSerialBytesType(array) }
+    map: MapResolvedType -> { return map.readonly_ && sameType(map.keyType, primitive("string")) && isJsonValueType(map.valueType) }
     _ -> { return false }
   }
   return false

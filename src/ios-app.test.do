@@ -5,14 +5,14 @@ import {
 } from "./ios-app"
 
 export function testRendersIOSSupportFiles(): none {
-  custom: SerialObject := {}
+  custom: Map<string, SerialValue> := {}
   custom.set("NSCameraUsageDescription", "Scan & share")
   config := IOSAppConfig {
     executableName: "DoofDemo",
     bundleId: "dev.doof.demo",
     displayName: "Doof & Demo",
     version: "1.2.3",
-    infoPlist: custom,
+    infoPlist: custom.cloneReadonly(),
     minimumDeploymentTarget: "16.0",
   }
   plist := renderIOSInfoPlist(config)

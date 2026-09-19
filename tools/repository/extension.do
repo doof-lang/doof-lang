@@ -92,7 +92,7 @@ export function buildEditorService(root: string): Result<none, string> {
   sortedNames := sortNames(ordered)
   sourceArray: SerialValue[] := []
   for name of sortedNames { try source := sources.get(name); sourceArray.push(source.toSerialObject()) }
-  serialized := formatJsonValue(sourceArray)
+  serialized := formatJsonValue(sourceArray.cloneReadonly())
   try write(path(artifacts, "stdlib.json"), serialized)
   metadata: SerialObject := { version, compilerSourceSha256, dirty: status != "", wasmSha256: sha256Hex(wasm), revision, stdlibBundleDigest: catalog.bundleDigest, stdlibSha256: sha256HexString(serialized) }
   return write(path(artifacts, "service-version.json"), formatJsonValue(metadata) + "\n")
@@ -108,7 +108,7 @@ export function verifyEditorArtifacts(root: string): Result<none, string> {
   try expectedStdlib := jsonString(metadata, "stdlibSha256")
   try require(sha256HexString(serialized) == expectedStdlib, "Stdlib identity mismatch")
   try value := parseJsonValue(serialized)
-  array := value as SerialValue[] else { return Failure("Invalid stdlib source list") }
+  array := value as readonly SerialValue[] else { return Failure("Invalid stdlib source list") }
   for item of array {
     try source := EditorSource.fromSerialValue(item, true)
     try require(source.path.startsWith("/std/"), "Invalid virtual stdlib path")

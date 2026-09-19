@@ -10,7 +10,7 @@ import { emitNoneLiteral, emitStringConstant, quote } from "./emitter-expr-liter
 import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
 import { emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { cppIdentifier as emittedCppIdentifier, moduleDiagnosticPath } from "./emitter-names"
-import { isNumeric, sameType } from "./checker-types"
+import { isNumeric, isSerialBytesType, sameType } from "./checker-types"
 
 /** Lowers checked `as` conversion to a Result without evaluating its source twice. */
 export function emitAs(expression: AsExpression, context: EmitContext): string {
@@ -148,7 +148,15 @@ function emitJsonAs(source: string, target: ResolvedType, resultCpp: string, suc
       else if primitive.name == "float" { condition = "doof::serial_is_number(_as_value)"; value = "doof::serial_as_float(_as_value)" }
       else if primitive.name == "double" { condition = "doof::serial_is_number(_as_value)"; value = "doof::serial_as_double(_as_value)" }
     }
-    _: ArrayResolvedType -> { condition = "doof::serial_is_array(_as_value)"; value = "std::get<doof::SerialArray>(doof::serial_storage(_as_value))" }
+    array: ArrayResolvedType -> {
+      if isSerialBytesType(array) {
+        condition = "doof::serial_is_bytes(_as_value)"
+        value = "std::get<doof::SerialBytes>(doof::serial_storage(_as_value))"
+      } else {
+        condition = "doof::serial_is_array(_as_value)"
+        value = "std::get<doof::SerialArray>(doof::serial_storage(_as_value))"
+      }
+    }
     _: MapResolvedType -> { condition = "doof::serial_is_object(_as_value)"; value = "doof::serial_object(_as_value)" }
     _: SerialValueResolvedType -> { value = "_as_value" }
     _ -> { }

@@ -1202,8 +1202,22 @@ export function testUsesSerialCarrierAndGeneratedMethodNames(): none {
 }
 
 export function testChecksJsonValueAsNarrowingWithDeclarationElse(): none {
-  result := checked("function read(raw: SerialValue): string { flag := raw as bool else { return \"bad\" }\nname := raw as string else { return \"bad\" }\nvalues := raw as readonly SerialValue[] else { return \"bad\" }\nreturn name + string(flag) + string(values.length) }")
+  result := checked("function read(raw: SerialValue): string { flag := raw as bool else { return \"bad\" }\nname := raw as string else { return \"bad\" }\nvalues := raw as readonly SerialValue[] else { return \"bad\" }\nbytes := raw as readonly byte[] else { return \"bad\" }\nreturn name + string(flag) + string(values.length) + string(bytes.length) }")
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testAcceptsReadonlySerialArraysAndBytesAsSerialValues(): none {
+  result := checked("function encode(): SerialValue { values: readonly SerialValue[] := [1, \"two\"]\nbytes: readonly byte[] := [0, 255]\nvalue: SerialValue := values\nreturn bytes }")
+  Assert.equal(result.diagnostics.length, 0)
+
+  direct := checked("function encode(): SerialValue { bytes: readonly byte[] := [0, 255]\nvalue: SerialValue := bytes\nreturn value }")
+  Assert.equal(direct.diagnostics.length, 0)
+
+  object := checked("function encode(): SerialValue { values: readonly Map<string, SerialValue> := { name: \"Ada\" }\nreturn values }")
+  Assert.equal(object.diagnostics.length, 0)
+
+  rejected := checked("function arrayValue(values: SerialValue[]): SerialValue => values\nfunction mapValue(values: Map<string, SerialValue>): SerialValue => values\nfunction charValue(value: char): SerialValue => value")
+  Assert.equal(rejected.diagnostics.length, 3)
 }
 
 export function testAcceptsNullableNaturalRepresentationAsNarrowing(): none {
@@ -1222,7 +1236,7 @@ export function testAllowsDeclarationElseContinueAndMutableMapInterior(): none {
 }
 
 export function testAllowsJsonCollectionsAndLenientGeneratedDecode(): none {
-  result := checked("class Options { enabled: bool\nname: string }\nfunction run(value: SerialValue, values: Map<string, SerialValue>, items: SerialValue[]): Result<Options, string> { values[\"items\"] = items\nreturn Options.fromSerialValue(value, true) }")
+  result := checked("class Options { enabled: bool\nname: string }\nfunction run(value: SerialValue, values: Map<string, SerialValue>, items: readonly SerialValue[]): Result<Options, string> { values[\"items\"] = items\nreturn Options.fromSerialValue(value, true) }")
   Assert.equal(result.diagnostics.length, 0)
 }
 

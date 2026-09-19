@@ -42,7 +42,7 @@ json := Outer { inner: Inner { value: 42 } }.toSerialObject()
 
 ## Serialization — `.toSerialObject()`
 
-Every eligible class or struct instance has a `.toSerialObject()` method that returns a `SerialObject` value. `SerialObject` is the intrinsic alias for `Map<string, SerialValue>`, so it can still be passed anywhere a `SerialValue` is expected.
+Every eligible class or struct instance has a `.toSerialObject()` method that returns a `SerialObject` value. `SerialObject` is the intrinsic alias for `readonly Map<string, SerialValue>`, so it can still be passed anywhere a `SerialValue` is expected.
 
 ```doof
 class User {

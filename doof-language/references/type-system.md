@@ -180,22 +180,23 @@ Accepted shapes:
 
 - `none` (serialized as JSON `null`)
 - `bool`, `byte`, `int`, `long`, `float`, `double`, `string`
-- `SerialValue[]`
-- `Map<string, SerialValue>`
+- `readonly SerialValue[]`
+- `readonly byte[]` (formatted by `std/json` as a base64 JSON string)
+- `readonly Map<string, SerialValue>`
 - unions composed from those cases
 
 Rules:
 
 - Contextual typing keeps literals ergonomic.
 - Pre-built `int[]` or `Map<string, int>` values do not implicitly convert to `SerialValue`.
-- `SerialObject` is a built-in alias for the exact object carrier type `Map<string, SerialValue>`.
+- `SerialObject` is a built-in alias for the exact object carrier type `readonly Map<string, SerialValue>`.
 - `long` values are preserved, including parsed JSON integers beyond `int` range.
 - Object key insertion order is preserved for literals, formatting, and generated JSON methods.
-- Assignments from `SerialValue[]` or `Map<string, SerialValue>` preserve shared-container reference semantics.
+- Assignments from `readonly SerialValue[]` or `readonly Map<string, SerialValue>` preserve shared-container reference semantics. `readonly byte[]` uses a dedicated byte carrier; `std/json` formats it as a padded standard base64 JSON string.
 
 ```doof
 payload: SerialObject := { "name": "Ada" }
-row: Map<string, SerialValue> := payload
+row: readonly Map<string, SerialValue> := payload
 ```
 
 ## Enum Types

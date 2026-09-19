@@ -1183,7 +1183,7 @@ function testRequest(request: CliRequest): int {
   if request.listOnly && request.jsonOutput {
     let values: SerialValue[] = []
     for test of selected { values.push(test.toSerialObject()) }
-    println(formatJsonValue(values))
+    println(formatJsonValue(values.cloneReadonly()))
     return 0
   }
   if selected.length == 0 {
@@ -1379,7 +1379,7 @@ function testRequest(request: CliRequest): int {
     }
   }
   if request.reportJson != "" {
-    _ := writeText(request.reportJson, formatJsonValue(resultValues)) else error {
+    _ := writeText(request.reportJson, formatJsonValue(resultValues.cloneReadonly())) else error {
       println("error: Could not write test report: " + request.reportJson)
       return 1
     }
@@ -1752,4 +1752,4 @@ function main(args: string[]): int {
   return emitRequest(parsed.request!)
 }
 
-export function structuredTestResult(id: string, exitCode: int, output: string): Map<string, SerialValue> => { "id": id, "exitCode": exitCode, "output": output }
+export function structuredTestResult(id: string, exitCode: int, output: string): SerialObject => { "id": id, "exitCode": exitCode, "output": output }

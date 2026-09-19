@@ -1156,8 +1156,9 @@ inline std::optional<Target> checked_numeric_as(Source value) {
 struct SerialValue;
 
 using SerialArray = std::shared_ptr<std::vector<SerialValue>>;
+using SerialBytes = std::shared_ptr<std::vector<uint8_t>>;
 using SerialObject = std::shared_ptr<ordered_map<std::string, SerialValue>>;
-using SerialStorage = std::variant<std::monostate, bool, int32_t, int64_t, float, double, std::string, SerialArray, SerialObject>;
+using SerialStorage = std::variant<std::monostate, bool, int32_t, int64_t, float, double, std::string, SerialArray, SerialBytes, SerialObject>;
 
 struct SerialValue : SerialStorage {
     using SerialStorage::SerialStorage;
@@ -1204,6 +1205,10 @@ inline bool serial_is_string(const SerialValue& value) {
     return std::holds_alternative<std::string>(serial_storage(value));
 }
 
+inline bool serial_is_bytes(const SerialValue& value) {
+    return std::holds_alternative<SerialBytes>(serial_storage(value));
+}
+
 inline bool serial_is_array(const SerialValue& value) {
     return std::holds_alternative<SerialArray>(serial_storage(value));
 }
@@ -1216,7 +1221,7 @@ inline const char* serial_type_name(const SerialValue& value) {
     if (serial_is_null(value)) return "null";
     if (serial_is_boolean(value)) return "boolean";
     if (serial_is_number(value)) return "number";
-    if (serial_is_string(value)) return "string";
+    if (serial_is_string(value) || serial_is_bytes(value)) return "string";
     if (serial_is_array(value)) return "array";
     if (serial_is_object(value)) return "object";
     return "unknown";
@@ -1226,6 +1231,24 @@ inline const SerialArray::element_type* serial_as_array(const SerialValue& value
     const auto* array = std::get_if<SerialArray>(&serial_storage(value));
     if (array == nullptr || !*array) return nullptr;
     return array->get();
+}
+
+inline std::string serial_bytes_to_base64(const SerialBytes& bytes) {
+    static constexpr char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    if (bytes == nullptr) return "";
+    std::string result;
+    result.reserve((bytes->size() + 2) / 3 * 4);
+    for (size_t index = 0; index < bytes->size(); index += 3) {
+        const uint32_t first = (*bytes)[index];
+        const uint32_t second = index + 1 < bytes->size() ? (*bytes)[index + 1] : 0;
+        const uint32_t third = index + 2 < bytes->size() ? (*bytes)[index + 2] : 0;
+        const size_t remaining = bytes->size() - index;
+        result.push_back(alphabet[(first >> 2) & 0x3F]);
+        result.push_back(alphabet[((first & 0x03) << 4) | ((second >> 4) & 0x0F)]);
+        result.push_back(remaining > 1 ? alphabet[((second & 0x0F) << 2) | ((third >> 6) & 0x03)] : '=');
+        result.push_back(remaining > 2 ? alphabet[third & 0x3F] : '=');
+    }
+    return result;
 }
 
 inline const SerialObject::element_type* serial_as_object(const SerialValue& value) {

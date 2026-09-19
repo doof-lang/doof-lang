@@ -10,6 +10,7 @@ import {
   ResolvedType, ResultResolvedType, WeakResolvedType,
 } from "./semantic"
 import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, usesNullableSingleValueRepresentation, usesVariantRepresentation } from "./emitter-types"
+import { isSerialBytesType } from "./checker-types"
 
 export class CaseTypePatternEmission {
   condition: string
@@ -115,7 +116,15 @@ function emitJsonValuePattern(patternType: ResolvedType, subject: string, bindin
       else if primitive.name == "double" { condition = "doof::serial_is_number(" + subject + ")"; value = "doof::serial_as_double(" + subject + ")" }
       else { panic("Unsupported primitive SerialValue case pattern " + primitive.name) }
     }
-    _: ArrayResolvedType -> { condition = "doof::serial_is_array(" + subject + ")"; value = "std::get<doof::SerialArray>(doof::serial_storage(" + subject + "))" }
+    array: ArrayResolvedType -> {
+      if isSerialBytesType(array) {
+        condition = "doof::serial_is_bytes(" + subject + ")"
+        value = "std::get<doof::SerialBytes>(doof::serial_storage(" + subject + "))"
+      } else {
+        condition = "doof::serial_is_array(" + subject + ")"
+        value = "std::get<doof::SerialArray>(doof::serial_storage(" + subject + "))"
+      }
+    }
     _: MapResolvedType -> { condition = "doof::serial_is_object(" + subject + ")"; value = "doof::serial_object(" + subject + ")" }
     _: NoneType -> { condition = "doof::serial_is_null(" + subject + ")"; value = emitCarrierAbsence(patternType, EmitContext {}) }
     _: SerialValueResolvedType -> { }

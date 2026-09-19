@@ -48,6 +48,7 @@ import { parseJsonValue, parseJsonObject, formatJsonValue } from "std/json"
 - `parseJsonValue(text): Result<SerialValue, string>` parses any JSON value.
 - `parseJsonObject(text): Result<SerialObject, string>` rejects non-object roots.
 - `formatJsonValue(value): string` emits compact JSON.
+- `std/json` formats `readonly byte[]` as padded standard base64 JSON strings; parsing those strings does not implicitly convert them back to bytes.
 
 Integral numbers become `int` or `long` when representable; fractional and
 exponent forms become `double`. Parse errors include line and column.

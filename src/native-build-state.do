@@ -83,7 +83,7 @@ export function parseMsvcDependencies(source: string): string[] {
   dataValue := root.get("Data") else { return [] }
   data := dataValue as SerialObject else { return [] }
   includesValue := data.get("Includes") else { return [] }
-  includes := includesValue as SerialValue[] else { return [] }
+  includes := includesValue as readonly SerialValue[] else { return [] }
   let result: string[] = []
   for value of includes {
     path := value as string else { continue }

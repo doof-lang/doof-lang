@@ -302,7 +302,7 @@ function addMember(
 }
 
 function memberJson(member: BundleMember): SerialObject {
-  let value: SerialObject = {}
+  let value: Map<string, SerialValue> = {}
   value.set("kind", member.kind)
   value.set("packageName", member.packageName)
   value.set("path", member.logicalPath)
@@ -310,7 +310,7 @@ function memberJson(member: BundleMember): SerialObject {
   value.set("sourceBytes", member.sourceBytes)
   value.set("compressedBytes", long(member.data.length))
   value.set("sha256", member.sha256)
-  return value
+  return value.cloneReadonly()
 }
 
 function canonicalBundleDigest(
@@ -351,24 +351,24 @@ function bundleIndex(
   let licenseValues: SerialValue[] = []
   for package_ of discovered {
     for licensePath of requiredLicensePaths(package_.name, targets) {
-      let license: SerialObject = {}
+      let license: Map<string, SerialValue> = {}
       license.set("packageName", package_.name)
       license.set("path", licensePath)
       license.set("member", "native/" + package_.name.substring(4, package_.name.length) + ".tar.zst")
-      licenseValues.push(license)
+      licenseValues.push(license.cloneReadonly())
     }
   }
 
-  let root: SerialObject = {}
+  let root: Map<string, SerialValue> = {}
   root.set("schemaVersion", 4)
   root.set("format", "doof-stdlib-tar-of-tar-zst")
   root.set("bundleDigest", bundleDigest)
   root.set("zstdLevel", level)
-  root.set("targets", targetValues)
-  root.set("packages", packages)
-  root.set("members", memberValues)
-  root.set("licenseFiles", licenseValues)
-  return encoded(formatJsonValue(root) + "\n")
+  root.set("targets", targetValues.cloneReadonly())
+  root.set("packages", packages.cloneReadonly())
+  root.set("members", memberValues.cloneReadonly())
+  root.set("licenseFiles", licenseValues.cloneReadonly())
+  return encoded(formatJsonValue(root.cloneReadonly()) + "\n")
 }
 
 export function buildStdlibBundle(

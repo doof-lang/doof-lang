@@ -7,7 +7,7 @@ import { resolveMember } from "./checker-resolution"
 import { ActorType, ArrayResolvedType, Binding, ClassType, EnumType, InterfaceType, Diagnostic, FunctionParamType, FunctionType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
 
 import { CheckedMember, ArrayLiteral, AsExpression, AssignmentExpression, BinaryExpression, Block, BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ConstructExpression, DoubleLiteral, DotShorthand, EnumDeclaration, Expression, FloatLiteral, FunctionDeclaration, IfExpression, Identifier, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral, ObjectLiteral, SourceSpan, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression, CatchExpression, CaseExpression, CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern, AsyncExpression, RetireExpression, ActorCreationExpression } from "./ast"
-import { actorType, classType, functionType, isNumeric, isJsonValueType, resultType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
+import { actorType, classType, functionType, isNumeric, isJsonValueType, isSerialBytesType, resultType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { asyncResultViolation } from "./checker-async"
@@ -1070,8 +1070,8 @@ export function isJsonAsTarget(state: CheckerState, target: ResolvedType): bool 
     primitiveType: PrimitiveType -> {
       return primitiveType.name == "bool" || primitiveType.name == "string" || isNumeric(primitiveType)
     }
-    array: ArrayResolvedType -> { return isJsonValueType(array.elementType) }
-    map: MapResolvedType -> { return sameType(map.keyType, primitive("string")) && isJsonValueType(map.valueType) }
+    array: ArrayResolvedType -> { return (array.readonly_ && isJsonValueType(array.elementType)) || isSerialBytesType(array) }
+    map: MapResolvedType -> { return map.readonly_ && sameType(map.keyType, primitive("string")) && isJsonValueType(map.valueType) }
     _: SerialValueResolvedType -> { return true }
     _ -> { return false }
   }

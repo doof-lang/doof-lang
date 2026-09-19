@@ -250,11 +250,11 @@ function receiptMatches(path: string, provider: StdlibBundleProvider, packageNam
 }
 
 function receiptSource(provider: StdlibBundleProvider, packageName: string): string {
-  let value: SerialObject = {}
+  let value: Map<string, SerialValue> = {}
   value.set("schemaVersion", 1)
   value.set("bundleDigest", provider.index.bundleDigest)
   value.set("packageName", packageName)
-  return formatJsonValue(value) + "\n"
+  return formatJsonValue(value.cloneReadonly()) + "\n"
 }
 
 function readCompressedMember(provider: StdlibBundleProvider, member: StdlibBundleMember): Result<readonly byte[], string> {

@@ -2,17 +2,17 @@ import { Assert } from "std/assert"
 import { MacOSAppConfig, macOSCodesignArguments, macOSPackageArchiveName, renderMacOSInfoPlist } from "./macos-app"
 
 export function testRendersMacOSInfoPlistAndCustomMetadata(): none {
-  custom: SerialObject := {}
+  custom: Map<string, SerialValue> := {}
   custom.set("NSLocalNetworkUsageDescription", "Find nearby players & hosts.")
   services: SerialValue[] := ["_doof._tcp"]
-  custom.set("NSBonjourServices", services)
+  custom.set("NSBonjourServices", services.cloneReadonly())
   plist := renderMacOSInfoPlist(MacOSAppConfig {
     executableName: "DoofDemo",
     bundleId: "dev.doof.demo",
     displayName: "Doof & Demo",
     version: "1.2.3",
     iconPath: "/app/icon.png",
-    infoPlist: custom,
+    infoPlist: custom.cloneReadonly(),
     category: "public.app-category.games",
     minimumSystemVersion: "12.0",
   })

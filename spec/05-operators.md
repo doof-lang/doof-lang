@@ -479,7 +479,7 @@ wide := numeric as long  // Result<long, string>
 | `T \| none`     | `T`            | `none` check                            |
 | `U1 \| U2`      | `Ui`           | `std::holds_alternative<Ui>` variant check |
 | Numeric primitive or numeric union member | Numeric primitive | Checked numeric conversion; succeeds only when the runtime value is exactly representable in the target type |
-| `SerialValue`      | Exact JSON member (`string`, `int`, `long`, `float`, `double`, `bool`, `none`, `SerialValue[]`, `Map<string, SerialValue>`, readonly variants) | JSON carrier tag check |
+| `SerialValue`      | Exact JSON member (`string`, `int`, `long`, `float`, `double`, `bool`, `none`, `readonly SerialValue[]`, `readonly byte[]`, `readonly Map<string, SerialValue>`) | JSON carrier tag check |
 | Interface       | Class          | `std::holds_alternative<Class>` variant check |
 | `Result<V, F>`  | `T`            | If failure: pass through `F`; if success: narrow `V` to `T` |
 | `T`             | `T`            | Identity — always succeeds            |
