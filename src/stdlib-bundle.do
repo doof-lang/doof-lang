@@ -196,7 +196,7 @@ export function openStdlibBundle(path: string): Result<StdlibBundleProvider, str
   }
   indexText := BlobReader(indexData).readString(long(indexData.length))
   parsed := parseJsonValue(indexText) else error { return Failure("Invalid bundled stdlib index: " + error) }
-  index := StdlibBundleIndex.fromJsonValue(parsed, true) else error {
+  index := StdlibBundleIndex.fromSerialValue(parsed, true) else error {
     return Failure("Invalid bundled stdlib index: " + error)
   }
   try validateBundleIndex(index, entries)
@@ -241,7 +241,7 @@ function applyMode(path: string, mode: int): Result<none, string> {
 function receiptMatches(path: string, provider: StdlibBundleProvider, packageName: string): bool {
   source := readText(path) else { return false }
   parsed := parseJsonValue(source) else { return false }
-  object := parsed as JsonObject else { return false }
+  object := parsed as SerialObject else { return false }
   digestValue := object.get("bundleDigest") else { return false }
   digest := digestValue as string else { return false }
   packageValue := object.get("packageName") else { return false }
@@ -250,7 +250,7 @@ function receiptMatches(path: string, provider: StdlibBundleProvider, packageNam
 }
 
 function receiptSource(provider: StdlibBundleProvider, packageName: string): string {
-  let value: JsonObject = {}
+  let value: SerialObject = {}
   value.set("schemaVersion", 1)
   value.set("bundleDigest", provider.index.bundleDigest)
   value.set("packageName", packageName)

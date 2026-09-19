@@ -4,7 +4,7 @@ import { retainEditorScope } from "./checker-common"
 import {
   ActorType, ArrayResolvedType, Binding, CheckResult, ClassType, EnumType, InterfaceType,
   Diagnostic, FunctionParamType, FunctionType,
-  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
+  SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, SemanticLocation, SemanticSpan, SetResolvedType, Symbol,
   StreamResolvedType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType, ResolvedTypeConstraint,
 } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
@@ -557,7 +557,7 @@ function classStreamElementType(class_: ClassDeclaration): ResolvedType | none {
 }
 
 function generatedMemberName(name: string): bool {
-  return name == "metadata" || name == "toJsonObject" || name == "fromJsonValue"
+  return name == "metadata" || name == "toSerialObject" || name == "fromSerialValue"
 }
 
 function containsWeakType(type_: ResolvedType): bool {
@@ -634,7 +634,7 @@ function populateConstraint(state: CheckerState, scope: Scope, names: string[], 
   active.push(names[index])
   case annotation {
     named: NamedType -> {
-      if named.typeArgs.length == 0 && (named.name == "JsonSerializable" || named.name == "Reflectable") {
+      if named.typeArgs.length == 0 && (named.name == "Serializable" || named.name == "Reflectable") {
         scope.typeParamConstraintNames[offset + index] = named.name
         completed.push(names[index])
         return

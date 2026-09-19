@@ -58,8 +58,8 @@ whole input.
 import { parseJsonValue, parseJsonObject, formatJsonValue } from "std/json"
 ```
 
-- `parseJsonValue(text): Result<JsonValue, string>` parses any JSON value.
-- `parseJsonObject(text): Result<JsonObject, string>` rejects non-object roots.
+- `parseJsonValue(text): Result<SerialValue, string>` parses any JSON value.
+- `parseJsonObject(text): Result<SerialObject, string>` rejects non-object roots.
 - `formatJsonValue(value): string` emits compact JSON.
 
 Integral numbers become `int` or `long` when representable; fractional and

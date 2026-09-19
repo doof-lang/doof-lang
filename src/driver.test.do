@@ -38,7 +38,7 @@ export function testDebugDriverExternalLaunchIntegration(): none {
     arguments.push("--"); arguments.push("a b"); arguments.push("工具")
     result := try! run(compiler, arguments, ExecOptions { inheritOutput: true })
     Assert.equal(result.exitCode, 0)
-    launch := try! DebugLaunch.fromJsonValue(try! parseJsonValue(try! readText(descriptor)))
+    launch := try! DebugLaunch.fromSerialValue(try! parseJsonValue(try! readText(descriptor)))
     Assert.isTrue(exists(launch.executable))
     Assert.isTrue(exists(launch.symbols))
     Assert.equal(launch.arguments.length, 2)

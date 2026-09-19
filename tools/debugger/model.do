@@ -1,7 +1,7 @@
 export class DebugRow {
   key: string
   label: string
-  data: JsonObject = {}
+  data: SerialObject = {}
   let children: DebugRow[] = []
   let loaded: bool = false
   let loading: bool = false

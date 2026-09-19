@@ -402,12 +402,12 @@ function emitEnumDeclaration(declaration: EnumDeclaration, context: EmitContext)
     result = result + declaration.name + "::" + declaration.variants[i].name
   }
   result = result + "}); }\n"
-  valueRead := if declaration.backingKind == "string" then "doof::json_as_string(value)" else "doof::json_as_int(value)"
-  typeCheck := if declaration.backingKind == "string" then "doof::json_is_string(value)" else "doof::json_is_integer(value)"
+  valueRead := if declaration.backingKind == "string" then "doof::serial_as_string(value)" else "doof::serial_as_int(value)"
+  typeCheck := if declaration.backingKind == "string" then "doof::serial_is_string(value)" else "doof::serial_is_integer(value)"
   expectedType := if declaration.backingKind == "string" then "string" else "integer"
-  result = result + "inline doof::JsonValue " + declaration.name + "_toJsonValue(" + declaration.name + " value) { return doof::json_value(" + declaration.name + "_value(value)); }\n"
-  result = result + "inline doof::Result<" + declaration.name + ", std::string> " + declaration.name + "_fromJsonValue(const doof::JsonValue& value, bool) {\n"
-  result = result + "  if (!(" + typeCheck + ")) return doof::Failure<std::string>{std::string(\"Expected " + expectedType + " for enum " + declaration.name + ", got \") + doof::json_type_name(value)};\n"
+  result = result + "inline doof::SerialValue " + declaration.name + "_toSerialValue(" + declaration.name + " value) { return doof::serial_value(" + declaration.name + "_value(value)); }\n"
+  result = result + "inline doof::Result<" + declaration.name + ", std::string> " + declaration.name + "_fromSerialValue(const doof::SerialValue& value, bool) {\n"
+  result = result + "  if (!(" + typeCheck + ")) return doof::Failure<std::string>{std::string(\"Expected " + expectedType + " for enum " + declaration.name + ", got \") + doof::serial_type_name(value)};\n"
   result = result + "  auto resolved = " + declaration.name + "_fromValue(" + valueRead + ");\n"
   let validValues = ""
   for i of 0..<declaration.variants.length {

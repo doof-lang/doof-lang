@@ -14,13 +14,13 @@ class Fixture {
 }
 
 function main(arguments: string[]): none {
-  fixture := try! Fixture.fromJsonValue(try! parseJsonValue(try! readText(arguments[0])))
+  fixture := try! Fixture.fromSerialValue(try! parseJsonValue(try! readText(arguments[0])))
   issues := analyze(fixture.sources, fixture.entry)
-  let values: JsonValue[] = []
-  for issue of issues { values.push(issue.toJsonObject()) }
+  let values: SerialValue[] = []
+  for issue of issues { values.push(issue.toSerialObject()) }
   response := query(fixture.operation, fixture.module, fixture.offset, fixture.text)
-  let strict: JsonValue[] = []
-  for issue of diagnostics(fixture.sources, fixture.entry) { strict.push(issue.toJsonObject()) }
-  result: Map<string, JsonValue> := { "diagnostics": values, "strict": strict, "response": response.toJsonObject() }
+  let strict: SerialValue[] = []
+  for issue of diagnostics(fixture.sources, fixture.entry) { strict.push(issue.toSerialObject()) }
+  result: Map<string, SerialValue> := { "diagnostics": values, "strict": strict, "response": response.toSerialObject() }
   println(formatJsonValue(result))
 }

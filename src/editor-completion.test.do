@@ -31,13 +31,13 @@ export function testEditorCompletionSeparatesStaticAndInstanceMembers(): none {
           Assert.contains(labels, "count")
           Assert.notContains(labels, "read")
           Assert.notContains(labels, "value")
-          Assert.notContains(labels, "toJsonObject")
+          Assert.notContains(labels, "toSerialObject")
         } else {
           Assert.contains(labels, "read")
           Assert.contains(labels, "value")
           Assert.notContains(labels, "create")
           Assert.notContains(labels, "count")
-          Assert.notContains(labels, "fromJsonValue")
+          Assert.notContains(labels, "fromSerialValue")
         }
       }
     }

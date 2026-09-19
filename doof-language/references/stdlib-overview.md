@@ -14,7 +14,7 @@ the override and provenance records it as mutable input.
 | `std/archive` | In-memory ZIP plus raw deflate/inflate and CRC-32 |
 | `std/assert` | Source-aware test assertions |
 | `std/blob` | Binary readers/builders and text codecs |
-| `std/cli` | Declarative command-line argument parsing to `JsonObject` |
+| `std/cli` | Declarative command-line argument parsing to `SerialObject` |
 | `std/crypto` | Digests, HMAC, secret storage, encodings, UUID, JWT |
 | `std/event` | Bounded channels, main-loop integration, and timers |
 | `std/fs` | Files, directories, metadata, resources, and streams |
@@ -25,7 +25,7 @@ the override and provenance records it as mutable input.
 | `std/http-server` | Inbound HTTP/1.1 and server WebSockets |
 | `std/image` | Mutable RGBA images, views, resize, composite, encode/decode |
 | `std/js` | Persistent QuickJS-NG engine with a JSON boundary |
-| `std/json` | Parse and format `JsonValue`/`JsonObject` |
+| `std/json` | Parse and format `SerialValue`/`SerialObject` |
 | `std/log` | Structured global logging with console and rolling-file sinks |
 | `std/math` | Math constants, native functions, and numeric helpers |
 | `std/multiplayer` | Apple local peer discovery, invitations, and messages |

@@ -344,8 +344,8 @@ void test_collection_indexing() {
 
 void test_null_carriers() {
     require(doof::is_null(std::monostate{}), "stored unit was not recognized");
-    require(doof::is_null(doof::JsonValue{}), "JSON null was not recognized");
-    require(!doof::is_null(doof::JsonValue{int32_t{1}}), "JSON value was treated as null");
+    require(doof::is_null(doof::SerialValue{}), "JSON null was not recognized");
+    require(!doof::is_null(doof::SerialValue{int32_t{1}}), "JSON value was treated as null");
 
     std::optional<int32_t> optional;
     require(doof::is_null(optional), "empty optional was not recognized");

@@ -18,7 +18,7 @@ export PATH="$HOME/.doof/bin:$PATH"
 doof --version
 ```
 
-Use `bash -s -- --version 0.1.0` to select a release. Releases include the
+Use `bash -s -- --version 0.2.0` to select a release. Releases include the
 standard library and native debugger. Xcode Command Line Tools are required to
 compile native Doof programs. No administrator privileges are required.
 
@@ -61,7 +61,7 @@ contracts.
 ./dev-install.sh                   # incremental, uniquely versioned development install
 ./build.sh                         # installed-seed generated-source fixed-point verification
 ./scripts/test.sh                  # compiler, orchestration, installer, and debugger tests
-./scripts/release.sh 0.1.0          # verified, signed assets for manual publication
+./scripts/release.sh 0.2.0          # verified, signed assets for manual publication
 ```
 
 Development installs use `~/.doof/versions/dev`, selected by `~/.doof/current`.

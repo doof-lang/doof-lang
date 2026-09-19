@@ -8,7 +8,7 @@ import { SourceFile } from "./semantic"
 export function testWiderNoneJsonDecodesUnitAndContainers(): none {
   for type_ of ["none", "none[]", "Map<string, none>", "Tuple<none, int>"] {
     result := compile([SourceFile { path: "/main.do", source:
-      "class Data { value: " + type_ + " }\nfunction decode(input: JsonValue): Result<Data, string> => Data.fromJsonValue(input)",
+      "class Data { value: " + type_ + " }\nfunction decode(input: SerialValue): Result<Data, string> => Data.fromSerialValue(input)",
     }], "/main.do")
     Assert.equal(result.diagnostics.length, 0)
     Assert.isTrue(result.emission != none)
@@ -24,7 +24,7 @@ export function testCombinationNoneJsonNestedContainerGuards(): none {
   checks := ["if (_array == nullptr)", "if (_object_value == nullptr)", "if (_tuple == nullptr)"]
   for index of 0..<types.length {
     result := compile([SourceFile { path: "/main.do", source:
-      "class Data { values: " + types[index] + " }\nfunction decode(input: JsonValue): Result<Data, string> => Data.fromJsonValue(input)",
+      "class Data { values: " + types[index] + " }\nfunction decode(input: SerialValue): Result<Data, string> => Data.fromSerialValue(input)",
     }], "/main.do")
     Assert.equal(result.diagnostics.length, 0)
     Assert.isTrue(result.emission != none)
@@ -37,7 +37,7 @@ export function testCombinationNoneJsonNestedContainerGuards(): none {
 export function testReadonlyEmissionJsonUsesExplicitNames(): none {
   result := compileWithLoader([
     SourceFile { path: "/vendor/types.do", source: "export class Item { value: int = 1 }\nexport class Other {}\nexport enum Choice { One, Two }\nexport function make(): Item => Item {}" },
-    SourceFile { path: "/main.do", source: "import { Item, Other, Choice, make } from \"./vendor/types\"\nfunction decode(value: JsonValue): Result<Item, string> => Item.fromJsonValue(value)" },
+    SourceFile { path: "/main.do", source: "import { Item, Other, Choice, make } from \"./vendor/types\"\nfunction decode(value: SerialValue): Result<Item, string> => Item.fromSerialValue(value)" },
   ], "/main.do", noSourceLoader, [ModuleNamespaceMapping { logicalPrefix: "/vendor", packageName: "mapped" }])
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)

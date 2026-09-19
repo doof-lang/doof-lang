@@ -18,7 +18,7 @@ export function testDebugDriverWritesExternalLaunch(): none {
   launch := DebugLaunch { executable: "/tmp/app space", source: "/tmp/main.do", directory: "/tmp", symbols: "/tmp/app space.dSYM", arguments: ["a b", "工具"] }
   Assert.equal(writeDebugLaunch(launch, path), 0)
   Assert.isTrue(exists(path))
-  decoded := try! DebugLaunch.fromJsonValue(try! parseJsonValue(try! readText(path)))
+  decoded := try! DebugLaunch.fromSerialValue(try! parseJsonValue(try! readText(path)))
   Assert.equal(decoded.arguments[1], "工具")
   Assert.equal(decoded.executable, launch.executable)
   try! remove(path)

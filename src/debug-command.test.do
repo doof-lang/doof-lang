@@ -5,7 +5,7 @@ import { formatJsonValue, parseJsonValue } from "std/json"
 export function testDebugLaunchContract(): none {
   launch := DebugLaunch { executable: "/tmp/工具 app", source: "/tmp/main.do", directory: "/tmp", symbols: "/tmp/app.dSYM", arguments: ["a b", "\"quoted\""] }
   Assert.equal(debugLaunchError(launch), "")
-  decoded := try! DebugLaunch.fromJsonValue(try! parseJsonValue(formatJsonValue(launch.toJsonObject())))
+  decoded := try! DebugLaunch.fromSerialValue(try! parseJsonValue(formatJsonValue(launch.toSerialObject())))
   Assert.equal(decoded.executable, launch.executable)
   Assert.equal(decoded.arguments[1], "\"quoted\"")
   plan := planDebuggerRun("/tmp/Doof Debugger.app", "/tmp/a b.json", "/tmp")

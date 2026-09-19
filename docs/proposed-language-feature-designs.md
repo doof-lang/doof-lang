@@ -66,7 +66,7 @@ cross-phase and runtime review.
 ### Summary
 
 A named type alias whose underlying type is a union of JSON-serializable classes
-can synthesize `Alias.fromJsonValue(...)`. A shared literal-valued string field
+can synthesize `Alias.fromSerialValue(...)`. A shared literal-valued string field
 selects the concrete class to decode.
 
 The language specification already describes this surface. This proposal
@@ -95,9 +95,9 @@ Each member can decode itself, but callers should not have to duplicate the
 discriminator switch:
 
 ```doof
-function decodeShape(value: JsonValue): Result<Shape, string> {
+function decodeShape(value: SerialValue): Result<Shape, string> {
     // This should be generated from the alias declaration.
-    return Shape.fromJsonValue(value)
+    return Shape.fromSerialValue(value)
 }
 ```
 
@@ -112,19 +112,19 @@ No new declaration syntax is required:
 ```doof
 type Shape = Circle | Rectangle
 
-result := Shape.fromJsonValue({
+result := Shape.fromSerialValue({
     kind: "circle",
     radius: 5.0,
 })
 
-lenient := Shape.fromJsonValue(payload, true)
+lenient := Shape.fromSerialValue(payload, true)
 ```
 
 The synthetic signature is:
 
 ```doof
-Shape.fromJsonValue(
-    value: JsonValue,
+Shape.fromSerialValue(
+    value: SerialValue,
     lenient: bool = false,
 ): Result<Shape, string>
 ```
@@ -167,7 +167,7 @@ class Rectangle { width, height: double }
 type Shape = Circle | Rectangle
 
 // Compile error: no shared literal string discriminator.
-value := Shape.fromJsonValue(payload)
+value := Shape.fromSerialValue(payload)
 ```
 
 Field-based guessing is unstable when a default is added, a field is renamed,
@@ -182,24 +182,24 @@ The generated decoder performs these steps in order:
 2. Find the discriminator field.
 3. Require a JSON string discriminator value.
 4. Select the member with that literal value.
-5. Invoke that member's generated `fromJsonValue(value, lenient)`.
+5. Invoke that member's generated `fromSerialValue(value, lenient)`.
 6. Promote a successful member into the alias union.
 7. Forward a member decoding failure unchanged.
 
 Example outcomes:
 
 ```doof
-Shape.fromJsonValue("circle")
+Shape.fromSerialValue("circle")
 // Failure("Expected JSON object")
 
-Shape.fromJsonValue({ radius: 5.0 })
+Shape.fromSerialValue({ radius: 5.0 })
 // Failure("Missing or invalid discriminator field \"kind\"")
 
-Shape.fromJsonValue({ kind: "triangle" })
+Shape.fromSerialValue({ kind: "triangle" })
 // Failure("Unknown kind: \"triangle\"")
 
-Shape.fromJsonValue({ kind: "circle", radius: "large" })
-// Failure from Circle.fromJsonValue concerning radius.
+Shape.fromSerialValue({ kind: "circle", radius: "large" })
+// Failure from Circle.fromSerialValue concerning radius.
 ```
 
 ### Nested use
@@ -214,7 +214,7 @@ class Drawing {
     named: Map<string, Shape>
 }
 
-drawing := Drawing.fromJsonValue({
+drawing := Drawing.fromSerialValue({
     primary: { kind: "circle", radius: 2.0 },
     layers: [
         { kind: "rectangle", width: 10.0, height: 4.0 },
@@ -253,7 +253,7 @@ Core type operations use `underlying`:
 
 Alias-sensitive operations retain the wrapper:
 
-- `Alias.fromJsonValue` lookup;
+- `Alias.fromSerialValue` lookup;
 - generated JSON eligibility for annotated fields;
 - schema naming and `$defs` ownership;
 - diagnostics; and
@@ -261,12 +261,12 @@ Alias-sensitive operations retain the wrapper:
 
 An implementation may instead decorate the source annotation and member access
 with the alias symbol, but it must also retain alias provenance for nested JSON
-fields. A purely syntactic special case at `Shape.fromJsonValue` is
+fields. A purely syntactic special case at `Shape.fromSerialValue` is
 insufficient.
 
 ### Checker and emitter contract
 
-When the checker accepts `Shape.fromJsonValue(...)`, it decorates the call with:
+When the checker accepts `Shape.fromSerialValue(...)`, it decorates the call with:
 
 - the alias symbol;
 - the resolved union result type;
@@ -281,12 +281,12 @@ discriminator.
 The generated C++ is conceptually:
 
 ```cpp
-doof::Result<Shape, std::string> Shape_fromJsonValue(
-    const doof::JsonValue& json,
+doof::Result<Shape, std::string> Shape_fromSerialValue(
+    const doof::SerialValue& json,
     bool lenient
 ) {
     // Validate object and discriminator.
-    // Call Circle::fromJsonValue or Rectangle::fromJsonValue.
+    // Call Circle::fromSerialValue or Rectangle::fromSerialValue.
     // Promote the successful shared_ptr into Shape's std::variant.
 }
 ```
@@ -304,7 +304,7 @@ Recommended diagnostics include:
 
 ```text
 Automatic JSON deserialization is available only on named union aliases;
-name this union with `type` before calling `fromJsonValue`
+name this union with `type` before calling `fromSerialValue`
 ```
 
 ```text
@@ -318,7 +318,7 @@ field with distinct values; "Circle.kind" and "Rectangle.kind" both use
 "shape"
 ```
 
-The error is attached to the `fromJsonValue` member access. Secondary spans may
+The error is attached to the `fromSerialValue` member access. Secondary spans may
 point to conflicting discriminator declarations.
 
 ### Tests
@@ -372,7 +372,7 @@ become the reusable capability vocabulary for generics.
 Doof already validates concrete type arguments against generic constraints.
 However, an ordinary constraint is of limited value if the generic body cannot
 use the members guaranteed by that constraint. Compiler-known constraints such
-as `JsonSerializable` and `Reflectable` currently receive special member
+as `Serializable` and `Reflectable` currently receive special member
 behavior. User-defined structural interfaces should receive the same general
 principle without becoming compiler intrinsics.
 
@@ -427,7 +427,7 @@ The checker distinguishes three categories:
    must be assignable to one member of the constraint.
 2. **Structural capability constraints**, such as `T: Hashable`. A concrete
    class, and eventually a struct, must structurally implement the interface.
-3. **Compiler capability constraints**, currently `JsonSerializable` and
+3. **Compiler capability constraints**, currently `Serializable` and
    `Reflectable`, which expose documented generated static members.
 
 The categories can share one resolved constraint representation while retaining
@@ -1808,7 +1808,7 @@ Widening to an interface cannot hide mutable storage.
 ### JSON and metadata
 
 Interface JSON dispatch should include struct implementations once struct
-conformance exists. Because struct `fromJsonValue` returns a direct value, the
+conformance exists. Because struct `fromSerialValue` returns a direct value, the
 generated dispatcher promotes that value directly into the interface variant.
 
 The discriminator requirements remain unchanged: every implementation must

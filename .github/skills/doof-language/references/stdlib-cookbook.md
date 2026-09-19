@@ -36,7 +36,7 @@ class Config {
 
 function decodeConfig(text: string): Result<Config, string> {
   try value := parseJsonValue(text)
-  try config := Config.fromJsonValue(value)
+  try config := Config.fromSerialValue(value)
   return Success { value: config }
 }
 ```
@@ -57,7 +57,7 @@ function loadConfig(path: string): Result<Config, string> {
 
 ## Build a typed command-line tool
 
-Let `std/cli` validate argv shape, decode its flat `JsonObject` into a class,
+Let `std/cli` validate argv shape, decode its flat `SerialObject` into a class,
 then use `std/parse` for numeric strings. Print both the error and generated
 usage for argv mistakes.
 
@@ -82,7 +82,7 @@ function main(args: string[]): int {
     println(error.usage)
     return 2
   }
-  options := RawOptions.fromJsonValue(parsed.value, true) else error {
+  options := RawOptions.fromSerialValue(parsed.value, true) else error {
     println("invalid options: ${error}")
     return 2
   }
@@ -254,7 +254,7 @@ function fetchUser(client: HttpClient, id: int): Result<User, string> {
     return Failure { error: "HTTP ${response.status}: ${response.statusText}" }
   }
   try json := response.getJsonValue()
-  return User.fromJsonValue(json)
+  return User.fromSerialValue(json)
 }
 
 client := createClient()
@@ -330,7 +330,7 @@ function loadTodos(path: string): Result<Todo[], SqliteError> {
 
   for item of rows {
     try row := item
-    todo := Todo.fromJsonValue(toJsonRow(row), true) else error {
+    todo := Todo.fromSerialValue(toJsonRow(row), true) else error {
       try close(database)
       return Failure {
         error: SqliteError {

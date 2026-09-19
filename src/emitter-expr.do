@@ -7,7 +7,7 @@
 import { CarrierPosition } from "./emitter-carriers"
 import { emitCarrierConversion } from "./emitter-carrier-values"
 import { ActorCreationExpression, ArrayLiteral, AsExpression, AssignmentExpression, AsyncExpression, BinaryExpression, BoolLiteral, CallExpression, CallerExpression, CaseExpression, CatchExpression, CharLiteral, ConstructExpression, DoubleLiteral, DotShorthand, Expression, FloatLiteral, Identifier, IfExpression, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NoneLiteral, ObjectLiteral, RetireExpression, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression } from "./ast"
-import { ClassType, JsonValueResolvedType, NoneType, PrimitiveType, ResolvedType } from "./semantic"
+import { ClassType, SerialValueResolvedType, NoneType, PrimitiveType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitAs, emitAssignment, emitBinary, emitIdentifier, emitIndex, emitMember, emitUnary, cppIdentifier as emitCppIdentifier } from "./emitter-expr-ops"
 import { emitCall } from "./emitter-expr-calls"
@@ -92,20 +92,20 @@ export function emitDiscardedExpression(expression: Expression, context: EmitCon
   }
 }
 
-// Literal collection emitters already construct JsonValue directly. Other
+// Literal collection emitters already construct SerialValue directly. Other
 // expressions need an explicit runtime wrapper when contextual typing widens a
-// primitive or an exact JSON carrier into JsonValue.
+// primitive or an exact JSON carrier into SerialValue.
 function emitJsonValuePromotion(expression: Expression, value: string, source: ResolvedType | none, expected: ResolvedType | none): string {
   if source == none || expected == none { return value }
   case expected! {
-    _: JsonValueResolvedType -> { }
+    _: SerialValueResolvedType -> { }
     _ -> { return value }
   }
   case source! {
-    _: JsonValueResolvedType -> { return value }
+    _: SerialValueResolvedType -> { return value }
     _: NoneType -> { return value }
     primitive: PrimitiveType -> {
-      if primitive.name == "byte" || primitive.name == "char" { return "doof::json_value(static_cast<int32_t>(" + value + "))" }
+      if primitive.name == "byte" || primitive.name == "char" { return "doof::serial_value(static_cast<int32_t>(" + value + "))" }
     }
     _ -> { }
   }
@@ -114,7 +114,7 @@ function emitJsonValuePromotion(expression: Expression, value: string, source: R
     _: ObjectLiteral -> { return value }
     _ -> { }
   }
-  return "doof::json_value(" + value + ")"
+  return "doof::serial_value(" + value + ")"
 }
 
 export function cppIdentifier(name: string): string { return emitCppIdentifier(name) }

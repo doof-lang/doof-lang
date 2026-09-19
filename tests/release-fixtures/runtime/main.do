@@ -112,8 +112,8 @@ function lambdaResult(): int {
 }
 
 function jsonResult(): int {
-  config := Config.fromJsonValue({ name: "Ada", enabled: true }) else { return 90 }
-  _ := Config.fromJsonValue({ name: 4, enabled: true }) else error {
+  config := Config.fromSerialValue({ name: "Ada", enabled: true }) else { return 90 }
+  _ := Config.fromSerialValue({ name: 4, enabled: true }) else error {
     if error.contains("Field \"name\" expected string") { return config.count }
     return 91
   }
@@ -132,7 +132,7 @@ class EnumPayload {
   byName: Map<string, WireState>
 }
 
-function decodeJson<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value)
+function decodeJson<T: Serializable>(value: SerialValue): Result<T, string> => T.fromSerialValue(value)
 
 function maybeValueState(present: bool): ValueState | none {
   if present { return ValueState.Ready }
@@ -146,11 +146,11 @@ function enumResult(): int {
   if WireState.Ready.value != "ready" || string(WireState.Ready) != "Ready" { return 91 }
   if ValueState.fromName("Ready")!.value != 7 || ValueState.fromValue(8)!.name != "Done" { return 92 }
   if ValueState.values()[1] != ValueState.Ready { return 93 }
-  direct := ValueState.Ready.toJsonValue() as int else { return 94 }
+  direct := ValueState.Ready.toSerialValue() as int else { return 94 }
   if direct != 7 || (try! decodeJson<WireState>("ready")) != WireState.Ready { return 95 }
   resolved := maybeValueState(true) else { return 96 }
   if acceptValueState(resolved) != 7 { return 97 }
-  payload := EnumPayload.fromJsonValue({
+  payload := EnumPayload.fromSerialValue({
     state: 7,
     wire: "ready",
     states: [0, 8],
@@ -158,12 +158,12 @@ function enumResult(): int {
     byName: { current: "ready" }
   }) else { return 98 }
   if payload.state != ValueState.Ready || payload.states[1] != ValueState.Done { return 99 }
-  encoded := payload.toJsonObject()
+  encoded := payload.toSerialObject()
   encodedState := encoded["state"] as int else { return 100 }
   if encodedState != 7 { return 101 }
-  _ := EnumPayload.fromJsonValue({ state: 7, wire: "ready", states: [0, 99], pair: ["pending", 7], byName: {} }) else error {
+  _ := EnumPayload.fromSerialValue({ state: 7, wire: "ready", states: [0, 99], pair: ["pending", 7], byName: {} }) else error {
     if !error.contains("Field \"states\"") || !error.contains("[1]") || !error.contains("enum ValueState") || !error.contains("0, 7, 8") { return 102 }
-    _ := ValueState.fromJsonValue("7", true) else kindError {
+    _ := ValueState.fromSerialValue("7", true) else kindError {
       if kindError.contains("Expected integer for enum ValueState") { return 7 }
       return 103
     }

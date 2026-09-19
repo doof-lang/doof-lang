@@ -385,7 +385,7 @@ function escapeDoofString(value: string): string {
 /** Selects execution ids without changing the compound harness's compilation set. */
 export function selectTestsFromJson(tests: DiscoveredTest[], source: string): Result<DiscoveredTest[], string> {
   parsed := parseJsonValue(source) else { return Failure("Test selection must be a JSON array of exact test ids") }
-  values := parsed as JsonValue[] else { return Failure("Test selection must be a JSON array of exact test ids") }
+  values := parsed as SerialValue[] else { return Failure("Test selection must be a JSON array of exact test ids") }
   let ids: Set<string> = []
   for value of values {
     id := value as string else { return Failure("Test selection ids must be strings") }

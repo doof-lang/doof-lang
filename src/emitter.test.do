@@ -235,8 +235,8 @@ export function testEmitsReflectableTypeParameterMetadataAccess(): none {
 }
 
 export function testEmitsJsonValueNullCasePattern(): none {
-  result := emit("function isNull(value: JsonValue): bool => case value { _: null -> true, _ -> false }")
-  Assert.stringContains(result.source, "doof::json_is_null(")
+  result := emit("function isNull(value: SerialValue): bool => case value { _: null -> true, _ -> false }")
+  Assert.stringContains(result.source, "doof::serial_is_null(")
 }
 
 export function testLambdaCaptureExcludesItsOwnTypedParameters(): none {
@@ -325,9 +325,9 @@ export function testNarrowsCapturedMutableOptionalStructInCallback(): none {
 }
 
 export function testEmitsJsonValueAsNarrowing(): none {
-  result := emit("function read(raw: JsonValue): bool { value := raw as bool else { return false }\nreturn value }")
-  Assert.equal(result.source.contains("doof::json_is_boolean(_as_value)"), true)
-  Assert.equal(result.source.contains("doof::json_as_bool(_as_value)"), true)
+  result := emit("function read(raw: SerialValue): bool { value := raw as bool else { return false }\nreturn value }")
+  Assert.equal(result.source.contains("doof::serial_is_boolean(_as_value)"), true)
+  Assert.equal(result.source.contains("doof::serial_as_bool(_as_value)"), true)
 }
 
 export function testEmitsDotShorthandEnumMapKeys(): none {
@@ -414,8 +414,8 @@ export function testEmitsSetAndReadonlySetOperations(): none {
 }
 
 export function testEmitsNullableJsonValueAsNarrowing(): none {
-  result := emit("function read(value: JsonValue | null): Result<string, string> => value! as string")
-  Assert.equal(result.source.contains("std::get<doof::JsonValue>(value)"), true)
+  result := emit("function read(value: SerialValue | null): Result<string, string> => value! as string")
+  Assert.equal(result.source.contains("std::get<doof::SerialValue>(value)"), true)
   Assert.equal(result.source.contains("doof::unwrap_optional(value)"), false)
 }
 
@@ -451,10 +451,10 @@ export function testWrapsIdentityAsInItsDeclaredResultType(): none {
 }
 
 export function testEmitsLenientGeneratedJsonDecode(): none {
-  result := emit("class Options { enabled: bool\nname: string }\nfunction decode(value: JsonValue): Result<Options, string> => Options.fromJsonValue(value, true)")
+  result := emit("class Options { enabled: bool\nname: string }\nfunction decode(value: SerialValue): Result<Options, string> => Options.fromSerialValue(value, true)")
   Assert.equal(result.header.contains("bool _lenient = false"), false)
-  Assert.equal(result.source.contains("json_is_lenient_boolean"), true)
-  Assert.equal(result.source.contains("json_as_string_lenient"), true)
+  Assert.equal(result.source.contains("serial_is_lenient_boolean"), true)
+  Assert.equal(result.source.contains("serial_as_string_lenient"), true)
 }
 
 export function testEscapesShortCppKeywordEverywhere(): none {
@@ -1031,11 +1031,11 @@ export function testEmitsDeprecatedBuildReadonlyThroughDrainHelper(): none {
 }
 
 export function testWrapsMapSetArgumentsForJsonValueMaps(): none {
-  result := emit("function fill(receipt: Map<string, JsonValue>, version: int, name: string): void { receipt.set(\"schemaVersion\", version)\nreceipt.set(\"name\", name) }\nfunction widen(value: int): long => long(value)")
-  Assert.stringContains(result.source, "doof::map_set<std::string, doof::JsonValue>(receipt, std::string(\"schemaVersion\"), doof::json_value(version)")
-  Assert.stringContains(result.source, "doof::map_set<std::string, doof::JsonValue>(receipt, std::string(\"name\"), doof::json_value(name)")
+  result := emit("function fill(receipt: Map<string, SerialValue>, version: int, name: string): void { receipt.set(\"schemaVersion\", version)\nreceipt.set(\"name\", name) }\nfunction widen(value: int): long => long(value)")
+  Assert.stringContains(result.source, "doof::map_set<std::string, doof::SerialValue>(receipt, std::string(\"schemaVersion\"), doof::serial_value(version)")
+  Assert.stringContains(result.source, "doof::map_set<std::string, doof::SerialValue>(receipt, std::string(\"name\"), doof::serial_value(name)")
   Assert.stringContains(result.source, "static_cast<int64_t>(value)")
-  Assert.equal(result.source.contains("static_cast<int64_t>(doof::json_value(value))"), false)
+  Assert.equal(result.source.contains("static_cast<int64_t>(doof::serial_value(value))"), false)
 }
 
 export function testInvokesCallbackValuedMemberThroughCallMethod(): none {
@@ -1183,10 +1183,10 @@ export function testEmitsResultStatusMethods(): none {
 }
 
 export function testEmitsResultUnwrapOrWithSingleEvaluation(): none {
-  result := emit("function load(): Result<JsonValue, string> => Failure { error: \"no\" }\nfunction value(): JsonValue => load().unwrapOr(null)")
+  result := emit("function load(): Result<SerialValue, string> => Failure { error: \"no\" }\nfunction value(): SerialValue => load().unwrapOr(null)")
   Assert.stringContains(result.source, "auto _result_unwrap_")
   Assert.stringContains(result.source, "if (doof::is_failure(_result_unwrap_")
-  Assert.stringContains(result.source, "return doof::json_value(nullptr);")
+  Assert.stringContains(result.source, "return doof::serial_value(nullptr);")
   Assert.stringContains(result.source, "return std::move(doof::success_value(_result_unwrap_")
 }
 
@@ -1305,96 +1305,96 @@ export function testEmitsClassDestructorBody(): none {
 }
 
 export function testEmitsStrictPrimitiveJsonDeserialization(): none {
-  result := emit("class Config { name: string\nenabled: bool\ncount: int = 10\nnotes: string | null = null }\nfunction parse(value: JsonValue): Result<Config, string> => Config.fromJsonValue(value)")
-  Assert.equal(result.header.contains("static doof::Result<std::shared_ptr<Config>, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);"), true)
-  Assert.stringContains(result.source, "Config::fromJsonValue(value, false)")
-  Assert.equal(result.source.contains("const auto* _object = doof::json_as_object(_json);"), true)
+  result := emit("class Config { name: string\nenabled: bool\ncount: int = 10\nnotes: string | null = null }\nfunction parse(value: SerialValue): Result<Config, string> => Config.fromSerialValue(value)")
+  Assert.equal(result.header.contains("static doof::Result<std::shared_ptr<Config>, std::string> fromSerialValue(const doof::SerialValue& _json, bool _lenient);"), true)
+  Assert.stringContains(result.source, "Config::fromSerialValue(value, false)")
+  Assert.equal(result.source.contains("const auto* _object = doof::serial_as_object(_json);"), true)
   Assert.equal(result.source.contains("Missing required field \\\"name\\\""), true)
   Assert.equal(result.source.contains("Field \\\"enabled\\\" expected boolean but got"), true)
   Assert.equal(result.source.contains("_field_count = 10;"), true)
   Assert.equal(result.source.contains("_field_notes = std::optional<std::string>{std::nullopt};"), true)
-  Assert.equal(result.source.contains("doof::json_is_null(_iterator_notes->second)"), true)
+  Assert.equal(result.source.contains("doof::serial_is_null(_iterator_notes->second)"), true)
   Assert.equal(result.source.contains("std::make_shared<Config>(_field_name, _field_enabled, _field_count.value(), _field_notes.value())"), true)
 }
 
 export function testDeserializesDefaultedStructFieldsWithoutDefaultConstruction(): none {
-  result := emit("struct Depth { mode: int }\nclass Pass { depth: Depth = Depth { mode: 0 } }\nfunction parse(value: JsonValue): Result<Pass, string> => Pass.fromJsonValue(value)")
+  result := emit("struct Depth { mode: int }\nclass Pass { depth: Depth = Depth { mode: 0 } }\nfunction parse(value: SerialValue): Result<Pass, string> => Pass.fromSerialValue(value)")
   Assert.stringContains(result.source, "std::optional<Depth> _field_depth;")
   Assert.stringContains(result.source, "std::make_shared<Pass>(_field_depth.value())")
   Assert.equal(result.source.contains("Depth _field_depth;"), false)
 }
 
 export function testEmitsStructJsonDeserializationByValue(): none {
-  result := emit("struct Point { x: int\ny: double }\nfunction parse(value: JsonValue): Result<Point, string> => Point.fromJsonValue(value)")
-  Assert.equal(result.header.contains("static doof::Result<Point, std::string> fromJsonValue(const doof::JsonValue& _json, bool _lenient);"), true)
+  result := emit("struct Point { x: int\ny: double }\nfunction parse(value: SerialValue): Result<Point, string> => Point.fromSerialValue(value)")
+  Assert.equal(result.header.contains("static doof::Result<Point, std::string> fromSerialValue(const doof::SerialValue& _json, bool _lenient);"), true)
   Assert.equal(result.source.contains("return doof::Success<Point>{Point{_field_x, _field_y}};"), true)
   Assert.equal(result.source.contains("std::make_shared<Point>"), false)
 }
 
 export function testEmitsJsonCollectionSerializationAndDeserialization(): none {
-  result := emit("class Payload { items: JsonValue[]\nvalues: Map<string, JsonValue> }\nfunction serialize(value: Payload): JsonObject => value.toJsonObject()")
-  Assert.equal(result.header.contains("doof::JsonObject toJsonObject() const;"), true)
-  Assert.equal(result.header.contains("fromJsonValue"), false)
-  Assert.equal(result.source.contains("doof::json_value(this->items)"), true)
-  Assert.equal(result.source.contains("doof::json_value(this->values)"), true)
+  result := emit("class Payload { items: SerialValue[]\nvalues: Map<string, SerialValue> }\nfunction serialize(value: Payload): SerialObject => value.toSerialObject()")
+  Assert.equal(result.header.contains("doof::SerialObject toSerialObject() const;"), true)
+  Assert.equal(result.header.contains("fromSerialValue"), false)
+  Assert.equal(result.source.contains("doof::serial_value(this->items)"), true)
+  Assert.equal(result.source.contains("doof::serial_value(this->values)"), true)
 }
 
 export function testEmitsNullableJsonObjectSerialization(): none {
-  result := emit("class Config { values: JsonObject | null = null }\nfunction write(value: Config): JsonObject => value.toJsonObject()")
-  Assert.equal(result.source.contains("this->values ? doof::json_value(this->values) : doof::json_value(nullptr)"), true)
-  Assert.equal(result.header.contains("fromJsonValue"), false)
+  result := emit("class Config { values: SerialObject | null = null }\nfunction write(value: Config): SerialObject => value.toSerialObject()")
+  Assert.equal(result.source.contains("this->values ? doof::serial_value(this->values) : doof::serial_value(nullptr)"), true)
+  Assert.equal(result.header.contains("fromSerialValue"), false)
 }
 
 export function testDoesNotEmitAutomaticJsonForUnusedEligibleType(): none {
   result := emit("class Point { x: int\ny: int }\nfunction main(): int => Point { x: 1, y: 2 }.x")
-  Assert.stringNotContains(result.header, "toJsonObject")
-  Assert.stringNotContains(result.header, "fromJsonValue")
-  Assert.stringNotContains(result.source, "Point::toJsonObject")
-  Assert.stringNotContains(result.source, "Point::fromJsonValue")
+  Assert.stringNotContains(result.header, "toSerialObject")
+  Assert.stringNotContains(result.header, "fromSerialValue")
+  Assert.stringNotContains(result.source, "Point::toSerialObject")
+  Assert.stringNotContains(result.source, "Point::fromSerialValue")
 }
 
 export function testKeepsAutomaticJsonDemandDirectionSpecificAndTransitive(): none {
-  encoded := emit("class Inner { value: int }\nclass Outer { inner: Inner }\nfunction encode(value: Outer): JsonObject => value.toJsonObject()")
-  Assert.stringContains(encoded.source, "Outer::toJsonObject")
-  Assert.stringContains(encoded.source, "Inner::toJsonObject")
-  Assert.stringNotContains(encoded.source, "Outer::fromJsonValue")
-  Assert.stringNotContains(encoded.source, "Inner::fromJsonValue")
+  encoded := emit("class Inner { value: int }\nclass Outer { inner: Inner }\nfunction encode(value: Outer): SerialObject => value.toSerialObject()")
+  Assert.stringContains(encoded.source, "Outer::toSerialObject")
+  Assert.stringContains(encoded.source, "Inner::toSerialObject")
+  Assert.stringNotContains(encoded.source, "Outer::fromSerialValue")
+  Assert.stringNotContains(encoded.source, "Inner::fromSerialValue")
 
-  decoded := emit("class Inner { value: int }\nclass Outer { inner: Inner }\nfunction decode(value: JsonValue): Result<Outer, string> => Outer.fromJsonValue(value)")
-  Assert.stringContains(decoded.source, "Outer::fromJsonValue")
-  Assert.stringContains(decoded.source, "Inner::fromJsonValue")
-  Assert.stringNotContains(decoded.source, "Outer::toJsonObject")
-  Assert.stringNotContains(decoded.source, "Inner::toJsonObject")
+  decoded := emit("class Inner { value: int }\nclass Outer { inner: Inner }\nfunction decode(value: SerialValue): Result<Outer, string> => Outer.fromSerialValue(value)")
+  Assert.stringContains(decoded.source, "Outer::fromSerialValue")
+  Assert.stringContains(decoded.source, "Inner::fromSerialValue")
+  Assert.stringNotContains(decoded.source, "Outer::toSerialObject")
+  Assert.stringNotContains(decoded.source, "Inner::toSerialObject")
 }
 
 export function testDiscoversJsonDemandThroughGenericSpecialization(): none {
-  result := emit("class Config { name: string }\nfunction decode<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value)\nfunction main(): int { config := decode<Config>({ name: \"ok\" }) else { return 0 }\nreturn config.name.length }")
-  Assert.stringContains(result.source, "Config::fromJsonValue")
-  Assert.stringNotContains(result.source, "Config::toJsonObject")
+  result := emit("class Config { name: string }\nfunction decode<T: Serializable>(value: SerialValue): Result<T, string> => T.fromSerialValue(value)\nfunction main(): int { config := decode<Config>({ name: \"ok\" }) else { return 0 }\nreturn config.name.length }")
+  Assert.stringContains(result.source, "Config::fromSerialValue")
+  Assert.stringNotContains(result.source, "Config::toSerialObject")
 }
 
 export function testDiscoversJsonDemandThroughGenericMethodTemplate(): none {
-  result := emit("class Config { name: string }\nclass Decoder { function decode<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value) }\nfunction main(): int { config := Decoder {}.decode<Config>({ name: \"ok\" }) else { return 0 }\nreturn config.name.length }")
-  Assert.stringContains(result.source, "Config::fromJsonValue")
-  Assert.stringNotContains(result.source, "Config::toJsonObject")
+  result := emit("class Config { name: string }\nclass Decoder { function decode<T: Serializable>(value: SerialValue): Result<T, string> => T.fromSerialValue(value) }\nfunction main(): int { config := Decoder {}.decode<Config>({ name: \"ok\" }) else { return 0 }\nreturn config.name.length }")
+  Assert.stringContains(result.source, "Config::fromSerialValue")
+  Assert.stringNotContains(result.source, "Config::toSerialObject")
 }
 
 export function testEngagesOuterPresenceForNullableJsonDefaults(): none {
-  result := emit("class Config { notes: string | null = null }\nfunction read(value: JsonValue): Result<Config, string> => Config.fromJsonValue(value)")
+  result := emit("class Config { notes: string | null = null }\nfunction read(value: SerialValue): Result<Config, string> => Config.fromSerialValue(value)")
   Assert.stringContains(result.source, "std::optional<std::optional<std::string>> _field_notes;")
   Assert.stringContains(result.source, "_field_notes = std::optional<std::string>{std::nullopt};")
   Assert.stringContains(result.source, "_field_notes.value()")
 }
 
 export function testEmitsRecursiveAutomaticJsonTypes(): none {
-  result := emit("enum Kind { One, Two }\nclass Point { x: double\ny: double }\nclass Payload { kind: Kind\nids: int[]\npoints: Point[]\nselected: Point | null = null }\nfunction encode(value: Payload): JsonObject => value.toJsonObject()\nfunction decode(value: JsonValue): Result<Payload, string> => Payload.fromJsonValue(value)")
+  result := emit("enum Kind { One, Two }\nclass Point { x: double\ny: double }\nclass Payload { kind: Kind\nids: int[]\npoints: Point[]\nselected: Point | null = null }\nfunction encode(value: Payload): SerialObject => value.toSerialObject()\nfunction decode(value: SerialValue): Result<Payload, string> => Payload.fromSerialValue(value)")
   Assert.equal(result.header.contains("Kind_fromValue"), true)
-  Assert.stringContains(result.source, "Kind_toJsonValue(this->kind)")
-  Assert.stringContains(result.source, "Kind_fromJsonValue")
+  Assert.stringContains(result.source, "Kind_toSerialValue(this->kind)")
+  Assert.stringContains(result.source, "Kind_fromSerialValue")
   Assert.equal(result.source.contains("this->kind"), true)
   Assert.equal(result.source.contains("for (const auto& _element : *this->ids)"), true)
-  Assert.equal(result.source.contains("Point::fromJsonValue"), true)
-  Assert.stringContains(result.source, "doof::json_decode_value(Point::fromJsonValue")
+  Assert.equal(result.source.contains("Point::fromSerialValue"), true)
+  Assert.stringContains(result.source, "doof::serial_decode_value(Point::fromSerialValue")
   Assert.stringContains(result.source, "catch (const doof::JsonDecodeError& _error)")
 }
 
@@ -1408,8 +1408,8 @@ export function testEmitsValueBackedEnumHelpersAndDirectJson(): none {
     "function states(): readonly State[] => State.values()\n" +
     "function forcedName(): string => State.fromValue(7)!.name\n" +
     "function forcedValue(): int => State.fromName(\"Ready\")!.value\n" +
-    "function encode(value: WireState): JsonValue => value.toJsonValue()\n" +
-    "function decode(value: JsonValue): Result<WireState, string> => WireState.fromJsonValue(value)"
+    "function encode(value: WireState): SerialValue => value.toSerialValue()\n" +
+    "function decode(value: SerialValue): Result<WireState, string> => WireState.fromSerialValue(value)"
   )
   Assert.stringContains(result.header, "Pending = 0")
   Assert.stringContains(result.header, "Ready = 7")
@@ -1417,13 +1417,13 @@ export function testEmitsValueBackedEnumHelpersAndDirectJson(): none {
   Assert.stringContains(result.header, "inline std::string WireState_value")
   Assert.stringContains(result.header, "case WireState::Ready: return \"ready\"")
   Assert.stringContains(result.header, "State_values()")
-  Assert.stringContains(result.header, "State_toJsonValue")
-  Assert.stringContains(result.source, "WireState_toJsonValue(value)")
+  Assert.stringContains(result.header, "State_toSerialValue")
+  Assert.stringContains(result.source, "WireState_toSerialValue(value)")
   Assert.stringContains(result.source, "State_value(State::Ready)")
   Assert.stringContains(result.source, "WireState_value(WireState::Ready)")
   Assert.stringContains(result.source, "State_name(doof::unwrap_optional(State_fromValue(7)))")
   Assert.stringContains(result.source, "State_value(doof::unwrap_optional(State_fromName")
-  Assert.stringContains(result.source, "WireState_fromJsonValue(value, false)")
+  Assert.stringContains(result.source, "WireState_fromSerialValue(value, false)")
   Assert.stringContains(result.source, "doof::to_string(value)")
 }
 
@@ -1448,66 +1448,66 @@ export function testEmitsNullableEnumsThroughAllOrdinaryCarrierFlows(): none {
     "function accept(value: Outcome): Outcome => value\n" +
     "function parameter(value: Outcome | none): Outcome => value ?? Outcome.Stop\n" +
     "function postfix(value: Outcome | none): Outcome => value!\n" +
-    "function encodeForced(value: Outcome | none): JsonValue => value!.toJsonValue()\n" +
+    "function encodeForced(value: Outcome | none): SerialValue => value!.toSerialValue()\n" +
     "function cast(value: Outcome | none): Outcome { resolved := value as Outcome else { return Outcome.Stop }\nreturn resolved }\n" +
     "function assign(value: Outcome): Outcome | none { let result: Outcome | none = none\nresult = value\nreturn result }\n" +
     "function field(holder: Holder): Outcome { resolved := holder.current else { return Outcome.Stop }\nreturn accept(resolved) }\n" +
-    "function decode(value: JsonValue): Result<Holder, string> => Holder.fromJsonValue(value)"
+    "function decode(value: SerialValue): Result<Holder, string> => Holder.fromSerialValue(value)"
   )
   Assert.stringContains(result.header, "std::optional<Outcome> current")
   Assert.stringContains(result.header, "std::optional<Outcome> maybe")
   Assert.stringContains(result.header, "parameter(const std::optional<Outcome>& value)")
   Assert.stringContains(result.source, "doof::unwrap_optional(value)")
-  Assert.stringContains(result.source, "Outcome_toJsonValue(doof::unwrap_optional(value))")
+  Assert.stringContains(result.source, "Outcome_toSerialValue(doof::unwrap_optional(value))")
   Assert.stringContains(result.source, "doof::unwrap_optional(_binding_value_")
-  Assert.stringContains(result.source, "std::optional<Outcome>{doof::json_decode_value(Outcome_fromJsonValue")
+  Assert.stringContains(result.source, "std::optional<Outcome>{doof::serial_decode_value(Outcome_fromSerialValue")
   Assert.stringNotContains(result.header, "std::variant<std::monostate, Outcome>")
 }
 
 export function testEmitsUnicodeCharJsonConversionAndValidation(): none {
-  result := emit("class Mark { value: char }\nfunction decode(value: JsonValue): Result<Mark, string> => Mark.fromJsonValue(value)\nfunction encode(value: Mark): JsonObject => value.toJsonObject()")
-  Assert.stringContains(result.source, "doof::json_is_char(_iterator_value->second, _lenient)")
-  Assert.stringContains(result.source, "doof::json_as_char(_iterator_value->second, _lenient)")
-  Assert.stringContains(result.source, "doof::json_value(doof::char_to_utf8(this->value))")
-  Assert.equal(result.source.contains("json_as_string(_iterator_value->second)[0]"), false)
+  result := emit("class Mark { value: char }\nfunction decode(value: SerialValue): Result<Mark, string> => Mark.fromSerialValue(value)\nfunction encode(value: Mark): SerialObject => value.toSerialObject()")
+  Assert.stringContains(result.source, "doof::serial_is_char(_iterator_value->second, _lenient)")
+  Assert.stringContains(result.source, "doof::serial_as_char(_iterator_value->second, _lenient)")
+  Assert.stringContains(result.source, "doof::serial_value(doof::char_to_utf8(this->value))")
+  Assert.equal(result.source.contains("serial_as_string(_iterator_value->second)[0]"), false)
 }
 
 export function testEmitsTupleAutomaticJsonTypes(): none {
-  result := emit("class Point { x: int\ny: int }\nclass Payload { pair: Tuple<string, int>\npoint: Tuple<Point, bool>\noptional: Tuple<int, string> | null = null }\nfunction encode(value: Payload): JsonObject => value.toJsonObject()\nfunction decode(value: JsonValue): Result<Payload, string> => Payload.fromJsonValue(value)")
-  Assert.stringContains(result.header, "doof::JsonObject toJsonObject() const;")
-  Assert.stringContains(result.header, "fromJsonValue(const doof::JsonValue& _json")
+  result := emit("class Point { x: int\ny: int }\nclass Payload { pair: Tuple<string, int>\npoint: Tuple<Point, bool>\noptional: Tuple<int, string> | null = null }\nfunction encode(value: Payload): SerialObject => value.toSerialObject()\nfunction decode(value: SerialValue): Result<Payload, string> => Payload.fromSerialValue(value)")
+  Assert.stringContains(result.header, "doof::SerialObject toSerialObject() const;")
+  Assert.stringContains(result.header, "fromSerialValue(const doof::SerialValue& _json")
   Assert.stringContains(result.source, "std::get<0>(this->pair)")
   Assert.stringContains(result.source, "std::get<1>(this->point)")
   Assert.stringContains(result.source, "std::make_tuple(")
-  Assert.stringContains(result.source, "Point::fromJsonValue((*_tuple)[0], _lenient)")
+  Assert.stringContains(result.source, "Point::fromSerialValue((*_tuple)[0], _lenient)")
   Assert.stringContains(result.source, "std::holds_alternative<std::monostate>(this->optional)")
   Assert.stringContains(result.source, "std::variant<std::monostate, std::tuple<int32_t, std::string>>{std::monostate{}}")
 }
 
 export function testEmitsStringMapAutomaticJsonTypes(): none {
-  result := emit("class Point { x: int\ny: int }\nclass Payload { counts: Map<string, int>\npoints: Map<string, Point> }\nfunction encode(value: Payload): JsonObject => value.toJsonObject()\nfunction decode(value: JsonValue): Result<Payload, string> => Payload.fromJsonValue(value)")
-  Assert.stringContains(result.source, "std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>();")
+  result := emit("class Point { x: int\ny: int }\nclass Payload { counts: Map<string, int>\npoints: Map<string, Point> }\nfunction encode(value: Payload): SerialObject => value.toSerialObject()\nfunction decode(value: SerialValue): Result<Payload, string> => Payload.fromSerialValue(value)")
+  Assert.stringContains(result.source, "std::make_shared<doof::ordered_map<std::string, doof::SerialValue>>();")
   Assert.stringContains(result.source, "for (const auto& _entry : *this->counts)")
-  Assert.stringContains(result.source, "doof::json_value(_entry.second)")
+  Assert.stringContains(result.source, "doof::serial_value(_entry.second)")
   Assert.stringContains(result.source, "std::make_shared<doof::ordered_map<std::string, std::shared_ptr<Point>>>()")
-  Assert.stringContains(result.source, "Point::fromJsonValue(_entry.second, _lenient)")
+  Assert.stringContains(result.source, "Point::fromSerialValue(_entry.second, _lenient)")
 }
 
 export function testEmitsDiscriminatedInterfaceJsonDeserialization(): none {
-  result := emit("interface Shape { area(): double }\nclass Circle implements Shape { const kind = \"circle\"\nradius: double\narea(): double => radius * radius }\nclass Rect implements Shape { const kind = \"rect\"\nwidth: double\nheight: double\narea(): double => width * height }\nfunction decode(value: JsonValue): Result<Shape, string> => Shape.fromJsonValue(value, true)")
-  Assert.stringContains(result.header, "doof::Result<Shape, std::string> Shape_fromJsonValue(const doof::JsonValue& _json, bool _lenient);")
-  Assert.stringContains(result.source, "Shape_fromJsonValue(value, true)")
+  result := emit("interface Shape { area(): double }\nclass Circle implements Shape { const kind = \"circle\"\nradius: double\narea(): double => radius * radius }\nclass Rect implements Shape { const kind = \"rect\"\nwidth: double\nheight: double\narea(): double => width * height }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value, true)")
+  Assert.stringContains(result.header, "doof::Result<Shape, std::string> Shape_fromSerialValue(const doof::SerialValue& _json, bool _lenient);")
+  Assert.stringContains(result.source, "Shape_fromSerialValue(value, true)")
   Assert.stringContains(result.source, "_object->find(\"kind\")")
   Assert.stringContains(result.source, "if (_discriminator == \"circle\")")
-  Assert.stringContains(result.source, "Circle::fromJsonValue(_json, _lenient)")
-  Assert.stringContains(result.source, "Rect::fromJsonValue(_json, _lenient)")
+  Assert.stringContains(result.source, "Circle::fromSerialValue(_json, _lenient)")
+  Assert.stringContains(result.source, "Rect::fromSerialValue(_json, _lenient)")
   Assert.stringContains(result.source, "doof::Success<Shape>{Shape{doof::success_value(_result)}}")
   Assert.stringContains(result.header, "const std::string kind = std::string(\"circle\")")
   Assert.stringContains(result.source, "Field \\\"kind\\\" must be \\\"circle\\\"")
 }
 
 export function testEmitsDescriptionsMetadataSchemasAndInvoke(): none {
-  result := emit("class Tool \"A tool.\" { count \"Current count.\": int = 0\nfunction run \"Runs it.\"(input \"The input.\": string): string => input }\nfunction invoke(tool: Tool, params: JsonValue): Result<JsonValue, JsonValue> => Tool.metadata.invoke(tool, \"run\", params)")
+  result := emit("class Tool \"A tool.\" { count \"Current count.\": int = 0\nfunction run \"Runs it.\"(input \"The input.\": string): string => input }\nfunction invoke(tool: Tool, params: SerialValue): Result<SerialValue, SerialValue> => Tool.metadata.invoke(tool, \"run\", params)")
   Assert.equal(result.header.contains("// A tool."), true)
   Assert.equal(result.header.contains("// Current count."), true)
   Assert.equal(result.header.contains("// Runs it."), true)
@@ -1518,7 +1518,7 @@ export function testEmitsDescriptionsMetadataSchemasAndInvoke(): none {
   Assert.equal(result.source.contains("\"input\""), true)
   Assert.equal(result.source.contains("\"required\""), true)
   Assert.equal(result.source.contains("_instance.run(input)"), true)
-  Assert.equal(result.source.contains("doof::Success<doof::JsonValue>"), true)
+  Assert.equal(result.source.contains("doof::Success<doof::SerialValue>"), true)
   Assert.equal(result.source.contains("Tool::_metadata"), true)
   Assert.equal(result.source.contains("metadata.invoke"), true)
 }
@@ -1530,23 +1530,23 @@ export function testEmitsEnumMetadataSchemasFromBackingValues(): none {
     "class Tool { function change(state: State, wire: WireState): State => state }\n" +
     "function metadata(): string => Tool.metadata.name"
   )
-  Assert.stringContains(result.source, "{\"type\", doof::json_value(\"integer\")}")
-  Assert.stringContains(result.source, "doof::json_value(static_cast<int32_t>(0))")
-  Assert.stringContains(result.source, "doof::json_value(static_cast<int32_t>(7))")
-  Assert.stringContains(result.source, "doof::json_value(static_cast<int32_t>(8))")
-  Assert.stringContains(result.source, "{\"type\", doof::json_value(\"string\")}")
-  Assert.stringContains(result.source, "doof::json_value(\"pending\")")
-  Assert.stringContains(result.source, "doof::json_value(\"ready\")")
+  Assert.stringContains(result.source, "{\"type\", doof::serial_value(\"integer\")}")
+  Assert.stringContains(result.source, "doof::serial_value(static_cast<int32_t>(0))")
+  Assert.stringContains(result.source, "doof::serial_value(static_cast<int32_t>(7))")
+  Assert.stringContains(result.source, "doof::serial_value(static_cast<int32_t>(8))")
+  Assert.stringContains(result.source, "{\"type\", doof::serial_value(\"string\")}")
+  Assert.stringContains(result.source, "doof::serial_value(\"pending\")")
+  Assert.stringContains(result.source, "doof::serial_value(\"ready\")")
 }
 
 export function testEmitsDirectionalJsonDependenciesForMetadataInvoke(): none {
   result := emit("class Input { value: int }\nclass Output { label: string }\nclass Tool { function convert(input: Input): Output => Output { label: string(input.value) } }\nfunction metadata(): string => Tool.metadata.name")
-  Assert.stringContains(result.source, "Input::fromJsonValue")
-  Assert.stringNotContains(result.source, "Input::toJsonObject")
-  Assert.stringContains(result.source, "Output::toJsonObject")
-  Assert.stringNotContains(result.source, "Output::fromJsonValue")
-  Assert.stringNotContains(result.source, "Tool::toJsonObject")
-  Assert.stringNotContains(result.source, "Tool::fromJsonValue")
+  Assert.stringContains(result.source, "Input::fromSerialValue")
+  Assert.stringNotContains(result.source, "Input::toSerialObject")
+  Assert.stringContains(result.source, "Output::toSerialObject")
+  Assert.stringNotContains(result.source, "Output::fromSerialValue")
+  Assert.stringNotContains(result.source, "Tool::toSerialObject")
+  Assert.stringNotContains(result.source, "Tool::fromSerialValue")
 }
 
 export function testDoesNotEmitMetadataWhenUnused(): none {
@@ -1557,9 +1557,9 @@ export function testDoesNotEmitMetadataWhenUnused(): none {
 
 export function testDoesNotEmitJsonMethodsThatDependOnUnsupportedNominalFields(): none {
   result := emit("class Handler { callback: (value: int): void }\nclass Envelope { handler: Handler }")
-  Assert.equal(result.header.contains("doof::JsonObject toJsonObject() const;"), false)
-  Assert.equal(result.source.contains("Envelope::toJsonObject"), false)
-  Assert.equal(result.source.contains("Handler::fromJsonValue"), false)
+  Assert.equal(result.header.contains("doof::SerialObject toSerialObject() const;"), false)
+  Assert.equal(result.source.contains("Envelope::toSerialObject"), false)
+  Assert.equal(result.source.contains("Handler::fromSerialValue"), false)
 }
 
 export function testEmitsStructThisByValue(): none {
@@ -1616,11 +1616,11 @@ export function testEmitsExactClassCaseExpressionWithoutVariantOperations(): non
 }
 
 export function testEmitsJsonValueCaseTypeGuardsAndNarrowing(): none {
-  result := emit("function read(value: JsonValue): int { case value { text: string -> { return text.length } object: JsonObject -> { return object.size } _ -> { return 0 } } }")
-  Assert.equal(result.source.contains("if (doof::json_is_string(_case_subject))"), true)
-  Assert.equal(result.source.contains("const auto text = doof::json_as_string(_case_subject);"), true)
-  Assert.equal(result.source.contains("else if (doof::json_is_object(_case_subject))"), true)
-  Assert.equal(result.source.contains("const auto object = doof::json_object(_case_subject);"), true)
+  result := emit("function read(value: SerialValue): int { case value { text: string -> { return text.length } object: SerialObject -> { return object.size } _ -> { return 0 } } }")
+  Assert.equal(result.source.contains("if (doof::serial_is_string(_case_subject))"), true)
+  Assert.equal(result.source.contains("const auto text = doof::serial_as_string(_case_subject);"), true)
+  Assert.equal(result.source.contains("else if (doof::serial_is_object(_case_subject))"), true)
+  Assert.equal(result.source.contains("const auto object = doof::serial_object(_case_subject);"), true)
 }
 
 export function testGeneratedModulesUseRuntimeStandardLibraryBaseline(): none {
@@ -1716,10 +1716,10 @@ export function testEmitsNullableStructParametersAsOptionalValues(): none {
 }
 
 export function testEmitsUniformNoneComparisons(): none {
-  result := emit("function nullable(value: int | none): bool => value != none\nfunction jsonNull(value: JsonValue): bool => none == value")
+  result := emit("function nullable(value: int | none): bool => value != none\nfunction jsonNull(value: SerialValue): bool => none == value")
   Assert.stringContains(result.source, "(!doof::is_null(value))")
   Assert.stringContains(result.source, "doof::is_null(value)")
-  Assert.stringNotContains(result.source, "doof::json_is_null(value)")
+  Assert.stringNotContains(result.source, "doof::serial_is_null(value)")
 }
 
 export function testEmitsPositionAwareNoneRepresentations(): none {
@@ -2021,18 +2021,18 @@ export function testForwardDeclaresNativeStructuralInterfaceImplementations(): n
 }
 
 export function testEmitsIntrinsicJsonValueLiterals(): none {
-  result := emit("function main(): JsonValue { payload: JsonValue := { name: \"Ada\", values: [1, true] }\nreturn payload }")
-  Assert.equal(result.header.contains("doof::JsonValue"), true)
-  Assert.equal(result.source.contains("doof::ordered_map<std::string, doof::JsonValue>"), true)
-  Assert.equal(result.source.contains("doof::json_value"), true)
+  result := emit("function main(): SerialValue { payload: SerialValue := { name: \"Ada\", values: [1, true] }\nreturn payload }")
+  Assert.equal(result.header.contains("doof::SerialValue"), true)
+  Assert.equal(result.source.contains("doof::ordered_map<std::string, doof::SerialValue>"), true)
+  Assert.equal(result.source.contains("doof::serial_value"), true)
 }
 
 export function testParsesNativeJsonFunctionSurface(): none {
-  native := emit("export import function formatJsonValue(value: JsonValue): string from \"<json.hpp>\" as doof_json::format")
+  native := emit("export import function formatJsonValue(value: SerialValue): string from \"<json.hpp>\" as doof_json::format")
   Assert.equal(native.header.contains("#include <json.hpp>"), true)
   result := emitSources([
     SourceFile { path: "/main.do", source: "import { formatJsonValue } from \"./json\"\nfunction main(): string => formatJsonValue({ ok: true })" },
-    SourceFile { path: "/json.do", source: "export import function formatJsonValue(value: JsonValue): string from \"<json.hpp>\" as doof_json::format" },
+    SourceFile { path: "/json.do", source: "export import function formatJsonValue(value: SerialValue): string from \"<json.hpp>\" as doof_json::format" },
   ], "/main.do")
   Assert.equal(result.source.contains("doof_json::format"), true)
 }
@@ -2083,10 +2083,10 @@ export function testEmitsResultPayloadAccessThroughRuntimeHelpers(): none {
 }
 
 export function testEmitsAsNarrowingOverResultValues(): none {
-  result := emit("function parse(): Result<JsonValue, string> => Success { value: \"ok\" }\nfunction read(): Result<string, string> { value := parse() as string else { return { error: value.error } }\nreturn { value } }")
+  result := emit("function parse(): Result<SerialValue, string> => Success { value: \"ok\" }\nfunction read(): Result<string, string> { value := parse() as string else { return { error: value.error } }\nreturn { value } }")
   Assert.equal(result.source.contains("if (doof::is_failure(_as_source))"), true)
   Assert.equal(result.source.contains("auto _as_value = doof::success_value(_as_source)"), true)
-  Assert.equal(result.source.contains("doof::json_as_string(_as_value)"), true)
+  Assert.equal(result.source.contains("doof::serial_as_string(_as_value)"), true)
 }
 
 export function testDoesNotTreatFunctionsReturningNativeClassesAsConstructors(): none {

@@ -89,7 +89,7 @@ export function testQuarkWeakCaseNullableUnion(): none {
 export function testNoneCarrierJsonPatternBindsUnit(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function take(value: none): none {}\n" +
-    "function main(): none { let value: JsonValue = none\n" +
+    "function main(): none { let value: SerialValue = none\n" +
     "case value { n: none -> { take(n) }\n_ -> {} } }",
   }], "/main.do")
   Assert.equal(result.diagnostics.length, 0)

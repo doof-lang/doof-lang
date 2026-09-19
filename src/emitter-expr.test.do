@@ -44,8 +44,8 @@ export function testEmitterGapConditionalDispatchPreservesExpectedUnionOrder(): 
 }
 
 export function testNoneCarrierNamedValuesUseContextualAbsence(): none {
-  types := ["int | none", "Item | none", "Value | none", "int[] | none", "int | string | none", "JsonValue", "none"]
-  carriers := ["std::nullopt", "nullptr", "std::nullopt", "nullptr", "std::monostate{}", "doof::json_value(nullptr)", "value"]
+  types := ["int | none", "Item | none", "Value | none", "int[] | none", "int | string | none", "SerialValue", "none"]
+  carriers := ["std::nullopt", "nullptr", "std::nullopt", "nullptr", "std::monostate{}", "doof::serial_value(nullptr)", "value"]
   for index of 0..<types.length {
     result := compile([SourceFile { path: "/main.do", source:
       "class Item {}\nstruct Value { number: int }\n" +

@@ -8,10 +8,10 @@ import { CliSpec, CliArgs, CliError } from "std/cli"
 
 Build a mutable fluent schema with `CliSpec.create(program, description)`, then
 add `flag`, `option`, and `positional` entries. `parse(args)` returns a flat
-`JsonObject` in `CliArgs.value`: flags are booleans, ordinary options are
+`SerialObject` in `CliArgs.value`: flags are booleans, ordinary options are
 strings, repeatable options are string arrays, and free positionals are stored
 under `_`. Decode that object with a configuration class's
-`fromJsonValue(value, true)`; `std/cli` does not convert numeric strings.
+`fromSerialValue(value, true)`; `std/cli` does not convert numeric strings.
 
 Parsing supports long/short options, `--name=value`, attached short values,
 `--no-name`, and `--`. Errors contain both an actionable message and usage.

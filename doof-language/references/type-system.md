@@ -80,12 +80,12 @@ ratio := parseDouble("3.14")
 ## Generic Constraints
 
 Generic type parameters can be constrained with `T: Constraint`. Union
-constraints restrict type arguments to assignable members. `JsonSerializable` is
+constraints restrict type arguments to assignable members. `Serializable` is
 a compiler-known constraint-only intrinsic used for generic JSON helpers:
 
 ```doof
-function decode<T: JsonSerializable>(json: JsonValue): Result<T, string> {
-    return T.fromJsonValue(json)
+function decode<T: Serializable>(json: SerialValue): Result<T, string> {
+    return T.fromSerialValue(json)
 }
 ```
 
@@ -168,34 +168,34 @@ Error results are also ordinary unions: `Result<T, E>` is the canonical spelling
 of `Success<T> | Failure<E>`. The intrinsic arms are valid standalone types, but
 their payload members are intentionally not shared across the union.
 
-## `JsonValue`
+## `SerialValue`
 
-`JsonValue` is an exact recursive JSON carrier.
+`SerialValue` is an exact recursive JSON carrier.
 
 ```doof
-payload: JsonValue := { name: "Ada", scores: [1, 2, 3] }
+payload: SerialValue := { name: "Ada", scores: [1, 2, 3] }
 ```
 
 Accepted shapes:
 
 - `none` (serialized as JSON `null`)
 - `bool`, `byte`, `int`, `long`, `float`, `double`, `string`
-- `JsonValue[]`
-- `Map<string, JsonValue>`
+- `SerialValue[]`
+- `Map<string, SerialValue>`
 - unions composed from those cases
 
 Rules:
 
 - Contextual typing keeps literals ergonomic.
-- Pre-built `int[]` or `Map<string, int>` values do not implicitly convert to `JsonValue`.
-- `JsonObject` is a built-in alias for the exact object carrier type `Map<string, JsonValue>`.
+- Pre-built `int[]` or `Map<string, int>` values do not implicitly convert to `SerialValue`.
+- `SerialObject` is a built-in alias for the exact object carrier type `Map<string, SerialValue>`.
 - `long` values are preserved, including parsed JSON integers beyond `int` range.
 - Object key insertion order is preserved for literals, formatting, and generated JSON methods.
-- Assignments from `JsonValue[]` or `Map<string, JsonValue>` preserve shared-container reference semantics.
+- Assignments from `SerialValue[]` or `Map<string, SerialValue>` preserve shared-container reference semantics.
 
 ```doof
-payload: JsonObject := { "name": "Ada" }
-row: Map<string, JsonValue> := payload
+payload: SerialObject := { "name": "Ada" }
+row: Map<string, SerialValue> := payload
 ```
 
 ## Enum Types

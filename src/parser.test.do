@@ -502,7 +502,7 @@ export function testParsesReadonlyArrayLiteral(): none {
 }
 
 export function testParsesReadonlyMapType(): none {
-  case first("function read(value: readonly Map<string, JsonValue>): void { }") {
+  case first("function read(value: readonly Map<string, SerialValue>): void { }") {
     fn: FunctionDeclaration -> {
       case fn.params[0].type_! {
         named: NamedType -> {

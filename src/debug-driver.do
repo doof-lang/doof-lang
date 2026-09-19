@@ -46,7 +46,7 @@ export function launchDebugger(binary: string, source: string, directory: string
 export function writeDebugLaunch(launch: DebugLaunch, descriptor: string): int {
   error := debugLaunchError(launch)
   if error != "" { println("error: " + error); return 1 }
-  _ := writeText(descriptor, formatJsonValue(launch.toJsonObject())) else error {
+  _ := writeText(descriptor, formatJsonValue(launch.toSerialObject())) else error {
     println("error: Could not write debugger launch: " + string(error)); return 1
   }
   return 0

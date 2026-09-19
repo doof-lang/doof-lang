@@ -624,7 +624,7 @@ export function testChecksNoneComparisonOperands(): none {
   Assert.equal(generic.diagnostics.length, 1)
   Assert.stringContains(generic.diagnostics[0].message, "is not defined for T and none")
 
-  nullable := checked("class Box {}\nfunction hasBox(value: Box | none): bool => value != none\nfunction hasScalar(value: int | none): bool => none != value\nfunction isJsonNull(value: JsonValue): bool => value == none")
+  nullable := checked("class Box {}\nfunction hasBox(value: Box | none): bool => value != none\nfunction hasScalar(value: int | none): bool => none != value\nfunction isJsonNull(value: SerialValue): bool => value == none")
   Assert.equal(nullable.diagnostics.length, 0)
 }
 
@@ -683,11 +683,11 @@ export function testDoesNotExposeWeakFieldsAsStrongValues(): none {
 }
 
 export function testRejectsGeneratedJsonForWeakFields(): none {
-  modifier := checked("class Node { weak parent: Node }\nfunction encode(value: Node): JsonValue => value.toJsonObject()")
+  modifier := checked("class Node { weak parent: Node }\nfunction encode(value: Node): SerialValue => value.toSerialObject()")
   Assert.equal(modifier.diagnostics.length > 0, true)
   Assert.equal(modifier.diagnostics[0].message.contains("does not support automatic JSON serialization"), true)
 
-  qualifier := checked("class Node { parent: weak Node }\nfunction encode(value: Node): JsonValue => value.toJsonObject()")
+  qualifier := checked("class Node { parent: weak Node }\nfunction encode(value: Node): SerialValue => value.toSerialObject()")
   Assert.equal(qualifier.diagnostics.length > 0, true)
   Assert.equal(qualifier.diagnostics[0].message.contains("does not support automatic JSON serialization"), true)
 }
@@ -916,7 +916,7 @@ export function testCompleteDecorationGateRejectsMissingWithBindingType(): none 
 }
 
 export function testCompleteDecorationGateTraversesAsSourceAndTarget(): none {
-  source := "function narrow(raw: JsonValue): Result<string, string> => raw as string"
+  source := "function narrow(raw: SerialValue): Result<string, string> => raw as string"
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   case analysis.modules[0].program.statements[0] {
@@ -1189,12 +1189,20 @@ export function testValidatesDedicatedConstructorDeclarationShape(): none {
 }
 
 export function testChecksSupportedJsonDeserializationSurface(): none {
-  result := checked("class Config { name: string\nenabled: bool\ncount: int = 10\nnotes: string | null = null }\nfunction parse(value: JsonValue): Result<Config, string> => Config.fromJsonValue(value)")
+  result := checked("class Config { name: string\nenabled: bool\ncount: int = 10\nnotes: string | null = null }\nfunction parse(value: SerialValue): Result<Config, string> => Config.fromSerialValue(value)")
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testUsesSerialCarrierAndGeneratedMethodNames(): none {
+  accepted := checked("class Config { name: string }\nfunction encode(value: Config): SerialObject => value.toSerialObject()\nfunction decode<T: Serializable>(value: SerialValue): Result<T, string> => T.fromSerialValue(value)")
+  Assert.equal(accepted.diagnostics.length, 0)
+
+  rejected := checked("class Config { name: string }\nfunction encode(value: Config): JsonObject => value.toJsonObject()")
+  Assert.equal(rejected.diagnostics.length > 0, true)
+}
+
 export function testChecksJsonValueAsNarrowingWithDeclarationElse(): none {
-  result := checked("function read(raw: JsonValue): string { flag := raw as bool else { return \"bad\" }\nname := raw as string else { return \"bad\" }\nvalues := raw as readonly JsonValue[] else { return \"bad\" }\nreturn name + string(flag) + string(values.length) }")
+  result := checked("function read(raw: SerialValue): string { flag := raw as bool else { return \"bad\" }\nname := raw as string else { return \"bad\" }\nvalues := raw as readonly SerialValue[] else { return \"bad\" }\nreturn name + string(flag) + string(values.length) }")
   Assert.equal(result.diagnostics.length, 0)
 }
 
@@ -1209,17 +1217,17 @@ export function testChecksExpressionResultElseWithFailureCapture(): none {
 }
 
 export function testAllowsDeclarationElseContinueAndMutableMapInterior(): none {
-  result := checked("function run(values: Map<string, JsonValue>, items: JsonValue[]): void { for item of items { text := item as string else { continue }\nvalues[\"name\"] = text } }")
+  result := checked("function run(values: Map<string, SerialValue>, items: SerialValue[]): void { for item of items { text := item as string else { continue }\nvalues[\"name\"] = text } }")
   Assert.equal(result.diagnostics.length, 0)
 }
 
 export function testAllowsJsonCollectionsAndLenientGeneratedDecode(): none {
-  result := checked("class Options { enabled: bool\nname: string }\nfunction run(value: JsonValue, values: Map<string, JsonValue>, items: JsonValue[]): Result<Options, string> { values[\"items\"] = items\nreturn Options.fromJsonValue(value, true) }")
+  result := checked("class Options { enabled: bool\nname: string }\nfunction run(value: SerialValue, values: Map<string, SerialValue>, items: SerialValue[]): Result<Options, string> { values[\"items\"] = items\nreturn Options.fromSerialValue(value, true) }")
   Assert.equal(result.diagnostics.length, 0)
 }
 
 export function testDecoratesPrivateMethodParameterMembers(): none {
-  source := "class Option { readonly name: string\nreadonly multiple: bool }\nclass Spec { option(): none {}\nprivate add(option: Option, values: Map<string, JsonValue>): none { if option.multiple { raw := values.get(option.name) else { values[option.name] = []\nreturn }\nvalues[option.name] = raw } } }"
+  source := "class Option { readonly name: string\nreadonly multiple: bool }\nclass Spec { option(): none {}\nprivate add(option: Option, values: Map<string, SerialValue>): none { if option.multiple { raw := values.get(option.name) else { values[option.name] = []\nreturn }\nvalues[option.name] = raw } } }"
   analysis := createAnalyzer([SourceFile { path: "/main.do", source }]).analyze("/main.do")
   Assert.equal(createChecker(analysis).check("/main.do").diagnostics.length, 0)
   diagnostics := validateCheckedTypes(analysis)
@@ -1228,22 +1236,22 @@ export function testDecoratesPrivateMethodParameterMembers(): none {
 }
 
 export function testChecksJsonDeserializationBeforeClassDeclaration(): none {
-  result := checked("function parse(value: JsonValue): Result<Config, string> => Config.fromJsonValue(value)\nclass Config { name: string\ncount = 10 }")
+  result := checked("function parse(value: SerialValue): Result<Config, string> => Config.fromSerialValue(value)\nclass Config { name: string\ncount = 10 }")
   Assert.equal(result.diagnostics.length, 0)
 }
 
 export function testRejectsJsonDeserializationForUnsupportedFields(): none {
-  result := checked("class Handler { callback: (value: int): void }\nfunction parse(value: JsonValue): Result<Handler, string> => Handler.fromJsonValue(value)")
+  result := checked("class Handler { callback: (value: int): void }\nfunction parse(value: SerialValue): Result<Handler, string> => Handler.fromSerialValue(value)")
   Assert.equal(result.diagnostics.length > 0, true)
   Assert.equal(result.diagnostics[0].message, "Type \"Handler\" does not support automatic JSON deserialization")
 }
 
 export function testRejectsJsonMethodsForNestedUnsupportedFields(): none {
-  decode := checked("class Handler { callback: (value: int): void }\nclass Envelope { handler: Handler }\nfunction parse(value: JsonValue): Result<Envelope, string> => Envelope.fromJsonValue(value)")
+  decode := checked("class Handler { callback: (value: int): void }\nclass Envelope { handler: Handler }\nfunction parse(value: SerialValue): Result<Envelope, string> => Envelope.fromSerialValue(value)")
   Assert.equal(decode.diagnostics.length > 0, true)
   Assert.equal(decode.diagnostics[0].message, "Type \"Envelope\" does not support automatic JSON deserialization")
 
-  encode := checked("class Handler { callback: (value: int): void }\nclass Envelope { handler: Handler }\nfunction write(value: Envelope): JsonObject => value.toJsonObject()")
+  encode := checked("class Handler { callback: (value: int): void }\nclass Envelope { handler: Handler }\nfunction write(value: Envelope): SerialObject => value.toSerialObject()")
   Assert.equal(encode.diagnostics.length > 0, true)
   Assert.equal(encode.diagnostics[0].message, "Type \"Envelope\" does not support automatic JSON serialization")
 }
@@ -1254,42 +1262,42 @@ export function testChecksContextualNumericLiteralAssignments(): none {
 }
 
 export function testChecksRecursiveAutomaticJsonTypes(): none {
-  source := "enum Kind { One, Two }\nclass Point { x: double\ny: double }\nclass Payload { kind: Kind\nids: int[]\npoints: Point[]\nselected: Point | null = null }\nfunction encode(value: Payload): JsonObject => value.toJsonObject()\nfunction decode(value: JsonValue): Result<Payload, string> => Payload.fromJsonValue(value)"
+  source := "enum Kind { One, Two }\nclass Point { x: double\ny: double }\nclass Payload { kind: Kind\nids: int[]\npoints: Point[]\nselected: Point | null = null }\nfunction encode(value: Payload): SerialObject => value.toSerialObject()\nfunction decode(value: SerialValue): Result<Payload, string> => Payload.fromSerialValue(value)"
   result := checked(source)
   Assert.equal(result.diagnostics.length, 0)
 }
 
 export function testChecksTupleAutomaticJsonTypes(): none {
-  source := "class Point { x: int\ny: int }\nclass Payload { pair: Tuple<string, int>\npoint: Tuple<Point, bool>\noptional: Tuple<int, string> | null = null }\nfunction encode(value: Payload): JsonObject => value.toJsonObject()\nfunction decode(value: JsonValue): Result<Payload, string> => Payload.fromJsonValue(value)"
+  source := "class Point { x: int\ny: int }\nclass Payload { pair: Tuple<string, int>\npoint: Tuple<Point, bool>\noptional: Tuple<int, string> | null = null }\nfunction encode(value: Payload): SerialObject => value.toSerialObject()\nfunction decode(value: SerialValue): Result<Payload, string> => Payload.fromSerialValue(value)"
   result := checked(source)
   Assert.equal(result.diagnostics.length, 0)
 }
 
 export function testChecksStringMapAutomaticJsonTypes(): none {
-  source := "class Point { x: int\ny: int }\nclass Payload { counts: Map<string, int>\npoints: Map<string, Point> }\nfunction encode(value: Payload): JsonObject => value.toJsonObject()\nfunction decode(value: JsonValue): Result<Payload, string> => Payload.fromJsonValue(value)"
+  source := "class Point { x: int\ny: int }\nclass Payload { counts: Map<string, int>\npoints: Map<string, Point> }\nfunction encode(value: Payload): SerialObject => value.toSerialObject()\nfunction decode(value: SerialValue): Result<Payload, string> => Payload.fromSerialValue(value)"
   result := checked(source)
   Assert.equal(result.diagnostics.length, 0)
 
-  invalid := checked("class Payload { values: Map<int, string> }\nfunction decode(value: JsonValue): Result<Payload, string> => Payload.fromJsonValue(value)")
+  invalid := checked("class Payload { values: Map<int, string> }\nfunction decode(value: SerialValue): Result<Payload, string> => Payload.fromSerialValue(value)")
   Assert.equal(invalid.diagnostics.length > 0, true)
   Assert.equal(invalid.diagnostics[0].message, "Type \"Payload\" does not support automatic JSON deserialization")
 }
 
 export function testChecksDiscriminatedInterfaceJsonDeserialization(): none {
-  valid := checked("interface Shape { area(): double }\nclass Circle implements Shape { const kind = \"circle\"\nradius: double\narea(): double => radius * radius }\nclass Rect implements Shape { const kind = \"rect\"\nwidth: double\nheight: double\narea(): double => width * height }\nfunction decode(value: JsonValue): Result<Shape, string> => Shape.fromJsonValue(value, true)")
+  valid := checked("interface Shape { area(): double }\nclass Circle implements Shape { const kind = \"circle\"\nradius: double\narea(): double => radius * radius }\nclass Rect implements Shape { const kind = \"rect\"\nwidth: double\nheight: double\narea(): double => width * height }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value, true)")
   Assert.equal(valid.diagnostics.length, 0)
 
-  invalid := checked("interface Shape { area(): double }\nclass Circle implements Shape { radius: double\narea(): double => radius * radius }\nclass Rect implements Shape { width: double\narea(): double => width }\nfunction decode(value: JsonValue): Result<Shape, string> => Shape.fromJsonValue(value)")
+  invalid := checked("interface Shape { area(): double }\nclass Circle implements Shape { radius: double\narea(): double => radius * radius }\nclass Rect implements Shape { width: double\narea(): double => width }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value)")
   Assert.equal(invalid.diagnostics.length > 0, true)
   Assert.stringContains(invalid.diagnostics[0].message, "must share a const string field with distinct values")
 
-  duplicate := checked("interface Shape { area(): double }\nclass Circle implements Shape { const kind = \"shape\"\nradius: double\narea(): double => radius }\nclass Rect implements Shape { const kind = \"shape\"\nwidth: double\narea(): double => width }\nfunction decode(value: JsonValue): Result<Shape, string> => Shape.fromJsonValue(value)")
+  duplicate := checked("interface Shape { area(): double }\nclass Circle implements Shape { const kind = \"shape\"\nradius: double\narea(): double => radius }\nclass Rect implements Shape { const kind = \"shape\"\nwidth: double\narea(): double => width }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value)")
   Assert.equal(duplicate.diagnostics.length > 0, true)
   Assert.stringContains(duplicate.diagnostics[0].message, "distinct values")
 }
 
 export function testAcceptsLenientJsonDeserialization(): none {
-  result := checked("class Config { name: string }\nfunction parse(value: JsonValue): Result<Config, string> => Config.fromJsonValue(value, true)")
+  result := checked("class Config { name: string }\nfunction parse(value: SerialValue): Result<Config, string> => Config.fromSerialValue(value, true)")
   Assert.equal(result.diagnostics.length, 0)
 }
 
@@ -1892,7 +1900,7 @@ export function testChecksResultStatusMethods(): none {
 }
 
 export function testChecksResultUnwrapOrFallback(): none {
-  result := checked("function load(): Result<JsonValue, string> => Failure { error: \"no\" }\nfunction value(): JsonValue => load().unwrapOr(null)")
+  result := checked("function load(): Result<SerialValue, string> => Failure { error: \"no\" }\nfunction value(): SerialValue => load().unwrapOr(null)")
   Assert.equal(result.diagnostics.length, 0)
 }
 
@@ -2103,12 +2111,12 @@ export function testRejectsInterfacesWithoutImplementations(): none {
 }
 
 export function testChecksIntrinsicJsonValueLiterals(): none {
-  result := checked("function main(): JsonValue { payload: JsonValue := { name: \"Ada\", values: [1, true, null] }\nreturn payload }")
+  result := checked("function main(): SerialValue { payload: SerialValue := { name: \"Ada\", values: [1, true, null] }\nreturn payload }")
   Assert.equal(result.diagnostics.length, 0)
 }
 
 export function testRejectsNonJsonCollections(): none {
-  result := checked("function main(): void { values: int[] := [1, 2]\npayload: JsonValue := values }")
+  result := checked("function main(): void { values: int[] := [1, 2]\npayload: SerialValue := values }")
   Assert.equal(result.diagnostics.length > 0, true)
 }
 
@@ -2174,7 +2182,7 @@ export function testRejectsUnmatchedAndSpreadContextualSumObjects(): none {
 }
 
 export function testPreservesJsonObjectTypingWhenUnionHasNominalMember(): none {
-  result := checked("class Payload { name: string }\ntype Value = Payload | JsonValue\nfunction make(): Value => { name: \"Ada\" }")
+  result := checked("class Payload { name: string }\ntype Value = Payload | SerialValue\nfunction make(): Value => { name: \"Ada\" }")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 }
@@ -2204,7 +2212,7 @@ export function testResolvesImportedReadonlyValueTypes(): none {
 }
 
 export function testAssignsJsonValueNullableUnions(): none {
-  result := checked("function wrap(value: JsonValue): JsonValue | null { return value }\nfunction keep(value: JsonValue | null): JsonValue | null { let current: JsonValue | null = value\ncurrent = value\nreturn current }")
+  result := checked("function wrap(value: SerialValue): SerialValue | null { return value }\nfunction keep(value: SerialValue | null): SerialValue | null { let current: SerialValue | null = value\ncurrent = value\nreturn current }")
   Assert.equal(result.diagnostics.length, 0)
 }
 
@@ -2598,9 +2606,9 @@ export function testChecksValueBackedEnumApisAndStringEnums(): none {
     "function states(): readonly State[] => State.values()\n" +
     "function byName(): State | none => State.fromName(\"Ready\")\n" +
     "function byValue(): WireState | none => WireState.fromValue(\"ready\")\n" +
-    "function encode(value: State): JsonValue => value.toJsonValue()\n" +
-    "function decode<T: JsonSerializable>(value: JsonValue): Result<T, string> => T.fromJsonValue(value)\n" +
-    "function decoded(value: JsonValue): Result<State, string> => decode<State>(value)"
+    "function encode(value: State): SerialValue => value.toSerialValue()\n" +
+    "function decode<T: Serializable>(value: SerialValue): Result<T, string> => T.fromSerialValue(value)\n" +
+    "function decoded(value: SerialValue): Result<State, string> => decode<State>(value)"
   )
   Assert.equal(result.diagnostics.length, 0)
 }

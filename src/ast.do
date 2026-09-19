@@ -4,7 +4,7 @@
 // phases do not re-resolve syntax.
 
 import {
-  ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PromiseType, RangeResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType,
+  ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PromiseType, RangeResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType,
   FunctionType, NoneType, PrimitiveType, Symbol, TupleResolvedType, UnionResolvedType,
   UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"

@@ -65,15 +65,15 @@ window: Range := 1..<5
 Open-ended forms such as `5..` and `..<10` are range patterns only; they are not
 valid `Range` values.
 
-### The `JsonValue` Type
+### The `SerialValue` Type
 
-Doof provides a built-in `JsonValue` carrier for JSON-compatible data:
+Doof provides a built-in `SerialValue` carrier for JSON-compatible data:
 
 ```javascript
-payload: JsonValue := { name: "Ada", scores: [1, 2, 3] }
+payload: SerialValue := { name: "Ada", scores: [1, 2, 3] }
 ```
 
-`JsonValue` is an exact recursive carrier, not a general implicit conversion sink. Its shape is:
+`SerialValue` is an exact recursive carrier, not a general implicit conversion sink. Its shape is:
 
 - `none`
 - `bool`
@@ -83,32 +83,32 @@ payload: JsonValue := { name: "Ada", scores: [1, 2, 3] }
 - `float`
 - `double`
 - `string`
-- `JsonValue[]`
-- `Map<string, JsonValue>`
+- `SerialValue[]`
+- `Map<string, SerialValue>`
 - unions composed from the cases above
 
 This has two important consequences:
 
-- JSON literals remain ergonomic through contextual typing, so `value: JsonValue := [1, 2, 3]` and `value: JsonValue := { answer: 42 }` are valid.
-- Pre-built typed collections do not implicitly convert to `JsonValue`. For example, `int[]` and `Map<string, int>` are not assignable to `JsonValue`; use JsonValue-shaped collections instead.
+- JSON literals remain ergonomic through contextual typing, so `value: SerialValue := [1, 2, 3]` and `value: SerialValue := { answer: 42 }` are valid.
+- Pre-built typed collections do not implicitly convert to `SerialValue`. For example, `int[]` and `Map<string, int>` are not assignable to `SerialValue`; use SerialValue-shaped collections instead.
 
-`JsonObject` is a built-in intrinsic alias for `Map<string, JsonValue>`. It is interchangeable with that exact map shape in annotations, assignments, and return types:
+`SerialObject` is a built-in intrinsic alias for `Map<string, SerialValue>`. It is interchangeable with that exact map shape in annotations, assignments, and return types:
 
 ```doof
-payload: JsonObject := { "name": "Ada" }
-row: Map<string, JsonValue> := payload
+payload: SerialObject := { "name": "Ada" }
+row: Map<string, SerialValue> := payload
 ```
 
-64-bit integers are preserved as `long` inside `JsonValue`, including values parsed from JSON that do not fit in `int`.
+64-bit integers are preserved as `long` inside `SerialValue`, including values parsed from JSON that do not fit in `int`.
 
-Equality between a `JsonValue` and a typed scalar or collection requires
+Equality between a `SerialValue` and a typed scalar or collection requires
 explicit narrowing with `as` or `case`. For example, narrow a schema value
 with `schema := value as int else { return false }` before `schema == 4`.
 Comparison with `none` tests JSON absence directly.
 
-When a `Map<string, JsonValue>` or `JsonValue[]` is assigned to `JsonValue`, the runtime preserves reference semantics for the underlying shared container rather than copying it.
+When a `Map<string, SerialValue>` or `SerialValue[]` is assigned to `SerialValue`, the runtime preserves reference semantics for the underlying shared container rather than copying it.
 
-`JsonValue` objects preserve insertion order for their string keys. Formatting with `formatJsonValue(...)`, iterating through the underlying map, and generated class/object JSON emission all follow that insertion order.
+`SerialValue` objects preserve insertion order for their string keys. Formatting with `formatJsonValue(...)`, iterating through the underlying map, and generated class/object JSON emission all follow that insertion order.
 
 ### Numeric Literals
 
@@ -437,7 +437,7 @@ let knowledge: Knowledge = {
 Value types do not break shape ties. If no nominal member matches, or more
 than one member matches, the literal is rejected and must use explicit
 `Type { ... }` construction. Spread fields also require explicit nominal
-construction. Contextual Result, Map, and `JsonValue` object behavior retains
+construction. Contextual Result, Map, and `SerialValue` object behavior retains
 precedence over nominal union inference.
 
 ### Contextual Numeric Narrowing
@@ -732,12 +732,12 @@ Every enum provides this intrinsic API:
 ```doof
 direction.name                 // string: "North"
 direction.value                // int or string, matching the enum backing kind
-direction.toJsonValue()        // JsonValue containing direction.value
+direction.toSerialValue()        // SerialValue containing direction.value
 
 Direction.values()             // readonly Direction[], declaration order
 Direction.fromName("North")    // Direction | none
 Direction.fromValue(1)         // Direction | none
-Direction.fromJsonValue(1)     // Result<Direction, string>
+Direction.fromSerialValue(1)     // Result<Direction, string>
 ```
 
 Names and backing values must each be unique. Integer enums may mix implicit
@@ -1073,13 +1073,13 @@ let unique: Set<int> = [1, 2, 3, 2, 1]  // Contains {1, 2, 3}
 When a declaration or default value uses `Map`, `ReadonlyMap`, `Set`, or `ReadonlySet` **without type arguments**, the checker may infer the missing type arguments only from a **same-site non-empty homogeneous literal**.
 
 Generic type parameters can use constraints such as `T: int | long` to restrict
-valid type arguments. `JsonSerializable` and `Reflectable` are compiler-known,
+valid type arguments. `Serializable` and `Reflectable` are compiler-known,
 constraint-only intrinsics used by generic JSON and metadata helpers; they are
 not normal type annotations:
 
 ```javascript
-function decode<T: JsonSerializable>(json: JsonValue): Result<T, string> {
-  return T.fromJsonValue(json)
+function decode<T: Serializable>(json: SerialValue): Result<T, string> {
+  return T.fromSerialValue(json)
 }
 
 function toolName<T: Reflectable>(tool: T): string {
@@ -1124,7 +1124,7 @@ parameters that occur only in the return type cannot be inferred from the
 expected result type and must be supplied explicitly.
 
 Constraints are checked for explicit and inferred arguments. Ordinary
-constraints restrict admissible concrete arguments; `JsonSerializable` and
+constraints restrict admissible concrete arguments; `Serializable` and
 `Reflectable` additionally provide only their documented compiler intrinsics.
 
 ### Numeric Constraints
@@ -1198,7 +1198,7 @@ accepted in generic declarations, type annotations, and explicit generic calls.
 Expression shift operators retain their ordinary meaning.
 
 Interface bounds do not grant the compiler-generated static capabilities of
-`Reflectable` or `JsonSerializable`. Combined/intersection constraints and
+`Reflectable` or `Serializable`. Combined/intersection constraints and
 associated types are not introduced by interface bounds.
 
 ### Generic Emission
@@ -1272,7 +1272,7 @@ The same key restrictions apply in all map initialization contexts, including de
 
 Bare map inference is limited to same-site literals on declarations and defaults. For example, `function getMap(): Map { ... }` is rejected because there is no same-site literal attached to the return type annotation.
 
-Map iteration order is defined by first insertion order. `.keys()`, `.values()`, `for (key, value) of map`, direct map printing, and `JsonValue` object formatting all expose that order.
+Map iteration order is defined by first insertion order. `.keys()`, `.values()`, `for (key, value) of map`, direct map printing, and `SerialValue` object formatting all expose that order.
 
 Replacing the value for an existing key does not move it. Deleting a key and then inserting it again appends it to the end.
 

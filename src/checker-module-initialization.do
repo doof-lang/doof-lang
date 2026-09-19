@@ -13,7 +13,7 @@ import {
 } from "./ast"
 import { CheckerState } from "./checker-state"
 import {
-  ArrayResolvedType, ClassType, EnumType, InterfaceType, JsonValueResolvedType,
+  ArrayResolvedType, ClassType, EnumType, InterfaceType, SerialValueResolvedType,
   MapResolvedType, NoneType, PrimitiveType, ResolvedType, SetResolvedType,
   TupleResolvedType, WeakResolvedType,
 } from "./semantic"
@@ -231,7 +231,7 @@ function supportsDirectStorage(type_: ResolvedType): bool {
     _: MapResolvedType -> { return true }
     _: SetResolvedType -> { return true }
     _: InterfaceType -> { return true }
-    _: JsonValueResolvedType -> { return true }
+    _: SerialValueResolvedType -> { return true }
     weak_: WeakResolvedType -> { return supportsDirectStorage(weak_.inner) }
     tuple: TupleResolvedType -> {
       for element of tuple.elements { if !supportsDirectStorage(element) { return false } }

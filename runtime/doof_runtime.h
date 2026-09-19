@@ -1150,219 +1150,219 @@ inline std::optional<Target> checked_numeric_as(Source value) {
 }
 
 // ============================================================================
-// JsonValue — first-class JSON runtime value
+// SerialValue — first-class JSON runtime value
 // ============================================================================
 
-struct JsonValue;
+struct SerialValue;
 
-using JsonArray = std::shared_ptr<std::vector<JsonValue>>;
-using JsonObject = std::shared_ptr<ordered_map<std::string, JsonValue>>;
-using JsonStorage = std::variant<std::monostate, bool, int32_t, int64_t, float, double, std::string, JsonArray, JsonObject>;
+using SerialArray = std::shared_ptr<std::vector<SerialValue>>;
+using SerialObject = std::shared_ptr<ordered_map<std::string, SerialValue>>;
+using SerialStorage = std::variant<std::monostate, bool, int32_t, int64_t, float, double, std::string, SerialArray, SerialObject>;
 
-struct JsonValue : JsonStorage {
-    using JsonStorage::JsonStorage;
+struct SerialValue : SerialStorage {
+    using SerialStorage::SerialStorage;
 
-    JsonValue() : JsonStorage(std::monostate{}) {}
-    JsonValue(std::nullptr_t) : JsonStorage(std::monostate{}) {}
-    JsonValue(const char* v) : JsonStorage(std::string(v)) {}
+    SerialValue() : SerialStorage(std::monostate{}) {}
+    SerialValue(std::nullptr_t) : SerialStorage(std::monostate{}) {}
+    SerialValue(const char* v) : SerialStorage(std::string(v)) {}
 };
 
 template <typename T>
-inline JsonValue json_value(T&& value) {
-    return JsonValue(std::forward<T>(value));
+inline SerialValue serial_value(T&& value) {
+    return SerialValue(std::forward<T>(value));
 }
 
-inline const JsonStorage& json_storage(const JsonValue& value) {
-    return static_cast<const JsonStorage&>(value);
+inline const SerialStorage& serial_storage(const SerialValue& value) {
+    return static_cast<const SerialStorage&>(value);
 }
 
-inline JsonStorage& json_storage(JsonValue& value) {
-    return static_cast<JsonStorage&>(value);
+inline SerialStorage& serial_storage(SerialValue& value) {
+    return static_cast<SerialStorage&>(value);
 }
 
-inline bool json_is_null(const JsonValue& value) {
-    return std::holds_alternative<std::monostate>(json_storage(value));
+inline bool serial_is_null(const SerialValue& value) {
+    return std::holds_alternative<std::monostate>(serial_storage(value));
 }
 
-inline bool json_is_boolean(const JsonValue& value) {
-    return std::holds_alternative<bool>(json_storage(value));
+inline bool serial_is_boolean(const SerialValue& value) {
+    return std::holds_alternative<bool>(serial_storage(value));
 }
 
-inline bool json_is_number(const JsonValue& value) {
-    return std::holds_alternative<int32_t>(json_storage(value))
-        || std::holds_alternative<int64_t>(json_storage(value))
-        || std::holds_alternative<float>(json_storage(value))
-        || std::holds_alternative<double>(json_storage(value));
+inline bool serial_is_number(const SerialValue& value) {
+    return std::holds_alternative<int32_t>(serial_storage(value))
+        || std::holds_alternative<int64_t>(serial_storage(value))
+        || std::holds_alternative<float>(serial_storage(value))
+        || std::holds_alternative<double>(serial_storage(value));
 }
 
-inline bool json_is_integer(const JsonValue& value) {
-    return std::holds_alternative<int32_t>(json_storage(value)) ||
-           std::holds_alternative<int64_t>(json_storage(value));
+inline bool serial_is_integer(const SerialValue& value) {
+    return std::holds_alternative<int32_t>(serial_storage(value)) ||
+           std::holds_alternative<int64_t>(serial_storage(value));
 }
 
-inline bool json_is_string(const JsonValue& value) {
-    return std::holds_alternative<std::string>(json_storage(value));
+inline bool serial_is_string(const SerialValue& value) {
+    return std::holds_alternative<std::string>(serial_storage(value));
 }
 
-inline bool json_is_array(const JsonValue& value) {
-    return std::holds_alternative<JsonArray>(json_storage(value));
+inline bool serial_is_array(const SerialValue& value) {
+    return std::holds_alternative<SerialArray>(serial_storage(value));
 }
 
-inline bool json_is_object(const JsonValue& value) {
-    return std::holds_alternative<JsonObject>(json_storage(value));
+inline bool serial_is_object(const SerialValue& value) {
+    return std::holds_alternative<SerialObject>(serial_storage(value));
 }
 
-inline const char* json_type_name(const JsonValue& value) {
-    if (json_is_null(value)) return "null";
-    if (json_is_boolean(value)) return "boolean";
-    if (json_is_number(value)) return "number";
-    if (json_is_string(value)) return "string";
-    if (json_is_array(value)) return "array";
-    if (json_is_object(value)) return "object";
+inline const char* serial_type_name(const SerialValue& value) {
+    if (serial_is_null(value)) return "null";
+    if (serial_is_boolean(value)) return "boolean";
+    if (serial_is_number(value)) return "number";
+    if (serial_is_string(value)) return "string";
+    if (serial_is_array(value)) return "array";
+    if (serial_is_object(value)) return "object";
     return "unknown";
 }
 
-inline const JsonArray::element_type* json_as_array(const JsonValue& value) {
-    const auto* array = std::get_if<JsonArray>(&json_storage(value));
+inline const SerialArray::element_type* serial_as_array(const SerialValue& value) {
+    const auto* array = std::get_if<SerialArray>(&serial_storage(value));
     if (array == nullptr || !*array) return nullptr;
     return array->get();
 }
 
-inline const JsonObject::element_type* json_as_object(const JsonValue& value) {
-    const auto* object = std::get_if<JsonObject>(&json_storage(value));
+inline const SerialObject::element_type* serial_as_object(const SerialValue& value) {
+    const auto* object = std::get_if<SerialObject>(&serial_storage(value));
     if (object == nullptr || !*object) return nullptr;
     return object->get();
 }
 
-inline JsonValue json_error(int32_t code, std::string message) {
-    auto object = std::make_shared<ordered_map<std::string, JsonValue>>();
-    (*object)["code"] = json_value(code);
-    (*object)["message"] = json_value(std::move(message));
-    return json_value(std::move(object));
+inline SerialValue serial_error(int32_t code, std::string message) {
+    auto object = std::make_shared<ordered_map<std::string, SerialValue>>();
+    (*object)["code"] = serial_value(code);
+    (*object)["message"] = serial_value(std::move(message));
+    return serial_value(std::move(object));
 }
 
-inline bool json_as_bool(const JsonValue& value) {
-    const auto* result = std::get_if<bool>(&json_storage(value));
-    if (result == nullptr) panic("Expected JSON boolean");
+inline bool serial_as_bool(const SerialValue& value) {
+    const auto* result = std::get_if<bool>(&serial_storage(value));
+    if (result == nullptr) panic("Expected boolean");
     return *result;
 }
 
-inline int32_t json_as_int(const JsonValue& value) {
-    if (const auto* result = std::get_if<int32_t>(&json_storage(value))) return *result;
-    if (const auto* result = std::get_if<int64_t>(&json_storage(value))) return static_cast<int32_t>(*result);
-    if (const auto* result = std::get_if<float>(&json_storage(value))) return static_cast<int32_t>(*result);
-    if (const auto* result = std::get_if<double>(&json_storage(value))) return static_cast<int32_t>(*result);
-    panic("Expected JSON number");
+inline int32_t serial_as_int(const SerialValue& value) {
+    if (const auto* result = std::get_if<int32_t>(&serial_storage(value))) return *result;
+    if (const auto* result = std::get_if<int64_t>(&serial_storage(value))) return static_cast<int32_t>(*result);
+    if (const auto* result = std::get_if<float>(&serial_storage(value))) return static_cast<int32_t>(*result);
+    if (const auto* result = std::get_if<double>(&serial_storage(value))) return static_cast<int32_t>(*result);
+    panic("Expected number");
 }
 
-inline int64_t json_as_long(const JsonValue& value) {
-    if (const auto* result = std::get_if<int32_t>(&json_storage(value))) return *result;
-    if (const auto* result = std::get_if<int64_t>(&json_storage(value))) return *result;
-    if (const auto* result = std::get_if<float>(&json_storage(value))) return static_cast<int64_t>(*result);
-    if (const auto* result = std::get_if<double>(&json_storage(value))) return static_cast<int64_t>(*result);
-    panic("Expected JSON number");
+inline int64_t serial_as_long(const SerialValue& value) {
+    if (const auto* result = std::get_if<int32_t>(&serial_storage(value))) return *result;
+    if (const auto* result = std::get_if<int64_t>(&serial_storage(value))) return *result;
+    if (const auto* result = std::get_if<float>(&serial_storage(value))) return static_cast<int64_t>(*result);
+    if (const auto* result = std::get_if<double>(&serial_storage(value))) return static_cast<int64_t>(*result);
+    panic("Expected number");
 }
 
-inline float json_as_float(const JsonValue& value) {
-    if (const auto* result = std::get_if<int32_t>(&json_storage(value))) return static_cast<float>(*result);
-    if (const auto* result = std::get_if<int64_t>(&json_storage(value))) return static_cast<float>(*result);
-    if (const auto* result = std::get_if<float>(&json_storage(value))) return *result;
-    if (const auto* result = std::get_if<double>(&json_storage(value))) return static_cast<float>(*result);
-    panic("Expected JSON number");
+inline float serial_as_float(const SerialValue& value) {
+    if (const auto* result = std::get_if<int32_t>(&serial_storage(value))) return static_cast<float>(*result);
+    if (const auto* result = std::get_if<int64_t>(&serial_storage(value))) return static_cast<float>(*result);
+    if (const auto* result = std::get_if<float>(&serial_storage(value))) return *result;
+    if (const auto* result = std::get_if<double>(&serial_storage(value))) return static_cast<float>(*result);
+    panic("Expected number");
 }
 
-inline double json_as_double(const JsonValue& value) {
-    if (const auto* result = std::get_if<int32_t>(&json_storage(value))) return static_cast<double>(*result);
-    if (const auto* result = std::get_if<int64_t>(&json_storage(value))) return static_cast<double>(*result);
-    if (const auto* result = std::get_if<float>(&json_storage(value))) return static_cast<double>(*result);
-    if (const auto* result = std::get_if<double>(&json_storage(value))) return *result;
-    panic("Expected JSON number");
+inline double serial_as_double(const SerialValue& value) {
+    if (const auto* result = std::get_if<int32_t>(&serial_storage(value))) return static_cast<double>(*result);
+    if (const auto* result = std::get_if<int64_t>(&serial_storage(value))) return static_cast<double>(*result);
+    if (const auto* result = std::get_if<float>(&serial_storage(value))) return static_cast<double>(*result);
+    if (const auto* result = std::get_if<double>(&serial_storage(value))) return *result;
+    panic("Expected number");
 }
 
-inline const std::string& json_as_string(const JsonValue& value) {
-    const auto* result = std::get_if<std::string>(&json_storage(value));
-    if (result == nullptr) panic("Expected JSON string");
+inline const std::string& serial_as_string(const SerialValue& value) {
+    const auto* result = std::get_if<std::string>(&serial_storage(value));
+    if (result == nullptr) panic("Expected string");
     return *result;
 }
 
-inline JsonObject json_object(const JsonValue& value) {
-    const auto* object = std::get_if<JsonObject>(&json_storage(value));
-    if (object == nullptr || !*object) panic("Expected JSON object");
+inline SerialObject serial_object(const SerialValue& value) {
+    const auto* object = std::get_if<SerialObject>(&serial_storage(value));
+    if (object == nullptr || !*object) panic("Expected object");
     return *object;
 }
 
-inline bool json_is_lenient_boolean(const JsonValue& value) {
-    if (json_is_boolean(value) || json_is_number(value)) return true;
-    if (!json_is_string(value)) return false;
-    std::string lowered = json_as_string(value);
+inline bool serial_is_lenient_boolean(const SerialValue& value) {
+    if (serial_is_boolean(value) || serial_is_number(value)) return true;
+    if (!serial_is_string(value)) return false;
+    std::string lowered = serial_as_string(value);
     std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) {
         return static_cast<char>(std::tolower(ch));
     });
     return lowered == "true" || lowered == "false" || lowered == "1" || lowered == "0";
 }
 
-inline bool json_is_lenient_number(const JsonValue& value) {
-    return json_is_number(value) || json_is_boolean(value);
+inline bool serial_is_lenient_number(const SerialValue& value) {
+    return serial_is_number(value) || serial_is_boolean(value);
 }
 
-inline bool json_is_lenient_string(const JsonValue& value) {
-    return json_is_null(value) || json_is_string(value) || json_is_boolean(value) || json_is_number(value);
+inline bool serial_is_lenient_string(const SerialValue& value) {
+    return serial_is_null(value) || serial_is_string(value) || serial_is_boolean(value) || serial_is_number(value);
 }
 
-inline bool json_as_bool_lenient(const JsonValue& value) {
-    if (json_is_boolean(value)) return json_as_bool(value);
-    if (const auto* result = std::get_if<int32_t>(&json_storage(value))) return *result != 0;
-    if (const auto* result = std::get_if<int64_t>(&json_storage(value))) return *result != 0;
-    if (const auto* result = std::get_if<float>(&json_storage(value))) return *result != 0.0f;
-    if (const auto* result = std::get_if<double>(&json_storage(value))) return *result != 0.0;
-    if (json_is_string(value)) {
-        std::string lowered = json_as_string(value);
+inline bool serial_as_bool_lenient(const SerialValue& value) {
+    if (serial_is_boolean(value)) return serial_as_bool(value);
+    if (const auto* result = std::get_if<int32_t>(&serial_storage(value))) return *result != 0;
+    if (const auto* result = std::get_if<int64_t>(&serial_storage(value))) return *result != 0;
+    if (const auto* result = std::get_if<float>(&serial_storage(value))) return *result != 0.0f;
+    if (const auto* result = std::get_if<double>(&serial_storage(value))) return *result != 0.0;
+    if (serial_is_string(value)) {
+        std::string lowered = serial_as_string(value);
         std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) {
             return static_cast<char>(std::tolower(ch));
         });
         if (lowered == "true" || lowered == "1") return true;
         if (lowered == "false" || lowered == "0") return false;
     }
-    panic("Expected lenient JSON boolean");
+    panic("Expected lenient boolean");
 }
 
-inline int32_t json_as_int_lenient(const JsonValue& value) {
-    if (json_is_boolean(value)) return json_as_bool(value) ? 1 : 0;
-    return json_as_int(value);
+inline int32_t serial_as_int_lenient(const SerialValue& value) {
+    if (serial_is_boolean(value)) return serial_as_bool(value) ? 1 : 0;
+    return serial_as_int(value);
 }
 
-inline int64_t json_as_long_lenient(const JsonValue& value) {
-    if (json_is_boolean(value)) return json_as_bool(value) ? 1 : 0;
-    return json_as_long(value);
+inline int64_t serial_as_long_lenient(const SerialValue& value) {
+    if (serial_is_boolean(value)) return serial_as_bool(value) ? 1 : 0;
+    return serial_as_long(value);
 }
 
-inline float json_as_float_lenient(const JsonValue& value) {
-    if (json_is_boolean(value)) return json_as_bool(value) ? 1.0f : 0.0f;
-    return json_as_float(value);
+inline float serial_as_float_lenient(const SerialValue& value) {
+    if (serial_is_boolean(value)) return serial_as_bool(value) ? 1.0f : 0.0f;
+    return serial_as_float(value);
 }
 
-inline double json_as_double_lenient(const JsonValue& value) {
-    if (json_is_boolean(value)) return json_as_bool(value) ? 1.0 : 0.0;
-    return json_as_double(value);
+inline double serial_as_double_lenient(const SerialValue& value) {
+    if (serial_is_boolean(value)) return serial_as_bool(value) ? 1.0 : 0.0;
+    return serial_as_double(value);
 }
 
-inline std::string json_as_string_lenient(const JsonValue& value) {
-    if (json_is_null(value)) return std::string();
-    if (json_is_string(value)) return json_as_string(value);
-    if (json_is_boolean(value)) return json_as_bool(value) ? "true" : "false";
-    if (const auto* result = std::get_if<int32_t>(&json_storage(value))) return std::to_string(*result);
-    if (const auto* result = std::get_if<int64_t>(&json_storage(value))) return std::to_string(*result);
-    if (const auto* result = std::get_if<float>(&json_storage(value))) {
+inline std::string serial_as_string_lenient(const SerialValue& value) {
+    if (serial_is_null(value)) return std::string();
+    if (serial_is_string(value)) return serial_as_string(value);
+    if (serial_is_boolean(value)) return serial_as_bool(value) ? "true" : "false";
+    if (const auto* result = std::get_if<int32_t>(&serial_storage(value))) return std::to_string(*result);
+    if (const auto* result = std::get_if<int64_t>(&serial_storage(value))) return std::to_string(*result);
+    if (const auto* result = std::get_if<float>(&serial_storage(value))) {
         std::ostringstream oss;
         oss << *result;
         return oss.str();
     }
-    if (const auto* result = std::get_if<double>(&json_storage(value))) {
+    if (const auto* result = std::get_if<double>(&serial_storage(value))) {
         std::ostringstream oss;
         oss << *result;
         return oss.str();
     }
-    panic("Expected lenient JSON string");
+    panic("Expected lenient string");
 }
 
 inline std::optional<char32_t> utf8_single_code_point(const std::string& text) {
@@ -1431,16 +1431,16 @@ inline char32_t char_from_utf8(const std::string& value) {
     return *decoded;
 }
 
-inline bool json_is_char(const JsonValue& value, bool lenient) {
+inline bool serial_is_char(const SerialValue& value, bool lenient) {
     if (lenient) {
-        if (!json_is_lenient_string(value)) return false;
-        return utf8_single_code_point(json_as_string_lenient(value)).has_value();
+        if (!serial_is_lenient_string(value)) return false;
+        return utf8_single_code_point(serial_as_string_lenient(value)).has_value();
     }
-    return json_is_string(value) && utf8_single_code_point(json_as_string(value)).has_value();
+    return serial_is_string(value) && utf8_single_code_point(serial_as_string(value)).has_value();
 }
 
-inline char32_t json_as_char(const JsonValue& value, bool lenient) {
-    const auto decoded = utf8_single_code_point(lenient ? json_as_string_lenient(value) : json_as_string(value));
+inline char32_t serial_as_char(const SerialValue& value, bool lenient) {
+    const auto decoded = utf8_single_code_point(lenient ? serial_as_string_lenient(value) : serial_as_string(value));
     if (!decoded.has_value()) panic("Expected one Unicode character");
     return decoded.value();
 }
@@ -1455,7 +1455,7 @@ private:
 };
 
 template <typename F>
-auto json_decode_at(const std::string& path, F&& decode) -> decltype(decode()) {
+auto serial_decode_at(const std::string& path, F&& decode) -> decltype(decode()) {
     try {
         return decode();
     } catch (const JsonDecodeError& error) {
@@ -1464,7 +1464,7 @@ auto json_decode_at(const std::string& path, F&& decode) -> decltype(decode()) {
 }
 
 template <typename T>
-T json_decode_value(Result<T, std::string> result) {
+T serial_decode_value(Result<T, std::string> result) {
     if (is_failure(result)) throw JsonDecodeError(failure_error(result));
     return std::move(success_value(result));
 }
@@ -1778,8 +1778,8 @@ inline std::string string_repeat(const std::string& s, int32_t count) {
 // receiver representation is statically known are lowered directly instead.
 inline bool is_null(std::monostate) { return true; }
 
-inline bool is_null(const JsonValue& value) {
-    return json_is_null(value);
+inline bool is_null(const SerialValue& value) {
+    return serial_is_null(value);
 }
 
 template <typename T>
@@ -2608,22 +2608,22 @@ namespace doof {
 /** Per-method reflection entry with an invoke lambda. */
 template <typename T>
 struct MethodInvoker {
-    using result_type = doof::Result<doof::JsonValue, doof::JsonValue>;
+    using result_type = doof::Result<doof::SerialValue, doof::SerialValue>;
 
-    std::function<result_type(T&, const doof::JsonValue&)> call;
+    std::function<result_type(T&, const doof::SerialValue&)> call;
 
     MethodInvoker() = default;
 
     template <typename F>
     MethodInvoker(F&& f) : call(std::forward<F>(f)) {}
 
-    result_type operator()(T& instance, const doof::JsonValue& params) const {
+    result_type operator()(T& instance, const doof::SerialValue& params) const {
         return call(instance, params);
     }
 
-    result_type operator()(const std::shared_ptr<T>& instance, const doof::JsonValue& params) const {
+    result_type operator()(const std::shared_ptr<T>& instance, const doof::SerialValue& params) const {
         if (instance == nullptr) {
-            return doof::Failure<doof::JsonValue>{doof::json_error(400, std::string("Cannot invoke method on null instance"))};
+            return doof::Failure<doof::SerialValue>{doof::serial_error(400, std::string("Cannot invoke method on null instance"))};
         }
         return call(*instance, params);
     }
@@ -2634,8 +2634,8 @@ template <typename T>
 struct MethodReflection {
     std::string name;
     std::string description;
-    doof::JsonValue inputSchema;
-    doof::JsonValue outputSchema;
+    doof::SerialValue inputSchema;
+    doof::SerialValue outputSchema;
     doof::MethodInvoker<T> invoke;
 };
 
@@ -2645,12 +2645,12 @@ struct ClassMetadata {
     std::string name;
     std::string description;
     std::shared_ptr<std::vector<doof::MethodReflection<T>>> methods;
-    std::optional<doof::JsonValue> defs;
+    std::optional<doof::SerialValue> defs;
 
-    doof::Result<doof::JsonValue, doof::JsonValue> invoke(
+    doof::Result<doof::SerialValue, doof::SerialValue> invoke(
         T& instance,
         const std::string& methodName,
-        const doof::JsonValue& params
+        const doof::SerialValue& params
     ) const {
         if (methods != nullptr) {
             for (const auto& method : *methods) {
@@ -2659,16 +2659,16 @@ struct ClassMetadata {
                 }
             }
         }
-        return doof::Failure<doof::JsonValue>{doof::json_error(400, std::string("Unknown method: ") + methodName)};
+        return doof::Failure<doof::SerialValue>{doof::serial_error(400, std::string("Unknown method: ") + methodName)};
     }
 
-    doof::Result<doof::JsonValue, doof::JsonValue> invoke(
+    doof::Result<doof::SerialValue, doof::SerialValue> invoke(
         const std::shared_ptr<T>& instance,
         const std::string& methodName,
-        const doof::JsonValue& params
+        const doof::SerialValue& params
     ) const {
         if (instance == nullptr) {
-            return doof::Failure<doof::JsonValue>{doof::json_error(400, std::string("Cannot invoke method on null instance"))};
+            return doof::Failure<doof::SerialValue>{doof::serial_error(400, std::string("Cannot invoke method on null instance"))};
         }
         return invoke(*instance, methodName, params);
     }

@@ -242,7 +242,7 @@ function discoverStdlibPackages(stdlibRoot: string): Result<DiscoveredStdlibPack
     if !exists(manifestPath) { continue }
     source := readText(manifestPath) else { return Failure("Could not read " + manifestPath) }
     parsed := parseJsonValue(source) else error { return Failure("Invalid " + manifestPath + ": " + error) }
-    object := parsed as JsonObject else { return Failure("Invalid " + manifestPath + ": root must be an object") }
+    object := parsed as SerialObject else { return Failure("Invalid " + manifestPath + ": root must be an object") }
     nameValue := object.get("name") else { continue }
     packageName := nameValue as string else { return Failure("Invalid " + manifestPath + ": name must be a string") }
     if !packageName.startsWith("std/") { continue }
@@ -301,8 +301,8 @@ function addMember(
   return Success()
 }
 
-function memberJson(member: BundleMember): JsonObject {
-  let value: JsonObject = {}
+function memberJson(member: BundleMember): SerialObject {
+  let value: SerialObject = {}
   value.set("kind", member.kind)
   value.set("packageName", member.packageName)
   value.set("path", member.logicalPath)
@@ -342,16 +342,16 @@ function bundleIndex(
   members: BundleMember[],
   targets: string[],
 ): readonly byte[] {
-  let packages: JsonValue[] = []
+  let packages: SerialValue[] = []
   for package_ of discovered { packages.push(package_.name) }
-  let targetValues: JsonValue[] = []
+  let targetValues: SerialValue[] = []
   for target of targets { targetValues.push(target) }
-  let memberValues: JsonValue[] = []
+  let memberValues: SerialValue[] = []
   for member of members { memberValues.push(memberJson(member)) }
-  let licenseValues: JsonValue[] = []
+  let licenseValues: SerialValue[] = []
   for package_ of discovered {
     for licensePath of requiredLicensePaths(package_.name, targets) {
-      let license: JsonObject = {}
+      let license: SerialObject = {}
       license.set("packageName", package_.name)
       license.set("path", licensePath)
       license.set("member", "native/" + package_.name.substring(4, package_.name.length) + ".tar.zst")
@@ -359,7 +359,7 @@ function bundleIndex(
     }
   }
 
-  let root: JsonObject = {}
+  let root: SerialObject = {}
   root.set("schemaVersion", 4)
   root.set("format", "doof-stdlib-tar-of-tar-zst")
   root.set("bundleDigest", bundleDigest)

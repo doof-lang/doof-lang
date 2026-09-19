@@ -14,7 +14,7 @@ export function emitCarrierAbsence(type_: ResolvedType, context: EmitContext): s
     .SharedPointer -> { return "nullptr" }
     .Optional -> { return if concreteType.kind == "weak" then emitContextType(concreteType, context) + "{}" else "std::nullopt" }
     .WeakPointer -> { return emitContextType(concreteType, context) + "{}" }
-    .Json -> { return "doof::json_value(nullptr)" }
+    .Json -> { return "doof::serial_value(nullptr)" }
     .Variant -> {
       if carrier.naturalNullable { return emitContextType(carrier.member!, context) + "{}" }
       if carrier.hasNone { return "std::monostate{}" }

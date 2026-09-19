@@ -157,9 +157,9 @@ export class RangeResolvedType {
   kind: string = "range"
 }
 
-// JsonValue is recursive, so it is represented as a dedicated intrinsic
+// SerialValue is recursive, so it is represented as a dedicated intrinsic
 // semantic type rather than expanding into a finite union of containers.
-export class JsonValueResolvedType {
+export class SerialValueResolvedType {
   let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "json-value"
 }
@@ -232,7 +232,7 @@ export class MethodReflectionResolvedType {
 }
 
 export type ResolvedType = PrimitiveType | ClassType | EnumType | InterfaceType | FunctionType |
-  ActorType | PromiseType | ArrayResolvedType | MapResolvedType | SetResolvedType | StreamResolvedType | RangeResolvedType | JsonValueResolvedType | ResultResolvedType | TupleResolvedType | UnionResolvedType | WeakResolvedType |
+  ActorType | PromiseType | ArrayResolvedType | MapResolvedType | SetResolvedType | StreamResolvedType | RangeResolvedType | SerialValueResolvedType | ResultResolvedType | TupleResolvedType | UnionResolvedType | WeakResolvedType |
   NoneType | NeverType | UnknownType | TypeParameterType | ClassMetadataResolvedType | MethodReflectionResolvedType
 
 export class TypeSubstitution {

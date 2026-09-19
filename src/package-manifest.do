@@ -10,8 +10,8 @@ import { MacOSAppConfig, MacOSAppResource, MacOSEmbeddedLibrary, MacOSPackageCon
 import { IOSAppConfig, IOSAppResource, IOSEmbeddedLibrary, IOSPackageConfig } from "./ios-app"
 
 function manifestJoinPath(directory: string, name: string): string => join([directory, name])
-function manifestJsonField(object: JsonObject, name: string): JsonValue => try! object.get(name)
-function manifestJsonHas(object: JsonObject, name: string): bool => object.has(name)
+function manifestJsonField(object: SerialObject, name: string): SerialValue => try! object.get(name)
+function manifestJsonHas(object: SerialObject, name: string): bool => object.has(name)
 
 /** Normalized native inputs contributed by one or more reached packages. */
 export class NativeBuildPlan {
@@ -114,7 +114,7 @@ export function parsePackageManifest(
 }
 
 function parsePackageDependencies(
-  root: JsonObject,
+  root: SerialObject,
   manifestPath: string,
   rootDirectory: string,
 ): Result<PackageDependency[], string> {
@@ -134,7 +134,7 @@ function parsePackageDependencies(
   return Success(result)
 }
 
-function parseStdlibPreparation(root: JsonObject, manifestPath: string): Result<StdlibPreparationCommand[], string> {
+function parseStdlibPreparation(root: SerialObject, manifestPath: string): Result<StdlibPreparationCommand[], string> {
   if !manifestJsonHas(root, "build") { return Success([]) }
   try build := manifestObject(manifestJsonField(root, "build"), manifestPath, "build")
   if !manifestJsonHas(build, "stdlib") { return Success([]) }
@@ -144,7 +144,7 @@ function parseStdlibPreparation(root: JsonObject, manifestPath: string): Result<
 }
 
 function requiredManifestString(
-  object: JsonObject,
+  object: SerialObject,
   name: string,
   manifestPath: string,
   fieldPath: string,
@@ -160,7 +160,7 @@ function requiredManifestString(
 }
 
 function parsePreparationCommands(
-  object: JsonObject,
+  object: SerialObject,
   name: string,
   manifestPath: string,
   fieldPath: string,
@@ -200,7 +200,7 @@ function parsePreparationCommands(
 }
 
 function parseManifestNativeBuild(
-  root: JsonObject,
+  root: SerialObject,
   manifestPath: string,
   rootDirectory: string,
   platform: string,
@@ -226,7 +226,7 @@ function parseManifestNativeBuild(
 }
 
 function parseManifestResources(
-  root: JsonObject,
+  root: SerialObject,
   manifestPath: string,
   rootDirectory: string,
 ): Result<PackageResource[], string> {
@@ -247,7 +247,7 @@ function parseManifestResources(
   return Success([])
 }
 
-function parseManifestTarget(root: JsonObject, manifestPath: string): Result<string, string> {
+function parseManifestTarget(root: SerialObject, manifestPath: string): Result<string, string> {
   if manifestJsonHas(root, "target") {
     return manifestString(manifestJsonField(root, "target"), manifestPath, "target")
   }
@@ -261,7 +261,7 @@ function parseManifestTarget(root: JsonObject, manifestPath: string): Result<str
 }
 
 function parseMacOSApp(
-  root: JsonObject,
+  root: SerialObject,
   manifestPath: string,
   rootDirectory: string,
   packageName: string,
@@ -269,12 +269,12 @@ function parseMacOSApp(
   target: string,
 ): Result<MacOSAppConfig | none, string> {
   if target != "macos-app" { return Success(none) }
-  let build: JsonObject = {}
+  let build: SerialObject = {}
   if manifestJsonHas(root, "build") {
     try parsedBuild := manifestObject(manifestJsonField(root, "build"), manifestPath, "build")
     build = parsedBuild
   }
-  let nested: JsonObject = {}
+  let nested: SerialObject = {}
   if manifestJsonHas(build, "macosApp") {
     try parsedNested := manifestObject(manifestJsonField(build, "macosApp"), manifestPath, "build.macosApp")
     nested = parsedNested
@@ -316,7 +316,7 @@ function parseMacOSApp(
     }
   }
 
-  let infoPlist: JsonObject | none = none
+  let infoPlist: SerialObject | none = none
   if manifestJsonHas(nested, "infoPlist") {
     try parsedInfo := manifestObject(manifestJsonField(nested, "infoPlist"), manifestPath, "build.macosApp.infoPlist")
     for key, ignored of parsedInfo {
@@ -327,7 +327,7 @@ function parseMacOSApp(
     infoPlist = parsedInfo
   }
 
-  let resourceValue: JsonValue | none = none
+  let resourceValue: SerialValue | none = none
   let resourceField = "build.macosApp.resources"
   if manifestJsonHas(root, "resources") {
     resourceValue = manifestJsonField(root, "resources")
@@ -383,7 +383,7 @@ function parseMacOSApp(
 }
 
 function parseIOSApp(
-  root: JsonObject,
+  root: SerialObject,
   manifestPath: string,
   rootDirectory: string,
   packageName: string,
@@ -391,12 +391,12 @@ function parseIOSApp(
   target: string,
 ): Result<IOSAppConfig | none, string> {
   if target != "ios-app" { return Success(none) }
-  let build: JsonObject = {}
+  let build: SerialObject = {}
   if manifestJsonHas(root, "build") {
     try parsedBuild := manifestObject(manifestJsonField(root, "build"), manifestPath, "build")
     build = parsedBuild
   }
-  let nested: JsonObject = {}
+  let nested: SerialObject = {}
   if manifestJsonHas(build, "iosApp") {
     try parsedNested := manifestObject(manifestJsonField(build, "iosApp"), manifestPath, "build.iosApp")
     nested = parsedNested
@@ -437,7 +437,7 @@ function parseIOSApp(
     }
   }
 
-  let infoPlist: JsonObject | none = none
+  let infoPlist: SerialObject | none = none
   if manifestJsonHas(nested, "infoPlist") {
     try parsedInfo := manifestObject(manifestJsonField(nested, "infoPlist"), manifestPath, "build.iosApp.infoPlist")
     for key, ignored of parsedInfo {
@@ -448,7 +448,7 @@ function parseIOSApp(
     infoPlist = parsedInfo
   }
 
-  let resourceValue: JsonValue | none = none
+  let resourceValue: SerialValue | none = none
   let resourceField = "build.iosApp.resources"
   if manifestJsonHas(root, "resources") {
     resourceValue = manifestJsonField(root, "resources")
@@ -502,7 +502,7 @@ function parseIOSApp(
   })
 }
 
-function parseMacOSPackage(root: JsonObject, manifestPath: string, rootDirectory: string): Result<MacOSPackageConfig, string> {
+function parseMacOSPackage(root: SerialObject, manifestPath: string, rootDirectory: string): Result<MacOSPackageConfig, string> {
   let distDirectory = manifestJoinPath(rootDirectory, "dist")
   let signing = "developer-id"
   let identity = ""
@@ -553,7 +553,7 @@ function parseMacOSPackage(root: JsonObject, manifestPath: string, rootDirectory
   return Success(MacOSPackageConfig { distDirectory, signing, identity, sandbox, entitlementsPath })
 }
 
-function parseIOSPackage(root: JsonObject, manifestPath: string, rootDirectory: string): Result<IOSPackageConfig, string> {
+function parseIOSPackage(root: SerialObject, manifestPath: string, rootDirectory: string): Result<IOSPackageConfig, string> {
   let identity = ""
   let provisioningProfilePath = ""
   if !manifestJsonHas(root, "build") { return Success(IOSPackageConfig {}) }
@@ -576,15 +576,15 @@ function parseIOSPackage(root: JsonObject, manifestPath: string, rootDirectory: 
   return Success(IOSPackageConfig { identity, provisioningProfilePath })
 }
 
-function optionalManifestString(object: JsonObject, key: string, fallback: string, manifestPath: string, fieldPath: string): Result<string, string> {
+function optionalManifestString(object: SerialObject, key: string, fallback: string, manifestPath: string, fieldPath: string): Result<string, string> {
   if !manifestJsonHas(object, key) { return Success(fallback) }
   return manifestString(manifestJsonField(object, key), manifestPath, fieldPath)
 }
 
 function firstManifestString(
-  first: JsonObject, firstKey: string,
-  second: JsonObject, secondKey: string,
-  third: JsonObject, thirdKey: string,
+  first: SerialObject, firstKey: string,
+  second: SerialObject, secondKey: string,
+  third: SerialObject, thirdKey: string,
   fallback: string,
   manifestPath: string,
   fieldPath: string,
@@ -634,7 +634,7 @@ function isManagedIOSPlistKey(key: string): bool {
 }
 
 function parseResourceArray(
-  value: JsonValue,
+  value: SerialValue,
   manifestPath: string,
   rootDirectory: string,
   fieldPath: string,
@@ -652,7 +652,7 @@ function parseResourceArray(
         source = text
         destination = text
       }
-      object: JsonObject -> {
+      object: SerialObject -> {
         if !manifestJsonHas(object, "from") || !manifestJsonHas(object, "to") {
           return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + "[" + string(index) + "] requires string fields from and to")
         }
@@ -719,7 +719,7 @@ function normalizeResourceDestination(
 
 function appendNativeFragment(
   target: NativeBuildPlan,
-  fragment: JsonObject,
+  fragment: SerialObject,
   manifestPath: string,
   rootDirectory: string,
   fieldPath: string,
@@ -739,7 +739,7 @@ function appendNativeFragment(
 
 function appendStringArrayField(
   target: string[],
-  object: JsonObject,
+  object: SerialObject,
   name: string,
   manifestPath: string,
   fieldPath: string,
@@ -781,21 +781,21 @@ function appendUnique(target: string[], value: string): none {
   target.push(value)
 }
 
-function manifestObject(value: JsonValue, manifestPath: string, fieldPath: string): Result<JsonObject, string> {
+function manifestObject(value: SerialValue, manifestPath: string, fieldPath: string): Result<SerialObject, string> {
   case value {
-    object: JsonObject -> return Success(object)
+    object: SerialObject -> return Success(object)
     _ -> return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must be an object")
   }
 }
 
-function manifestArray(value: JsonValue, manifestPath: string, fieldPath: string): Result<JsonValue[], string> {
+function manifestArray(value: SerialValue, manifestPath: string, fieldPath: string): Result<SerialValue[], string> {
   case value {
-    array: JsonValue[] -> return Success(array)
+    array: SerialValue[] -> return Success(array)
     _ -> return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must be an array")
   }
 }
 
-function manifestString(value: JsonValue, manifestPath: string, fieldPath: string): Result<string, string> {
+function manifestString(value: SerialValue, manifestPath: string, fieldPath: string): Result<string, string> {
   case value {
     text: string -> return Success(text)
     _ -> return Failure("Invalid doof.json at " + manifestPath + ": " + fieldPath + " must be a string")

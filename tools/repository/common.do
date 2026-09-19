@@ -79,11 +79,11 @@ export function stableVersion(version: string): bool {
   }
   return true
 }
-export function jsonFile(path_: string): Result<JsonObject, string> {
+export function jsonFile(path_: string): Result<SerialObject, string> {
   try source := read(path_)
   return parseJsonObject(source)
 }
-export function jsonString(value: JsonObject, key: string): Result<string, string> {
+export function jsonString(value: SerialObject, key: string): Result<string, string> {
   field := value.get(key) else { return Failure("Missing " + key) }
   result := field as string else { return Failure("Expected string for " + key) }
   return Success(result)

@@ -3,7 +3,7 @@
 import { emitCarrierConversion } from "./emitter-carrier-values"
 import { carrierOf, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
-import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitNoneLiteral, emitStringConstant, quote } from "./emitter-expr-literals"
@@ -29,7 +29,7 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
         sourceResult: ResultResolvedType -> {
           let narrowed = ""
           case sourceResult.valueType {
-            _: JsonValueResolvedType -> { narrowed = emitJsonAs("doof::success_value(_as_source)", target, resultCpp, success, failure) }
+            _: SerialValueResolvedType -> { narrowed = emitJsonAs("doof::success_value(_as_source)", target, resultCpp, success, failure) }
             _ -> { }
           }
           if narrowed != "" {
@@ -47,7 +47,7 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
         return "[&]() -> " + resultCpp + " { auto _as_checked = doof::checked_numeric_as<" + targetCpp + ">(" + source + "); if (_as_checked.has_value()) return " + success + "{_as_checked.value()}; return " + failure + "{\"Numeric narrowing failed\"}; }()"
       }
       case sourceType {
-        _: JsonValueResolvedType -> { return emitJsonAs(source, target, resultCpp, success, failure) }
+        _: SerialValueResolvedType -> { return emitJsonAs(source, target, resultCpp, success, failure) }
         interface_: InterfaceType -> {
           case target {
             _: ClassType -> {
@@ -58,9 +58,9 @@ export function emitAs(expression: AsExpression, context: EmitContext): string {
         }
         union_: UnionResolvedType -> {
           if unionContainsJsonValue(union_) {
-            narrowedJson := "std::get<doof::JsonValue>(_as_nullable)"
+            narrowedJson := "std::get<doof::SerialValue>(_as_nullable)"
             jsonNarrowing := emitJsonAs(narrowedJson, target, resultCpp, success, failure)
-            return "[&]() -> " + resultCpp + " { auto _as_nullable = " + source + "; if (doof::is_null(_as_nullable)) return " + failure + "{\"JsonValue narrowing failed\"}; return " + jsonNarrowing + "; }()"
+            return "[&]() -> " + resultCpp + " { auto _as_nullable = " + source + "; if (doof::is_null(_as_nullable)) return " + failure + "{\"SerialValue narrowing failed\"}; return " + jsonNarrowing + "; }()"
           }
           member := naturalNullableUnionMember(union_)
           if member != none {
@@ -129,7 +129,7 @@ function emitNumericUnionAs(source: string, union_: UnionResolvedType, targetCpp
 function unionContainsJsonValue(union_: UnionResolvedType): bool {
   for member of union_.types {
     case member {
-      _: JsonValueResolvedType -> { return true }
+      _: SerialValueResolvedType -> { return true }
       _ -> { }
     }
   }
@@ -141,19 +141,19 @@ function emitJsonAs(source: string, target: ResolvedType, resultCpp: string, suc
   let value = source
   case target {
     primitive: PrimitiveType -> {
-      if primitive.name == "bool" { condition = "doof::json_is_boolean(_as_value)"; value = "doof::json_as_bool(_as_value)" }
-      else if primitive.name == "string" { condition = "doof::json_is_string(_as_value)"; value = "doof::json_as_string(_as_value)" }
-      else if primitive.name == "int" { condition = "doof::json_is_number(_as_value)"; value = "doof::json_as_int(_as_value)" }
-      else if primitive.name == "long" { condition = "doof::json_is_number(_as_value)"; value = "doof::json_as_long(_as_value)" }
-      else if primitive.name == "float" { condition = "doof::json_is_number(_as_value)"; value = "doof::json_as_float(_as_value)" }
-      else if primitive.name == "double" { condition = "doof::json_is_number(_as_value)"; value = "doof::json_as_double(_as_value)" }
+      if primitive.name == "bool" { condition = "doof::serial_is_boolean(_as_value)"; value = "doof::serial_as_bool(_as_value)" }
+      else if primitive.name == "string" { condition = "doof::serial_is_string(_as_value)"; value = "doof::serial_as_string(_as_value)" }
+      else if primitive.name == "int" { condition = "doof::serial_is_number(_as_value)"; value = "doof::serial_as_int(_as_value)" }
+      else if primitive.name == "long" { condition = "doof::serial_is_number(_as_value)"; value = "doof::serial_as_long(_as_value)" }
+      else if primitive.name == "float" { condition = "doof::serial_is_number(_as_value)"; value = "doof::serial_as_float(_as_value)" }
+      else if primitive.name == "double" { condition = "doof::serial_is_number(_as_value)"; value = "doof::serial_as_double(_as_value)" }
     }
-    _: ArrayResolvedType -> { condition = "doof::json_is_array(_as_value)"; value = "std::get<doof::JsonArray>(doof::json_storage(_as_value))" }
-    _: MapResolvedType -> { condition = "doof::json_is_object(_as_value)"; value = "doof::json_object(_as_value)" }
-    _: JsonValueResolvedType -> { value = "_as_value" }
+    _: ArrayResolvedType -> { condition = "doof::serial_is_array(_as_value)"; value = "std::get<doof::SerialArray>(doof::serial_storage(_as_value))" }
+    _: MapResolvedType -> { condition = "doof::serial_is_object(_as_value)"; value = "doof::serial_object(_as_value)" }
+    _: SerialValueResolvedType -> { value = "_as_value" }
     _ -> { }
   }
-  return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (" + condition + ") return " + success + "{" + value + "}; return " + failure + "{\"JsonValue narrowing failed\"}; }()"
+  return "[&]() -> " + resultCpp + " { auto _as_value = " + source + "; if (" + condition + ") return " + success + "{" + value + "}; return " + failure + "{\"SerialValue narrowing failed\"}; }()"
 }
 
 export function emitAssignment(expression: AssignmentExpression, context: EmitContext): string {
@@ -474,10 +474,10 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
       parameter: TypeParameterType -> {
         specialized := specializeEmitType(parameter, context)
         if parameter.constraintName == "Reflectable" && expression.property == "metadata" { return "doof::metadata_for_type<" + emitType(specialized, context.modulePath, context.names) + ">()" }
-        if parameter.constraintName == "JsonSerializable" && expression.property == "fromJsonValue" {
+        if parameter.constraintName == "Serializable" && expression.property == "fromSerialValue" {
           case specialized {
-            concrete: ClassType -> { return emitType(concrete, context.modulePath, context.names) + "::element_type::fromJsonValue" }
-            unresolved: TypeParameterType -> { return cppIdentifier(unresolved.name) + "::element_type::fromJsonValue" }
+            concrete: ClassType -> { return emitType(concrete, context.modulePath, context.names) + "::element_type::fromSerialValue" }
+            unresolved: TypeParameterType -> { return cppIdentifier(unresolved.name) + "::element_type::fromSerialValue" }
             _ -> { }
           }
         }

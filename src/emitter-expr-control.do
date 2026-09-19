@@ -1,7 +1,7 @@
 // Conditional and pattern-based expression lowering.
 
 import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, RangePattern, TypePattern, ValuePattern, WildcardPattern, YieldBlockExpression } from "./ast"
-import { JsonValueResolvedType, ResolvedType } from "./semantic"
+import { SerialValueResolvedType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitCaseSubjectValue, emitCaseTypePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -36,7 +36,7 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
     resultType := specializeEmitType(expression.resolvedType!, context)
     contextualBranches = hasNoneMember(resultType) || usesVariantRepresentation(resultType)
     case resultType {
-      _: JsonValueResolvedType -> { contextualBranches = true }
+      _: SerialValueResolvedType -> { contextualBranches = true }
       _ -> { }
     }
   }

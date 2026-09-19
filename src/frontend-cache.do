@@ -38,11 +38,11 @@ export class FrontendCacheState {
 
 export function parseFrontendCacheState(source: string): FrontendCacheState | none {
   value := parseJsonValue(source) else { return none }
-  state := FrontendCacheState.fromJsonValue(value, true) else { return none }
+  state := FrontendCacheState.fromSerialValue(value, true) else { return none }
   if state.version != FRONTEND_CACHE_VERSION { return none }
   return state
 }
 
 export function renderFrontendCacheState(state: FrontendCacheState): string {
-  return formatJsonValue(state.toJsonObject()) + "\n"
+  return formatJsonValue(state.toSerialObject()) + "\n"
 }

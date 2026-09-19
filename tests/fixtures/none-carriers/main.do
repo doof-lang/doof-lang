@@ -29,18 +29,18 @@ function main(): int {
  item := Item {}
  let reference: (weak Item) | none = item
  if widen(reference) == none { return 7 }
- let bad: JsonValue = { values: [none] }
- arrayResult := Arrays.fromJsonValue(bad)
+ let bad: SerialValue = { values: [none] }
+ arrayResult := Arrays.fromSerialValue(bad)
  case arrayResult { error: Failure -> { if !error.error.contains("[0]") || !error.error.contains("Expected array") { return 8 } }
 _ -> { return 9 } }
- if Maps.fromJsonValue(bad).isSuccess() || Tuples.fromJsonValue(bad).isSuccess() { return 10 }
- let shortTuple: JsonValue = { values: [[none]] }
- let longTuple: JsonValue = { values: [[none, 7, 8]] }
- if Tuples.fromJsonValue(shortTuple).isSuccess() || Tuples.fromJsonValue(longTuple).isSuccess() { return 11 }
- let goodArray: JsonValue = { values: [[none]] }
- let goodMap: JsonValue = { values: [{ a: none }] }
- let goodTuple: JsonValue = { values: [[none, 7]] }
- if !Arrays.fromJsonValue(goodArray).isSuccess() || !Maps.fromJsonValue(goodMap).isSuccess() || !Tuples.fromJsonValue(goodTuple).isSuccess() { return 12 }
+ if Maps.fromSerialValue(bad).isSuccess() || Tuples.fromSerialValue(bad).isSuccess() { return 10 }
+ let shortTuple: SerialValue = { values: [[none]] }
+ let longTuple: SerialValue = { values: [[none, 7, 8]] }
+ if Tuples.fromSerialValue(shortTuple).isSuccess() || Tuples.fromSerialValue(longTuple).isSuccess() { return 11 }
+ let goodArray: SerialValue = { values: [[none]] }
+ let goodMap: SerialValue = { values: [{ a: none }] }
+ let goodTuple: SerialValue = { values: [[none, 7]] }
+ if !Arrays.fromSerialValue(goodArray).isSuccess() || !Maps.fromSerialValue(goodMap).isSuccess() || !Tuples.fromSerialValue(goodTuple).isSuccess() { return 12 }
  return 0
 }
 

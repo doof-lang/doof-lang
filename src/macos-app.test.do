@@ -2,9 +2,9 @@ import { Assert } from "std/assert"
 import { MacOSAppConfig, macOSCodesignArguments, macOSPackageArchiveName, renderMacOSInfoPlist } from "./macos-app"
 
 export function testRendersMacOSInfoPlistAndCustomMetadata(): none {
-  custom: JsonObject := {}
+  custom: SerialObject := {}
   custom.set("NSLocalNetworkUsageDescription", "Find nearby players & hosts.")
-  services: JsonValue[] := ["_doof._tcp"]
+  services: SerialValue[] := ["_doof._tcp"]
   custom.set("NSBonjourServices", services)
   plist := renderMacOSInfoPlist(MacOSAppConfig {
     executableName: "DoofDemo",

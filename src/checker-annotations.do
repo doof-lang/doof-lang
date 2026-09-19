@@ -59,11 +59,11 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
         if rejectUnexpectedTypeArguments(resolution, named, module, scope, validateConstraints) { return finishAnnotation(resolution, annotation, unknownType()) }
         return finishAnnotation(resolution, annotation, neverType())
       }
-      if named.name == "JsonValue" {
+      if named.name == "SerialValue" {
         if rejectUnexpectedTypeArguments(resolution, named, module, scope, validateConstraints) { return finishAnnotation(resolution, annotation, unknownType()) }
         return finishAnnotation(resolution, annotation, jsonValueType())
       }
-      if named.name == "JsonObject" {
+      if named.name == "SerialObject" {
         if rejectUnexpectedTypeArguments(resolution, named, module, scope, validateConstraints) { return finishAnnotation(resolution, annotation, unknownType()) }
         return finishAnnotation(resolution, annotation, jsonObjectType())
       }
@@ -262,7 +262,7 @@ export function validateAnnotationConstraints(state: CheckerState, names: string
     annotation := constraints[index].type_!
     case annotation {
       named: NamedType -> {
-        if named.typeArgs.length == 0 && (named.name == "Reflectable" || named.name == "JsonSerializable") {
+        if named.typeArgs.length == 0 && (named.name == "Reflectable" || named.name == "Serializable") {
           case arguments[index] {
             parameter: TypeParameterType -> { if parameter.constraintName == named.name { continue } }
             _ -> { }
@@ -275,9 +275,9 @@ export function validateAnnotationConstraints(state: CheckerState, names: string
           }
           continue
         }
-        if named.typeArgs.length == 0 && named.name == "JsonSerializable" {
-          result := memberType(state, arguments[index], "fromJsonValue", span)
-          if result.kind == "unknown" { reportConstraintViolation(state, names[index], arguments[index], "JsonSerializable", span) }
+        if named.typeArgs.length == 0 && named.name == "Serializable" {
+          result := memberType(state, arguments[index], "fromSerialValue", span)
+          if result.kind == "unknown" { reportConstraintViolation(state, names[index], arguments[index], named.name, span) }
           continue
         }
       }

@@ -198,7 +198,7 @@ JSON eligibility and JSON code demand are intentionally separate:
 2. Checker member resolution advertises only synthetic methods that can be
    generated and marks metadata needs on declarations.
 3. The monomorphisation walk observes checked member uses:
-   `toJsonObject`, `fromJsonValue`, and `metadata`.
+   `toSerialObject`, `fromSerialValue`, and `metadata`.
 4. `InstantiationPlan` records direction-specific class keys in
    `jsonSerializationKeys` and `jsonDeserializationKeys`. Demand is propagated
    recursively through supported field, collection, tuple, and union types.

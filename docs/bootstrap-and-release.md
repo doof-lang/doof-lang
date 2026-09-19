@@ -38,7 +38,7 @@ disable frontend cache reuse. Never reuse a published version for changed code.
 export DOOF_STDLIB_ROOT=/absolute/path/to/doof-stdlib
 export DOOF_SIGN_IDENTITY='Developer ID Application: Your Organization (TEAMID)'
 export DOOF_NOTARY_PROFILE=doof-release
-./scripts/release.sh 0.1.0
+./scripts/release.sh 0.2.0
 ```
 
 Provision the Developer ID Application certificate and its private key in the

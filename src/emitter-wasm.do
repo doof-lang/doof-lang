@@ -17,7 +17,7 @@ import { planModuleInitializationOrder } from "./emitter-module"
 import { emitContextType } from "./emitter-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, nullableJsonMember } from "./json-semantics"
 import {
-  ArrayResolvedType, ClassType, EnumType, FunctionType, JsonValueResolvedType, NoneType,
+  ArrayResolvedType, ClassType, EnumType, FunctionType, SerialValueResolvedType, NoneType,
   PrimitiveType, ResolvedType, ResultResolvedType, UnionResolvedType,
 } from "./semantic"
 
@@ -142,7 +142,7 @@ function validateWasmFunction(fn: FunctionDeclaration, analysis: AnalysisResult)
 function isWasmJsonType(type_: ResolvedType, analysis: AnalysisResult): bool {
   case type_ {
     _: PrimitiveType -> { return true }
-    _: JsonValueResolvedType -> { return true }
+    _: SerialValueResolvedType -> { return true }
     _: NoneType -> { return true }
     _: EnumType -> { return true }
     class_: ClassType -> {
@@ -173,21 +173,21 @@ function wasmPreamble(info: ModuleInfo, result: AnalysisResult, entry: string, m
     "namespace {\n" +
     "int __doof_wasm_initialization_state = 0;\n" +
     "char* __doof_wasm_return_text(const std::string& text) { auto* out = static_cast<char*>(std::malloc(text.size() + 1)); if (out == nullptr) return nullptr; std::memcpy(out, text.c_str(), text.size() + 1); return out; }\n" +
-    "doof::JsonValue __doof_wasm_object(std::initializer_list<std::pair<std::string, doof::JsonValue>> values) { return doof::json_value(std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(values)); }\n" +
-    "char* __doof_wasm_success(const doof::JsonValue& value) { return __doof_wasm_return_text(doof_json::format(__doof_wasm_object({{\"ok\", doof::json_value(true)}, {\"value\", value}}))); }\n" +
-    "char* __doof_wasm_failure(const doof::JsonValue& error) { return __doof_wasm_return_text(doof_json::format(__doof_wasm_object({{\"ok\", doof::json_value(false)}, {\"error\", error}}))); }\n" +
-    "char* __doof_wasm_failure_message(int32_t code, const std::string& message) { return __doof_wasm_failure(doof::json_error(code, message)); }\n" +
+    "doof::SerialValue __doof_wasm_object(std::initializer_list<std::pair<std::string, doof::SerialValue>> values) { return doof::serial_value(std::make_shared<doof::ordered_map<std::string, doof::SerialValue>>(values)); }\n" +
+    "char* __doof_wasm_success(const doof::SerialValue& value) { return __doof_wasm_return_text(doof_json::format(__doof_wasm_object({{\"ok\", doof::serial_value(true)}, {\"value\", value}}))); }\n" +
+    "char* __doof_wasm_failure(const doof::SerialValue& error) { return __doof_wasm_return_text(doof_json::format(__doof_wasm_object({{\"ok\", doof::serial_value(false)}, {\"error\", error}}))); }\n" +
+    "char* __doof_wasm_failure_message(int32_t code, const std::string& message) { return __doof_wasm_failure(doof::serial_error(code, message)); }\n" +
     "}\n\nextern \"C\" void doof_free(char* ptr) { std::free(ptr); }\n\n" +
     "extern \"C\" char* doof_initialize() {\n" +
     "    try {\n" +
-    "        if (__doof_wasm_initialization_state == 2) return __doof_wasm_success(doof::json_value(nullptr));\n" +
+    "        if (__doof_wasm_initialization_state == 2) return __doof_wasm_success(doof::serial_value(nullptr));\n" +
     "        if (__doof_wasm_initialization_state == 1) return __doof_wasm_failure_message(500, \"Doof module initialization is already in progress\");\n" +
     "        if (__doof_wasm_initialization_state == 3) return __doof_wasm_failure_message(500, \"Doof module initialization previously failed\");\n" +
     "        __doof_wasm_initialization_state = 1;\n" +
     "        auto& __domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __scope(&__domain);\n" +
     calls +
     "        __doof_wasm_initialization_state = 2;\n" +
-    "        return __doof_wasm_success(doof::json_value(nullptr));\n" +
+    "        return __doof_wasm_success(doof::serial_value(nullptr));\n" +
     "    } catch (const doof::Panic& error) { __doof_wasm_initialization_state = 3; return __doof_wasm_failure_message(500, std::string(\"panic: \") + error.what()); }\n" +
     "      catch (const std::exception& error) { __doof_wasm_initialization_state = 3; return __doof_wasm_failure_message(500, error.what()); }\n" +
     "}\n\n"
@@ -203,7 +203,7 @@ function emitWasmWrapper(fn: FunctionDeclaration, exportName: string, context: E
   source = source + "        auto& __domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __scope(&__domain);\n"
   source = source + "        auto __parsed = doof_json::parse(params_json == nullptr ? std::string(\"{}\") : std::string(params_json));\n"
   source = source + "        if (doof::is_failure(__parsed)) return __doof_wasm_failure_message(400, std::string(\"Invalid JSON params: \" ) + doof::failure_error(__parsed));\n"
-  source = source + "        const auto* __params = doof::json_as_object(doof::success_value(__parsed));\n"
+  source = source + "        const auto* __params = doof::serial_as_object(doof::success_value(__parsed));\n"
   source = source + "        if (__params == nullptr) return __doof_wasm_failure_message(400, \"Invalid JSON params: expected object\");\n"
   for parameter of fn.params { source = source + emitParameter(parameter, context) }
   let arguments = ""
@@ -213,11 +213,11 @@ function emitWasmWrapper(fn: FunctionDeclaration, exportName: string, context: E
   }
   call := "::" + moduleNamespace(context.modulePath, context.names) + "::" + cppIdentifier(fn.name) + "(" + arguments + ")"
   case type_.returnType {
-    _: NoneType -> { source = source + "        " + call + ";\n        return __doof_wasm_success(doof::json_value(nullptr));\n" }
+    _: NoneType -> { source = source + "        " + call + ";\n        return __doof_wasm_success(doof::serial_value(nullptr));\n" }
     result: ResultResolvedType -> {
       source = source + "        auto __result = " + call + ";\n        if (doof::is_failure(__result)) return __doof_wasm_failure(" + emitJsonField("doof::failure_error(__result)", result.errorType, context) + ");\n"
       case result.valueType {
-        _: NoneType -> { source = source + "        return __doof_wasm_success(doof::json_value(nullptr));\n" }
+        _: NoneType -> { source = source + "        return __doof_wasm_success(doof::serial_value(nullptr));\n" }
         _ -> { source = source + "        auto __value = doof::success_value(__result);\n        return __doof_wasm_success(" + emitJsonField("__value", result.valueType, context) + ");\n" }
       }
     }

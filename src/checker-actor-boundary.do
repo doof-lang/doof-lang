@@ -7,7 +7,7 @@
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import {
   ActorType, ArrayResolvedType, ClassType, Diagnostic, EnumType, FunctionType, InterfaceType,
-  JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType,
+  SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType,
   ResolvedType, ResultResolvedType, SemanticLocation, SemanticSpan, SetResolvedType, StreamResolvedType, TupleResolvedType,
   TypeParameterType, UnionResolvedType, UnknownType, WeakResolvedType,
 } from "./semantic"
@@ -68,7 +68,7 @@ function findViolation(result: AnalysisResult, type_: ResolvedType, seen: string
     _: NoneType -> { return none }
     _: UnknownType -> { return none }
     _: TypeParameterType -> { return none }
-    _: JsonValueResolvedType -> { return none }
+    _: SerialValueResolvedType -> { return none }
     _: ActorType -> { return ActorBoundaryViolation { reason: "Actor<T> references cannot cross actor boundaries" } }
     _: PromiseType -> { return ActorBoundaryViolation { reason: "Promise<T> values cannot cross actor boundaries" } }
     weak_: WeakResolvedType -> { return findViolation(result, weak_.inner, seen) }

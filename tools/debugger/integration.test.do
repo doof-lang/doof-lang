@@ -26,7 +26,7 @@ function waitForStop(session: DebugSession): none {
 
 export function testRealLldbSession(): none {
   path := env("DOOF_DEBUG_TEST_LAUNCH") else { return }
-  launch := try! DebugLaunch.fromJsonValue(try! parseJsonValue(try! readText(path)))
+  launch := try! DebugLaunch.fromSerialValue(try! parseJsonValue(try! readText(path)))
   session := DebugSession { launch }
   session.toggleBreakpoint(launch.source, 5)
   session.start()

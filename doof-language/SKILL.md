@@ -60,7 +60,7 @@ Load the narrowest matching file for the task.
 | Need | Reference |
 | --- | --- |
 | Core syntax, bindings, lambdas, control flow, operators, language differences | [references/core-language.md](./references/core-language.md) |
-| Types, collections, enums, `JsonValue`, inference, nullability | [references/type-system.md](./references/type-system.md) |
+| Types, collections, enums, `SerialValue`, inference, nullability | [references/type-system.md](./references/type-system.md) |
 | Classes, structs, interfaces, construction, statics, destructors, `weak` references | [references/classes-and-memory.md](./references/classes-and-memory.md) |
 | `Result`, `try`, `try!`, `try?`, declaration-`else`, `catch`, `as`, `panic` | [references/error-handling.md](./references/error-handling.md) |
 | Imports, exports, package dependencies, `import class`, `import function` | [references/modules-and-interop.md](./references/modules-and-interop.md) |
@@ -86,6 +86,6 @@ Load the narrowest matching file for the task.
 
 - Writing a `.do` module from scratch: load [references/core-language.md](./references/core-language.md) and then whichever feature reference matches the code.
 - Designing APIs with classes, interfaces, or metadata: load [references/classes-and-memory.md](./references/classes-and-memory.md) and [references/json-and-metadata.md](./references/json-and-metadata.md).
-- Fixing type errors around unions, nullability, collections, or `JsonValue`: load [references/type-system.md](./references/type-system.md) and [references/error-handling.md](./references/error-handling.md).
+- Fixing type errors around unions, nullability, collections, or `SerialValue`: load [references/type-system.md](./references/type-system.md) and [references/error-handling.md](./references/error-handling.md).
 - Working on imports, packages, or C++ bridge code: load [references/modules-and-interop.md](./references/modules-and-interop.md).
 - Writing tests or mocks: load [references/stdlib-assert-and-testing.md](./references/stdlib-assert-and-testing.md).

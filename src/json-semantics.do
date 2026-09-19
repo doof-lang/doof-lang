@@ -7,7 +7,7 @@ import {
   ArrayType, BoolLiteral, CharLiteral, ClassDeclaration, ClassField, DoubleLiteral, FloatLiteral,
   ExportDeclaration, IntLiteral, InterfaceDeclaration, LongLiteral, NamedType, Program, Statement, StringLiteral, TypeAnnotation, UnionType,
 } from "./ast"
-import { ArrayResolvedType, ClassType, EnumType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, EnumType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
 
 export class JsonDiscriminatorEntry {
   value: string
@@ -135,7 +135,7 @@ export function nullableJsonMember(type_: ResolvedType): ResolvedType | none {
 export function isGeneratedJsonType(type_: ResolvedType, programs: Program[] = [], visited: string[] = []): bool {
   case type_ {
     _: PrimitiveType -> { return true }
-    _: JsonValueResolvedType -> { return true }
+    _: SerialValueResolvedType -> { return true }
     _: NoneType -> { return true }
     _: EnumType -> { return true }
     class_: ClassType -> {
@@ -266,7 +266,7 @@ function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, pr
     named: NamedType -> {
       if named.name == "byte" || named.name == "int" || named.name == "long" ||
         named.name == "float" || named.name == "double" || named.name == "string" ||
-        named.name == "char" || named.name == "bool" || named.name == "JsonValue" { return true }
+        named.name == "char" || named.name == "bool" || named.name == "SerialValue" { return true }
       if named.name == "Tuple" {
         if named.typeArgs.length == 0 { return false }
         for element of named.typeArgs {
@@ -299,7 +299,7 @@ function isGeneratedJsonDeserializationAnnotation(annotation: TypeAnnotation, pr
         case member {
           named: NamedType -> {
             if named.name == "null" { hasNull = true }
-            else if named.name != "JsonValue" && isGeneratedJsonDeserializationAnnotation(member, programs, visited) { hasPrimitive = true }
+            else if named.name != "SerialValue" && isGeneratedJsonDeserializationAnnotation(member, programs, visited) { hasPrimitive = true }
             else { return false }
           }
           _ -> { return false }
@@ -349,7 +349,7 @@ function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, prog
         case named.typeArgs[0] {
           key: NamedType -> {
             case named.typeArgs[1] {
-              value: NamedType -> { return key.name == "string" && value.name == "JsonValue" }
+              value: NamedType -> { return key.name == "string" && value.name == "SerialValue" }
               _ -> { return false }
             }
           }
@@ -360,7 +360,7 @@ function isGeneratedJsonSerializationAnnotation(annotation: TypeAnnotation, prog
     }
     array: ArrayType -> {
       case array.elementType {
-        element: NamedType -> { return element.name == "JsonValue" }
+        element: NamedType -> { return element.name == "SerialValue" }
         _ -> { return false }
       }
     }

@@ -11,7 +11,7 @@ function loadLaunch(arguments: string[]): Result<DebugLaunch, string> {
   if arguments.length != 1 { return Failure("Start a session with doof debug <entry.do or package-directory>.") }
   text := readText(arguments[0]) else error { return Failure("Cannot read debugger launch: " + string(error)) }
   try value := parseJsonValue(text)
-  try launch := DebugLaunch.fromJsonValue(value)
+  try launch := DebugLaunch.fromSerialValue(value)
   error := debugLaunchError(launch)
   if error != "" { return Failure(error) }
   if !exists(launch.executable) { return Failure("Debug executable is missing: " + launch.executable) }

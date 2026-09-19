@@ -2,7 +2,7 @@
 
 import { ClassDeclaration, EnumDeclaration, ExportDeclaration, FunctionDeclaration, Statement } from "./ast"
 import {
-  ArrayResolvedType, ClassType, EnumType, FunctionType, JsonValueResolvedType, NoneType, PrimitiveType,
+  ArrayResolvedType, ClassType, EnumType, FunctionType, SerialValueResolvedType, NoneType, PrimitiveType,
   ResolvedType, ResultResolvedType, TupleResolvedType, UnionResolvedType,
 } from "./semantic"
 import { EmitContext } from "./emitter-context"
@@ -34,7 +34,7 @@ export function emitMetadataDefinition(owner: ClassDeclaration, context: EmitCon
   }
   result = result + "    }),\n"
   defs := emitDefinitions(methods, context)
-  result = result + "    " + (if defs == "" then "std::nullopt" else "std::optional<doof::JsonValue>{" + defs + "}") + "\n"
+  result = result + "    " + (if defs == "" then "std::nullopt" else "std::optional<doof::SerialValue>{" + defs + "}") + "\n"
   return result + "};\n"
 }
 
@@ -46,9 +46,9 @@ function emitMethodReflection(owner: ClassDeclaration, method: FunctionDeclarati
   result = result + "            \"" + escapeCpp(method.description) + "\",\n"
   result = result + "            " + inputSchema + ",\n"
   result = result + "            " + outputSchema + ",\n"
-  result = result + "            []( " + owner.name + "& _instance, const doof::JsonValue& _params) -> doof::Result<doof::JsonValue, doof::JsonValue> {\n"
+  result = result + "            []( " + owner.name + "& _instance, const doof::SerialValue& _params) -> doof::Result<doof::SerialValue, doof::SerialValue> {\n"
   result = result + "                const bool _lenient = false;\n"
-  result = result + "                const auto* _p = doof::json_as_object(_params);\n"
+  result = result + "                const auto* _p = doof::serial_as_object(_params);\n"
   result = result + "                if (_p == nullptr) { return " + metadataFailure(400, "std::string(\"Invalid JSON params: expected object\")") + "; }\n"
   for parameter of method.params {
     type_ := parameter.resolvedType!
@@ -76,19 +76,19 @@ function emitMethodReflection(owner: ClassDeclaration, method: FunctionDeclarati
   case returnType {
     _: NoneType -> {
       result = result + "                _instance." + cppIdentifier(method.name) + "(" + arguments + ");\n"
-      result = result + "                return " + metadataSuccess("doof::json_value(nullptr)") + ";\n"
+      result = result + "                return " + metadataSuccess("doof::serial_value(nullptr)") + ";\n"
     }
     resultType: ResultResolvedType -> {
       result = result + "                auto _result = _instance." + cppIdentifier(method.name) + "(" + arguments + ");\n"
       result = result + "                if (doof::is_failure(_result)) {\n"
       if resultType.errorType.kind == "json-value" {
-        result = result + "                    return doof::Failure<doof::JsonValue>{doof::failure_error(_result)};\n"
+        result = result + "                    return doof::Failure<doof::SerialValue>{doof::failure_error(_result)};\n"
       } else {
         result = result + "                    return " + metadataFailure(500, "\"An error occurred\"") + ";\n"
       }
       result = result + "                }\n"
       if resultType.valueType.kind == "none" {
-        result = result + "                return " + metadataSuccess("doof::json_value(nullptr)") + ";\n"
+        result = result + "                return " + metadataSuccess("doof::serial_value(nullptr)") + ";\n"
       } else {
         result = result + "                auto _success = doof::success_value(_result);\n"
         result = result + "                return " + metadataSuccess(emitJsonField("_success", resultType.valueType, context)) + ";\n"
@@ -103,15 +103,15 @@ function emitMethodReflection(owner: ClassDeclaration, method: FunctionDeclarati
 }
 
 function emitParameterValidation(name: string, value: string, type_: ResolvedType, context: EmitContext, indent: string): string {
-  return indent + "if (!(" + emitJsonTypeCheck(value, type_, context) + ")) { return " + metadataFailure(400, "std::string(\"Parameter \\\"" + escapeCpp(name) + "\\\" expected " + jsonTypeName(type_, context) + " but got \") + doof::json_type_name(" + value + ")") + "; }\n"
+  return indent + "if (!(" + emitJsonTypeCheck(value, type_, context) + ")) { return " + metadataFailure(400, "std::string(\"Parameter \\\"" + escapeCpp(name) + "\\\" expected " + jsonTypeName(type_, context) + " but got \") + doof::serial_type_name(" + value + ")") + "; }\n"
 }
 
 function metadataFailure(code: int, message: string): string {
-  return "doof::Failure<doof::JsonValue>{doof::json_error(" + string(code) + ", " + message + ")}"
+  return "doof::Failure<doof::SerialValue>{doof::serial_error(" + string(code) + ", " + message + ")}"
 }
 
 function metadataSuccess(value: string): string {
-  return "doof::Success<doof::JsonValue>{" + value + "}"
+  return "doof::Success<doof::SerialValue>{" + value + "}"
 }
 
 function methodReturnType(method: FunctionDeclaration): ResolvedType {
@@ -162,7 +162,7 @@ function emitTypeSchemaEntries(type_: ResolvedType, context: EmitContext): strin
       if primitive.name == "string" || primitive.name == "char" { return [jsonEntry("type", jsonString("string"))] }
       return [jsonEntry("type", jsonString("boolean"))]
     }
-    _: JsonValueResolvedType -> { return [] }
+    _: SerialValueResolvedType -> { return [] }
     _: NoneType -> { return [jsonEntry("type", jsonString("null"))] }
     class_: ClassType -> { return [jsonEntry("$ref", jsonString("#/$defs/" + class_.name))] }
     array: ArrayResolvedType -> { return [jsonEntry("type", jsonString("array")), jsonEntry("items", emitTypeSchema(array.elementType, context))] }
@@ -277,10 +277,10 @@ function containsClass(classes: ClassDeclaration[], candidate: ClassDeclaration)
 }
 
 function jsonEntry(key: string, value: string): string { return "{\"" + escapeCpp(key) + "\", " + value + "}" }
-function jsonString(value: string): string { return "doof::json_value(\"" + escapeCpp(value) + "\")" }
-function jsonInt(value: int): string { return "doof::json_value(static_cast<int32_t>(" + string(value) + "))" }
-function jsonArray(values: string[]): string { return "doof::json_value(std::make_shared<std::vector<doof::JsonValue>>(std::vector<doof::JsonValue>{" + joinStrings(values) + "}))" }
-function jsonObject(entries: string[]): string { return "doof::json_value(std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(doof::ordered_map<std::string, doof::JsonValue>{" + joinStrings(entries) + "}))" }
+function jsonString(value: string): string { return "doof::serial_value(\"" + escapeCpp(value) + "\")" }
+function jsonInt(value: int): string { return "doof::serial_value(static_cast<int32_t>(" + string(value) + "))" }
+function jsonArray(values: string[]): string { return "doof::serial_value(std::make_shared<std::vector<doof::SerialValue>>(std::vector<doof::SerialValue>{" + joinStrings(values) + "}))" }
+function jsonObject(entries: string[]): string { return "doof::serial_value(std::make_shared<doof::ordered_map<std::string, doof::SerialValue>>(doof::ordered_map<std::string, doof::SerialValue>{" + joinStrings(entries) + "}))" }
 
 function joinStrings(values: string[]): string {
   let result = ""

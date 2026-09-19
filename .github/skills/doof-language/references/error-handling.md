@@ -182,8 +182,8 @@ Rules:
 x: int | string := "hello"
 s := x as string
 
-payload: JsonValue := { ok: true }
-obj := payload as readonly Map<string, JsonValue>
+payload: SerialValue := { ok: true }
+obj := payload as readonly Map<string, SerialValue>
 
 numeric: int | string := 42
 wide := numeric as long
@@ -193,7 +193,7 @@ Behavior:
 
 - For plain values, `as` yields `Result<T, string>`.
 - For `Result<V, F>` sources, it narrows the success channel and yields `Result<T, F | string>`.
-- Supported sources include unions, nullable types, interfaces, exact numeric conversions, `JsonValue`, and `Result` values wrapping those forms.
+- Supported sources include unions, nullable types, interfaces, exact numeric conversions, `SerialValue`, and `Result` values wrapping those forms.
 - Numeric `as` is checked. It fails when the runtime value cannot be represented exactly in the target type.
 
 Useful combinations:

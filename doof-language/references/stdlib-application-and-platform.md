@@ -8,7 +8,7 @@ import { AppleIntelligenceSession } from "std/apple-intelligence"
 
 Creates a persistent Apple FoundationModels `LanguageModelSession` with
 instructions and multi-turn `respond(prompt)`. `transcriptText()` returns the
-native JSON string; `transcriptJson()` parses it to `JsonValue`.
+native JSON string; `transcriptJson()` parses it to `SerialValue`.
 
 `addTool(name, description, inputSchema, invoke)` registers a JSON tool.
 `addTools<T: Reflectable>(tools)` derives tool names, descriptions, schemas, and
@@ -22,7 +22,7 @@ import { JsEngine, JsError, JsJsonHandler } from "std/js"
 ```
 
 `JsEngine` is an isolated persistent QuickJS-NG context. Use `exec(source)` for
-side effects, `eval(source)` for a `JsonValue`, `callJson(name, args)` to invoke
+side effects, `eval(source)` for a `SerialValue`, `callJson(name, args)` to invoke
 a global, and `bindJson(name, handler)` to expose a synchronous Doof callback.
 The boundary rejects non-JSON values, cycles, and non-finite numbers.
 
@@ -55,7 +55,7 @@ import {
 ```
 
 Hosts bundled HTML in native WebKit on macOS/iOS. `app.bind(name, handler)`
-exposes `Result<JsonValue, string>` handlers to JavaScript as
+exposes `Result<SerialValue, string>` handlers to JavaScript as
 `doof.call(name, params)`; `app.postEvent` feeds `doof.on` listeners and queues
 events until the page is ready. `run()` is single-use and must own the macOS
 main thread.

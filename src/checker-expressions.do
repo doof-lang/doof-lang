@@ -4,7 +4,7 @@ import { retainEditorScope } from "./checker-common"
 import { checkArguments, positionalArguments } from "./checker-arguments"
 import { resolveMember } from "./checker-resolution"
 
-import { ActorType, ArrayResolvedType, Binding, ClassType, EnumType, InterfaceType, Diagnostic, FunctionParamType, FunctionType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, Binding, ClassType, EnumType, InterfaceType, Diagnostic, FunctionParamType, FunctionType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
 
 import { CheckedMember, ArrayLiteral, AsExpression, AssignmentExpression, BinaryExpression, Block, BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ConstructExpression, DoubleLiteral, DotShorthand, EnumDeclaration, Expression, FloatLiteral, FunctionDeclaration, IfExpression, Identifier, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral, ObjectLiteral, SourceSpan, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression, CatchExpression, CaseExpression, CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern, AsyncExpression, RetireExpression, ActorCreationExpression } from "./ast"
 import { actorType, classType, functionType, isNumeric, isJsonValueType, resultType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
@@ -491,8 +491,8 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       case objectType {
         _: EnumType -> {
           namedReceiver := isNamedStaticReceiver(member.object)
-          staticMember := member.property == "values" || member.property == "fromName" || member.property == "fromValue" || member.property == "fromJsonValue"
-          if namedReceiver && (member.property == "name" || member.property == "value" || member.property == "toJsonValue") {
+          staticMember := member.property == "values" || member.property == "fromName" || member.property == "fromValue" || member.property == "fromSerialValue"
+          if namedReceiver && (member.property == "name" || member.property == "value" || member.property == "toSerialValue") {
             typeError(state, "Instance member '" + member.property + "' cannot be accessed through an enum type", member.span)
           } else if !namedReceiver && staticMember {
             typeError(state, "Static enum member '" + member.property + "' cannot be accessed through a value", member.span)
@@ -923,7 +923,7 @@ export function checkBinary(state: CheckerState, expression: BinaryExpression, s
   if operator == "==" || operator == "!=" {
     validateNoneComparison(state, operator, left, right, expression.span)
     if (isJsonValueType(left) && right.kind != "json-value" && right.kind != "none" && right.kind != "unknown" && right.kind != "never") || (isJsonValueType(right) && left.kind != "json-value" && left.kind != "none" && left.kind != "unknown" && left.kind != "never") {
-      typeError(state, "Narrow JsonValue with 'as' or 'case' before comparing it with a typed value", expression.span)
+      typeError(state, "Narrow SerialValue with 'as' or 'case' before comparing it with a typed value", expression.span)
       return finish(state, expression, primitive("bool"))
     }
     if left.kind != "none" && right.kind != "none" && !typesOverlap(state, left, right) {
@@ -957,7 +957,7 @@ function admitsNone(type_: ResolvedType): bool {
   case type_ {
     _: NoneType -> { return true }
     _: UnknownType -> { return true }
-    _: JsonValueResolvedType -> { return true }
+    _: SerialValueResolvedType -> { return true }
     union_: UnionResolvedType -> {
       for member of union_.types { if member.kind == "none" { return true } }
     }
@@ -1050,7 +1050,7 @@ export function isValidAsNarrow(state: CheckerState, source: ResolvedType, targe
   if sameType(source, target) { return true }
   if isNumeric(source) && isNumeric(target) { return true }
   case source {
-    _: JsonValueResolvedType -> { return isJsonAsTarget(state, target) }
+    _: SerialValueResolvedType -> { return isJsonAsTarget(state, target) }
     union_: UnionResolvedType -> {
       for member of union_.types { if isValidAsNarrow(state, member, target) { return true } }
     }
@@ -1072,7 +1072,7 @@ export function isJsonAsTarget(state: CheckerState, target: ResolvedType): bool 
     }
     array: ArrayResolvedType -> { return isJsonValueType(array.elementType) }
     map: MapResolvedType -> { return sameType(map.keyType, primitive("string")) && isJsonValueType(map.valueType) }
-    _: JsonValueResolvedType -> { return true }
+    _: SerialValueResolvedType -> { return true }
     _ -> { return false }
   }
   return false

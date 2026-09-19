@@ -6,7 +6,7 @@ import { emitCarrierAbsence } from "./emitter-carrier-values"
 import { EmitContext } from "./emitter-context"
 import { NamedType, TypePattern } from "./ast"
 import {
-  ArrayResolvedType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType,
+  ArrayResolvedType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType,
   ResolvedType, ResultResolvedType, WeakResolvedType,
 } from "./semantic"
 import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, usesNullableSingleValueRepresentation, usesVariantRepresentation } from "./emitter-types"
@@ -48,7 +48,7 @@ export function emitCaseTypePattern(
   patternType := pattern.resolvedType!
   case subjectType {
     result: ResultResolvedType -> { return emitResultPattern(pattern, result, subject, bindingName, currentModulePath, names, context) }
-    _: JsonValueResolvedType -> { return emitJsonValuePattern(patternType, subject, bindingName) }
+    _: SerialValueResolvedType -> { return emitJsonValuePattern(patternType, subject, bindingName) }
     _ -> { }
   }
   if usesVariantRepresentation(subjectType) {
@@ -107,19 +107,19 @@ function emitJsonValuePattern(patternType: ResolvedType, subject: string, bindin
   let value = subject
   case patternType {
     primitive: PrimitiveType -> {
-      if primitive.name == "bool" { condition = "doof::json_is_boolean(" + subject + ")"; value = "doof::json_as_bool(" + subject + ")" }
-      else if primitive.name == "string" { condition = "doof::json_is_string(" + subject + ")"; value = "doof::json_as_string(" + subject + ")" }
-      else if primitive.name == "int" { condition = "doof::json_is_number(" + subject + ")"; value = "doof::json_as_int(" + subject + ")" }
-      else if primitive.name == "long" { condition = "doof::json_is_number(" + subject + ")"; value = "doof::json_as_long(" + subject + ")" }
-      else if primitive.name == "float" { condition = "doof::json_is_number(" + subject + ")"; value = "doof::json_as_float(" + subject + ")" }
-      else if primitive.name == "double" { condition = "doof::json_is_number(" + subject + ")"; value = "doof::json_as_double(" + subject + ")" }
-      else { panic("Unsupported primitive JsonValue case pattern " + primitive.name) }
+      if primitive.name == "bool" { condition = "doof::serial_is_boolean(" + subject + ")"; value = "doof::serial_as_bool(" + subject + ")" }
+      else if primitive.name == "string" { condition = "doof::serial_is_string(" + subject + ")"; value = "doof::serial_as_string(" + subject + ")" }
+      else if primitive.name == "int" { condition = "doof::serial_is_number(" + subject + ")"; value = "doof::serial_as_int(" + subject + ")" }
+      else if primitive.name == "long" { condition = "doof::serial_is_number(" + subject + ")"; value = "doof::serial_as_long(" + subject + ")" }
+      else if primitive.name == "float" { condition = "doof::serial_is_number(" + subject + ")"; value = "doof::serial_as_float(" + subject + ")" }
+      else if primitive.name == "double" { condition = "doof::serial_is_number(" + subject + ")"; value = "doof::serial_as_double(" + subject + ")" }
+      else { panic("Unsupported primitive SerialValue case pattern " + primitive.name) }
     }
-    _: ArrayResolvedType -> { condition = "doof::json_is_array(" + subject + ")"; value = "std::get<doof::JsonArray>(doof::json_storage(" + subject + "))" }
-    _: MapResolvedType -> { condition = "doof::json_is_object(" + subject + ")"; value = "doof::json_object(" + subject + ")" }
-    _: NoneType -> { condition = "doof::json_is_null(" + subject + ")"; value = emitCarrierAbsence(patternType, EmitContext {}) }
-    _: JsonValueResolvedType -> { }
-    _ -> { panic("Unsupported JsonValue case pattern") }
+    _: ArrayResolvedType -> { condition = "doof::serial_is_array(" + subject + ")"; value = "std::get<doof::SerialArray>(doof::serial_storage(" + subject + "))" }
+    _: MapResolvedType -> { condition = "doof::serial_is_object(" + subject + ")"; value = "doof::serial_object(" + subject + ")" }
+    _: NoneType -> { condition = "doof::serial_is_null(" + subject + ")"; value = emitCarrierAbsence(patternType, EmitContext {}) }
+    _: SerialValueResolvedType -> { }
+    _ -> { panic("Unsupported SerialValue case pattern") }
   }
   return CaseTypePatternEmission {
     condition,

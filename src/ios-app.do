@@ -21,7 +21,7 @@ export class IOSAppConfig {
   displayName: string
   version: string
   iconPath: string = ""
-  infoPlist: JsonObject | none = none
+  infoPlist: SerialObject | none = none
   resources: IOSAppResource[] = []
   embeddedLibraries: IOSEmbeddedLibrary[] = []
   minimumDeploymentTarget: string = "16.0"
@@ -187,7 +187,7 @@ function plistIndent(depth: int): string {
   return result
 }
 
-function renderPlistValue(value: JsonValue, depth: int): string {
+function renderPlistValue(value: SerialValue, depth: int): string {
   indent := plistIndent(depth)
   case value {
     _: none -> return indent + "<string></string>\n"
@@ -197,12 +197,12 @@ function renderPlistValue(value: JsonValue, depth: int): string {
     number: float -> return indent + "<real>" + string(number) + "</real>\n"
     number: double -> return indent + "<real>" + string(number) + "</real>\n"
     text: string -> return indent + "<string>" + escapePlistText(text) + "</string>\n"
-    array: JsonValue[] -> {
+    array: SerialValue[] -> {
       let result = indent + "<array>\n"
       for item of array { result += renderPlistValue(item, depth + 1) }
       return result + indent + "</array>\n"
     }
-    object: JsonObject -> {
+    object: SerialObject -> {
       let result = indent + "<dict>\n"
       for key, item of object {
         result += plistIndent(depth + 1) + "<key>" + escapePlistText(key) + "</key>\n"

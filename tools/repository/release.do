@@ -134,7 +134,7 @@ export function prepareRelease(root: string, version: string): Result<none, stri
   try emscripten := capture("em++", ["--version"])
   try sdkVersion := capture("xcrun", ["--show-sdk-version"])
   try macos := capture("sw_vers", ["-productVersion"])
-  metadata: JsonObject := { version, tag: "v" + version, compilerRevision, stdlibRevisions: stdlibRevision, seedVersion, seedSha256, fixedPointGeneration: built.generation, clang, swift, emscripten, sdkVersion, macos, notarizationId: submission, verified: ["compiler-tests", "release-fixtures", "source-rebuild", "relocation", "signatures", "notarization", "quarantine-assessment", "debugger-startup", "debugger-integration"] }
+  metadata: SerialObject := { version, tag: "v" + version, compilerRevision, stdlibRevisions: stdlibRevision, seedVersion, seedSha256, fixedPointGeneration: built.generation, clang, swift, emscripten, sdkVersion, macos, notarizationId: submission, verified: ["compiler-tests", "release-fixtures", "source-rebuild", "relocation", "signatures", "notarization", "quarantine-assessment", "debugger-startup", "debugger-integration"] }
   try write(path(pending, "release.json"), formatJsonValue(metadata) + "\n")
   try assets := files(pending)
   let checksums = ""

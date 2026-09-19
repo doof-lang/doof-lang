@@ -85,13 +85,13 @@ export function readProjectSpec(requestedPath: string, platform: string = "", ta
   packageDirectory := parentPath(manifest)
   manifestSource := try! readText(manifest)
   packageManifest := try! parsePackageManifest(manifestSource, manifest, packageDirectory, platform, targetOverride)
-  root := try! (try! parseJsonValue(manifestSource)) as JsonObject
+  root := try! (try! parseJsonValue(manifestSource)) as SerialObject
   let name = fileName(packageDirectory)
   if root.has("name") { name = try! (try! root.get("name")) as string }
   let entry = "main.do"
   let buildDirectory = "build"
   if root.has("build") {
-    build := try! (try! root.get("build")) as JsonObject
+    build := try! (try! root.get("build")) as SerialObject
     if build.has("entry") { entry = try! (try! build.get("entry")) as string }
     if build.has("buildDir") { buildDirectory = try! (try! build.get("buildDir")) as string }
   }

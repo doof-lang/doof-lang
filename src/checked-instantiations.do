@@ -340,11 +340,11 @@ function collectPattern(pattern: CasePattern, modulePath: string, analysis: Anal
 function collectJsonMemberDemand(member: MemberExpression, analysis: AnalysisResult, plan: CheckedInstantiations, names: string[], arguments: ResolvedType[]): none {
   if member.object.resolvedType == none { return }
   receiver := specialize(member.object.resolvedType!, names, arguments)
-  if member.property == "toJsonObject" {
+  if member.property == "toSerialObject" {
     addJsonSerializationDemand(plan, receiver, analysis)
     return
   }
-  if member.property == "fromJsonValue" {
+  if member.property == "fromSerialValue" {
     case receiver {
       interface_: InterfaceType -> { addInterfaceJsonDeserializationDemand(plan, interface_, analysis) }
       _ -> { addJsonDeserializationDemand(plan, receiver, analysis) }

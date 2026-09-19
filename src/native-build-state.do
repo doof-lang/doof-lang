@@ -31,13 +31,13 @@ export class NativeBuildState {
 
 export function parseNativeBuildState(source: string): NativeBuildState | none {
   value := parseJsonValue(source) else { return none }
-  state := NativeBuildState.fromJsonValue(value, true) else { return none }
+  state := NativeBuildState.fromSerialValue(value, true) else { return none }
   if state.version != NATIVE_BUILD_STATE_VERSION { return none }
   return state
 }
 
 export function renderNativeBuildState(state: NativeBuildState): string {
-  return formatJsonValue(state.toJsonObject()) + "\n"
+  return formatJsonValue(state.toSerialObject()) + "\n"
 }
 
 /** Parses the portable subset of Make dependency files emitted by GCC/Clang. */
@@ -79,11 +79,11 @@ export function parseMakeDependencies(source: string): string[] {
 /** Parses the dependency JSON emitted by MSVC's /sourceDependencies option. */
 export function parseMsvcDependencies(source: string): string[] {
   parsed := parseJsonValue(source) else { return [] }
-  root := parsed as JsonObject else { return [] }
+  root := parsed as SerialObject else { return [] }
   dataValue := root.get("Data") else { return [] }
-  data := dataValue as JsonObject else { return [] }
+  data := dataValue as SerialObject else { return [] }
   includesValue := data.get("Includes") else { return [] }
-  includes := includesValue as JsonValue[] else { return [] }
+  includes := includesValue as SerialValue[] else { return [] }
   let result: string[] = []
   for value of includes {
     path := value as string else { continue }

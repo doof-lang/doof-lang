@@ -258,9 +258,9 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
         }
         return classMetadataType(parameter)
       }
-      if property == "fromJsonValue" {
-        if parameter.constraintName != "JsonSerializable" {
-          typeError(state, "Static member \"fromJsonValue\" requires type parameter \"" + parameter.name + "\" to be constrained by JsonSerializable", span)
+      if property == "fromSerialValue" {
+        if parameter.constraintName != "Serializable" {
+          typeError(state, "Static member \"" + property + "\" requires type parameter \"" + parameter.name + "\" to be constrained by Serializable", span)
           return unknownType()
         }
         return functionType([
@@ -305,7 +305,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
       }
       if property == "name" { return primitive("string") }
       if property == "value" { return backingType }
-      if property == "toJsonValue" { return functionType([], jsonValueType()) }
+      if property == "toSerialValue" { return functionType([], jsonValueType()) }
       if property == "values" { return functionType([], arrayType(enum_, true)) }
       if property == "fromName" {
         return functionType(
@@ -319,7 +319,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
           unionType([enum_, noneType()]),
         )
       }
-      if property == "fromJsonValue" {
+      if property == "fromSerialValue" {
         return functionType([
           FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
           FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
@@ -385,18 +385,18 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
             recordMember(selection, class_, class_.symbol.module, none, false, classDeclaration, false)
             return classMetadataType(class_)
           }
-          if property == "toJsonObject" && canGenerateJsonSerialization(classDeclaration, jsonPrograms(state.result)) {
+          if property == "toSerialObject" && canGenerateJsonSerialization(classDeclaration, jsonPrograms(state.result)) {
             return functionType([], jsonObjectType())
           }
-          if property == "fromJsonValue" && canGenerateJsonDeserialization(classDeclaration, jsonPrograms(state.result)) {
+          if property == "fromSerialValue" && canGenerateJsonDeserialization(classDeclaration, jsonPrograms(state.result)) {
             recordMember(selection, class_, class_.symbol.module, none, false, classDeclaration, false)
             return functionType([
               FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
               FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
             ], resultType(object, primitive("string")))
           }
-          if property == "toJsonObject" || property == "fromJsonValue" {
-            typeError(state, "Type \"" + classDeclaration.name + "\" does not support automatic JSON " + (if property == "toJsonObject" then "serialization" else "deserialization"), span)
+          if property == "toSerialObject" || property == "fromSerialValue" {
+            typeError(state, "Type \"" + classDeclaration.name + "\" does not support automatic JSON " + (if property == "toSerialObject" then "serialization" else "deserialization"), span)
             return unknownType()
           }
           for field of classDeclaration.fields {
@@ -450,7 +450,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
             }
           }
           if declaredOnly { return unknownType() }
-          if property == "fromJsonValue" {
+          if property == "fromSerialValue" {
             if interface_.typeParams.length > 0 {
               typeError(state, "Automatic JSON deserialization is not available on generic interface \"" + interface_.name + "\"", span)
               return unknownType()

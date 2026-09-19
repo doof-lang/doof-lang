@@ -35,12 +35,12 @@ export function testQuarkWeakCaseExpressionChecking(): none {
 
 export function testQuarkJsonEqualityRequiresNarrowing(): none {
   for source of ["value == 4", "4 != value", "value == true", "value != \"four\""] {
-    result := checked("function compare(value: JsonValue): bool => " + source)
+    result := checked("function compare(value: SerialValue): bool => " + source)
     Assert.equal(result.diagnostics.length, 1)
-    Assert.stringContains(result.diagnostics[0].message, "Narrow JsonValue")
+    Assert.stringContains(result.diagnostics[0].message, "Narrow SerialValue")
   }
   for source of ["value == none", "none != value", "value == value", "(value as int)! == 4"] {
-    Assert.equal(checked("function compare(value: JsonValue): bool => " + source).diagnostics.length, 0)
+    Assert.equal(checked("function compare(value: SerialValue): bool => " + source).diagnostics.length, 0)
   }
 }
 
@@ -67,7 +67,7 @@ export function testInterfaceBoundTypeReceiver(): none {
 }
 
 export function testInterfaceBoundReservedNames(): none {
-  result := checked("interface View { metadata: string\nfromJsonValue(): int }\nclass Value { metadata: string\nfromJsonValue(): int => 1 }\nfunction read<T: View>(value: T): string => value.metadata\nfunction call<T: View>(value: T): int => value.fromJsonValue()")
+  result := checked("interface View { metadata: string\nfromSerialValue(): int }\nclass Value { metadata: string\nfromSerialValue(): int => 1 }\nfunction read<T: View>(value: T): string => value.metadata\nfunction call<T: View>(value: T): int => value.fromSerialValue()")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.isTrue(result.diagnostics.length > 0)
 }

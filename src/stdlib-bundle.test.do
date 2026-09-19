@@ -40,8 +40,8 @@ function compressedTestMember(path: string, source: string, mode: int = 420): re
   return try! zstdCompressWithLevel(tar, 3)
 }
 
-function testMemberJson(member: TestBundleMember): JsonObject {
-  let value: JsonObject = {}
+function testMemberJson(member: TestBundleMember): SerialObject {
+  let value: SerialObject = {}
   value.set("kind", member.kind)
   value.set("packageName", "std/json")
   value.set("path", member.logicalPath)
@@ -53,7 +53,7 @@ function testMemberJson(member: TestBundleMember): JsonObject {
 }
 
 function fixtureBundle(customNativeEntries: TarWriteEntry[] | none = none): readonly byte[] {
-  manifestSource := "{\"name\":\"std/json\",\"version\":\"0.1.0\",\"dependencies\":{}}\n"
+  manifestSource := "{\"name\":\"std/json\",\"version\":\"0.2.0\",\"dependencies\":{}}\n"
   indexSource := "export function answer(): int => 42\n"
   nestedSource := "export readonly VALUE = 7\n"
   scriptSource := "#!/bin/sh\nexit 0\n"
@@ -81,14 +81,14 @@ function fixtureBundle(customNativeEntries: TarWriteEntry[] | none = none): read
     },
   ]
   let canonical = "schema=4\ntarget=linux\ntarget=macos\npackage=std/json\n"
-  let memberValues: JsonValue[] = []
+  let memberValues: SerialValue[] = []
   for member of members {
     canonical += "member=" + member.kind + "\u0000std/json\u0000" + member.logicalPath + "\u0000" +
       member.memberPath + "\u0000" + string(member.sourceBytes) + "\u0000" + string(member.data.length) +
       "\u0000" + sha256Hex(member.data) + "\n"
     memberValues.push(testMemberJson(member))
   }
-  let index: JsonObject = {}
+  let index: SerialObject = {}
   index.set("schemaVersion", 4)
   index.set("format", "doof-stdlib-tar-of-tar-zst")
   index.set("bundleDigest", sha256HexString(canonical))

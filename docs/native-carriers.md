@@ -35,7 +35,7 @@ bindings and types, specializes generics, then chooses a native carrier.
 | Primitive, enum, or struct plus `none` | `std::optional<T>` | empty optional |
 | Weak pointer plus `none` | weak pointer | empty ownership identity |
 | Tuple, callback, Result, or multi-arm union plus `none` | variant | monostate arm |
-| `JsonValue` | JSON storage | JSON null |
+| `SerialValue` | JSON storage | JSON null |
 
 The descriptor distinguishes a native variant from an explicit nullable union.
 For example, a Result is physically a variant but may be one indivisible arm

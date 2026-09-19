@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { carrierOf, CarrierKind, CarrierPosition, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
-import { ArrayResolvedType, ClassType, FunctionType, JsonValueResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, FunctionType, SerialValueResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, Symbol, TupleResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 export function testCarrierModelPositionsAndNullableFamilies(): none {
   unit := NoneType {}
@@ -18,7 +18,7 @@ export function testCarrierModelPositionsAndNullableFamilies(): none {
   Assert.isTrue(weakTargetUsesVariant(weakTarget))
   Assert.isFalse(weakTargetUsesVariant(UnionResolvedType { types: [item, unit] }))
   Assert.equal(carrierOf(WeakResolvedType { inner: weakTarget }).kind, CarrierKind.Optional)
-  types: ResolvedType[] := [integer, item, point, ArrayResolvedType { elementType: integer, readonly_: false }, WeakResolvedType { inner: item }, TupleResolvedType { elements: [integer] }, FunctionType { params: [], returnType: integer }, ResultResolvedType { valueType: integer, errorType: integer }, JsonValueResolvedType {}]
+  types: ResolvedType[] := [integer, item, point, ArrayResolvedType { elementType: integer, readonly_: false }, WeakResolvedType { inner: item }, TupleResolvedType { elements: [integer] }, FunctionType { params: [], returnType: integer }, ResultResolvedType { valueType: integer, errorType: integer }, SerialValueResolvedType {}]
   kinds := [CarrierKind.Optional, CarrierKind.SharedPointer, CarrierKind.Optional, CarrierKind.SharedPointer, CarrierKind.WeakPointer, CarrierKind.Variant, CarrierKind.Variant, CarrierKind.Variant, CarrierKind.Variant]
   for index of 0..<types.length {
     carrier := carrierOf(UnionResolvedType { types: [UnionResolvedType { types: [types[index], unit] }, unit] })

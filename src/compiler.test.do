@@ -95,7 +95,7 @@ export function testInvalidatesProviderWhenDownstreamAddsJsonDemand(): none {
     keys.push(ModuleEmissionCacheKey { modulePath: module.modulePath, fingerprint: module.fingerprint })
   }
 
-  sources[0] = SourceFile { path: "/main.do", source: "import { Payload } from \"./lib\"\nfunction main(): int => Payload { value: 1 }.toJsonObject().size" }
+  sources[0] = SourceFile { path: "/main.do", source: "import { Payload } from \"./lib\"\nfunction main(): int => Payload { value: 1 }.toSerialObject().size" }
   second := compileWithLoader(sources, "/main.do", noSourceLoader, [], "executable", false, keys, "json-demand-test")
   for module of second.emission!.modules {
     if module.modulePath == "/lib.do" { Assert.equal(module.reused, false) }

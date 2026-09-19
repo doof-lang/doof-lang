@@ -1181,8 +1181,8 @@ function testRequest(request: CliRequest): int {
     selected = exactSelection
   }
   if request.listOnly && request.jsonOutput {
-    let values: JsonValue[] = []
-    for test of selected { values.push(test.toJsonObject()) }
+    let values: SerialValue[] = []
+    for test of selected { values.push(test.toSerialObject()) }
     println(formatJsonValue(values))
     return 0
   }
@@ -1213,7 +1213,7 @@ function testRequest(request: CliRequest): int {
     projectLocks.push(projectLock)
   }
 
-  let resultValues: JsonValue[] = []
+  let resultValues: SerialValue[] = []
   let passed = 0
   let failed = 0
   let coverageModules: CoverageModuleMetadata[] = []
@@ -1752,4 +1752,4 @@ function main(args: string[]): int {
   return emitRequest(parsed.request!)
 }
 
-export function structuredTestResult(id: string, exitCode: int, output: string): Map<string, JsonValue> => { "id": id, "exitCode": exitCode, "output": output }
+export function structuredTestResult(id: string, exitCode: int, output: string): Map<string, SerialValue> => { "id": id, "exitCode": exitCode, "output": output }

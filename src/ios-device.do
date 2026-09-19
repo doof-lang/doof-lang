@@ -47,29 +47,29 @@ class IOSDeviceCommandResult {
   error: string = ""
 }
 
-function jsonObjectField(object: JsonObject, name: string): JsonValue | none {
+function jsonObjectField(object: SerialObject, name: string): SerialValue | none {
   if !object.has(name) { return none }
   value := object.get(name) else { return none }
   return value
 }
 
-function jsonObjectValue(value: JsonValue | none): JsonObject | none {
+function jsonObjectValue(value: SerialValue | none): SerialObject | none {
   if value == none { return none }
   case value! {
-    object: JsonObject -> return object
+    object: SerialObject -> return object
     _ -> return none
   }
 }
 
-function jsonArrayValue(value: JsonValue | none): JsonValue[] {
+function jsonArrayValue(value: SerialValue | none): SerialValue[] {
   if value == none { return [] }
   case value! {
-    array: JsonValue[] -> return array
+    array: SerialValue[] -> return array
     _ -> return []
   }
 }
 
-function jsonStringValue(value: JsonValue | none): string {
+function jsonStringValue(value: SerialValue | none): string {
   if value == none { return "" }
   case value! {
     text: string -> return text

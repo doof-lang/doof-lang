@@ -129,7 +129,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if arrayObjectType != none {
         case arrayObjectType! {
           _: InterfaceType -> {
-            if member.property == "fromJsonValue" && expression.resolvedFunction == none && !member.resolvedCallableField { return emitInterfaceJsonCall(member, expression, context) }
+            if member.property == "fromSerialValue" && expression.resolvedFunction == none && !member.resolvedCallableField { return emitInterfaceJsonCall(member, expression, context) }
             return emitVariantMemberCall(member, expression, context)
           }
           _: StreamResolvedType -> { return emitInterfaceCall(member, expression, context) }
@@ -175,19 +175,19 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
               return emitContextType(enum_, context) + "_" + member.property + "(" + args + ")"
             }
             if member.property == "values" { return emitContextType(enum_, context) + "_values()" }
-            if member.property == "toJsonValue" {
+            if member.property == "toSerialValue" {
               let receiver = emitExpression(member.object, context)
               if member.force { receiver = "doof::unwrap_optional(" + receiver + ")" }
-              return emitContextType(enum_, context) + "_toJsonValue(" + receiver + ")"
+              return emitContextType(enum_, context) + "_toSerialValue(" + receiver + ")"
             }
-            if member.property == "fromJsonValue" {
+            if member.property == "fromSerialValue" {
               let args = ""
               for i of 0..<expression.args.length {
                 if i > 0 { args = args + ", " }
                 args = args + emitExpression(expression.args[i].value, context)
               }
               if expression.args.length == 1 { args = args + ", false" }
-              return emitContextType(enum_, context) + "_fromJsonValue(" + args + ")"
+              return emitContextType(enum_, context) + "_fromSerialValue(" + args + ")"
             }
           }
           _ -> { }
@@ -234,18 +234,18 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
       if !nominalReceiver && member.property == "toUpperCase" { return "doof::string_toUpperCase(" + emitExpression(member.object, context) + ")" }
       if !nominalReceiver && member.property == "split" { return "doof::string_split(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ")" }
       if !nominalReceiver && member.property == "pop" && expression.args.length == 0 { return "doof::array_pop(" + emitExpression(member.object, context) + ")" }
-      if member.property == "toJsonObject" && expression.args.length == 0 {
+      if member.property == "toSerialObject" && expression.args.length == 0 {
         object := emitExpression(member.object, context)
         objectType := decoratedExpressionType(member.object)
         if objectType != none {
           case objectType! {
-            class_: ClassType -> { if class_.symbol.kind == "struct" { return object + ".toJsonObject()" } }
+            class_: ClassType -> { if class_.symbol.kind == "struct" { return object + ".toSerialObject()" } }
             _ -> { }
           }
         }
-        return object + "->toJsonObject()"
+        return object + "->toSerialObject()"
       }
-      if member.property == "fromJsonValue" && (!nominalReceiver || member.resolvedStaticOwner != none) {
+      if member.property == "fromSerialValue" && (!nominalReceiver || member.resolvedStaticOwner != none) {
         object := emitExpression(member.object, context)
         let args = ""
         for i of 0..<expression.args.length {
@@ -256,11 +256,11 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
         objectType := decoratedExpressionType(member.object)
         if objectType != none {
           case objectType! {
-            _: InterfaceType -> { return object + "_fromJsonValue(" + args + ")" }
+            _: InterfaceType -> { return object + "_fromSerialValue(" + args + ")" }
             _ -> { }
           }
         }
-        return object + "::fromJsonValue(" + args + ")"
+        return object + "::fromSerialValue(" + args + ")"
       }
     }
     _ -> { }
@@ -460,7 +460,7 @@ function emitInterfaceJsonCall(member: MemberExpression, call: CallExpression, c
     args = args + emitExpression(call.args[i].value, context)
   }
   if call.args.length == 1 { args = args + ", false" }
-  return emitExpression(member.object, context) + "_fromJsonValue(" + args + ")"
+  return emitExpression(member.object, context) + "_fromSerialValue(" + args + ")"
 }
 
 function builtinName(name: string): string {

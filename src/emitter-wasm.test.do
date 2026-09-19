@@ -37,10 +37,10 @@ export function testEmitsDirectionalNominalJsonSupportForWasmAbi(): none {
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
   source := result.emission!.modules[0].source
-  Assert.stringContains(source, "Input::fromJsonValue")
-  Assert.stringNotContains(source, "Input::toJsonObject")
-  Assert.stringContains(source, "Output::toJsonObject")
-  Assert.stringNotContains(source, "Output::fromJsonValue")
+  Assert.stringContains(source, "Input::fromSerialValue")
+  Assert.stringNotContains(source, "Input::toSerialObject")
+  Assert.stringContains(source, "Output::toSerialObject")
+  Assert.stringNotContains(source, "Output::fromSerialValue")
 }
 
 export function testRejectsGenericWasmExports(): none {

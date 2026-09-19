@@ -14,7 +14,7 @@ class PendingRequest {
   seq: int
   command: string
   deadline: long
-  callback: (body: JsonObject): none
+  callback: (body: SerialObject): none
   onError: ((message: string): none) | none = none
 }
 
@@ -67,7 +67,7 @@ export class DebugSession {
       supportsRunInTerminalRequest: false, supportsVariableType: true,
     }, (body): none => {
       if !boolField(body, "supportsConfigurationDoneRequest") { fail("LLDB-DAP does not support launch configuration"); return }
-      let args: JsonValue[] = []
+      let args: SerialValue[] = []
       for argument of launch.arguments { args.push(argument) }
       request("launch", {
         program: launch.executable, cwd: launch.directory, args,
@@ -76,11 +76,11 @@ export class DebugSession {
     })
   }
 
-  request(command: string, arguments: JsonObject, callback: (body: JsonObject): none, onError: ((message: string): none) | none = none): none {
+  request(command: string, arguments: SerialObject, callback: (body: SerialObject): none, onError: ((message: string): none) | none = none): none {
     if transport == none || ending { return }
     sequence += 1
     pending.push(PendingRequest { seq: sequence, command, deadline: Instant.now().toEpochMillis() + 30000L, callback, onError })
-    message: JsonObject := { seq: sequence, "type": "request", command, arguments }
+    message: SerialObject := { seq: sequence, "type": "request", command, arguments }
     _ := transport!.send(frameMessage(message)) else error { fail(error) }
   }
 
@@ -117,7 +117,7 @@ export class DebugSession {
     }
   }
 
-  receive(message: JsonObject): none {
+  receive(message: SerialObject): none {
     kind := textField(message, "type")
     if kind == "response" {
       seq := intField(message, "request_seq")
@@ -139,7 +139,7 @@ export class DebugSession {
     if kind == "request" {
       if transport != none {
         sequence += 1
-        response: JsonObject := { seq: sequence, "type": "response", request_seq: intField(message, "seq"),
+        response: SerialObject := { seq: sequence, "type": "response", request_seq: intField(message, "seq"),
           command: textField(message, "command"), success: false, message: "This debugger does not support terminal or reverse requests" }
         _ := transport!.send(frameMessage(response)) else error { fail(error) }
       }
@@ -154,7 +154,7 @@ export class DebugSession {
         points := arrayField(reply, "breakpoints")
         if points.length != 1 { fail("Invalid panic breakpoint response"); return }
         if points.length > 0 {
-          point := points[0] as JsonObject else { fail("Invalid panic breakpoint response"); return }
+          point := points[0] as SerialObject else { fail("Invalid panic breakpoint response"); return }
           panicBreakpointId = intField(point, "id")
           if !boolField(point, "verified") { appendOutput("[Debugger] Panic breakpoint is pending symbol resolution.\n") }
         }
@@ -233,13 +233,13 @@ export class DebugSession {
     users: SourceBreakpoint[] := if breakpoints.has(path) then try! breakpoints.get(path) else []
     for point of users { points.push(point) }
     if path == launch.source && entryBreakpoint != none { points.push(entryBreakpoint!) }
-    let values: JsonValue[] = []
+    let values: SerialValue[] = []
     for point of points { values.push({ line: point.line }) }
     request("setBreakpoints", { source: { path }, breakpoints: values }, (body): none => {
       answers := arrayField(body, "breakpoints")
       for index of 0..<points.length {
         if index < answers.length {
-          answer := answers[index] as JsonObject else { continue }
+          answer := answers[index] as SerialObject else { continue }
           points[index].verified = boolField(answer, "verified")
           points[index].actualLine = intField(answer, "line")
           points[index].message = textField(answer, "message")
@@ -299,7 +299,7 @@ export class DebugSession {
     request("scopes", { frameId: runtimeFrame }, (reply): none => {
       if epoch != stopEpoch || selection != frameSelectionRevision || !isPanicStop() { return }
       for value of arrayField(reply, "scopes") {
-        scope := value as JsonObject else { continue }
+        scope := value as SerialObject else { continue }
         if textField(scope, "name") != "Locals" && textField(scope, "presentationHint") != "locals" { continue }
         reference := intField(scope, "variablesReference")
         if reference == 0 { continue }
@@ -408,10 +408,10 @@ export class DebugSession {
 
 }
 
-function rows(values: JsonValue[], prefix: string): DebugRow[] {
+function rows(values: SerialValue[], prefix: string): DebugRow[] {
   let result: DebugRow[] = []
   for index of 0..<values.length {
-    value := values[index] as JsonObject else { continue }
+    value := values[index] as SerialObject else { continue }
     let label = textField(value, "name")
     if prefix == "frame" {
       parts := label.split("(")

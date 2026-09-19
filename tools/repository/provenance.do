@@ -2,8 +2,8 @@ import { EntryKind, exists, readDir } from "std/fs"
 import { cleanRevision, jsonFile, jsonString, path, require, sorted } from "./common"
 
 // A stdlib workspace may be one checkout or a directory of std/* checkouts.
-export function stdlibRevisions(root: string): Result<JsonObject, string> {
-  result: JsonObject := {}
+export function stdlibRevisions(root: string): Result<SerialObject, string> {
+  result: SerialObject := {}
   if exists(path(root, ".git")) {
     try revision := cleanRevision(root)
     result.set(".", revision)

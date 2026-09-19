@@ -185,9 +185,9 @@ class NativeTestResult {
 }
 function testResults(file: string): Result<NativeTestResult[], string> {
   try content := read(file); try value := parseJsonValue(content)
-  items := value as JsonValue[] else { return Failure("Expected structured result array") }
+  items := value as SerialValue[] else { return Failure("Expected structured result array") }
   result: NativeTestResult[] := []
-  for item of items { try decoded := NativeTestResult.fromJsonValue(item); result.push(decoded) }
+  for item of items { try decoded := NativeTestResult.fromSerialValue(item); result.push(decoded) }
   return Success(result)
 }
 export function nativeEditorChecks(root: string, compiler: string): Result<none, string> {
@@ -199,7 +199,7 @@ export function nativeEditorChecks(root: string, compiler: string): Result<none,
   try write(tests, "export function testSelected(): none {}\nexport function testSelectedOther(): none { panic(\"Unselected test must not execute\") }\n")
   try discovered := capture(compiler, ["test", directory, "--list", "--json"])
   try listValue := parseJsonValue(discovered)
-  listed := listValue as JsonValue[] else { return Failure("Expected JSON test discovery") }
+  listed := listValue as SerialValue[] else { return Failure("Expected JSON test discovery") }
   try require(listed.length == 2, "Wrong test discovery count")
   id := "workflow.test.do::testSelected"; report := path(directory, "results.json")
   try command(compiler, ["test", directory, "--exact-filter", id, "--report-json", report])

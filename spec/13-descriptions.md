@@ -166,9 +166,9 @@ Each entry in `.methods` is a `MethodReflection` with:
 |---|---|---|
 | `.name` | `string` | The method name |
 | `.description` | `string` | The method description (empty string if none) |
-| `.inputSchema` | `JsonValue` | JSON Schema (Draft 7) for the input parameters |
-| `.outputSchema` | `JsonValue` | JSON Schema for the success return payload |
-| `.invoke` | `(instance, params) → Result<JsonValue, JsonValue>` | Invoke the method with JSON params |
+| `.inputSchema` | `SerialValue` | JSON Schema (Draft 7) for the input parameters |
+| `.outputSchema` | `SerialValue` | JSON Schema for the success return payload |
+| `.invoke` | `(instance, params) → Result<SerialValue, SerialValue>` | Invoke the method with JSON params |
 
 ### `ClassMetadata.invoke`
 
@@ -183,18 +183,18 @@ if result.isSuccess() {
 }
 ```
 
-**Signature:** `(instance: TypeName, methodName: string, params: JsonValue) → Result<JsonValue, JsonValue>`
+**Signature:** `(instance: TypeName, methodName: string, params: SerialValue) → Result<SerialValue, SerialValue>`
 
 - `instance` — the object to call the method on
 - `methodName` — the public instance method name to invoke
 - `params` — a JSON object with parameter names as keys
-- On **success**: returns the method's return value as `JsonValue`, using source
+- On **success**: returns the method's return value as `SerialValue`, using source
   `none` (JSON `null`) for `none`-returning methods
-- On **failure**: returns a `JsonValue`. Framework failures such as invalid parameters or unknown method names return `{ code: 400, message: string }`. If the method itself returns `Result<S, JsonValue>`, then the `JsonValue` failure is passed through unchanged. For any other `Result<S, F>` failure type, invoke returns `{ code: 500, message: "An error occurred" }`.
+- On **failure**: returns a `SerialValue`. Framework failures such as invalid parameters or unknown method names return `{ code: 400, message: string }`. If the method itself returns `Result<S, SerialValue>`, then the `SerialValue` failure is passed through unchanged. For any other `Result<S, F>` failure type, invoke returns `{ code: 500, message: "An error occurred" }`.
 
 ### `.invoke`
 
-Each method reflection has an `.invoke` member that dispatches a method call using `JsonValue` parameters, returning a `Result<JsonValue, JsonValue>`:
+Each method reflection has an `.invoke` member that dispatches a method call using `SerialValue` parameters, returning a `Result<SerialValue, SerialValue>`:
 
 ```doof
 meta := Calculator.metadata
@@ -206,13 +206,13 @@ if result.isSuccess() {
 }
 ```
 
-**Signature:** `(instance: TypeName, params: JsonValue) → Result<JsonValue, JsonValue>`
+**Signature:** `(instance: TypeName, params: SerialValue) → Result<SerialValue, SerialValue>`
 
 - `instance` — the object to call the method on
 - `params` — a JSON object with parameter names as keys
-- On **success**: returns the method's return value as `JsonValue`, using source
+- On **success**: returns the method's return value as `SerialValue`, using source
   `none` (JSON `null`) for `none`-returning methods
-- On **failure**: returns a `JsonValue` using the same failure rules as `ClassMetadata.invoke`
+- On **failure**: returns a `SerialValue` using the same failure rules as `ClassMetadata.invoke`
 
 ### JSON Schema
 
@@ -240,34 +240,34 @@ When a method parameter or return type references another class or struct, that 
 
 ### Result Members
 
-The `Result<JsonValue, JsonValue>` returned by `.invoke` supports:
+The `Result<SerialValue, SerialValue>` returned by `.invoke` supports:
 
 | Member | Type | Description |
 |---|---|---|
-| `.value` | `JsonValue` | The success value (only valid when `isSuccess()` is true) |
-| `.error` | `JsonValue` | The failure payload (only valid when `isFailure()` is true) |
+| `.value` | `SerialValue` | The success value (only valid when `isSuccess()` is true) |
+| `.error` | `SerialValue` | The failure payload (only valid when `isFailure()` is true) |
 | `.isSuccess()` | `bool` | Whether the invocation succeeded |
 | `.isFailure()` | `bool` | Whether the invocation failed |
-| `.map(fn)` | `Result<U, JsonValue>` | Transform the success payload |
-| `.mapError(fn)` | `Result<JsonValue, U>` | Transform the failure payload |
-| `.andThen(fn)` | `Result<U, JsonValue>` | Chain another Result-returning operation from success |
-| `.orElse(fn)` | `Result<JsonValue \| U, U2>` | Recover from a failure with another Result-returning operation |
-| `.unwrapOr(value)` | `JsonValue` | Return the success payload or a fallback |
-| `.unwrapOrElse(fn)` | `JsonValue` | Return the success payload or compute a fallback from the error |
-| `.ok()` | `JsonValue \| none` | Convert success to a nullable value |
-| `.err()` | `JsonValue \| none` | Convert failure to a nullable value |
+| `.map(fn)` | `Result<U, SerialValue>` | Transform the success payload |
+| `.mapError(fn)` | `Result<SerialValue, U>` | Transform the failure payload |
+| `.andThen(fn)` | `Result<U, SerialValue>` | Chain another Result-returning operation from success |
+| `.orElse(fn)` | `Result<SerialValue \| U, U2>` | Recover from a failure with another Result-returning operation |
+| `.unwrapOr(value)` | `SerialValue` | Return the success payload or a fallback |
+| `.unwrapOrElse(fn)` | `SerialValue` | Return the success payload or compute a fallback from the error |
+| `.ok()` | `SerialValue \| none` | Convert success to a nullable value |
+| `.err()` | `SerialValue \| none` | Convert failure to a nullable value |
 
 ### Restrictions
 
 - **Generic classes and structs** cannot use `.metadata` (compile error)
 - All public method parameters must be **JSON-serializable** (compile error otherwise)
-- Public method return types must either be JSON-serializable, or be `Result<S, F>` where `S` is JSON-serializable (or `none`). Failure types do not need to be JSON-serializable; invoke only passes them through when `F` is exactly `JsonValue`.
-- `"metadata"`, `"toJsonObject"`, and `"fromJsonValue"` are **reserved** — classes and structs cannot define methods or fields with these names
+- Public method return types must either be JSON-serializable, or be `Result<S, F>` where `S` is JSON-serializable (or `none`). Failure types do not need to be JSON-serializable; invoke only passes them through when `F` is exactly `SerialValue`.
+- `"metadata"`, `"toSerialObject"`, and `"fromSerialValue"` are **reserved** — classes and structs cannot define methods or fields with these names
 - Private and static methods are excluded from metadata and invoke dispatch
 
 ### On-demand Generation
 
-Metadata code is only generated when user code accesses `TypeName.metadata`. Nominal method parameter types get the `fromJsonValue` support required by invocation, while nominal success return types get the `toJsonObject` support required for the JSON result. The unused opposite direction is not generated.
+Metadata code is only generated when user code accesses `TypeName.metadata`. Nominal method parameter types get the `fromSerialValue` support required by invocation, while nominal success return types get the `toSerialObject` support required for the JSON result. The unused opposite direction is not generated.
 
 ## Future Use
 

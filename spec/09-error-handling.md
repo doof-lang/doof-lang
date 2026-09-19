@@ -191,11 +191,11 @@ payload is uninhabited. This applies to both bare and binding forms.
 
 ```doof
 function loadConfig(path: string): Result<Config, string> {
-    // readText(), parseJsonValue(), and Config.fromJsonValue() each return
+    // readText(), parseJsonValue(), and Config.fromSerialValue() each return
     // Result<_, string>.
     try text := readText(path)
     try json := parseJsonValue(text)
-    try config := Config.fromJsonValue(json)
+    try config := Config.fromSerialValue(json)
     return Success(config)
 }
 ```
@@ -489,7 +489,7 @@ Rules:
 - For `Result<V, F>` sources, it narrows the success channel and returns
   `Result<T, F | string>`.
 - Supported sources include unions, nullable types, interfaces to implementing
-  classes, numeric primitives and numeric union members, exact `JsonValue`
+  classes, numeric primitives and numeric union members, exact `SerialValue`
   carrier members, and `Result` values wrapping those forms.
 - Numeric narrowing is checked at runtime and fails when the value cannot be
   represented exactly in the target type.

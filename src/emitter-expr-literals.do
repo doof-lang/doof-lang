@@ -3,7 +3,7 @@
 import { emitCarrierAbsence } from "./emitter-carrier-values"
 import { emitClassObject } from "./emitter-construction"
 import { ArrayLiteral, ObjectLiteral, StringLiteral, TupleLiteral } from "./ast"
-import { ArrayResolvedType, ClassType, JsonValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, SetResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, SerialValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, SetResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitPropertyValue, findProperty } from "./emitter-expr-utils"
@@ -55,13 +55,13 @@ export function emitArray(expression: ArrayLiteral, context: EmitContext, expect
         }
         return "std::make_shared<doof::ordered_set<" + elementType + ">>(doof::ordered_set<" + elementType + ">{" + values + "})"
       }
-      _: JsonValueResolvedType -> {
+      _: SerialValueResolvedType -> {
         let values = ""
         for i of 0..<expression.elements.length {
           if i > 0 { values = values + ", " }
-          values = values + "doof::json_value(" + emitExpression(expression.elements[i], context) + ")"
+          values = values + "doof::serial_value(" + emitExpression(expression.elements[i], context) + ")"
         }
-        return "doof::json_value(std::make_shared<std::vector<doof::JsonValue>>(std::initializer_list<doof::JsonValue>{" + values + "}))"
+        return "doof::serial_value(std::make_shared<std::vector<doof::SerialValue>>(std::initializer_list<doof::SerialValue>{" + values + "}))"
       }
       _ -> { }
     }
@@ -107,10 +107,10 @@ export function emitObject(expression: ObjectLiteral, context: EmitContext, expe
     if !first { values = values + ", " }
     first = false
     key := quote(property.name)
-    value := "doof::json_value(" + emitPropertyValue(property, context) + ")"
+    value := "doof::serial_value(" + emitPropertyValue(property, context) + ")"
     values = values + "{" + key + ", " + value + "}"
   }
-  return "doof::json_value(std::make_shared<doof::ordered_map<std::string, doof::JsonValue>>(std::initializer_list<std::pair<std::string, doof::JsonValue>>{" + values + "}))"
+  return "doof::serial_value(std::make_shared<doof::ordered_map<std::string, doof::SerialValue>>(std::initializer_list<std::pair<std::string, doof::SerialValue>>{" + values + "}))"
 }
 
 function emitMapObject(expression: ObjectLiteral, context: EmitContext, map: MapResolvedType): string {

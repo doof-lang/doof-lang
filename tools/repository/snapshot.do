@@ -32,7 +32,7 @@ export function captureNative(arguments: string[]): Result<int, string> {
   for i of 0..<rest.length {
     if rest[i] == "-o" && i + 1 < rest.length {
       record := NativeCommand { compiler, arguments: rest }
-      try write(path(setting("DOOF_NATIVE_COMMANDS"), sha256HexString(rest[i + 1]) + ".json"), formatJsonValue(record.toJsonObject()))
+      try write(path(setting("DOOF_NATIVE_COMMANDS"), sha256HexString(rest[i + 1]) + ".json"), formatJsonValue(record.toSerialObject()))
     }
   }
   nativeArgs := [compiler]
@@ -143,7 +143,7 @@ export function createSnapshot(work: string, source: string, artifacts: string, 
   for name of names {
     try content := read(path(recordRoot, name))
     try value := parseJsonValue(content)
-    try record := NativeCommand.fromJsonValue(value, true)
+    try record := NativeCommand.fromSerialValue(value, true)
     records.push(record)
   }
   try exportGraph(path(work, "compiler/release"), path(destination, "compiler"), source, records)

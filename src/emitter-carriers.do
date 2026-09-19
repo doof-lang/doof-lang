@@ -1,7 +1,7 @@
 // Pure native representation model. Inputs are checked, specialized types;
 // this module never inspects AST syntax, emits C++, or decides assignability.
 
-import { ArrayResolvedType, ClassType, EnumType, InterfaceType, JsonValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, EnumType, InterfaceType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, ResultResolvedType, SetResolvedType, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 export enum CarrierPosition { Value, Return, Payload }
 export enum CarrierKind { Value, Unit, Void, SharedPointer, Optional, WeakPointer, Variant, Json }
@@ -22,7 +22,7 @@ export class NativeCarrier {
 export function carrierOf(type_: ResolvedType, position: CarrierPosition = .Value): NativeCarrier {
   case type_ {
     _: NoneType -> { return NativeCarrier { kind: if position == .Value then .Unit else .Void, hasNone: true } }
-    _: JsonValueResolvedType -> { return NativeCarrier { kind: .Json } }
+    _: SerialValueResolvedType -> { return NativeCarrier { kind: .Json } }
     class_: ClassType -> { return NativeCarrier { kind: if class_.symbol.kind == "struct" then .Value else .SharedPointer } }
     _: ArrayResolvedType -> { return NativeCarrier { kind: .SharedPointer } }
     _: MapResolvedType -> { return NativeCarrier { kind: .SharedPointer } }

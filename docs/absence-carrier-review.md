@@ -13,7 +13,7 @@ decisions about the same checked type.
 | A nullable primitive, enum, or struct | `std::nullopt` |
 | A nullable variant | `std::monostate{}` |
 | Weak storage | An empty value of its contextual weak carrier |
-| `JsonValue` | `doof::json_value(nullptr)` |
+| `SerialValue` | `doof::json_value(nullptr)` |
 
 A function returning `none` uses C++ `void`; this is separate from storing the
 unit value in a collection, tuple, or variant.

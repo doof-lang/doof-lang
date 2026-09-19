@@ -8,7 +8,7 @@ export function bytesOf(text: string): readonly byte[] {
   return builder.build()
 }
 
-export function frameMessage(message: JsonObject): string {
+export function frameMessage(message: SerialObject): string {
   body := formatJsonValue(message)
   return "Content-Length: " + string(bytesOf(body).length) + "\r\n\r\n" + body
 }
@@ -17,10 +17,10 @@ export class DapDecoder {
   private let buffer: byte[] = []
   private let expected = -1
 
-  feed(bytes: readonly byte[]): Result<JsonObject[], string> {
+  feed(bytes: readonly byte[]): Result<SerialObject[], string> {
     if buffer.length + bytes.length > 8388608 { return Failure("DAP buffer exceeded 8 MiB") }
     for item of bytes { buffer.push(item) }
-    let messages: JsonObject[] = []
+    let messages: SerialObject[] = []
     while true {
       if expected < 0 {
         let end = -1
@@ -76,15 +76,15 @@ export class DapDecoder {
   private discard(count: int): none { buffer = slice(count, buffer.length) }
 }
 
-export function field(object: JsonObject, name: string): JsonValue {
+export function field(object: SerialObject, name: string): SerialValue {
   value := object.get(name) else { return none }
   return value
 }
-export function textField(object: JsonObject, name: string): string {
+export function textField(object: SerialObject, name: string): string {
   value := field(object, name) as string else { return "" }
   return value
 }
-export function intField(object: JsonObject, name: string): int {
+export function intField(object: SerialObject, name: string): int {
   value := field(object, name)
   case value {
     n: long -> return int(n),
@@ -92,15 +92,15 @@ export function intField(object: JsonObject, name: string): int {
     _ -> return 0,
   }
 }
-export function boolField(object: JsonObject, name: string): bool {
+export function boolField(object: SerialObject, name: string): bool {
   value := field(object, name) as bool else { return false }
   return value
 }
-export function objectField(object: JsonObject, name: string): JsonObject {
-  value := field(object, name) as JsonObject else { return {} }
+export function objectField(object: SerialObject, name: string): SerialObject {
+  value := field(object, name) as SerialObject else { return {} }
   return value
 }
-export function arrayField(object: JsonObject, name: string): JsonValue[] {
-  value := field(object, name) as JsonValue[] else { return [] }
+export function arrayField(object: SerialObject, name: string): SerialValue[] {
+  value := field(object, name) as SerialValue[] else { return [] }
   return value
 }

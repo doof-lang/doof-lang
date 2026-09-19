@@ -139,7 +139,7 @@ function validateTypeParameterConstraints(constraints: TypeParameterConstraint[]
     if constraint.type_ == none { continue }
     case constraint.type_! {
       named: NamedType -> {
-        if named.typeArgs.length == 0 && (named.name == "JsonSerializable" || named.name == "Reflectable") { continue }
+        if named.typeArgs.length == 0 && (named.name == "Serializable" || named.name == "Reflectable") { continue }
       }
       _ -> { }
     }

@@ -1,6 +1,6 @@
 # 12. JSON Serialization
 
-Doof provides built-in JSON serialization and deserialization for class and struct instances. Nominal objects with all-serializable fields and no dedicated `constructor` method are eligible for `.toJsonObject()` and `.fromJsonValue()` with no annotations or special syntax. JSON support code is generated on-demand: the compiler only emits serialization methods when your code actually uses these intrinsics.
+Doof provides built-in JSON serialization and deserialization for class and struct instances. Nominal objects with all-serializable fields and no dedicated `constructor` method are eligible for `.toSerialObject()` and `.fromSerialValue()` with no annotations or special syntax. JSON support code is generated on-demand: the compiler only emits serialization methods when your code actually uses these intrinsics.
 
 ## Overview
 
@@ -10,39 +10,39 @@ class Point {
 }
 
 p := Point { x: 1.5, y: 2.5 }
-json := p.toJsonObject()               // JsonObject
-result := Point.fromJsonValue(json)    // Result<Point, string>
+json := p.toSerialObject()               // SerialObject
+result := Point.fromSerialValue(json)    // Result<Point, string>
 ```
 
-Structs use the same source-level JSON API and return `Result<StructName, string>` from `.fromJsonValue()`, but the generated C++ stores and returns direct values rather than `shared_ptr` objects.
+Structs use the same source-level JSON API and return `Result<StructName, string>` from `.fromSerialValue()`, but the generated C++ stores and returns direct values rather than `shared_ptr` objects.
 
 When you need text rather than structured JSON, use the standard JSON helpers:
 
 ```doof
 import { parseJsonValue, formatJsonValue } from "std/json"
 
-text := formatJsonValue(p.toJsonObject())
-parsed := parseJsonValue(text)         // Result<JsonValue, string>
+text := formatJsonValue(p.toSerialObject())
+parsed := parseJsonValue(text)         // Result<SerialValue, string>
 ```
 
-`JsonValue` objects preserve insertion order for object keys. `formatJsonValue(...)` emits object members in that order, and generated `.toJsonObject()` methods emit class or struct fields in declaration order.
+`SerialValue` objects preserve insertion order for object keys. `formatJsonValue(...)` emits object members in that order, and generated `.toSerialObject()` methods emit class or struct fields in declaration order.
 
 ## On-Demand Generation
 
-JSON methods are only generated for classes, structs, and supported interfaces where user code actually accesses `.toJsonObject()` or `.fromJsonValue()`. If a program never calls these methods, no nominal-object JSON code is generated.
+JSON methods are only generated for classes, structs, and supported interfaces where user code actually accesses `.toSerialObject()` or `.fromSerialValue()`. If a program never calls these methods, no nominal-object JSON code is generated.
 
-Generation is transitive and direction-specific: if nominal object `A` has a field of type `B`, calling `A.toJsonObject()` generates `toJsonObject()` for `B`, while calling `A.fromJsonValue()` generates `fromJsonValue()` for `B`. Neither operation generates the unused opposite direction.
+Generation is transitive and direction-specific: if nominal object `A` has a field of type `B`, calling `A.toSerialObject()` generates `toSerialObject()` for `B`, while calling `A.fromSerialValue()` generates `fromSerialValue()` for `B`. Neither operation generates the unused opposite direction.
 
 ```doof
 class Inner { value: int }
 class Outer { inner: Inner }
 
-json := Outer { inner: Inner { value: 42 } }.toJsonObject()
+json := Outer { inner: Inner { value: 42 } }.toSerialObject()
 ```
 
-## Serialization — `.toJsonObject()`
+## Serialization — `.toSerialObject()`
 
-Every eligible class or struct instance has a `.toJsonObject()` method that returns a `JsonObject` value. `JsonObject` is the intrinsic alias for `Map<string, JsonValue>`, so it can still be passed anywhere a `JsonValue` is expected.
+Every eligible class or struct instance has a `.toSerialObject()` method that returns a `SerialObject` value. `SerialObject` is the intrinsic alias for `Map<string, SerialValue>`, so it can still be passed anywhere a `SerialValue` is expected.
 
 ```doof
 class User {
@@ -52,7 +52,7 @@ class User {
 }
 
 u := User { name: "Alice", age: 30, email: "alice@example.com" }
-println(formatJsonValue(u.toJsonObject()))
+println(formatJsonValue(u.toSerialObject()))
 // {"name":"Alice","age":30,"email":"alice@example.com"}
 ```
 
@@ -80,11 +80,11 @@ println(formatJsonValue(u.toJsonObject()))
 | `Map<string, T>` | JSON object when `T` is serializable |
 | Enums | JSON string (member name) |
 | `T | none` | Value or JSON `null` |
-| `JsonValue` | Preserved as-is |
+| `SerialValue` | Preserved as-is |
 
 ### Non-Serializable Types
 
-The following types are not JSON-serializable. A compile-time error is produced if `.toJsonObject()` or `.fromJsonValue()` is used on a class or struct containing these field types:
+The following types are not JSON-serializable. A compile-time error is produced if `.toSerialObject()` or `.fromSerialValue()` is used on a class or struct containing these field types:
 
 - Function types (`(int) → string`)
 - `weak` references
@@ -100,19 +100,19 @@ class Bad {
 }
 
 b := Bad { callback: (x) => println(x) }
-b.toJsonObject()  // compile error
+b.toSerialObject()  // compile error
 ```
 
 Nominal objects with a dedicated `constructor` method are excluded because custom
 construction usually encodes invariants that the automatic field-by-field JSON
 deserializer cannot safely recreate.
 
-## Deserialization — `.fromJsonValue()`
+## Deserialization — `.fromSerialValue()`
 
-Every eligible class or struct has a `.fromJsonValue(json: JsonValue, lenient: bool = false)` method accessible on the type name that returns `Result<TypeName, string>`.
+Every eligible class or struct has a `.fromSerialValue(json: SerialValue, lenient: bool = false)` method accessible on the type name that returns `Result<TypeName, string>`.
 
 ```doof
-result := Point.fromJsonValue({ x: 1.5, y: 2.5 })
+result := Point.fromSerialValue({ x: 1.5, y: 2.5 })
 
 case result {
   p: Success -> println("Got point: ${p.value.x}, ${p.value.y}")
@@ -120,19 +120,19 @@ case result {
 }
 ```
 
-Generic functions can call `.fromJsonValue()` on a type parameter only when that
-parameter has the compiler-known `JsonSerializable` constraint:
+Generic functions can call `.fromSerialValue()` on a type parameter only when that
+parameter has the compiler-known `Serializable` constraint:
 
 ```doof
-function decode<T: JsonSerializable>(json: JsonValue): Result<T, string> {
-  return T.fromJsonValue(json)
+function decode<T: Serializable>(json: SerialValue): Result<T, string> {
+  return T.fromSerialValue(json)
 }
 
-payload: JsonValue := { name: "Ada" }
+payload: SerialValue := { name: "Ada" }
 user := decode<User>{ json: payload }
 ```
 
-`JsonSerializable` is a constraint-only intrinsic. It is not a normal value type,
+`Serializable` is a constraint-only intrinsic. It is not a normal value type,
 and each concrete type argument must be a class or struct whose fields are JSON-serializable.
 The concrete nominal-object JSON methods are still generated on demand when the generic is
 instantiated.
@@ -152,13 +152,13 @@ class Config {
   version: "1.0"
 }
 
-Config.fromJsonValue({ host: "localhost" })
+Config.fromSerialValue({ host: "localhost" })
 // Success: Config { host: "localhost", port: 8080, version: "1.0" }
 
-Config.fromJsonValue({ port: 3000 })
+Config.fromSerialValue({ port: 3000 })
 // Failure: "Missing required field \"host\""
 
-Config.fromJsonValue({ host: "localhost", version: "2.0" })
+Config.fromSerialValue({ host: "localhost", version: "2.0" })
 // Failure: "Field \"version\" must be \"1.0\" but got \"2.0\""
 ```
 
@@ -167,7 +167,7 @@ Config.fromJsonValue({ host: "localhost", version: "2.0" })
 Field values are checked during deserialization:
 
 ```doof
-Point.fromJsonValue({ x: "not a number", y: 2.5 })
+Point.fromSerialValue({ x: "not a number", y: 2.5 })
 // Failure: "Field \"x\" expected number but got string"
 ```
 
@@ -176,16 +176,16 @@ Point.fromJsonValue({ x: "not a number", y: 2.5 })
 Extra object fields that do not correspond to class fields are ignored:
 
 ```doof
-Point.fromJsonValue({ x: 1.0, y: 2.0, z: 3.0 })
+Point.fromSerialValue({ x: 1.0, y: 2.0, z: 3.0 })
 // Success: Point { x: 1.0, y: 2.0 }
 ```
 
 ### Non-Object Inputs
 
-`.fromJsonValue()` expects a JSON object. Passing a non-object `JsonValue` fails:
+`.fromSerialValue()` expects a JSON object. Passing a non-object `SerialValue` fails:
 
 ```doof
-Point.fromJsonValue("not an object")
+Point.fromSerialValue("not an object")
 // Failure: "Expected JSON object"
 ```
 
@@ -201,7 +201,7 @@ class Todo {
   done: bool
 }
 
-Todo.fromJsonValue({ title: none, done: 1 }, true)
+Todo.fromSerialValue({ title: none, done: 1 }, true)
 // Success: Todo { title: "", done: true }
 ```
 
@@ -237,14 +237,14 @@ class Rect implements Shape {
   function area(): float => width * height
 }
 
-result := Shape.fromJsonValue({ kind: "circle", radius: 5.0 })
+result := Shape.fromSerialValue({ kind: "circle", radius: 5.0 })
 ```
 
 ### Discriminator Requirements
 
 - All implementing classes must share a literal-valued field with the same name, such as `kind`.
 - Each implementing class must use a distinct string discriminator value.
-- If these requirements are not met, using `.fromJsonValue()` on the interface is a compile-time error.
+- If these requirements are not met, using `.fromSerialValue()` on the interface is a compile-time error.
 
 ```doof
 interface Animal {}
@@ -257,14 +257,14 @@ class Cat implements Animal {
   name: string
 }
 
-Animal.fromJsonValue({})
+Animal.fromSerialValue({})
 // compile error: implementing classes must share a literal string discriminator
 ```
 
 ### Unknown Discriminator Values
 
 ```doof
-Shape.fromJsonValue({ kind: "triangle", base: 3.0 })
+Shape.fromSerialValue({ kind: "triangle", base: 3.0 })
 // Failure: "Unknown kind: \"triangle\""
 ```
 
@@ -285,17 +285,17 @@ class Rect {
 
 type Shape = Circle | Rect
 
-result := Shape.fromJsonValue({ kind: "circle", radius: 5.0 })
+result := Shape.fromSerialValue({ kind: "circle", radius: 5.0 })
 ```
 
 ### Alias Requirements
 
-- `.fromJsonValue()` is available only on named type aliases, not on bare union expressions.
+- `.fromSerialValue()` is available only on named type aliases, not on bare union expressions.
 - The alias must resolve to a union of classes.
 - All member classes must be JSON-serializable.
 - All member classes must share a literal string discriminator field with distinct values, the same as interface deserialization.
 
-If these requirements are not met, using `.fromJsonValue()` on the alias is a compile-time error.
+If these requirements are not met, using `.fromSerialValue()` on the alias is a compile-time error.
 
 ## Nested Serialization
 
@@ -311,8 +311,8 @@ line := Line {
   end: Point { x: 1.0, y: 1.0 }
 }
 
-json := line.toJsonObject()
-restored := Line.fromJsonValue(json)
+json := line.toSerialObject()
+restored := Line.fromSerialValue(json)
 ```
 
 ## Arrays and Tuples
@@ -326,7 +326,7 @@ poly := Polygon {
   vertices: [Point { x: 0.0, y: 0.0 }, Point { x: 1.0, y: 0.0 }, Point { x: 0.0, y: 1.0 }]
 }
 
-println(formatJsonValue(poly.toJsonObject()))
+println(formatJsonValue(poly.toSerialObject()))
 // {"vertices":[{"x":0.0,"y":0.0},{"x":1.0,"y":0.0},{"x":0.0,"y":1.0}]}
 ```
 
@@ -337,7 +337,7 @@ class Pair {
   value: Tuple<string, int>
 }
 
-println(formatJsonValue(Pair { value: ("hello", 42) }.toJsonObject()))
+println(formatJsonValue(Pair { value: ("hello", 42) }.toSerialObject()))
 // {"value":["hello",42]}
 ```
 
@@ -348,7 +348,7 @@ class Scores {
   values: Map<string, int>
 }
 
-scores := Scores.fromJsonValue({ values: { alice: 10, bob: 12 } })
+scores := Scores.fromSerialValue({ values: { alice: 10, bob: 12 } })
 ```
 
 ## Enums
@@ -361,7 +361,7 @@ class Pixel {
   color: Color
 }
 
-println(formatJsonValue(Pixel { x: 10, y: 20, color: Color.Green }.toJsonObject()))
+println(formatJsonValue(Pixel { x: 10, y: 20, color: Color.Green }.toSerialObject()))
 // {"x":10,"y":20,"color":1}
 ```
 
@@ -371,12 +371,12 @@ Enum JSON is always its backing value, never its declared name:
 enum Status { Pending, Ready = 7, Done }
 enum WireStatus { Pending = "pending", Ready = "ready" }
 
-Status.Pending.toJsonValue()       // JSON integer 0
-Status.Ready.toJsonValue()         // JSON integer 7
-WireStatus.Ready.toJsonValue()     // JSON string "ready"
+Status.Pending.toSerialValue()       // JSON integer 0
+Status.Ready.toSerialValue()         // JSON integer 7
+WireStatus.Ready.toSerialValue()     // JSON string "ready"
 
-Status.fromJsonValue(7)            // Success(Status.Ready)
-WireStatus.fromJsonValue("ready")  // Success(WireStatus.Ready)
+Status.fromSerialValue(7)            // Success(Status.Ready)
+WireStatus.fromSerialValue("ready")  // Success(WireStatus.Ready)
 ```
 
 The scalar JSON type must match the enum backing kind exactly. Lenient decoding
@@ -384,7 +384,7 @@ does not coerce enum strings to integers or enum integers to strings. Unknown
 values report the containing field/index/map path, enum type, received value,
 and the valid backing values. This rule applies identically to direct enum
 decoding, nullable fields, arrays, tuples, string-keyed maps, and generic
-`T.fromJsonValue(...)` calls where `T: JsonSerializable`.
+`T.fromSerialValue(...)` calls where `T: Serializable`.
 
 Examples in this chapter that call `formatJsonValue(...)` assume:
 
@@ -394,13 +394,13 @@ import { formatJsonValue } from "std/json"
 
 ## Reserved Method Names
 
-`toJsonObject` and `fromJsonValue` are reserved intrinsic method names. User-defined methods with these names on classes produce a compile-time error:
+`toSerialObject` and `fromSerialValue` are reserved intrinsic method names. User-defined methods with these names on classes produce a compile-time error:
 
 ```doof
 class Foo {
   x: int
 
-  function toJsonObject(): JsonObject {
+  function toSerialObject(): SerialObject {
     return { "x": 1 }
   }
 }

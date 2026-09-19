@@ -2,11 +2,11 @@
 
 ## JSON Serialization
 
-Classes and structs with all-serializable fields and no dedicated `constructor` method automatically get `.toJsonObject()` and `.fromJsonValue(json, lenient = false)`. Code is generated **on-demand** — only when each method is actually required. Generation is transitive and direction-specific: encoding generates nested encoders, while decoding generates nested decoders, without generating the unused opposite direction.
+Classes and structs with all-serializable fields and no dedicated `constructor` method automatically get `.toSerialObject()` and `.fromSerialValue(json, lenient = false)`. Code is generated **on-demand** — only when each method is actually required. Generation is transitive and direction-specific: encoding generates nested encoders, while decoding generates nested decoders, without generating the unused opposite direction.
 
-### `.toJsonObject()` — Instance Method
+### `.toSerialObject()` — Instance Method
 
-Returns a `JsonObject` representation. `JsonObject` is the intrinsic alias for `Map<string, JsonValue>`, so it is still accepted anywhere a `JsonValue` is expected.
+Returns a `SerialObject` representation. `SerialObject` is the intrinsic alias for `Map<string, SerialValue>`, so it is still accepted anywhere a `SerialValue` is expected.
 
 ```doof
 import { formatJsonValue } from "std/json"
@@ -17,7 +17,7 @@ class User {
     private email: string
 }
 
-println(formatJsonValue(User("Alice", 30, "a@b.com").toJsonObject()))
+println(formatJsonValue(User("Alice", 30, "a@b.com").toSerialObject()))
 // {"name":"Alice","age":30,"email":"alice@example.com"}
 ```
 
@@ -46,29 +46,29 @@ Rules:
 `Promise<T>`, `Result<T,E>`, and classes or structs with a dedicated static
 `constructor(...): Self`.
 
-### `.fromJsonValue()` — Static Method
+### `.fromSerialValue()` — Static Method
 
 ```doof
-result := Point.fromJsonValue({ x: 1.5, y: 2.5 })  // Result<Point, string>
-lenient := Point.fromJsonValue({ x: 1, y: none }, true)
+result := Point.fromSerialValue({ x: 1.5, y: 2.5 })  // Result<Point, string>
+lenient := Point.fromSerialValue({ x: 1, y: none }, true)
 ```
 
 Generic helpers can deserialize through a type parameter when it is explicitly
-constrained with the intrinsic `JsonSerializable` constraint:
+constrained with the intrinsic `Serializable` constraint:
 
 ```doof
-function decode<T: JsonSerializable>(json: JsonValue): Result<T, string> {
-    return T.fromJsonValue(json)
+function decode<T: Serializable>(json: SerialValue): Result<T, string> {
+    return T.fromSerialValue(json)
 }
 
-payload: JsonValue := { name: "Ada" }
+payload: SerialValue := { name: "Ada" }
 user := decode<User>{ json: payload }
 ```
 
-`JsonSerializable` is constraint-only, not a normal value type. Concrete
+`Serializable` is constraint-only, not a normal value type. Concrete
 instantiations may use eligible JSON-serializable classes, structs, or enums.
 
-Enums also expose `.toJsonValue()` and static `.fromJsonValue(...)` directly.
+Enums also expose `.toSerialValue()` and static `.fromSerialValue(...)` directly.
 Enum decoding requires the exact scalar kind even in lenient mode; lenient mode
 does not coerce enum values. Unknown values report the enum, received backing
 value, valid values, and any containing field/index/map path.
@@ -79,7 +79,7 @@ Rules:
 - Literal-valued fields are auto-filled; if present in JSON, value must match
 - Extra JSON fields are silently ignored
 - Type mismatches produce `Failure`
-- Non-object JsonValue input produces `Failure`
+- Non-object SerialValue input produces `Failure`
 
 When `lenient` is `true`:
 - Required `string` fields accept JSON `null` (represented by source `none`) as `""`
@@ -106,15 +106,15 @@ class Rect implements Shape {
     function area(): float => width * height
 }
 
-Shape.fromJsonValue({ kind: "circle", radius: 5.0 })  // Result<Shape, string>
-Shape.fromJsonValue({ kind: "circle", radius: 5.0 }, true)
+Shape.fromSerialValue({ kind: "circle", radius: 5.0 })  // Result<Shape, string>
+Shape.fromSerialValue({ kind: "circle", radius: 5.0 }, true)
 ```
 
 Compile error if implementing classes lack a shared literal-valued discriminator.
 
 ### Reserved Names
 
-`toJsonObject` and `fromJsonValue` are reserved — user-defined methods with these names produce a compile error.
+`toSerialObject` and `fromSerialValue` are reserved — user-defined methods with these names produce a compile error.
 
 ## Description Metadata
 
@@ -149,9 +149,9 @@ meta.description        // "A simple calculator."
 meta.methods            // MethodReflection[]
 meta.methods[0].name            // "add"
 meta.methods[0].description     // "Adds two numbers."
-meta.methods[0].inputSchema     // JsonValue JSON Schema Draft 7 object
-meta.methods[0].outputSchema    // JsonValue JSON Schema Draft 7 object
-meta.methods[0].invoke(instance, { a: 1, b: 2 })  // Result<JsonValue, JsonValue>
+meta.methods[0].inputSchema     // SerialValue JSON Schema Draft 7 object
+meta.methods[0].outputSchema    // SerialValue JSON Schema Draft 7 object
+meta.methods[0].invoke(instance, { a: 1, b: 2 })  // Result<SerialValue, SerialValue>
 ```
 
 Generic helpers can access metadata on a type parameter with the compiler-known

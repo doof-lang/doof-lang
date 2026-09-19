@@ -4,7 +4,7 @@ import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitNoneLiteral } from "./emitter-expr-literals"
-import { ClassType, JsonValueResolvedType, NoneType, PrimitiveType, ResolvedType, Symbol, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ClassType, SerialValueResolvedType, NoneType, PrimitiveType, ResolvedType, Symbol, UnionResolvedType, WeakResolvedType } from "./semantic"
 
 export function testGenericNoneLiteralUsesSpecializedCarrier(): none {
   types := ["Item", "int", "Value", "Item | none", "int | none", "Item | Value"]
@@ -38,10 +38,10 @@ export function testGenericNoneLiteralWeakAndUnitCarriers(): none {
   item := ClassType { name: "Item", symbol: Symbol { kind: "class", name: "Item", module: "", exported: false } }
   weakItem := WeakResolvedType { inner: item }
   optionalWeak := WeakResolvedType { inner: UnionResolvedType { types: [item, NoneType {}] } }
-  let types: ResolvedType[] = [NoneType {}, JsonValueResolvedType {}, weakItem, optionalWeak,
+  let types: ResolvedType[] = [NoneType {}, SerialValueResolvedType {}, weakItem, optionalWeak,
     UnionResolvedType { types: [weakItem, NoneType {}] },
     UnionResolvedType { types: [UnionResolvedType { types: [PrimitiveType { name: "int" }, NoneType {}] }, NoneType {}] }]
-  values := ["std::monostate{}", "doof::json_value(nullptr)", "std::weak_ptr<Item>{}",
+  values := ["std::monostate{}", "doof::serial_value(nullptr)", "std::weak_ptr<Item>{}",
     "std::optional<std::weak_ptr<Item>>{}", "std::weak_ptr<Item>{}", "std::nullopt"]
   for index of 0..<types.length { Assert.equal(emitNoneLiteral(types[index], context), values[index]) }
 }
@@ -92,24 +92,24 @@ export function testNoneCarrierShorthandObject(): none {
 export function testEmissionCleanupContextualFieldsAndJsonObjects(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "class Box { const kind = \"box\"\nvalue: int = 7\nsource: SourceLocation = @caller }\n" +
-    "function make(): Box => {}\nfunction json(): JsonValue => {}",
+    "function make(): Box => {}\nfunction json(): SerialValue => {}",
   }], "/main.do")
   Assert.equal(hasErrorDiagnostics(result.diagnostics), false)
   Assert.isTrue(result.emission != none)
   source := result.emission!.modules[0].source
   Assert.stringContains(source, "std::make_shared<Box>(7, std::make_shared<doof::SourceLocation>(std::string(\"main\"), 4, std::string(\"make\")))")
-  Assert.stringContains(source, "std::initializer_list<std::pair<std::string, doof::JsonValue>>{}")
+  Assert.stringContains(source, "std::initializer_list<std::pair<std::string, doof::SerialValue>>{}")
 }
 
 export function testCheckerConsolidationJsonShorthandEmission(): none {
   let previous = ""
   for property of ["value", "value: value"] {
     result := compile([SourceFile { path: "/main.do", source:
-      "function make(value: int): JsonValue => { " + property + " }",
+      "function make(value: int): SerialValue => { " + property + " }",
     }], "/main.do")
     Assert.equal(result.diagnostics.length, 0)
     source := result.emission!.modules[0].source
-    Assert.stringContains(source, "doof::json_value(value)")
+    Assert.stringContains(source, "doof::serial_value(value)")
     if previous != "" { Assert.equal(source, previous) }
     previous = source
   }

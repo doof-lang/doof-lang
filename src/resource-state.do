@@ -22,13 +22,13 @@ export class ResourceState {
 
 export function parseResourceState(source: string): ResourceState | none {
   value := parseJsonValue(source) else { return none }
-  state := ResourceState.fromJsonValue(value, true) else { return none }
+  state := ResourceState.fromSerialValue(value, true) else { return none }
   if state.version != RESOURCE_STATE_VERSION { return none }
   return state
 }
 
 export function renderResourceState(state: ResourceState): string {
-  return formatJsonValue(state.toJsonObject()) + "\n"
+  return formatJsonValue(state.toSerialObject()) + "\n"
 }
 
 export function findMaterializedResource(

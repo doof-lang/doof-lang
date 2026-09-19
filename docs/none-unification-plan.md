@@ -23,7 +23,7 @@ continues to use `void`, and JSON continues to encode absence as `null`.
   payloadless success channel.
 - `try?` remains invalid for `Result<none, E>` because success and failure
   would both collapse to `none`.
-- `none` is assignable to `JsonValue` and serializes as JSON `null`.
+- `none` is assignable to `SerialValue` and serializes as JSON `null`.
 - `??`, `??=`, `?.`, postfix `!`, declaration-`else`, `as`, and case patterns
   use `none` as their absence member without changing operator spelling.
 - The legacy spellings `void` and `null` canonicalize to `none` before
@@ -44,7 +44,7 @@ than reconstructing a distinction between legacy spellings.
 | Optional primitive or struct | `std::optional<T>` |
 | Optional class or collection | Existing nullable pointer representation |
 | General union absence arm | `std::monostate` |
-| `JsonValue` | JSON `null` |
+| `SerialValue` | JSON `null` |
 | Metadata and WASM absent result | JSON `null` |
 
 Dedicated helpers such as `emitReturnType` and `emitResultPayloadType` should

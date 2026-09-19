@@ -199,8 +199,8 @@ uuidV4(): string
 parseJwt(token: string): Result<Jwt, JwtError>
 
 class Jwt {
-    readonly header: readonly Map<string, JsonValue>
-    readonly claims: readonly Map<string, JsonValue>
+    readonly header: readonly Map<string, SerialValue>
+    readonly claims: readonly Map<string, SerialValue>
     readonly signedContent: string
     readonly signature: byte[]
 }
@@ -218,7 +218,7 @@ import { parseJwt, sha256HexString } from "std/crypto"
 
 digest := sha256HexString("hello")
 
-function readClaims(token: string): Result<readonly Map<string, JsonValue>, JwtError> {
+function readClaims(token: string): Result<readonly Map<string, SerialValue>, JwtError> {
     try parsed := parseJwt(token)
     return Success { value: parsed.claims }
 }
@@ -344,7 +344,7 @@ class HttpResponse {
     getText(): string
     getBlob(): readonly byte[]
     getLineStream(): Stream<string>
-    getJsonValue(): Result<JsonValue, string>
+    getJsonValue(): Result<SerialValue, string>
 }
 
 class HttpClient { readonly native: NativeHttpClient }
@@ -355,7 +355,7 @@ class HttpClient { readonly native: NativeHttpClient }
 ```
 createClient(): HttpClient
 get(client: HttpClient, url: string): Result<HttpResponse, HttpError>
-postJsonValue(client: HttpClient, url: string, body: JsonValue): Result<HttpResponse, HttpError>
+postJsonValue(client: HttpClient, url: string, body: SerialValue): Result<HttpResponse, HttpError>
 send(client: HttpClient, request: HttpRequest): Result<HttpResponse, HttpError>
 ```
 
@@ -366,7 +366,7 @@ send(client: HttpClient, request: HttpRequest): Result<HttpResponse, HttpError>
 ```doof
 import { createClient, get, send, HttpRequest, HttpHeader } from "std/http"
 
-function fetchJson(url: string): Result<JsonValue, string> {
+function fetchJson(url: string): Result<SerialValue, string> {
     client := createClient()
     try resp := get(client, url)
     if !resp.ok() {
@@ -395,7 +395,7 @@ function patchResource(url: string, data: readonly byte[]): Result<none, string>
 
 ## `std/json`
 
-Parse and format `JsonValue` (the built-in JSON carrier type).
+Parse and format `SerialValue` (the built-in JSON carrier type).
 
 ```doof
 import { parseJsonValue, formatJsonValue } from "std/json"
@@ -404,8 +404,8 @@ import { parseJsonValue, formatJsonValue } from "std/json"
 ### Functions
 
 ```
-parseJsonValue(text: string): Result<JsonValue, string>
-formatJsonValue(value: JsonValue): string
+parseJsonValue(text: string): Result<SerialValue, string>
+formatJsonValue(value: SerialValue): string
 ```
 
 `formatJsonValue` produces compact JSON with insertion-order key preservation.
@@ -421,7 +421,7 @@ function prettyRoundTrip(input: string): Result<string, string> {
 }
 ```
 
-See [spec/12-json-serialization.md](12-json-serialization.md) for class-level auto-serialization via `.toJsonObject()` and `.fromJsonValue()`.
+See [spec/12-json-serialization.md](12-json-serialization.md) for class-level auto-serialization via `.toSerialObject()` and `.fromSerialValue()`.
 
 ---
 
@@ -975,7 +975,7 @@ function countLines(path: string): Result<int, IoError> {
 ```doof
 import { createClient, get } from "std/http"
 
-function fetchUser(id: int): Result<JsonValue, string> {
+function fetchUser(id: int): Result<SerialValue, string> {
     client := createClient()
     try resp := get(client, "https://api.example.com/users/${string(id)}")
     if !resp.ok() {
@@ -995,12 +995,12 @@ class CreateUserResponse { id: int; name: string }
 
 function createUser(req: CreateUserRequest): Result<CreateUserResponse, string> {
     client := createClient()
-    try resp := postJsonValue(client, "https://api.example.com/users", req.toJsonObject())
+    try resp := postJsonValue(client, "https://api.example.com/users", req.toSerialObject())
     if !resp.ok() {
         return Failure { error: "HTTP ${string(resp.status)}" }
     }
     try json := resp.getJsonValue()
-    return CreateUserResponse.fromJsonValue(json)
+    return CreateUserResponse.fromSerialValue(json)
 }
 ```
 

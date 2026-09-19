@@ -46,7 +46,7 @@ export function buildEditorService(root: string): Result<none, string> {
   try names := files(path(stage, "src"))
   for name of names { if name.endsWith(".test.do") { try erase(path(stage, "src/" + name)) } }
   try makeDirectory(artifacts)
-  manifest: JsonObject := { name: "doof-language-service", build: { entry: "src/editor-wasm.do", target: "wasm", native: { linkerFlags: ["-sALLOW_MEMORY_GROWTH=1", "-sMAXIMUM_MEMORY=1073741824", "-sSTACK_SIZE=1048576"] } } }
+  manifest: SerialObject := { name: "doof-language-service", build: { entry: "src/editor-wasm.do", target: "wasm", native: { linkerFlags: ["-sALLOW_MEMORY_GROWTH=1", "-sMAXIMUM_MEMORY=1073741824", "-sSTACK_SIZE=1048576"] } } }
   try write(path(stage, "doof.json"), formatJsonValue(manifest))
   try command("env", ["-u", "DOOF_STDLIB_ROOT", path(root, "dist/doof"), "build", stage, "-o", path(root, "build/vscode-service")], {}, root)
   try command("cp", [path(root, "build/vscode-service/doof-language-service.wasm"), path(artifacts, "service.wasm")])
@@ -61,7 +61,7 @@ export function buildEditorService(root: string): Result<none, string> {
   let catalogSource = ""
   for entry of archive.entries { if entry.name == "bundle-index.json" { catalogSource = text(archive.entryData(entry)) } }
   try catalogValue := parseJsonValue(catalogSource)
-  try catalog := StdlibBundleIndex.fromJsonValue(catalogValue, true)
+  try catalog := StdlibBundleIndex.fromSerialValue(catalogValue, true)
   try require(catalog.schemaVersion == 4, "Unsupported stdlib bundle schema")
   sources: Map<string, EditorSource> := {}
   try erase(path(artifacts, "stdlib"))
@@ -90,11 +90,11 @@ export function buildEditorService(root: string): Result<none, string> {
   ordered: string[] := []
   for name, _ of sources { ordered.push(name) }
   sortedNames := sortNames(ordered)
-  sourceArray: JsonValue[] := []
-  for name of sortedNames { try source := sources.get(name); sourceArray.push(source.toJsonObject()) }
+  sourceArray: SerialValue[] := []
+  for name of sortedNames { try source := sources.get(name); sourceArray.push(source.toSerialObject()) }
   serialized := formatJsonValue(sourceArray)
   try write(path(artifacts, "stdlib.json"), serialized)
-  metadata: JsonObject := { version, compilerSourceSha256, dirty: status != "", wasmSha256: sha256Hex(wasm), revision, stdlibBundleDigest: catalog.bundleDigest, stdlibSha256: sha256HexString(serialized) }
+  metadata: SerialObject := { version, compilerSourceSha256, dirty: status != "", wasmSha256: sha256Hex(wasm), revision, stdlibBundleDigest: catalog.bundleDigest, stdlibSha256: sha256HexString(serialized) }
   return write(path(artifacts, "service-version.json"), formatJsonValue(metadata) + "\n")
 }
 import { sorted as sortNames } from "./common"
@@ -108,9 +108,9 @@ export function verifyEditorArtifacts(root: string): Result<none, string> {
   try expectedStdlib := jsonString(metadata, "stdlibSha256")
   try require(sha256HexString(serialized) == expectedStdlib, "Stdlib identity mismatch")
   try value := parseJsonValue(serialized)
-  array := value as JsonValue[] else { return Failure("Invalid stdlib source list") }
+  array := value as SerialValue[] else { return Failure("Invalid stdlib source list") }
   for item of array {
-    try source := EditorSource.fromJsonValue(item, true)
+    try source := EditorSource.fromSerialValue(item, true)
     try require(source.path.startsWith("/std/"), "Invalid virtual stdlib path")
     name := source.path.substring(5, source.path.length)
     try require(safeModulePath(name), "Unsafe stdlib source path")

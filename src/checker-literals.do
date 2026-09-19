@@ -3,7 +3,7 @@
 import { resolveConstructor, checkClassProperties } from "./checker-construction"
 import { checkPropertyValue, checkAssignableProperty } from "./checker-properties"
 
-import { ArrayResolvedType, ClassType, JsonValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, Scope, SetResolvedType, UnionResolvedType, UnknownType } from "./semantic"
+import { ArrayResolvedType, ClassType, SerialValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, Scope, SetResolvedType, UnionResolvedType, UnknownType } from "./semantic"
 
 import { ArrayLiteral, ClassDeclaration, Expression, NamedType, ObjectLiteral, TypeAnnotation } from "./ast"
 import { arrayType, joinTypes, isJsonValueType, isSupportedHashCollectionType, jsonValueType, mapType, setType, primitive, sameType, typeName, unknownType } from "./checker-types"
@@ -105,10 +105,10 @@ export function checkOmittedCollectionLiteral(state: CheckerState, annotation: T
 export function checkArray(state: CheckerState, expression: ArrayLiteral, scope: Scope, expected: ResolvedType | none): ResolvedType {
   if expected != none {
     case expected! {
-      _: JsonValueResolvedType -> {
+      _: SerialValueResolvedType -> {
         for item of expression.elements {
           actual := checkExpression(state, item, scope, optionalResolvedType(jsonValueType()))
-          if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to JsonValue", item.span) }
+          if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to SerialValue", item.span) }
         }
         return finish(state, expression, expected!)
       }
@@ -116,7 +116,7 @@ export function checkArray(state: CheckerState, expression: ArrayLiteral, scope:
         if containsJsonValue(state, union_) {
           for item of expression.elements {
             actual := checkExpression(state, item, scope, optionalResolvedType(jsonValueType()))
-            if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to JsonValue", item.span) }
+            if !isAssignableWithInterfaces(state.result, actual, jsonValueType()) { typeError(state, "Cannot assign " + typeName(actual) + " to SerialValue", item.span) }
           }
           return finish(state, expression, jsonValueType())
         }
@@ -188,7 +188,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
   let expectedValue: ResolvedType | none = none
   if expected != none {
     case expected! {
-      _: JsonValueResolvedType -> { expectedValue = jsonValueType() }
+      _: SerialValueResolvedType -> { expectedValue = jsonValueType() }
       union_: UnionResolvedType -> {
         if containsJsonValue(state, union_) { expectedValue = jsonValueType() }
       }
@@ -210,7 +210,7 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
 
   if expected != none {
     case expected! {
-      _: JsonValueResolvedType -> { return finish(state, expression, expected!) }
+      _: SerialValueResolvedType -> { return finish(state, expression, expected!) }
       union_: UnionResolvedType -> { if containsJsonValue(state, union_) { return finish(state, expression, jsonValueType()) } }
       _: MapResolvedType -> { return finish(state, expression, expected!) }
       _ -> { }
@@ -238,7 +238,7 @@ function supportsUnionObjectInference(union_: UnionResolvedType): bool {
   let hasNominal = false
   for member of union_.types {
     case member {
-      _: JsonValueResolvedType -> { return false }
+      _: SerialValueResolvedType -> { return false }
       _: MapResolvedType -> { return false }
       _: ClassType -> { hasNominal = true }
       _ -> { }

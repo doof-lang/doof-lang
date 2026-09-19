@@ -9,7 +9,7 @@ import { TypeLoweringGraph } from "./emitter-type-cache"
 import { CppType, CppTypeRegistry, renderCppType } from "./cpp-type"
 import { carrierOf, flattenCarrierMembers, naturalCarrierMember } from "./emitter-carriers"
 import {
-  ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType, InterfaceType, JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol,
+  ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol,
   NeverType, NoneType, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import { moduleNamespace } from "./emitter-names"
@@ -213,7 +213,7 @@ function lowerCppTypeUncached(type_: ResolvedType, registry: CppTypeRegistry, ca
     set_: SetResolvedType -> { return registry.templateType("std::shared_ptr", [registry.templateType("doof::ordered_set", [lowerCppType(set_.elementType, registry, cache)])]) }
     stream: StreamResolvedType -> { return registry.atom(concreteName("Stream", [stream.elementType], registry.names)) }
     _: RangeResolvedType -> { return registry.atom("doof::Range") }
-    _: JsonValueResolvedType -> { return registry.atom("doof::JsonValue") }
+    _: SerialValueResolvedType -> { return registry.atom("doof::SerialValue") }
     result: ResultResolvedType -> { return registry.templateType("doof::Result", [lowerCppPayload(result.valueType, registry, cache), lowerCppPayload(result.errorType, registry, cache)]) }
     actor: ActorType -> { return registry.templateType("std::shared_ptr", [registry.templateType("doof::Actor", [lowerCppClassInnerType(actor.innerClass, registry, cache)])]) }
     promise: PromiseType -> { return registry.templateType("doof::Promise", [lowerCppPayload(promise.valueType, registry, cache)]) }
@@ -308,7 +308,7 @@ export function canBorrowParameter(resolvedType: ResolvedType): bool {
     _: MapResolvedType -> { return true }
     _: SetResolvedType -> { return true }
     _: StreamResolvedType -> { return true }
-    _: JsonValueResolvedType -> { return true }
+    _: SerialValueResolvedType -> { return true }
     result: ResultResolvedType -> {
       return !requiresParameterValueSemantics(result.valueType) && !requiresParameterValueSemantics(result.errorType)
     }

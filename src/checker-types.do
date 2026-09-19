@@ -3,7 +3,7 @@
 import {
   ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType,
   InterfaceType,
-  JsonValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NeverType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType,
+  SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NeverType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType,
   UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
 } from "./semantic"
 import type {
@@ -37,11 +37,11 @@ export function streamType(element: ResolvedType): ResolvedType {
 
 export function rangeType(): ResolvedType { return RangeResolvedType {} }
 
-export function jsonValueType(): ResolvedType { return JsonValueResolvedType {} }
+export function jsonValueType(): ResolvedType { return SerialValueResolvedType {} }
 
 export function isJsonValueType(resolvedType: ResolvedType): bool {
   case resolvedType {
-    _: JsonValueResolvedType -> { return true }
+    _: SerialValueResolvedType -> { return true }
     _ -> { return false }
   }
   return false
@@ -265,7 +265,7 @@ export function typeName(resolvedType: ResolvedType): string {
     set: SetResolvedType -> { return (if set.readonly_ then "ReadonlySet" else "Set") + "<" + typeName(set.elementType) + ">" }
     stream: StreamResolvedType -> { return "Stream<" + typeName(stream.elementType) + ">" }
     _: RangeResolvedType -> { return "Range" }
-    _: JsonValueResolvedType -> { return "JsonValue" }
+    _: SerialValueResolvedType -> { return "SerialValue" }
     result: ResultResolvedType -> { return "Result<" + typeName(result.valueType) + ", " + typeName(result.errorType) + ">" }
     weak_: WeakResolvedType -> { return "weak " + typeName(weak_.inner) }
     actor: ActorType -> { return "Actor<" + typeName(actor.innerClass) + ">" }
@@ -481,7 +481,7 @@ function compareTypes(left: ResolvedType, right: ResolvedType, ignoreMutability:
       }
     }
     _: RangeResolvedType -> { return true }
-    _: JsonValueResolvedType -> { return true }
+    _: SerialValueResolvedType -> { return true }
     _: NoneType -> { return true }
     _: NeverType -> { return true }
     _: UnknownType -> { return true }
@@ -575,7 +575,7 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
         _ -> { }
       }
     }
-    _: JsonValueResolvedType -> {
+    _: SerialValueResolvedType -> {
       if sameType(value, target) { return true }
     }
     _ -> { }
@@ -586,7 +586,7 @@ export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
     _ -> { }
   }
   case target {
-    _: JsonValueResolvedType -> { return isJsonValueAssignable(value) }
+    _: SerialValueResolvedType -> { return isJsonValueAssignable(value) }
     _ -> { }
   }
   case value {
@@ -694,7 +694,7 @@ function sameTypeArguments(left: ResolvedType[], right: ResolvedType[], ignoreMu
 function isJsonValueAssignable(value: ResolvedType): bool {
   case value {
     _: UnknownType -> { return true }
-    _: JsonValueResolvedType -> { return true }
+    _: SerialValueResolvedType -> { return true }
     _: NoneType -> { return true }
     primitiveValue: PrimitiveType -> {
       return primitiveValue.name == "byte" || primitiveValue.name == "int" || primitiveValue.name == "long" ||

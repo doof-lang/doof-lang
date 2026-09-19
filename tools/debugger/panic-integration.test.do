@@ -10,7 +10,7 @@ import { Duration, Thread } from "std/time"
 
 function checkPanic(mode: string, functionName: string, line: int): none {
   path := env("DOOF_DEBUG_PANIC_TEST_LAUNCH") else { return }
-  original := try! DebugLaunch.fromJsonValue(try! parseJsonValue(try! readText(path)))
+  original := try! DebugLaunch.fromSerialValue(try! parseJsonValue(try! readText(path)))
   launch := DebugLaunch { executable: original.executable, directory: original.directory, symbols: original.symbols, source: original.source, arguments: [mode] }
   session := DebugSession { launch }
   session.start()

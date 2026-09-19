@@ -5,7 +5,7 @@ import {
 } from "./ios-app"
 
 export function testRendersIOSSupportFiles(): none {
-  custom: JsonObject := {}
+  custom: SerialObject := {}
   custom.set("NSCameraUsageDescription", "Scan & share")
   config := IOSAppConfig {
     executableName: "DoofDemo",

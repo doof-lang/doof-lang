@@ -207,7 +207,7 @@
       "patterns": [
         {
           "name": "support.type.builtin.doof",
-          "match": "\\b(Map|ReadonlyMap|Set|ReadonlySet|Tuple|Result|Success|Failure|Actor|Promise|Stream|Range|JsonValue|JsonObject|SourceLocation)\\b"
+          "match": "\\b(Map|ReadonlyMap|Set|ReadonlySet|Tuple|Result|Success|Failure|Actor|Promise|Stream|Range|SerialValue|SerialObject|SourceLocation)\\b"
         }
       ]
     },

@@ -19,7 +19,7 @@ declarations in `index.do` are the exact callable surface.
 | `std/archive` | In-memory ZIP plus raw deflate/inflate and CRC-32 |
 | `std/assert` | Source-aware test assertions |
 | `std/blob` | Binary readers/builders and text codecs |
-| `std/cli` | Declarative command-line argument parsing to `JsonObject` |
+| `std/cli` | Declarative command-line argument parsing to `SerialObject` |
 | `std/console` | Synchronous native terminal prompts and numbered choices |
 | `std/crypto` | Digests, HMAC, secret storage, encodings, UUID, JWT |
 | `std/csv` | Strict CSV parsing and generation with source locations |
@@ -33,7 +33,7 @@ declarations in `index.do` are the exact callable surface.
 | `std/http-server` | Inbound HTTP/1.1 and server WebSockets |
 | `std/image` | Mutable RGBA images, views, resize, composite, encode/decode |
 | `std/js` | Persistent QuickJS-NG engine with a JSON boundary |
-| `std/json` | Parse and format `JsonValue`/`JsonObject` |
+| `std/json` | Parse and format `SerialValue`/`SerialObject` |
 | `std/log` | Structured global logging with console and rolling-file sinks |
 | `std/math` | Math constants, native functions, and numeric helpers |
 | `std/multiplayer` | Apple local peer discovery, invitations, and messages |
@@ -81,9 +81,9 @@ declarations in `index.do` are the exact callable surface.
 - Byte APIs use `readonly byte[]`. `std/blob` is the bridge between typed bytes
   and text; `std/fs`, HTTP bodies, compression, archives, crypto, and images all
   use compatible byte values.
-- `JsonValue` is the interchange type for JSON, CLI decoding, JavaScript,
+- `SerialValue` is the interchange type for JSON, CLI decoding, JavaScript,
   reflected tools, and several app bridges. Prefer a typed class's generated
-  `fromJsonValue` at application boundaries.
+  `fromSerialValue` at application boundaries.
 - Streams are pull-based and lazy. Consume them once, surface per-item failures,
   and keep owning handles alive until iteration ends.
 - Directory and resource helpers can fail even when string manipulation cannot.

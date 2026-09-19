@@ -87,17 +87,17 @@ export function testStdlibBundleCreatesDeterministicAddressableMembers(): none {
   try! mkdir(packageRoot)
   try! mkdir(path(packageRoot, "nested"))
   try! mkdir(path(packageRoot, "tests"))
-  try! writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/json\",\"version\":\"0.1.0\",\"dependencies\":{}}\n")
+  try! writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/json\",\"version\":\"0.2.0\",\"dependencies\":{}}\n")
   try! writeText(path(packageRoot, "index.do"), "export function answer(): int => 42\n")
   try! writeText(path(packageRoot, "nested/codec.do"), "export function encode(): string => \"ok\"\n")
   try! writeText(path(packageRoot, "index.test.do"), "export function testNope(): none {}\n")
   try! writeText(path(packageRoot, "native_json.hpp"), "// native\n")
   try! writeText(path(packageRoot, "tests/fixture.txt"), "excluded\n")
 
-  catalog := "{\"schemaVersion\":1,\"compilerVersion\":\"0.1.0\",\"digest\":\"" +
+  catalog := "{\"schemaVersion\":1,\"compilerVersion\":\"0.2.0\",\"digest\":\"" +
     "0000000000000000000000000000000000000000000000000000000000000000\",\"packages\":[{" +
-    "\"name\":\"std/json\",\"url\":\"https://example.invalid/json\",\"ref\":\"v0.1.0\"," +
-    "\"version\":\"0.1.0\",\"commit\":\"0000000000000000000000000000000000000000\"}]}"
+    "\"name\":\"std/json\",\"url\":\"https://example.invalid/json\",\"ref\":\"v0.2.0\"," +
+    "\"version\":\"0.2.0\",\"commit\":\"0000000000000000000000000000000000000000\"}]}"
   first := try! buildStdlibBundle(root, 3)
   second := try! buildStdlibBundle(root, 3)
   assertBytes(first.data, second.data)
@@ -107,17 +107,17 @@ export function testStdlibBundleCreatesDeterministicAddressableMembers(): none {
 
   indexSource := text(entryData(first.data, "bundle-index.json"))
   indexValue := try! parseJsonValue(indexSource)
-  index := indexValue as JsonObject else { panic("expected bundle index object") }
+  index := indexValue as SerialObject else { panic("expected bundle index object") }
   format := (try! index.get("format")) as string else { panic("expected bundle format string") }
   assert(format == "doof-stdlib-tar-of-tar-zst", "expected bundle format")
   schemaVersion := (try! index.get("schemaVersion")) as int else { panic("expected schema version") }
   assert(schemaVersion == 4, "expected target-aware bundle schema")
-  targets := (try! index.get("targets")) as JsonValue[] else { panic("expected bundle targets") }
+  targets := (try! index.get("targets")) as SerialValue[] else { panic("expected bundle targets") }
   assert(targets.length == 6, "expected default bundle to support every target")
   bundleDigest := (try! index.get("bundleDigest")) as string else { panic("expected bundle digest") }
   assert(bundleDigest == first.bundleDigest && bundleDigest.length == 64, "expected bundle identity")
-  membersValue := (try! index.get("members")) as JsonValue[] else { panic("expected members") }
-  firstMember := membersValue[0] as JsonObject else { panic("expected member object") }
+  membersValue := (try! index.get("members")) as SerialValue[] else { panic("expected members") }
+  firstMember := membersValue[0] as SerialObject else { panic("expected member object") }
   memberHash := (try! firstMember.get("sha256")) as string else { panic("expected member hash") }
   assert(memberHash.length == 64, "expected member SHA-256")
 
@@ -142,7 +142,7 @@ export function testStdlibBundleIncludesCurlOnlyForLinuxProfiles(): none {
   try! mkdir(path(packageRoot, "vendor"))
   try! mkdir(path(packageRoot, "vendor/curl"))
   try! mkdir(path(packageRoot, "vendor/curl/lib"))
-  try! writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/http\",\"version\":\"0.1.0\",\"dependencies\":{}}\n")
+  try! writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/http\",\"version\":\"0.2.0\",\"dependencies\":{}}\n")
   try! writeText(path(packageRoot, "index.do"), "export function get(): none {}\n")
   try! writeText(path(packageRoot, "native_http_client.hpp"), "// shared native input\n")
   try! writeText(path(packageRoot, "vendor/curl/COPYING"), "curl license\n")
@@ -174,14 +174,14 @@ export function testStdlibBundleRejectsMissingVendoredLicense(): none {
   try! mkdir(packageRoot)
   try! mkdir(path(packageRoot, "vendor"))
   try! mkdir(path(packageRoot, "vendor/libwebp"))
-  try! writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/image\",\"version\":\"0.1.0\",\"dependencies\":{}}\n")
+  try! writeText(path(packageRoot, "doof.json"), "{\"name\":\"std/image\",\"version\":\"0.2.0\",\"dependencies\":{}}\n")
   try! writeText(path(packageRoot, "index.do"), "export function width(): int => 1\n")
   try! writeText(path(packageRoot, "vendor/libwebp/COPYING"), "license\n")
 
-  catalog := "{\"schemaVersion\":1,\"compilerVersion\":\"0.1.0\",\"digest\":\"" +
+  catalog := "{\"schemaVersion\":1,\"compilerVersion\":\"0.2.0\",\"digest\":\"" +
     "0000000000000000000000000000000000000000000000000000000000000000\",\"packages\":[{" +
-    "\"name\":\"std/image\",\"url\":\"https://example.invalid/image\",\"ref\":\"v0.1.0\"," +
-    "\"version\":\"0.1.0\",\"commit\":\"0000000000000000000000000000000000000000\"}]}"
+    "\"name\":\"std/image\",\"url\":\"https://example.invalid/image\",\"ref\":\"v0.2.0\"," +
+    "\"version\":\"0.2.0\",\"commit\":\"0000000000000000000000000000000000000000\"}]}"
   result := buildStdlibBundle(root, 3)
   message := case result {
     _: Success -> "",

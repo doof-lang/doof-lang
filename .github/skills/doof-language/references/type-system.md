@@ -115,12 +115,12 @@ list exact primitive alternatives: `T: double` excludes `int`, and
 Numeric bounds enable operators valid for every alternative; arithmetic keeps
 `T` only when promotion preserves every alternative (`byte` promotes to `int`).
 Integer division, remainder and bitwise operations require integer bounds; `/`
-requires a floating operand for every possible combination. `JsonSerializable` is
+requires a floating operand for every possible combination. `Serializable` is
 a compiler-known constraint-only intrinsic used for generic JSON helpers:
 
 ```doof
-function decode<T: JsonSerializable>(json: JsonValue): Result<T, string> {
-    return T.fromJsonValue(json)
+function decode<T: Serializable>(json: SerialValue): Result<T, string> {
+    return T.fromSerialValue(json)
 }
 ```
 
@@ -148,7 +148,7 @@ function keep<T: Reader<int>>(reader: T): T => reader
 - Bounds resolve in their declaration module and may reference enclosing class parameters.
 - Constraints alone do not infer otherwise-undetermined type arguments.
 - Adjacent generic closers (`>>`, `>>>`) need no separating whitespace.
-- Interface bounds do not grant `Reflectable` or `JsonSerializable` intrinsics; combined bounds remain unsupported.
+- Interface bounds do not grant `Reflectable` or `Serializable` intrinsics; combined bounds remain unsupported.
 
 ## Type Inference
 
@@ -253,43 +253,43 @@ literal-valued fields must be present; ordinary defaulted fields may be
 omitted. Value types do not break shape ties, so zero or multiple matches
 require explicit `Type { ... }` construction. The selected member's field
 types flow recursively into nested object literals. Spread literals and
-unions with Map or `JsonValue` object carriers require their existing explicit
+unions with Map or `SerialValue` object carriers require their existing explicit
 or carrier-specific forms.
 
 Error results are also ordinary unions: `Result<T, E>` is the canonical spelling
 of `Success<T> | Failure<E>`. The intrinsic arms are valid standalone types, but
 their payload members are intentionally not shared across the union.
 
-## `JsonValue`
+## `SerialValue`
 
-`JsonValue` is an exact recursive JSON carrier.
+`SerialValue` is an exact recursive JSON carrier.
 
-Narrow with `as` or `case` before comparing a JsonValue with a typed scalar or collection. Direct comparison with `none` tests absence.
+Narrow with `as` or `case` before comparing a SerialValue with a typed scalar or collection. Direct comparison with `none` tests absence.
 
 ```doof
-payload: JsonValue := { name: "Ada", scores: [1, 2, 3] }
+payload: SerialValue := { name: "Ada", scores: [1, 2, 3] }
 ```
 
 Accepted shapes:
 
 - `none` (serialized as JSON `null`)
 - `bool`, `byte`, `int`, `long`, `float`, `double`, `string`
-- `JsonValue[]`
-- `Map<string, JsonValue>`
+- `SerialValue[]`
+- `Map<string, SerialValue>`
 - unions composed from those cases
 
 Rules:
 
 - Contextual typing keeps literals ergonomic.
-- Pre-built `int[]` or `Map<string, int>` values do not implicitly convert to `JsonValue`.
-- `JsonObject` is a built-in alias for the exact object carrier type `Map<string, JsonValue>`.
+- Pre-built `int[]` or `Map<string, int>` values do not implicitly convert to `SerialValue`.
+- `SerialObject` is a built-in alias for the exact object carrier type `Map<string, SerialValue>`.
 - `long` values are preserved, including parsed JSON integers beyond `int` range.
 - Object key insertion order is preserved for literals, formatting, and generated JSON methods.
-- Assignments from `JsonValue[]` or `Map<string, JsonValue>` preserve shared-container reference semantics.
+- Assignments from `SerialValue[]` or `Map<string, SerialValue>` preserve shared-container reference semantics.
 
 ```doof
-payload: JsonObject := { "name": "Ada" }
-row: Map<string, JsonValue> := payload
+payload: SerialObject := { "name": "Ada" }
+row: Map<string, SerialValue> := payload
 ```
 
 ## Enum Types
@@ -309,8 +309,8 @@ HttpStatus.OK.value
 Direction.values()
 Direction.fromName("North")
 HttpStatus.fromValue(200)
-Direction.North.toJsonValue()
-Direction.fromJsonValue(0)
+Direction.North.toSerialValue()
+Direction.fromSerialValue(0)
 ```
 
 Every variant has a descriptive name and a unique backing value. Fully
