@@ -146,7 +146,7 @@ export function cacheChecks(root: string, oldCompiler: string, newCompiler: stri
   try erase(work); try makeDirectory(work)
   try write(path(work, "main.do"), "function main(): int => 7\n")
   compiler := path(work, "doof"); output := path(work, "output")
-  environment: Map<string, string> := { DOOF_STDLIB_ROOT: stdlib, DOOF_RUNTIME_HEADER: path(root, "runtime/doof_runtime.h") }
+  environment: Map<string, string> := { DOOF_STDLIB_ROOT: stdlib, DOOF_RUNTIME_HEADER: path(root, "runtime/doof_runtime.hpp") }
   try command("cp", [oldCompiler, compiler])
   try command(compiler, ["emit", path(work, "main.do"), "-o", output], environment)
   try oldCheck := read(path(output, ".doof-cache/v1/check.json"))

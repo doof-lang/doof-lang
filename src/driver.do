@@ -969,7 +969,7 @@ function materializeRuntimeHeader(outputDirectory: string): none {
   // The override remains useful when developing against an alternate runtime.
   let sourcePath = environmentValue("DOOF_RUNTIME_HEADER")
   runtimeSource := if sourcePath == ""
-    then readTextResource("doof_runtime.h")
+    then readTextResource("doof_runtime.hpp")
     else readText(sourcePath)
   writeTextIfChanged(driverOutputPath(outputDirectory, "doof_runtime.hpp"), try! runtimeSource)
 }

@@ -99,7 +99,7 @@ export function right(): int => 22" },
   for diagnostic of compiled.diagnostics { println(diagnostic.message) }
   Assert.equal(hasErrorDiagnostics(compiled.diagnostics), false)
   Assert.isTrue(compiled.emission != none)
-  try! writeText(join([root, "doof_runtime.hpp"]), try! readText("runtime/doof_runtime.h"))
+  try! writeText(join([root, "doof_runtime.hpp"]), try! readText("runtime/doof_runtime.hpp"))
   executable := join([root, "matrix"])
   let args = ["-std=c++17", "-O0", "-pthread", "-o", executable]
   for module of compiled.emission!.modules {

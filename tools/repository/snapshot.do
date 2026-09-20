@@ -150,7 +150,7 @@ export function createSnapshot(work: string, source: string, artifacts: string, 
   try exportGraph(path(source, "build/debugger-app"), path(destination, "debugger"), source, records)
   resources := path(destination, "resources")
   try makeDirectory(resources)
-  for name of ["doof_runtime.h", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar"] { try command("cp", [path(artifacts, name), path(resources, name)]) }
+  for name of ["doof_runtime.hpp", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar"] { try command("cp", [path(artifacts, name), path(resources, name)]) }
   app := path(resources, "Doof Debugger.app")
   try copyTree(path(artifacts, "Doof Debugger.app"), app)
   try erase(path(app, "Contents/MacOS")); try erase(path(app, "Contents/_CodeSignature"))

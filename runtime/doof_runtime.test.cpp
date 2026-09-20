@@ -1,4 +1,4 @@
-#include "doof_runtime.h"
+#include "doof_runtime.hpp"
 
 #include <atomic>
 #include <iostream>

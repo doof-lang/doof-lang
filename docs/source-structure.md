@@ -173,7 +173,7 @@ checks these boundaries alongside contextual callback arguments through unions.
 The [native carrier model](native-carriers.md) defines representation and conversion
 invariants and its native test matrix.
 
-`runtime/doof_runtime.h` owns reusable generated-program behavior. It is not a
+`runtime/doof_runtime.hpp` owns reusable generated-program behavior. It is not a
 place to hide a missing checker rule or an emitter decision.
 Its nullable weak-pointer helpers distinguish an empty pointer from an expired
 owner and preserve that owner when unwrapping. Map mutation emission supplies
@@ -196,7 +196,7 @@ Async-block capture decoration and transfer restrictions belong to
 `checker-async.do`; transitive callable effects remain owned by
 `checker-isolation.do`. `emitter-expr-actor.do` lowers actor async calls,
 decorated isolated calls, and async blocks through the runtime's
-scheduling-policy-neutral submission boundary. `runtime/doof_runtime.h` owns
+scheduling-policy-neutral submission boundary. `runtime/doof_runtime.hpp` owns
 the process-wide bounded scheduler, CPU-token release around blocking waits,
 and per-actor serial mailbox admission; compiler lowering does not select
 threads or reconstruct scheduling policy.
@@ -231,7 +231,7 @@ the driver.
 
 Other maintained inputs:
 
-- `runtime/doof_runtime.h` — canonical generated-program runtime
+- `runtime/doof_runtime.hpp` — canonical generated-program runtime
 - `runtime/doof_wasm_test_runner_apple.swift` — bounded JavaScriptCore/WASI host for Wasm test commands
 - `tools/stdlib-bundle.do` — deterministic curated stdlib bundle builder and strict release verifier
 - `build/doof-stdlib.tar` — generated compiler resource, published beside `doof`

@@ -1,7 +1,7 @@
 #pragma once
 
 // doof_runtime.hpp — Runtime support for transpiled Doof code
-// Source template for the generated doof_runtime.hpp header.
+// Canonical source template and generated header for the Doof runtime.
 
 #include <algorithm>
 #include <chrono>

@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "license": "ISC",
   "resources": [
-    { "from": "runtime/doof_runtime.h", "to": "." },
+    { "from": "runtime/doof_runtime.hpp", "to": "." },
     { "from": "runtime/doof_wasm_test_runner_apple.swift", "to": "." }
   ],
   "dependencies": {},

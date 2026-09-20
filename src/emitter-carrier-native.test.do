@@ -33,7 +33,7 @@ function runNativeFixture(fixture: string): none {
   for diagnostic of compiled.diagnostics { println(diagnostic.message) }
   Assert.equal(compiled.diagnostics.length, 0)
   Assert.isTrue(compiled.emission != none)
-  try! writeText(join([root, "doof_runtime.hpp"]), try! readText("runtime/doof_runtime.h"))
+  try! writeText(join([root, "doof_runtime.hpp"]), try! readText("runtime/doof_runtime.hpp"))
   executable := join([root, "matrix"])
   let args = ["-std=c++17", "-O0", "-pthread", "-o", executable]
   for module of compiled.emission!.modules {

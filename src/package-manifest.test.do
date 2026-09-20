@@ -49,14 +49,14 @@ export function testRejectsRetiredDependencyFields(): none {
 
 export function testParsesAndNormalizesExecutableResources(): none {
   manifest := try! parsePackageManifest(
-    "{\"name\":\"doof\",\"resources\":[{\"from\":\"doof_runtime.h\",\"to\":\".\"},\"assets\"]}",
+    "{\"name\":\"doof\",\"resources\":[{\"from\":\"doof_runtime.hpp\",\"to\":\".\"},\"assets\"]}",
     "/compiler/doof.json",
     "/compiler",
     "macos",
   )
 
   Assert.equal(manifest.resources.length, 2)
-  Assert.equal(manifest.resources[0].sourcePath, "/compiler/doof_runtime.h")
+  Assert.equal(manifest.resources[0].sourcePath, "/compiler/doof_runtime.hpp")
   Assert.equal(manifest.resources[0].destination, "")
   Assert.equal(manifest.resources[1].sourcePath, "/compiler/assets")
   Assert.equal(manifest.resources[1].destination, "assets")

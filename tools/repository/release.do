@@ -85,7 +85,7 @@ export function signAndNotarize(artifacts: string, work: string, archive: string
 function emitWindowsInputs(compiler: string, source: string, stdlib: string, emitted: string): Result<none, string> {
   environment: Map<string, string> := {
     DOOF_STDLIB_ROOT: stdlib,
-    DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.h"),
+    DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.hpp"),
   }
   return command(compiler, ["emit", source, "--native-platform", "windows", "-o", emitted], environment)
 }
@@ -161,7 +161,7 @@ export function windowsEndToEnd(root: string, version: string): Result<none, str
   try makeDirectory(pending)
   try compiler := resolveSeed(root, "DOOF_DEV_COMPILER")
   bundle := path(work, "doof-stdlib.tar")
-  environment: Map<string, string> := { DOOF_STDLIB_ROOT: stdlib, DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.h") }
+  environment: Map<string, string> := { DOOF_STDLIB_ROOT: stdlib, DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.hpp") }
   try command(compiler, ["run", path(source, "tools/stdlib-bundle.do"), "-o", path(work, "stdlib-bundle-tool"), "--", stdlib, bundle, "windows"], environment)
   return buildWindowsReleaseArtifact(compiler, source, stdlib, bundle, work, pending, version)
 }

@@ -59,7 +59,7 @@ export function buildToolchain(inputs: BuildInputs, fixed: bool, record: bool = 
   try require(platform() == "darwin" && architecture() == "arm64", "Toolchain builds currently require macOS arm64")
   maximum := parseInt(setting("DOOF_MAX_GENERATIONS", "6")) else { return Failure("DOOF_MAX_GENERATIONS must be an integer at least 2") }
   try require(maximum >= 2, "DOOF_MAX_GENERATIONS must be at least 2")
-  environment: Map<string, string> := { DOOF_STDLIB_ROOT: inputs.stdlib, DOOF_RUNTIME_HEADER: path(inputs.source, "runtime/doof_runtime.h") }
+  environment: Map<string, string> := { DOOF_STDLIB_ROOT: inputs.stdlib, DOOF_RUNTIME_HEADER: path(inputs.source, "runtime/doof_runtime.hpp") }
   bundle := path(inputs.work, "doof-stdlib.tar")
   try erase(bundle)
   try command(inputs.seed, ["run", path(inputs.source, "tools/stdlib-bundle.do"), "-o", path(inputs.work, "stdlib-bundle-tool"), "--", inputs.stdlib, bundle, "ios-device,ios-simulator,macos,wasm,windows"], environment)
@@ -94,7 +94,7 @@ export function buildToolchain(inputs: BuildInputs, fixed: bool, record: bool = 
     try erase(path(inputs.source, "build/debugger-app"))
   }
   try command(compiler, ["package", inputs.source, "-o", path(inputs.work, "compiler"), "--distdir", artifacts], environment)
-  bundleEnv: Map<string, string> := { DOOF_STDLIB_ROOT: inputs.stdlib, DOOF_RUNTIME_HEADER: path(inputs.source, "runtime/doof_runtime.h"), CXX: "c++" }
+  bundleEnv: Map<string, string> := { DOOF_STDLIB_ROOT: inputs.stdlib, DOOF_RUNTIME_HEADER: path(inputs.source, "runtime/doof_runtime.hpp"), CXX: "c++" }
   try command(path(artifacts, "doof"), ["run", path(inputs.source, "tools/stdlib-bundle.do"), "-o", path(inputs.work, "final-bundle-tool"), "--", inputs.stdlib, path(artifacts, "doof-stdlib.tar"), "ios-device,ios-simulator,macos,wasm,windows"], bundleEnv)
   try buildDebugger(inputs.source, inputs.stdlib, path(artifacts, "doof"), artifacts, environment)
   try version := capture(path(artifacts, "doof"), ["--version"])

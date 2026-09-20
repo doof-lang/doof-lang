@@ -35,7 +35,7 @@ function fixture(): DownloadFixture {
 function payload(f: DownloadFixture, version: string = "1.2.3"): none {
   try! erase(f.artifacts); try! makeDirectory(f.artifacts)
   try! write(path(f.artifacts, "doof"), "#!/bin/sh\ncase \"$1\" in --version) echo \"doof " + version + "\" ;; --help|emit) exit 0 ;; *) exit 64 ;; esac\n")
-  for name of ["doof_runtime.h", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar"] { try! write(path(f.artifacts, name), "fixture") }
+  for name of ["doof_runtime.hpp", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar"] { try! write(path(f.artifacts, name), "fixture") }
   debugger := path(f.artifacts, "Doof Debugger.app/Contents/MacOS/DoofDebugger")
   try! write(debugger, "#!/bin/sh\nexit 0\n")
   try! command("chmod", ["+x", path(f.artifacts, "doof"), debugger])
@@ -92,7 +92,7 @@ export function testRepositoryDownloadVerifiesChecksumAndVersion(): none {
   payload(f, "1.2.4")
   invoke(f)
   payload(f)
-  try! erase(path(f.artifacts, "doof_runtime.h")); archive(f)
+  try! erase(path(f.artifacts, "doof_runtime.hpp")); archive(f)
   invoke(f)
   f.temporary.close()
 }
@@ -113,18 +113,18 @@ export function testRepositoryInstallationRollsBackActivationFailure(): none {
   try! command("sh", helperArgs)
   try! write(path(f.home, "versions/1.0.0/marker"), "released")
   try! write(path(f.home, "packages/marker"), "cached")
-  try! write(path(f.artifacts, "doof_runtime.h"), "replacement")
+  try! write(path(f.artifacts, "doof_runtime.hpp"), "replacement")
   bin := path(f.temporary.root, "failing-bin")
   try! write(path(bin, "ln"), "#!/bin/sh\nexit 77\n")
   try! command("chmod", ["+x", path(bin, "ln")])
   result := try! execute("sh", helperArgs, { PATH: bin + ":" + setting("PATH") })
   Assert.isTrue(result.exitCode != 0)
-  Assert.equal(try! read(path(f.home, "versions/dev/doof_runtime.h")), "fixture")
+  Assert.equal(try! read(path(f.home, "versions/dev/doof_runtime.hpp")), "fixture")
   Assert.equal(try! capture("readlink", [path(f.home, "current")]), "versions/dev")
   Assert.equal(try! read(path(f.home, "versions/1.0.0/marker")), "released")
   Assert.equal(try! read(path(f.home, "packages/marker")), "cached")
   try! command("sh", helperArgs)
-  Assert.equal(try! read(path(f.home, "versions/dev/doof_runtime.h")), "replacement")
+  Assert.equal(try! read(path(f.home, "versions/dev/doof_runtime.hpp")), "replacement")
   f.temporary.close()
 }
 
@@ -148,10 +148,10 @@ export function testRepositoryInstalledCompilerResourceLinks(): none {
   home := path(temp.root, "home")
   helper := ["-c", "DOOF_INSTALL_LIBRARY_ONLY=1; . \"$1\"; install_artifacts \"$2\" \"$3\" dev", "sh", path(root, "install.sh"), path(root, "dist"), home]
   try! command("sh", helper)
-  for name of ["doof", "doof_runtime.h", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar", "Doof Debugger.app"] {
+  for name of ["doof", "doof_runtime.hpp", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar", "Doof Debugger.app"] {
     Assert.equal(try! capture("readlink", [path(home, "bin/" + name)]), "../current/" + name)
   }
   try! command("env", ["-u", "DOOF_STDLIB_ROOT", "-u", "DOOF_RUNTIME_HEADER", path(home, "bin/doof"), "emit", path(root, "tests/release-fixtures/runtime"), "-o", path(temp.root, "emitted")], {}, temp.root)
-  Assert.equal(try! read(path(root, "dist/doof_runtime.h")), try! read(path(temp.root, "emitted/doof_runtime.hpp")))
+  Assert.equal(try! read(path(root, "dist/doof_runtime.hpp")), try! read(path(temp.root, "emitted/doof_runtime.hpp")))
   temp.close()
 }
