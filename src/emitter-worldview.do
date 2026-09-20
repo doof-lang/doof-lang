@@ -14,7 +14,7 @@ import { collectStatementExpressions } from "./ast-walk"
 import { Symbol, ResolvedType } from "./semantic"
 import {
   DependencyBuilder, DependencySummary, SymbolDependency, InterfaceDependency,
-  collectDependencySurface, collectDependencyExpression, collectDependencyType,
+  collectDependencySurface, collectDependencyExpression, collectDependencyType, collectCompleteDependencyType,
   dependencyForSymbol, summarizeDeclaration,
 } from "./emitter-dependencies"
 
@@ -77,6 +77,14 @@ export function planWorldview(
     for expression of expressions { collectDependencyExpression(expression, dependencies) }
   }
   replayDependencies(dependencies.finish(), rootPath, index)
+  // Generated JSON methods are emitted in the owning module's source, but
+  // their field operations are not present in its handwritten AST. They call
+  // through every field's concrete type, so select those definitions before
+  // projecting the owner header rather than leaving a forward declaration in
+  // the generated translation unit.
+  if instantiations != none {
+    collectGeneratedJsonDependencies(root!.program, rootPath, instantiations!, index)
+  }
   // The root header owns all of its declarations, including every native
   // declaration it exposes. Seed each opaque native-header surface even though
   // resolving a root symbol does not add a foreign statement.
@@ -200,6 +208,11 @@ function addUniqueString(values: string[], value: string): none {
   values.push(value)
 }
 
+function containsString(values: string[], value: string): bool {
+  for existing of values { if existing == value { return true } }
+  return false
+}
+
 function addInterfaceKey(index: WorldviewIndex, value: string): none {
   if index.interfaceKeySet.has(value) { return }
   index.interfaceKeySet.add(value)
@@ -230,6 +243,28 @@ function collectArgumentDependencies(type_: ResolvedType, rootPath: string, inde
   builder := DependencyBuilder { identities: index.graph.identityPreparation }
   collectDependencyType(type_, builder)
   replayDependencies(builder.finish(), rootPath, index)
+}
+
+function collectGeneratedJsonDependencies(program: Program, rootPath: string, instantiations: InstantiationPlan, index: WorldviewIndex): none {
+  for statement of program.statements {
+    collectGeneratedJsonDeclarationDependencies(statement, rootPath, instantiations, index)
+  }
+}
+
+function collectGeneratedJsonDeclarationDependencies(statement: Statement, rootPath: string, instantiations: InstantiationPlan, index: WorldviewIndex): none {
+  case statement {
+    export_: ExportDeclaration -> { collectGeneratedJsonDeclarationDependencies(export_.declaration, rootPath, instantiations, index) }
+    class_: ClassDeclaration -> {
+      key := rootPath + "::" + class_.name
+      if !containsString(instantiations.jsonSerializationKeys, key) && !containsString(instantiations.jsonDeserializationKeys, key) { return }
+      dependencies := DependencyBuilder { identities: index.graph.identityPreparation }
+      for field of class_.fields {
+        if !field.static_ && field.resolvedType != none { collectCompleteDependencyType(field.resolvedType!, dependencies) }
+      }
+      replayDependencies(dependencies.finish(), rootPath, index, true)
+    }
+    _ -> { }
+  }
 }
 
 function replayDependencies(summary: DependencySummary, rootPath: string, index: WorldviewIndex, forceDefinitions: bool = false): none {

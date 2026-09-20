@@ -173,7 +173,7 @@ export function collectDependencyType(
 
 // Operations that inspect or construct a type need complete definitions for
 // every nominal alternative the generated C++ operation can visit.
-function collectCompleteDependencyType(type_: ResolvedType, index: DependencyBuilder): none {
+export function collectCompleteDependencyType(type_: ResolvedType, index: DependencyBuilder): none {
   if index.identities != none { index.identities!.prepare(type_) }
   case type_ {
     class_: ClassType -> {

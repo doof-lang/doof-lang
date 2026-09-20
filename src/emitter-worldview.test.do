@@ -49,6 +49,19 @@ export function testCollectsGenericInterfaceKeysDuringPrimaryWorldviewTraversal(
   Assert.equal(plan.interfaceKeys.length, 1)
 }
 
+export function testSelectsCompleteForeignFieldsForGeneratedJsonMethods(): none {
+  sources := [
+    SourceFile { path: "/raster.do", source: "export class RasterLayout { width: int }" },
+    SourceFile { path: "/mask.do", source: "import { RasterLayout } from \"./raster\"\nexport class Mask { raster: RasterLayout }\nexport function serialize(value: Mask): SerialObject => value.toSerialObject()" },
+  ]
+  analysis := createAnalyzer(sources).analyze("/mask.do")
+  checked := createChecker(analysis).check("/mask.do")
+  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
+
+  plan := planWorldview(analysis, "/mask.do", buildInstantiationPlan(analysis))
+  Assert.equal(dependencyNames(plan, "/raster.do"), "RasterLayout,")
+}
+
 export function testSelectsConcreteGenericArgumentDefinitionsInOwningModules(): none {
   sources := [
     SourceFile { path: "/main.do", source:
