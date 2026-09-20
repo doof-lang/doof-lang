@@ -62,6 +62,46 @@ or a published GitHub release with that version. The requested version is
 written only into the staged inputs and stays constant across generations.
 The checkout manifest remains the base version for subsequent development.
 
+### Optional Windows release verification
+
+The release command can also build the staged compiler on a Windows x64 machine
+with Visual Studio Community installed. Set the SSH host, username, and password
+before running the release:
+
+~~~sh
+export DOOF_WINDOWS_HOST='windows-host-or-address'
+export DOOF_WINDOWS_HOST_USERNAME='build-user'
+export DOOF_WINDOWS_HOST_PASSWORD='password-from-your-secret-store'
+~~~
+
+SSH host-key verification uses ~/.ssh/known_hosts; set
+`DOOF_WINDOWS_HOST_KNOWN_HOSTS` when the release runner uses another file.
+Credentials are passed directly to the SSH client and are not written to
+release metadata or command output.
+
+Wake-on-LAN is optional. To wake the machine before SSH, set both values:
+
+~~~sh
+export DOOF_WINDOWS_HOST_MAC='aa:bb:cc:dd:ee:ff'
+export DOOF_WINDOWS_HOST_BROADCAST='192.168.1.255'
+~~~
+
+When either Wake-on-LAN value is absent, the release skips the wake packet and
+waits for SSH connectivity. The release uploads the stamped source and stdlib
+inputs over SFTP, invokes the build from the Visual Studio x64 developer
+environment, verifies the resulting compiler version, downloads
+`doof-<version>-windows-x64.zip`, and includes it in `SHA256SUMS`. The remote
+build is driven from those staged inputs rather than a mutable checkout.
+
+For a non-publishing end-to-end check of the current checkout, use:
+
+~~~sh
+./tools/run.sh windows-test 0.2.0
+~~~
+
+This uses the same remote workflow and writes the downloaded test archive below
+build/windows-e2e/; it does not sign, notarize, or publish release assets.
+
 The stdlib may be a single Git checkout or a workspace of separate `std/*`
 package checkouts. In the latter layout, every standard package must be clean;
 release metadata records a revision per package. Non-standard example projects
@@ -88,6 +128,8 @@ Completed assets appear under `dist/releases/<version>/`:
 
 - `doof-<version>-macos-arm64.zip`: compiler, runtime resources, stdlib archive,
   and `Doof Debugger.app`.
+- `doof-<version>-windows-x64.zip`: present when the optional Windows release
+  verification is configured.
 - `doof-<version>-source.tar.gz`: generated compiler/debugger sources, native
   sources/headers, license material, resources, and standalone build scripts.
 - `release.json`: version, input revisions, seed version, toolchain details,
@@ -105,7 +147,7 @@ maintained, but no other host release archive is promised yet.
 
 The script creates no tags and uploads nothing to GitHub. Manually create tag
 `v<version>` at the compiler revision in `release.json`, create a release in
-`doof-lang/doof-lang`, and upload all four assets before publishing it as the
+`doof-lang/doof-lang`, and upload all listed assets before publishing it as the
 latest stable release. Versions and published asset contents are immutable.
 Changing any released content requires a new version.
 

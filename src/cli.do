@@ -31,6 +31,7 @@ export class CliRequest {
   let iosSignIdentity: string = ""
   let iosProvisioningProfile: string = ""
   let targetOverride: string = ""
+  let nativePlatformOverride: string = ""
   programArguments: string[] = []
 }
 
@@ -59,6 +60,7 @@ export function cliUsage(): string {
     "  -o, --output-directory <path>  output root (package uses <path>/release)\n" +
     "  --compiler <path>           C++ compiler command (default: CXX, cl.exe on Windows, or c++)\n" +
     "  --target <kind>            override build target (macos-app, ios-app, or wasm)\n" +
+    "  --native-platform <kind>   emit native inputs for macos, linux, or windows\n" +
     "  --distdir <path>            packaged artifact directory\n" +
     "  --macos-signing <kind>      developer-id or ad-hoc\n" +
     "  --macos-sign-identity <id>  Developer ID Application identity\n" +
@@ -151,6 +153,16 @@ export function parseCli(args: string[]): CliParseResult {
         return CliParseResult { request: none, error: "invalid value for --target: " + value }
       }
       request.targetOverride = value
+      index = index + 2
+      continue
+    }
+    if argument == "--native-platform" {
+      if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --native-platform" } }
+      value := args[index + 1]
+      if value != "macos" && value != "linux" && value != "windows" {
+        return CliParseResult { request: none, error: "invalid value for --native-platform: " + value }
+      }
+      request.nativePlatformOverride = value
       index = index + 2
       continue
     }

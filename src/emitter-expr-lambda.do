@@ -54,7 +54,7 @@ export function emitLambdaExpression(expression: LambdaExpression, context: Emit
       // host callback runs). Keep the ordinary `this` spelling for body
       // emission and pair it with an owning init-capture.
       if capture == "this" && context.currentClass != "" && !context.currentClassStruct {
-        captures = captures + "this, _doof_captured_self = this->shared_from_this()"
+        captures = captures + "this, _doof_captured_self = shared_from_this()"
       } else if structCaptures.contains(capture) {
         // Init-capture makes an owned value copy even when an enclosing
         // closure or binding exposes the source as const. Doof's checker

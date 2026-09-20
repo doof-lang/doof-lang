@@ -1421,6 +1421,10 @@ export function phaseTimingsEnabled(command: string, value: string): bool {
 
 function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   setupStart := timings.start()
+  if request.nativePlatformOverride != "" && request.command != "emit" && request.command != "check" {
+    println("error: --native-platform is only supported with emit and check")
+    return 1
+  }
   if request.command == "profile" && hostPlatform() != "macos" {
     println("error: doof profile is currently supported only on macOS")
     return 1
@@ -1429,7 +1433,8 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     println("error: doof debug is supported only on macOS")
     return 1
   }
-  let project = readProjectSpec(request.entry, hostPlatform(), request.targetOverride)
+  requestedNativePlatform := if request.nativePlatformOverride == "" then hostPlatform() else request.nativePlatformOverride
+  let project = readProjectSpec(request.entry, requestedNativePlatform, request.targetOverride)
   entryError := projectEntryRequestError(project, request.entry)
   if entryError != "" {
     println("error: " + entryError)
@@ -1448,7 +1453,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     if debugError != "" { println("error: " + debugError); return 1 }
   }
   iosDestination := if request.command == "package" then "device" else request.iosDestination
-  nativePlatform := if project.iosApp == none then hostPlatform() else "ios-" + iosDestination
+  nativePlatform := if project.iosApp == none then requestedNativePlatform else "ios-" + iosDestination
   if project.iosApp != none { project = readProjectSpec(request.entry, nativePlatform, request.targetOverride) }
   iosMinimumVersion := if project.iosApp == none then "" else project.iosApp!.minimumDeploymentTarget
   preparationTarget := preparationTargetForRequest(project.target, nativePlatform, iosDestination, iosMinimumVersion) else error {

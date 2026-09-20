@@ -100,6 +100,17 @@ export function testParsesWasmTargetOverride(): none {
   Assert.equal(result.request!.targetOverride, "wasm")
 }
 
+export function testParsesNativePlatformOverride(): none {
+  result := parseCli(["emit", "main.do", "--native-platform", "windows"])
+  Assert.equal(result.error, "")
+  Assert.equal(result.request!.nativePlatformOverride, "windows")
+}
+
+export function testRejectsInvalidNativePlatformOverride(): none {
+  result := parseCli(["emit", "main.do", "--native-platform", "freebsd"])
+  Assert.equal(result.error, "invalid value for --native-platform: freebsd")
+}
+
 export function testRejectsInvalidTargetOverride(): none {
   result := parseCli(["build", "main.do", "--target", "browser"])
   Assert.equal(result.error, "invalid value for --target: browser")

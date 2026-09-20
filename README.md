@@ -74,7 +74,10 @@ fixed-point/release builds. Both otherwise prefer installed `doof`, then
 Release builds require clean compiler and stdlib checkouts, `em++`, `xcrun swiftc`,
 `DOOF_SIGN_IDENTITY`, and `DOOF_NOTARY_PROFILE`. They stage the requested version
 without changing tracked files, converge, verify, sign, notarize, and prepare
-assets under `dist/releases/<version>`. See [release strategy](docs/bootstrap-and-release.md)
+assets under `dist/releases/<version>`. Set `DOOF_WINDOWS_HOST`,
+`DOOF_WINDOWS_HOST_USERNAME`, and `DOOF_WINDOWS_HOST_PASSWORD` to add a remote
+MSVC Windows build; `DOOF_WINDOWS_HOST_MAC` and `DOOF_WINDOWS_HOST_BROADCAST`
+are optional Wake-on-LAN inputs. See [release strategy](docs/bootstrap-and-release.md)
 for credentials, source rebuilding, and manual GitHub publication.
 
 Language behavior is defined by the [language specification](spec/01-overview.md).

@@ -62,7 +62,7 @@ export function buildToolchain(inputs: BuildInputs, fixed: bool, record: bool = 
   environment: Map<string, string> := { DOOF_STDLIB_ROOT: inputs.stdlib, DOOF_RUNTIME_HEADER: path(inputs.source, "runtime/doof_runtime.h") }
   bundle := path(inputs.work, "doof-stdlib.tar")
   try erase(bundle)
-  try command(inputs.seed, ["run", path(inputs.source, "tools/stdlib-bundle.do"), "-o", path(inputs.work, "stdlib-bundle-tool"), "--", inputs.stdlib, bundle, "ios-device,ios-simulator,macos,wasm"], environment)
+  try command(inputs.seed, ["run", path(inputs.source, "tools/stdlib-bundle.do"), "-o", path(inputs.work, "stdlib-bundle-tool"), "--", inputs.stdlib, bundle, "ios-device,ios-simulator,macos,wasm,windows"], environment)
   let compiler = inputs.seed
   let generation = 0
   if fixed {
@@ -95,7 +95,7 @@ export function buildToolchain(inputs: BuildInputs, fixed: bool, record: bool = 
   }
   try command(compiler, ["package", inputs.source, "-o", path(inputs.work, "compiler"), "--distdir", artifacts], environment)
   bundleEnv: Map<string, string> := { DOOF_STDLIB_ROOT: inputs.stdlib, DOOF_RUNTIME_HEADER: path(inputs.source, "runtime/doof_runtime.h"), CXX: "c++" }
-  try command(path(artifacts, "doof"), ["run", path(inputs.source, "tools/stdlib-bundle.do"), "-o", path(inputs.work, "final-bundle-tool"), "--", inputs.stdlib, path(artifacts, "doof-stdlib.tar"), "ios-device,ios-simulator,macos,wasm"], bundleEnv)
+  try command(path(artifacts, "doof"), ["run", path(inputs.source, "tools/stdlib-bundle.do"), "-o", path(inputs.work, "final-bundle-tool"), "--", inputs.stdlib, path(artifacts, "doof-stdlib.tar"), "ios-device,ios-simulator,macos,wasm,windows"], bundleEnv)
   try buildDebugger(inputs.source, inputs.stdlib, path(artifacts, "doof"), artifacts, environment)
   try version := capture(path(artifacts, "doof"), ["--version"])
   try require(version == "doof " + inputs.version, "Packaged compiler version mismatch")

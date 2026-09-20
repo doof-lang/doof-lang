@@ -64,7 +64,7 @@ export function copyTree(source: string, destination: string): Result<none, stri
 export function copyInputs(source: string, destination: string): Result<none, string> {
   try makeDirectory(destination)
   arguments := ["-a", "--delete"]
-  for name of [".git", "build", "dist", ".doof", ".reckon", ".doof-tests", "node_modules", "__pycache__", ".DS_Store", "bootstrap"] {
+  for name of [".git", "build", "dist", ".doof", ".reckon", ".doof-tests", "node_modules", ".vscode-test", "__pycache__", ".DS_Store", "bootstrap"] {
     arguments.push("--exclude=" + name)
   }
   arguments.push(source + "/"); arguments.push(destination + "/")

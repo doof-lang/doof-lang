@@ -77,7 +77,7 @@ export function testClassLambdaRetainsCapturedThis(): none {
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
   source := result.emission!.modules[0].source
-  Assert.stringContains(source, "[this, _doof_captured_self = this->shared_from_this()]() -> int32_t")
+  Assert.stringContains(source, "[this, _doof_captured_self = shared_from_this()]() -> int32_t")
 }
 
 export function testStructLambdaKeepsValueTypeThisCapture(): none {

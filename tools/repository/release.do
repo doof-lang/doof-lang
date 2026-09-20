@@ -1,14 +1,18 @@
 import { sha256Hex } from "std/crypto"
-import { exists, File, readBlob } from "std/fs"
+import { exists, File, readBlob, writeBlob } from "std/fs"
 import { formatJsonValue, parseJsonObject } from "std/json"
 import { architecture, platform, Exec, ExecOptions } from "std/os"
 import { basename, dirname } from "std/path"
 import { Duration, Thread } from "std/time"
+import { BlobBuilder } from "std/blob"
+import { connect, SshClient, SshConnectOptions } from "std/ssh"
+import { wakeOnLan } from "std/wol"
 import { buildToolchain, prepare } from "./build"
-import { capture, cleanRevision, command, copyTree, erase, execute, files, jsonFile, jsonString, makeDirectory, path, read, require, resolveSeed, setting, stableVersion, stdlibDirectory, write } from "./common"
+import { capture, cleanRevision, command, copyInputs, copyTree, erase, execute, files, jsonFile, jsonString, makeDirectory, path, read, require, resolveSeed, setting, stableVersion, stamp, stdlibDirectory, write } from "./common"
 import { createSnapshot, isMachO } from "./snapshot"
 import { debuggerChecks, releaseVerification, testRepository } from "./verify"
 import { stdlibRevisions } from "./provenance"
+import { windowsBuildConfig, windowsBuildEnabled, windowsBuildScript, windowsProjectFile, windowsReleaseArchiveName, windowsVisualStudioCommand, windowsVisualStudioScript } from "./windows-build"
 
 export function signingPreflight(identity: string, profile: string): Result<none, string> {
   try require(platform() == "darwin" && architecture() == "arm64", "Releases require macOS arm64")
@@ -77,6 +81,91 @@ export function signAndNotarize(artifacts: string, work: string, archive: string
   try zipArtifacts(artifacts, archive)
   return jsonString(result, "id")
 }
+
+function emitWindowsInputs(compiler: string, source: string, stdlib: string, emitted: string): Result<none, string> {
+  environment: Map<string, string> := {
+    DOOF_STDLIB_ROOT: stdlib,
+    DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.h"),
+  }
+  return command(compiler, ["emit", source, "--native-platform", "windows", "-o", emitted], environment)
+}
+
+function buildWindowsReleaseArtifact(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, pending: string, version: string): Result<none, string> {
+  try config := windowsBuildConfig()
+  emitted := path(work, "windows-emitted")
+  emittedArchive := path(work, "windows-emitted.zip")
+  try erase(emitted)
+  try emitWindowsInputs(compiler, source, stdlib, emitted)
+  try command("ditto", ["-c", "-k", "--norsrc", emitted, emittedArchive])
+  try emittedFiles := files(emitted)
+  projectPath := path(work, "doof.vcxproj")
+  try write(projectPath, windowsProjectFile(emittedFiles))
+  if config.mac != none && config.broadcast != none {
+    try wakeOnLan(config.mac!, config.broadcast!)
+  }
+  try client := connect(SshConnectOptions {
+    host: config.host,
+    username: config.username,
+    password: config.password,
+    knownHostsPath: config.knownHostsPath,
+    wait: Duration.ofSeconds(60L),
+    timeoutMs: 30000,
+  })
+  remoteRoot := "doof-release-" + version
+  _ := try! client.run("powershell.exe -NoProfile -NonInteractive -Command \"$root = Join-Path $env:USERPROFILE 'doof-release-" + version + "'; Remove-Item -LiteralPath $root -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force -Path $root | Out-Null\"")
+  try sftp := client.sftp()
+  emittedBytes := readBlob(emittedArchive) else { return Failure("Cannot read emitted Windows archive") }
+  bundleBytes := readBlob(stdlibBundle) else { return Failure("Cannot read Windows stdlib bundle") }
+  projectBytes := readBlob(projectPath) else { return Failure("Cannot read Windows project") }
+  try sftp.writeFile(remoteRoot + "/emitted.zip", emittedBytes)
+  try sftp.writeFile(remoteRoot + "/doof-stdlib.tar", bundleBytes)
+  try sftp.writeFile(remoteRoot + "/doof.vcxproj", projectBytes)
+  scriptBuilder := BlobBuilder(); scriptBuilder.writeString(windowsBuildScript(version))
+  try sftp.writeFile(remoteRoot + "/build.ps1", scriptBuilder.build())
+  commandBuilder := BlobBuilder(); commandBuilder.writeString(windowsVisualStudioScript(version))
+  try sftp.writeFile(remoteRoot + "/build.cmd", commandBuilder.build())
+  sftp.close()
+  try result := client.run(windowsVisualStudioCommand(version), 1800000)
+  if result.exitStatus != 0 {
+    client.close()
+    return Failure("Windows build failed: " + result.stderr + result.stdout)
+  }
+  try downloaded := sftpRead(client, remoteRoot + "/" + windowsReleaseArchiveName(version))
+  client.close()
+  archive := path(pending, windowsReleaseArchiveName(version))
+  _ := writeBlob(archive, downloaded) else { return Failure("Cannot write Windows release archive") }
+  try erase(emittedArchive)
+  println("Verified Windows release asset: " + archive)
+  return Success()
+}
+
+function sftpRead(client: SshClient, remotePath: string): Result<readonly byte[], string> {
+  try sftp := client.sftp()
+  try bytes := sftp.readFile(remotePath)
+  sftp.close()
+  return Success(bytes)
+}
+
+/** Runs the remote Windows release workflow without signing or publishing. */
+export function windowsEndToEnd(root: string, version: string): Result<none, string> {
+  try require(stableVersion(version), "Windows test version must be stable MAJOR.MINOR.PATCH")
+  work := path(root, "build/windows-e2e/" + version)
+  source := path(work, "source")
+  pending := path(work, "artifacts")
+  try erase(work)
+  try makeDirectory(work)
+  try stamp(root, source, version)
+  try liveStdlib := stdlibDirectory(root)
+  stdlib := path(work, "stdlib")
+  try copyInputs(liveStdlib, stdlib)
+  try makeDirectory(pending)
+  try compiler := resolveSeed(root, "DOOF_DEV_COMPILER")
+  bundle := path(work, "doof-stdlib.tar")
+  environment: Map<string, string> := { DOOF_STDLIB_ROOT: stdlib, DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.h") }
+  try command(compiler, ["run", path(source, "tools/stdlib-bundle.do"), "-o", path(work, "stdlib-bundle-tool"), "--", stdlib, bundle, "windows"], environment)
+  return buildWindowsReleaseArtifact(compiler, source, stdlib, bundle, work, pending, version)
+}
+
 export function prepareRelease(root: string, version: string): Result<none, string> {
   try require(stableVersion(version), "Release version must be stable MAJOR.MINOR.PATCH without a v prefix")
   try makeDirectory(path(root, "build"))
@@ -104,6 +193,7 @@ export function prepareRelease(root: string, version: string): Result<none, stri
   try releaseVerification(inputs.source, path(built.artifacts, "doof"), inputs.stdlib)
   pending := path(work, "pending")
   try makeDirectory(pending)
+  if windowsBuildEnabled() { try buildWindowsReleaseArtifact(path(built.artifacts, "doof"), inputs.source, inputs.stdlib, path(built.artifacts, "doof-stdlib.tar"), work, pending, version) }
   snapshot := path(work, "doof-" + version + "-source")
   try createSnapshot(work, inputs.source, built.artifacts, snapshot, version)
   sourceArchive := path(pending, "doof-" + version + "-source.tar.gz")
@@ -134,7 +224,7 @@ export function prepareRelease(root: string, version: string): Result<none, stri
   try emscripten := capture("em++", ["--version"])
   try sdkVersion := capture("xcrun", ["--show-sdk-version"])
   try macos := capture("sw_vers", ["-productVersion"])
-  metadata: SerialObject := { version, tag: "v" + version, compilerRevision, stdlibRevisions: stdlibRevision, seedVersion, seedSha256, fixedPointGeneration: built.generation, clang, swift, emscripten, sdkVersion, macos, notarizationId: submission, verified: ["compiler-tests", "release-fixtures", "source-rebuild", "relocation", "signatures", "notarization", "quarantine-assessment", "debugger-startup", "debugger-integration"] }
+  metadata: SerialObject := { version, tag: "v" + version, compilerRevision, stdlibRevisions: stdlibRevision, seedVersion, seedSha256, fixedPointGeneration: built.generation, clang, swift, emscripten, sdkVersion, macos, notarizationId: submission, verified: if windowsBuildEnabled() then ["compiler-tests", "release-fixtures", "source-rebuild", "relocation", "signatures", "notarization", "quarantine-assessment", "debugger-startup", "debugger-integration", "windows-msvc-remote-build"] else ["compiler-tests", "release-fixtures", "source-rebuild", "relocation", "signatures", "notarization", "quarantine-assessment", "debugger-startup", "debugger-integration"] }
   try write(path(pending, "release.json"), formatJsonValue(metadata) + "\n")
   try assets := files(pending)
   let checksums = ""
