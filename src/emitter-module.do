@@ -186,7 +186,7 @@ class CxxModuleEmitter {
 
   private planSection(view: WorldviewModule): HeaderPlan {
     lookupStart := timings.start()
-    key := projectedHeaderKey(view.path, view.program, worldviewInterfaceKeys)
+    key := projectedHeaderKey(view.path, view.program, worldviewInterfaceKeys, view.forwardClassNames)
     cached := headerPlans.get(key)
     timings.finish("header.cache-lookup-copy", lookupStart)
     if cached != none { return cached! }
@@ -208,6 +208,13 @@ class CxxModuleEmitter {
       if instantiations == none then [] else instantiations!.methods,
       if instantiations == none then [] else instantiations!.classes,
     )
+    for name of view.forwardClassNames {
+      declaration := "struct " + name + ";\n"
+      if !containsString(sectionPlan.classForwardDeclarations, declaration) {
+        sectionPlan.classForwardDeclarations.push(declaration)
+      }
+      reserveHeaderNamespaceName(sectionPlan, name)
+    }
     timings.finish("header.declarations", declarationsStart)
     concreteStart := timings.start()
     if instantiations != none {

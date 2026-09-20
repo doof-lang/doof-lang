@@ -971,7 +971,7 @@ export function testProjectsNamedAliasesIntoConsumerHeaders(): none {
       path: "/tree.do",
       source: "export class Leaf {}\nexport class Branch {}\nexport type Node = Leaf | Branch\nexport class Pair { left: Node\nright: Node }",
     },
-    SourceFile { path: "/main.do", source: "import { Pair } from \"./tree\"\nfunction pass(value: Pair): Pair => value" },
+    SourceFile { path: "/main.do", source: "import { Node, Pair } from \"./tree\"\nfunction first(value: Pair): Node => value.left" },
   ]
   analysis := createAnalyzer(sources).analyze("/main.do")
   Assert.equal(analysis.diagnostics.length, 0)
@@ -991,7 +991,7 @@ export function testIndexesAnonymousHeaderTypesAcrossProjectedNamespaces(): none
   sources := [
     SourceFile { path: "/a.do", source: "export class ALeft {}\nexport class ARight {}\nexport class APair { left: ALeft | ARight\nright: ALeft | ARight }" },
     SourceFile { path: "/b.do", source: "export class BLeft {}\nexport class BRight {}\nexport class BPair { left: BLeft | BRight\nright: BLeft | BRight }" },
-    SourceFile { path: "/main.do", source: "import { APair } from \"./a\"\nimport { BPair } from \"./b\"\nfunction first(a: APair, b: BPair): APair => a" },
+    SourceFile { path: "/main.do", source: "import { ALeft, ARight, APair } from \"./a\"\nimport { BLeft, BRight, BPair } from \"./b\"\nfunction first(a: APair): ALeft | ARight => a.left\nfunction second(b: BPair): BLeft | BRight => b.right" },
   ]
   analysis := createAnalyzer(sources).analyze("/main.do")
   Assert.equal(analysis.diagnostics.length, 0)

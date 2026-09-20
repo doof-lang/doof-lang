@@ -2,8 +2,9 @@ import { SemanticTypeIdentities } from "./semantic-type-identities"
 // Checked-AST traversal stops at ordered dependency events. Summaries own only
 // immutable scalar data, never symbols, resolved types or AST nodes.
 import {
-  ArrayType, AstFunctionType, Block, ClassDeclaration, ConstDeclaration, EnumDeclaration, ExportDeclaration, Expression, FunctionDeclaration, Identifier,
-  ImmutableBinding, InterfaceDeclaration, MemberExpression, NamedType, ReadonlyDeclaration, Statement, TypeAliasDeclaration,
+  ActorCreationExpression, ArrayType, AstFunctionType, Block, CallExpression, ClassDeclaration, ConstDeclaration, ConstructExpression, EnumDeclaration,
+  ExportDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, MemberExpression, NamedType, ObjectLiteral,
+  ReadonlyDeclaration, Statement, TypeAliasDeclaration,
   TypeAnnotation, UnionType, WeakType,
 } from "./ast"
 import { interfaceInstantiationKey } from "./emitter-monomorphize"
@@ -19,6 +20,7 @@ export class SymbolDependency {
   readonly name: string
   readonly key: string
   readonly nativeHeader: string
+  readonly forwardOnly: bool = false
 }
 
 export class InterfaceDependency {
@@ -42,21 +44,23 @@ export class DependencyBuilder {
   }
 }
 
-export function dependencyForSymbol(symbol: Symbol): SymbolDependency {
+export function dependencyForSymbol(symbol: Symbol, forwardOnly: bool = false): SymbolDependency {
   name := if symbol.originalName == "" then symbol.name else symbol.originalName
   return SymbolDependency {
     modulePath: symbol.module,
     name,
     key: symbol.module + "::" + symbol.kind + "::" + name,
     nativeHeader: if symbol.native_ then symbol.nativeHeader else "",
+    forwardOnly,
   }
 }
 
-function recordSymbol(symbol: Symbol, index: DependencyBuilder): none {
+function recordSymbol(symbol: Symbol, index: DependencyBuilder, forwardOnly: bool = false): none {
   if symbol.module == "" { return }
-  dependency := dependencyForSymbol(symbol)
-  if index.symbols.has(dependency.key) { return }
-  index.symbols.add(dependency.key)
+  dependency := dependencyForSymbol(symbol, forwardOnly)
+  eventKey := dependency.key + (if forwardOnly then "::forward" else "::definition")
+  if index.symbols.has(eventKey) { return }
+  index.symbols.add(eventKey)
   index.events.push(dependency)
 }
 
@@ -98,6 +102,19 @@ export function collectDependencyExpression(
         if member.resolvedStaticOwner != none && member.resolvedStaticOwner!.resolvedSymbol != none {
           recordSymbol(member.resolvedStaticOwner!.resolvedSymbol!, index)
         }
+        if member.object.resolvedType != none { collectCompleteDependencyType(member.object.resolvedType!, index) }
+      }
+      call: CallExpression -> {
+        if call.resolvedConstruction != none { collectCompleteDependencyType(call.resolvedConstruction!.owner, index) }
+      }
+      object: ObjectLiteral -> {
+        if object.resolvedConstruction != none { collectCompleteDependencyType(object.resolvedConstruction!.owner, index) }
+      }
+      construct: ConstructExpression -> {
+        if construct.resolvedConstruction != none { collectCompleteDependencyType(construct.resolvedConstruction!.owner, index) }
+      }
+      actor: ActorCreationExpression -> {
+        if actor.resolvedConstruction != none { collectCompleteDependencyType(actor.resolvedConstruction!.owner, index) }
       }
       _ -> { }
     }
@@ -112,7 +129,8 @@ export function collectDependencyType(
   if index.identities != none { index.identities!.prepare(type_) }
   case type_ {
     class_: ClassType -> {
-      recordSymbol(class_.symbol, index)
+      forwardOnly := class_.symbol.kind == "class" && !class_.symbol.native_ && class_.typeArgs.length == 0
+      recordSymbol(class_.symbol, index, forwardOnly)
       for argument of class_.typeArgs { collectDependencyType(argument, index) }
     }
     enum_: EnumType -> { recordSymbol(enum_.symbol, index) }
@@ -148,6 +166,51 @@ export function collectDependencyType(
     function_: FunctionType -> {
       for parameter of function_.params { collectDependencyType(parameter.type_, index) }
       collectDependencyType(function_.returnType, index)
+    }
+    _ -> { }
+  }
+}
+
+// Operations that inspect or construct a type need complete definitions for
+// every nominal alternative the generated C++ operation can visit.
+function collectCompleteDependencyType(type_: ResolvedType, index: DependencyBuilder): none {
+  if index.identities != none { index.identities!.prepare(type_) }
+  case type_ {
+    class_: ClassType -> {
+      recordSymbol(class_.symbol, index)
+      for argument of class_.typeArgs { collectCompleteDependencyType(argument, index) }
+    }
+    enum_: EnumType -> { recordSymbol(enum_.symbol, index) }
+    interface_: InterfaceType -> {
+      recordSymbol(interface_.symbol, index)
+      if interface_.typeArgs.length > 0 {
+        recordInterface(index, interfaceInstantiationKey(interface_.symbol.module, interface_.name, interface_.typeArgs))
+      }
+      for implementation of interface_.symbol.implementations { recordSymbol(implementation, index) }
+      for argument of interface_.typeArgs { collectCompleteDependencyType(argument, index) }
+    }
+    actor: ActorType -> { collectCompleteDependencyType(actor.innerClass, index) }
+    promise: PromiseType -> { collectCompleteDependencyType(promise.valueType, index) }
+    array: ArrayResolvedType -> { collectCompleteDependencyType(array.elementType, index) }
+    map: MapResolvedType -> {
+      collectCompleteDependencyType(map.keyType, index)
+      collectCompleteDependencyType(map.valueType, index)
+    }
+    set_: SetResolvedType -> { collectCompleteDependencyType(set_.elementType, index) }
+    stream: StreamResolvedType -> {
+      recordInterface(index, interfaceInstantiationKey("", "Stream", [stream.elementType]))
+      collectCompleteDependencyType(stream.elementType, index)
+    }
+    result_: ResultResolvedType -> {
+      collectCompleteDependencyType(result_.valueType, index)
+      collectCompleteDependencyType(result_.errorType, index)
+    }
+    tuple: TupleResolvedType -> { for element of tuple.elements { collectCompleteDependencyType(element, index) } }
+    union_: UnionResolvedType -> { for member of union_.types { collectCompleteDependencyType(member, index) } }
+    weak_: WeakResolvedType -> { collectCompleteDependencyType(weak_.inner, index) }
+    function_: FunctionType -> {
+      for parameter of function_.params { collectCompleteDependencyType(parameter.type_, index) }
+      collectCompleteDependencyType(function_.returnType, index)
     }
     _ -> { }
   }

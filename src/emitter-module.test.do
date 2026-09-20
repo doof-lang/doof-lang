@@ -13,6 +13,44 @@ import { emitModuleGraph, ModuleEmissionCacheKey } from "./emitter-module"
 import { PhaseTimings } from "./phase-timings"
 import { SourceFile } from "./semantic"
 
+export function testImportedClassUsedOnlyAsSharedPointerIsForwardDeclared(): none {
+  result := compileWithLoader([
+    SourceFile { path: "/types.do", source: "export class Foo { value: int\nlabel(): string => string(value) }" },
+    SourceFile { path: "/main.do", source: "import { Foo } from \"./types\"\nfunction carry(value: Foo): Foo => value\nfunction main(): int => 0" },
+  ], "/main.do", noSourceLoader)
+  Assert.equal(result.diagnostics.length, 0)
+  for module of result.emission!.modules {
+    if module.modulePath != "/main.do" { continue }
+    Assert.stringContains(module.header, "struct Foo;")
+    Assert.stringContains(module.header, "Foo> carry")
+    Assert.stringNotContains(module.header, "int32_t value;")
+  }
+}
+
+export function testImportedClassMemberUseKeepsCompleteDefinition(): none {
+  result := compileWithLoader([
+    SourceFile { path: "/types.do", source: "export class Foo { value: int\nlabel(): string => string(value) }" },
+    SourceFile { path: "/main.do", source: "import { Foo } from \"./types\"\nfunction read(value: Foo): int => value.value\nfunction main(): int => 0" },
+  ], "/main.do", noSourceLoader)
+  Assert.equal(result.diagnostics.length, 0)
+  for module of result.emission!.modules {
+    if module.modulePath != "/main.do" { continue }
+    Assert.stringContains(module.header, "int32_t value;")
+  }
+}
+
+export function testImportedStructTypeKeepsCompleteDefinition(): none {
+  result := compileWithLoader([
+    SourceFile { path: "/types.do", source: "export struct Point { x: int }" },
+    SourceFile { path: "/main.do", source: "import { Point } from \"./types\"\nfunction carry(value: Point): Point => value\nfunction main(): int => 0" },
+  ], "/main.do", noSourceLoader)
+  Assert.equal(result.diagnostics.length, 0)
+  for module of result.emission!.modules {
+    if module.modulePath != "/main.do" { continue }
+    Assert.stringContains(module.header, "int32_t x;")
+  }
+}
+
 export function testPhaseTimingsEmitterSeparatesRenderingAndReuse(): none {
   analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function main(): int => 1" }]).analyze("/main.do")
   checked := createChecker(analysis, "/main.do").check("/main.do")
@@ -35,8 +73,8 @@ export function testPhaseTimingsEmitterSeparatesRenderingAndReuse(): none {
 export function testHeaderCacheReusesDependencyProjectionsWithinOneGraph(): none {
   sources := [
     SourceFile { path: "/types.do", source: "export class Left {}\nexport class Right {}\nexport class Pair { left: Left | Right\nright: Left | Right }\nexport class Unused {}" },
-    SourceFile { path: "/left.do", source: "import { Pair } from \"./types\"\nexport function left(value: Pair): Pair => value" },
-    SourceFile { path: "/right.do", source: "import { Pair } from \"./types\"\nexport function right(value: Pair): Pair => value" },
+    SourceFile { path: "/left.do", source: "import { Left, Right, Pair } from \"./types\"\nexport function left(value: Pair): Left | Right => value.left" },
+    SourceFile { path: "/right.do", source: "import { Left, Right, Pair } from \"./types\"\nexport function right(value: Pair): Left | Right => value.right" },
     SourceFile { path: "/main.do", source: "import { left } from \"./left\"\nimport { right } from \"./right\"\nfunction main(): int => 0" },
   ]
   timings := PhaseTimings { enabled: true }
@@ -56,6 +94,7 @@ export function testHeaderCacheReusesDependencyProjectionsWithinOneGraph(): none
     }
   }
   sources[0] = SourceFile { path: "/types.do", source: sources[0].source.replaceAll("left:", "next:") }
+  sources[1] = SourceFile { path: "/left.do", source: sources[1].source.replaceAll("value.left", "value.next") }
   second := compileWithLoader(sources, "/main.do", noSourceLoader)
   Assert.equal(second.diagnostics.length, 0)
   for module of second.emission!.modules {

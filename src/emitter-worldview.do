@@ -21,6 +21,7 @@ import {
 export class WorldviewModule {
   path: string
   program: Program
+  forwardClassNames: string[] = []
 }
 
 export class WorldviewPlan {
@@ -30,6 +31,7 @@ export class WorldviewPlan {
 
 class WorldviewSelection {
   statements: Statement[] = []
+  forwardClassNames: string[] = []
 }
 
 // One index belongs to a checked graph. Declaration summaries are frozen before
@@ -148,7 +150,7 @@ function appendWorldviewModule(
   info := findModule(index, path)
   if info == none { return }
   selection := findSelection(index, path)
-  if path != rootPath && (selection == none || selection!.statements.length == 0) { return }
+  if path != rootPath && (selection == none || (selection!.statements.length == 0 && selection!.forwardClassNames.length == 0)) { return }
   index.visitingPaths.add(path)
   for imported of info!.imports {
     if imported.sourceModule != rootPath {
@@ -168,8 +170,34 @@ function appendWorldviewModule(
     plan.modules.push(WorldviewModule {
       path,
       program: Program { kind: info!.program.kind, statements: ordered, span: info!.program.span },
+      forwardClassNames: forwardNamesWithoutDefinitions(selection!),
     })
   }
+}
+
+function forwardNamesWithoutDefinitions(selection: WorldviewSelection): string[] {
+  let result: string[] = []
+  for name of selection.forwardClassNames {
+    let defined = false
+    for statement of selection.statements {
+      if statementName(statement) == name { defined = true; break }
+    }
+    if !defined { result.push(name) }
+  }
+  return result
+}
+
+function statementIsClass(statement: Statement): bool {
+  case statement {
+    export_: ExportDeclaration -> { return statementIsClass(export_.declaration) }
+    _: ClassDeclaration -> { return true }
+    _ -> { return false }
+  }
+}
+
+function addUniqueString(values: string[], value: string): none {
+  for existing of values { if existing == value { return } }
+  values.push(value)
 }
 
 function addInterfaceKey(index: WorldviewIndex, value: string): none {
@@ -193,8 +221,9 @@ function collectSymbol(
   symbol: Symbol,
   rootPath: string,
   index: WorldviewIndex,
+  forceTransitiveDefinitions: bool = false,
 ): none {
-  collectSymbolDependency(dependencyForSymbol(symbol), rootPath, index)
+  collectSymbolDependency(dependencyForSymbol(symbol), rootPath, index, forceTransitiveDefinitions)
 }
 
 function collectArgumentDependencies(type_: ResolvedType, rootPath: string, index: WorldviewIndex): none {
@@ -203,17 +232,31 @@ function collectArgumentDependencies(type_: ResolvedType, rootPath: string, inde
   replayDependencies(builder.finish(), rootPath, index)
 }
 
-function replayDependencies(summary: DependencySummary, rootPath: string, index: WorldviewIndex): none {
+function replayDependencies(summary: DependencySummary, rootPath: string, index: WorldviewIndex, forceDefinitions: bool = false): none {
   for event of summary.events {
     case event {
-      symbol: SymbolDependency -> { collectSymbolDependency(symbol, rootPath, index) }
+      symbol: SymbolDependency -> { collectSymbolDependency(symbol, rootPath, index, forceDefinitions) }
       interface_: InterfaceDependency -> { addInterfaceKey(index, interface_.key) }
     }
   }
 }
 
-function collectSymbolDependency(symbol: SymbolDependency, rootPath: string, index: WorldviewIndex): none {
-  if symbol.modulePath == "" || index.selectedKeys.has(symbol.key) { return }
+function collectSymbolDependency(
+  symbol: SymbolDependency,
+  rootPath: string,
+  index: WorldviewIndex,
+  forceTransitiveDefinitions: bool = false,
+): none {
+  if symbol.modulePath == "" { return }
+  if symbol.forwardOnly && !forceTransitiveDefinitions {
+    if index.selectedKeys.has(symbol.key) { return }
+    declaration := declarationFor(index, symbol.modulePath, symbol.name)
+    if declaration == none || !statementIsClass(declaration!) { return }
+    selection := selectionFor(index, symbol.modulePath)
+    addUniqueString(selection.forwardClassNames, symbol.name)
+    return
+  }
+  if index.selectedKeys.has(symbol.key) { return }
   index.selectedKeys.add(symbol.key)
   if symbol.modulePath == rootPath {
     collectNativeHeaderClosure(symbol, rootPath, index)
@@ -224,7 +267,7 @@ function collectSymbolDependency(symbol: SymbolDependency, rootPath: string, ind
   selection := selectionFor(index, symbol.modulePath)
   selection.statements.push(declaration!)
   summary := try! index.graph.summaries.get(declarationKey(symbol.modulePath, symbol.name))
-  replayDependencies(summary, rootPath, index)
+  replayDependencies(summary, rootPath, index, forceTransitiveDefinitions)
   collectNativeHeaderClosure(symbol, rootPath, index)
 }
 
@@ -242,7 +285,7 @@ function collectNativeHeaderClosure(
     if module != none {
       for sibling of module!.symbols {
         if sibling.native_ && sibling.nativeHeader == symbol.nativeHeader {
-          collectSymbol(sibling, rootPath, index)
+          collectSymbol(sibling, rootPath, index, true)
         }
       }
       // Native headers are intentionally opaque. Their supported Doof-facing
@@ -250,17 +293,17 @@ function collectNativeHeaderClosure(
       // project those declarations completely before including the header.
       for imported of module!.imports {
         if imported.symbol != none && isNominalSurfaceSymbol(imported.symbol!) {
-          collectSymbol(imported.symbol!, rootPath, index)
+          collectSymbol(imported.symbol!, rootPath, index, true)
         }
       }
       for exported of module!.exports {
-        if isNominalSurfaceSymbol(exported) { collectSymbol(exported, rootPath, index) }
+        if isNominalSurfaceSymbol(exported) { collectSymbol(exported, rootPath, index, true) }
       }
       for reExportPath of module!.reExports {
         reExported := findModule(index, reExportPath)
         if reExported == none { continue }
         for exported of reExported!.exports {
-          if isNominalSurfaceSymbol(exported) { collectSymbol(exported, rootPath, index) }
+          if isNominalSurfaceSymbol(exported) { collectSymbol(exported, rootPath, index, true) }
         }
       }
     }

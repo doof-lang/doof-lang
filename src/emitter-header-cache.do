@@ -19,7 +19,7 @@ export class HeaderPlanCache {
 }
 
 /** Source spans identify the original, checked statements in this one graph. */
-export function projectedHeaderKey(path: string, program: Program, interfaceKeys: string[]): string {
+export function projectedHeaderKey(path: string, program: Program, interfaceKeys: string[], forwardClassNames: string[] = []): string {
   key := StringBuilder()
   key.append(string(path.length) + ":" + path + "|")
   for statement of program.statements {
@@ -27,6 +27,7 @@ export function projectedHeaderKey(path: string, program: Program, interfaceKeys
   }
   key.append("|")
   for interfaceKey of interfaceKeys { key.append(string(interfaceKey.length) + ":" + interfaceKey) }
+  key.append("|")
+  for name of forwardClassNames { key.append(string(name.length) + ":" + name) }
   return key.drainToString()
 }
-
