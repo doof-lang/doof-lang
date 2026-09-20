@@ -21,6 +21,6 @@ function main(arguments: string[]): none {
   response := query(fixture.operation, fixture.module, fixture.offset, fixture.text)
   let strict: SerialValue[] = []
   for issue of diagnostics(fixture.sources, fixture.entry) { strict.push(issue.toSerialObject()) }
-  result: Map<string, SerialValue> := { "diagnostics": values, "strict": strict, "response": response.toSerialObject() }
+  result: readonly Map<string, SerialValue> := { "diagnostics": values.drainToReadonly(), "strict": strict.drainToReadonly(), "response": response.toSerialObject() }
   println(formatJsonValue(result))
 }
