@@ -41,6 +41,11 @@ namespace doof {
 class Never;
 [[noreturn]] inline Never panic(const std::string& msg);
 
+inline int32_t hardware_concurrency() {
+    const auto detected = std::thread::hardware_concurrency();
+    return static_cast<int32_t>(detected == 0 ? 1 : detected);
+}
+
 /* __DOOF_OBSERVER_RUNTIME_SUPPORT__ */
 
 // ============================================================================

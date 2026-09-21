@@ -14,8 +14,9 @@ export function testClampsProgressInputsAndWidth(): none {
 }
 
 export function testBoundsWorkersToAvailableItems(): none {
-  Assert.equal(boundedWorkerCount(10), 4)
+  Assert.isTrue(boundedWorkerCount(10) > 0)
   Assert.equal(boundedWorkerCount(2), 2)
   Assert.equal(boundedWorkerCount(0), 0)
+  Assert.equal(boundedWorkerCount(10, 4), 4)
   Assert.equal(boundedWorkerCount(3, 0), 0)
 }
