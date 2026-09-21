@@ -46,6 +46,7 @@ export function testStdlibBundleCurationIsCoarseAndExplicit(): none {
   assert(includeStdlibBundlePath("std/json", "index.do"), "expected module")
   assert(!includeStdlibBundlePath("std/json", "index.test.do"), "expected colocated test exclusion")
   assert(!includeStdlibBundlePath("std/json", "docs/API.md"), "expected docs exclusion")
+  assert(!includeStdlibBundlePath("std/json", "doof-vendor.json"), "expected vendor manifest exclusion")
   assert(includeStdlibBundlePath("std/gzip", "vendor/zlib/inflate.c"), "expected zlib root source")
   assert(!includeStdlibBundlePath("std/gzip", "vendor/zlib/examples/zpipe.c"), "expected zlib examples exclusion")
   assert(includeStdlibBundlePath("std/http", "vendor/curl/lib/vtls/openssl.c"), "expected full curl lib")

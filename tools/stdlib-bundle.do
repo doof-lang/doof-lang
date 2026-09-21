@@ -91,6 +91,7 @@ function isProjectOnlyRoot(relativePath: string): bool {
 function isProjectOnlyFile(relativePath: string): bool {
   if relativePath.contains("/") { return false }
   return relativePath == ".DS_Store" || relativePath == ".gitignore" ||
+    relativePath == "doof-vendor.json" ||
     relativePath == "README.md" || relativePath == "sample.do" ||
     relativePath == "test_support.do" || relativePath.endsWith(".test.do") ||
     relativePath.contains("_test_support.")
