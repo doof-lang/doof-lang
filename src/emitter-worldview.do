@@ -48,6 +48,10 @@ export class WorldviewGraphIndex {
 class WorldviewIndex {
   // Opaque native surfaces expand once per consumer, including recursive cycles.
   expandedNativeHeaders: Set<string> = []
+  // Explicit named type imports are part of a module's intentional generated
+  // surface. Expand them once so generated consumers can use complete nominal
+  // declarations even when the handwritten signature only needs a pointer.
+  expandedExplicitTypeImports: Set<string> = []
   graph: WorldviewGraphIndex
   selections: Map<string, WorldviewSelection> = {}
   selectedKeys: Set<string> = []
@@ -66,6 +70,12 @@ export function planWorldview(
   index := WorldviewIndex { graph: if graphIndex == none then indexWorldviewGraph(result) else graphIndex! }
   root := findModule(index, rootPath)
   if root == none { return WorldviewPlan {} }
+
+  // An explicit type import is stronger than an inferred signature dependency:
+  // generated code may inspect or serialize the imported value after the
+  // handwritten AST has been projected. Keep this rule independent of any
+  // particular generated consumer such as the wasm JSON adapter.
+  collectExplicitTypeImports(root!, rootPath, index)
 
   // The root owns every declaration it defines. Foreign declarations are
   // selected only from checked uses and their recursive declaration surface.
@@ -301,9 +311,19 @@ function collectSymbolDependency(
   if declaration == none { return }
   selection := selectionFor(index, symbol.modulePath)
   selection.statements.push(declaration!)
+  collectExplicitTypeImports(findModule(index, symbol.modulePath)!, rootPath, index)
   summary := try! index.graph.summaries.get(declarationKey(symbol.modulePath, symbol.name))
   replayDependencies(summary, rootPath, index, forceTransitiveDefinitions)
   collectNativeHeaderClosure(symbol, rootPath, index)
+}
+
+function collectExplicitTypeImports(info: ModuleInfo, rootPath: string, index: WorldviewIndex): none {
+  if index.expandedExplicitTypeImports.has(info.path) { return }
+  index.expandedExplicitTypeImports.add(info.path)
+  for imported of info.imports {
+    if imported.symbol == none || !isNominalSurfaceSymbol(imported.symbol!) { continue }
+    collectSymbol(imported.symbol!, rootPath, index)
+  }
 }
 
 function collectNativeHeaderClosure(

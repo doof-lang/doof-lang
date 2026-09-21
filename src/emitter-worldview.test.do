@@ -62,6 +62,26 @@ export function testSelectsCompleteForeignFieldsForGeneratedJsonMethods(): none 
   Assert.equal(dependencyNames(plan, "/raster.do"), "RasterLayout,")
 }
 
+export function testExplicitNamedTypeImportsSelectCompleteDefinitions(): none {
+  sources := [
+    SourceFile {
+      path: "/main.do",
+      source: "import { Item } from \"./types\"\nfunction consume(value: Item): none {}",
+    },
+    SourceFile {
+      path: "/types.do",
+      source: "export class Item { value: int }",
+    },
+  ]
+  analysis := createAnalyzer(sources).analyze("/main.do")
+  checked := createChecker(analysis).check("/main.do")
+  Assert.equal(hasErrorDiagnostics(checked.diagnostics), false)
+
+  plan := planWorldview(analysis, "/main.do")
+  Assert.equal(plan.modules.length, 2)
+  Assert.equal(dependencyNames(plan, "/types.do"), "Item,")
+}
+
 export function testSelectsConcreteGenericArgumentDefinitionsInOwningModules(): none {
   sources := [
     SourceFile { path: "/main.do", source:
