@@ -13,7 +13,7 @@ import { emitModuleGraph, ModuleEmissionCacheKey } from "./emitter-module"
 import { PhaseTimings } from "./phase-timings"
 import { SourceFile } from "./semantic"
 
-export function testImportedClassUsedOnlyAsSharedPointerIsForwardDeclared(): none {
+export function testExplicitlyImportedClassUsedOnlyAsSharedPointerGetsCompleteDefinition(): none {
   result := compileWithLoader([
     SourceFile { path: "/types.do", source: "export class Foo { value: int\nlabel(): string => string(value) }" },
     SourceFile { path: "/main.do", source: "import { Foo } from \"./types\"\nfunction carry(value: Foo): Foo => value\nfunction main(): int => 0" },
@@ -23,7 +23,7 @@ export function testImportedClassUsedOnlyAsSharedPointerIsForwardDeclared(): non
     if module.modulePath != "/main.do" { continue }
     Assert.stringContains(module.header, "struct Foo;")
     Assert.stringContains(module.header, "Foo> carry")
-    Assert.stringNotContains(module.header, "int32_t value;")
+    Assert.stringContains(module.header, "int32_t value;")
   }
 }
 
