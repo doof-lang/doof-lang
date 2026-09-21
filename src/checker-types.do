@@ -4,7 +4,7 @@ import {
   ActorType, ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionParamType, FunctionType,
   InterfaceType,
   SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, NeverType, NoneType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, Symbol, TupleResolvedType,
-  UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType,
+  UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType, SuccessResolvedType, FailureResolvedType,
 } from "./semantic"
 import type {
   ArrayType as AstArrayType, AstFunctionType,
@@ -68,6 +68,8 @@ export function classMetadataType(classType_: ResolvedType): ResolvedType { retu
 export function methodReflectionType(classType_: ResolvedType): ResolvedType { return MethodReflectionResolvedType { classType: classType_ } }
 
 export function resultType(value: ResolvedType, error: ResolvedType): ResolvedType { return ResultResolvedType { valueType: value, errorType: error } }
+export function successType(value: ResolvedType): ResolvedType { return SuccessResolvedType { valueType: value } }
+export function failureType(error: ResolvedType): ResolvedType { return FailureResolvedType { errorType: error } }
 
 export function actorType(innerClass: ClassType): ResolvedType { return ActorType { innerClass } }
 
@@ -117,6 +119,8 @@ export function applyDeepReadonly(type_: ResolvedType): ResolvedType {
     set: SetResolvedType -> { return setType(applyDeepReadonly(set.elementType), true) }
     stream: StreamResolvedType -> { return streamType(applyDeepReadonly(stream.elementType)) }
     result: ResultResolvedType -> { return resultType(applyDeepReadonly(result.valueType), applyDeepReadonly(result.errorType)) }
+    success: SuccessResolvedType -> { return successType(applyDeepReadonly(success.valueType)) }
+    failure: FailureResolvedType -> { return failureType(applyDeepReadonly(failure.errorType)) }
     weak_: WeakResolvedType -> { return weakType(weak_.inner) }
     actor: ActorType -> {
       let typeArgs: ResolvedType[] = []
@@ -164,6 +168,8 @@ export function substituteTypeParams(type_: ResolvedType, names: string[], argum
     set: SetResolvedType -> { return setType(substituteTypeParams(set.elementType, names, arguments), set.readonly_) }
     stream: StreamResolvedType -> { return streamType(substituteTypeParams(stream.elementType, names, arguments)) }
     result: ResultResolvedType -> { return resultType(substituteTypeParams(result.valueType, names, arguments), substituteTypeParams(result.errorType, names, arguments)) }
+    success: SuccessResolvedType -> { return successType(substituteTypeParams(success.valueType, names, arguments)) }
+    failure: FailureResolvedType -> { return failureType(substituteTypeParams(failure.errorType, names, arguments)) }
     weak_: WeakResolvedType -> { return weakType(substituteTypeParams(weak_.inner, names, arguments)) }
     actor: ActorType -> {
       let typeArgs: ResolvedType[] = []
@@ -281,6 +287,8 @@ export function typeName(resolvedType: ResolvedType): string {
     _: RangeResolvedType -> { return "Range" }
     _: SerialValueResolvedType -> { return "SerialValue" }
     result: ResultResolvedType -> { return "Result<" + typeName(result.valueType) + ", " + typeName(result.errorType) + ">" }
+    success: SuccessResolvedType -> { return "Success<" + typeName(success.valueType) + ">" }
+    failure: FailureResolvedType -> { return "Failure<" + typeName(failure.errorType) + ">" }
     weak_: WeakResolvedType -> { return "weak " + typeName(weak_.inner) }
     actor: ActorType -> { return "Actor<" + typeName(actor.innerClass) + ">" }
     promise: PromiseType -> { return "Promise<" + typeName(promise.valueType) + ">" }
@@ -384,6 +392,8 @@ function compareTypes(left: ResolvedType, right: ResolvedType, ignoreMutability:
         _ -> { return false }
       }
     }
+    leftSuccess: SuccessResolvedType -> { case right { rightSuccess: SuccessResolvedType -> { return compareTypes(leftSuccess.valueType, rightSuccess.valueType, ignoreMutability) } _ -> { return false } } }
+    leftFailure: FailureResolvedType -> { case right { rightFailure: FailureResolvedType -> { return compareTypes(leftFailure.errorType, rightFailure.errorType, ignoreMutability) } _ -> { return false } } }
     leftWeak: WeakResolvedType -> {
       case right {
         rightWeak: WeakResolvedType -> { return compareTypes(leftWeak.inner, rightWeak.inner, ignoreMutability) }
@@ -505,6 +515,11 @@ function compareTypes(left: ResolvedType, right: ResolvedType, ignoreMutability:
 }
 
 export function isAssignable(value: ResolvedType, target: ResolvedType): bool {
+  case value {
+    success: SuccessResolvedType -> { case target { result: ResultResolvedType -> { return isAssignable(success.valueType, result.valueType) } _ -> { } } }
+    failure: FailureResolvedType -> { case target { result: ResultResolvedType -> { return isAssignable(failure.errorType, result.errorType) } _ -> { } } }
+    _ -> { }
+  }
   case value {
     _: NeverType -> { return true }
     parameter: TypeParameterType -> {

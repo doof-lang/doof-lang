@@ -3,7 +3,7 @@
 import { emitCarrierConversion } from "./emitter-carrier-values"
 import { carrierOf, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
-import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitNoneLiteral, emitStringConstant, quote } from "./emitter-expr-literals"
@@ -460,14 +460,6 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
   }
   case expression.object {
     identifier: Identifier -> {
-      if identifier.resolvedBinding != none && identifier.resolvedBinding!.casePattern != "" && (expression.property == "value" || expression.property == "error") {
-        return object + "." + cppIdentifier(expression.property)
-      }
-    }
-    _ -> { }
-  }
-  case expression.object {
-    identifier: Identifier -> {
       for namespace of context.namespaceImports {
         if namespace.localName == identifier.name {
           return "::" + exprModuleNamespaceFor(namespace.sourceModule, context.names) + "::" + cppIdentifier(expression.property)
@@ -552,10 +544,8 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
         if primitive.name == "string" && expression.property == "toLowerCase" { return "doof::string_toLowerCase" }
         if primitive.name == "string" && expression.property == "toUpperCase" { return "doof::string_toUpperCase" }
       }
-      result: ResultResolvedType -> {
-        if expression.property == "value" { return "doof::success_value(" + object + ")" }
-        if expression.property == "error" { return "doof::failure_error(" + object + ")" }
-      }
+      _: SuccessResolvedType -> { if expression.property == "value" { return object + ".value" } }
+      _: FailureResolvedType -> { if expression.property == "error" { return object + ".error" } }
       _: ClassMetadataResolvedType -> { return object + "." + cppIdentifier(expression.property) }
       _: MethodReflectionResolvedType -> { return object + "." + cppIdentifier(expression.property) }
       enum_: EnumType -> {
@@ -594,7 +584,7 @@ function emitWeakFieldAccess(expression: MemberExpression, object: string, conte
     return "[&]() -> " + resultType + " { auto " + storage + " = " + object + "; " + noneCheck + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) doof::panic(\"Weak reference has expired\"); auto " + temporary + " = std::move(_weak_locked.value()); return " + access + "; }()"
   }
   case expression.resolvedType! {
-    result: ResultResolvedType -> {
+      result: ResultResolvedType -> {
       resultCpp := emitType(result, context.modulePath, context.names)
       payloadCpp := emitResultPayloadType(result.valueType, context.modulePath, context.names)
       errorCpp := emitResultPayloadType(result.errorType, context.modulePath, context.names)

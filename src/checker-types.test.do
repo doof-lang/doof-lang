@@ -1,6 +1,16 @@
 import { Assert } from "std/assert"
 import { FunctionParamType, Symbol } from "./semantic"
-import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, functionType, isAssignable, mapType, noneType, primitive, promiseType, sameType, streamType, substituteTypeParams, typeParameter, unionMutabilityConflict, unionType, weakType } from "./checker-types"
+import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultType, sameType, streamType, substituteTypeParams, successType, typeParameter, unionMutabilityConflict, unionType, weakType } from "./checker-types"
+
+export function testResultArmAssignabilityUsesOnlyItsPayloadChannel(): none {
+  success := successType(primitive("int"))
+  failure := failureType(primitive("string"))
+  Assert.isTrue(isAssignable(success, resultType(primitive("int"), primitive("bool"))))
+  Assert.isTrue(isAssignable(success, resultType(primitive("long"), primitive("bool"))))
+  Assert.isTrue(isAssignable(failure, resultType(primitive("bool"), primitive("string"))))
+  Assert.isFalse(isAssignable(success, resultType(primitive("string"), primitive("bool"))))
+  Assert.isFalse(isAssignable(failure, resultType(primitive("bool"), primitive("int"))))
+}
 
 export function testGenericNoneLiteralReadonlyUnionNormalization(): none {
   mutableArray := arrayType(primitive("int"))

@@ -5,6 +5,17 @@ import { Assert } from "std/assert"
 import { compile } from "./compiler"
 import { SourceFile } from "./semantic"
 
+export function testResultHelpersDoNotEmitUncheckedPayloadAccess(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function inspect(result: Result<int, string>): bool => result.isFailure()",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::is_failure(result)")
+  Assert.stringNotContains(source, "failure_error(result)")
+  Assert.stringNotContains(source, "success_value(result)")
+}
+
 export function testGenericNoneLiteralNarrowingUsesSpecializedCarrier(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "class Item {}\n" +

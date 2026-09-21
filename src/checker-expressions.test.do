@@ -15,6 +15,14 @@ function checked(source: string): CheckResult {
   return createChecker(analysis, "/main.do").check("/main.do")
 }
 
+export function testResultCaseArmCanChangeTheOppositeChannel(): none {
+  result := checked(
+    "function widenError(input: Result<int, string>): Result<long, bool> { return case input { success: Success -> success, _: Failure -> Failure { error: false } } }\n" +
+    "function widenValue(input: Result<int, string>): Result<bool, string> { return case input { _: Success -> Success { value: false }, failure: Failure -> failure } }",
+  )
+  Assert.equal(result.diagnostics.length, 0)
+}
+
 export function testQuarkWeakCaseExpressionChecking(): none {
   prefix := "class Item { value: int }\n"
   valid := checked(prefix + "function read(item: weak Item): int => case item { value: Success -> value.value.value\n_: Failure -> -1 }")

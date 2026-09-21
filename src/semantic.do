@@ -171,6 +171,20 @@ export class ResultResolvedType {
   errorType: ResolvedType
 }
 
+// The two concrete arms of an intrinsic Result. These exist so a case binding
+// carries the same arm-specific type information as any other union binding.
+export class SuccessResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
+  kind: string = "success"
+  valueType: ResolvedType
+}
+
+export class FailureResolvedType {
+  let emissionIdentity: SemanticTypeIdentity | none = none
+  kind: string = "failure"
+  errorType: ResolvedType
+}
+
 export class TupleResolvedType {
   let emissionIdentity: SemanticTypeIdentity | none = none
   kind: string = "tuple"
@@ -232,7 +246,7 @@ export class MethodReflectionResolvedType {
 }
 
 export type ResolvedType = PrimitiveType | ClassType | EnumType | InterfaceType | FunctionType |
-  ActorType | PromiseType | ArrayResolvedType | MapResolvedType | SetResolvedType | StreamResolvedType | RangeResolvedType | SerialValueResolvedType | ResultResolvedType | TupleResolvedType | UnionResolvedType | WeakResolvedType |
+  ActorType | PromiseType | ArrayResolvedType | MapResolvedType | SetResolvedType | StreamResolvedType | RangeResolvedType | SerialValueResolvedType | ResultResolvedType | SuccessResolvedType | FailureResolvedType | TupleResolvedType | UnionResolvedType | WeakResolvedType |
   NoneType | NeverType | UnknownType | TypeParameterType | ClassMetadataResolvedType | MethodReflectionResolvedType
 
 export class TypeSubstitution {

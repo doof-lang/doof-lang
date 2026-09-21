@@ -72,6 +72,14 @@ let effects = 0
 function unitEffect(): none { effects += 1 }
 function unitResult(): Result<none, string> { effects += 1
 return Success {} }
+function widenResultSuccess(input: Result<int, string>): Result<long, bool> => case input {
+  success: Success -> success,
+  _: Failure -> Failure { error: false }
+}
+function widenResultFailure(input: Result<int, string>): Result<bool, string> => case input {
+  _: Success -> Success { value: false },
+  failure: Failure -> failure
+}
 function consume(value: none): none { effects += 10 }
 function unitPair(): Tuple<none, int> => (unitEffect(), 7)
 function nativeMatrix(): none {
@@ -99,7 +107,18 @@ function nativeMatrix(): none {
     _ -> { panic("nested result arm") }
   }
   let failed: Result<int, string> = Failure { error: "expected" }
-  if failed.error != "expected" { panic("result error access") }
+  case failed {
+    error: Failure -> { if error.error != "expected" { panic("result error access") } }
+    _ -> { panic("result failure arm") }
+  }
+  case widenResultSuccess(result) {
+    success: Success -> { if success.value != 7L { panic("widened result success") } }
+    _: Failure -> { panic("widened result success arm") }
+  }
+  case widenResultFailure(failed) {
+    failure: Failure -> { if failure.error != "expected" { panic("widened result failure") } }
+    _: Success -> { panic("widened result failure arm") }
+  }
   consume(unitEffect())
   consume(try! unitResult())
   consume(unitResult()!)

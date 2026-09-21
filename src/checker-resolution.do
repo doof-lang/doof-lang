@@ -1,6 +1,6 @@
 // Type annotation, member, index, and callable-field resolution.
 
-import { ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, FunctionParamType, FunctionType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, Scope, SetResolvedType, Symbol, StreamResolvedType, TupleResolvedType, UnionResolvedType, TypeParameterType } from "./semantic"
+import { ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, FunctionParamType, FunctionType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Scope, SetResolvedType, Symbol, StreamResolvedType, TupleResolvedType, UnionResolvedType, TypeParameterType } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { CheckedMember, ClassDeclaration, EnumDeclaration, Expression, FunctionDeclaration, Identifier, InterfaceDeclaration, MemberExpression, Program, SourceSpan, TypeAnnotation, Parameter, TypeParameterConstraint } from "./ast"
 import { interfaceBoundReceiver, applyDeepReadonly, arrayType, classMetadataType, classType, functionType, joinTypes, jsonObjectType, jsonValueType, mapType, resultType, setType, noneType, primitive, promiseType, sameType, typeName, unionType, methodReflectionType, substituteTypeParams, typeParameter, unknownType } from "./checker-types"
@@ -207,8 +207,6 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
       return unknownType()
     }
     result: ResultResolvedType -> {
-      if property == "value" { return result.valueType }
-      if property == "error" { return result.errorType }
       if property == "isSuccess" || property == "isFailure" { return functionType([], primitive("bool")) }
       if property == "unwrapOr" {
         if result.valueType.kind == "none" {
@@ -221,6 +219,10 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
       }
       return unknownType()
     }
+    success: SuccessResolvedType -> { if property == "value" && success.valueType.kind != "none" { return success.valueType }
+      return unknownType() }
+    failure: FailureResolvedType -> { if property == "error" && failure.errorType.kind != "none" { return failure.errorType }
+      return unknownType() }
     stream: StreamResolvedType -> {
       if property == "next" { return functionType([], primitive("bool")) }
       if property == "value" { return functionType([], stream.elementType) }

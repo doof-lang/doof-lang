@@ -4,10 +4,10 @@ import { retainEditorScope } from "./checker-common"
 import { checkArguments, positionalArguments } from "./checker-arguments"
 import { resolveMember } from "./checker-resolution"
 
-import { ActorType, ArrayResolvedType, Binding, ClassType, EnumType, InterfaceType, Diagnostic, FunctionParamType, FunctionType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, Scope, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
+import { ActorType, ArrayResolvedType, Binding, ClassType, EnumType, InterfaceType, Diagnostic, FunctionParamType, FunctionType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Scope, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
 
 import { CheckedMember, ArrayLiteral, AsExpression, AssignmentExpression, BinaryExpression, Block, BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ConstructExpression, DoubleLiteral, DotShorthand, EnumDeclaration, Expression, FloatLiteral, FunctionDeclaration, IfExpression, Identifier, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral, ObjectLiteral, SourceSpan, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression, CatchExpression, CaseExpression, CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern, AsyncExpression, RetireExpression, ActorCreationExpression } from "./ast"
-import { actorType, classType, functionType, isNumeric, isJsonValueType, isSerialBytesType, resultType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
+import { actorType, classType, functionType, isNumeric, isJsonValueType, isSerialBytesType, resultType, successType, failureType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { asyncResultViolation } from "./checker-async"
@@ -260,7 +260,7 @@ export function checkCasePatterns(state: CheckerState, patterns: CasePattern[], 
               named: NamedType -> {
                 if named.name == "Success" || named.name == "Failure" {
                   contextualResultArm = true
-                  resolved = subjectType
+                  resolved = if named.name == "Success" then successType(result.valueType) else failureType(result.errorType)
                   // Explicit payload arguments still need full decoration.
                   if named.typeArgs.length > 1 { typeError(state, named.name + " case pattern accepts one payload type argument", type_.span) }
                   for argument of named.typeArgs {
@@ -1259,6 +1259,12 @@ function typesOverlap(state: CheckerState, left: ResolvedType, right: ResolvedTy
       for member of union_.types { if typesOverlap(state, left, member) { return true } }
       return false
     }
+    _ -> { }
+  }
+  case left {
+    result: ResultResolvedType -> { case right { success: SuccessResolvedType -> { return typesOverlap(state, result.valueType, success.valueType) } failure: FailureResolvedType -> { return typesOverlap(state, result.errorType, failure.errorType) } _ -> { } } }
+    success: SuccessResolvedType -> { case right { result: ResultResolvedType -> { return typesOverlap(state, success.valueType, result.valueType) } _ -> { } } }
+    failure: FailureResolvedType -> { case right { result: ResultResolvedType -> { return typesOverlap(state, failure.errorType, result.errorType) } _ -> { } } }
     _ -> { }
   }
   return isAssignableWithInterfaces(state.result, left, right) || isAssignableWithInterfaces(state.result, right, left) || (isNumericOperand(left) && isNumericOperand(right))

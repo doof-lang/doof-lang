@@ -1,10 +1,10 @@
 // C++ operations on the pure carrier model. No AST inspection or assignability.
 // Callers pass specialized checked types and the native source position.
 
-import { ResolvedType } from "./semantic"
+import { FailureResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType } from "./semantic"
 import { CarrierPosition, carrierOf } from "./emitter-carriers"
 import { EmitContext } from "./emitter-context"
-import { emitContextType, specializeEmitType } from "./emitter-types"
+import { emitContextReturnType, emitContextType, specializeEmitType } from "./emitter-types"
 
 export function emitCarrierAbsence(type_: ResolvedType, context: EmitContext): string {
   concreteType := specializeEmitType(type_, context)
@@ -31,6 +31,21 @@ export function emitCarrierPresentValue(value: string): string { return "doof::u
 export function emitCarrierConversion(value: string, source: ResolvedType, target: ResolvedType, context: EmitContext, position: CarrierPosition = .Value): string {
   fromType := specializeEmitType(source, context)
   toType := specializeEmitType(target, context)
+  case fromType {
+    success: SuccessResolvedType -> {
+      case toType {
+        result: ResultResolvedType -> { return emitResultArmConversion(value, success.valueType, result.valueType, true, result, context) }
+        _ -> { }
+      }
+    }
+    failure: FailureResolvedType -> {
+      case toType {
+        result: ResultResolvedType -> { return emitResultArmConversion(value, failure.errorType, result.errorType, false, result, context) }
+        _ -> { }
+      }
+    }
+    _ -> { }
+  }
   sourceCarrier := carrierOf(fromType, position)
   targetCarrier := carrierOf(toType)
   if sourceCarrier.kind == .Void || (sourceCarrier.kind == .Unit && targetCarrier.kind != .Unit) {
@@ -46,4 +61,15 @@ export function emitCarrierConversion(value: string, source: ResolvedType, targe
     return "doof::variant_promote<" + toCpp + ">(" + value + ")"
   }
   return value
+}
+
+function emitResultArmConversion(value: string, sourcePayload: ResolvedType, targetPayload: ResolvedType, success: bool, target: ResultResolvedType, context: EmitContext): string {
+  targetCpp := emitContextType(target, context)
+  arm := if success then "doof::Success" else "doof::Failure"
+  payloadCpp := emitContextReturnType(targetPayload, context)
+  if targetPayload.kind == "none" {
+    return "[&]() -> " + targetCpp + " { static_cast<void>(" + value + "); return " + arm + "<void>{}; }()"
+  }
+  converted := emitCarrierConversion("_result_arm." + (if success then "value" else "error"), sourcePayload, targetPayload, context)
+  return "[&]() -> " + targetCpp + " { const auto& _result_arm = " + value + "; return " + arm + "<" + payloadCpp + ">{" + converted + "}; }()"
 }

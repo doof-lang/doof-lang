@@ -18,6 +18,25 @@ export function testInterfaceBoundMembers(): none {
   Assert.equal(result.diagnostics.length, 0)
 }
 
+export function testResultPayloadMembersRequireNarrowing(): none {
+  for property of ["value", "error"] {
+    result := checked("function inspect(result: Result<int, string>): int { " + property + " := result." + property + "\nreturn 0 }")
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.equal(result.diagnostics[0].message, "Type \"Result<int, string>\" has no member \"" + property + "\"")
+  }
+  narrowed := checked("function inspect(result: Result<int, string>): int => case result { success: Success -> success.value, _: Failure -> 0 }")
+  Assert.equal(narrowed.diagnostics.length, 0)
+}
+
+export function testPayloadlessResultArmsHaveNoPayloadMember(): none {
+  success := checked("function inspect(result: Result<none, string>): none { case result { value: Success -> { value.value }, _: Failure -> { } } }")
+  Assert.equal(success.diagnostics.length, 1)
+  Assert.equal(success.diagnostics[0].message, "Type \"Success<none>\" has no member \"value\"")
+  failure := checked("function inspect(result: Result<int, none>): none { case result { _: Success -> { }, error: Failure -> { error.error } } }")
+  Assert.equal(failure.diagnostics.length, 1)
+  Assert.equal(failure.diagnostics[0].message, "Type \"Failure<none>\" has no member \"error\"")
+}
+
 export function testInterfaceBoundMissingMember(): none {
   result := checked("interface Reader<V> { read(): V }\nclass IntReader { read(): int => 7 }\nfunction readOne<T: Reader<int>>(reader: T): int => reader.missing()")
   let found = false
