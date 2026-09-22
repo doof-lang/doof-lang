@@ -46,3 +46,22 @@ export function testEditorIndexRenamesReexportAliasWithoutChangingOrigin(): none
   EditorAssert.equal(result.edits.length, 3)
   for edit of result.edits { EditorAssert.isTrue(edit.module != "/dep.do") }
 }
+
+export function testEditorIndexDefinesNamedConstructionTypes(): none {
+  source := "class ModuleResolver {}\nclass ModuleAnalyzer { resolver: ModuleResolver }\nfunction createAnalyzer(): ModuleAnalyzer { return ModuleAnalyzer { resolver: ModuleResolver {} } }"
+  index := createEditorIndex(editorAnalysis([EditorSource { path: "/main.do", source }], "/main.do"))
+  analyzer := queryEditor(index, "definition", "/main.do", source.indexOf("return ModuleAnalyzer") + 8)
+  EditorAssert.equal(analyzer.items.length, 1)
+  EditorAssert.equal(analyzer.items[0].definitionStart, source.indexOf("ModuleAnalyzer"))
+  resolver := queryEditor(index, "definition", "/main.do", source.indexOf("resolver: ModuleResolver {}") + 11)
+  EditorAssert.equal(resolver.items.length, 1)
+  EditorAssert.equal(resolver.items[0].definitionStart, source.indexOf("ModuleResolver"))
+}
+
+export function testEditorIndexDefinesCasePatternTypes(): none {
+  source := "class NamedType {}\nfunction inspect(annotation: NamedType | none): none { case annotation { named: NamedType -> {} _ -> {} } }"
+  index := createEditorIndex(editorAnalysis([EditorSource { path: "/main.do", source }], "/main.do"))
+  definition := queryEditor(index, "definition", "/main.do", source.indexOf("named: NamedType") + 8)
+  EditorAssert.equal(definition.items.length, 1)
+  EditorAssert.equal(definition.items[0].definitionStart, source.indexOf("NamedType"))
+}

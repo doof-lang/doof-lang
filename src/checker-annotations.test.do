@@ -4,7 +4,7 @@ import { SourceFile as EditorSource } from "./semantic"
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
-import { FunctionDeclaration } from "./ast"
+import { FunctionDeclaration, NamedType } from "./ast"
 import { SourceFile } from "./semantic"
 import { resolveProvisionalAnnotation } from "./checker-annotations"
 import { typeName } from "./checker-types"
@@ -86,4 +86,24 @@ export function testEditorCheckerAnnotationsRetainsCheckedGraphWithScopes(): non
   EditorAssert.equal(result.diagnostics.length, 0)
   EditorAssert.isTrue(result.analysis.modules[0].editorScopes.length > 0)
   EditorAssert.isTrue(result.analysis.modules[0].editorExpressions.length > 0)
+}
+
+export function testEditorCheckedCasePatternRetainsResolvedTypeSymbol(): none {
+  source := "class NamedType {}\nfunction inspect(annotation: NamedType | none): none { case annotation { named: NamedType -> {} _ -> {} } }"
+  result := editorAnalysis([EditorSource { path: "/main.do", source }], "/main.do")
+  EditorAssert.equal(result.diagnostics.length, 0)
+  patternOffset := source.indexOf("named: NamedType") + 7
+  let found = false
+  for annotation of result.analysis.modules[0].editorAnnotations {
+    case annotation {
+      named: NamedType -> {
+        if named.span.start.offset == patternOffset {
+          EditorAssert.isTrue(named.resolvedSymbol != none)
+          found = true
+        }
+      }
+      _ -> { }
+    }
+  }
+  EditorAssert.isTrue(found)
 }

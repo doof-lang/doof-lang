@@ -138,6 +138,10 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
         typeError(state, "Unknown type '" + named.name + "'", named.span)
         return finishAnnotation(resolution, annotation, unknownType())
       }
+      // Types reached only while checking expressions (for example case-arm
+      // patterns) skip the analyzer's declaration-type traversal. Preserve the
+      // checker selection so editor consumers see the same symbol either way.
+      if resolution.commit { named.resolvedSymbol = symbol }
       if symbol!.kind == "type-alias" {
         declaration := declarationFor(state.result, symbol!)
         if declaration == none { return finishAnnotation(resolution, annotation, unknownType()) }

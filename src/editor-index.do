@@ -202,7 +202,22 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
           }
         }
         object: ObjectLiteral -> { addProperties(index, object.properties, module.path, if object.resolvedConstruction == none then none else object.resolvedConstruction!.owner) }
-        construct: ConstructExpression -> { addProperties(index, construct.args, module.path, construct.resolvedConstructedType) }
+        construct: ConstructExpression -> {
+          case construct.resolvedConstructedType {
+            constructed: ClassType -> {
+              target := symbolItem(index, constructed.symbol)
+              token := nameItem(index, module.path, construct.type_, construct.span.start.offset, construct.span.end.offset, "type")
+              index.occurrences.push(EditorItem {
+                label: construct.type_, detail: editorTypeName(constructed), kind: "type",
+                module: module.path, start: token.start, end: token.end,
+                identity: itemIdentity(target), definitionModule: target.module,
+                definitionStart: target.start, definitionEnd: target.end,
+              })
+            }
+            _ -> { }
+          }
+          addProperties(index, construct.args, module.path, construct.resolvedConstructedType)
+        }
         _ -> { }
       }
     }
