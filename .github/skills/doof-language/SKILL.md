@@ -2,7 +2,7 @@
 name: doof-language
 description: Write, read, and reason about Doof programming language code. Doof is a statically-typed language with familiar curly-brace syntax that transpiles to C++. Use when writing .do files, using Doof standard-library packages imported from std/, designing APIs, implementing classes/functions, writing .test.do files, using assert or the doof test runner, handling Result types, or working with modules, pattern matching, concurrency, or JSON serialization.
 metadata:
-    version: "2.0"
+    version: "2.1"
     languageVersion: "0.1"
 ---
 
@@ -17,6 +17,8 @@ Use this base file as the entry point. Load only the reference file that matches
 - Prefer the focused reference files below over broad assumptions.
 - When exact semantics matter, confirm them in `spec/*.md`.
 - Keep code idiomatic: immutable by default, explicit types at boundaries, no JavaScript-style coercions.
+- Prefer backtick multiline literals for static multiline text. Do not construct
+  multiline text by concatenating quoted lines with `\n`.
 - Use intrinsic `Success<T>` / `Failure<E>` arms and their `Result<T, E>` union alias with `case`, `try`, declaration-`else`, `as`, or `!` for fallible flows. Use `panic(...)` only for programmer errors.
 - Plain `if value != none` checks do **not** narrow static types. Use explicit narrowing forms.
 - Block-bodied non-`none` functions must return a value on every reachable path; `never` functions must terminate on every path.
@@ -47,6 +49,13 @@ readonly VERSION = "0.1"
 
 result := try! loadConfig()
 value := source as string else { return "" }
+
+message := `Hello ${name},
+Your build is ready.
+
+Run:
+  doof test src
+`
 ```
 
 Key reminders:
@@ -72,7 +81,7 @@ Load the narrowest matching file for the task.
 
 | Need | Reference |
 | --- | --- |
-| Core syntax, bindings, lambdas, control flow, operators, language differences | [references/core-language.md](./references/core-language.md) |
+| Core syntax, strings, multiline literals, interpolation, bindings, lambdas, control flow, operators, language differences | [references/core-language.md](./references/core-language.md) |
 | Types, collections, enums, `SerialValue`, inference, nullability | [references/type-system.md](./references/type-system.md) |
 | Classes, structs, interfaces, construction, statics, destructors, `weak` references | [references/classes-and-memory.md](./references/classes-and-memory.md) |
 | `Result`, `try`, `try!`, `try?`, declaration-`else`, `catch`, `as`, `panic` | [references/error-handling.md](./references/error-handling.md) |
