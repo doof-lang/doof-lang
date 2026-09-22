@@ -104,7 +104,7 @@ install_release() (
     '') [ "$#" -eq 0 ] || exit 2 ;;
     *) echo 'usage: install.sh [--version MAJOR.MINOR.PATCH]' >&2; exit 2 ;;
   esac
-  [ "$(uname -s)/$(uname -m)" = Darwin/arm64 ] || { echo 'Doof releases currently support macOS arm64 only' >&2; exit 1; }
+  [ "$(uname -s)/$(uname -m)" = Darwin/arm64 ] || { echo 'The release installer currently supports macOS arm64 only' >&2; exit 1; }
   doof_home=${DOOF_HOME-"$HOME/.doof"}
   case "$doof_home" in /*) ;; *) echo 'DOOF_HOME must be a nonempty absolute path' >&2; exit 2 ;; esac
   case "$doof_home" in /|//|///) echo 'DOOF_HOME cannot be /' >&2; exit 2 ;; esac

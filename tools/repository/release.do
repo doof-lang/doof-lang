@@ -13,12 +13,14 @@ import { createSnapshot, isMachO } from "./snapshot"
 import { debuggerChecks, releaseVerification, testRepository } from "./verify"
 import { stdlibRevisions } from "./provenance"
 import { windowsBuildConfig, windowsBuildEnabled, windowsBuildScript, windowsProjectFile, windowsReleaseArchiveName, windowsVisualStudioCommand, windowsVisualStudioScript } from "./windows-build"
+import { LinuxReleaseTarget, linuxBuildScript, linuxContainerArguments, linuxMakefile, linuxReleaseArchiveName, linuxReleaseTargets } from "./linux-build"
 
 export function signingPreflight(identity: string, profile: string): Result<none, string> {
   try require(platform() == "darwin" && architecture() == "arm64", "Releases require macOS arm64")
   try require(identity != "", "DOOF_SIGN_IDENTITY is required for signed releases")
   try require(profile != "", "DOOF_NOTARY_PROFILE is required for signed releases")
-  for tool of ["em++", "xcrun", "codesign", "ditto", "rsync", "curl"] { try capture("sh", ["-c", "command -v \"$1\"", "sh", tool]) }
+  for tool of ["em++", "xcrun", "codesign", "ditto", "rsync", "curl", "container"] { try capture("sh", ["-c", "command -v \"$1\"", "sh", tool]) }
+  try capture("container", ["system", "status"])
   try identities := capture("security", ["find-identity", "-v", "-p", "codesigning"])
   let matches = 0
   for line of identities.split("\n") { if line.contains(identity) && line.contains("Developer ID Application:") { matches += 1 } }
@@ -88,6 +90,39 @@ function emitWindowsInputs(compiler: string, source: string, stdlib: string, emi
     DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.hpp"),
   }
   return command(compiler, ["emit", source, "--native-platform", "windows", "-o", emitted], environment)
+}
+
+function emitLinuxInputs(compiler: string, source: string, stdlib: string, emitted: string): Result<none, string> {
+  environment: Map<string, string> := {
+    DOOF_STDLIB_ROOT: stdlib,
+    DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.hpp"),
+  }
+  return command(compiler, ["emit", source, "--native-platform", "linux", "-o", emitted], environment)
+}
+
+function buildLinuxReleaseArtifact(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, pending: string, version: string, target: LinuxReleaseTarget): Result<none, string> {
+  linux := path(work, "linux-" + target.name)
+  emitted := path(linux, "emitted")
+  resources := path(linux, "resources")
+  try erase(linux); try makeDirectory(resources)
+  try emitLinuxInputs(compiler, source, stdlib, emitted)
+  try emittedFiles := files(emitted)
+  try write(path(linux, "Makefile"), linuxMakefile(emittedFiles))
+  try write(path(linux, "build.sh"), linuxBuildScript(target))
+  try command("chmod", ["+x", path(linux, "build.sh")])
+  for name of ["doof_runtime.hpp", "doof_wasm_test_runner_apple.swift"] {
+    try command("cp", [path(source, "runtime/" + name), path(resources, name)])
+  }
+  try command("cp", [stdlibBundle, path(resources, "doof-stdlib.tar")])
+  image := setting("DOOF_LINUX_CONTAINER_IMAGE", "docker.io/library/alpine:3.22.1")
+  cpus := setting("DOOF_LINUX_CONTAINER_CPUS", "8")
+  memory := setting("DOOF_LINUX_CONTAINER_MEMORY", "8G")
+  jobs := setting("DOOF_LINUX_BUILD_JOBS", "4")
+  try command("container", linuxContainerArguments(work, image, version, target, cpus, memory, jobs))
+  archive := path(pending, linuxReleaseArchiveName(version, target))
+  try require(exists(archive), "Linux container did not produce release archive")
+  println("Verified Linux " + target.name + " musl release asset: " + archive)
+  return Success()
 }
 
 function buildWindowsReleaseArtifact(compiler: string, source: string, stdlib: string, stdlibBundle: string, work: string, pending: string, version: string): Result<none, string> {
@@ -166,6 +201,27 @@ export function windowsEndToEnd(root: string, version: string): Result<none, str
   return buildWindowsReleaseArtifact(compiler, source, stdlib, bundle, work, pending, version)
 }
 
+/** Runs the local Apple Container Linux workflow without signing or publishing. */
+export function linuxEndToEnd(root: string, version: string): Result<none, string> {
+  try require(stableVersion(version), "Linux test version must be stable MAJOR.MINOR.PATCH")
+  work := path(root, "build/linux-e2e/" + version)
+  source := path(work, "source")
+  pending := path(work, "pending")
+  try erase(work)
+  try makeDirectory(work)
+  try stamp(root, source, version)
+  try liveStdlib := stdlibDirectory(root)
+  stdlib := path(work, "stdlib")
+  try copyInputs(liveStdlib, stdlib)
+  try makeDirectory(pending)
+  try compiler := resolveSeed(root, "DOOF_DEV_COMPILER")
+  bundle := path(work, "doof-stdlib.tar")
+  environment: Map<string, string> := { DOOF_STDLIB_ROOT: stdlib, DOOF_RUNTIME_HEADER: path(source, "runtime/doof_runtime.hpp") }
+  try command(compiler, ["run", path(source, "tools/stdlib-bundle.do"), "-o", path(work, "stdlib-bundle-tool"), "--", stdlib, bundle, "linux"], environment)
+  for target of linuxReleaseTargets() { try buildLinuxReleaseArtifact(compiler, source, stdlib, bundle, work, pending, version, target) }
+  return Success()
+}
+
 export function prepareRelease(root: string, version: string): Result<none, string> {
   try require(stableVersion(version), "Release version must be stable MAJOR.MINOR.PATCH without a v prefix")
   try makeDirectory(path(root, "build"))
@@ -193,6 +249,7 @@ export function prepareRelease(root: string, version: string): Result<none, stri
   try releaseVerification(inputs.source, path(built.artifacts, "doof"), inputs.stdlib)
   pending := path(work, "pending")
   try makeDirectory(pending)
+  for target of linuxReleaseTargets() { try buildLinuxReleaseArtifact(path(built.artifacts, "doof"), inputs.source, inputs.stdlib, path(built.artifacts, "doof-stdlib.tar"), work, pending, version, target) }
   if windowsBuildEnabled() { try buildWindowsReleaseArtifact(path(built.artifacts, "doof"), inputs.source, inputs.stdlib, path(built.artifacts, "doof-stdlib.tar"), work, pending, version) }
   snapshot := path(work, "doof-" + version + "-source")
   try createSnapshot(work, inputs.source, built.artifacts, snapshot, version)
@@ -224,7 +281,14 @@ export function prepareRelease(root: string, version: string): Result<none, stri
   try emscripten := capture("em++", ["--version"])
   try sdkVersion := capture("xcrun", ["--show-sdk-version"])
   try macos := capture("sw_vers", ["-productVersion"])
-  metadata: SerialObject := { version, tag: "v" + version, compilerRevision, stdlibRevisions: stdlibRevision, seedVersion, seedSha256, fixedPointGeneration: built.generation, clang, swift, emscripten, sdkVersion, macos, notarizationId: submission, verified: if windowsBuildEnabled() then ["compiler-tests", "release-fixtures", "source-rebuild", "relocation", "signatures", "notarization", "quarantine-assessment", "debugger-startup", "debugger-integration", "windows-msvc-remote-build"] else ["compiler-tests", "release-fixtures", "source-rebuild", "relocation", "signatures", "notarization", "quarantine-assessment", "debugger-startup", "debugger-integration"] }
+  try containerVersion := capture("container", ["--version"])
+  linuxContainerImage := setting("DOOF_LINUX_CONTAINER_IMAGE", "docker.io/library/alpine:3.22.1")
+  try linuxArm64Toolchain := read(path(work, "linux-arm64/toolchain.txt"))
+  try linuxX64Toolchain := read(path(work, "linux-x64/toolchain.txt"))
+  linuxToolchains: SerialObject := { arm64: linuxArm64Toolchain, x64: linuxX64Toolchain }
+  let verified: SerialValue[] = ["compiler-tests", "release-fixtures", "source-rebuild", "relocation", "signatures", "notarization", "quarantine-assessment", "debugger-startup", "debugger-integration", "linux-arm64-musl-container-build", "linux-x64-musl-container-build"]
+  if windowsBuildEnabled() { verified.push("windows-msvc-remote-build") }
+  metadata: SerialObject := { version, tag: "v" + version, compilerRevision, stdlibRevisions: stdlibRevision, seedVersion, seedSha256, fixedPointGeneration: built.generation, clang, swift, emscripten, sdkVersion, macos, containerVersion, linuxContainerImage, linuxToolchains, notarizationId: submission, verified: verified.cloneReadonly() }
   try write(path(pending, "release.json"), formatJsonValue(metadata) + "\n")
   try assets := files(pending)
   let checksums = ""

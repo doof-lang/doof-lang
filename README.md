@@ -71,13 +71,16 @@ Set `DOOF_DEV_COMPILER` for a development seed or `DOOF_SEED_COMPILER` for
 fixed-point/release builds. Both otherwise prefer installed `doof`, then
 `dist/doof`. Build scripts never download a seed implicitly.
 
-Release builds require clean compiler and stdlib checkouts, `em++`, `xcrun swiftc`,
+Release builds require clean compiler and stdlib checkouts, Apple Container,
+`em++`, `xcrun swiftc`,
 `DOOF_SIGN_IDENTITY`, and `DOOF_NOTARY_PROFILE`. They stage the requested version
 without changing tracked files, converge, verify, sign, notarize, and prepare
 assets under `dist/releases/<version>`. Set `DOOF_WINDOWS_HOST`,
 `DOOF_WINDOWS_HOST_USERNAME`, and `DOOF_WINDOWS_HOST_PASSWORD` to add a remote
 MSVC Windows build; `DOOF_WINDOWS_HOST_MAC` and `DOOF_WINDOWS_HOST_BROADCAST`
-are optional Wake-on-LAN inputs. See [release strategy](docs/bootstrap-and-release.md)
+are optional Wake-on-LAN inputs. Every release also builds and smoke-tests
+static Linux arm64 and x64 musl toolchains in Alpine containers. See
+[release strategy](docs/bootstrap-and-release.md)
 for credentials, source rebuilding, and manual GitHub publication.
 
 Language behavior is defined by the [language specification](spec/01-overview.md).

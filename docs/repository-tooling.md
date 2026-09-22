@@ -2,7 +2,7 @@
 
 Repository automation is Doof under `tools/repository/`. It invokes native
 programs where those programs own the operation: rsync, Git, Apple toolchains,
-archive utilities, code signing and notarization. It does not embed shell or
+archive utilities, Apple Container, code signing and notarization. It does not embed shell or
 Python implementations of build policy.
 
 ## Retained entry points
@@ -39,7 +39,9 @@ Use `tools/run.sh test`, `verify`, `debugger-test`, `process-test`, `preflight`,
 `snapshot-test` (after `build.sh`), or
 `cache-test <old-stamped-compiler> <new-stamped-compiler>` for the corresponding
 repository checks. `verify` is the full platform acceptance gate without signing
-or publishing; `release <version>` also enforces clean inputs and signing.
+or publishing; `linux-test <version>` builds the static arm64 and x64 musl
+artifacts in Apple Container; `release <version>` also enforces clean inputs
+and signing.
 
 Historical reports retain the command names that were actually run at the time.
 They are not current operating instructions.

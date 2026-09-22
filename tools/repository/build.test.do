@@ -1,5 +1,5 @@
 import { Assert } from "std/assert"
-import { generatedGraph, graphsMatch } from "./build"
+import { generatedGraph, graphsMatch, releaseBundleTargets } from "./build"
 import { TemporaryDirectory } from "./test-support"
 import { erase, makeDirectory, path, write } from "./common"
 
@@ -28,6 +28,9 @@ export function testRepositoryRejectsEmptyFixedPoint(): none {
   }
   Assert.isTrue(failed)
   temp.close()
+}
+export function testRepositoryReleaseBundleIncludesEveryPublishedNativeTarget(): none {
+  Assert.equal(releaseBundleTargets(), "ios-device,ios-simulator,linux,macos,wasm,windows")
 }
 
 import { BuildInputs, buildToolchain } from "./build"

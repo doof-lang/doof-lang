@@ -237,7 +237,7 @@ Other maintained inputs:
 - `build/doof-stdlib.tar` — generated compiler resource, published beside `doof`
 - `tests/release-fixtures/` — native and platform acceptance packages
 - `tools/repository/common.do` / `build.do` — frozen source inputs, version stamping, seed resolution, fixed-point builds
-- `tools/repository/release.do` / `snapshot.do` — release gates, signing, captured native commands, source-only release archives
+- `tools/repository/release.do` / `linux-build.do` / `snapshot.do` — release gates, Apple Container musl builds, signing, captured native commands, source-only release archives
 - `install.sh` — standalone downloader and shared transactional artifact installation
 
 Primitive string parsing is a standard-library concern owned by `std/parse`.

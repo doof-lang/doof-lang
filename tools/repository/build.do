@@ -18,6 +18,7 @@ export class BuildResult {
   artifacts: string
   generation: int
 }
+export function releaseBundleTargets(): string => "ios-device,ios-simulator,linux,macos,wasm,windows"
 export function prepare(root: string, work: string, seed: string, version: string): Result<BuildInputs, string> {
   if !exists(path(work, "staged-layout-v2")) {
     for name of ["compiler", "stdlib-bundle-tool", "final-bundle-tool"] { try erase(path(work, name)) }
@@ -62,7 +63,7 @@ export function buildToolchain(inputs: BuildInputs, fixed: bool, record: bool = 
   environment: Map<string, string> := { DOOF_STDLIB_ROOT: inputs.stdlib, DOOF_RUNTIME_HEADER: path(inputs.source, "runtime/doof_runtime.hpp") }
   bundle := path(inputs.work, "doof-stdlib.tar")
   try erase(bundle)
-  try command(inputs.seed, ["run", path(inputs.source, "tools/stdlib-bundle.do"), "-o", path(inputs.work, "stdlib-bundle-tool"), "--", inputs.stdlib, bundle, "ios-device,ios-simulator,macos,wasm,windows"], environment)
+  try command(inputs.seed, ["run", path(inputs.source, "tools/stdlib-bundle.do"), "-o", path(inputs.work, "stdlib-bundle-tool"), "--", inputs.stdlib, bundle, releaseBundleTargets()], environment)
   let compiler = inputs.seed
   let generation = 0
   if fixed {
@@ -95,7 +96,7 @@ export function buildToolchain(inputs: BuildInputs, fixed: bool, record: bool = 
   }
   try command(compiler, ["package", inputs.source, "-o", path(inputs.work, "compiler"), "--distdir", artifacts], environment)
   bundleEnv: Map<string, string> := { DOOF_STDLIB_ROOT: inputs.stdlib, DOOF_RUNTIME_HEADER: path(inputs.source, "runtime/doof_runtime.hpp"), CXX: "c++" }
-  try command(path(artifacts, "doof"), ["run", path(inputs.source, "tools/stdlib-bundle.do"), "-o", path(inputs.work, "final-bundle-tool"), "--", inputs.stdlib, path(artifacts, "doof-stdlib.tar"), "ios-device,ios-simulator,macos,wasm,windows"], bundleEnv)
+  try command(path(artifacts, "doof"), ["run", path(inputs.source, "tools/stdlib-bundle.do"), "-o", path(inputs.work, "final-bundle-tool"), "--", inputs.stdlib, path(artifacts, "doof-stdlib.tar"), releaseBundleTargets()], bundleEnv)
   try buildDebugger(inputs.source, inputs.stdlib, path(artifacts, "doof"), artifacts, environment)
   try version := capture(path(artifacts, "doof"), ["--version"])
   try require(version == "doof " + inputs.version, "Packaged compiler version mismatch")

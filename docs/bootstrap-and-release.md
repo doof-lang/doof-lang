@@ -2,7 +2,8 @@
 
 The compiler is maintained exclusively as Doof sources. Generated C++ is no
 longer checked into this repository. It is distributed as a release-owned,
-standalone source snapshot alongside the macOS arm64 binary toolchain.
+standalone source snapshot alongside macOS arm64 and Linux arm64/x64 musl
+binary toolchains.
 
 ## Development and fixed points
 
@@ -52,8 +53,9 @@ See [Apple's Developer ID certificate instructions](https://developer.apple.com/
 Store notarization credentials in a named profile with
 `xcrun notarytool store-credentials doof-release`; credentials are never stored
 in source or release metadata. The script checks the identity and profile
-before expensive compilation. Xcode tools, `em++`, and `xcrun swiftc` are
-required. Sandboxed runs need access to Emscripten's external cache, normally
+before expensive compilation. Xcode tools, Apple Container with its system
+service running, `em++`, and `xcrun swiftc` are required. Sandboxed runs need
+access to Emscripten's external cache, normally
 under `/opt/homebrew/Cellar/emscripten/.../libexec/cache`.
 
 The command accepts a stable `MAJOR.MINOR.PATCH` version, requires clean compiler
@@ -115,6 +117,33 @@ Source snapshot scripts replay those commands with relocated paths, without
 relying on the repository, an installed Doof, Python, Node, or a stdlib checkout.
 The snapshot is extracted at a different path, compiled, and smoke-tested.
 
+### Linux musl release verification
+
+Every release emits the staged compiler for Linux, generates an explicit
+Makefile for that closed source graph, and bind-mounts only the release work
+area into arm64 and amd64 Alpine VMs run by Apple Container. The amd64 VM runs
+under Rosetta. Alpine supplies GCC, musl, and Linux headers; neither VM receives
+a compiler or stdlib checkout. Each build links a static ELF executable, checks
+its architecture, embedded version, and file type, then uses that compiler and
+its adjacent stdlib bundle to compile and run a smoke program before creating
+the deterministic release archive.
+
+The default image is `docker.io/library/alpine:3.22.1`. Override it with
+`DOOF_LINUX_CONTAINER_IMAGE`. The build VM defaults to 8 CPUs, 8 GB of memory,
+and four compiler jobs; `DOOF_LINUX_CONTAINER_CPUS`,
+`DOOF_LINUX_CONTAINER_MEMORY`, and `DOOF_LINUX_BUILD_JOBS` override those
+values. The image name, Apple Container version, and per-architecture
+Alpine/GCC/musl versions are recorded in `release.json`.
+
+For a non-publishing end-to-end check of the current checkout, use:
+
+~~~sh
+container system start
+./tools/run.sh linux-test 0.2.0
+~~~
+
+The verified archive is written below `build/linux-e2e/<version>/pending/`.
+
 Binary releases are Developer ID signed with hardened runtime and secure
 timestamps. The debugger receives the debugger entitlement. The release ZIP is
 submitted to Apple's notary service; acceptance is mandatory. The debugger app
@@ -128,13 +157,17 @@ Completed assets appear under `dist/releases/<version>/`:
 
 - `doof-<version>-macos-arm64.zip`: compiler, runtime resources, stdlib archive,
   and `Doof Debugger.app`.
+- `doof-<version>-linux-arm64-musl.tar.gz`: static arm64 musl compiler, runtime
+  header, Wasm host source, and Linux-capable stdlib archive.
+- `doof-<version>-linux-x64-musl.tar.gz`: static x86-64 musl compiler, runtime
+  header, Wasm host source, and Linux-capable stdlib archive.
 - `doof-<version>-windows-x64.zip`: present when the optional Windows release
   verification is configured.
 - `doof-<version>-source.tar.gz`: generated compiler/debugger sources, native
   sources/headers, license material, resources, and standalone build scripts.
 - `release.json`: version, input revisions, seed version, toolchain details,
   fixed-point generation, notarization submission, and completed verification.
-- `SHA256SUMS`: SHA-256 checksums for both archives and release metadata.
+- `SHA256SUMS`: SHA-256 checksums for every archive and release metadata.
 
 The source archive builds on macOS arm64 with Xcode Command Line Tools using
 `./build.sh`, writing an ad-hoc signed local toolchain to `dist/`. It contains
