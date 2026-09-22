@@ -252,7 +252,8 @@ installed/prepared standard packages. Repeat serially with fresh directories and
 report the compiler binary, stdlib selection, and median of multiple runs. Reuse
 one output directory to measure the warm frontend-cache path separately.
 
-The [2026-09-07 cold-emission measurements](archive/emission-2026-09-07.md#cold-emission-timings) compare the compiler and Middai workloads.
+Historical emission measurements are not maintained as part of the current
+architecture documentation.
 
 ### Projected header reuse
 
@@ -459,8 +460,7 @@ transferable. No isolation exception is introduced for emission.
 
 The opt-in header worker experiment was removed after its small rendering saving
 and increased memory failed the simplicity test. Headers render serially through
-the existing projection caches. Historical results remain in
-[header worker measurements](archive/emission-2026-09-07.md#header-emission-workers).
+the existing projection caches.
 
 ### Semantic specialization boundary
 
@@ -478,8 +478,7 @@ input; worker transfer is not an architectural requirement.
 
 Per-module `module.prepare:<path>` and `module.render:<path>` timing entries expose
 candidate worker costs. They are nested inside existing phase timings and must not
-be added to their parents. The archived emission report models cold serial runs;
-[the modelling report](archive/emission-2026-09-07.md#instantiation-catalogue-modelling) explains its limits.
+be added to their parents.
 
 ## Editor frontend boundary
 
