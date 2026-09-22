@@ -9,7 +9,7 @@ Python implementations of build policy.
 
 | Entry | Why it exists |
 | --- | --- |
-| `install.sh` | Must run before Doof is installed; standalone HTTPS installer and the shared artifact transaction. |
+| `install.sh` | Must run before Doof is installed; standalone macOS/Linux HTTPS installer and the shared artifact transaction. |
 | `tools/run.sh` | Resolves an installed seed and launches the Doof repository tool. No build/release policy. |
 | `dev-install.sh`, `build.sh` | Thin compatibility entry points for development installation and fixed-point verification. |
 | `scripts/test.sh`, `scripts/release.sh` | Thin compatibility entry points for normal tests and explicit-version releases. |

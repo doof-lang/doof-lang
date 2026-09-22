@@ -15,6 +15,7 @@ export function testLinuxMakefileBuildsExactStaticMuslGraph(): none {
   Assert.stringContains(makefile, "std/time")
   Assert.stringContains(makefile, "$(addprefix -I,$(INCLUDE_DIRS))")
   Assert.stringContains(makefile, "-static")
+  Assert.stringContains(makefile, "-DZSTD_DISABLE_ASM")
   Assert.stringContains(makefile, "-std=c++17")
   Assert.stringNotContains(makefile, ".doof-cache")
   Assert.stringNotContains(makefile, "zstd_v01.c")

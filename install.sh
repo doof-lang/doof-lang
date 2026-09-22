@@ -86,8 +86,10 @@ install_artifacts() (
   done
   if [ -e "$doof_home/current" ] || [ -L "$doof_home/current" ]; then cp -P "$doof_home/current" "$transaction/old-current"; fi
   ln -s "versions/$version_name" "$transaction/new-current"
-  # BSD mv -h replaces the symlink itself instead of following its directory target.
-  if [ "$(uname -s)" = Darwin ]; then mv -fh "$transaction/new-current" "$doof_home/current"; else mv -fT "$transaction/new-current" "$doof_home/current"; fi
+  # GNU mv -T and BSD mv -h both replace the destination symlink itself.
+  if ! mv -fT "$transaction/new-current" "$doof_home/current" 2>/dev/null; then
+    mv -fh "$transaction/new-current" "$doof_home/current"
+  fi
   activated=true
   "$doof_home/bin/doof" --help >/dev/null
   committed=true
@@ -97,6 +99,27 @@ stable_version() {
   printf '%s\n' "$1" | LC_ALL=C grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 }
 
+release_target() {
+  case "$1/$2" in
+    Darwin/arm64) printf '%s\n' 'macos-arm64 zip' ;;
+    Linux/aarch64|Linux/arm64) printf '%s\n' 'linux-arm64-musl tar.gz' ;;
+    Linux/x86_64|Linux/amd64) printf '%s\n' 'linux-x64-musl tar.gz' ;;
+    *) return 1 ;;
+  esac
+}
+
+verify_sha256() (
+  directory=$1
+  if command -v shasum >/dev/null 2>&1; then
+    cd "$directory" && shasum -a 256 -c checksum
+  elif command -v sha256sum >/dev/null 2>&1; then
+    cd "$directory" && sha256sum -c checksum
+  else
+    echo 'Required tool not found: shasum or sha256sum' >&2
+    exit 1
+  fi
+)
+
 install_release() (
   version=''
   case "${1:-}" in
@@ -104,11 +127,18 @@ install_release() (
     '') [ "$#" -eq 0 ] || exit 2 ;;
     *) echo 'usage: install.sh [--version MAJOR.MINOR.PATCH]' >&2; exit 2 ;;
   esac
-  [ "$(uname -s)/$(uname -m)" = Darwin/arm64 ] || { echo 'The release installer currently supports macOS arm64 only' >&2; exit 1; }
+  target=$(release_target "$(uname -s)" "$(uname -m)") || { echo 'The release installer supports macOS arm64 and Linux arm64/x86-64 only' >&2; exit 1; }
+  set -- $target
+  platform=$1
+  archive_format=$2
   doof_home=${DOOF_HOME-"$HOME/.doof"}
   case "$doof_home" in /*) ;; *) echo 'DOOF_HOME must be a nonempty absolute path' >&2; exit 2 ;; esac
   case "$doof_home" in /|//|///) echo 'DOOF_HOME cannot be /' >&2; exit 2 ;; esac
-  for tool in curl unzip zipinfo shasum; do command -v "$tool" >/dev/null || { echo "Required tool not found: $tool" >&2; exit 1; }; done
+  for tool in curl awk; do command -v "$tool" >/dev/null || { echo "Required tool not found: $tool" >&2; exit 1; }; done
+  case "$archive_format" in
+    zip) for tool in unzip zipinfo; do command -v "$tool" >/dev/null || { echo "Required tool not found: $tool" >&2; exit 1; }; done ;;
+    tar.gz) command -v tar >/dev/null || { echo 'Required tool not found: tar' >&2; exit 1; } ;;
+  esac
   download=$(mktemp -d "${TMPDIR:-/tmp}/doof-download.XXXXXX")
   trap 'rm -rf "$download"' EXIT
   trap 'exit 130' HUP INT TERM
@@ -118,27 +148,38 @@ install_release() (
     case "$resolved" in "$github/releases/tag/v"*) version=${resolved#"$github/releases/tag/v"} ;; *) echo 'could not resolve latest stable Doof release' >&2; exit 1 ;; esac
     stable_version "$version" || { echo 'latest release does not have a stable version tag' >&2; exit 1; }
   fi
-  archive="doof-$version-macos-arm64.zip"
+  archive="doof-$version-$platform.$archive_format"
   base="$github/releases/download/v$version"
   for name in "$archive" SHA256SUMS; do
     curl --proto '=https' --proto-redir '=https' --tlsv1.2 --connect-timeout 15 --max-time 300 -fsSL --retry 3 "$base/$name" -o "$download/$name"
   done
   awk -v name="$archive" '$2 == name && length($1) == 64 && $1 !~ /[^0-9a-f]/ {print $1 "  " $2; count++} END {if(count != 1) exit 1}' "$download/SHA256SUMS" > "$download/checksum"
-  (cd "$download" && shasum -a 256 -c checksum)
-  zipinfo -1 "$download/$archive" > "$download/entries"
+  verify_sha256 "$download"
+  case "$archive_format" in
+    zip) zipinfo -1 "$download/$archive" > "$download/entries" ;;
+    tar.gz) tar -tzf "$download/$archive" > "$download/entries" ;;
+  esac
   [ -s "$download/entries" ] || { echo 'empty release archive' >&2; exit 1; }
   while IFS= read -r entry; do
     case "$entry" in ''|/*|*\\*|../*|*/../*|*/..|..|./*|*/./*) echo 'unsafe archive path' >&2; exit 1 ;; esac
     case "$entry" in *[!A-Za-z0-9._/\ -]*) echo 'unsupported archive filename' >&2; exit 1 ;; esac
   done < "$download/entries"
   # Release payloads contain only ordinary files/directories, never links or devices.
-  zipinfo -l "$download/$archive" > "$download/modes"
+  case "$archive_format" in
+    zip) zipinfo -l "$download/$archive" > "$download/modes" ;;
+    tar.gz) tar -tvzf "$download/$archive" > "$download/modes" ;;
+  esac
   if LC_ALL=C grep -Eq '^[lbcps][-rwxstST?]{9}' "$download/modes"; then echo 'unsafe archive entry type' >&2; exit 1; fi
   mkdir "$download/artifacts"
-  unzip -q "$download/$archive" -d "$download/artifacts"
+  case "$archive_format" in
+    zip) unzip -q "$download/$archive" -d "$download/artifacts" ;;
+    tar.gz) tar -xzf "$download/$archive" -C "$download/artifacts" ;;
+  esac
   artifacts="$download/artifacts"
   [ -x "$artifacts/doof" ] || { echo 'missing executable compiler' >&2; exit 1; }
-  [ -x "$artifacts/Doof Debugger.app/Contents/MacOS/DoofDebugger" ] || { echo 'missing debugger application' >&2; exit 1; }
+  if [ "$platform" = macos-arm64 ]; then
+    [ -x "$artifacts/Doof Debugger.app/Contents/MacOS/DoofDebugger" ] || { echo 'missing debugger application' >&2; exit 1; }
+  fi
   [ "$("$artifacts/doof" --version)" = "doof $version" ] || { echo 'downloaded compiler version mismatch' >&2; exit 1; }
   printf 'function main(): int => 0\n' > "$download/smoke.do"
   env -u DOOF_STDLIB_ROOT -u DOOF_RUNTIME_HEADER "$artifacts/doof" emit "$download/smoke.do" -o "$download/smoke" >/dev/null

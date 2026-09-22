@@ -10,7 +10,8 @@ written in Doof itself.
 
 ## Requirements
 
-Install the latest macOS arm64 release (once published):
+Install the latest release on macOS arm64 or Linux arm64/x86-64 (once
+published):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/doof-lang/doof-lang/main/install.sh | bash
@@ -19,8 +20,9 @@ doof --version
 ```
 
 Use `bash -s -- --version 0.2.0` to select a release. Releases include the
-standard library and native debugger. Xcode Command Line Tools are required to
-compile native Doof programs. No administrator privileges are required.
+standard library; the native debugger application is included on macOS. Xcode
+Command Line Tools are required to compile native Doof programs on macOS, and a
+C++17 toolchain is required on Linux. No administrator privileges are required.
 
 Compiler development requires an installed Doof compiler, rsync,
 Xcode Command Line Tools, and the standard-library checkout at

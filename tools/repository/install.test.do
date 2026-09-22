@@ -11,7 +11,8 @@ class DownloadFixture {
   repo: string
   home: string
   artifacts: string
-  archive: string
+  let archive: string
+  let archiveName: string
   environment: Map<string, string>
 }
 function fixture(): DownloadFixture {
@@ -24,11 +25,12 @@ function fixture(): DownloadFixture {
   bin := path(root, "bin")
   artifacts := path(root, "artifacts")
   try! makeDirectory(bin)
-  curl := "#!/bin/sh\nset -eu\n[ \"\${DOWNLOAD_FAIL:-}\" != 1 ] || exit 22\noutput=''\nurl=''\nwhile [ \"$#\" -gt 0 ]; do\ncase \"$1\" in\n-o) output=$2; shift 2 ;;\nhttps:*) url=$1; shift ;;\n*) shift ;;\nesac\ndone\ncase \"$url\" in\n*/latest) printf https://github.com/doof-lang/doof-lang/releases/tag/v1.2.3 ;;\n*/SHA256SUMS) cp \"$FIXTURE/SHA256SUMS\" \"$output\" ;;\n*/doof-1.2.3-macos-arm64.zip) cp \"$FIXTURE/doof-1.2.3-macos-arm64.zip\" \"$output\" ;;\n*) exit 23 ;;\nesac\n"
+  curl := "#!/bin/sh\nset -eu\n[ \"\${DOWNLOAD_FAIL:-}\" != 1 ] || exit 22\noutput=''\nurl=''\nwhile [ \"$#\" -gt 0 ]; do\ncase \"$1\" in\n-o) output=$2; shift 2 ;;\nhttps:*) url=$1; shift ;;\n*) shift ;;\nesac\ndone\ncase \"$url\" in\n*/latest) printf https://github.com/doof-lang/doof-lang/releases/tag/v1.2.3 ;;\n*/SHA256SUMS) cp \"$FIXTURE/SHA256SUMS\" \"$output\" ;;\n*/\"$FIXTURE_ARCHIVE\") cp \"$FIXTURE/$FIXTURE_ARCHIVE\" \"$output\" ;;\n*) exit 23 ;;\nesac\n"
   try! write(path(bin, "curl"), curl)
   try! write(path(bin, "uname"), "#!/bin/sh\ncase \"$1\" in -s) echo Darwin ;; -m) echo arm64 ;; esac\n")
   try! command("chmod", ["+x", path(bin, "curl"), path(bin, "uname")])
-  result := DownloadFixture { temporary, repo, home: path(root, "home"), artifacts, archive: path(root, "doof-1.2.3-macos-arm64.zip"), environment: { DOOF_HOME: path(root, "home"), PATH: bin + ":" + setting("PATH"), FIXTURE: root } }
+  archiveName := "doof-1.2.3-macos-arm64.zip"
+  result := DownloadFixture { temporary, repo, home: path(root, "home"), artifacts, archive: path(root, archiveName), archiveName, environment: { DOOF_HOME: path(root, "home"), PATH: bin + ":" + setting("PATH"), FIXTURE: root, FIXTURE_ARCHIVE: archiveName } }
   payload(result)
   return result
 }
@@ -42,11 +44,15 @@ function payload(f: DownloadFixture, version: string = "1.2.3"): none {
   archive(f)
 }
 function checksum(f: DownloadFixture): none {
-  try! write(path(f.temporary.root, "SHA256SUMS"), sha256Hex(try! readBlob(f.archive)) + "  doof-1.2.3-macos-arm64.zip\n")
+  try! write(path(f.temporary.root, "SHA256SUMS"), sha256Hex(try! readBlob(f.archive)) + "  " + f.archiveName + "\n")
 }
 function archive(f: DownloadFixture): none {
   try! erase(f.archive)
-  try! command("ditto", ["-c", "-k", "--norsrc", f.artifacts, f.archive])
+  if f.archiveName.endsWith(".zip") {
+    try! command("ditto", ["-c", "-k", "--norsrc", f.artifacts, f.archive])
+  } else {
+    try! command("tar", ["-czf", f.archive, "doof", "doof_runtime.hpp", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar"], {}, f.artifacts)
+  }
   checksum(f)
 }
 function invoke(f: DownloadFixture, arguments: string[] = [], success: bool = false): string {
@@ -69,6 +75,28 @@ export function testRepositoryDownloadLatestAndPinnedVersion(): none {
   Assert.equal(try! capture("readlink", [path(f.home, "bin/doof")]), "../current/doof")
   invoke(f, ["--version", "1.2.3"], true)
   Assert.isFalse(exists(path(f.home, ".install-lock")))
+  f.temporary.close()
+}
+export function testRepositoryDownloadInstallsLinuxX64Tarball(): none {
+  f := fixture()
+  f.archiveName = "doof-1.2.3-linux-x64-musl.tar.gz"
+  f.archive = path(f.temporary.root, f.archiveName)
+  f.environment.set("FIXTURE_ARCHIVE", f.archiveName)
+  try! write(path(f.temporary.root, "bin/uname"), "#!/bin/sh\ncase \"$1\" in -s) echo Linux ;; -m) echo x86_64 ;; esac\n")
+  payload(f)
+  invoke(f, [], true)
+  Assert.equal(try! capture("readlink", [path(f.home, "current")]), "versions/1.2.3")
+  Assert.isFalse(exists(path(f.home, "bin/Doof Debugger.app")))
+  f.temporary.close()
+}
+export function testRepositoryReleaseTargetMapping(): none {
+  f := fixture()
+  helper := "DOOF_INSTALL_LIBRARY_ONLY=1; . \"$1\"; release_target \"$2\" \"$3\""
+  Assert.equal(try! capture("sh", ["-c", helper, "sh", path(f.repo, "install.sh"), "Darwin", "arm64"]), "macos-arm64 zip")
+  Assert.equal(try! capture("sh", ["-c", helper, "sh", path(f.repo, "install.sh"), "Linux", "aarch64"]), "linux-arm64-musl tar.gz")
+  Assert.equal(try! capture("sh", ["-c", helper, "sh", path(f.repo, "install.sh"), "Linux", "x86_64"]), "linux-x64-musl tar.gz")
+  unsupported := try! execute("sh", ["-c", helper, "sh", path(f.repo, "install.sh"), "Linux", "riscv64"])
+  Assert.isTrue(unsupported.exitCode != 0)
   f.temporary.close()
 }
 export function testRepositoryDownloadRejectsInvalidInputs(): none {

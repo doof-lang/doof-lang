@@ -186,10 +186,12 @@ Changing any released content requires a new version.
 
 The root `install.sh` is self-contained for `curl | bash`. It resolves the latest
 stable release once, or accepts `--version <version>`, downloads the matching
-ZIP and checksum list, verifies the checksum, rejects unsafe archive entries,
-checks embedded version/resources, and smoke-tests before installation.
-Downloads use HTTPS. It rejects unsupported hosts rather than selecting an
-incompatible archive or silently building from source.
+macOS ZIP or Linux musl tarball and checksum list, verifies the checksum,
+rejects unsafe archive entries, checks embedded version/resources, and
+smoke-tests before installation. Linux `aarch64`/`arm64` selects the arm64
+asset; Linux `x86_64`/`amd64` selects the x64 asset. Downloads use HTTPS. It
+rejects unsupported hosts rather than selecting an incompatible archive or
+silently building from source.
 
 The common artifact transaction stages under `~/.doof/versions/`, preserves
 previous versions and package caches, and rolls back failed activation. Release

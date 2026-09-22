@@ -46,7 +46,7 @@ export function linuxMakefile(emittedFiles: string[]): string {
     makeVariable("INCLUDE_DIRS", directories) +
     "OBJECTS := $(CXX_SOURCES:.cpp=.o) $(C_SOURCES:.c=.o)\n" +
     "CPPFLAGS := -I. $(addprefix -I,$(INCLUDE_DIRS))\n" +
-    "COMMON_FLAGS := -O2 -DNDEBUG -ffunction-sections -fdata-sections -flto -pthread\n" +
+    "COMMON_FLAGS := -O2 -DNDEBUG -DZSTD_DISABLE_ASM -ffunction-sections -fdata-sections -flto -pthread\n" +
     "CXXFLAGS := -std=c++17 $(COMMON_FLAGS)\n" +
     "CFLAGS := -std=c11 $(COMMON_FLAGS)\n" +
     "LDFLAGS := -static -flto -pthread -Wl,--gc-sections -Wl,--strip-all\n\n" +
