@@ -1,0 +1,7 @@
+{
+  "name": "observe-fixture",
+  "version": "0.1.0",
+  "observe": { "ui": "observability" },
+  "dependencies": {},
+  "build": { "entry": "main.do" }
+}

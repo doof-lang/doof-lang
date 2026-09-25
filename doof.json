@@ -4,7 +4,10 @@
   "license": "ISC",
   "resources": [
     { "from": "runtime/doof_runtime.hpp", "to": "." },
-    { "from": "runtime/doof_wasm_test_runner_apple.swift", "to": "." }
+    { "from": "runtime/doof_observer.hpp", "to": "." },
+    { "from": "runtime/doof_observer_platform.hpp", "to": "." },
+    { "from": "runtime/doof_wasm_test_runner_apple.swift", "to": "." },
+    { "from": "observer-ui", "to": "observer-ui" }
   ],
   "dependencies": {},
   "build": {

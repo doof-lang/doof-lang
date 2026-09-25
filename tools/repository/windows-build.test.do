@@ -15,6 +15,9 @@ export function testWindowsBuildScriptUsesUploadedInputsAndChecksVersion(): none
   Assert.isFalse(script.contains("Users\\Public"))
   Assert.isTrue(script.contains("doof 1.2.3"))
   Assert.isTrue(script.contains("doof-1.2.3-windows-x64.zip"))
+  Assert.isTrue(script.contains("doof_observer.hpp"))
+  Assert.isTrue(script.contains("doof_observer_platform.hpp"))
+  Assert.isTrue(script.contains("observer-ui"))
   Assert.isFalse(script.contains("DOOF_WINDOWS_HOST_PASSWORD"))
 }
 

@@ -1,10 +1,30 @@
 import { Assert } from "std/assert"
-import { structuredTestResult } from "./driver"
+import { structuredTestResult, stdlibPackageAcquisitionRoot } from "./driver"
 import { compilerCacheIdentity } from "./driver"
+import { nativeBuildOutputModeForCommand, takeObserveUrlFile } from "./driver"
 import { compilerVersion, compilerVersionStamped } from "./version"
 
 export function testDriverUsesStampedCompilerIdentity(): none {
   Assert.equal(compilerCacheIdentity(), if compilerVersionStamped then compilerVersion else "")
+}
+
+export function testStandardPackageCacheFollowsSelectedBuildDirectory(): none {
+  Assert.equal(stdlibPackageAcquisitionRoot("/tmp/jigsaw/build"), "/tmp/jigsaw/build/.doof/packages")
+  Assert.equal(stdlibPackageAcquisitionRoot("/tmp/custom-output"), "/tmp/custom-output/.doof/packages")
+}
+
+export function testObserveAndRunSuppressSuccessfulNativeBuildProgress(): none {
+  Assert.equal(nativeBuildOutputModeForCommand("run"), .Silent)
+  Assert.equal(nativeBuildOutputModeForCommand("observe"), .Silent)
+  Assert.equal(nativeBuildOutputModeForCommand("build"), .Progress)
+}
+
+export function testDetachedObservedAppUrlFileIsConsumed(): none {
+  path := "/tmp/doof-observe-url-driver-test"
+  try! writeText(path, "http://127.0.0.1:4317/token/\n")
+  Assert.equal(takeObserveUrlFile(path, 1), "http://127.0.0.1:4317/token/")
+  Assert.isFalse(exists(path))
+  Assert.equal(takeObserveUrlFile(path, 0), "")
 }
 
 export function testEditorDriverReportsExactIdentityAndExitStatus(): none {
@@ -22,7 +42,7 @@ export function testBatchSelectionCacheTargetBoundaries(): none {
 }
 
 import { env, run, ExecOptions } from "std/os"
-import { readText, remove, exists } from "std/fs"
+import { readText, remove, exists, writeText } from "std/fs"
 import { DebugLaunch } from "./debug-command"
 import { parseJsonValue } from "std/json"
 

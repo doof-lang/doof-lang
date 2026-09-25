@@ -11,6 +11,7 @@ import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
 import { emitModuleGraph, ModuleEmissionCacheKey } from "./emitter-module"
 import { PhaseTimings } from "./phase-timings"
+import { EmissionConfiguration } from "./emitter-context"
 import { SourceFile } from "./semantic"
 
 export function testExplicitlyImportedClassUsedOnlyAsSharedPointerGetsCompleteDefinition(): none {
@@ -200,4 +201,18 @@ export function testReadonlyEmissionGraphNamesAreExplicit(): none {
   plain := emitModuleGraph(analysis, "/vendor/main.do")
   Assert.stringContains(named.modules[0].source, "namespace mapped::main_")
   Assert.stringContains(plain.modules[0].source, "namespace app_vendor_main_")
+}
+
+export function testObserveEmissionStartsServerAndInvalidatesReusableFingerprint(): none {
+  sources := [SourceFile { path: "/main.do", source: "function main(): int => 0" }]
+  normal := compileWithLoader(sources, "/main.do", noSourceLoader)
+  observed := compileWithLoader(
+    sources, "/main.do", noSourceLoader, [], "executable", false, [], "", false, PhaseTimings {},
+    EmissionConfiguration { observe: true },
+  )
+  Assert.equal(normal.diagnostics.length, 0)
+  Assert.equal(observed.diagnostics.length, 0)
+  Assert.stringNotContains(normal.emission!.modules[0].source, "doof::observe::start_server")
+  Assert.stringContains(observed.emission!.modules[0].source, "doof::observe::start_server();")
+  Assert.isTrue(normal.emission!.modules[0].fingerprint != observed.emission!.modules[0].fingerprint)
 }

@@ -13,8 +13,10 @@ code is Doof source under `src/`; generated release snapshots are derived artifa
   not reconstruct checker decisions during emission.
 - Prefer collected diagnostics with source spans over panics for user errors.
 - Doof imports omit file extensions. JavaScript is prohibited outside
-  `extensions/vscode-doof`, where TypeScript tooling and untracked generated
-  JavaScript bundles are permitted for the VS Code extension.
+  `extensions/vscode-doof` and `observer-ui`. The VS Code extension may keep
+  untracked generated JavaScript bundles; `observer-ui` may contain maintained
+  browser JavaScript for the observability UI. Compiler and repository
+  automation remains Doof.
 - Update `spec/` and the Doof language skill when syntax or semantics change.
 - Update architecture/source-structure docs when ownership or lowering changes.
 

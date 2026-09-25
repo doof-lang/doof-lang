@@ -408,6 +408,279 @@ void test_string_padding() {
     require(doof::string_padEnd("done", 2, U'x') == "done", "shorter end padding changed the string");
 }
 
+void test_runtime_metrics() {
+    require(doof::metrics::snapshot_prometheus().empty(), "new metric registry was not empty");
+    doof::metrics::increment_counter("beta_total", 2);
+    doof::metrics::increment_counter("alpha_total", 1);
+    doof::metrics::increment_counter("alpha_total", -3);
+
+    std::vector<std::thread> workers;
+    for (int worker = 0; worker < 8; ++worker) {
+        workers.emplace_back([] {
+            for (int iteration = 0; iteration < 1000; ++iteration) {
+                doof::metrics::increment_counter("concurrent_total", 1);
+            }
+        });
+    }
+    for (auto& worker : workers) {
+        worker.join();
+    }
+
+    require(
+        doof::metrics::snapshot_prometheus() ==
+            "alpha_total -2\n"
+            "beta_total 2\n"
+            "concurrent_total 8000\n",
+        "metric snapshot was not accumulated, sorted, or thread-safe");
+}
+
+#if defined(DOOF_OBSERVE)
+std::string observer_get(
+    const std::string& url,
+    const std::string& path,
+    const std::string& method = "GET",
+    const std::string& extra_headers = "") {
+    const auto port_start = url.find(':', std::string("http://").size()) + 1;
+    const auto path_start = url.find('/', port_start);
+    const auto port = std::stoi(url.substr(port_start, path_start - port_start));
+    const auto client = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    require(client != doof::observe::invalid_socket, "observer test socket could not be created");
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_port = htons(static_cast<uint16_t>(port));
+    require(::connect(client, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0,
+            "observer test could not connect to loopback server");
+    const std::string request = method + " " + path + " HTTP/1.1\r\nHost: 127.0.0.1\r\n" +
+        extra_headers + "Connection: close\r\n\r\n";
+    require(doof::observe::send_all(client, request), "observer test request could not be sent");
+    std::string response;
+    std::array<char, 4096> buffer{};
+    for (;;) {
+        const auto count = ::recv(client, buffer.data(), static_cast<int>(buffer.size()), 0);
+        if (count <= 0) break;
+        response.append(buffer.data(), static_cast<std::size_t>(count));
+    }
+    doof::observe::close_socket(client);
+    return response;
+}
+
+std::string observer_sse(const std::string& url, const std::string& path, uint64_t last_id) {
+    const auto port_start = url.find(':', std::string("http://").size()) + 1;
+    const auto path_start = url.find('/', port_start);
+    const auto port = std::stoi(url.substr(port_start, path_start - port_start));
+    const auto client = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    require(client != doof::observe::invalid_socket, "observer SSE test socket could not be created");
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_port = htons(static_cast<uint16_t>(port));
+    require(::connect(client, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0,
+            "observer SSE test could not connect to loopback server");
+    const std::string request = "GET " + path + " HTTP/1.1\r\nHost: 127.0.0.1\r\nLast-Event-ID: " +
+        std::to_string(last_id) + "\r\nConnection: close\r\n\r\n";
+    require(doof::observe::send_all(client, request), "observer SSE request could not be sent");
+    std::string response;
+    std::array<char, 4096> buffer{};
+    while (response.find("fourth") == std::string::npos) {
+        const auto count = ::recv(client, buffer.data(), static_cast<int>(buffer.size()), 0);
+        if (count <= 0) break;
+        response.append(buffer.data(), static_cast<std::size_t>(count));
+    }
+    doof::observe::close_socket(client);
+    return response;
+}
+
+void test_runtime_observer_resilience() {
+    const auto url = doof::observe::start_server();
+    const auto port_start = url.find(':', std::string("http://").size()) + 1;
+    const auto path_start = url.find('/', port_start);
+    const auto port = std::stoi(url.substr(port_start, path_start - port_start));
+    const auto client = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    require(client != doof::observe::invalid_socket, "slow observer client socket could not be created");
+    doof::observe::configure_client_timeout(client);
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_port = htons(static_cast<uint16_t>(port));
+    require(::connect(client, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0,
+            "slow observer client could not connect");
+    const std::string request = "GET " + url.substr(path_start) +
+        "api/v1/events HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n";
+    require(doof::observe::send_all(client, request), "slow observer request could not be sent");
+    std::array<char, 4096> buffer{};
+    const auto greeting_size = ::recv(client, buffer.data(), static_cast<int>(buffer.size()), 0);
+    require(greeting_size > 0, "slow observer client did not receive a stream greeting");
+
+    auto producer = std::async(std::launch::async, [] {
+        for (int index = 0; index < 1000; ++index) {
+            doof::observe::publish_event("log", "{\"message\":\"" + std::string(16000, 'x') + "\"}");
+        }
+    });
+    require(producer.wait_for(std::chrono::seconds(2)) == std::future_status::ready,
+            "a slow SSE client backpressured telemetry producers");
+    producer.get();
+
+    doof::observe::close_socket(client);
+    uint64_t last_id = 0;
+    {
+        std::lock_guard<std::mutex> lock(doof::observe::events_mutex);
+        last_id = doof::observe::next_event_id - 1;
+    }
+    const auto clean_client = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    require(clean_client != doof::observe::invalid_socket, "shutdown observer client socket could not be created");
+    doof::observe::configure_client_timeout(clean_client);
+    require(::connect(clean_client, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0,
+            "shutdown observer client could not connect");
+    const std::string clean_request = "GET " + url.substr(path_start) +
+        "api/v1/events HTTP/1.1\r\nHost: 127.0.0.1\r\nLast-Event-ID: " +
+        std::to_string(last_id) + "\r\nConnection: close\r\n\r\n";
+    require(doof::observe::send_all(clean_client, clean_request), "shutdown observer request could not be sent");
+    require(::recv(clean_client, buffer.data(), static_cast<int>(buffer.size()), 0) > 0,
+            "shutdown observer client did not receive a stream greeting");
+    auto stopper = std::async(std::launch::async, [] { doof::observe::stop_server(); });
+    std::string shutdown_stream;
+    while (shutdown_stream.find("event: shutdown") == std::string::npos) {
+        const auto received = ::recv(clean_client, buffer.data(), static_cast<int>(buffer.size()), 0);
+        if (received <= 0) break;
+        shutdown_stream.append(buffer.data(), static_cast<std::size_t>(received));
+    }
+    doof::observe::close_socket(clean_client);
+    require(shutdown_stream.find("event: shutdown") != std::string::npos,
+            "clean observer shutdown was not delivered to an SSE client");
+    require(stopper.wait_for(std::chrono::seconds(5)) == std::future_status::ready,
+            "observer shutdown did not finish after clients disconnected");
+    stopper.get();
+    require(!doof::observe::running.load() && doof::observe::active_clients.load() == 0,
+            "observer did not stop and release slow client connections");
+    {
+        std::lock_guard<std::mutex> lock(doof::observe::events_mutex);
+        require(!doof::observe::events.empty() && doof::observe::events.back().type == "shutdown",
+                "observer shutdown event was not published");
+    }
+}
+
+void test_runtime_observer() {
+    require(doof::observe::parse_after_query("after=42") == 42 &&
+            doof::observe::parse_after_query("after=42junk") == 0,
+            "observer snapshot cursor query was not validated");
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        doof::observe::publish_metric("coalesced_total", iteration);
+    }
+    doof::observe::flush_metric_events();
+    {
+        std::lock_guard<std::mutex> lock(doof::observe::events_mutex);
+        require(doof::observe::events.size() == 1, "metric burst did not coalesce into one event");
+        require(doof::observe::events.front().type == "metrics" &&
+                doof::observe::events.front().data.find("\"value\":99") != std::string::npos,
+                "coalesced metric event omitted the final value");
+    }
+    doof::metrics::increment_counter("observer_requests_total", 7);
+    doof::observe::publish_event("log", "{\"message\":\"first\"}");
+    doof::observe::publish_event("log", "{\"message\":\"second\"}");
+    doof::observe::publish_event("log", "{\"message\":\"third\"}");
+    doof::observe::publish_event("log", "{\"message\":\"fourth\"}");
+    const auto url = doof::observe::start_server();
+    require(url.find("http://127.0.0.1:") == 0, "observer did not publish a loopback URL");
+    const auto path_start = url.find('/', std::string("http://").size());
+    const auto root = url.substr(path_start);
+    const auto snapshot = observer_get(url, root + "api/v1/snapshot");
+    require(snapshot.find("HTTP/1.1 200 OK") != std::string::npos, "observer snapshot was not served");
+    require(snapshot.find("\"name\":\"observer_requests_total\",\"value\":7") != std::string::npos,
+            "observer snapshot omitted runtime metrics");
+    require(snapshot.find("\"version\":1") != std::string::npos && snapshot.find("\"logs\":[") != std::string::npos,
+            "observer snapshot omitted versioned session or retained logs");
+    require(snapshot.find("Access-Control-Allow-Origin") == std::string::npos,
+            "observer unexpectedly enabled cross-origin access");
+    const auto dashboard = observer_get(url, root);
+    require(dashboard.find("Content-Security-Policy: default-src 'none'") != std::string::npos,
+            "observer dashboard omitted its content security policy");
+    require(dashboard.find("observer_requests_total") != std::string::npos,
+            "observer dashboard omitted runtime metrics");
+    const auto denied = observer_get(url, "/api/v1/snapshot");
+    require(denied.find("HTTP/1.1 404 Not Found") != std::string::npos,
+            "observer endpoint was reachable without its session token");
+#if defined(__APPLE__)
+    require(doof::observe::listener_v6 != doof::observe::invalid_socket,
+            "observer did not start its macOS IPv6 loopback listener");
+#endif
+    if (doof::observe::listener_v6 != doof::observe::invalid_socket) {
+        const auto port_start = url.find(':', std::string("http://").size()) + 1;
+        const auto port = std::stoi(url.substr(port_start, path_start - port_start));
+        const auto ipv6_client = ::socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+        require(ipv6_client != doof::observe::invalid_socket, "IPv6 observer client socket could not be created");
+        sockaddr_in6 ipv6_address{};
+        ipv6_address.sin6_family = AF_INET6;
+        ipv6_address.sin6_addr = in6addr_loopback;
+        ipv6_address.sin6_port = htons(static_cast<uint16_t>(port));
+        require(::connect(ipv6_client, reinterpret_cast<sockaddr*>(&ipv6_address), sizeof(ipv6_address)) == 0,
+                "observer did not bind the IPv6 loopback listener");
+        const std::string ipv6_request = "GET " + root +
+            "api/v1/snapshot HTTP/1.1\r\nHost: [::1]\r\nConnection: close\r\n\r\n";
+        require(doof::observe::send_all(ipv6_client, ipv6_request), "IPv6 observer request could not be sent");
+        std::array<char, 4096> ipv6_buffer{};
+        const auto ipv6_count = ::recv(ipv6_client, ipv6_buffer.data(), static_cast<int>(ipv6_buffer.size()), 0);
+        require(ipv6_count > 0 && std::string(ipv6_buffer.data(), static_cast<std::size_t>(ipv6_count))
+                .find("HTTP/1.1 200 OK") != std::string::npos,
+                "observer did not serve an authenticated IPv6 loopback request");
+        doof::observe::close_socket(ipv6_client);
+    }
+    const auto wrong_method = observer_get(url, root + "api/v1/snapshot", "POST");
+    require(wrong_method.find("HTTP/1.1 405 Method Not Allowed") != std::string::npos,
+            "observer accepted a mutating HTTP method");
+    const auto oversized = observer_get(url, root + "api/v1/snapshot", "GET", "X-Long: " + std::string(9000, 'x') + "\r\n");
+    require(oversized.find("HTTP/1.1 413 Content Too Large") != std::string::npos,
+            "observer accepted oversized request headers");
+    const auto stream = observer_sse(url, root + "api/v1/events", 1);
+    require(stream.find("Content-Type: text/event-stream") != std::string::npos,
+            "observer event endpoint was not an SSE stream");
+    require(stream.find("event: hello") != std::string::npos,
+            "observer stream omitted its protocol greeting");
+    require(stream.find("event: gap") != std::string::npos,
+            "observer did not signal an event retention gap");
+    require(stream.find("event: log") != std::string::npos && stream.find("fourth") != std::string::npos,
+            "observer did not replay retained events");
+}
+
+void test_runtime_observer_custom_ui() {
+    const auto url = doof::observe::start_server();
+    if (const char* url_file = std::getenv("DOOF_OBSERVE_URL_FILE")) {
+        std::ifstream input(url_file);
+        std::string published;
+        std::getline(input, published);
+        require(published == url, "detached app URL discovery file did not contain the session URL");
+#if !defined(_WIN32)
+        const auto permissions = std::filesystem::status(url_file).permissions();
+        require((permissions & std::filesystem::perms::group_read) == std::filesystem::perms::none &&
+                (permissions & std::filesystem::perms::others_read) == std::filesystem::perms::none,
+                "observer URL discovery file was readable by another account");
+#endif
+    }
+    const auto path_start = url.find('/', std::string("http://").size());
+    const auto root = url.substr(path_start);
+    const auto index = observer_get(url, root);
+    require(index.find("Bespoke Doof Observe") != std::string::npos,
+            "observer did not serve the package's custom index page");
+    require(index.find("script-src 'self'") != std::string::npos,
+            "custom observer UI omitted its restrictive CSP");
+    const auto css = observer_get(url, root + "custom.css");
+    require(css.find("Content-Type: text/css") != std::string::npos,
+            "custom observer CSS had the wrong MIME type");
+    const auto js = observer_get(url, root + "custom.js");
+    require(js.find("Content-Type: text/javascript") != std::string::npos,
+            "custom observer JavaScript had the wrong MIME type");
+    const auto missing = observer_get(url, root + "missing.js");
+    require(missing.find("HTTP/1.1 404 Not Found") != std::string::npos,
+            "missing custom asset did not return 404");
+    const auto traversal = observer_get(url, root + "../doof.json");
+    require(traversal.find("HTTP/1.1 404 Not Found") != std::string::npos,
+            "custom asset traversal escaped the UI root");
+    const auto snapshot = observer_get(url, root + "api/v1/snapshot");
+    require(snapshot.find("\"version\":1") != std::string::npos,
+            "custom UI changed the observer API");
+}
+#endif
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -446,6 +719,19 @@ int main(int argc, char** argv) {
     else if (mode == "nulls") test_null_carriers();
     else if (mode == "string-builder") test_string_builder();
     else if (mode == "string-padding") test_string_padding();
+    else if (mode == "metrics") test_runtime_metrics();
+#if defined(DOOF_OBSERVE)
+    else if (mode == "observer" || mode == "observer-custom" || mode == "observer-resilience") {
+#if defined(_WIN32)
+        _putenv_s("DOOF_OBSERVE_NO_OPEN", "1");
+#else
+        ::setenv("DOOF_OBSERVE_NO_OPEN", "1", 1);
+#endif
+        if (mode == "observer") test_runtime_observer();
+        else if (mode == "observer-custom") test_runtime_observer_custom_ui();
+        else test_runtime_observer_resilience();
+    }
+#endif
     else fail("unknown test mode: " + mode);
     return 0;
 }

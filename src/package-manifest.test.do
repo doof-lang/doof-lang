@@ -62,6 +62,24 @@ export function testParsesAndNormalizesExecutableResources(): none {
   Assert.equal(manifest.resources[1].destination, "assets")
 }
 
+export function testParsesCustomObserveUiWithinPackageRoot(): none {
+  manifest := try! parsePackageManifest(
+    "{\"observe\":{\"ui\":\"observability\"}}",
+    "/app/doof.json", "/app", "linux",
+  )
+  Assert.equal(manifest.observeUiRoot, "/app/observability")
+
+  outside := parsePackageManifest(
+    "{\"observe\":{\"ui\":\"../shared-ui\"}}",
+    "/app/doof.json", "/app", "linux",
+  )
+  _ := outside else error {
+    Assert.stringContains(error, "observe.ui must stay within the package root")
+    return
+  }
+  panic("expected observe UI traversal rejection")
+}
+
 export function testUsesBuildResourcesWhenRootResourcesAreAbsent(): none {
   manifest := try! parsePackageManifest(
     "{\"build\":{\"resources\":[\"assets\"]}}",

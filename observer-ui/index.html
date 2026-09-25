@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Doof Observe</title>
+    <link rel="stylesheet" href="app.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">runtime observability</p>
+        <h1>Doof Observe</h1>
+      </div>
+      <div id="connection" class="connection" data-state="connecting">Connecting</div>
+    </header>
+    <main>
+      <section>
+        <div class="section-heading">
+          <h2>Metrics</h2>
+          <span id="metric-count">0 series</span>
+        </div>
+        <div class="toolbar"><a href="api/v1/metrics/prometheus" target="_blank" rel="noopener">Raw Prometheus</a></div>
+        <div id="objects" class="objects"></div>
+        <div id="metrics" class="metrics empty">No metrics recorded yet.</div>
+      </section>
+      <section>
+        <div class="section-heading">
+          <h2>Structured logs</h2>
+          <button id="clear-logs" type="button">Clear</button>
+        </div>
+        <div class="toolbar">
+          <label for="log-filter">Filter</label>
+          <input id="log-filter" type="search" placeholder="Message, context, or source">
+          <select id="log-level" aria-label="Minimum log level">
+            <option value="debug">Debug and above</option>
+            <option value="info">Info and above</option>
+            <option value="warn">Warn and above</option>
+            <option value="error">Error and above</option>
+            <option value="fatal">Fatal only</option>
+          </select>
+        </div>
+        <ol id="logs" class="logs empty"><li>Waiting for diagnostics.</li></ol>
+      </section>
+    </main>
+  </body>
+</html>

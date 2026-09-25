@@ -254,12 +254,14 @@ export function planClassDeclaration(decl: ClassDeclaration, context: EmitContex
         result.text(cppIdentifier(name) + "(" + cppIdentifier(name) + ")")
       }
     }
-    result.text(" {}\n")
+    lifecycle := classLifecycleIncrement("created", decl, context, className)
+    result.text(if lifecycle == "" then " {}\n" else " {" + lifecycle + " }\n")
     if decl.struct_ {
       result.text("    " + className + "() {}\n")
     }
   } else if !decl.struct_ {
-    result.text("    " + className + "() {}\n")
+    lifecycle := classLifecycleIncrement("created", decl, context, className)
+    result.text("    " + className + "()" + if lifecycle == "" then " {}\n" else " {" + lifecycle + " }\n")
   }
   for method of decl.methods {
     if method.typeParams.length > 0 {
@@ -280,7 +282,7 @@ export function planClassDeclaration(decl: ClassDeclaration, context: EmitContex
       result.text(";\n")
     }
   }
-  if decl.destructor_ != none {
+  if decl.destructor_ != none || (context.metricsClassLifecycle && !decl.struct_) {
     result.text("    ~" + className + "();\n")
   }
   if decl.struct_ {
@@ -420,7 +422,7 @@ export function emitClassMethodDefinition(owner: ClassDeclaration, method: Funct
 }
 
 export function emitClassDestructorDefinition(owner: ClassDeclaration, context: EmitContext, emittedOwnerName: string = ""): string {
-  if owner.destructor_ == none || owner.native_ { return "" }
+  if owner.native_ || owner.struct_ || (owner.destructor_ == none && !context.metricsClassLifecycle) { return "" }
   ownerName := if emittedOwnerName == "" then owner.name else emittedOwnerName
   previous := context.currentClass
   previousNative := context.currentClassNative
@@ -428,11 +430,23 @@ export function emitClassDestructorDefinition(owner: ClassDeclaration, context: 
   context.currentClass = owner.name
   context.currentClassNative = false
   context.currentClassStruct = owner.struct_
-  result := ownerName + "::~" + ownerName + "() {\n" + emitBlock(owner.destructor_!, 1, context) + "}\n"
+  body := if owner.destructor_ == none then "" else emitBlock(owner.destructor_!, 1, context)
+  result := ownerName + "::~" + ownerName + "() {" + classLifecycleIncrement("disposed", owner, context, ownerName) + "\n" + body + "}\n"
   context.currentClass = previous
   context.currentClassNative = previousNative
   context.currentClassStruct = previousStruct
   return result
+}
+
+function classLifecycleIncrement(event: string, owner: ClassDeclaration, context: EmitContext, emittedName: string): string {
+  if !context.metricsClassLifecycle || owner.struct_ || owner.native_ { return "" }
+  module := prometheusLabel(context.modulePath)
+  className := prometheusLabel(emittedName)
+  return " doof::metrics::increment_counter(\"doof_class_" + event + "_total{module=\\\"" + module + "\\\",class=\\\"" + className + "\\\"}\", 1);"
+}
+
+function prometheusLabel(value: string): string {
+  return value.replaceAll("\\", "\\\\").replaceAll("\n", "\\n").replaceAll("\"", "\\\"")
 }
 
 function emitExpressionCoverageMark(expression: Expression, context: EmitContext): string {

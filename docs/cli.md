@@ -12,13 +12,14 @@ doof check <path>
 doof emit <path> [-o <directory>]
 doof build <path> [-o <directory>]
 doof run <path> [build options] [-- program arguments]
+doof observe <path> [build options] [--no-open] [--port <port>] [--retain-events <count>] [-- program arguments]
 doof debug <path> [build options] [--launch-json <path>] [-- program arguments]
 doof profile <path> [build options] [--trace-output <file.trace>] [--time-limit <duration>] [--no-open] [-- program arguments]
 doof package <path> [-o <build-directory>] [--distdir <directory>]
 doof test <path> [filter] [--list] [--coverage] [--target wasm]
 ```
 
-Commands that write compiler state (`check`, `emit`, `build`, `run`, `debug`, `profile`,
+Commands that write compiler state (`check`, `emit`, `build`, `run`, `observe`, `debug`, `profile`,
 `package`, and executing tests) hold an exclusive project lock at
 `<project>/<build.buildDir>/.doof.lock` (normally `build/.doof.lock`). A busy
 command prints a waiting message and blocks until the current command finishes;
@@ -27,7 +28,8 @@ is not guaranteed. Different projects can run concurrently.
 
 The lock location is independent of `-o`, keeping builds, coverage, and tests
 for the same project serialized. It covers test execution; `run` releases it
-after building/installing and before launching the program. `test --list` does not acquire it.
+after building/installing and before launching the program. `observe` does the
+same. `test --list` does not acquire it.
 The lock file stays on disk; closing the handle or process exit releases
 ownership automatically. Do not delete the file to unlock a running command.
 
@@ -84,6 +86,23 @@ status. Apple's local xctrace launch forwards target standard input and output,
 but folds target standard error into standard output. Use `doof run` when
 separate output channels are part of the program's protocol. Profiling requires
 Xcode's Instruments command-line support to be available through `xcrun`.
+
+`observe` builds a native console program or macOS app in the separate
+`<build-directory>/observe` graph. It starts a loopback HTTP server inside the
+target and prints a token-bearing `DOOF_OBSERVE_URL=...` line. The browser opens
+automatically unless `--no-open` is given. `--port 0` selects an ephemeral port
+(the default); `--retain-events` limits the recent SSE event ring (default
+10,000). Arguments after `--` reach the program unchanged, and console targets
+retain their exit status. WebAssembly and iOS targets are unsupported.
+
+The built-in HTML UI shows process metrics, live reference-class counts, and
+structured `std/log` entries, and uncaught Doof panic messages from connected
+sessions. Its versioned API provides a snapshot, a bounded
+SSE stream, and Prometheus text. Standard output is not interpreted as a log
+stream. The URL token authorizes all UI and API requests, so treat the URL as
+private. A package can supply static UI files with
+`"observe": { "ui": "observability" }` in `doof.json`; the directory must
+contain `index.html` and stay inside the package root.
 
 Successful compilation performed by `run` is silent: the launched program owns
 its inherited standard input, output, and error streams without compiler
@@ -156,7 +175,7 @@ Every command honors `DOOF_STDLIB_ROOT` as an explicit, global mutable
 standard-library checkout. When it is unset, `std/*` imports come only from the
 `doof-stdlib.tar` resource adjacent to the compiler. Reached packages are
 verified and materialized independently below
-`.doof/packages/stdlib-bundles/<bundle-digest>/<target-key>/`; standard imports
+`<build-directory>/.doof/packages/stdlib-bundles/<bundle-digest>/<target-key>/`; standard imports
 never fall back to Git or the network. The target key includes the native
 target configuration because vendored build commands may create target-local
 state. Each bundle declares its supported native targets, and releases omit

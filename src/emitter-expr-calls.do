@@ -467,6 +467,8 @@ function builtinName(name: string): string {
   if name == "println" { return "doof::println" }
   if name == "panic" { return "doof::panic" }
   if name == "assert" { return "doof::assert_" }
+  if name == "metricsIncrement" { return "doof::metrics::increment_counter" }
+  if name == "metricsSnapshotPrometheus" { return "doof::metrics::snapshot_prometheus" }
   if name == "string" { return "doof::to_string" }
   if name == "byte" { return "static_cast<uint8_t>" }
   if name == "int" { return "static_cast<int32_t>" }
@@ -479,7 +481,7 @@ function builtinName(name: string): string {
 }
 
 function isBuiltinName(name: string): bool {
-  return name == "println" || name == "panic" || name == "assert" || name == "catchPanic" || name == "string" || name == "byte" || name == "int" || name == "long" || name == "float" || name == "double" || name == "char" || name == "bool"
+  return name == "println" || name == "panic" || name == "assert" || name == "catchPanic" || name == "metricsIncrement" || name == "metricsSnapshotPrometheus" || name == "string" || name == "byte" || name == "int" || name == "long" || name == "float" || name == "double" || name == "char" || name == "bool"
 }
 
 function concreteFunctionName(context: EmitContext, key: string): string {

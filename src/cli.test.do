@@ -68,7 +68,33 @@ export function testDirectScriptArgumentsAreForwardedVerbatim(): none {
 
 export function testRejectsProgramArgumentSeparatorForNonRunCommands(): none {
   result := parseCli(["build", "demo", "--", "--verbose"])
-  Assert.equal(result.error, "-- is only supported with the run, debug, and profile commands")
+  Assert.equal(result.error, "-- is only supported with the run, observe, debug, and profile commands")
+}
+
+export function testParsesObserveRequestAndBoundsOptions(): none {
+  result := parseCli([
+    "observe", "demo", "--port", "4317", "--retain-events", "250", "--no-open",
+    "--", "--scenario", "large",
+  ])
+  Assert.equal(result.error, "")
+  Assert.equal(result.request!.command, "observe")
+  Assert.equal(result.request!.observePort, 4317)
+  Assert.equal(result.request!.observeRetainEvents, 250)
+  Assert.isTrue(result.request!.observeNoOpen)
+  Assert.equal(result.request!.programArguments[0], "--scenario")
+  Assert.equal(result.request!.programArguments[1], "large")
+}
+
+export function testValidatesObserveOnlyOptions(): none {
+  Assert.equal(parseCli(["run", "demo", "--port", "1"]).error, "--port is only supported with the observe command")
+  Assert.equal(parseCli(["build", "demo", "--retain-events", "1"]).error, "--retain-events is only supported with the observe command")
+  for value of ["-1", "65536", "nope"] {
+    Assert.equal(parseCli(["observe", "demo", "--port", value]).error, "invalid --port; expected 0 through 65535")
+  }
+  for value of ["0", "-2", "nope"] {
+    Assert.equal(parseCli(["observe", "demo", "--retain-events", value]).error, "invalid --retain-events; expected a positive integer")
+  }
+  Assert.stringContains(parseCli(["run", "demo", "--no-open"]).error, "profile and observe")
 }
 
 export function testParsesProfileRequestAndProgramArguments(): none {
@@ -87,7 +113,7 @@ export function testParsesProfileRequestAndProgramArguments(): none {
 }
 
 export function testValidatesProfileOnlyOptions(): none {
-  Assert.equal(parseCli(["run", "demo", "--no-open"]).error, "--no-open is only supported with the profile command")
+  Assert.equal(parseCli(["run", "demo", "--no-open"]).error, "--no-open is only supported with the profile and observe commands")
   Assert.equal(parseCli(["build", "demo", "--trace-output", "demo.trace"]).error, "--trace-output is only supported with the profile command")
   Assert.equal(parseCli(["profile", "demo", "--trace-output", "demo.data"]).error, "--trace-output must end with .trace")
   Assert.equal(parseCli(["profile", "demo", "--time-limit", "fast"]).error, "invalid --time-limit; expected Nms, Ns, Nm, or Nh")
@@ -263,7 +289,7 @@ export function testParsesDebugCommand(): none {
   Assert.equal(result.request!.command, "debug")
   Assert.equal(result.request!.programArguments[0], "argument space")
   Assert.equal(parseCli(["debug"]).request!.entry, ".")
-  Assert.stringContains(parseCli(["debug", ".", "--no-open"]).error, "profile")
+  Assert.stringContains(parseCli(["debug", ".", "--no-open"]).error, "profile and observe")
 }
 
 export function testDebugLaunchJsonParsing(): none {

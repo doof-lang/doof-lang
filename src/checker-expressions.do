@@ -451,12 +451,19 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       }
       if objectType.kind == "never" { return finish(state, expression, neverType()) }
       let weakReceiver: WeakResolvedType | none = none
+      let nullableReceiver = false
       case objectType {
         weak_: WeakResolvedType -> {
           weakReceiver = weak_
           objectType = weakAccessTarget(weak_.inner)
           if !member.optional && !member.force {
             typeError(state, "Weak reference member access requires '?.' or '!.'", member.span)
+          }
+        }
+        union_: UnionResolvedType -> {
+          if member.optional {
+            unwrapped := weakAccessTarget(union_)
+            if !sameType(unwrapped, union_) { objectType = unwrapped; nullableReceiver = true }
           }
         }
         _ -> { }
@@ -511,6 +518,9 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
             if member.optional { return finish(state, expression, resultType(unionType([memberValue, noneType()]), weakReferenceErrorType())) }
           }
         }
+      }
+      if nullableReceiver && memberValue.kind != "function" {
+        return finish(state, expression, unionType([memberValue, noneType()]))
       }
       return finish(state, expression, memberValue)
     }

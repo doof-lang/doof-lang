@@ -49,6 +49,7 @@ export class ProjectSpec {
   iosApp: IOSAppConfig | none = none
   packageConfig: MacOSPackageConfig | none = none
   iosPackageConfig: IOSPackageConfig | none = none
+  observeUiRoot: string = ""
 }
 
 export function projectEntryRequestError(project: ProjectSpec, requestedPath: string): string {
@@ -114,5 +115,6 @@ export function readProjectSpec(requestedPath: string, platform: string = "", ta
     iosApp: packageManifest.iosApp,
     packageConfig: packageManifest.packageConfig,
     iosPackageConfig: packageManifest.iosPackageConfig,
+    observeUiRoot: packageManifest.observeUiRoot,
   }
 }

@@ -24,6 +24,12 @@ export class SourceLocationSpanOverride {
   span: SourceSpan
 }
 
+/** Build-scoped instrumentation and optional runtime feature selection. */
+export class EmissionConfiguration {
+  readonly observe: bool = false
+  readonly metricsClassLifecycle: bool = false
+}
+
 export class EmitContext {
   let names: ModuleNames = ModuleNames {}
   let typeLowering: TypeLoweringSession | none = none
@@ -71,6 +77,7 @@ export class EmitContext {
   // Native entry scripts lower direct bindings into private deferred storage.
   let scriptEntry: bool = false
   let tryPanics: bool = false
+  let metricsClassLifecycle: bool = false
   // Coverage is configured per source module by the graph emitter.
   let coverageEnabled: bool = false
   let coverageModuleId: int = -1

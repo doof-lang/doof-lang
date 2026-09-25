@@ -1,8 +1,17 @@
 import { prepareModuleNames, ModuleNamespaceMapping, moduleNamespace } from "./emitter-names"
 import { CppTypeRegistry } from "./cpp-type"
 import { Assert } from "std/assert"
-import { EmitContext } from "./emitter-context"
+import { EmissionConfiguration, EmitContext } from "./emitter-context"
 import { primitive, noneType, unionType, sameType } from "./checker-types"
+
+export function testEmissionConfigurationDefaultsToNoInstrumentation(): none {
+  configuration := EmissionConfiguration {}
+  Assert.isFalse(configuration.observe)
+  Assert.isFalse(configuration.metricsClassLifecycle)
+  enabled := EmissionConfiguration { observe: true, metricsClassLifecycle: true }
+  Assert.isTrue(enabled.observe)
+  Assert.isTrue(enabled.metricsClassLifecycle)
+}
 
 export function testRestrictedYieldCarrierContext(): none {
   context := EmitContext {}

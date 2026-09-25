@@ -238,6 +238,13 @@ function checkedMemberCallReturnType(expression: CallExpression, returnType: Res
               }
             }
           }
+          union_: UnionResolvedType -> {
+            if member.optional {
+              let includesNone = false
+              for arm of union_.types { if arm.kind == "none" { includesNone = true } }
+              if includesNone { return unionType([returnType, noneType()]) }
+            }
+          }
           _ -> { }
         }
       }

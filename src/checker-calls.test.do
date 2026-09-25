@@ -32,6 +32,20 @@ export function testBlockLambdaNeverFallthrough(): none {
   Assert.equal(result.diagnostics[0].span.start.line, 1)
 }
 
+export function testRuntimeMetricBuiltinCallDiagnostics(): none {
+  invalid := [
+    "function main(): none { metricsIncrement(\"requests_total\") }",
+    "function main(): none { metricsIncrement(1, 2L) }",
+    "function main(): none { metricsIncrement(\"requests_total\", \"bad\") }",
+    "function main(): none { metricsSnapshotPrometheus(1) }",
+  ]
+  for source of invalid {
+    result := checked(source)
+    Assert.isTrue(result.diagnostics.length > 0)
+    Assert.equal(result.diagnostics[0].span.start.line, 1)
+  }
+}
+
 export function testResultConstructorShorthandPayloads(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function load(): Result<int, string> => Success { value: 1 }\n" +

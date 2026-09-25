@@ -75,14 +75,15 @@ export function linuxBuildScript(target: LinuxReleaseTarget): string {
     "rm -rf \"$root/dist\" \"$root/smoke\"\n" +
     "mkdir -p \"$root/dist\" \"$root/smoke\"\n" +
     "cp \"$root/emitted/doof\" \"$root/dist/doof\"\n" +
-    "cp \"$root/resources/doof_runtime.hpp\" \"$root/resources/doof_wasm_test_runner_apple.swift\" \"$root/resources/doof-stdlib.tar\" \"$root/dist/\"\n" +
+    "cp \"$root/resources/doof_runtime.hpp\" \"$root/resources/doof_observer.hpp\" \"$root/resources/doof_observer_platform.hpp\" \"$root/resources/doof_wasm_test_runner_apple.swift\" \"$root/resources/doof-stdlib.tar\" \"$root/dist/\"\n" +
+    "cp -R \"$root/resources/observer-ui\" \"$root/dist/observer-ui\"\n" +
     "[ \"$(\"$root/dist/doof\" --version)\" = \"doof $version\" ] || { echo 'Linux compiler version mismatch' >&2; exit 1; }\n" +
     "file \"$root/dist/doof\" | grep -Eq 'ELF 64-bit.*" + target.elfPattern + ".*statically linked' || { echo 'Linux compiler is not a static " + target.name + " ELF binary' >&2; exit 1; }\n" +
     "\"$root/dist/doof\" --help >/dev/null\n" +
     "printf 'function main(): int => 0\\n' > \"$root/smoke/main.do\"\n" +
     "env -u DOOF_STDLIB_ROOT -u DOOF_RUNTIME_HEADER \"$root/dist/doof\" run \"$root/smoke/main.do\" -o \"$root/smoke/output\" >/dev/null\n" +
     "rm -f \"$archive\"\n" +
-    "tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -czf \"$archive\" -C \"$root/dist\" doof doof_runtime.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar\n"
+    "tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner -czf \"$archive\" -C \"$root/dist\" doof doof_runtime.hpp doof_observer.hpp doof_observer_platform.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar observer-ui\n"
 }
 
 export function linuxContainerArguments(work: string, image: string, version: string, target: LinuxReleaseTarget, cpus: string = "8", memory: string = "8G", jobs: string = "4"): string[] {

@@ -13,6 +13,7 @@ import { PhaseTimings } from "./phase-timings"
 import { checkWithLoader, Compilation, compileWithLoader } from "./compiler"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { CliRequest, cliUsage, parseCli } from "./cli"
+import { EmissionConfiguration } from "./emitter-context"
 import { NativePackageInput, ProjectEmission, planProjectEmission } from "./emitter-project"
 import { ModuleNamespaceMapping } from "./emitter-names"
 import { ModuleEmission, ModuleEmissionCacheKey, ModuleGraphEmission } from "./emitter-module"
@@ -36,6 +37,7 @@ import { environmentValue, fileName, joinPath, parentPath, projectEntryRequestEr
 import { acquireProjectBuildLock } from "./project-build-lock"
 import { launchDebugger } from "./debug-driver"
 import { debugTargetError } from "./debug-command"
+import { observeEnvironment, observeTargetError, planObservedMacOSAppRun } from "./observe-command"
 import { planProfileCapture, planProfileOpen, planProfileSymbols } from "./profile-command"
 import {
   MaterializedResource, ResourceState, findMaterializedResource, materializedResourceIsCurrent,
@@ -64,7 +66,7 @@ import { sha256HexString } from "std/crypto"
 import { EntryKind, File, exists, isDirectory, metadata, mkdir, readBlob, readDir, readText, readTextResource, remove, rename, writeBlob, writeText } from "std/fs"
 import { ExecOptions, ProcessGroupMode, architecture, run, platform } from "std/os"
 import { absolute, resourcePath } from "std/path"
-import { Instant } from "std/time"
+import { Duration, Instant, Thread } from "std/time"
 
 import isolated function printFlushed(value: string): none from "doof_runtime.hpp" as doof::print_flushed
 
@@ -74,7 +76,20 @@ readonly MAX_COVERAGE_OUTPUT_BYTES = 16777216L
 
 /** Selects whether a top-level command may report successful native build progress. */
 export function nativeBuildOutputModeForCommand(command: string): NativeBuildOutputMode {
-  return if command == "run" then .Silent else .Progress
+  return if command == "run" || command == "observe" then .Silent else .Progress
+}
+
+/** Receives a detached macOS app's observer URL, then removes the token file. */
+export function takeObserveUrlFile(path: string, attempts: int = 100): string {
+  for _ of 0..<attempts {
+    if exists(path) {
+      content := readText(path) else { return "" }
+      try! remove(path)
+      return content.trim()
+    }
+    Thread.sleep(Duration.ofMillis(50L))
+  }
+  return ""
 }
 
 function runProfileTarget(
@@ -172,6 +187,7 @@ isolated function runNativeCommand(
   processGroupMode: ProcessGroupMode = .Isolated,
   // Defaults are emitted in the generated prototype before module values.
   maxOutputBytes: long = 262144L,
+  environment: Map<string, string> = {},
 ): NativeCommandResult {
   executed := run(command, arguments, ExecOptions {
     cwd: directory,
@@ -180,6 +196,7 @@ isolated function runNativeCommand(
     inheritOutput,
     processGroupMode,
     maxOutputBytes,
+    env: environment.cloneReadonly(),
   }) else error {
     return NativeCommandResult { exitCode: -1, error, truncated: false }
   }
@@ -444,11 +461,17 @@ function driverSourceDiskRoot(path: string): string {
   return ""
 }
 
+/** Keeps extracted standard packages with the selected build output. */
+export function stdlibPackageAcquisitionRoot(buildDirectory: string): string {
+  return joinPath(buildDirectory, ".doof/packages")
+}
+
 function sourceLoaderForRequest(
   entryPath: string,
   stdlibRoot: string,
   namespaceMappings: ModuleNamespaceMapping[],
   rootManifest: PackageManifest,
+  buildDirectory: string,
   nativePlatform: string = "",
   preparationTarget: StdlibPreparationTarget | none = none,
 ): Result<SourceLoader, string> {
@@ -479,7 +502,7 @@ function sourceLoaderForRequest(
     }
     stdlibBundle = opened
   }
-  packageAcquisitionRoot := joinPath(rootManifest.rootDirectory, ".doof/packages")
+  packageAcquisitionRoot := stdlibPackageAcquisitionRoot(buildDirectory)
   platformName := if nativePlatform == "" then hostPlatform() else nativePlatform
   if rootManifest.stdlibPreparation.length > 0 {
     return Failure("build.stdlib.prepare is only allowed in standard packages")
@@ -974,6 +997,24 @@ function materializeRuntimeHeader(outputDirectory: string): none {
   writeTextIfChanged(driverOutputPath(outputDirectory, "doof_runtime.hpp"), try! runtimeSource)
 }
 
+function materializeObserverRuntime(outputDirectory: string): none {
+  for name of ["doof_observer.hpp", "doof_observer_platform.hpp"] {
+    content := readTextResource(name) else { panic("Could not read embedded observer runtime resource " + name) }
+    writeTextIfChanged(driverOutputPath(outputDirectory, name), content)
+  }
+}
+
+function materializeObserverUi(outputDirectory: string): none {
+  uiDirectory := driverOutputPath(outputDirectory, "observer-ui")
+  ensureOutputDirectory(uiDirectory)
+  for name of ["index.html", "app.css", "app.js"] {
+    source := readTextResource("observer-ui/" + name) else {
+      panic("Could not read embedded observer UI asset " + name)
+    }
+    writeTextIfChanged(driverOutputPath(uiDirectory, name), source)
+  }
+}
+
 function buildAppleWasmTestRunner(buildRoot: string): Result<string, string> {
   runnerDirectory := joinPath(joinPath(buildRoot, ".doof-tests"), "apple-wasm-runner")
   ensureOutputDirectory(runnerDirectory)
@@ -1256,7 +1297,7 @@ function testRequest(request: CliRequest): int {
       testPreparationTarget = resolvedTarget
     }
     loader := sourceLoaderForRequest(
-      harnessPath, stdlibRoot, namespaceMappings, project.manifest, hostPlatform(), testPreparationTarget,
+      harnessPath, stdlibRoot, namespaceMappings, project.manifest, buildRoot, hostPlatform(), testPreparationTarget,
     ) else error {
       println("error: " + error)
       return 1
@@ -1452,6 +1493,14 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     debugError := debugTargetError(hostPlatform(), project.target)
     if debugError != "" { println("error: " + debugError); return 1 }
   }
+  if request.command == "observe" {
+    observeError := observeTargetError(project.target, project.iosApp != none)
+    if observeError != "" { println("error: " + observeError); return 1 }
+    if project.observeUiRoot != "" && (!isDirectory(project.observeUiRoot) || !exists(joinPath(project.observeUiRoot, "index.html"))) {
+      println("error: observe.ui must name a directory containing index.html: " + project.observeUiRoot)
+      return 1
+    }
+  }
   iosDestination := if request.command == "package" then "device" else request.iosDestination
   nativePlatform := if project.iosApp == none then requestedNativePlatform else "ios-" + iosDestination
   if project.iosApp != none { project = readProjectSpec(request.entry, nativePlatform, request.targetOverride) }
@@ -1461,6 +1510,9 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     return 1
   }
   rootManifest := project.manifest
+  buildDirectory := if request.outputDirectory == ""
+    then joinPath(project.rootDirectory, project.buildDirectory)
+    else try! absolute(request.outputDirectory)
   entryPath := joinPath(project.rootDirectory, project.entry)
   entry := driverRootLogicalPath(entryPath, project.rootDirectory, project.name)
   stdlibRoot := environmentValue("DOOF_STDLIB_ROOT")
@@ -1470,7 +1522,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     outputRoot: "",
   }]
   loader := sourceLoaderForRequest(
-    entryPath, stdlibRoot, namespaceMappings, rootManifest, nativePlatform, preparationTarget,
+    entryPath, stdlibRoot, namespaceMappings, rootManifest, buildDirectory, nativePlatform, preparationTarget,
   ) else error {
     println("error: " + error)
     return 1
@@ -1482,14 +1534,12 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     }
   }
   entryMode := if project.target == "wasm" then "wasm" else if project.iosApp == none then "executable" else "ios-app"
-  buildDirectory := if request.outputDirectory == ""
-    then joinPath(project.rootDirectory, project.buildDirectory)
-    else try! absolute(request.outputDirectory)
   outputDirectory := if request.command == "package"
     then joinPath(buildDirectory, "release")
     else if request.command == "profile" then joinPath(buildDirectory, "profile")
-    else if request.command == "debug" then joinPath(buildDirectory, "debug") else buildDirectory
-  cacheDirectory := if request.command == "profile" || request.command == "debug" then outputDirectory else buildDirectory
+    else if request.command == "debug" then joinPath(buildDirectory, "debug")
+    else if request.command == "observe" then joinPath(buildDirectory, "observe") else buildDirectory
+  cacheDirectory := if request.command == "profile" || request.command == "debug" || request.command == "observe" then outputDirectory else buildDirectory
   frontendConfiguration := frontendConfigurationFingerprint(
     entry, entryMode, project.target, rootManifest, stdlibRoot, nativePlatform, preparationTarget,
   )
@@ -1504,7 +1554,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   previousEmissionState := readFrontendState(emissionCachePath)
   let reusedFrontend = false
   let result = Compilation { emission: none, diagnostics: [] }
-  cachedGraph := if request.command == "emit" || request.command == "build" || request.command == "run" || request.command == "profile" || request.command == "debug"
+  cachedGraph := if request.command == "emit" || request.command == "build" || request.command == "run" || request.command == "observe" || request.command == "profile" || request.command == "debug"
     then if !frontendEmissionCacheSupported(project.target)
       then none
       else if frontendStateMatches(previousEmissionState, frontendConfiguration, loader) && previousEmissionState != none
@@ -1523,7 +1573,8 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
         [], entry, loader, namespaceMappings, entryMode, false,
         if request.command == "package" || frontendConfiguration == "" then [] else reusableEmissionKeys(previousEmissionState, outputDirectory),
         frontendConfiguration,
-        request.command == "profile" || request.command == "debug", timings,
+        request.command == "profile" || request.command == "debug" || request.command == "observe", timings,
+        EmissionConfiguration { observe: request.command == "observe", metricsClassLifecycle: request.command == "observe" },
       )
   }
   timings.finish("command.compiler", compilerStart)
@@ -1555,11 +1606,17 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
   emission := planProjectEmission(
     result.emission!,
     projectNativePackages(project.rootDirectory, rootManifest, stdlibRoot),
+    request.command == "observe",
   )
   timings.finish("command.project-planning", projectStart)
   materializationStart := timings.start()
   materializeProject(outputDirectory, emission)
   materializeRuntimeHeader(outputDirectory)
+  if request.command == "observe" {
+    materializeObserverRuntime(outputDirectory)
+    materializeObserverUi(outputDirectory)
+  }
+  observeUiRoot := if project.observeUiRoot != "" then project.observeUiRoot else driverOutputPath(outputDirectory, "observer-ui")
   legacyProvenance := driverOutputPath(outputDirectory, "provenance.json")
   if exists(legacyProvenance) { try! remove(legacyProvenance) }
   if !reusedFrontend && request.command != "package" && frontendEmissionCacheSupported(project.target) {
@@ -1574,7 +1631,7 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
       return 1
     }
   }
-  if request.command == "build" || request.command == "run" || request.command == "profile" || request.command == "debug" {
+  if request.command == "build" || request.command == "run" || request.command == "observe" || request.command == "profile" || request.command == "debug" {
     if request.command == "run" && project.target == "wasm" {
       println("error: doof run is not supported for --target wasm; instantiate the generated .wasm from your host runtime")
       return 1
@@ -1660,9 +1717,20 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
         )
       }
       try! projectLock.close()
-      launchPlan := planMacOSAppRun(appPath, project.rootDirectory)
+      urlFile := driverOutputPath(outputDirectory, ".doof-observe-url-" + string(Instant.now().toEpochMillis()))
+      launchPlan := if request.command == "observe"
+        then planObservedMacOSAppRun(appPath, project.rootDirectory, observeEnvironment(request.observePort, request.observeNoOpen, request.observeRetainEvents, observeUiRoot, urlFile))
+        else planMacOSAppRun(appPath, project.rootDirectory)
       launchResult := runNativeCommand(launchPlan.command, launchPlan.arguments, launchPlan.directory, true)
       if launchResult.error != "" { println("error: " + launchResult.error) }
+      if launchResult.exitCode == 0 && request.command == "observe" {
+        url := takeObserveUrlFile(urlFile)
+        if !url.startsWith("http://127.0.0.1:") {
+          println("error: observed macOS app did not publish its local URL")
+          return 1
+        }
+        println("DOOF_OBSERVE_URL=" + url)
+      }
       return launchResult.exitCode
     }
     if request.command == "build" { return 0 }
@@ -1678,7 +1746,11 @@ function emitRequestTimed(request: CliRequest, timings: PhaseTimings): int {
     }
     try! projectLock.close()
     runPlan := planNativeProgramRun(outputPath, request.programArguments, project.rootDirectory)
-    runResult := runNativeCommand(runPlan.command, runPlan.arguments, runPlan.directory, true, .Inherited)
+    let environment: Map<string, string> = {}
+    if request.command == "observe" {
+      environment = observeEnvironment(request.observePort, request.observeNoOpen, request.observeRetainEvents, observeUiRoot)
+    }
+    runResult := runNativeCommand(runPlan.command, runPlan.arguments, runPlan.directory, true, .Inherited, MAX_NATIVE_COMPILER_OUTPUT_BYTES, environment)
     if runResult.error != "" { println("error: " + runResult.error) }
     return runResult.exitCode
   }

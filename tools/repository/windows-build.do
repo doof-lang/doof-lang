@@ -80,6 +80,11 @@ export function windowsBuildScript(version: string): string {
     "if ($LASTEXITCODE -ne 0) { throw 'MSBuild failed' }\n" +
     "if (-not (Test-Path (Join-Path $dist 'doof.exe'))) { throw 'MSVC build did not produce dist\\doof.exe' }\n" +
     "if ((& (Join-Path $dist 'doof.exe') --version).Trim() -ne 'doof " + version + "') { throw 'Windows compiler version mismatch' }\n" +
+    "Copy-Item (Join-Path $emittedExtract 'doof_runtime.hpp') (Join-Path $dist 'doof_runtime.hpp') -Force\n" +
+    "Copy-Item (Join-Path $emittedExtract 'doof_observer.hpp') (Join-Path $dist 'doof_observer.hpp') -Force\n" +
+    "Copy-Item (Join-Path $emittedExtract 'doof_observer_platform.hpp') (Join-Path $dist 'doof_observer_platform.hpp') -Force\n" +
+    "Copy-Item (Join-Path $emittedExtract 'doof_wasm_test_runner_apple.swift') (Join-Path $dist 'doof_wasm_test_runner_apple.swift') -Force\n" +
+    "Copy-Item (Join-Path $emittedExtract 'observer-ui') (Join-Path $dist 'observer-ui') -Recurse -Force\n" +
     "Copy-Item (Join-Path $work 'doof-stdlib.tar') (Join-Path $dist 'doof-stdlib.tar') -Force\n" +
     "Compress-Archive -Path (Join-Path $dist '*') -DestinationPath (Join-Path $work '" + windowsReleaseArchiveName(version) + "') -Force\n"
 }

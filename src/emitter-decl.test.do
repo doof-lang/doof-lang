@@ -1,7 +1,7 @@
 import { ModuleNamespaceMapping } from "./emitter-names"
 import { noSourceLoader } from "./resolver"
 import { compileWithLoader } from "./compiler"
-import { EmitContext } from "./emitter-context"
+import { EmissionConfiguration, EmitContext } from "./emitter-context"
 import { renderDeclaration } from "./cpp-declaration"
 import { planClassDeclaration } from "./emitter-decl"
 import { Assert } from "std/assert"
@@ -195,4 +195,31 @@ export function testReadonlyEmissionDeclarationsUsesExplicitNames(): none {
   for module of result.emission!.modules { if module.modulePath == "/main.do" { output = module.header + module.source } }
   Assert.stringContains(output, "::mapped::types::Item")
   Assert.stringNotContains(output, "app_vendor_types_")
+}
+
+export function testClassLifecycleMetricsAreOptInAndExcludeValueStructs(): none {
+  sources := [SourceFile { path: "/main.do", source:
+    "class Widget { value: int = 1 }\nstruct Point { x: int }\nfunction main(): int => Widget {}.value" }]
+  normal := compile(sources, "/main.do")
+  observed := compile(sources, "/main.do", false, EmissionConfiguration { metricsClassLifecycle: true })
+  Assert.equal(normal.diagnostics.length, 0)
+  Assert.equal(observed.diagnostics.length, 0)
+  normalOutput := normal.emission!.modules[0].header + normal.emission!.modules[0].source
+  output := observed.emission!.modules[0].header + observed.emission!.modules[0].source
+  Assert.stringNotContains(normalOutput, "doof_class_created_total")
+  Assert.stringContains(output, "doof_class_created_total{module=\\\"/main.do\\\",class=\\\"Widget\\\"}")
+  Assert.stringContains(output, "doof_class_disposed_total{module=\\\"/main.do\\\",class=\\\"Widget\\\"}")
+  Assert.stringNotContains(output, "class=\\\"Point\\\"")
+  Assert.stringContains(output, "~Widget();")
+}
+
+export function testClassLifecycleMetricsDistinguishGenericSpecializations(): none {
+  sources := [SourceFile { path: "/main.do", source:
+    "class Box<T> { value: T }\nfunction main(): int { first := Box<int> { value: 1 }\nsecond := Box<string> { value: \"two\" }\nreturn first.value + second.value.length }" }]
+  observed := compile(sources, "/main.do", false, EmissionConfiguration { metricsClassLifecycle: true })
+  Assert.equal(observed.diagnostics.length, 0)
+  output := observed.emission!.modules[0].header + observed.emission!.modules[0].source
+  Assert.stringContains(output, "doof_class_created_total")
+  Assert.stringContains(output, "Box__int")
+  Assert.stringContains(output, "Box__string")
 }

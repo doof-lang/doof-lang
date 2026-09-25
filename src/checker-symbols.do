@@ -324,12 +324,19 @@ export function iterableElement(iterable: ResolvedType): ResolvedType {
 }
 
 export function isBuiltinCallable(name: string): bool {
-  return name == "byte" || name == "string" || name == "int" || name == "long" || name == "float" || name == "double" || name == "bool" || name == "println" || name == "panic" || name == "assert" || name == "catchPanic" || name == "Success" || name == "Failure"
+  return name == "byte" || name == "string" || name == "int" || name == "long" || name == "float" || name == "double" || name == "bool" || name == "println" || name == "panic" || name == "assert" || name == "catchPanic" || name == "metricsIncrement" || name == "metricsSnapshotPrometheus" || name == "Success" || name == "Failure"
 }
 
 export function builtinCallable(name: string): ResolvedType {
   if name == "println" { return functionType([FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false }], noneType()) }
   if name == "panic" { return functionType([FunctionParamType { name: "message", type_: primitive("string"), hasDefault: false }], neverType()) }
+  if name == "metricsIncrement" {
+    return functionType([
+      FunctionParamType { name: "name", type_: primitive("string"), hasDefault: false },
+      FunctionParamType { name: "value", type_: primitive("long"), hasDefault: false },
+    ], noneType())
+  }
+  if name == "metricsSnapshotPrometheus" { return functionType([], primitive("string")) }
   if name == "assert" {
     return functionType([
       FunctionParamType { name: "condition", type_: primitive("bool"), hasDefault: false },

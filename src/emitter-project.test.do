@@ -41,6 +41,14 @@ export function testNativePackageOrderIsIndependentOfAcquisitionOrder(): none {
   Assert.equal(planProjectEmission(graph, []).nativeBuild.includePaths.length, 0)
 }
 
+export function testObserveProjectEnablesNativeObserverWithoutAffectingNormalBuilds(): none {
+  graph := ModuleGraphEmission {}
+  normal := planProjectEmission(graph, [])
+  observed := planProjectEmission(graph, [], true)
+  Assert.equal(normal.nativeBuild.defines.contains("DOOF_OBSERVE=1"), false)
+  Assert.equal(observed.nativeBuild.defines.contains("DOOF_OBSERVE=1"), true)
+}
+
 export function testPlansPackageRelativeNativeCopiesWithoutFilenameCollisions(): none {
   graph := ModuleGraphEmission { modules: [
     ModuleEmission {

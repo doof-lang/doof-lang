@@ -136,6 +136,14 @@ generated-code support. Actor identity is independent of worker-thread
 identity; the runtime admits one message per actor while sharing workers across
 domains.
 
+The `observe` emission configuration instruments checked reference-class
+constructors and destructors and changes only its isolated build graph. The
+optional observer headers own a process-local bounded event ring, loopback
+HTTP and SSE transport, and UI asset delivery. `std/log` publishes structured
+entries to that ring in observable builds while preserving the installed
+application logger. The HTML UI reads the versioned HTTP API and may be
+replaced by static files named in a package manifest.
+
 ## Side-effect boundary
 
 The compiler core accepts `SourceFile` values and returns diagnostics and

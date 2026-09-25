@@ -11,6 +11,7 @@ import { emitModuleGraph, ModuleEmissionCacheKey, ModuleGraphEmission } from "./
 import { nameInstantiations } from "./emitter-monomorphize"
 import { emitWasmSupport, WasmEmission } from "./emitter-wasm"
 import { ModuleNamespaceMapping, prepareModuleNames } from "./emitter-names"
+import { EmissionConfiguration } from "./emitter-context"
 import { hasErrorDiagnostics } from "./diagnostics"
 import { SourceLoader, noSourceLoader } from "./resolver"
 import { Diagnostic, SemanticLocation, SemanticSpan, SourceFile } from "./semantic"
@@ -22,8 +23,8 @@ export class Compilation {
   resolutionProbes: string[] = []
 }
 
-export function compile(sources: SourceFile[], entry: string, coverage: bool = false): Compilation {
-  return compileInternal(sources, entry, noSourceLoader, [], "executable", coverage)
+export function compile(sources: SourceFile[], entry: string, coverage: bool = false, emissionConfiguration: EmissionConfiguration = EmissionConfiguration {}): Compilation {
+  return compileInternal(sources, entry, noSourceLoader, [], "executable", coverage, true, [], "", false, PhaseTimings {}, emissionConfiguration)
 }
 
 export function compileWithLoader(
@@ -37,10 +38,11 @@ export function compileWithLoader(
   emissionConfigurationFingerprint: string = "",
   physicalSourcePaths: bool = false,
   timings: PhaseTimings = PhaseTimings {},
+  emissionConfiguration: EmissionConfiguration = EmissionConfiguration {},
 ): Compilation {
   return compileInternal(
     sources, entry, loader, namespaceMappings, entryMode, coverage, true,
-    reusableModules, emissionConfigurationFingerprint, physicalSourcePaths, timings,
+    reusableModules, emissionConfigurationFingerprint, physicalSourcePaths, timings, emissionConfiguration,
   )
 }
 
@@ -67,6 +69,7 @@ function compileInternal(
   emissionConfigurationFingerprint: string = "",
   physicalSourcePaths: bool = false,
   timings: PhaseTimings = PhaseTimings {},
+  emissionConfiguration: EmissionConfiguration = EmissionConfiguration {},
 ): Compilation {
   frontend := analyzeWithLoader(sources, entry, loader, entryMode, timings)
   analysis := frontend.analysis
@@ -112,7 +115,7 @@ function compileInternal(
   emissionStart := timings.start()
   emission := emitModuleGraph(
     analysis, entry, instantiations, entryMode, coverage,
-    reusableModules, emissionConfigurationFingerprint, physicalSourcePaths, timings, names,
+    reusableModules, emissionConfigurationFingerprint, physicalSourcePaths, timings, names, emissionConfiguration,
   )
   timings.finish("compiler.emission", emissionStart)
   if wasmEmission != none {

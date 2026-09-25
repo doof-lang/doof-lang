@@ -37,7 +37,8 @@ function fixture(): DownloadFixture {
 function payload(f: DownloadFixture, version: string = "1.2.3"): none {
   try! erase(f.artifacts); try! makeDirectory(f.artifacts)
   try! write(path(f.artifacts, "doof"), "#!/bin/sh\ncase \"$1\" in --version) echo \"doof " + version + "\" ;; --help|emit) exit 0 ;; *) exit 64 ;; esac\n")
-  for name of ["doof_runtime.hpp", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar"] { try! write(path(f.artifacts, name), "fixture") }
+  for name of ["doof_runtime.hpp", "doof_observer.hpp", "doof_observer_platform.hpp", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar"] { try! write(path(f.artifacts, name), "fixture") }
+  try! write(path(f.artifacts, "observer-ui/index.html"), "observer")
   debugger := path(f.artifacts, "Doof Debugger.app/Contents/MacOS/DoofDebugger")
   try! write(debugger, "#!/bin/sh\nexit 0\n")
   try! command("chmod", ["+x", path(f.artifacts, "doof"), debugger])
@@ -51,7 +52,7 @@ function archive(f: DownloadFixture): none {
   if f.archiveName.endsWith(".zip") {
     try! command("ditto", ["-c", "-k", "--norsrc", f.artifacts, f.archive])
   } else {
-    try! command("tar", ["-czf", f.archive, "doof", "doof_runtime.hpp", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar"], {}, f.artifacts)
+    try! command("tar", ["-czf", f.archive, "doof", "doof_runtime.hpp", "doof_observer.hpp", "doof_observer_platform.hpp", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar", "observer-ui"], {}, f.artifacts)
   }
   checksum(f)
 }
@@ -176,7 +177,7 @@ export function testRepositoryInstalledCompilerResourceLinks(): none {
   home := path(temp.root, "home")
   helper := ["-c", "DOOF_INSTALL_LIBRARY_ONLY=1; . \"$1\"; install_artifacts \"$2\" \"$3\" dev", "sh", path(root, "install.sh"), path(root, "dist"), home]
   try! command("sh", helper)
-  for name of ["doof", "doof_runtime.hpp", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar", "Doof Debugger.app"] {
+  for name of ["doof", "doof_runtime.hpp", "doof_observer.hpp", "doof_observer_platform.hpp", "doof_wasm_test_runner_apple.swift", "doof-stdlib.tar", "observer-ui", "Doof Debugger.app"] {
     Assert.equal(try! capture("readlink", [path(home, "bin/" + name)]), "../current/" + name)
   }
   try! command("env", ["-u", "DOOF_STDLIB_ROOT", "-u", "DOOF_RUNTIME_HEADER", path(home, "bin/doof"), "emit", path(root, "tests/release-fixtures/runtime"), "-o", path(temp.root, "emitted")], {}, temp.root)

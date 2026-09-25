@@ -39,8 +39,10 @@ export class ProjectEmission {
 export function planProjectEmission(
   graph: ModuleGraphEmission,
   packages: NativePackageInput[],
+  observe: bool = false,
 ): ProjectEmission {
   project := ProjectEmission { modules: graph.modules }
+  if observe { project.nativeBuild.defines.push("DOOF_OBSERVE=1") }
   if graph.wasmSupportSource != "" {
     project.supportFiles.push(ProjectSupportFile { relativePath: "doof_wasm.cpp", content: graph.wasmSupportSource })
     project.nativeBuild.sourceFiles.push("doof_wasm.cpp")

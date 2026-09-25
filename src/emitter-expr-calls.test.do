@@ -39,6 +39,16 @@ export function testEmissionFailuresCatchPanicKeepsNeverResult(): none {
   Assert.stringNotContains(source, "return doof::panic(")
 }
 
+export function testRuntimeMetricBuiltinCallsUseRuntimeCounterAPI(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): string { metricsIncrement(\"requests_total\", 2L)\nreturn metricsSnapshotPrometheus() }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::metrics::increment_counter(std::string(\"requests_total\"), 2LL)")
+  Assert.stringContains(source, "return doof::metrics::snapshot_prometheus()")
+}
+
 export function testResultConstructorShorthandEmission(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function success(value: int): Result<long, string> => Success { value }\n" +

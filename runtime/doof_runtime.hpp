@@ -1,9 +1,15 @@
 #pragma once
 
+#if defined(DOOF_OBSERVE)
+// Winsock must precede any Windows headers transitively included by the C++ library.
+#include "doof_observer_platform.hpp"
+#endif
+
 // doof_runtime.hpp — Runtime support for transpiled Doof code
 // Canonical source template and generated header for the Doof runtime.
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cerrno>
 #include <cctype>
@@ -34,9 +40,13 @@
 #include <variant>
 #include <vector>
 
-/* __DOOF_OBSERVER_PLATFORM_SUPPORT__ */
-
 namespace doof {
+
+#if defined(DOOF_OBSERVE)
+namespace observe {
+void publish_metric(const std::string& name, int64_t value);
+}
+#endif
 
 class Never;
 [[noreturn]] inline Never panic(const std::string& msg);
@@ -46,7 +56,55 @@ inline int32_t hardware_concurrency() {
     return static_cast<int32_t>(detected == 0 ? 1 : detected);
 }
 
-/* __DOOF_OBSERVER_RUNTIME_SUPPORT__ */
+// ============================================================================
+// Metrics — process-local counters
+// ============================================================================
+
+namespace metrics {
+
+inline std::unordered_map<std::string, int64_t> counters;
+inline std::mutex counters_mutex;
+
+inline void increment_counter(const std::string& name, int64_t value) {
+    int64_t total = 0;
+    {
+        std::lock_guard<std::mutex> lock(counters_mutex);
+        total = (counters[name] += value);
+    }
+#if defined(DOOF_OBSERVE)
+    try { observe::publish_metric(name, total); } catch (...) { /* observation is best effort */ }
+#endif
+}
+
+inline std::vector<std::pair<std::string, int64_t>> snapshot_pairs() {
+    std::vector<std::pair<std::string, int64_t>> snapshot;
+    {
+        std::lock_guard<std::mutex> lock(counters_mutex);
+        snapshot.reserve(counters.size());
+        for (const auto& item : counters) {
+            snapshot.push_back(item);
+        }
+    }
+    std::sort(snapshot.begin(), snapshot.end(), [](const auto& left, const auto& right) {
+        return left.first < right.first;
+    });
+    return snapshot;
+}
+
+inline std::string snapshot_prometheus() {
+    const auto snapshot = snapshot_pairs();
+    std::ostringstream output;
+    for (const auto& item : snapshot) {
+        output << item.first << " " << item.second << "\n";
+    }
+    return output.str();
+}
+
+} // namespace metrics
+
+#if defined(DOOF_OBSERVE)
+#include "doof_observer.hpp"
+#endif
 
 // ============================================================================
 // Panic — unrecoverable error
@@ -95,6 +153,15 @@ public:
 
 [[noreturn]] DOOF_NOINLINE inline void unhandled_panic(const Panic& panic) {
     std::cerr << "panic: " << panic.what() << std::endl;
+#if defined(DOOF_OBSERVE)
+    // Flush the final diagnostic to connected observers before abort skips atexit.
+    try {
+        if (observe::running.load()) {
+            observe::publish_event("panic", "{\"message\":\"" + observe::json_escape(panic.message()) + "\"}");
+            observe::stop_server();
+        }
+    } catch (...) { /* observation must not mask the panic */ }
+#endif
     std::abort();
 }
 

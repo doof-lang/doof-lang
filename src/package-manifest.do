@@ -62,6 +62,7 @@ export class PackageManifest {
   iosApp: IOSAppConfig | none = none
   packageConfig: MacOSPackageConfig | none = none
   iosPackageConfig: IOSPackageConfig | none = none
+  observeUiRoot: string = ""
 }
 
 /** Parses package identity and host-platform native inputs from doof.json. */
@@ -106,11 +107,25 @@ export function parsePackageManifest(
   try iosApp := parseIOSApp(root, manifestPath, rootDirectory, name, version, target)
   try packageConfig := parseMacOSPackage(root, manifestPath, rootDirectory)
   try iosPackageConfig := parseIOSPackage(root, manifestPath, rootDirectory)
+  try observeUiRoot := parseObserveUi(root, manifestPath, rootDirectory)
   return Success(PackageManifest {
     name, version, manifestPath, rootDirectory, resources, dependencies, stdlibPreparation,
     nativeBuild, target, macosApp, iosApp,
-    packageConfig, iosPackageConfig,
+    packageConfig, iosPackageConfig, observeUiRoot,
   })
+}
+
+function parseObserveUi(root: SerialObject, manifestPath: string, rootDirectory: string): Result<string, string> {
+  if !manifestJsonHas(root, "observe") { return Success("") }
+  try observe := manifestObject(manifestJsonField(root, "observe"), manifestPath, "observe")
+  if !manifestJsonHas(observe, "ui") { return Success("") }
+  try value := manifestString(manifestJsonField(observe, "ui"), manifestPath, "observe.ui")
+  if value == "" { return Failure("Invalid doof.json at " + manifestPath + ": observe.ui must not be empty") }
+  resolved := manifestJoinPath(rootDirectory, value)
+  if !manifestPathWithinRoot(resolved, rootDirectory) {
+    return Failure("Invalid doof.json at " + manifestPath + ": observe.ui must stay within the package root")
+  }
+  return Success(resolved)
 }
 
 function parsePackageDependencies(

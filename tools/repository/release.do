@@ -110,9 +110,10 @@ function buildLinuxReleaseArtifact(compiler: string, source: string, stdlib: str
   try write(path(linux, "Makefile"), linuxMakefile(emittedFiles))
   try write(path(linux, "build.sh"), linuxBuildScript(target))
   try command("chmod", ["+x", path(linux, "build.sh")])
-  for name of ["doof_runtime.hpp", "doof_wasm_test_runner_apple.swift"] {
+  for name of ["doof_runtime.hpp", "doof_observer.hpp", "doof_observer_platform.hpp", "doof_wasm_test_runner_apple.swift"] {
     try command("cp", [path(source, "runtime/" + name), path(resources, name)])
   }
+  try copyTree(path(source, "observer-ui"), path(resources, "observer-ui"))
   try command("cp", [stdlibBundle, path(resources, "doof-stdlib.tar")])
   image := setting("DOOF_LINUX_CONTAINER_IMAGE", "docker.io/library/alpine:3.22.1")
   cpus := setting("DOOF_LINUX_CONTAINER_CPUS", "8")
@@ -131,6 +132,10 @@ function buildWindowsReleaseArtifact(compiler: string, source: string, stdlib: s
   emittedArchive := path(work, "windows-emitted.zip")
   try erase(emitted)
   try emitWindowsInputs(compiler, source, stdlib, emitted)
+  for name of ["doof_observer.hpp", "doof_observer_platform.hpp", "doof_wasm_test_runner_apple.swift"] {
+    try command("cp", [path(source, "runtime/" + name), path(emitted, name)])
+  }
+  try copyTree(path(source, "observer-ui"), path(emitted, "observer-ui"))
   try command("ditto", ["-c", "-k", "--norsrc", emitted, emittedArchive])
   try emittedFiles := files(emitted)
   projectPath := path(work, "doof.vcxproj")

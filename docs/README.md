@@ -26,6 +26,7 @@ explain how this compiler implements that contract.
 | How does a checked value map to C++? | [C++ lowering](cpp-lowering.md) |
 | How are packages, resources, and native inputs modeled? | [Packages](packages.md) |
 | Where does a CLI command route? | [CLI](cli.md) |
+| How will live runtime observability be restored? | [Runtime observability implementation plan](observability-implementation-plan.md) |
 | Where should a test live and how does the runner work? | [Testing](testing.md) |
 | How is the compiler built, versioned, and released? | [Versioned builds and releases](bootstrap-and-release.md) |
 | What is knowingly incomplete? | [Known limitations](known-limitations.md) and [roadmap](../ROADMAP.md) |

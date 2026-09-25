@@ -124,7 +124,7 @@ emitter or individual expression branch.
 
 | File | Responsibility |
 | --- | --- |
-| `emitter-context.do` | Graph-wide nominal/method context and per-module emission state |
+| `emitter-context.do` | Graph-wide nominal/method context, per-module emission state, and opt-in observer instrumentation configuration |
 | `emitter-names.do` | Immutable per-compilation namespace snapshots; pure stable filenames, diagnostics and native paths; shared C++ keyword escaping |
 | `checked-instantiations.do` | Semantic specialization fixed point and shared JSON demand traversal |
 | `emitter-monomorphize.do` | C++ naming adapter over semantic specialization discovery |
@@ -140,7 +140,7 @@ emitter or individual expression branch.
 | `emitter-header.do` | Checked declaration selection and header-plan construction, including native aliases and enum helpers |
 | `emitter-header-render.do` | Multi-namespace ordering and immutable rendered-section reuse with alias-state restoration |
 | `string-builder.do` | Runtime-backed append-only construction for large generated text |
-| `emitter-decl.do` | Shared function/method body and return boundaries, signatures, class declarations, top-level definitions, and field equality operators for structs |
+| `emitter-decl.do` | Shared function/method body and return boundaries, signatures, class declarations, opt-in class lifecycle counters, top-level definitions, and field equality operators for structs |
 | `emitter-stmt.do` | Blocks and statement/control-flow lowering, routing discarded statement, loop-update, and void-yield values through expression discard emission |
 | `emitter-expr.do` | Single expression dispatch façade; contextual conversion of checked unit expressions and native void calls to stored unit values; discarded calls bypass unused carrier conversion |
 | `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as`; equality uses checked none types and unit unwraps produce stored unit values |
@@ -160,7 +160,7 @@ emitter or individual expression branch.
 | `emitter-json.do` | Demand-gated generated JSON reads, writes, enum backing values, paths, and interface dispatch; unit decoding validates null and all nested containers validate shape before access |
 | `emitter-metadata.do` | Reflection metadata, backing-value JSON Schema, and JSON invocation |
 | `emitter-wasm.do` | JSON-over-C-ABI WebAssembly wrapper generation |
-| `emitter-project.do` | Generated project shape and reached-package native input collation; root-first, logical-prefix package ordering stabilizes native build arguments while preserving manifest input order |
+| `emitter-project.do` | Generated project shape, observer define selection, and reached-package native input collation; root-first, logical-prefix package ordering stabilizes native build arguments while preserving manifest input order |
 
 Function and method definitions share capture/context setup and a specialized return
 boundary. Both expression and block bodies of `never` callables retain the
@@ -173,8 +173,11 @@ checks these boundaries alongside contextual callback arguments through unions.
 The [native carrier model](native-carriers.md) defines representation and conversion
 invariants and its native test matrix.
 
-`runtime/doof_runtime.hpp` owns reusable generated-program behavior. It is not a
-place to hide a missing checker rule or an emitter decision.
+`runtime/doof_runtime.hpp` owns reusable generated-program behavior. Optional
+`runtime/doof_observer.hpp` and `runtime/doof_observer_platform.hpp` own the
+loopback transport, bounded event ring, and platform socket dependencies used
+only by observable builds. The maintained browser assets live in `observer-ui/`.
+The runtime is not a place to hide a missing checker rule or an emitter decision.
 Its nullable weak-pointer helpers distinguish an empty pointer from an expired
 owner and preserve that owner when unwrapping. Map mutation emission supplies
 the checked key and value template types so absence tokens cannot change native
@@ -219,6 +222,7 @@ threads or reconstruct scheduling policy.
 | `test-runner.do` | Pure test discovery, grouping, harness generation, coverage reports, and relative URL-safe coverage page paths |
 | `wasm-test-runner.do` | Pure Apple JavaScriptCore runner build and per-test invocation plans |
 | `run-command.do` | Pure invocation plans for built artifacts |
+| `observe-command.do` | Observe target validation, launch environment, and macOS bundle invocation plan |
 | `profile-command.do` | Pure macOS xctrace capture and completed-trace open plans |
 | `macos-app.do` / `ios-app.do` | Deterministic bundle metadata, signing arguments, and platform plans |
 | `macos-app-driver.do` / `ios-app-driver.do` | Bundle materialization and Apple tool execution |

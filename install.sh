@@ -15,13 +15,14 @@ install_artifacts() (
   [ "$doof_home" != / ] || { echo 'refusing to use / as Doof home' >&2; exit 2; }
   case "$version_name" in ''|.|..|*[!A-Za-z0-9._-]*) echo 'unsafe version name' >&2; exit 2 ;; esac
   [ -x "$artifact_root/doof" ] || { echo 'missing executable compiler' >&2; exit 1; }
-  for resource in doof_runtime.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar; do
+  for resource in doof_runtime.hpp doof_observer.hpp doof_observer_platform.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar; do
     [ -f "$artifact_root/$resource" ] || { echo "missing compiler resource: $resource" >&2; exit 1; }
   done
+  [ -d "$artifact_root/observer-ui" ] || { echo 'missing compiler resource: observer-ui' >&2; exit 1; }
   for directory in "$doof_home/versions" "$doof_home/bin"; do
     [ ! -L "$directory" ] || { echo "managed directory cannot be a symlink: $directory" >&2; exit 1; }
   done
-  for name in current bin/doof bin/doof_runtime.hpp bin/doof_wasm_test_runner_apple.swift bin/doof-stdlib.tar 'bin/Doof Debugger.app'; do
+  for name in current bin/doof bin/doof_runtime.hpp bin/doof_observer.hpp bin/doof_observer_platform.hpp bin/doof_wasm_test_runner_apple.swift bin/doof-stdlib.tar bin/observer-ui 'bin/Doof Debugger.app'; do
     if [ -d "$doof_home/$name" ] && [ ! -L "$doof_home/$name" ]; then
       echo "cannot replace directory: $doof_home/$name" >&2; exit 1
     fi
@@ -45,7 +46,7 @@ install_artifacts() (
       if [ "$replaced" = true ]; then rm -rf "$version_root"; fi
       if [ -d "$transaction/old-version" ]; then mv "$transaction/old-version" "$version_root"; fi
       if [ -f "$transaction/links-started" ]; then
-        for name in doof doof_runtime.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar 'Doof Debugger.app'; do
+        for name in doof doof_runtime.hpp doof_observer.hpp doof_observer_platform.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar observer-ui 'Doof Debugger.app'; do
           rm -f "$doof_home/bin/$name"
           if [ -e "$transaction/links/$name" ] || [ -L "$transaction/links/$name" ]; then mv "$transaction/links/$name" "$doof_home/bin/$name"; fi
         done
@@ -58,12 +59,13 @@ install_artifacts() (
   trap finish_install EXIT
   trap 'exit 130' HUP INT TERM
   mkdir "$transaction/new" "$transaction/links"
-  for name in doof doof_runtime.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar; do
+  for name in doof doof_runtime.hpp doof_observer.hpp doof_observer_platform.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar; do
     cp "$artifact_root/$name" "$transaction/new/$name"
   done
+  cp -R "$artifact_root/observer-ui" "$transaction/new/observer-ui"
   if [ -d "$artifact_root/Doof Debugger.app" ]; then cp -R "$artifact_root/Doof Debugger.app" "$transaction/new/Doof Debugger.app"; fi
   chmod 755 "$transaction/new/doof"
-  chmod 644 "$transaction/new/doof_runtime.hpp" "$transaction/new/doof_wasm_test_runner_apple.swift" "$transaction/new/doof-stdlib.tar"
+  chmod 644 "$transaction/new/doof_runtime.hpp" "$transaction/new/doof_observer.hpp" "$transaction/new/doof_observer_platform.hpp" "$transaction/new/doof_wasm_test_runner_apple.swift" "$transaction/new/doof-stdlib.tar"
   "$transaction/new/doof" --help >/dev/null
   if [ -d "$transaction/new/Doof Debugger.app" ]; then
     [ -x "$transaction/new/Doof Debugger.app/Contents/MacOS/DoofDebugger" ] || { echo 'invalid debugger application' >&2; exit 1; }
@@ -75,11 +77,11 @@ install_artifacts() (
   mv "$transaction/new" "$version_root"
   replaced=true
   # Save every link before changing any, including dangling links.
-  for name in doof doof_runtime.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar 'Doof Debugger.app'; do
+  for name in doof doof_runtime.hpp doof_observer.hpp doof_observer_platform.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar observer-ui 'Doof Debugger.app'; do
     if [ -e "$doof_home/bin/$name" ] || [ -L "$doof_home/bin/$name" ]; then cp -P "$doof_home/bin/$name" "$transaction/links/$name"; fi
   done
   touch "$transaction/links-started"
-  for name in doof doof_runtime.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar 'Doof Debugger.app'; do
+  for name in doof doof_runtime.hpp doof_observer.hpp doof_observer_platform.hpp doof_wasm_test_runner_apple.swift doof-stdlib.tar observer-ui 'Doof Debugger.app'; do
     if [ "$name" != 'Doof Debugger.app' ] || [ -d "$version_root/$name" ]; then
       ln -sfn "../current/$name" "$doof_home/bin/$name"
     elif [ -L "$doof_home/bin/$name" ]; then rm "$doof_home/bin/$name"; fi

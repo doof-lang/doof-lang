@@ -3,13 +3,22 @@ import { exists, File } from "std/fs"
 import { parseJsonObject } from "std/json"
 import { command, capture, copyInputs, erase, execute, installArtifacts, makeDirectory, path, read, require, setting, text, write } from "./common"
 import { commandOutputChecks, interactiveCheck, projectLockChecks, cacheChecks } from "./process-checks"
+import { observedReconnectCheck } from "./observe-checks"
 
 export function runtimeChecks(root: string): Result<none, string> {
   work := path(root, "build/runtime-tests")
   try makeDirectory(work)
   binary := path(work, "scheduler")
   try command("c++", ["-std=c++17", "-O0", "-pthread", path(root, "runtime/doof_runtime.test.cpp"), "-o", binary])
-  for mode of ["limit", "nested", "first-completed", "actor", "actor-waits", "failures", "application", "release", "priority", "configuration", "collections", "nulls", "string-builder", "string-padding"] { try command(binary, [mode]) }
+  for mode of ["limit", "nested", "first-completed", "actor", "actor-waits", "failures", "application", "release", "priority", "configuration", "collections", "nulls", "string-builder", "string-padding", "metrics"] { try command(binary, [mode]) }
+  observerBinary := path(work, "observer")
+  try command("c++", ["-std=c++17", "-O0", "-pthread", "-DDOOF_OBSERVE=1", path(root, "runtime/doof_runtime.test.cpp"), "-o", observerBinary])
+  environment: Map<string, string> := { DOOF_OBSERVE_NO_OPEN: "1", DOOF_OBSERVE_RETAIN_EVENTS: "2" }
+  try command(observerBinary, ["observer"], environment)
+  try command(observerBinary, ["observer-resilience"], environment)
+  environment.set("DOOF_OBSERVE_UI_ROOT", path(root, "tests/release-fixtures/observe/observability"))
+  environment.set("DOOF_OBSERVE_URL_FILE", path(work, "observer.url"))
+  try command(observerBinary, ["observer-custom"], environment)
   return Success()
 }
 export function debuggerChecks(root: string, compiler: string, stdlib: string): Result<none, string> {
@@ -83,6 +92,19 @@ export function releaseVerification(root: string, compiler: string, stdlib: stri
     try command(path(fixtures, name + "/dist/doof-release-" + name), [], {}, releaseRoot)
   }
   try require(exists(path(fixtures, "runtime/dist/release-resource.txt")), "Missing packaged resource")
+  try observed := execute(
+    compiler,
+    ["observe", path(fixtures, "observe"), "--no-open", "-o", path(verify, "observe"), "--", "--exit"],
+    environment,
+    releaseRoot,
+  )
+  try require(observed.exitCode == 23 && text(observed.stdout).contains("DOOF_OBSERVE_URL=http://127.0.0.1:"),
+    "Observed fixture did not launch, publish its loopback URL, and preserve exit status")
+  try require(exists(path(verify, "observe/observe/observer-ui/index.html")),
+    "Observed build did not include the built-in UI")
+  try require(exists(path(verify, "observe/observe/doof_observer.hpp")),
+    "Observed build did not include optional observer support")
+  try observedReconnectCheck(compiler, path(fixtures, "observe"), path(verify, "observe-stream"), stdlib)
   try interactiveCheck(compiler, path(fixtures, "interactive-run"), stdlib)
   try commandOutputChecks(compiler, fixtures, path(verify, "command-output"), stdlib)
   try command(compiler, ["build", path(fixtures, "manifestless-script/script.do"), "-o", path(verify, "manifestless-script")], environment)

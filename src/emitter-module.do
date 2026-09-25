@@ -20,7 +20,7 @@ import {
   IntLiteral, LongLiteral, ReadonlyDeclaration, Statement, TryStatement, TypeAliasDeclaration,
 } from "./ast"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { createEmitContextForModule, EmitContext, EmitModuleSurface, generatedLineDirective } from "./emitter-context"
+import { createEmitContextForModule, EmissionConfiguration, EmitContext, EmitModuleSurface, generatedLineDirective } from "./emitter-context"
 import { emitClassDeclaration, emitClassDestructorDefinition, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitModuleValueStorage, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions } from "./emitter-decl"
 import { emitGeneratedJsonMethods, emitInterfaceJsonDefinition } from "./emitter-json"
 import { emitMetadataDefinition } from "./emitter-metadata"
@@ -118,6 +118,7 @@ class PendingModuleEmission {
 }
 
 class CxxModuleEmitter {
+  configuration: EmissionConfiguration = EmissionConfiguration {}
   names: ModuleNames = ModuleNames {}
   timings: PhaseTimings = PhaseTimings {}
   headerPlans: HeaderPlanCache = HeaderPlanCache {}
@@ -173,6 +174,7 @@ class CxxModuleEmitter {
     context.cppTypes = CppTypeRegistry { base: preparedTypes, names }
     context.moduleSurfaces = moduleSurfaces
     context.jsonEligibility = JsonEligibilityCache {}
+    context.metricsClassLifecycle = configuration.metricsClassLifecycle
     if coverageModuleId >= 0 {
       context.coverageEnabled = true
       context.coverageModuleId = coverageModuleId
@@ -198,6 +200,7 @@ class CxxModuleEmitter {
     sectionContext.cppTypes = cppTypes
     sectionContext.moduleSurfaces = moduleSurfaces
     sectionContext.jsonEligibility = jsonEligibility
+    sectionContext.metricsClassLifecycle = configuration.metricsClassLifecycle
     if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
     if typeLowering != none { sectionContext.typeLowering = TypeLoweringSession { graph: typeLowering! } }
     timings.finish("header.section-context", contextStart)
@@ -263,8 +266,8 @@ class CxxModuleEmitter {
       sourceBuilder.append("\nusing namespace ::" + namespaceName + ";\n\n" + nativeMethods)
     }
     initializationCall := emitGraphInitializationCall(initializationModuleNamespaces)
-    if entryMode == "executable" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(generatedLineDirective() + emitMainWrapper(namespaceName, plan, context.scriptEntry, initializationCall)) }
-    if entryMode == "ios-app" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(generatedLineDirective() + emitAppEntryWrapper(namespaceName, plan, context.scriptEntry, initializationCall)) }
+    if entryMode == "executable" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(generatedLineDirective() + emitMainWrapper(namespaceName, plan, context.scriptEntry, initializationCall, configuration.observe)) }
+    if entryMode == "ios-app" && (plan.hasMain || context.scriptEntry) { sourceBuilder.append(generatedLineDirective() + emitAppEntryWrapper(namespaceName, plan, context.scriptEntry, initializationCall, configuration.observe)) }
     source := sourceBuilder.drainToString()
     timings.finish("emission.source-rendering", sourceStart)
     return ModuleEmission {
@@ -439,6 +442,7 @@ export function emitModuleGraph(
   physicalSourcePaths: bool = false,
   timings: PhaseTimings = PhaseTimings {},
   names: ModuleNames = ModuleNames {},
+  configuration: EmissionConfiguration = EmissionConfiguration {},
 ): ModuleGraphEmission {
   planningStart := timings.start()
   graph := ModuleGraphEmission {}
@@ -474,9 +478,15 @@ export function emitModuleGraph(
     }
     moduleStart := timings.start()
     fingerprintStart := timings.start()
+    let observerFingerprint = ""
+    if configuration.observe || configuration.metricsClassLifecycle {
+      observerFingerprint = "\nobserve:" + string(configuration.observe) +
+        "\nmetrics-class-lifecycle:" + string(configuration.metricsClassLifecycle)
+    }
     fingerprint := moduleEmissionFingerprint(
       result, moduleIndex, module.path, entry, entryMode, coverage,
-      initializationOrder, configurationFingerprint + "\nphysical-source-paths:" + string(physicalSourcePaths), instantiationFingerprintInput,
+      initializationOrder, configurationFingerprint + "\nphysical-source-paths:" + string(physicalSourcePaths) +
+        observerFingerprint, instantiationFingerprintInput,
     )
     timings.finish("emission.fingerprints", fingerprintStart)
     if !coverage && reusableModuleMatches(reusableFingerprints, module.path, fingerprint) {
@@ -488,7 +498,7 @@ export function emitModuleGraph(
       continue
     }
     emitter := CxxModuleEmitter {
-      names, timings, headerPlans, headerRenders, cppTypes, typeLowering,
+      configuration, names, timings, headerPlans, headerRenders, cppTypes, typeLowering,
       headerNameOverride: module.headerName,
       sourceNameOverride: module.sourceName,
       namespaceNameOverride: module.namespaceName,
@@ -536,7 +546,7 @@ export function emitModuleGraph(
     pending[index] = none
     moduleRenderStart := timings.start()
     renderer := CxxModuleEmitter {
-      names, timings,
+      configuration, names, timings,
       visibleModulePaths: job.visibleModulePaths,
       headerNameOverride: job.headerName,
       sourceNameOverride: job.sourceName,
@@ -1113,7 +1123,8 @@ function emitNativeClassMethodsForStatement(statement: Statement, context: EmitC
 }
 
 // Translate an uncaught Doof panic into a stable process-boundary diagnostic.
-function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool = false, initializationCall: string = ""): string {
+function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool = false, initializationCall: string = "", observe: bool = false): string {
+  observeSetup := if observe then "doof::observe::start_server(); " else ""
   if !hasScript {
     signature := if plan.mainAcceptsArgs then "int main(int argc, char** argv)" else "int main()"
     argumentSetup := if plan.mainAcceptsArgs then "std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); " else ""
@@ -1121,7 +1132,7 @@ function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool =
     success := if plan.mainReturnsInt then "return " + call + ";" else call + "; return 0;"
     panicHandler := "catch (const doof::Panic& _panic) { doof::unhandled_panic(_panic); }"
     actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
-    return "\n" + signature + " { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
+    return "\n" + signature + " { try { " + actorSetup + observeSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
   }
   needsArguments := plan.mainAcceptsArgs || hasScript
   signature := if needsArguments then "int main(int argc, char** argv)" else "int main()"
@@ -1131,18 +1142,19 @@ function emitMainWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool =
   success := if !plan.hasMain then scriptCall + "return 0;" else if plan.mainReturnsInt then scriptCall + "return " + call + ";" else scriptCall + call + "; return 0;"
   panicHandler := "catch (const doof::Panic& _panic) { doof::unhandled_panic(_panic); }"
   actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
-  return "\n" + signature + " { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
+  return "\n" + signature + " { try { " + actorSetup + observeSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
 }
 
 // App targets provide their own platform main and enter Doof through this C ABI.
-function emitAppEntryWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool = false, initializationCall: string = ""): string {
+function emitAppEntryWrapper(moduleName: string, plan: HeaderPlan, hasScript: bool = false, initializationCall: string = "", observe: bool = false): string {
+  observeSetup := if observe then "doof::observe::start_server(); " else ""
   if !hasScript {
     argumentSetup := if plan.mainAcceptsArgs then "std::vector<std::string> args; for (int i = 1; i < argc; ++i) args.emplace_back(argv[i]); " else "(void)argc; (void)argv; "
     call := if plan.mainAcceptsArgs then moduleName + "::doof_main(std::make_shared<std::vector<std::string>>(std::move(args)))" else moduleName + "::doof_main()"
     success := if plan.mainReturnsInt then "return " + call + ";" else call + "; return 0;"
     panicHandler := "catch (const doof::Panic& _panic) { doof::unhandled_panic(_panic); }"
     actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
-    return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
+    return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + observeSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
   }
   needsArguments := plan.mainAcceptsArgs || hasScript
   argumentSetup := if needsArguments then "std::vector<std::string> raw_arguments; for (int i = 1; i < argc; ++i) raw_arguments.emplace_back(argv[i]); auto arguments = std::make_shared<std::vector<std::string>>(std::move(raw_arguments)); " else "(void)argc; (void)argv; "
@@ -1151,5 +1163,5 @@ function emitAppEntryWrapper(moduleName: string, plan: HeaderPlan, hasScript: bo
   success := if !plan.hasMain then scriptCall + "return 0;" else if plan.mainReturnsInt then scriptCall + "return " + call + ";" else scriptCall + call + "; return 0;"
   panicHandler := "catch (const doof::Panic& _panic) { doof::unhandled_panic(_panic); }"
   actorSetup := "auto& __doof_application_domain = doof::detail::ApplicationDomain::shared(); doof::detail::ActiveActorScope __doof_application_scope(&__doof_application_domain); "
-  return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
+  return "\nextern \"C\" int doof_entry_main(int argc, char** argv) { try { " + actorSetup + observeSetup + initializationCall + argumentSetup + success + " } " + panicHandler + " catch (const std::exception& error) { std::cerr << \"error: \" << error.what() << std::endl; return 1; } }\n"
 }

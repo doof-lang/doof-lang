@@ -37,6 +37,15 @@ export function testReadsRootProjectExecutableResources(): none {
   Assert.equal(project.resources[0].destination, "")
 }
 
+export function testReadsCustomObserveUiRootFromManifest(): none {
+  root := "/tmp/doof-compiler-project-observe-test"
+  if !exists(root) { try! mkdir(root) }
+  try! writeText(root + "/doof.json", "{\"name\":\"observed\",\"observe\":{\"ui\":\"dashboard\"},\"build\":{\"entry\":\"main.do\"}}")
+  try! writeText(root + "/main.do", "function main(): int => 0")
+  project := readProjectSpec(root, "macos")
+  Assert.equal(project.observeUiRoot, root + "/dashboard")
+}
+
 export function testFallsBackWhenNoProjectManifestExists(): none {
   root := "/tmp/doof-compiler-project-no-manifest-test"
   if !exists(root) { try! mkdir(root) }

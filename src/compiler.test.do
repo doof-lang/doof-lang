@@ -1,4 +1,5 @@
 import { ModuleNamespaceMapping } from "./emitter-names"
+import { EmissionConfiguration } from "./emitter-context"
 import { PhaseTimings } from "./phase-timings"
 import { Assert } from "std/assert"
 import { readText } from "std/fs"
@@ -13,6 +14,20 @@ function compileSample(path: string): Compilation {
   return compile([
     SourceFile { path: "/sample.do", source: try! readText(path) },
   ], "/sample.do")
+}
+
+export function testCompilerForwardsObservableEmissionConfiguration(): none {
+  sources := [SourceFile { path: "/main.do", source: "class Widget { }\nfunction main(): int { widget := Widget {}\nreturn 0 }" }]
+  ordinary := compile(sources, "/main.do")
+  observed := compile(sources, "/main.do", false, EmissionConfiguration { observe: true, metricsClassLifecycle: true })
+  Assert.equal(ordinary.diagnostics.length, 0)
+  Assert.equal(observed.diagnostics.length, 0)
+  ordinaryOutput := ordinary.emission!.modules[0].header + ordinary.emission!.modules[0].source
+  observedOutput := observed.emission!.modules[0].header + observed.emission!.modules[0].source
+  Assert.stringNotContains(ordinaryOutput, "doof::observe::start_server")
+  Assert.stringNotContains(ordinaryOutput, "doof_class_created_total")
+  Assert.stringContains(observedOutput, "doof::observe::start_server();")
+  Assert.stringContains(observedOutput, "doof_class_created_total")
 }
 
 export function testCheckOnlyDoesNotProduceEmission(): none {

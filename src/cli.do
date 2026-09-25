@@ -4,6 +4,8 @@
 // future commands can reuse the same request shape without growing the native
 // driver into a second compiler implementation.
 
+import { parseInt } from "std/parse"
+
 export class CliRequest {
   command: string
   entry: string
@@ -20,6 +22,9 @@ export class CliRequest {
   let traceOutput: string = ""
   let profileTimeLimit: string = ""
   let profileNoOpen: bool = false
+  let observeNoOpen: bool = false
+  let observePort: int = 0
+  let observeRetainEvents: int = 10000
   let debugLaunchJson: string = ""
   let distDirectory: string = ""
   let macosSigning: string = ""
@@ -43,12 +48,13 @@ export class CliParseResult {
 }
 
 export function cliUsage(): string {
-  return "usage: doof <build|run|debug|profile|package|emit|check|test> [entry.do|package-dir] [options] [-- program-args...]\n" +
+  return "usage: doof <build|run|observe|debug|profile|package|emit|check|test> [entry.do|package-dir] [options] [-- program-args...]\n" +
     "       doof <script.do> [program-args...]\n" +
     "\n" +
     "commands:\n" +
     "  build   emit generated C++ and build the executable\n" +
     "  run     emit, build, and run the executable\n" +
+    "  observe emit, build, and run with a local HTML observability UI\n" +
     "  debug   build with symbols and open Doof Debugger on macOS\n" +
     "  profile emit, build, and record a macOS Time Profiler trace\n" +
     "  package build an optimized executable in the package dist directory\n" +
@@ -80,10 +86,12 @@ export function cliUsage(): string {
     "  --coverage-output <path>    write coverage JSON to this path\n" +
     "  --trace-output <path>       write the profile trace to this .trace path\n" +
     "  --time-limit <duration>     stop profiling after Nms, Ns, Nm, or Nh\n" +
-    "  --no-open                   do not open a completed trace in Instruments\n" +
+    "  --no-open                   profile/observe: do not open the resulting UI\n" +
+    "  --port <port>               observe: loopback port (default: ephemeral)\n" +
+    "  --retain-events <count>     observe: bounded recent event retention\n" +
     "  --launch-json <path>        debug: write a launch descriptor without opening the app\n" +
     "  -h, --help                  show this help\n" +
-    "  --                           pass remaining arguments to doof run/debug/profile"
+    "  --                           pass remaining arguments to doof run/observe/debug/profile"
 }
 
 function validProfileTimeLimit(value: string): bool {
@@ -113,7 +121,7 @@ export function parseCli(args: string[]): CliParseResult {
   }
 
   command := args[0]
-  if command != "build" && command != "run" && command != "debug" && command != "profile" && command != "package" && command != "emit" && command != "check" && command != "test" {
+  if command != "build" && command != "run" && command != "observe" && command != "debug" && command != "profile" && command != "package" && command != "emit" && command != "check" && command != "test" {
     return CliParseResult { request: none, error: "unknown command '" + command + "'" }
   }
   request := CliRequest { command, entry: if args.length < 2 then "." else args[1] }
@@ -121,8 +129,8 @@ export function parseCli(args: string[]): CliParseResult {
   while index < args.length {
     argument := args[index]
     if argument == "--" {
-      if command != "run" && command != "debug" && command != "profile" {
-        return CliParseResult { request: none, error: "-- is only supported with the run, debug, and profile commands" }
+      if command != "run" && command != "observe" && command != "debug" && command != "profile" {
+        return CliParseResult { request: none, error: "-- is only supported with the run, observe, debug, and profile commands" }
       }
       index += 1
       while index < args.length {
@@ -286,9 +294,27 @@ export function parseCli(args: string[]): CliParseResult {
       continue
     }
     if argument == "--no-open" {
-      if command != "profile" { return CliParseResult { request: none, error: "--no-open is only supported with the profile command" } }
-      request.profileNoOpen = true
+      if command != "profile" && command != "observe" { return CliParseResult { request: none, error: "--no-open is only supported with the profile and observe commands" } }
+      if command == "profile" { request.profileNoOpen = true } else { request.observeNoOpen = true }
       index += 1
+      continue
+    }
+    if argument == "--port" {
+      if command != "observe" { return CliParseResult { request: none, error: "--port is only supported with the observe command" } }
+      if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --port" } }
+      value := parseInt(args[index + 1]) else { return CliParseResult { request: none, error: "invalid --port; expected 0 through 65535" } }
+      if value < 0 || value > 65535 { return CliParseResult { request: none, error: "invalid --port; expected 0 through 65535" } }
+      request.observePort = value
+      index += 2
+      continue
+    }
+    if argument == "--retain-events" {
+      if command != "observe" { return CliParseResult { request: none, error: "--retain-events is only supported with the observe command" } }
+      if index + 1 >= args.length { return CliParseResult { request: none, error: "missing value for --retain-events" } }
+      value := parseInt(args[index + 1]) else { return CliParseResult { request: none, error: "invalid --retain-events; expected a positive integer" } }
+      if value <= 0 { return CliParseResult { request: none, error: "invalid --retain-events; expected a positive integer" } }
+      request.observeRetainEvents = value
+      index += 2
       continue
     }
     return CliParseResult { request: none, error: "unknown option '" + argument + "'" }
