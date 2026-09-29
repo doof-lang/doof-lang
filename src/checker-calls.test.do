@@ -171,3 +171,17 @@ export function testSecondConsolidationRecursiveGenericAliasSignature(): none {
   Assert.equal(result.diagnostics.length, 0)
   Assert.isTrue(result.emission != none)
 }
+
+export function testResultWrappersCheckPayloadAgainstContext(): none {
+  for body of ["return Success(\"s\")", "return Failure(1)", "let r: Result<int, string> = Success(\"s\")\nreturn r"] {
+    result := checked("function f(): Result<int, string> { " + body + " }")
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.stringContains(result.diagnostics[0].message, "Result<int, string>")
+  }
+  argument := checked("function g(r: Result<int, string>): none { }\nfunction f(): none { g(Success(\"s\")) }")
+  Assert.equal(argument.diagnostics.length, 1)
+  Assert.stringContains(argument.diagnostics[0].message, "as the success value of Result<int, string>")
+  valid := checked("function f(flag: bool): Result<long | none, string> { if flag { return Success(1) }\nreturn Failure(\"no\") }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+}

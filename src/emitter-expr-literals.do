@@ -3,7 +3,7 @@
 import { emitCarrierAbsence } from "./emitter-carrier-values"
 import { emitClassObject } from "./emitter-construction"
 import { ArrayLiteral, ObjectLiteral, StringLiteral, TupleLiteral } from "./ast"
-import { ArrayResolvedType, ClassType, SerialValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, SetResolvedType } from "./semantic"
+import { ArrayResolvedType, ClassType, SerialValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, SetResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitPropertyValue, findProperty } from "./emitter-expr-utils"
@@ -98,6 +98,16 @@ export function emitObject(expression: ObjectLiteral, context: EmitContext, expe
   if expected != none {
     case expected! {
       map: MapResolvedType -> { return emitMapObject(expression, context, map) }
+      _: UnionResolvedType -> {
+        // A nullable map context is checked as the map itself; the caller
+        // converts the constructed map into the union carrier.
+        if expression.resolvedType != none {
+          case expression.resolvedType! {
+            map: MapResolvedType -> { return emitMapObject(expression, context, map) }
+            _ -> { }
+          }
+        }
+      }
       _ -> { }
     }
   }

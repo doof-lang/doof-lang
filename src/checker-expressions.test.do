@@ -202,3 +202,59 @@ export function testEditorCheckerExpressionsRetainsCheckedGraphWithScopes(): non
   EditorAssert.isTrue(result.analysis.modules[0].editorScopes.length > 0)
   EditorAssert.isTrue(result.analysis.modules[0].editorExpressions.length > 0)
 }
+
+export function testPlainMemberAccessRejectsPossiblyNoneReceivers(): none {
+  for access of ["s.length", "a.x", "a.read()"] {
+    result := checked("class A { x: int\nread(): int => x }\nfunction f(s: string | none, a: A | none): none { _ := " + access + " }")
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.stringContains(result.diagnostics[0].message, "on possibly-none value")
+    Assert.stringContains(result.diagnostics[0].message, "use '?.', '!.', or narrow it first")
+  }
+  assigned := checked("class A { let x: int }\nfunction f(a: A | none): none { a.x = 3 }")
+  Assert.isTrue(assigned.diagnostics.length > 0)
+  Assert.stringContains(assigned.diagnostics[0].message, "on possibly-none value")
+  explicit := checked("class A { x: int }\nfunction f(s: string | none, a: A | none): int { n := s?.length\nreturn a!.x + s!.length }")
+  for diagnostic of explicit.diagnostics { println(diagnostic.message) }
+  Assert.equal(explicit.diagnostics.length, 0)
+}
+
+export function testOptionalChainingTypesAndTargets(): none {
+  typed := checked(
+    "class A { x: int\nread(): string => \"a\"\nrun(): none { } }\n" +
+    "function f(a: A | none, items: int[] | none): none {\n" +
+    "let x: int | none = a?.x\nlet r: string | none = a?.read()\na?.run()\nlet first: int | none = items?[0] }",
+  )
+  for diagnostic of typed.diagnostics { println(diagnostic.message) }
+  Assert.equal(typed.diagnostics.length, 0)
+  narrowing := checked("function f(items: int[] | none): none { let first: int = items?[0] }")
+  Assert.equal(narrowing.diagnostics.length, 1)
+  Assert.equal(narrowing.diagnostics[0].message, "Cannot assign int | none to int")
+  member := checked("class A { let x: int }\nfunction f(a: A | none): none { a?.x = 1 }")
+  Assert.isTrue(member.diagnostics.length > 0)
+  Assert.equal(member.diagnostics[0].message, "Optional chaining '?.' cannot be used as an assignment target")
+  index := checked("function f(items: int[] | none): none { items?[0] = 1 }")
+  Assert.isTrue(index.diagnostics.length > 0)
+  Assert.equal(index.diagnostics[0].message, "Optional indexing '?[]' cannot be used as an assignment target")
+}
+
+export function testOptionalChainingOverResultReceivers(): none {
+  prelude := "enum LookupError { Missing }\nenum ProfileError { Private }\nclass Profile { bio: string }\n" +
+    "class User { name: string\nprofile(): Result<Profile, ProfileError> => Success(Profile { bio: name })\nshout(): string => name\nping(): none { } }\n" +
+    "function findUser(): Result<User, LookupError> => Success(User { name: \"ada\" })\n" +
+    "function maybeUser(): Result<User | none, LookupError> => Success(none)\n"
+  typed := checked(prelude +
+    "function f(): none {\n" +
+    "let name: Result<string | none, LookupError> = findUser()?.name\n" +
+    "let profile: Result<Profile | none, LookupError | ProfileError> = findUser()?.profile()\n" +
+    "let bio: Result<string | none, LookupError | ProfileError> = findUser()?.profile()?.bio\n" +
+    "let shout: Result<string | none, LookupError> = maybeUser()?.shout()\n" +
+    "let pinged: Result<none, LookupError> = findUser()?.ping() }")
+  for diagnostic of typed.diagnostics { println(diagnostic.message) }
+  Assert.equal(typed.diagnostics.length, 0)
+  widened := checked(prelude + "function f(): none { let name: Result<string, LookupError> = findUser()?.name }")
+  Assert.equal(widened.diagnostics.length, 1)
+  Assert.equal(widened.diagnostics[0].message, "Cannot assign Result<string | none, LookupError> to Result<string, LookupError>")
+  plain := checked(prelude + "function f(): none { _ := findUser().name }")
+  Assert.equal(plain.diagnostics.length, 1)
+  Assert.stringContains(plain.diagnostics[0].message, "has no member \"name\"")
+}

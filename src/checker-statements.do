@@ -39,6 +39,7 @@ import { collectRetiredActorBindings, reportRetiredActorUses } from "./checker-a
 import { pathType } from "./checker-inference"
 import { CheckerState, LambdaReturnObservation } from "./checker-state"
 import { checkTry } from "./checker-try"
+import { validateStructLayout } from "./checker-struct-layout"
 import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
@@ -285,6 +286,12 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
     valueType = applyDeepReadonly(valueType)
     declaredType = applyDeepReadonly(declaredType)
     value.resolvedType = optionalResolvedType(valueType)
+    // Readonly collections are applied structurally above; nominal classes
+    // must already be deeply immutable, matching readonly field validation.
+    violation := findActorBoundaryViolation(state.result, declaredType)
+    if violation != none {
+      typeError(state, "Readonly binding \"" + name + "\" must be deeply immutable: " + violation!.reason, span)
+    }
   }
   if annotation != none && inferredCollectionType != none { decorateAnnotationWithResolved(annotation!, declaredType) }
   if elseBlock != none {
@@ -460,6 +467,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
       }
     }
   }
+  validateStructLayout(state, class_, symbol!)
   for method of class_.methods {
     deprecatedClassMethodFunction(state, method)
     if generatedMemberName(method.name) { typeError(state, "Method name \"" + method.name + "\" is reserved for compiler-generated reflection and JSON support", method.span) }

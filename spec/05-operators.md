@@ -244,6 +244,10 @@ city := user?.address?.city    // string | none
 logger?.log("Hello")           // Only calls if logger is present
 ```
 
+The receiver is evaluated once. When it is `none`, the access short-circuits:
+field reads and value-returning calls produce `none`, and calls returning
+`none` are skipped. `?.` and `?[]` cannot be used as assignment targets.
+
 **Interaction with Result types:**
 
 When the `?.` operator is used with Result types, it propagates `none` while

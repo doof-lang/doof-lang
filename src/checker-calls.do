@@ -55,6 +55,10 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           let expectedValue: ResolvedType | none = none
           if expectedResult != none { expectedValue = if identifier.name == "Success" then expectedResult!.valueType else expectedResult!.errorType }
           valueType = checkExpression(state, expression.args[0].value, scope, expectedValue)
+          if expectedValue != none && !isAssignableWithInterfaces(state.result, valueType, expectedValue!) {
+            channel := if identifier.name == "Success" then "success" else "failure"
+            typeError(state, "Cannot use " + typeName(valueType) + " as the " + channel + " value of " + typeName(expectedResult!), expression.args[0].span)
+          }
         }
         if expectedResult != none {
           valueType = if expression.args.length == 0 then (if identifier.name == "Success" then expectedResult!.valueType else expectedResult!.errorType) else valueType
@@ -238,11 +242,27 @@ function checkedMemberCallReturnType(expression: CallExpression, returnType: Res
               }
             }
           }
+          receiver: ResultResolvedType -> {
+            // '?.' over a Result keeps the receiver's Failure, adds none to the
+            // success channel, and flattens a Result-returning method.
+            if member.optional && member.resolvedOptionalReceiver != none {
+              expression.resolvedOptionalValue = optionalResolvedType(returnType)
+              case returnType {
+                nested: ResultResolvedType -> {
+                  return resultType(unionType([nested.valueType, noneType()]), unionType([receiver.errorType, nested.errorType]))
+                }
+                _ -> { return resultType(unionType([returnType, noneType()]), receiver.errorType) }
+              }
+            }
+          }
           union_: UnionResolvedType -> {
             if member.optional {
               let includesNone = false
               for arm of union_.types { if arm.kind == "none" { includesNone = true } }
-              if includesNone { return unionType([returnType, noneType()]) }
+              if includesNone {
+                expression.resolvedOptionalValue = optionalResolvedType(returnType)
+                return unionType([returnType, noneType()])
+              }
             }
           }
           _ -> { }

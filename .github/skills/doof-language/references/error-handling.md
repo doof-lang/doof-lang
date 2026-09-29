@@ -208,7 +208,7 @@ s := x as string else { return "" }
 result := foo()?.bar()
 ```
 
-When `foo()` returns `Result<MyObj, E1>` and `bar()` returns `Result<int, E2>`, the final type is `Result<int | none, E1 | E2>`.
+When `foo()` returns `Result<MyObj, E1>` and `bar()` returns `Result<int, E2>`, the final type is `Result<int | none, E1 | E2>`. A `Failure` receiver is preserved, a `Success(none)` receiver short-circuits to `Success(none)`, plain members give `Result<T | none, E1>`, and only calls are flattened (a `Result`-typed field stays nested). Use `try?` to collapse both failure and none to `none`.
 
 ## Catch Expressions
 

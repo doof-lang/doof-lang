@@ -166,3 +166,21 @@ export function testActorFieldAccessUnionAndCallableRejected(): none {
     Assert.equal(result.emission, none)
   }
 }
+
+export function testIndexingReportsNonIndexableReceivers(): none {
+  sources := [
+    "function f(value: int): none { _ := value[0] }",
+    "function f(items: int[] | none): none { _ := items[0] }",
+    "function f(): none { pair := (1, \"a\")\n_ := pair[0] }",
+  ]
+  messages := [
+    "Type \"int\" cannot be indexed",
+    "Cannot index possibly-none value of type \"int[] | none\"; use '?[]' or narrow it first",
+    "Tuples cannot be indexed; access elements with '._1', '._2', ...",
+  ]
+  for index of 0..<sources.length {
+    result := checked(sources[index])
+    Assert.equal(result.diagnostics.length, 1)
+    Assert.equal(result.diagnostics[0].message, messages[index])
+  }
+}

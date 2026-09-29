@@ -25,7 +25,7 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
 | File | Owns | Does not own |
 | --- | --- | --- |
 | `lexer.do` | Tokens, lexical scanning, token source spans, and typed-tag header/text lexical modes | Grammar or diagnostics about program meaning |
-| `parser.do` | Parser façade and token cursor | Individual grammar families |
+| `parser.do` | Parser façade, token cursor, and virtual generic closers | Individual grammar families |
 | `parser-declarations.do` | Declarations, imports, exports | Expressions, control flow, type grammar |
 | `parser-statements.do` | Statements, control flow, case patterns | Declaration and expression internals |
 | `parser-expressions.do` | Expressions, literals, precedence, and typed-tag desugaring into named calls | Type annotations |
@@ -42,7 +42,9 @@ several layers, use the [horizontal architecture map](compiler-architecture.md).
 
 ## Checker
 
-`checker.do` is the public façade and module-level coordinator. Its focused
+`checker.do` is the public façade and module-level coordinator. It also owns
+graph-wide field-type preparation, constructing scopes only for modules with
+unresolved fields. Its focused
 modules own the following decisions:
 
 | File | Responsibility |
@@ -55,6 +57,7 @@ modules own the following decisions:
 | `checker-common.do` | State-aware diagnostics, expression type decoration, and centralized assignment-binding validation |
 | `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, enum backing-value resolution, and control-flow continuation |
 | `checker-try.do` | Result propagation boundaries, error compatibility, and success declaration checking |
+| `checker-struct-layout.do` | Struct value-layout validation, rejecting structs that contain themselves by value |
 | `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |
 | `checker-inference.do` | Contextual path validation and common-type inference; only optional unions are synthesized for value paths |
 | `checker-expressions.do` | Expression dispatch, operators, narrowing, assignment, and case expressions |
@@ -130,7 +133,7 @@ emitter or individual expression branch.
 | `emitter-monomorphize.do` | C++ naming adapter over semantic specialization discovery |
 | `emitter-dependencies.do` | Immutable ordered direct-dependency extraction from checked surfaces, root bodies and concrete argument types |
 | `emitter-worldview.do` | Graph indexing, recursive dependency-summary replay, native closure and consumer-local declaration selection/order |
-| `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, and header/source pairing |
+| `emitter-module.do` | Module graph orchestration, transitive emission fingerprints, header/source pairing, and per-defining-module header type sessions |
 | `emitter-header-cache.do` | Compilation-local reuse of immutable plans for exact projected declaration selections |
 | `emitter-type-cache.do` | Preparation/renderer-local semantic-to-C++ memo tables with mutable preparation or read-only identity lookup and specialization-scoped sessions |
 | `cpp-type.do` | Immutable C++ type nodes, prepared registry snapshots and renderer-local interning/render overlays |
@@ -145,6 +148,7 @@ emitter or individual expression branch.
 | `emitter-expr.do` | Single expression dispatch façade; contextual conversion of checked unit expressions and native void calls to stored unit values; discarded calls bypass unused carrier conversion |
 | `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as`; equality uses checked none types and unit unwraps produce stored unit values |
 | `emitter-expr-calls.do` | Call target selection, runtime member dispatch, and positional Result payload construction |
+| `emitter-optional-chain.do` | `?.` and `?[]` over nullable receivers and `?.` over Result receivers: single evaluation, none and Failure short-circuits, Result flattening for calls, and access through the checked unwrapped receiver |
 | `emitter-call-arguments.do` | Shared named/positional argument ordering, checked contextual argument types, and call-site default emission for direct and dispatched calls |
 | `emitter-construction.do` | Positional, named, contextual, and actor construction from checked plans; shared argument/default lowering, owner specialization, and spread handling |
 | `emitter-expr-literals.do` | Literal, array, object, tuple, and string lowering; shared contextual absence values for literals and catch initialization |

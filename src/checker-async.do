@@ -115,11 +115,11 @@ function findAsyncViolation(result: AnalysisResult, type_: ResolvedType, seen: s
     }
     class_: ClassType -> {
       violation := findClassAsyncViolation(result, class_, seen, resultMode, safe)
-      if violation != none { return violation.reason }
+      if violation != none { return violation!.reason }
     }
     interface_: InterfaceType -> {
       violation := findInterfaceAsyncViolation(result, interface_, seen, resultMode, safe)
-      if violation != none { return violation.reason }
+      if violation != none { return violation!.reason }
     }
     _ -> { }
   }

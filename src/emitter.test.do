@@ -1016,7 +1016,7 @@ export function testDoesNotHoistSingleOrValueBearingHeaderVariants(): none {
 }
 
 export function testEmitsArbitrarySharedUnionMembersFromResolvedTypes(): none {
-  result := emit("class Left { value: int\nread(): int => value }\nclass Right { value: int\nread(): int => value }\ntype Either = Left | Right\ntype MaybeEither = Left | Right | none\nfunction total(item: Either): int => item.value + item.read()\nfunction maybeTotal(item: MaybeEither): int => item.value + item.read()")
+  result := emit("class Left { value: int\nread(): int => value }\nclass Right { value: int\nread(): int => value }\ntype Either = Left | Right\ntype MaybeEither = Left | Right | none\nfunction total(item: Either): int => item.value + item.read()\nfunction maybeTotal(item: MaybeEither): int => item!.value + item!.read()")
   Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, item)")
   Assert.stringContains(result.source, "std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, item)")
   Assert.stringContains(result.source, "std::visit([](auto&& _obj) { return _obj->value; }, doof::unwrap_optional(item))")

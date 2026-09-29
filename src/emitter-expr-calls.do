@@ -13,10 +13,12 @@ import { decoratedExpressionType, exprModuleNamespaceFor, variantVisitValue } fr
 import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
+import { emitOptionalCall } from "./emitter-optional-chain"
 
 export function emitCall(expression: CallExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   case expression.callee {
     member: MemberExpression -> {
+      if member.resolvedOptionalReceiver != none && expression.resolvedOptionalValue != none { return emitOptionalCall(expression, member, context) }
       if member.object.resolvedType != none {
         case member.object.resolvedType! {
           _: WeakResolvedType -> {

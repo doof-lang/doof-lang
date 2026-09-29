@@ -189,6 +189,10 @@ export class MemberExpression {
   let resolvedNamespaceSymbol: Symbol | none = none
   let resolvedMember: CheckedMember | none = none
   let resolvedCallableField: bool = false
+  // Set when '?.' short-circuits a nullable receiver: the receiver with its
+  // none arm removed, and a field's value before it is widened with none.
+  let resolvedOptionalReceiver: ResolvedType | none = none
+  let resolvedOptionalValue: ResolvedType | none = none
   let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
@@ -198,6 +202,9 @@ export class IndexExpression {
   object: Expression
   index: Expression
   optional: bool
+  // Set when '?[]' short-circuits a nullable receiver.
+  let resolvedOptionalReceiver: ResolvedType | none = none
+  let resolvedOptionalValue: ResolvedType | none = none
   let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
@@ -235,6 +242,9 @@ export class CallExpression {
   let resolvedFunctionModule: string = ""
   let resolvedConstructor: FunctionDeclaration | none = none
   let resolvedClass: ClassDeclaration | none = none
+  // Return type before widening with none when the callee short-circuits a
+  // nullable receiver with '?.'.
+  let resolvedOptionalValue: ResolvedType | none = none
   let resolvedType: ResolvedType | none = none
   let span: SourceSpan
 }

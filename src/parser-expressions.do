@@ -113,11 +113,11 @@ export isolated function parseUnary(parser: Parser): Expression {
   // it as an IntLiteral first would wrap before unary negation is represented.
   // Fold this boundary spelling while its magnitude can still be read as long.
   if parser.check(TokenType.Minus) && parser.peek(1).kind == TokenType.IntLiteral
-      && parseLongValue(parser, parser.text(parser.peek(1))) == 2147483648L {
+      && (integerLiteralMagnitude(parser.text(parser.peek(1))) ?? -1L) == 2147483648L {
     start := parser.location()
     parser.advance()
-    value := int(-parseLongValue(parser, parser.text(parser.advance())))
-    return IntLiteral { kind: "int-literal", value, span: parser.span(start) }
+    parser.advance()
+    return IntLiteral { kind: "int-literal", value: -2147483647 - 1, span: parser.span(start) }
   }
   if parser.check(TokenType.Identifier) && (parser.text(parser.current()) == "try!" || parser.text(parser.current()) == "try?") {
     start := parser.location()
@@ -262,12 +262,26 @@ function parseNamedCall(parser: Parser, callee: Expression, typeArgs: TypeAnnota
 isolated function parsePrimary(parser: Parser): Expression {
   start := parser.location()
   if parser.check(TokenType.IntLiteral) {
-    value := parseIntValue(parser, parser.text(parser.advance()))
-    return IntLiteral { kind: "int-literal", value, span: parser.span(start) }
+    // Out-of-range literals are rejected rather than wrapped; contextual
+    // long typing must not observe a silently truncated value.
+    magnitude := integerLiteralMagnitude(parser.text(parser.current()))
+    if magnitude == none || magnitude! > 2147483647L {
+      parser.reportIssue("Integer literal is out of range for int; use an 'L' suffix for a long literal")
+      parser.advance()
+      return IntLiteral { kind: "int-literal", value: 0, span: parser.span(start) }
+    }
+    parser.advance()
+    return IntLiteral { kind: "int-literal", value: int(magnitude!), span: parser.span(start) }
   }
   if parser.check(TokenType.LongLiteral) {
-    value := parseLongValue(parser, parser.text(parser.advance()))
-    return LongLiteral { kind: "long-literal", value, span: parser.span(start) }
+    magnitude := integerLiteralMagnitude(parser.text(parser.current()))
+    if magnitude == none {
+      parser.reportIssue("Long literal is out of range for long")
+      parser.advance()
+      return LongLiteral { kind: "long-literal", value: 0L, span: parser.span(start) }
+    }
+    parser.advance()
+    return LongLiteral { kind: "long-literal", value: magnitude!, span: parser.span(start) }
   }
   if parser.check(TokenType.FloatLiteral) {
     raw := parser.text(parser.advance()).replaceAll("f", "").replaceAll("F", "")
@@ -737,21 +751,25 @@ function looksLikeGenericTypeArguments(parser: Parser): bool {
   return false
 }
 
-function parseIntValue(parser: Parser, raw: string): int {
-  let base = 10
+// Returns an integer literal's non-negative magnitude, or none when it cannot
+// be represented as a long. Callers apply narrower literal ranges.
+function integerLiteralMagnitude(raw: string): long | none {
+  clean := raw.replaceAll("L", "").replaceAll("l", "")
+  let base: long = 10L
   let index = 0
-  if raw.length >= 2 && raw[0] == '0' && (raw[1] == 'x' || raw[1] == 'X') {
-    base = 16
+  if clean.length >= 2 && clean[0] == '0' && (clean[1] == 'x' || clean[1] == 'X') {
+    base = 16L
     index = 2
-  } else if raw.length >= 2 && raw[0] == '0' && (raw[1] == 'b' || raw[1] == 'B') {
-    base = 2
+  } else if clean.length >= 2 && clean[0] == '0' && (clean[1] == 'b' || clean[1] == 'B') {
+    base = 2L
     index = 2
   }
-  let result = 0
-  while index < raw.length {
-    ch := raw[index]
+  let result: long = 0L
+  while index < clean.length {
+    ch := clean[index]
     if ch == '_' { index = index + 1; continue }
-    digit := digitValue(ch)
+    digit := long(digitValue(ch))
+    if result > (9223372036854775807L - digit) \ base { return none }
     result = result * base + digit
     index = index + 1
   }

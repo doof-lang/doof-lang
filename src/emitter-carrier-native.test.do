@@ -65,3 +65,7 @@ export function testNeverReviewNative(): none {
 export function testCallbackEqualityNative(): none {
   runNativeFixture("callback-equality")
 }
+
+export function testOptionalChainingNative(): none {
+  runNativeFixture("optional-chaining")
+}

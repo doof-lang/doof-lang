@@ -296,6 +296,13 @@ Structs lower to direct C++ values:
 - Construction lowers to direct value construction, not `std::make_shared`.
 - Instance field and method access lowers with `.`, not `->`.
 
+Because structs are stored inline, a struct cannot contain itself by value, directly or through other structs, `T | none`, unions, tuples, or `Result` arms. Such declarations are rejected; classes, arrays, maps, sets, and callbacks provide the indirection needed for recursive data:
+
+```doof
+struct Node { next: Node | none }   // ❌ Error: contains itself by value
+struct Tree { children: Tree[] }    // ✅ OK: arrays are references
+```
+
 Structs are initially excluded from structural interface implementation. A struct declaration with `implements` is rejected, and assigning a struct value to an interface is not supported yet.
 
 The following class-only features are not available on structs in v1:

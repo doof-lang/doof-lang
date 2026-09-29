@@ -106,6 +106,47 @@ export function testHeaderCacheReusesDependencyProjectionsWithinOneGraph(): none
   }
 }
 
+export function testHeaderTypeSessionsReuseOverlappingProjections(): none {
+  sources := [
+    SourceFile { path: "/types.do", source: `export class Left { value: int }
+export class Right { value: string }
+export class Pair { left: Left[] right: Right[] }
+export class Box<T> { value: T }` },
+    SourceFile { path: "/left.do", source: `import { Left, Box } from "./types"
+export function left(value: Left[]): Box<int> => Box<int> { value: value.length }` },
+    SourceFile { path: "/right.do", source: `import { Pair, Box } from "./types"
+export function right(value: Pair): Box<string> => Box<string> { value: "right" }` },
+    SourceFile { path: "/main.do", source: `import { left } from "./left"
+import { right } from "./right"
+function main(): int => 0` },
+  ]
+  timings := PhaseTimings { enabled: true }
+  result := compileWithLoader(sources, "/main.do", noSourceLoader, [], "executable", false, [], "", false, timings)
+  Assert.equal(result.diagnostics.length, 0)
+  let sessions = 0
+  let projections = 0
+  for timing of timings.entries {
+    if timing.name == "header.type-session" { sessions = timing.count }
+    if timing.name == "header.declarations" { projections = timing.count }
+  }
+  Assert.equal(sessions, sources.length)
+  Assert.isTrue(projections > sessions)
+  for module of result.emission!.modules {
+    if module.modulePath == "/types.do" {
+      Assert.stringContains(module.header, "int32_t value;")
+      Assert.stringContains(module.header, "std::string value;")
+    }
+    if module.modulePath == "/left.do" { Assert.stringNotContains(module.header, "struct Pair") }
+    if module.modulePath == "/right.do" { Assert.stringContains(module.header, "struct Pair") }
+  }
+  again := compileWithLoader(sources, "/main.do", noSourceLoader)
+  Assert.equal(again.diagnostics.length, 0)
+  for i of 0..<result.emission!.modules.length {
+    Assert.equal(result.emission!.modules[i].header, again.emission!.modules[i].header)
+    Assert.equal(result.emission!.modules[i].source, again.emission!.modules[i].source)
+  }
+}
+
 export function testStructuredModuleHeadersShareTypesWithoutRewritingSources(): none {
   sources := [
     SourceFile { path: "/types.do", source: "export class Left {}\nexport class Right {}\nexport type Choice = Left | Right" },

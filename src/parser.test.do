@@ -1,6 +1,7 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Assert } from "std/assert"
 import { Parser, parse } from "./parser"
+import { Lexer, TokenType } from "./lexer"
 import isolated function codePointToUtf8(value: int): string from "doof_runtime.hpp" as doof::char_to_utf8
 import {
   IntLiteral, LongLiteral, DoubleLiteral, BinaryExpression, CallExpression, Identifier,
@@ -26,6 +27,61 @@ function firstExpression(source: string): Expression {
 function assertExpressionOffsets(expression: Expression, start: int, end: int): none {
   Assert.equal(expression.span.start.offset, start)
   Assert.equal(expression.span.end.offset, end)
+}
+
+export function testGenericCloserCursorPreservesLookaheadAndSpans(): none {
+  for source of ["> tail", ">> tail", ">>> tail"] {
+    parser := Parser { source }
+    parser.tokens = Lexer { source }.tokenize()
+    tokenCount := parser.tokens.length
+    closers := source.length - 5
+    for part of 0..<closers {
+      closer := parser.expect(TokenType.Greater)
+      Assert.equal(closer.offset, part)
+      Assert.equal(closer.column, part + 1)
+      Assert.equal(closer.length, 1)
+      Assert.equal(parser.text(closer), ">")
+      Assert.equal(parser.previousEnd().offset, part + 1)
+      Assert.isTrue(parser.previousIs(TokenType.Greater))
+      Assert.isTrue(parser.sameLineAsPrevious())
+      if part + 1 < closers {
+        Assert.equal(parser.current().offset, part + 1)
+        Assert.equal(parser.peek(closers - part - 1).kind, TokenType.Identifier)
+        Assert.equal(parser.peek(99).kind, TokenType.EndOfFile)
+        Assert.isTrue(parser.immediatelyAfterPrevious())
+      }
+    }
+    Assert.equal(parser.current().kind, TokenType.Identifier)
+    Assert.isFalse(parser.immediatelyAfterPrevious())
+    Assert.equal(parser.tokens.length, tokenCount)
+  }
+}
+
+export function testGenericCloserCursorKeepsNestedTypeSpansAndExpressionShifts(): none {
+  parser := Parser { source: "type Deep = Box<Box<Box<int>>>\nfunction shift(): int => 64 >>> 2 >> 1" }
+  program := parser.parse()
+  alias := program.statements[0] as TypeAliasDeclaration else { panic("expected alias") }
+  outer := alias.type_ as NamedType else { panic("expected outer type") }
+  middle := outer.typeArgs[0] as NamedType else { panic("expected middle type") }
+  inner := middle.typeArgs[0] as NamedType else { panic("expected inner type") }
+  Assert.equal(inner.span.end.offset + 1, middle.span.end.offset)
+  Assert.equal(middle.span.end.offset + 1, outer.span.end.offset)
+  function_ := program.statements[1] as FunctionDeclaration else { panic("expected function") }
+  shift := function_.body as BinaryExpression else { panic("expected shift") }
+  Assert.equal(shift.operator, ">>")
+  left := shift.left as BinaryExpression else { panic("expected unsigned shift") }
+  Assert.equal(left.operator, ">>>")
+  // Parser reuse must reset the virtual cursor and previous token state.
+  Assert.equal(parser.parse().statements.length, 2)
+}
+
+export function testGenericCloserCursorReportsExtraCloserAtExactOffset(): none {
+  parser := Parser { source: "type Broken = Box<Box<int>>>" }
+  parsed := catchPanic(=> parser.parse())
+  case parsed { _: Failure<string> -> { } _ -> { panic("expected parse failure") } }
+  Assert.equal(parser.errorOffset, parser.source.length - 1)
+  Assert.equal(parser.errorMessage, "Expected an expression")
+  Assert.equal(parser.tokens[parser.pos].kind, TokenType.GreaterGreaterGreater)
 }
 
 export function testParsesUnicodeCharacterLiteralsAsCodePoints(): none {
@@ -1564,4 +1620,21 @@ export function testEditorParserRecoversMissingClosingBraceButStrictRejects(): n
   program := editor.parse()
   EditorAssert.equal(program.statements.length, 1)
   EditorAssert.equal(editor.issues.length, 1)
+}
+
+export function testRejectsIntegerLiteralsOutsideTheirRange(): none {
+  for source of ["2147483648", "3_000_000_000", "0x80000000", "99999999999999999999L"] {
+    parser := Parser { source, editorMode: true }
+    parser.parse()
+    Assert.equal(parser.issues.length, 1)
+    Assert.stringContains(parser.issues[0].message, "out of range")
+  }
+  case first("2147483647") {
+    statement: ExpressionStatement -> { assertInt(statement.expression, 2147483647) }
+    _ -> { panic("expected expression statement") }
+  }
+  case firstExpression("9223372036854775807L") {
+    literal: LongLiteral -> { Assert.isTrue(literal.value == 9223372036854775807L) }
+    _ -> { panic("expected long literal") }
+  }
 }

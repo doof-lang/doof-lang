@@ -433,7 +433,7 @@ export function testRejectsModuleLetFromIsolatedFunctions(): none {
 
 export function testAcceptsLiteralTreeModuleInitializers(): none {
   result := checked(
-    "class Config { name: string\nvalues: int[] }\n" +
+    "class Config { name: string\nreadonly values: int[] }\n" +
     "readonly label = \"ready\"\n" +
     "readonly values = [2, 3, 5, 7]\n" +
     "readonly config = Config { name: \"demo\", values: [1, 2] }\n" +
@@ -568,6 +568,28 @@ export function testResolvesInferredStaticFieldsAcrossCircularImports(): none {
   ], "/transform.do")
 
   Assert.equal(result.diagnostics.length, 0)
+}
+
+export function testFieldPreparationConvergesThroughFunctionOnlyModules(): none {
+  sources := [
+    SourceFile { path: "/main.do", source: `import { First } from "./first"
+function main(): int => First {}.value` },
+    SourceFile { path: "/first.do", source: `import { Second } from "./second"
+export class First { readonly value = Second {}.value }` },
+    SourceFile { path: "/second.do", source: `import { answer } from "./functions"
+export class Second { readonly value = answer() }` },
+    SourceFile { path: "/functions.do", source: `export function answer(): int => 7` },
+  ]
+  result := checkedSources(sources, "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  sources[3] = SourceFile { path: "/functions.do", source: `export function answer(): string => "seven"` }
+  invalid := checkedSources(sources, "/main.do")
+  Assert.isTrue(invalid.diagnostics.length > 0)
+  let found = false
+  for diagnostic of invalid.diagnostics {
+    if diagnostic.message.contains("Cannot return string from function returning int") && diagnostic.module == "/main.do" { found = true }
+  }
+  Assert.isTrue(found)
 }
 
 export function testWarnsForLegacyNoneAliasesWithReplacementAndExactSpans(): none {

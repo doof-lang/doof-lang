@@ -207,6 +207,7 @@ function prepareClassFieldTypes(state: CheckerState): none {
   while changed {
     changed = false
     for module of state.result.modules {
+      if !hasUnpreparedClassFields(module.program.statements) { continue }
       state.info = module
       state.moduleScope = Scope { parent: none }
       predeclareModuleBindings(module, state.moduleScope!, state.result)
@@ -241,6 +242,18 @@ function prepareClassFieldTypes(state: CheckerState): none {
   state.diagnostics = []
   state.info = none
   state.moduleScope = none
+}
+
+function hasUnpreparedClassFields(statements: Statement[]): bool {
+  for statement of statements {
+    case statement {
+      class_: ClassDeclaration -> {
+        for field of class_.fields { if field.resolvedType == none { return true } }
+      }
+      _ -> { }
+    }
+  }
+  return false
 }
 
 export function validateCheckedTypes(result: AnalysisResult): Diagnostic[] {

@@ -415,7 +415,9 @@ profile := findUser(id)?.profile()
 
 If the left side is `Failure`, the failure is preserved. If the success value is
 none, the chain short-circuits as a success containing none. If a later call
-also returns `Result`, the error types are unioned.
+also returns `Result`, the error types are unioned. Only calls are flattened this
+way; a field whose type is `Result` is read as a nested value. The receiver is
+evaluated once.
 
 For a plain member on the success value:
 

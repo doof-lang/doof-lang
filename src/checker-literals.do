@@ -3,7 +3,7 @@
 import { resolveConstructor, checkClassProperties } from "./checker-construction"
 import { checkPropertyValue, checkAssignableProperty } from "./checker-properties"
 
-import { ArrayResolvedType, ClassType, SerialValueResolvedType, MapResolvedType, ResolvedType, ResultResolvedType, Scope, SetResolvedType, UnionResolvedType, UnknownType } from "./semantic"
+import { ArrayResolvedType, ClassType, SerialValueResolvedType, MapResolvedType, NoneType, ResolvedType, ResultResolvedType, Scope, SetResolvedType, UnionResolvedType, UnknownType } from "./semantic"
 
 import { ArrayLiteral, ClassDeclaration, Expression, NamedType, ObjectLiteral, TypeAnnotation } from "./ast"
 import { arrayType, joinTypes, isJsonValueType, isSupportedHashCollectionType, jsonValueType, mapType, setType, primitive, sameType, typeName, unknownType } from "./checker-types"
@@ -181,6 +181,10 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
         if supportsUnionObjectInference(union_) {
           return checkUnionObject(state, expression, scope, union_)
         }
+        // A nullable map context types the literal like the map itself, so
+        // entries are not widened to SerialValue.
+        presentMap := soleNullableMapArm(union_)
+        if presentMap != none { return checkObject(state, expression, scope, presentMap) }
       }
       _ -> { }
     }
@@ -217,6 +221,22 @@ export function checkObject(state: CheckerState, expression: ObjectLiteral, scop
     }
   }
   return finish(state, expression, mapType(primitive("string"), jsonValueType()))
+}
+
+function soleNullableMapArm(union_: UnionResolvedType): ResolvedType | none {
+  let map: ResolvedType | none = none
+  let hasNone = false
+  for member of union_.types {
+    case member {
+      _: NoneType -> { hasNone = true }
+      _: MapResolvedType -> {
+        if map != none { return none }
+        map = member
+      }
+      _ -> { return none }
+    }
+  }
+  return if hasNone then map else none
 }
 
 function checkClassObject(state: CheckerState, expression: ObjectLiteral, scope: Scope, class_: ClassType, structural: bool): ResolvedType | none {

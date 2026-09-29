@@ -1,6 +1,7 @@
 // Assignment, identifier, operator, member, and index lowering.
 
 import { emitCarrierConversion } from "./emitter-carrier-values"
+import { emitOptionalIndex, emitOptionalMember } from "./emitter-optional-chain"
 import { carrierOf, weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 import { AsExpression, AssignmentExpression, BinaryExpression, Expression, Identifier, IndexExpression, MemberExpression, StringLiteral, ThisExpression, UnaryExpression } from "./ast"
 import { ArrayResolvedType, ClassMetadataResolvedType, ClassType, EnumType, FunctionType, InterfaceType, SerialValueResolvedType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, TypeParameterType, UnionResolvedType, WeakResolvedType } from "./semantic"
@@ -422,6 +423,7 @@ function appendConstantStringParts(expression: Expression, parts: string[]): boo
 }
 
 export function emitMember(expression: MemberExpression, context: EmitContext): string {
+  if expression.resolvedOptionalReceiver != none && expression.resolvedOptionalValue != none { return emitOptionalMember(expression, context) }
   object := emitExpression(expression.object, context)
   let objectType = decoratedExpressionType(expression.object)
   if objectType != none {
@@ -606,6 +608,7 @@ function weakFailureValue(errorType: ResolvedType, errorCpp: string, context: Em
 }
 
 export function emitIndex(expression: IndexExpression, context: EmitContext): string {
+  if expression.resolvedOptionalReceiver != none && expression.resolvedOptionalValue != none { return emitOptionalIndex(expression, context) }
   object := emitExpression(expression.object, context)
   index := emitExpression(expression.index, context)
   sourcePath := quote(moduleDiagnosticPath(context.modulePath, true, context.names))

@@ -49,7 +49,7 @@ items := [1, 2, 3]
 let total = 0
 ```
 
-Prefer `readonly` for deeply immutable values and `:=` for immutable bindings with mutable interiors. `const` is deprecated and remains accepted temporarily with a warning. Global scope allows `readonly`, `:=`, `let`, deprecated `const`, and `function`. Functions hoist; value bindings do not.
+Prefer `readonly` for deeply immutable values and `:=` for immutable bindings with mutable interiors. A `readonly` binding whose class or struct has `let` fields is rejected; use `:=` for mutable singletons. `const` is deprecated and remains accepted temporarily with a warning. Global scope allows `readonly`, `:=`, `let`, deprecated `const`, and `function`. Functions hoist; value bindings do not.
 
 ### `with` Scoped Bindings
 

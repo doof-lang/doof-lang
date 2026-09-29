@@ -452,6 +452,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       if objectType.kind == "never" { return finish(state, expression, neverType()) }
       let weakReceiver: WeakResolvedType | none = none
       let nullableReceiver = false
+      let resultReceiver: ResultResolvedType | none = none
       case objectType {
         weak_: WeakResolvedType -> {
           weakReceiver = weak_
@@ -463,7 +464,24 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         union_: UnionResolvedType -> {
           if member.optional {
             unwrapped := weakAccessTarget(union_)
-            if !sameType(unwrapped, union_) { objectType = unwrapped; nullableReceiver = true }
+            if !sameType(unwrapped, union_) {
+              objectType = unwrapped
+              nullableReceiver = true
+              member.resolvedOptionalReceiver = optionalResolvedType(unwrapped)
+            }
+          } else if !member.force && hasNoneMember(state, union_) {
+            // Member resolution skips the none arm so '?.' and '!.' can share
+            // it; a plain '.' must not read through an absent value.
+            typeError(state, "Cannot access member \"" + member.property + "\" on possibly-none value of type \"" + typeName(objectType) + "\"; use '?.', '!.', or narrow it first", member.span)
+          }
+        }
+        result_: ResultResolvedType -> {
+          // '?.' over a Result reads the success value, preserving Failure
+          // and short-circuiting a none success value.
+          if member.optional {
+            resultReceiver = result_
+            objectType = weakAccessTarget(result_.valueType)
+            member.resolvedOptionalReceiver = optionalResolvedType(objectType)
           }
         }
         _ -> { }
@@ -519,16 +537,38 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
           }
         }
       }
+      if resultReceiver != none && memberValue.kind != "function" && memberValue.kind != "unknown" {
+        member.resolvedOptionalValue = optionalResolvedType(memberValue)
+        return finish(state, expression, resultType(unionType([memberValue, noneType()]), resultReceiver!.errorType))
+      }
       if nullableReceiver && memberValue.kind != "function" {
+        member.resolvedOptionalValue = optionalResolvedType(memberValue)
         return finish(state, expression, unionType([memberValue, noneType()]))
       }
       return finish(state, expression, memberValue)
     }
     index: IndexExpression -> {
-      objectType := checkExpression(state, index.object, scope, none)
+      let objectType = checkExpression(state, index.object, scope, none)
       indexValueType := checkExpression(state, index.index, scope, optionalResolvedType(primitive("int")))
+      let optionalReceiver = false
+      if index.optional {
+        case objectType {
+          union_: UnionResolvedType -> {
+            if hasNoneMember(state, union_) {
+              objectType = weakAccessTarget(union_)
+              optionalReceiver = true
+              index.resolvedOptionalReceiver = optionalResolvedType(objectType)
+            }
+          }
+          _ -> { }
+        }
+      }
       resolved := indexType(state, objectType, indexValueType, index.span)
       if objectType.kind == "never" || indexValueType.kind == "never" { return finish(state, expression, neverType()) }
+      if optionalReceiver && resolved.kind != "unknown" {
+        index.resolvedOptionalValue = optionalResolvedType(resolved)
+        return finish(state, expression, unionType([resolved, noneType()]))
+      }
       return finish(state, expression, resolved)
     }
     call: CallExpression -> { return checkCall(state, call, scope, expected) }
@@ -823,7 +863,7 @@ export function checkIdentifier(state: CheckerState, identifier: Identifier, sco
     return finish(state, identifier, unknownType())
   }
   identifier.resolvedBinding = binding
-  return finish(state, identifier, binding.type_)
+  return finish(state, identifier, binding!.type_)
 }
 
 function legacyNumericParseType(identifier: Identifier): bool {
@@ -1109,6 +1149,15 @@ export function hasNoneMember(state: CheckerState, value: UnionResolvedType): bo
 }
 
 export function checkAssignment(state: CheckerState, expression: AssignmentExpression, scope: Scope): ResolvedType {
+  case expression.target {
+    member: MemberExpression -> {
+      if member.optional { typeError(state, "Optional chaining '?.' cannot be used as an assignment target", expression.target.span) }
+    }
+    index: IndexExpression -> {
+      if index.optional { typeError(state, "Optional indexing '?[]' cannot be used as an assignment target", expression.target.span) }
+    }
+    _ -> { }
+  }
   targetType := checkExpression(state, expression.target, scope, none)
   // Assignment emission needs the target decoration to choose representation
   // conversions, especially when a member is a nullable AST union field.

@@ -133,3 +133,15 @@ export function testEditorCheckerStatementsRetainsCheckedGraphWithScopes(): none
   EditorAssert.isTrue(result.analysis.modules[0].editorScopes.length > 0)
   EditorAssert.isTrue(result.analysis.modules[0].editorExpressions.length > 0)
 }
+
+export function testReadonlyBindingsRequireDeeplyImmutableValues(): none {
+  global := checked("class Point { let x: int }\nreadonly origin = Point { x: 0 }")
+  Assert.equal(global.diagnostics.length, 1)
+  Assert.equal(global.diagnostics[0].message, "Readonly binding \"origin\" must be deeply immutable: field \"x\" is mutable")
+  local := checked("class Point { let x: int }\nfunction f(): none { readonly points = [Point { x: 0 }] }")
+  Assert.equal(local.diagnostics.length, 1)
+  Assert.stringContains(local.diagnostics[0].message, "Readonly binding \"points\" must be deeply immutable")
+  valid := checked("class Point { x: int }\nreadonly origin = Point { x: 0 }\nfunction f(): none { readonly items = [1, 2]\nshared := Point { x: 1 } }")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+}

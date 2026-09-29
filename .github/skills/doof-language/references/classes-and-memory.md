@@ -48,6 +48,7 @@ Current v1 restrictions:
 - Structs do not implement interfaces yet.
 - Structs cannot declare destructors.
 - Structs cannot use `weak` fields or be the target of `weak`.
+- Structs cannot contain themselves by value (directly or via `T | none`, unions, tuples, `Result`, or other structs); use a class or collection for recursive data.
 - Avoid fluent `return this` identity patterns; return an explicit copied value instead.
 
 ### Field Modifiers

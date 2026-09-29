@@ -125,6 +125,7 @@ class CxxModuleEmitter {
   headerRenders: HeaderRenderCache = HeaderRenderCache {}
   cppTypes: CppTypeRegistry = CppTypeRegistry {}
   typeLowering: TypeLoweringGraph | none = none
+  headerTypeSessions: Map<string, TypeLoweringSession> = {}
   headerNameOverride: string = ""
   sourceNameOverride: string = ""
   namespaceNameOverride: string = ""
@@ -202,7 +203,19 @@ class CxxModuleEmitter {
     sectionContext.jsonEligibility = jsonEligibility
     sectionContext.metricsClassLifecycle = configuration.metricsClassLifecycle
     if instantiations != none { configureInstantiationRegistry(sectionContext, instantiations!) }
-    if typeLowering != none { sectionContext.typeLowering = TypeLoweringSession { graph: typeLowering! } }
+    if typeLowering != none {
+      let session = try? headerTypeSessions.get(view.path)
+      if session == none {
+        sessionStart := timings.start()
+        session = TypeLoweringSession { graph: typeLowering! }
+        headerTypeSessions.set(view.path, session!)
+        timings.finish("header.type-session", sessionStart)
+      }
+      // Projections share the defining module and concrete registration tables.
+      // Keep Stream ownership module-local; select() still invalidates the memo
+      // tables whenever a concrete declaration changes the substitution.
+      sectionContext.typeLowering = session
+    }
     timings.finish("header.section-context", contextStart)
     declarationsStart := timings.start()
     sectionPlan := planHeader(
@@ -460,6 +473,7 @@ export function emitModuleGraph(
   cppTypes := CppTypeRegistry { names }
   identities := SemanticTypeIdentities {}
   typeLowering := TypeLoweringGraph { registry: cppTypes, identities }
+  headerTypeSessions: Map<string, TypeLoweringSession> := {}
   worldviewGraphIndex := indexWorldviewGraph(result, identities)
   let sourcePaths: Map<string, string> = {}
   for info of result.modules {
@@ -498,7 +512,7 @@ export function emitModuleGraph(
       continue
     }
     emitter := CxxModuleEmitter {
-      configuration, names, timings, headerPlans, headerRenders, cppTypes, typeLowering,
+      configuration, names, timings, headerPlans, headerRenders, cppTypes, typeLowering, headerTypeSessions,
       headerNameOverride: module.headerName,
       sourceNameOverride: module.sourceName,
       namespaceNameOverride: module.namespaceName,

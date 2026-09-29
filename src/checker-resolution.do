@@ -1,6 +1,6 @@
 // Type annotation, member, index, and callable-field resolution.
 
-import { ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, FunctionParamType, FunctionType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Scope, SetResolvedType, Symbol, StreamResolvedType, TupleResolvedType, UnionResolvedType, TypeParameterType } from "./semantic"
+import { ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, FunctionParamType, FunctionType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Scope, SetResolvedType, Symbol, StreamResolvedType, TupleResolvedType, UnionResolvedType, TypeParameterType, NeverType, UnknownType } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { CheckedMember, ClassDeclaration, EnumDeclaration, Expression, FunctionDeclaration, Identifier, InterfaceDeclaration, MemberExpression, Program, SourceSpan, TypeAnnotation, Parameter, TypeParameterConstraint } from "./ast"
 import { interfaceBoundReceiver, applyDeepReadonly, arrayType, classMetadataType, classType, functionType, joinTypes, jsonObjectType, jsonValueType, mapType, resultType, setType, noneType, primitive, promiseType, sameType, typeName, unionType, methodReflectionType, substituteTypeParams, typeParameter, unknownType } from "./checker-types"
@@ -568,15 +568,29 @@ export function indexType(state: CheckerState, object: ResolvedType, index: Reso
       if !isAssignableWithInterfaces(state.result, index, map.keyType) && typeName(index) != "unknown" { typeError(state, "Invalid map key type", span) }
       return map.valueType
     }
-    _: TupleResolvedType -> { return unknownType() }
+    _: TupleResolvedType -> {
+      typeError(state, "Tuples cannot be indexed; access elements with '._1', '._2', ...", span)
+      return unknownType()
+    }
     primitive_: PrimitiveType -> {
       if primitive_.name == "string" {
         if !isAssignableWithInterfaces(state.result, index, primitive("int")) && typeName(index) != "unknown" { typeError(state, "Index must be an int", span) }
         return primitive("char")
       }
     }
+    union_: UnionResolvedType -> {
+      for member of union_.types {
+        if member.kind == "none" {
+          typeError(state, "Cannot index possibly-none value of type \"" + typeName(object) + "\"; use '?[]' or narrow it first", span)
+          return unknownType()
+        }
+      }
+    }
+    _: UnknownType -> { return unknownType() }
+    _: NeverType -> { return unknownType() }
     _ -> { }
   }
+  typeError(state, "Type \"" + typeName(object) + "\" cannot be indexed", span)
   return unknownType()
 }
 

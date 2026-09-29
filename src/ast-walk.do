@@ -11,7 +11,7 @@ import {
   ImmutableBinding, IndexExpression, LambdaExpression, LetDeclaration, MemberExpression, ObjectLiteral, RangePattern,
   ReadonlyDeclaration, RetireExpression, ReturnStatement, Statement, StringLiteral, TryStatement, TupleLiteral,
   UnaryExpression, ValuePattern, WhileStatement, WithStatement, YieldBlockAssignmentStatement, YieldBlockExpression,
-  YieldStatement, AsExpression,
+  YieldStatement, AsExpression, ClassDeclaration, FunctionDeclaration, InterfaceDeclaration,
 } from "./ast"
 
 export function collectStatementExpressions(statement: Statement, result: Expression[]): none {
@@ -158,4 +158,60 @@ export function collectExpressionTree(expression: Expression, result: Expression
   let nested: Expression[] = []
   collectNestedExpressions(expression, nested)
   for child of nested { collectExpressionTree(child, result) }
+}
+
+// Checked annotations point from uses back to declarations: a call to its
+// function, a member to its method, a construction to its class. Any recursion
+// then forms a reference cycle through the declaration's own body, so a
+// reference-counted host never frees the checked program. Consumers that are
+// finished with an analysis call this to drop those back-references; the
+// syntax tree and resolved types remain intact.
+export function releaseCheckedReferences(statements: Statement[]): none {
+  let pending: Statement[] = []
+  for statement of statements { pending.push(statement) }
+  let expressions: Expression[] = []
+  while pending.length > 0 {
+    statement := try! pending.pop()
+    case statement {
+      function_: FunctionDeclaration -> { releaseFunctionBody(function_, pending, expressions) }
+      class_: ClassDeclaration -> {
+        for method of class_.methods { releaseFunctionBody(method, pending, expressions) }
+        for field of class_.fields { if field.defaultValue != none { expressions.push(field.defaultValue!) } }
+        if class_.destructor_ != none { for inner of class_.destructor_!.statements { pending.push(inner) } }
+      }
+      interface_: InterfaceDeclaration -> { for method of interface_.methods { releaseFunctionBody(method, pending, expressions) } }
+      export_: ExportDeclaration -> { pending.push(export_.declaration) }
+      block: Block -> { for inner of block.statements { pending.push(inner) } }
+      _ -> { collectStatementExpressions(statement, expressions) }
+    }
+    while expressions.length > 0 {
+      expression := try! expressions.pop()
+      releaseExpression(expression)
+      collectNestedExpressions(expression, expressions)
+    }
+  }
+}
+
+function releaseFunctionBody(function_: FunctionDeclaration, pending: Statement[], expressions: Expression[]): none {
+  for param of function_.params { if param.defaultValue != none { expressions.push(param.defaultValue!) } }
+  case function_.body {
+    block: Block -> { for inner of block.statements { pending.push(inner) } }
+    expression: Expression -> { expressions.push(expression) }
+  }
+}
+
+function releaseExpression(expression: Expression): none {
+  case expression {
+    call: CallExpression -> {
+      call.resolvedConstruction = none; call.resolvedFunction = none
+      call.resolvedConstructor = none; call.resolvedClass = none
+    }
+    member: MemberExpression -> { member.resolvedMember = none; member.resolvedStaticOwner = none }
+    object: ObjectLiteral -> { object.resolvedConstruction = none; object.resolvedClass = none }
+    construct: ConstructExpression -> {
+      construct.resolvedConstruction = none; construct.resolvedClass = none; construct.resolvedConstructor = none
+    }
+    actor: ActorCreationExpression -> { actor.resolvedConstruction = none; actor.resolvedConstructor = none }
+    _ -> { }
+  }
 }

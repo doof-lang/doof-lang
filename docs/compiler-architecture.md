@@ -18,6 +18,17 @@ The compiler processes a closed source graph in four front-end/back-end phases:
 4. The emitter consumes only the decorated graph and writes split C++17
    modules plus explicit runtime/native support inputs.
 
+The parser consumes nested generic closers from lexer shift tokens through a
+virtual cursor. Splitting `>>` or `>>>` takes constant work without copying the
+token array; lookahead and source spans still expose individual `>` tokens,
+while ordinary expression shifts retain their original lexer tokens.
+
+Before checking bodies, field-type preparation reaches a fixed point across
+the graph. It constructs provisional scopes only for modules with unresolved
+class fields; function-only modules and modules whose fields are already
+prepared need no scope for that pass. Normal module checking still validates
+initializers and reports diagnostics in their defining module.
+
 The important hand-offs are:
 
 | Producer | Product | Consumer |
@@ -67,6 +78,7 @@ the row from left to right.
 | Enums | variant syntax and resolved backing slots in `ast.do` | `checker-statements.do` selects integer/string backing kind, resolves values, and validates uniqueness; `checker-resolution.do` exposes the typed API | `emitter-header.do` emits identity/lookups/formatting, `emitter-types.do` selects optional nullable carriers, and JSON/metadata emitters consume the checked backing values |
 | Calls and dispatch | declarations and symbols from analysis | `checker-resolution.do` records member targets; `checker-calls.do` applies generic inference and shared `checker-arguments.do` validation | `emitter-expr-calls.do` lowers the recorded target; `emitter-call-arguments.do` shares ordering/defaults across direct and dispatched calls |
 | Control flow and narrowing | statement/expression/pattern AST in parser modules | `checker-statements.do` and `checker-expressions.do` determine continuation, exhaustiveness, and narrowed bindings | `emitter-stmt.do`, `emitter-expr-control.do`, and `emitter-case-pattern.do` lower those decisions |
+| Optional chaining | `?.` members and `?[]` indexes | `checker-expressions.do` and `checker-calls.do` decorate the unwrapped receiver (nullable arm or Result success value) and the pre-widening value type, and type Result chains with unioned error channels | `emitter-optional-chain.do` evaluates the receiver once, returns none when absent (propagating Failure for Result receivers), and re-emits the plain access through a synthetic unwrapped receiver |
 | Generics | type parameters in AST and resolved types | checker infers/substitutes concrete arguments | `checked-instantiations.do` discovers a fixed point; `emitter-monomorphize.do` assigns C++ names; emitters output concrete forms for every Doof-owned generic, including methods, while runtime/native-owned C++ templates remain external |
 | Interfaces | interface/class declarations and resolved nominal types | `checker-interfaces.do` validates structural conformance and discovers the closed implementor set | `emitter-types.do` and declaration/JSON emitters lower interface variants |
 | JSON and reflection | annotations/declarations in AST; eligibility in `json-semantics.do` | checker advertises only supported synthetic members and records metadata demand | `emitter-json.do`, `emitter-metadata.do`, and `emitter-wasm.do` generate definitions/adapters |
@@ -275,7 +287,12 @@ surfaces, checked types, JSON demand and concrete instantiations are fixed for t
 cache lifetime. The cache is never persisted or shared between compilations.
 
 A cache miss builds the complete section, including concrete declarations, in a
-fresh context. `freezeHeaderPlan` drains the builder into deeply immutable arrays
+fresh context. Header preparation reuses one `TypeLoweringSession` per defining
+module across different projections, with fixed concrete registration tables.
+Sessions remain module-local because lowered `Stream` aliases carry module
+ownership; changing the generic substitution still clears contextual memo tables.
+Source rendering starts with its own session, and no session survives the graph.
+`freezeHeaderPlan` drains the builder into deeply immutable arrays
 of declaration fragments and type references. The cache shares that snapshot
 without copies. Each consumer retains its original worldview order and chooses
 its own aliases; rendering never rewrites the cached plan. Root source-emission
@@ -285,6 +302,8 @@ context and coverage state remain per module.
 key/lookup/copy, section context, declarations, concrete declarations and cache
 store. Cache lookup count is the total section demand; declaration count is the
 number of misses. Their difference is the number of reused plans.
+`header.type-session` counts the defining modules whose header lowering sessions
+were created, including when several different projections miss the plan cache.
 
 ### Structured C++ types and declarations
 

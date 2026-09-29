@@ -132,7 +132,10 @@ let y: float = 3.14 // Literal interpreted as float
 ```
 
 A literal contextualized as `byte` must be in `0..255`; out-of-range values are
-rejected rather than implicitly truncated.
+rejected rather than implicitly truncated. An integer literal without a suffix must fit in
+`int` (`-2147483648..2147483647`), even when its context is `long`, `float`, or
+`double`; use the `L` suffix for larger values. Suffixed long literals must fit
+in `long`.
 
 Underscores may appear between two digits in numeric literals to improve readability. Leading, trailing, and consecutive underscores are rejected.
 

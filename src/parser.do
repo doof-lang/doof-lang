@@ -39,6 +39,8 @@ export class Parser {
   let issues: ParserIssue[] = []
   let tokens: Token[] = []
   let pos: int = 0
+  private let remainingTypeClosers: int = 0
+  private let previousToken: Token | none = none
   let inForIterable: bool = false
   let inTagAttribute: bool = false
   let tagAttributeDelimiterDepth: int = 0
@@ -70,6 +72,8 @@ export class Parser {
       }
     }
     pos = 0
+    remainingTypeClosers = 0
+    previousToken = none
     start := location()
     let statements: Statement[] = []
     while !atEnd() { appendStatement(statements) }
@@ -112,10 +116,21 @@ export class Parser {
 
   // Shared parser state operations are public to the focused parser modules;
   // callers should continue to use parse() or the top-level parse() function.
-  current(): Token { return tokens[pos] }
+  current(): Token {
+    if remainingTypeClosers > 0 { return typeCloser(tokens[pos].length - remainingTypeClosers) }
+    return tokens[pos]
+  }
+
+  private typeCloser(part: int): Token {
+    token := tokens[pos]
+    return Token { kind: TokenType.Greater, length: 1, valueOffset: token.offset + part, valueLength: 1, needsDecode: false, line: token.line, column: token.column + part, offset: token.offset + part }
+  }
 
   peek(offset: int = 0): Token {
-    index := pos + offset
+    if remainingTypeClosers > 0 && offset < remainingTypeClosers {
+      return typeCloser(tokens[pos].length - remainingTypeClosers + offset)
+    }
+    index := pos + offset + if remainingTypeClosers > 0 then 1 - remainingTypeClosers else 0
     if index >= tokens.length { return tokens[tokens.length - 1] }
     return tokens[index]
   }
@@ -131,7 +146,13 @@ export class Parser {
         tagAttributeDelimiterDepth = tagAttributeDelimiterDepth - 1
       }
     }
-    if !atEnd() { pos = pos + 1 }
+    if token.kind != TokenType.EndOfFile {
+      previousToken = token
+      if remainingTypeClosers > 0 {
+        remainingTypeClosers -= 1
+        if remainingTypeClosers == 0 { pos += 1 }
+      } else { pos += 1 }
+    }
     return token
   }
 
@@ -147,16 +168,10 @@ export class Parser {
     // The lexer retains shift operators. Split only when the grammar expects
     // a closing type delimiter, preserving offsets for subsequent diagnostics.
     if kind == TokenType.Greater && (check(TokenType.GreaterGreater) || check(TokenType.GreaterGreaterGreater)) {
-      token := current()
-      let expanded: Token[] = []
-      for index of 0..<tokens.length {
-        if index == pos {
-          for part of 0..<token.length {
-            expanded.push(Token { kind: TokenType.Greater, length: 1, valueOffset: token.offset + part, valueLength: 1, needsDecode: false, line: token.line, column: token.column + part, offset: token.offset + part })
-          }
-        } else { expanded.push(tokens[index]) }
-      }
-      tokens = expanded
+      // Expose virtual closing tokens instead of copying the complete token
+      // array for every nested generic. Lookahead and previous spans see the
+      // same individual '>' tokens; expression shifts stay intact.
+      remainingTypeClosers = current().length
     }
     if check(kind) { return advance() }
     let expectedMessage = message
@@ -203,7 +218,7 @@ export class Parser {
   }
 
   previousEnd(): AstLocation {
-    previous := if pos > 0 then tokens[pos - 1] else current()
+    previous := previousToken ?? current()
     return AstLocation {
       line: previous.line,
       column: previous.column + previous.length,
@@ -212,18 +227,18 @@ export class Parser {
   }
 
   sameLineAsPrevious(): bool {
-    if pos == 0 { return false }
-    return tokens[pos - 1].line == current().line
+    if previousToken == none { return false }
+    return previousToken!.line == current().line
   }
 
   previousIs(kind: TokenType): bool {
-    if pos == 0 { return false }
-    return tokens[pos - 1].kind == kind
+    if previousToken == none { return false }
+    return previousToken!.kind == kind
   }
 
   immediatelyAfterPrevious(): bool {
-    if pos == 0 { return false }
-    previous := tokens[pos - 1]
+    if previousToken == none { return false }
+    previous := previousToken!
     return previous.offset + previous.length == current().offset
   }
 
