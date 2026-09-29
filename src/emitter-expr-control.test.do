@@ -130,3 +130,51 @@ export function testReadonlyEmissionControlUsesExplicitNames(): none {
   Assert.stringContains(output, "::mapped::types::Choice")
   Assert.stringNotContains(output, "app_vendor_types_")
 }
+
+class GenericCaseWrapped { message: string }
+
+function mapGenericCaseResult<T>(result: Result<T, string>): Result<T, GenericCaseWrapped> {
+  return case result {
+    s: Success -> Success { value: s.value },
+    f: Failure -> Failure { error: GenericCaseWrapped { message: f.error } }
+  }
+}
+
+function pickGenericYield<T>(flag: bool, value: T, fallback: T): Result<T, string> {
+  let picked: Result<T, string> <- {
+    if flag { yield Success { value: value } }
+    yield Failure { error: "fallback" }
+  }
+  return case picked {
+    s: Success -> { yield Success { value: s.value } }
+    _: Failure -> { yield Success { value: fallback } }
+  }
+}
+
+export function testGenericCaseExpressionUsesSpecializedResultType(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Wrapped { message: string }\n" +
+    "function mapResult<T>(result: Result<T, string>): Result<T, Wrapped> {\n" +
+    "  return case result {\n" +
+    "    s: Success -> Success { value: s.value },\n" +
+    "    f: Failure -> Failure { error: Wrapped { message: f.error } }\n" +
+    "  }\n" +
+    "}\n" +
+    "function main(): none { mapped := mapResult<int>(Success { value: 1 }) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  let source = ""
+  for module of result.emission!.modules { source = source + module.source }
+  Assert.stringContains(source, "[&]() -> doof::Result<int32_t, std::shared_ptr<Wrapped>>")
+  Assert.stringNotContains(source, "doof::Result<T,")
+}
+
+export function testGenericCaseAndYieldExpressionsRunSpecialized(): none {
+  mappedSuccess := mapGenericCaseResult<int>(Success { value: 4 })
+  Assert.equal(case mappedSuccess { s: Success -> s.value, _: Failure -> -1 }, 4)
+  mappedFailure := mapGenericCaseResult<string>(Failure { error: "bad" })
+  Assert.equal(case mappedFailure { _: Success -> "", f: Failure -> f.error.message }, "bad")
+  picked := pickGenericYield<string>(false, "value", "fallback")
+  Assert.equal(case picked { s: Success -> s.value, _: Failure -> "" }, "fallback")
+  Assert.equal(case pickGenericYield<int>(true, 3, 9) { s: Success -> s.value, _: Failure -> -1 }, 3)
+}

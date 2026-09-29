@@ -7,7 +7,7 @@ import { emitCaseSubjectValue, emitCaseTypePattern } from "./emitter-case-patter
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock, emitCondition } from "./emitter-stmt"
 import { exprModuleNamespaceFor, hasNoneMember } from "./emitter-expr-utils"
-import { emitContextType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { emitContextType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { sameType } from "./checker-types"
 import { emitNoneLiteral } from "./emitter-expr-literals"
 
@@ -53,8 +53,9 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
 }
 
 export function emitYieldBlockExpression(expression: YieldBlockExpression, context: EmitContext, expected: ResolvedType | none): string {
-  resultType := if expected == none then expression.resolvedType else expected
-  if resultType == none { panic("Yield block has no resolved result type") }
+  checkedResultType := if expected == none then expression.resolvedType else expected
+  if checkedResultType == none { panic("Yield block has no resolved result type") }
+  resultType := specializeEmitType(checkedResultType!, context)
   previousYieldType := context.valueYieldType
   previousYieldVoid := context.valueYieldReturnsVoid
   previousYieldState := context.inValueYieldBlock
@@ -65,7 +66,7 @@ export function emitYieldBlockExpression(expression: YieldBlockExpression, conte
   context.inValueYieldBlock = previousYieldState
   context.valueYieldType = previousYieldType
   context.valueYieldReturnsVoid = previousYieldVoid
-  return "[&]() -> " + emitType(resultType!, context.modulePath, context.names) + " {\n" + body + "}()"
+  return "[&]() -> " + emitContextType(resultType, context) + " {\n" + body + "}()"
 }
 
 export function emitCatchExpression(expression: CatchExpression, context: EmitContext): string {
@@ -88,11 +89,12 @@ export function emitCatchExpression(expression: CatchExpression, context: EmitCo
 }
 
 export function emitCaseExpression(expression: CaseExpression, context: EmitContext, expected: ResolvedType | none): string {
-  let resultType: ResolvedType | none = none
-  if expected != none { resultType = expected! }
-  else if expression.resolvedType != none { resultType = expression.resolvedType! }
-  if resultType == none { panic("Case expression has no resolved result type") }
-  let output = "[&]() -> " + emitType(resultType!, context.modulePath, context.names) + " {\n"
+  let checkedResultType: ResolvedType | none = none
+  if expected != none { checkedResultType = expected! }
+  else if expression.resolvedType != none { checkedResultType = expression.resolvedType! }
+  if checkedResultType == none { panic("Case expression has no resolved result type") }
+  resultType := specializeEmitType(checkedResultType!, context)
+  let output = "[&]() -> " + emitContextType(resultType, context) + " {\n"
   subjectResult := expression.resolvedSubjectType else { panic("Case expression has no checked subject type") }
   storageType := expression.subject.resolvedType else { panic("Case expression subject has no resolved type") }
   output = output + "    auto _case_subject = " + emitCaseSubjectValue(emitExpression(expression.subject, context), specializeEmitType(storageType, context), specializeEmitType(subjectResult, context), context) + ";\n"
