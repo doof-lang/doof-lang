@@ -138,3 +138,15 @@ export function testCoalescingAssignmentLowersLazily(): none {
   Assert.stringContains(source, "if (doof::is_failure(_assignment_target)) { _assignment_target = doof::Success<int32_t>{4}; }")
   Assert.stringContains(source, "if (doof::is_failure(_assignment_target)) { _assignment_target = load(); }")
 }
+
+export function testSerializableStructCalleeUsesValueType(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "struct Point { x: int }\nenum Color { Red }\nfunction decode<T: Serializable>(json: SerialValue): Result<T, string> { return T.fromSerialValue(json) }\n" +
+    "function main(): none { point := decode<Point>({ x: 1 })\ncolor := decode<Color>(0) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "Point::fromSerialValue(")
+  Assert.stringContains(source, "Color_fromSerialValue(json, false)")
+  Assert.stringNotContains(source, "element_type")
+}

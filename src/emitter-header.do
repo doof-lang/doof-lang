@@ -12,7 +12,7 @@ import { EmitContext, EmitModuleSurface } from "./emitter-context"
 import { planClassDeclaration, emitDescriptionComment, planFunctionDeclaration, planInterfaceAlias } from "./emitter-decl"
 import { cppIdentifier } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
-import { emitInterfaceJsonDeclaration } from "./emitter-json"
+import { emitInterfaceJsonDeclaration, emitUnionAliasJsonDeclaration } from "./emitter-json"
 import { emitContextType, emitType } from "./emitter-types"
 import {
   ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, InterfaceType,
@@ -117,6 +117,8 @@ function collect(statement: Statement, plan: HeaderPlanBuilder, context: EmitCon
           }
         }
         else { plan.typeAliases.push(emitted) }
+        aliasJson := emitUnionAliasJsonDeclaration(alias)
+        if aliasJson != "" { plan.functionSignatures.push(textDeclaration(aliasJson)) }
       }
     }
     const_: ConstDeclaration -> {

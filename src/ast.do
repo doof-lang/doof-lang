@@ -183,6 +183,8 @@ export class MemberExpression {
   optional: bool
   force: bool
   let resolvedStaticOwner: ClassDeclaration | none = none
+  // `Alias.fromSerialValue` on a class-union alias; lowered to the alias decoder.
+  let resolvedJsonAlias: TypeAliasDeclaration | none = none
   // Namespace imports have no runtime value. Retain the checker-selected
   // exported symbol so lowering can project its exact declaration.
   let resolvedNamespaceAccess: bool = false
@@ -772,6 +774,8 @@ export class TypeAliasDeclaration {
   type_: TypeAnnotation
   exported: bool
   let resolvedType: ResolvedType | none = none
+  // Set when `Alias.fromSerialValue` is used, so the alias module emits its decoder.
+  let needsJson: bool = false
   span: SourceSpan
 }
 

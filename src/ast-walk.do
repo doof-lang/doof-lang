@@ -206,7 +206,7 @@ function releaseExpression(expression: Expression): none {
       call.resolvedConstruction = none; call.resolvedFunction = none
       call.resolvedConstructor = none; call.resolvedClass = none
     }
-    member: MemberExpression -> { member.resolvedMember = none; member.resolvedStaticOwner = none }
+    member: MemberExpression -> { member.resolvedMember = none; member.resolvedStaticOwner = none; member.resolvedJsonAlias = none }
     object: ObjectLiteral -> { object.resolvedConstruction = none; object.resolvedClass = none }
     construct: ConstructExpression -> {
       construct.resolvedConstruction = none; construct.resolvedClass = none; construct.resolvedConstructor = none

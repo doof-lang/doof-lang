@@ -113,3 +113,20 @@ export function testLiteralFieldDecodingValidatesEnumsAndOtherLiterals(): none {
   Assert.stringContains(source, "Field \\\"version\\\" must be -2")
   Assert.stringContains(source, "Field \\\"enabled\\\" must be true")
 }
+
+export function testUnionAliasDecoderDispatchesOnDiscriminator(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Circle { kind: \"circle\"\nradius: double }\nclass Rect { kind: \"rect\"\nwidth: double }\ntype Shape = Circle | Rect\n" +
+    "function decode(input: SerialValue): Result<Shape, string> => Shape.fromSerialValue(input)",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  module := result.emission!.modules[0]
+  Assert.stringContains(module.header, "doof::Result<Shape, std::string> Shape_fromSerialValue(const doof::SerialValue& _json, bool _lenient);")
+  Assert.stringContains(module.source, "if (_discriminator == \"circle\")")
+  Assert.stringContains(module.source, "Circle::fromSerialValue(_json, _lenient)")
+  Assert.stringContains(module.source, "Shape_fromSerialValue(input, false)")
+  unused := compile([SourceFile { path: "/main.do", source:
+    "class Circle { kind: \"circle\"\nradius: double }\nclass Rect { kind: \"rect\"\nwidth: double }\ntype Shape = Circle | Rect",
+  }], "/main.do")
+  Assert.stringNotContains(unused.emission!.modules[0].header, "Shape_fromSerialValue")
+}

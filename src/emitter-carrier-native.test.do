@@ -77,3 +77,7 @@ export function testLoopThenAndCoalescingNative(): none {
 export function testLiteralFieldDiscriminatorsNative(): none {
   runNativeFixture("literal-field-discriminators")
 }
+
+export function testJsonAliasAndGenericDecodeNative(): none {
+  runNativeFixture("json-alias-and-generic-decode")
+}

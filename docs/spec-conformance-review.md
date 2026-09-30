@@ -222,19 +222,20 @@ exports an interface for consumers to implement can't be checked on its own.
 **Recommendation**: emit nothing (or a warning) when no value of the
 interface type is reachable, and document the rule in ch. 7.
 
-### A27. Named union alias deserialization — **Implement**
+### A27. Named union alias deserialization — **Fixed**
 
-`type Shape = Circle | Rect` followed by `Shape.fromSerialValue(...)` fails
-with "Type 'Shape' cannot be used as a value", even when both classes share a
-literal discriminator. Ch. 12 "Named Union Alias Deserialization" documents it.
-Interface deserialization with the same classes works.
+`Shape.fromSerialValue(json, lenient)` now works for a non-generic alias of a
+union of classes that share a literal string discriminator, including aliases
+imported from another module. The alias module emits a `Shape_fromSerialValue`
+decoder that shares the interface decoder's dispatch. Other aliases report a
+targeted error, and the alias still can't be used as a value otherwise.
 
-### A28. Generic `T.fromSerialValue(json)` emits invalid C++ — **Implement**
+### A28. Generic `T.fromSerialValue(json)` emits invalid C++ — **Fixed**
 
-Inside `function decode<T: Serializable>(json: SerialValue)`,
-`T.fromSerialValue(json)` passes the checker, but the specialization calls
-`User::fromSerialValue(json)` without the `lenient` argument, and the C++
-compiler rejects it ("too few arguments"). Ch. 12 shows this exact example.
+A one-argument call now supplies the default `lenient` argument. The
+specialized callee also no longer assumes a shared-pointer class: struct
+arguments use the value type, and enum arguments call the generated enum
+decoder (previously both produced invalid C++).
 
 ### A29. Deprecated module `const` gives no warning — **Implement**
 
@@ -286,7 +287,7 @@ parser rule at the same time.
 
 ## Suggested order
 
-1. **A27, A28** (discriminated-union JSON), now that A1 and A2 are done, plus the remaining checker test helpers.
+1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes.** Cheap, and they remove misleading examples.
 3. **Common gaps: A5, A6, A8, A9, A10, A12, A13, A29.**
 4. **Needs a decision first: A3, A7, A14, A16, A23, A26, A30.**

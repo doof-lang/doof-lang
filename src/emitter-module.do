@@ -22,7 +22,7 @@ import {
 import { AnalysisResult, ModuleInfo } from "./analyzer"
 import { createEmitContextForModule, EmissionConfiguration, EmitContext, EmitModuleSurface, generatedLineDirective } from "./emitter-context"
 import { emitClassDeclaration, emitClassDestructorDefinition, emitClassMethodDefinition, emitFunctionDeclaration, emitFunctionDefinition, emitModuleValueStorage, emitNativeFunctionAdapterDefinition, emitStaticClassFieldDefinitions } from "./emitter-decl"
-import { emitGeneratedJsonMethods, emitInterfaceJsonDefinition } from "./emitter-json"
+import { emitGeneratedJsonMethods, emitInterfaceJsonDefinition, emitUnionAliasJsonDefinition } from "./emitter-json"
 import { emitMetadataDefinition } from "./emitter-metadata"
 import { emitStatement } from "./emitter-stmt"
 import { emitContextType } from "./emitter-types"
@@ -987,6 +987,7 @@ function emitSourceStatement(statement: Statement, context: EmitContext): string
       return result
     }
     interface_: InterfaceDeclaration -> { return emitInterfaceJsonDefinition(interface_, context) }
+    alias: TypeAliasDeclaration -> { return emitUnionAliasJsonDefinition(alias, context) }
     const_: ConstDeclaration -> { return emitModuleStorage(const_, const_.value, context) }
     readonly_: ReadonlyDeclaration -> { return emitModuleStorage(readonly_, readonly_.value, context) }
     binding: ImmutableBinding -> { return emitModuleStorage(binding, binding.value, context) }

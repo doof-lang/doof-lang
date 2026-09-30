@@ -94,18 +94,18 @@ When `lenient` is `true`:
 Requires a shared literal-valued discriminator field with distinct string values across all implementing classes:
 
 ```doof
-interface Shape { area(): float }
+interface Shape { area(): double }
 
 class Circle implements Shape {
     kind: "circle"
-    radius: float
-    function area(): float => 3.14159 * radius * radius
+    radius: double
+    area(): double => 3.14159 * radius * radius
 }
 
 class Rect implements Shape {
     kind: "rect"
-    width, height: float
-    function area(): float => width * height
+    width, height: double
+    area(): double => width * height
 }
 
 Shape.fromSerialValue({ kind: "circle", radius: 5.0 })  // Result<Shape, string>
@@ -113,6 +113,10 @@ Shape.fromSerialValue({ kind: "circle", radius: 5.0 }, true)
 ```
 
 Compile error if implementing classes lack a shared literal-valued discriminator.
+
+A named alias of a class union uses the same rule: with `type Shape = Circle | Rect`,
+`Shape.fromSerialValue(json)` returns `Result<Shape, string>`. Generic aliases and
+unions containing non-class members are compile errors.
 
 ### Reserved Names
 

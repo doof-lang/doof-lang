@@ -2,12 +2,15 @@ import { retainEditorScope } from "./checker-common"
 // Expression dispatch, operators, narrowing, and assignment checking.
 
 import { checkArguments, positionalArguments } from "./checker-arguments"
-import { resolveMember } from "./checker-resolution"
+import { jsonPrograms, resolveMember } from "./checker-resolution"
+import { unionAliasJsonDiscriminator } from "./json-semantics"
+import type { Symbol } from "./semantic"
+import type { TypeAliasDeclaration } from "./ast"
 
 import { ActorType, ArrayResolvedType, Binding, ClassType, EnumType, InterfaceType, Diagnostic, FunctionParamType, FunctionType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Scope, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
 
 import { CheckedMember, ArrayLiteral, AsExpression, AssignmentExpression, BinaryExpression, Block, BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ConstructExpression, DoubleLiteral, DotShorthand, EnumDeclaration, Expression, FloatLiteral, FunctionDeclaration, IfExpression, Identifier, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral, ObjectLiteral, SourceSpan, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression, CatchExpression, CaseExpression, CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern, AsyncExpression, RetireExpression, ActorCreationExpression } from "./ast"
-import { actorType, classType, functionType, isNumeric, isJsonValueType, isSerialBytesType, resultType, successType, failureType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
+import { actorType, classType, functionType, jsonValueType, isNumeric, isJsonValueType, isSerialBytesType, resultType, successType, failureType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { asyncResultViolation } from "./checker-async"
@@ -418,6 +421,8 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
               member.resolvedNamespaceSymbol = namespaceMemberSymbol(state.info!, identifier.name, member.property, state.result)
               namespaceMember = namespaceMemberType(state.info!, identifier.name, member.property, state.result)
             }
+          } else if localBinding == none && member.property == "fromSerialValue" && jsonAliasSymbol(state, identifier.name) != none {
+            return checkUnionAliasJsonMember(state, member, identifier, jsonAliasSymbol(state, identifier.name)!, scope)
           } else {
             objectType = checkExpression(state, member.object, scope, none)
           }
@@ -1332,4 +1337,55 @@ function validateCaseRangeBound(state: CheckerState, bound: Expression | none, s
   if !isInteger(subjectType) || !isInteger(boundType) || !typesOverlap(state, subjectType, boundType) {
     typeError(state, "Case range bound of type \"" + typeName(boundType) + "\" cannot match subject type \"" + typeName(subjectType) + "\"", span)
   }
+}
+
+/** The type-alias symbol a value-position name refers to, if any. */
+function jsonAliasSymbol(state: CheckerState, name: string): Symbol | none {
+  info := state.info!
+  for symbol of info.symbols {
+    if symbol.name == name && symbol.kind == "type-alias" && typeAliasDeclaration(state, symbol) != none { return symbol }
+  }
+  for imported of info.imports {
+    if imported.localName == name && !imported.typeOnly && imported.symbol != none && imported.symbol!.kind == "type-alias" && typeAliasDeclaration(state, imported.symbol!) != none {
+      return imported.symbol
+    }
+  }
+  return none
+}
+
+function typeAliasDeclaration(state: CheckerState, symbol: Symbol): TypeAliasDeclaration | none {
+  declaration := declarationFor(state.result, symbol)
+  if declaration == none { return none }
+  case declaration! {
+    alias: TypeAliasDeclaration -> { return alias }
+    _ -> { return none }
+  }
+}
+
+// `Alias.fromSerialValue(json)` decodes a named union of classes by the same
+// literal-discriminator rule as interfaces. The alias names a type, so it is
+// accepted only as this static receiver.
+function checkUnionAliasJsonMember(state: CheckerState, member: MemberExpression, identifier: Identifier, symbol: Symbol, scope: Scope): ResolvedType {
+  alias := typeAliasDeclaration(state, symbol)!
+  aliasType := resolveType(state, NamedType { kind: "named-type", name: identifier.name, typeArgs: [], span: identifier.span }, state.info!, scope)
+  // The binding records the alias symbol so lowering can qualify an imported decoder.
+  identifier.resolvedBinding = Binding { name: identifier.name, kind: "type-alias", type_: aliasType, mutable: false, span: checkerSemanticSpan(alias.span), module: symbol.module, symbol }
+  finish(state, identifier, aliasType)
+  if aliasType.kind == "unknown" { return finish(state, member, unknownType()) }
+  if alias.typeParams.length > 0 {
+    typeError(state, "Automatic JSON deserialization is not available on generic type alias \"" + alias.name + "\"", member.span)
+    return finish(state, member, unknownType())
+  }
+  if unionAliasJsonDiscriminator(alias, jsonPrograms(state.result)) == none {
+    typeError(state, "Cannot deserialize type alias \"" + alias.name + "\": it must be a union of classes that share a literal-valued string field with distinct values (e.g. kind: \"variant\")", member.span)
+    return finish(state, member, unknownType())
+  }
+  alias.needsJson = true
+  member.resolvedJsonAlias = alias
+  decoder := functionType([
+    FunctionParamType { name: "value", type_: jsonValueType(), hasDefault: false },
+    FunctionParamType { name: "lenient", type_: primitive("bool"), hasDefault: true },
+  ], resultType(aliasType, primitive("string")))
+  member.resolvedMember = CheckedMember { type_: decoder, modulePath: symbol.module, owner: aliasType }
+  return finish(state, member, decoder)
 }

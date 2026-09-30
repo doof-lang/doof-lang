@@ -210,3 +210,19 @@ export function testWeakOptionalCallToNoneMethodHandlesAbsence(): none {
   Assert.stringContains(source, ".has_value()) return doof::Success<void>{};")
   Assert.stringNotContains(source, "void{}")
 }
+
+export function testSerializableTypeParameterDecodeSuppliesLenient(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class User { name: string }\nstruct Point { x: int }\n" +
+    "function decode<T: Serializable>(json: SerialValue): Result<T, string> { return T.fromSerialValue(json) }\n" +
+    "function strict<T: Serializable>(json: SerialValue): Result<T, string> { return T.fromSerialValue(json, false) }\n" +
+    "function main(): none { user := decode<User>({ name: \"Ada\" })\npoint := decode<Point>({ x: 1 })\nagain := strict<User>({ name: \"Ada\" }) }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "User::fromSerialValue(json, false)")
+  Assert.stringContains(source, "Point::fromSerialValue(json, false)")
+  Assert.stringNotContains(source, "::element_type::fromSerialValue")
+  Assert.stringNotContains(source, "fromSerialValue(json, false, false)")
+}

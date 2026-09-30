@@ -306,3 +306,20 @@ export function testIntegerRangeExhaustivenessUsesSubjectBounds(): none {
     Assert.stringContains(result.diagnostics[0].message, "Case expression must be exhaustive")
   }
 }
+
+export function testUnionAliasesExposeJsonDecoders(): none {
+  shapes := "class Circle { kind: \"circle\"\nradius: double }\nclass Rect { kind: \"rect\"\nwidth: double }\ntype Shape = Circle | Rect\n"
+  valid := checked(shapes + "function decode(input: SerialValue): Result<Shape, string> => Shape.fromSerialValue(input)\nfunction lenient(input: SerialValue): Result<Shape, string> => Shape.fromSerialValue(input, true)")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+  undiscriminated := checked("class A { name: string }\nclass B { name: string }\ntype AB = A | B\nfunction decode(input: SerialValue): Result<AB, string> => AB.fromSerialValue(input)")
+  Assert.equal(undiscriminated.diagnostics.length, 1)
+  Assert.stringContains(undiscriminated.diagnostics[0].message, "Cannot deserialize type alias \"AB\": it must be a union of classes")
+  primitives := checked("type Num = int | string\nfunction decode(input: SerialValue): Result<Num, string> => Num.fromSerialValue(input)")
+  Assert.equal(primitives.diagnostics.length, 1)
+  Assert.stringContains(primitives.diagnostics[0].message, "Cannot deserialize type alias \"Num\"")
+  // Only the decoder is available; the alias is still not a value.
+  asValue := checked(shapes + "function main(): none { shape := Shape }")
+  Assert.equal(asValue.diagnostics.length, 1)
+  Assert.stringContains(asValue.diagnostics[0].message, "Type 'Shape' cannot be used as a value")
+}

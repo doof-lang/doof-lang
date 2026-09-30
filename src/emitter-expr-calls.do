@@ -120,6 +120,18 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           _ -> { }
         }
       }
+      if member.resolvedJsonAlias != none { return emitInterfaceJsonCall(member, expression, context) }
+      // `T.fromSerialValue(json)` on a Serializable type parameter has no static
+      // owner; supply the defaulted `lenient` argument like concrete calls do.
+      if member.property == "fromSerialValue" && isSerializableTypeParameter(decoratedExpressionType(member.object)) {
+        let args = ""
+        for i of 0..<expression.args.length {
+          if i > 0 { args = args + ", " }
+          args = args + emitExpression(expression.args[i].value, context)
+        }
+        if expression.args.length == 1 { args = args + ", false" }
+        return emitExpression(expression.callee, context) + "(" + args + ")"
+      }
       if member.property == "length" {
         if arrayObjectType != none {
           case arrayObjectType! {
@@ -500,4 +512,12 @@ function concreteMethodNameFor(context: EmitContext, key: string): string {
     if context.concreteMethodKeys[i] == key { return context.concreteMethodNames[i] }
   }
   return ""
+}
+
+function isSerializableTypeParameter(resolvedType: ResolvedType | none): bool {
+  if resolvedType == none { return false }
+  case resolvedType! {
+    parameter: TypeParameterType -> { return parameter.constraintName == "Serializable" }
+    _ -> { return false }
+  }
 }

@@ -552,7 +552,7 @@ export function fieldAssignmentBinding(state: CheckerState, object: ResolvedType
   return none
 }
 
-function jsonPrograms(result: AnalysisResult): Program[] {
+export function jsonPrograms(result: AnalysisResult): Program[] {
   let programs: Program[] = []
   for module of result.modules { programs.push(module.program) }
   return programs

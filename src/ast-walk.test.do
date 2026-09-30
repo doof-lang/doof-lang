@@ -1,7 +1,7 @@
 import { Assert } from "std/assert"
 import { parse } from "./parser"
-import { Block, CallExpression, Expression, FunctionDeclaration } from "./ast"
-import { collectBlockExpressions, collectNestedExpressions } from "./ast-walk"
+import { Block, CallExpression, Expression, FunctionDeclaration, MemberExpression, TypeAliasDeclaration } from "./ast"
+import { collectBlockExpressions, collectNestedExpressions, releaseCheckedReferences } from "./ast-walk"
 
 export function testWalksNestedStatementAndExpressionTrees(): none {
   program := parse("function main(): none { if ready() { println(format(\"ok\")) } }")
@@ -40,4 +40,32 @@ export function testSecondConsolidationPreorderTraversal(): none {
   Assert.equal(expressions.length, 4)
   case expressions[0] { _: CallExpression -> {} _ -> { panic("expected outer call first") } }
   case expressions[2] { _: CallExpression -> {} _ -> { panic("expected inner call after outer callee") } }
+}
+
+export function testReleasingCheckedReferencesClearsJsonAliases(): none {
+  program := parse("type Shape = int\nfunction main(): none { Shape.fromSerialValue(1) }")
+  case program.statements[1] {
+    fn: FunctionDeclaration -> {
+      case fn.body {
+        block: Block -> {
+          let expressions: Expression[] = []
+          collectBlockExpressions(block, expressions)
+          case program.statements[0] {
+            alias: TypeAliasDeclaration -> {
+              for expression of expressions {
+                case expression { member: MemberExpression -> { member.resolvedJsonAlias = alias } _ -> { } }
+              }
+            }
+            _ -> { panic("expected alias") }
+          }
+          releaseCheckedReferences(block.statements)
+          for expression of expressions {
+            case expression { member: MemberExpression -> { Assert.isTrue(member.resolvedJsonAlias == none) } _ -> { } }
+          }
+        }
+        _ -> { panic("expected function block") }
+      }
+    }
+    _ -> { panic("expected function") }
+  }
 }

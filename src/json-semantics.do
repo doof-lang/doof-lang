@@ -5,7 +5,7 @@
 
 import {
   ArrayType, BoolLiteral, CharLiteral, ClassDeclaration, ClassField, DoubleLiteral, FloatLiteral,
-  ExportDeclaration, IntLiteral, InterfaceDeclaration, LongLiteral, NamedType, Program, Statement, StringLiteral, TypeAnnotation, UnionType,
+  ExportDeclaration, IntLiteral, InterfaceDeclaration, LongLiteral, NamedType, Program, Statement, StringLiteral, TypeAliasDeclaration, TypeAnnotation, UnionType,
 } from "./ast"
 import { ArrayResolvedType, ClassType, EnumType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, Symbol, TupleResolvedType, UnionResolvedType } from "./semantic"
 
@@ -37,8 +37,49 @@ export function interfaceJsonDiscriminator(
   let implementations: ClassDeclaration[] = []
   for symbol of owner.resolvedSymbol!.implementations {
     declaration := findJsonClassDeclaration(programs, symbol)
-    if declaration == none || !canGenerateJsonDeserialization(declaration!, programs, cache) { return none }
+    if declaration == none { return none }
     implementations.push(declaration!)
+  }
+  return classesJsonDiscriminator(implementations, programs, cache)
+}
+
+/**
+ * Discriminates a named union alias of classes, such as
+ * `type Shape = Circle | Rect`, by the same rule as interfaces.
+ */
+export function unionAliasJsonDiscriminator(
+  alias: TypeAliasDeclaration,
+  programs: Program[],
+  cache: JsonEligibilityCache | none = none,
+): JsonDiscriminator | none {
+  if alias.typeParams.length > 0 || alias.resolvedType == none { return none }
+  case alias.resolvedType! {
+    union_: UnionResolvedType -> {
+      let members: ClassDeclaration[] = []
+      for member of union_.types {
+        case member {
+          class_: ClassType -> {
+            if class_.typeArgs.length > 0 || class_.symbol.kind != "class" { return none }
+            declaration := findJsonClassDeclaration(programs, class_.symbol)
+            if declaration == none { return none }
+            members.push(declaration!)
+          }
+          _ -> { return none }
+        }
+      }
+      return classesJsonDiscriminator(members, programs, cache)
+    }
+    _ -> { return none }
+  }
+}
+
+function classesJsonDiscriminator(
+  implementations: ClassDeclaration[],
+  programs: Program[],
+  cache: JsonEligibilityCache | none,
+): JsonDiscriminator | none {
+  for implementation of implementations {
+    if !canGenerateJsonDeserialization(implementation, programs, cache) { return none }
   }
   if implementations.length == 0 { return none }
   for candidate of implementations[0].fields {

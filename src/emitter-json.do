@@ -7,14 +7,14 @@ import { carrierOf } from "./emitter-carriers"
 import { emitCarrierAbsence } from "./emitter-carrier-values"
 import {
   BoolLiteral, CharLiteral, ClassDeclaration, ClassField, DoubleLiteral, EnumDeclaration, ExportDeclaration, Expression, FloatLiteral, Identifier,
-  IntLiteral, InterfaceDeclaration, LongLiteral, MemberExpression, NoneLiteral, Statement, StringLiteral, UnaryExpression,
+  IntLiteral, InterfaceDeclaration, LongLiteral, MemberExpression, NoneLiteral, Statement, StringLiteral, TypeAliasDeclaration, UnaryExpression,
 } from "./ast"
 import { quote } from "./emitter-expr-literals"
 import { ArrayResolvedType, ClassType, EnumType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitClassInnerType, emitContextType, usesVariantRepresentation } from "./emitter-types"
-import { interfaceJsonDiscriminator, jsonOwnerKey, nullableJsonMember } from "./json-semantics"
+import { JsonDiscriminator, interfaceJsonDiscriminator, jsonOwnerKey, nullableJsonMember, unionAliasJsonDiscriminator } from "./json-semantics"
 
 export function emitInterfaceJsonDeclaration(owner: InterfaceDeclaration): string {
   if !owner.needsJson { return "" }
@@ -25,25 +25,43 @@ export function emitInterfaceJsonDefinition(owner: InterfaceDeclaration, context
   if !owner.needsJson { return "" }
   discriminator := interfaceJsonDiscriminator(owner, context.allPrograms, context.jsonEligibility)
   if discriminator == none { return "" }
+  return emitDiscriminatedJsonDefinition(owner.name, discriminator!, context)
+}
+
+export function emitUnionAliasJsonDeclaration(alias: TypeAliasDeclaration): string {
+  if !alias.needsJson { return "" }
+  return "doof::Result<" + alias.name + ", std::string> " + alias.name + "_fromSerialValue(const doof::SerialValue& _json, bool _lenient);\n"
+}
+
+export function emitUnionAliasJsonDefinition(alias: TypeAliasDeclaration, context: EmitContext): string {
+  if !alias.needsJson { return "" }
+  discriminator := unionAliasJsonDiscriminator(alias, context.allPrograms, context.jsonEligibility)
+  if discriminator == none { return "" }
+  return emitDiscriminatedJsonDefinition(alias.name, discriminator!, context)
+}
+
+// Interfaces and class-union aliases both lower to variants of class pointers,
+// so one discriminator dispatch serves both decoders.
+function emitDiscriminatedJsonDefinition(ownerName: string, discriminator: JsonDiscriminator, context: EmitContext): string {
   failureType := "doof::Failure<std::string>"
-  successType := "doof::Success<" + owner.name + ">"
-  let result = "\ndoof::Result<" + owner.name + ", std::string> " + owner.name + "_fromSerialValue(const doof::SerialValue& _json, bool _lenient) {\n"
+  successType := "doof::Success<" + ownerName + ">"
+  let result = "\ndoof::Result<" + ownerName + ", std::string> " + ownerName + "_fromSerialValue(const doof::SerialValue& _json, bool _lenient) {\n"
   result = result + "    const auto* _object = doof::serial_as_object(_json);\n"
   result = result + "    if (_object == nullptr) { return " + failureType + "{\"Expected JSON object\"}; }\n"
-  result = result + "    auto _discriminator_iterator = _object->find(\"" + discriminator!.fieldName + "\");\n"
-  result = result + "    if (_discriminator_iterator == _object->end() || !doof::serial_is_string(_discriminator_iterator->second)) { return " + failureType + "{\"Missing or invalid discriminator field \\\"" + discriminator!.fieldName + "\\\"\"}; }\n"
+  result = result + "    auto _discriminator_iterator = _object->find(\"" + discriminator.fieldName + "\");\n"
+  result = result + "    if (_discriminator_iterator == _object->end() || !doof::serial_is_string(_discriminator_iterator->second)) { return " + failureType + "{\"Missing or invalid discriminator field \\\"" + discriminator.fieldName + "\\\"\"}; }\n"
   result = result + "    auto _discriminator = doof::serial_as_string(_discriminator_iterator->second);\n"
-  for i of 0..<discriminator!.entries.length {
-    entry := discriminator!.entries[i]
+  for i of 0..<discriminator.entries.length {
+    entry := discriminator.entries[i]
     classType_ := ClassType { name: entry.declaration.name, symbol: entry.declaration.resolvedSymbol! }
     className := emitClassInnerType(classType_, context.modulePath, context.names)
     result = result + "    " + (if i == 0 then "if" else "else if") + " (_discriminator == \"" + entry.value + "\") {\n"
     result = result + "        auto _result = " + className + "::fromSerialValue(_json, _lenient);\n"
-    result = result + "        if (doof::is_success(_result)) { return " + successType + "{" + owner.name + "{doof::success_value(_result)}}; }\n"
+    result = result + "        if (doof::is_success(_result)) { return " + successType + "{" + ownerName + "{doof::success_value(_result)}}; }\n"
     result = result + "        return " + failureType + "{doof::failure_error(_result)};\n"
     result = result + "    }\n"
   }
-  return result + "    return " + failureType + "{\"Unknown " + discriminator!.fieldName + ": \\\"\" + _discriminator + \"\\\"\"};\n}\n"
+  return result + "    return " + failureType + "{\"Unknown " + discriminator.fieldName + ": \\\"\" + _discriminator + \"\\\"\"};\n}\n"
 }
 
 /** Emits automatic JSON declarations owned by a concrete class or struct. */

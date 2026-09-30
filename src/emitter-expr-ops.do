@@ -9,7 +9,7 @@ import { EmitContext, isCapturedMutable } from "./emitter-context"
 import { emitExpression } from "./emitter-expr"
 import { emitNoneLiteral, emitStringConstant, quote } from "./emitter-expr-literals"
 import { decoratedExpressionType, emittedSymbolName, exprModuleNamespaceFor, hasSinglePrimitiveMember, isNullableVariantType, requireExpressionType, variantVisitValue } from "./emitter-expr-utils"
-import { emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
+import { emitClassInnerType, emitContextType, emitResultPayloadType, emitType, naturalNullableUnionMember, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
 import { cppIdentifier as emittedCppIdentifier, moduleDiagnosticPath } from "./emitter-names"
 import { isNumeric, isSerialBytesType, sameType } from "./checker-types"
 
@@ -503,7 +503,8 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
         if parameter.constraintName == "Reflectable" && expression.property == "metadata" { return "doof::metadata_for_type<" + emitType(specialized, context.modulePath, context.names) + ">()" }
         if parameter.constraintName == "Serializable" && expression.property == "fromSerialValue" {
           case specialized {
-            concrete: ClassType -> { return emitType(concrete, context.modulePath, context.names) + "::element_type::fromSerialValue" }
+            concrete: ClassType -> { return emitClassInnerType(concrete, context.modulePath, context.names) + "::fromSerialValue" }
+            enum_: EnumType -> { return emitContextType(enum_, context) + "_fromSerialValue" }
             unresolved: TypeParameterType -> { return cppIdentifier(unresolved.name) + "::element_type::fromSerialValue" }
             _ -> { }
           }
