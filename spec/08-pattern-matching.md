@@ -10,7 +10,7 @@ Doof's `case` forms provide pattern matching with value matching, range matching
 
 ## Basic Value Matching
 
-```javascript
+```doof
 let description = case value {
     0 -> "zero",
     1 -> "one",
@@ -21,7 +21,7 @@ let description = case value {
 
 ### Multiple Values
 
-```javascript
+```doof
 case status {
     200 | 201 | 204 -> "success"
     400 | 404 -> "client error"
@@ -32,12 +32,12 @@ case status {
 
 ### String Matching
 
-```javascript
+```doof
 case command {
     "start" -> startServer(),
     "stop" -> stopServer(),
     "restart" -> restartServer(),
-    _ -> print("Unknown command")
+    _ -> println("Unknown command")
 }
 ```
 
@@ -47,7 +47,7 @@ case command {
 
 Enum values can be matched directly. When the `case` subject is a known enum type, **dot-shorthand** can be used for variant names:
 
-```javascript
+```doof
 enum Direction { North, South, East, West }
 
 case direction {
@@ -60,7 +60,7 @@ case direction {
 
 Fully qualified names also work:
 
-```javascript
+```doof
 case direction {
     Direction.North -> moveUp(),
     Direction.South -> moveDown(),
@@ -73,7 +73,7 @@ case direction {
 
 Integer-valued enums match by identity, not by raw value:
 
-```javascript
+```doof
 enum HttpStatus {
     OK = 200,
     Created = 201,
@@ -92,7 +92,7 @@ case status {
 
 ### Enum Matching as Expression
 
-```javascript
+```doof
 let label = case color {
     .Red   -> "danger",
     .Green -> "safe",
@@ -104,7 +104,7 @@ let label = case color {
 
 When all enum variants are covered, no `_` wildcard is needed. The compiler enforces exhaustive matching:
 
-```javascript
+```doof
 // ✅ All variants covered — no wildcard needed
 let message = case direction {
     .North -> "up",
@@ -125,7 +125,7 @@ let message = case direction {
 
 ## Range Matching
 
-```javascript
+```doof
 let category = case age {
     ..<18 -> "Minor",
     ..<65 -> "Adult",
@@ -167,18 +167,18 @@ when iterated.
 
 Type patterns create immutable bindings with narrowed types:
 
-```javascript
+```doof
 let result: Result<int, string> = Success { value: 42 }
 
 case result {
-    s: Success -> print("Got: ${s.value}"),
-    f: Failure -> print("Error: ${f.error}")
+    s: Success -> println("Got: ${s.value}"),
+    f: Failure -> println("Error: ${f.error}")
 }
 
 // Discard binding with _
 case result {
-    _: Success -> print("success"),
-    _: Failure -> print("failed")
+    _: Success -> println("success"),
+    _: Failure -> println("failed")
 }
 ```
 
@@ -192,7 +192,7 @@ payloadless `Failure<none>` may not be captured because it has no `.error`.
 
 Capture patterns solve the path-tracking problem for nested fields:
 
-```javascript
+```doof
 class Container<T, E> {
     result: Result<T, E>
 }
@@ -200,14 +200,14 @@ class Container<T, E> {
 readonly container = Container { result: Success { value: 42 } }
 
 case container.result {
-    s: Success -> print(s.value),    // 's' is immutable Success<T>
-    f: Failure -> print(f.error)     // 'f' is immutable Failure<E>
+    s: Success -> println(s.value),    // 's' is immutable Success<T>
+    f: Failure -> println(f.error)     // 'f' is immutable Failure<E>
 }
 ```
 
 ### Combining Patterns
 
-```javascript
+```doof
 case response.status {
     200 -> "OK",
     404 -> "Not Found",
@@ -219,12 +219,11 @@ case response.status {
 
 ## Multi-Statement Blocks
 
-```javascript
-case response {
+```doof
 let value = case response {
     s: Success -> {
         readonly doubled = s.value * 2
-        print("Success: ${doubled}")
+        println("Success: ${doubled}")
         yield doubled
     },
     f: Failure -> {
@@ -240,7 +239,7 @@ let value = case response {
 
 Case statements are expressions and can be used anywhere:
 
-```javascript
+```doof
 // Variable assignment
 let result = case value {
     0 -> "zero",
@@ -256,7 +255,7 @@ function classify(n: int): string => case n {
 }
 
 // Inline
-print(case status { 200 -> "OK", _ -> "Error" })
+println(case status { 200 -> "OK", _ -> "Error" })
 ```
 
 ---
@@ -267,7 +266,7 @@ When `case` is used in a **value position** (i.e. as an expression — assigned 
 variable, returned directly, passed as an argument, etc.) each arm must evaluate
 to a value.  Using `return` inside such an arm is a **compile error**.
 
-```javascript
+```doof
 // ❌ Error: 'return' cannot be used inside a case-expression arm
 function main(): int {
     x := case tryOp() {
@@ -286,7 +285,7 @@ behaviour.
 When `case` is used as a **statement** (not assigned to anything), arms may
 contain `return` freely:
 
-```javascript
+```doof
 // ✅ Fine: case at statement level
 function main(): int {
     case tryOp() {
@@ -319,19 +318,19 @@ If you need early exit from inside a case expression, either:
 
 Case keeps it simple — pattern checks types/values, you access fields normally:
 
-```javascript
+```doof
 // ✅ Clean and explicit
 case point {
     p: Point -> {
         readonly x = p.x
         readonly y = p.y
-        print("Point at (${x}, ${y})")
+        println("Point at (${x}, ${y})")
     }
 }
 
 // ❌ Not supported
 case point {
-    Point { x, y } => print("Point at (${x}, ${y})")
+    Point { x, y } => println("Point at (${x}, ${y})")
 }
 ```
 
@@ -339,7 +338,7 @@ case point {
 
 Complex conditional logic should use `if` statements or ranges:
 
-```javascript
+```doof
 // ✅ Use ranges
 case value {
     11..99 -> "in range",
@@ -362,7 +361,7 @@ The `else` narrow form provides a compact "unwrap or bail" pattern for Result an
 
 ### Syntax
 
-```javascript
+```doof
 name := expression else {
     // name is not in scope here
     ... must exit (return / break / continue) ...
@@ -385,7 +384,7 @@ Else-narrow works only on **Result** and/or **nullable** types. Plain unions (e.
 
 ### Nullable Type Narrowing
 
-```javascript
+```doof
 function getValue(): string | none => "hello"
 function test(): int {
     x := getValue() else { return 0 }
@@ -396,7 +395,7 @@ function test(): int {
 
 ### Result Type Narrowing
 
-```javascript
+```doof
 class Config { name: string }
 class AppError { message: string }
 function loadConfig(): Result<Config, AppError> => Success { value: Config { name: "app" } }
@@ -413,7 +412,7 @@ function test(): string {
 When the expression is both nullable and a Result, one declaration removes the
 outer none layer. A second declaration unwraps the remaining Result:
 
-```javascript
+```doof
 function loadConfig(): Result<Config, AppError> | none => none
 
 function test(): string {
@@ -431,7 +430,7 @@ Declaration-`else` unwraps the Result but preserves none inside its success
 payload. A successful none is data carried by `Success`, not an unhappy state
 handled by this declaration-`else`:
 
-```javascript
+```doof
 function loadConfig(): Result<Config | none, AppError> => Success { value: none }
 
 function test(): string {
@@ -446,7 +445,7 @@ function test(): string {
 The success binding is available only after the `else` block. For a `Result<T, E>` subject without an outer `none` member,
 `else error { ... }` captures the `Failure<E>.error` payload directly:
 
-```javascript
+```doof
 function loadConfig(): Result<Config, AppError> => Failure { error: AppError { message: "not found" } }
 
 function test(): string {
@@ -466,7 +465,7 @@ may be `none` and has no failure payload.
 
 An explicit type annotation is supported:
 
-```javascript
+```doof
 x: string := getValue() else { return 0 }
 ```
 
@@ -474,7 +473,7 @@ x: string := getValue() else { return 0 }
 
 Else-narrow works with `break` and `continue` in loop contexts:
 
-```javascript
+```doof
 function getValue(): string | none => none
 function process(): none {
     while true {
@@ -496,7 +495,7 @@ function process(): none {
 
 Result-returning expression statements can use `else` directly to handle failures without binding the success value:
 
-```javascript
+```doof
 savePuzzleState(path) else error {
     println("failed to save: " + error)
 }
@@ -510,7 +509,7 @@ post-block binding invariant to satisfy.
 
 ## Complete Example
 
-```javascript
+```doof
 class Point { x, y: float; }
 class Line { start, end: Point; }
 type Shape = Point | Line
@@ -528,10 +527,10 @@ function categorize(age: int): string => case age {
 }
 
 function handleResponse(r: Response): none => case r.status {
-    200 | 201 | 204 -> print("Success: ${r.body}"),
-    404 -> print("Not found"),
-    500..599 -> print("Server error"),
-    _ -> print("Unexpected status: ${r.status}")
+    200 | 201 | 204 -> println("Success: ${r.body}"),
+    404 -> println("Not found"),
+    500..599 -> println("Server error"),
+    _ -> println("Unexpected status: ${r.status}")
 }
 
 enum Suit { Hearts, Diamonds, Clubs, Spades }

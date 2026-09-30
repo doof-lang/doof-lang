@@ -4,25 +4,25 @@
 
 ### Basic Forms
 
-```javascript
+```doof
 if condition {
     doSomething()
 }
 
 if temperature > 30 {
-    print("Hot")
+    println("Hot")
 } else {
-    print("Not hot")
+    println("Not hot")
 }
 
 if score >= 90 {
-    print("A")
+    println("A")
 } else if score >= 80 {
-    print("B")
+    println("B")
 } else if score >= 70 {
-    print("C")
+    println("C")
 } else {
-    print("F")
+    println("F")
 }
 ```
 
@@ -30,7 +30,7 @@ if score >= 90 {
 
 `if` can be used as an expression when all branches return a value:
 
-```javascript
+```doof
 grade := if score >= 90 then "A" 
          else if score >= 80 then "B"
          else if score >= 70 then "C"
@@ -38,7 +38,7 @@ grade := if score >= 90 then "A"
 
 abs := if x >= 0 then x else -x
 
-print(if isLoggedIn then "Welcome back!" else "Please log in")
+println(if isLoggedIn then "Welcome back!" else "Please log in")
 ```
 
 All branches must be present and return compatible types. The `then` keyword is required for expression form to distinguish it from statement form.
@@ -49,28 +49,28 @@ Branches of type `never` do not contribute a value type. If every branch is
 
 Blocks are required for statement forms:
 
-```javascript
+```doof
 if x > 0 {
-    print("positive")
+    println("positive")
 } else {
-    print("non-positive")
+    println("non-positive")
 }
 ```
 
 ### No Implicit `none` Narrowing in If
 
-```javascript
+```doof
 value: int | none := getValue()
 
 if value != none {
-    print(value!)  // explicit assertion still required
+    println(value!)  // explicit assertion still required
 }
 
 if value == none {
     return
 }
 
-print(value!)
+println(value!)
 ```
 
 `none` checks are still useful for control flow, but they do not change the
@@ -87,7 +87,7 @@ Some expression-like contexts use a block that produces a value by explicitly `y
 
 Case-expression arms may use block bodies instead of a single expression:
 
-```javascript
+```doof
 result := case n {
     0 -> {
         yield "zero"
@@ -105,7 +105,7 @@ result := case n {
 
 Local `let`, local `readonly`, and statement-only local reassignment can use `<-` followed by a block:
 
-```javascript
+```doof
 let x <- {
     if ready {
         yield 10
@@ -137,10 +137,10 @@ When every exhaustive branch returns, yields, loops forever, or evaluates a
 
 ## While Loops
 
-```javascript
+```doof
 let count = 0
 while count < 10 {
-    print(count)
+    println(count)
     count += 1
 }
 
@@ -150,7 +150,7 @@ while true {
     if i >= 10 {
         break
     }
-    print(i)
+    println(i)
     i += 1
 }
 ```
@@ -161,19 +161,19 @@ while true {
 
 ### Traditional For Loop
 
-```javascript
+```doof
 for let i = 0; i < 10; i += 1 {
-    print(i)
+    println(i)
 }
 
 // Multiple variables
 for let i = 0, j = 10; i < j; i += 1, j -= 1 {
-    print("${i}, ${j}")
+    println("${i}, ${j}")
 }
 
 // Reverse iteration
 for let i = 9; i >= 0; i -= 1 {
-    print(i)
+    println(i)
 }
 ```
 
@@ -181,11 +181,11 @@ for let i = 9; i >= 0; i -= 1 {
 
 Iterates over the values of any iterable. Loop variables are **immutable** bindings (no keyword needed):
 
-```javascript
+```doof
 names := ["Alice", "Bob", "Charlie"]
 
 for name of names {
-    print("Hello, ${name}!")
+    println("Hello, ${name}!")
     // name = "other"  // ❌ Error: cannot reassign
 }
 ```
@@ -205,11 +205,11 @@ until it returns `false`, then reading the current element with `value()`.
 The iterable expression is evaluated exactly once, and a collection or stream
 temporary returned by that expression remains alive until the loop completes.
 
-```javascript
+```doof
 class Counter implements Stream<int> {
-    current: int
+    let current: int
     end: int
-    currentValue: int = 0
+    let currentValue: int = 0
 
     next(): bool {
         if this.current < this.end {
@@ -224,26 +224,26 @@ class Counter implements Stream<int> {
 }
 
 for value of Counter(0, 3) {
-    print(value)
+    println(value)
 }
 ```
 
 ### For-Of with Maps
 
-```javascript
+```doof
 scores: Map<string, int> := { "Alice": 95, "Bob": 87 }
 
 // Destructured entries (MapEntry has key, value fields)
 for key, value of scores {
-    print("${key} scored ${value}")
+    println("${key} scored ${value}")
 }
 
 // Keys or values only
 for name of scores.keys() {
-    print(name)
+    println(name)
 }
 for score of scores.values() {
-    print(score)
+    println(score)
 }
 ```
 
@@ -251,10 +251,10 @@ Map iteration follows insertion order. Updating an existing key keeps its curren
 
 ### For-Of with Sets
 
-```javascript
+```doof
 unique: Set<int> := [1, 2, 3]
 for n of unique {
-    print(n)
+    println(n)
 }
 
 ```
@@ -272,28 +272,28 @@ than its upper bound is empty.
 
 ### Inclusive Range (`..`)
 
-```javascript
+```doof
 for i of 1..5 {
-    print(i)  // 1, 2, 3, 4, 5
+    println(i)  // 1, 2, 3, 4, 5
 }
 
 values: Range := 1..5
 for value of values {
-    print(value)
+    println(value)
 }
 ```
 
 ### Exclusive Range (`..<`)
 
-```javascript
+```doof
 for i of 0..<5 {
-    print(i)  // 0, 1, 2, 3, 4
+    println(i)  // 0, 1, 2, 3, 4
 }
 
 // Common pattern for array indices
 items := ["a", "b", "c", "d"]
 for i of 0..<items.length {
-    print("${i}: ${items[i]}")
+    println("${i}: ${items[i]}")
 }
 ```
 
@@ -302,7 +302,7 @@ Open-ended ranges are not iterable `Range` values; they are only valid in
 
 ### Range Accessors
 
-```javascript
+```doof
 inclusive := 1..9
 exclusive := 1..<10
 
@@ -318,13 +318,13 @@ adjusted to `10`; for `1..<10`, it is already `10`.
 
 ### Practical Range Example
 
-```javascript
+```doof
 items := loadItems()
 indices := 0..<items.length
-print("last valid index is ${indices.upperBound - 1}")
+println("last valid index is ${indices.upperBound - 1}")
 
 for i of indices {
-    print("${i}: ${items[i]}")
+    println("${i}: ${items[i]}")
 }
 ```
 
@@ -334,29 +334,29 @@ for i of indices {
 
 ### Basic
 
-```javascript
+```doof
 for i of 0..<100 {
     if i == 10 {
         break     // Exits innermost loop
     }
-    print(i)
+    println(i)
 }
 
 for i of 0..<10 {
     if i % 2 == 0 {
         continue  // Skips to next iteration
     }
-    print(i)
+    println(i)
 }
 ```
 
 ### Labeled Break and Continue
 
-```javascript
+```doof
 outer: for y of 0..<height {
     for x of 0..<width {
         if grid[y][x] == target {
-            print("Found at (${x}, ${y})")
+            println("Found at (${x}, ${y})")
             break outer  // Exits both loops
         }
     }
@@ -380,39 +380,39 @@ outer: for row of rows {
 The `then` clause executes when a loop completes normally, meaning control
 leaves the loop without `break` or another non-local exit such as `return`:
 
-```javascript
+```doof
 for item of items {
     if item == target {
-        print("Found!")
+        println("Found!")
         break
     }
 } then {
-    print("Not found")
+    println("Not found")
 }
 ```
 
 This applies even when the loop body ran; natural completion still counts:
 
-```javascript
+```doof
 while hasMoreData() {
     let data = readData()
     if data.isCorrupt() {
-        print("Corrupt data found")
+        println("Corrupt data found")
         break
     }
     process(data)
 } then {
-    print("All data processed successfully")
+    println("All data processed successfully")
 }
 ```
 
 Traditional `for` loops support the same follow-up clause:
 
-```javascript
+```doof
 for let i = 0; i < 3; i += 1 {
-    print(i)
+    println(i)
 } then {
-    print("loop completed")
+    println("loop completed")
 }
 ```
 
@@ -420,7 +420,7 @@ for let i = 0; i < 3; i += 1 {
 
 ## Early Return
 
-```javascript
+```doof
 function findUser(id: int): User | none {
     if id < 0 {
         return none
@@ -444,7 +444,7 @@ Return exits the entire function, not just the current block.
 
 ### Prefer For-Of Over Traditional For
 
-```javascript
+```doof
 // ✅ Preferred
 for item of items {
     process(item)
@@ -458,21 +458,21 @@ for let i = 0; i < items.length; i += 1 {
 
 ### Use Ranges for Numeric Iteration
 
-```javascript
+```doof
 // ✅ Clear and concise
 for i of 0..<10 {
-    print(i)
+    println(i)
 }
 
 // ❌ More verbose
 for let i = 0; i < 10; i += 1 {
-    print(i)
+    println(i)
 }
 ```
 
 ### Avoid Deep Nesting with Early Returns
 
-```javascript
+```doof
 // ❌ Deep nesting
 function process(data: Data | none): Result | none {
     if data != none {

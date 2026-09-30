@@ -67,6 +67,10 @@ count := 30_000
 
 Rules:
 
+- An unsuffixed integer literal must fit in `int` even when the context is
+  `long`, `float`, or `double`; write `3_000_000_000L` for larger values.
+  Suffixed long literals must fit in `long`, and `byte` literals must be
+  `0..255`.
 - `int` widens to `long` or `double`.
 - `float` widens to `double`.
 - `long` does not implicitly widen to `double`, because that conversion can lose precision.
@@ -158,7 +162,7 @@ Doof uses single-step, context-aware inference.
 names := ["Alice", "Bob"]
 process([1, 2, 3])
 
-empty: int[] = []
+empty: int[] := []
 maybeName: string | none := none
 ```
 
@@ -336,7 +340,7 @@ fields, and returns. Dot-shorthand works when the target type is known.
 
 ```doof
 numbers := [1, 2, 3]
-names: string[] = ["Alice", "Bob"]
+names: string[] := ["Alice", "Bob"]
 ```
 
 Common APIs:
@@ -368,7 +372,7 @@ negative or greater than or equal to `.length`.
 ### Tuples
 
 ```doof
-pair: (int, string) = (1, "one")
+pair: Tuple<int, string> := (1, "one")
 (id, label) := pair
 ```
 
@@ -377,8 +381,8 @@ Tuples are fixed-length and positionally destructured.
 ### Maps
 
 ```doof
-scores: Map<string, int> = { "Alice": 100, "Bob": 95 }
-ids: Map<long, string> = { 1L: "one", 2L: "two" }
+scores: Map<string, int> := { "Alice": 100, "Bob": 95 }
+ids: Map<long, string> := { 1L: "one", 2L: "two" }
 frozenScores: ReadonlyMap := { "Alice": 100 }
 ```
 
@@ -416,8 +420,8 @@ Deprecated `.buildReadonly()` remains accepted on mutable maps with a replacemen
 ### Sets
 
 ```doof
-unique: Set<int> = [1, 2, 3, 2, 1]
-palette: Set<Color> = [Color.Red, Color.Blue]
+unique: Set<int> := [1, 2, 3, 2, 1]
+palette: Set<Color> := [Color.Red, Color.Blue]
 frozenIds: ReadonlySet := [1, 2, 3]
 view: readonly Set := [1, 2, 3]
 readonly deepIds: Set = [1, 2, 3]
@@ -445,7 +449,7 @@ Common APIs: `.size`, `.has()`, `.add()`, `.delete()`, `.values()`, `.drainToRea
 
 ```doof
 class Counter implements Stream<int> {
-    current = 0
+    let current = 0
     end: int
 
     next(): bool => current < end

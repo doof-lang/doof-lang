@@ -181,6 +181,9 @@ invariants and its native test matrix.
 `runtime/doof_observer.hpp` and `runtime/doof_observer_platform.hpp` own the
 loopback transport, bounded event ring, and platform socket dependencies used
 only by observable builds. The maintained browser assets live in `observer-ui/`.
+`runtime/doof_runtime.test.cpp` is the native C++ regression test for the
+runtime and observer headers; `./scripts/test.sh` builds and runs it with and
+without `DOOF_OBSERVE`.
 The runtime is not a place to hide a missing checker rule or an emitter decision.
 Its nullable weak-pointer helpers distinguish an empty pointer from an expired
 owner and preserve that owner when unwrapping. Map mutation emission supplies
@@ -228,6 +231,7 @@ threads or reconstruct scheduling policy.
 | `run-command.do` | Pure invocation plans for built artifacts |
 | `observe-command.do` | Observe target validation, launch environment, and macOS bundle invocation plan |
 | `profile-command.do` | Pure macOS xctrace capture and completed-trace open plans |
+| `progress.do` | Shared fixed-width progress bars and hardware-bounded worker counts |
 | `macos-app.do` / `ios-app.do` | Deterministic bundle metadata, signing arguments, and platform plans |
 | `macos-app-driver.do` / `ios-app-driver.do` | Bundle materialization and Apple tool execution |
 | `ios-device.do` | Physical-device discovery, provisioning selection, signing, install, and launch boundary |
@@ -246,6 +250,11 @@ Other maintained inputs:
 - `tests/release-fixtures/` — native and platform acceptance packages
 - `tools/repository/common.do` / `build.do` — frozen source inputs, version stamping, seed resolution, fixed-point builds
 - `tools/repository/release.do` / `linux-build.do` / `snapshot.do` — release gates, Apple Container musl builds, signing, captured native commands, source-only release archives
+- `tools/repository/windows-build.do` — optional remote MSVC release build over SSH/SFTP with Wake-on-LAN
+- `tools/repository/verify.do` / `process-checks.do` / `observe-checks.do` / `extension.do` — acceptance gates, process and lock regressions, live observer checks, editor extension builds
+- `tools/repository/provenance.do` — clean-revision capture for compiler and stdlib release inputs
+- `tools/repository/main.do` / `test-support.do` — `tools/run.sh` command dispatch and shared test fixtures
+- `tools/vendor.do` — standalone helper that syncs, refreshes, or checks third-party sources declared in `doof-vendor.json` files (used for stdlib packages); not part of the compiler
 - `install.sh` — standalone downloader and shared transactional artifact installation
 
 Primitive string parsing is a standard-library concern owned by `std/parse`.

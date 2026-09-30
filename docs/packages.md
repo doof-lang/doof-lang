@@ -68,5 +68,15 @@ Manifest compiler and linker flags follow these defaults and can refine the
 package build. Packaging does not emit dependency provenance.
 
 macOS and iOS application settings live under `build.macosApp`, `build.iosApp`,
-and `build.package`. WebAssembly packages set `target` to `wasm`; exported entry
-functions become JSON-over-C-ABI wrappers.
+and `build.package`. WebAssembly packages set `build.target` (or top-level `target`) to `wasm`;
+exported entry functions become JSON-over-C-ABI wrappers.
+
+`observe.ui` names a package-relative directory of static files served by
+`doof observe` in place of the built-in UI. The directory must contain
+`index.html` and stay inside the package root:
+
+```json
+{
+  "observe": { "ui": "observability" }
+}
+```

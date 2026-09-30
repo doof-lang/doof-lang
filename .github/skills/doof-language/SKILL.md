@@ -93,11 +93,11 @@ Load the narrowest matching file for the task.
 | Assertions, test file structure, runner commands, mocks | [references/stdlib-assert-and-testing.md](./references/stdlib-assert-and-testing.md) |
 | `std/blob`, `std/csv`, `std/fs`, `std/json`, `std/path`, `std/stream`, `std/string`, `std/url`, `std/xml`, `std/event` | [references/stdlib-data-and-io.md](./references/stdlib-data-and-io.md) |
 | `std/archive`, `std/gzip`, `std/zstd`, `std/image` | [references/stdlib-compression-and-media.md](./references/stdlib-compression-and-media.md) |
-| `std/http`, `std/http-server`, `std/http-router` | [references/stdlib-networking.md](./references/stdlib-networking.md) |
+| `std/http`, `std/http-server`, `std/http-router`, `std/ssh`, `std/wol` | [references/stdlib-networking.md](./references/stdlib-networking.md) |
 | `std/cli`, `std/console`, `std/crypto`, `std/log`, `std/math`, `std/os`, `std/parse`, `std/random` | [references/stdlib-crypto-and-os.md](./references/stdlib-crypto-and-os.md) |
 | `std/regex`, `std/time` | [references/stdlib-regex-and-time.md](./references/stdlib-regex-and-time.md) |
-| `std/sqlite`, `std/postgres` | [references/stdlib-databases.md](./references/stdlib-databases.md) |
-| `std/apple-intelligence`, `std/dom`, `std/game`, `std/js`, `std/multiplayer`, `std/ts`, `std/webshell` | [references/stdlib-application-and-platform.md](./references/stdlib-application-and-platform.md) |
+| `std/sqlite`, `std/postgres`, `std/mysql` | [references/stdlib-databases.md](./references/stdlib-databases.md) |
+| `std/apple-intelligence`, `std/appkit`, `std/dom`, `std/game`, `std/js`, `std/layout`, `std/multiplayer`, `std/ts`, `std/uikit`, `std/webshell` | [references/stdlib-application-and-platform.md](./references/stdlib-application-and-platform.md) |
 
 ## Repo Anchors
 

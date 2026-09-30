@@ -1,4 +1,4 @@
-# Standard HTTP Client, Server, and Router APIs
+# Standard Networking APIs
 
 ## `std/http`
 
@@ -72,3 +72,34 @@ Use `pathToFileSystemPath(root, path)` or
 reject decoded traversal and separators. Static-file helpers provide MIME
 types, conservative cache control, ETags, Last-Modified, GET/HEAD handling, and
 conditional 304 responses.
+
+## `std/ssh`
+
+```doof
+import { connect, SshClient, SshConnectOptions, SshCommandResult, SftpClient } from "std/ssh"
+```
+
+- `connect` is `isolated` and blocking; call it from async or actor work, not
+  a UI thread. It returns `Result<SshClient, string>`.
+- Host-key verification is mandatory: supply `knownHostsPath` and/or
+  `hostKeySha256` (64 hex digits). Authenticate with a password or
+  `privateKeyPath`.
+- `wait` (default ten seconds) retries only TCP availability; handshake,
+  verification, and authentication failures return immediately.
+- `client.run(command)` returns `SshCommandResult` with `exitStatus`, `stdout`,
+  and `stderr`.
+- `client.sftp()` opens the one shared SFTP session: `writeFile`, bounded
+  `readFile` (16 MiB default), `listDirectory`, `makeDirectory`, `removeFile`,
+  `removeDirectory`, and `rename`. Close it before the SSH client.
+- Agent authentication, forwarding, and interactive channels are not provided.
+
+## `std/wol`
+
+```doof
+import { wakeOnLan } from "std/wol"
+
+try! wakeOnLan("aa:bb:cc:dd:ee:ff", "192.168.1.255")
+```
+
+`wakeOnLan(mac, broadcast = "255.255.255.255", port = 9)` returns
+`Result<none, string>`. Success confirms only local delivery of the datagram.

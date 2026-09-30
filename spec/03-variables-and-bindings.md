@@ -16,7 +16,7 @@ Doof provides binding mechanisms with distinct semantics for deep immutability, 
 | `with` | Scoped immutable binding | Shallow (content mutable) | Block only |
 | `const` | Deprecated immutable declaration | Legacy | Global or nested |
 
-```javascript
+```doof
 readonly MAX_SIZE = 100             // Deep immutable module constant
 readonly CONFIG = loadConfig()      // Runtime constant, deeply immutable
 timestamp := getCurrentTime()       // Immutable binding, shallow
@@ -27,7 +27,7 @@ let counter = 0                     // Mutable binding
 
 Local `let` and local `readonly` declarations can use `<-` when the initializer needs imperative work before producing its final value:
 
-```javascript
+```doof
 let x <- {
     if condition {
         yield 10
@@ -49,7 +49,7 @@ readonly total: int <- {
 
 The same syntax is also available for statement-only reassignment of an existing local variable:
 
-```javascript
+```doof
 let count = 0
 count <- {
     if shouldSkip {
@@ -67,7 +67,7 @@ count <- {
 
 `const` declarations are deprecated. The parser and checker still accept them temporarily and emit a warning. Use `readonly` for deeply immutable values, and use `:=` for immutable bindings with mutable interiors.
 
-```javascript
+```doof
 readonly PI = 3.14159
 readonly MAX_USERS = 1000
 readonly GREETING = "Hello"
@@ -86,7 +86,7 @@ label := "immutable value with mutable interior"
 
 The `:=` operator creates an immutable binding with **shallow immutability** — the binding cannot be reassigned, but its contents remain mutable:
 
-```javascript
+```doof
 // Shallow immutability - binding is immutable, content is mutable
 items := [1, 2, 3]        // int[] — mutable array
 items.push(4)             // ✅ OK — array contents are mutable
@@ -100,7 +100,7 @@ point = Point(3, 4)       // ❌ Error — binding is immutable
 
 ### Shallow vs Deep: Key Distinction
 
-```javascript
+```doof
 // := is shallow - mutable content allowed
 data := [1, 2, 3]              // int[]
 data.push(4)                   // ✅ OK
@@ -126,7 +126,7 @@ view[0].x = 2                  // ✅ OK
 
 `let` creates a mutable binding. Type inference prefers mutable types:
 
-```javascript
+```doof
 let counter = 0            // int
 let buffer = [1, 2, 3]    // Array<int> — inferred mutable
 
@@ -138,7 +138,7 @@ buffer = [5, 6]            // ✅ OK
 
 `let` also accepts local yield-block initializers and statement-only yield-block reassignment:
 
-```javascript
+```doof
 let current <- {
     yield loadInitialValue()
 }
@@ -153,7 +153,7 @@ current <- {
 
 ### Explicit Type Overrides Inference
 
-```javascript
+```doof
 // Mutable binding, but readonly contents
 let frozen: ReadonlyArray<int> = [1, 2, 3]
 frozen[0] = 99            // ❌ Error: readonly array
@@ -175,7 +175,7 @@ frozen = [4, 5, 6]        // ✅ OK: binding is mutable
 
 `readonly` is permitted at global scope for runtime-computed immutable values:
 
-```javascript
+```doof
 readonly MAX_SIZE = 100                 // Module constant
 readonly CONFIG = loadConfig()          // Runtime-computed, deeply immutable
 readonly PRIMES = readonly [2, 3, 5, 7] // Deeply immutable array
@@ -185,17 +185,28 @@ readonly PRIMES = readonly [2, 3, 5, 7] // Deeply immutable array
 
 ### Local Scope
 
-```javascript
+```doof
 readonly data = [1, 2, 3]    // readonly int[] - deeply immutable
 data.push(4)                  // ❌ Error: readonly array
 data = [5, 6]                 // ❌ Error: immutable binding
+```
 
 Deep immutability here means the entire reachable value must be immutable. Collection-typed readonly fields and bindings are therefore treated as readonly collections even if the annotation omits the collection-level `readonly`.
+
+Nominal classes and structs are not made readonly implicitly. A `readonly` binding whose value type has a `let` field, a mutable collection field, or another mutable reachable member is rejected; use `:=` for a singleton with mutable state:
+
+```doof
+class Counter {
+    let count: int = 0
+}
+
+readonly counter = Counter {}  // ❌ Error: field "count" is mutable
+counters := Counter {}         // ✅ Immutable binding, mutable interior
 ```
 
 Local `readonly` declarations may also use `<-` blocks when the final value is produced with `yield`:
 
-```javascript
+```doof
 readonly configName <- {
     yield "main"
 }
@@ -206,7 +217,7 @@ readonly configName <- {
 Fields are shallow immutable by default, `let` opts into field-slot
 reassignment, and `readonly` provides deep immutability:
 
-```javascript
+```doof
 class Entity {
     id: int                                 // Shallow immutable field
     readonly tags: string[]                 // Treated as readonly string[]
@@ -227,7 +238,7 @@ Mutation through the interior of a bare field remains valid; for example,
 
 `readonly` can modify collection literals to create readonly collections:
 
-```javascript
+```doof
 // Explicit readonly modifier
 items := readonly [1, 2, 3]           // readonly int[]
 let data = readonly ["a", "b"]        // readonly string[]
@@ -254,7 +265,7 @@ z := [1, 2]                  // int[] (mutable content, immutable binding)
 - Module `let` is explicit mutable global state and is unavailable to isolated
   or actor-dispatched call paths
 
-```javascript
+```doof
 // ✅ Valid — module constants
 readonly PI = 3.14159
 readonly MAX_USERS = 1000
@@ -268,7 +279,7 @@ config := loadConfig()                // Binding is immutable; value interior ma
 
 // ✅ Valid — functions hoist
 bar(5)  // Works — functions hoist
-function greet(name: string): none => print("Hello, " + name)
+function greet(name: string): none => println("Hello, " + name)
 function bar(x: int): int => x * 12
 
 // ✅ Mutable module state (prefer encapsulating it behind functions)
@@ -291,7 +302,7 @@ readonly CONFIG = load()   // readonly doesn't hoist
 - Nested scopes may still shadow an outer binding with a new local binding
 - Functions can reference themselves for recursion
 
-```javascript
+```doof
 function outer() {
     helper(5)  // ❌ Error: used before declaration
     
@@ -362,7 +373,7 @@ The `with` statement introduces one or more immutable bindings that are scoped t
 
 ### Syntax
 
-```javascript
+```doof
 with <name> [:Type] := <expression> [, ...] {
     // name is in scope here
 }
@@ -376,7 +387,7 @@ terminates the enclosing path for return-completeness checking.
 
 ### Single Binding
 
-```javascript
+```doof
 with connection := openDatabase() {
     query(connection, "SELECT * FROM users")
     update(connection, "UPDATE stats SET visits = visits + 1")
@@ -402,7 +413,7 @@ discard a `Result`; handle or unwrap the `Result` before entering the scope.
 
 Multiple bindings are separated by commas. They are evaluated left-to-right, and later bindings can reference earlier ones:
 
-```javascript
+```doof
 with x := computeX(), y := computeY(x) {
     println("Result: ${x + y}")
 }
@@ -412,7 +423,7 @@ with x := computeX(), y := computeY(x) {
 
 Type annotations can be provided for any binding:
 
-```javascript
+```doof
 with total: double := prices.reduce(0.0, (a, b) => a + b) {
     println("Total: ${total}")
 }
@@ -422,7 +433,7 @@ with total: double := prices.reduce(0.0, (a, b) => a + b) {
 
 `with` blocks can be nested:
 
-```javascript
+```doof
 with config := loadConfig() {
     with db := openDatabase(config.dbUrl) {
         migrate(db)
@@ -457,7 +468,7 @@ Destructuring mirrors initialisation — both positional and named forms are sup
 
 Extracts fields in declaration order:
 
-```javascript
+```doof
 class Point {
     x, y, z: float
 }
@@ -466,7 +477,7 @@ point := Point (1.0, 2.0, 3.0)
 
 // Immutable bindings
 (x, y, z) := point
-print(x)  // 1.0
+println(x)  // 1.0
 
 // Partial — trailing fields can be omitted
 (x, y) := point
@@ -493,7 +504,7 @@ let py = 0.0
 
 Extracts specific fields by name:
 
-```javascript
+```doof
 class User {
     id: int
     name: string
@@ -505,7 +516,7 @@ user := User { id: 1, name: "Alice", email: "alice@example.com", age: 30 }
 
 // Extract specific fields — immutable bindings
 { name, email } := user
-print(name)   // "Alice"
+println(name)   // "Alice"
 
 // Order doesn't matter
 { age, id } := user
@@ -521,9 +532,9 @@ let userAge = 0
 
 ### Renaming with `as`
 
-```javascript
+```doof
 { name as userName, email as userEmail } := user
-print(userName)   // "Alice"
+println(userName)   // "Alice"
 
 // Mix renamed and direct bindings
 { id, name as displayName } := user
@@ -535,7 +546,7 @@ print(userName)   // "Alice"
 
 Tuples destructure with the same positional syntax as classes:
 
-```javascript
+```doof
 function getStats(): Tuple<int, float, string> {
     return (42, 3.14, "hello")
 }
@@ -559,8 +570,8 @@ let tag = ""
 
 // Field access without destructuring
 stats := getStats()
-print(stats._1)  // 42
-print(stats._2)  // 3.14
+println(stats._1)  // 42
+println(stats._2)  // 3.14
 ```
 
 For tuples and classes, `_` discards a position without creating a binding.
@@ -569,7 +580,7 @@ For tuples and classes, `_` discards a position without creating a binding.
 
 Arrays destructure with square brackets and bind the array element type:
 
-```javascript
+```doof
 values := [10, 20, 30]
 
 // Immutable bindings
@@ -600,7 +611,7 @@ let third = 0
 
 Destructuring patterns can also assign into bindings that already exist:
 
-```javascript
+```doof
 let x = 0
 let y = 0
 (x, y) = point
@@ -626,7 +637,7 @@ Destructuring patterns are not currently accepted directly in function
 parameters. Accept the value as an ordinary parameter and destructure it at the
 start of the function body:
 
-```javascript
+```doof
 function magnitude(point: Point): float {
     (x, y, z) := point
     return sqrt(x*x + y*y + z*z)

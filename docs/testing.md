@@ -22,11 +22,17 @@ Run another package directly with:
 
 ```sh
 dist/doof test path/to/package
-dist/doof test path/to/package parser
-dist/doof test path/to/package --list
+dist/doof test path/to/package --filter parser
+dist/doof test path/to/package --exact-filter parser.test.do::testDiagnosesMalformedTypedTags
+dist/doof test path/to/package --list [--json]
 dist/doof test path/to/package --coverage --coverage-output build/coverage/report.json
 dist/doof test path/to/package --target wasm
 ```
+
+`--filter` selects test ids containing the text; `--exact-filter` selects one
+exact id. `--selection-json <file>` selects the exact ids in a JSON array and
+cannot be combined with either filter. `--report-json <file>` writes structured
+results, and `--list --json` prints discovery as JSON.
 
 Selected test files without `mock import` share one generated harness and
 native executable. Every test function still runs in a fresh process, but all
@@ -40,10 +46,9 @@ workers, including coverage and custom output directories. `--list` remains
 read-only and does not wait. Parallel workers inside the owning invocation
 continue to run normally.
 
-After rebuilding the compiler, the POSIX process regression
-`python3 scripts/project-build-lock.test.py <compiler>` verifies waiting builds
-and tests, cancellation of a waiter, independent projects, and lock ownership
-through test-worker execution.
+After rebuilding the compiler, `tools/run.sh process-test` runs the POSIX
+process regression for waiting builds and tests, cancellation of a waiter,
+independent projects, and lock ownership through test-worker execution.
 
 On macOS, a package with `build.target = "wasm"` or an explicit `--target wasm`
 builds the generated harness as a standalone Emscripten Wasm command. Each test

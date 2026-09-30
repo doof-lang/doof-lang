@@ -69,7 +69,7 @@ valid `Range` values.
 
 Doof provides a built-in `SerialValue` carrier for JSON-compatible data:
 
-```javascript
+```doof
 payload: SerialValue := { name: "Ada", scores: [1, 2, 3] }
 ```
 
@@ -117,7 +117,7 @@ base64 JSON string.
 
 ### Numeric Literals
 
-```javascript
+```doof
 let a = 42       // int (default for integer literals)
 let b = 42L      // long (explicit suffix)
 let c = 3.14     // double (default for decimal literals)
@@ -143,7 +143,7 @@ Underscores may appear between two digits in numeric literals to improve readabi
 
 Numeric types can be implicitly widened to larger types. Narrowing requires explicit conversion.
 
-```javascript
+```doof
 let b: byte = 42
 let i: int = b       // ✅ Implicit widening byte → int
 
@@ -169,7 +169,7 @@ remains explicit because 64-bit integers can lose precision.
 
 To convert between numeric types explicitly, use function-call syntax with the type name:
 
-```javascript
+```doof
 let x: int = 42
 let b: byte = byte(x)       // int → byte
 let f: float = float(x)      // int → float (explicit cast)
@@ -190,7 +190,7 @@ Numeric casts accept exactly one numeric argument and return the target type, wi
 
 To format primitive values as strings explicitly, use `string(...)` constructor syntax:
 
-```javascript
+```doof
 let answer: string = string(42)
 let ok: string = string(true)
 let ratio: string = string(3.5)
@@ -255,7 +255,7 @@ length by the smallest possible amount (at most three bytes).
 Character literals contain one Unicode code point, including non-ASCII forms
 such as `'é'` and `'🙂'`.
 
-```javascript
+```doof
 s := "Hello, World!"
 s.length              // 13
 s.indexOf("World")    // 7
@@ -292,7 +292,7 @@ Arrays support a `.length` property and the following built-in methods:
 
 `push`, `reserve`, `pop`, `drainToReadonly`, and `cloneReadonly` are rejected on `readonly T[]` arrays at compile time. The deprecated `buildReadonly()` spelling remains accepted on mutable arrays with a warning and has the same draining behavior as `drainToReadonly()`.
 
-```javascript
+```doof
 nums := [1, 2, 3, 4]
 nums.push(5)                         // nums is now [1, 2, 3, 4, 5]
 popped := nums.pop()                 // Result<int, string>
@@ -334,7 +334,7 @@ actually `none` or the Result is a `Failure`, the program panics.
 
 Applying `!` to a value that is neither nullable nor a `Result` is a compile error.
 
-```javascript
+```doof
 name: string | none := "Alice"
 println(name!)                  // ✅ Asserts presence, type is string
 greet(name!)                    // ✅ Works in function argument position
@@ -378,7 +378,7 @@ success path. The same rules apply inside expression-bodied lambdas.
 
 ### Basic Inference Rules
 
-```javascript
+```doof
 // ✅ Type inferred from initialiser
 let x = 42                        // int
 let y = 3.14                      // double
@@ -402,7 +402,7 @@ let x: int | none = none          // ✅ Explicit annotation
 
 Type information flows **both directions** in a single step:
 
-```javascript
+```doof
 // Top-down: expected type known from context
 function process(items: int[]): none { }
 process([1, 2, 3])  // Literal infers int[] from parameter type
@@ -430,7 +430,7 @@ and literal-valued fields must be supplied for structural construction. The
 selected member then provides contextual types for property values, including
 nested object literals:
 
-```javascript
+```doof
 class Animal { name: string }
 class Question { text: string; yes: Knowledge; no: Knowledge }
 type Knowledge = Animal | Question
@@ -452,7 +452,7 @@ precedence over nominal union inference.
 
 When an expected type is known from context, numeric literals are interpreted as that type even when the default would differ:
 
-```javascript
+```doof
 class Point { x, y: float }
 
 // Without context: 0.0 is double, 42 is int
@@ -478,7 +478,7 @@ f: float := 1                  // 1 interpreted as float
 
 Expected types propagate through collection literals and method calls:
 
-```javascript
+```doof
 class Point { x, y: float }
 
 // Expected type flows into array elements
@@ -505,7 +505,7 @@ hasTwo := nums.contains(2)      // true
 
 Binding keywords influence type inference and mutability:
 
-```javascript
+```doof
 // := provides shallow immutability - mutable collection type
 items := [1, 2, 3]        // int[] (mutable array, immutable binding)
 items.push(4)             // ✅ OK - array is mutable
@@ -531,7 +531,7 @@ explicit: int[] := [1, 2, 3]     // int[] (explicit overrides)
 
 ### Omitted Function Return Types
 
-```javascript
+```doof
 // Value-producing functions declare their return type
 function double(x: int): int => x * 2
 
@@ -557,7 +557,7 @@ function clarified(flag: bool): int | string {
 
 Doof has **no implicit absence** — nullability is explicit via union types:
 
-```javascript
+```doof
 let x: int = none        // ❌ Error: int is not nullable
 let y: int | none = none  // ✅ Explicit nullable type
 ```
@@ -566,7 +566,7 @@ let y: int | none = none  // ✅ Explicit nullable type
 
 These concepts are orthogonal:
 
-```javascript
+```doof
 class User {
     name: string                   // Required and always present
     email: string | none           // Required, nullable
@@ -581,7 +581,7 @@ let u4 = User { name: "Alice", email: none, nickname: "Ali" }  // ✅
 
 ### Absence Safety
 
-```javascript
+```doof
 function getLength(s: string | none): int {
     return s.length  // ❌ Error: s might be none
 }
@@ -605,7 +605,7 @@ function safeLengthV2(s: string | none): int {
 
 Union types express "one of several types":
 
-```javascript
+```doof
 type Value = int | string | bool
 type Optional<T> = T | none
 
@@ -630,7 +630,7 @@ result types. A single class nullable such as `Box | none` uses ordinary pointer
 member access, while a single struct nullable such as `Point | none` uses an
 optional value representation. Both may still require explicit none handling for safety.
 
-```javascript
+```doof
 class Request { method: string, path: string }
 class RouterRequest { method: string, path: string }
 
@@ -645,7 +645,7 @@ function routeKey(request: HttpRequest): string {
 
 Use literal-valued fields to create discriminated unions:
 
-```javascript
+```doof
 class Success {
     kind: "Success"
     value: int
@@ -678,7 +678,7 @@ When no values are assigned, variants receive integer ordinals beginning at
 zero. Reordering such an enum changes its backing values, so persistent
 protocols should prefer explicit values:
 
-```javascript
+```doof
 enum Color { Red, Green, Blue }
 
 enum Direction {
@@ -696,7 +696,7 @@ Here `Color.Red.value == 0`, `Color.Green.value == 1`, and
 
 Enum variants can have explicit integer values. If a variant omits a value, it is implicitly the previous variant's value + 1. The first variant defaults to 0 if unspecified:
 
-```javascript
+```doof
 enum Direction {
     North = 1,
     South = 2,
@@ -716,7 +716,7 @@ enum HttpStatus {
 
 Enum variants can have explicit string values. **Every variant must have a value** — auto-increment does not apply to strings:
 
-```javascript
+```doof
 enum Color { Red = "RED", Green = "GREEN", Blue = "BLUE" }
 
 enum LogLevel {
@@ -729,7 +729,7 @@ enum LogLevel {
 
 ### Accessing Enum Values
 
-```javascript
+```doof
 let dir = Direction.North       // Direction
 let status = HttpStatus.OK      // HttpStatus
 let level = LogLevel.Debug      // LogLevel
@@ -773,7 +773,7 @@ a native contract violation and panics when its name or value mapping is used.
 
 When the target type is known from context, enum variants can be referenced with **dot-shorthand** — a leading `.` without the enum name:
 
-```javascript
+```doof
 let c: Direction = .East          // Direction.East
 let level: LogLevel = .Warn       // LogLevel.Warn
 
@@ -793,7 +793,7 @@ Shorthand works anywhere the compiler can infer the enum type from context:
 - Parameter defaults and field defaults
 - Case arms matching on an enum value
 
-```javascript
+```doof
 // Shorthand in case expressions
 direction: Direction := .North
 
@@ -817,26 +817,26 @@ case direction {
 
 All enums have a `.name` property returning the variant's declared name as a string:
 
-```javascript
+```doof
 let d = Direction.North
-print(d.name)  // "North"
+println(d.name)  // "North"
 ```
 
 Integer-valued and string-valued enums additionally have a `.value` property:
 
-```javascript
+```doof
 let s = HttpStatus.OK
-print(s.name)   // "OK"
-print(s.value)  // 200
+println(s.name)   // "OK"
+println(s.value)  // 200
 
 let l = LogLevel.Debug
-print(l.name)   // "Debug"
-print(l.value)  // "DEBUG"
+println(l.name)   // "Debug"
+println(l.value)  // "DEBUG"
 ```
 
 ### Enum Utility Methods
 
-```javascript
+```doof
 // Get all variants
 Direction.values()   // readonly Direction[] — all variants in declaration order
 
@@ -851,7 +851,7 @@ HttpStatus.fromValue(200)     // HttpStatus | none
 
 Enum values support equality comparison. Integer-valued enums also support ordering:
 
-```javascript
+```doof
 let a = Direction.North
 let b = Direction.North
 a == b  // true
@@ -865,7 +865,7 @@ HttpStatus.OK < HttpStatus.NoContent  // true (200 < 204)
 
 Enum values can be used as literal-valued fields to discriminate unions, providing a type-safe alternative to string-based discriminator fields:
 
-```javascript
+```doof
 enum ShapeKind { Circle, Rectangle, Triangle }
 
 class CircleShape {
@@ -895,13 +895,13 @@ This provides stronger type safety than string-based discrimination — misspell
 
 Use **enums** for a fixed set of named values without associated data:
 
-```javascript
+```doof
 enum Status { Active, Inactive, Suspended }
 ```
 
 Use **discriminated unions** when variants carry different data:
 
-```javascript
+```doof
 class TextMessage {
     kind: "Text"
     content: string
@@ -922,7 +922,7 @@ type Message = TextMessage | ImageMessage
 
 Classes and structs define **nominal types** — two declarations with identical structure are distinct types. Classes are reference types; structs are value types.
 
-```javascript
+```doof
 class Point {
     readonly x: float
     readonly y: float
@@ -945,7 +945,7 @@ Interfaces define **structural contracts**. In Doof's closed-world compilation m
 
 ### Automatic Structural Matching
 
-```javascript
+```doof
 interface Thing2D {
     readonly x: float
     readonly y: float
@@ -975,7 +975,7 @@ distance(p, v)  // ✅ Both structurally compatible
 
 Classes can optionally declare interface implementation for validation:
 
-```javascript
+```doof
 class Point implements Thing2D {
     readonly x: float
     readonly y: float
@@ -1000,7 +1000,7 @@ field-slot assignment.
 
 ### Type Construction with Interfaces
 
-```javascript
+```doof
 interface Positioned {
     readonly x: float
     readonly y: float
@@ -1016,7 +1016,7 @@ let v: Positioned = Vector { x: 1.0, y: 2.0 }
 
 ### Literal-Valued Fields Aid Variant Identification
 
-```javascript
+```doof
 enum OutcomeKind { Success, Failure }
 
 class SuccessOutcome {
@@ -1033,8 +1033,8 @@ type Outcome = SuccessOutcome | FailureOutcome
 
 function show(o: Outcome): none {
     case o {
-        s: SuccessOutcome -> print(s.value)
-        _: FailureOutcome -> print("unexpected")
+        s: SuccessOutcome -> println(s.value)
+        _: FailureOutcome -> println("unexpected")
     }
 }
 
@@ -1053,7 +1053,7 @@ inside union members. Alias expansion must terminate; direct and indirect cyclic
 aliases are errors. The same type-argument arity rules apply to forward and
 recursive function signatures as to other annotation sites:
 
-```javascript
+```doof
 type Event<T> = Message<T> | Ready<T> | Closed<T>
 ```
 
@@ -1067,7 +1067,7 @@ type Event<T> = Message<T> | Ready<T> | Closed<T>
 | `ReadonlySet<T>` | — | Immutable set |
 | `Tuple<T1, T2, ...>` | — | Fixed-size heterogeneous tuple |
 
-```javascript
+```doof
 let nums: int[] = [1, 2, 3]
 let matrix: int[][] = [[1, 2], [3, 4]]
 
@@ -1085,7 +1085,7 @@ valid type arguments. `Serializable` and `Reflectable` are compiler-known,
 constraint-only intrinsics used by generic JSON and metadata helpers; they are
 not normal type annotations:
 
-```javascript
+```doof
 function decode<T: Serializable>(json: SerialValue): Result<T, string> {
   return T.fromSerialValue(json)
 }
@@ -1104,7 +1104,7 @@ parameter name must be unique within its declaration. A nested generic
 declaration, including a method, must not redeclare a type parameter visible
 from an enclosing generic declaration.
 
-```javascript
+```doof
 function identity<T>(value: T): T => value
 
 class Box<T> {
@@ -1120,7 +1120,7 @@ interface Reader<T> {
 Calls may supply every type argument explicitly or omit the complete argument
 list and use inference:
 
-```javascript
+```doof
 explicit := identity<int>(1)
 inferred := identity(1)
 ```
@@ -1223,7 +1223,7 @@ that survive at the ABI boundary are owned by a native header or the Doof
 runtime. A native C++ function template may accept a concrete monomorphized
 Doof type; the generated adapter invokes it with that concrete representation.
 
-```javascript
+```doof
 scores: Map := { "Alice": 100, "Bob": 95 }        // Map<string, int>
 readonlyScores: ReadonlyMap := { "Alice": 100 }    // ReadonlyMap<string, int>
 unique: Set := [1, 2, 3]                             // Set<int>
@@ -1242,7 +1242,7 @@ Maps use `{ key: value }` literal syntax within `{ }`. Empty braces `{}` produce
 
 When the annotation omits type arguments entirely, non-empty homogeneous literals can supply both type arguments:
 
-```javascript
+```doof
 scores: Map := { "Alice": 100, "Bob": 95 }        // Map<string, int>
 scores: ReadonlyMap := { "Alice": 100 }            // ReadonlyMap<string, int>
 let scores: readonly Map<string, int> = { "Alice": 100 } // Same as ReadonlyMap<string, int>
@@ -1253,7 +1253,7 @@ Both map type arguments must be omitted together. Partial annotations such as `M
 
 Supported key types are `string`, `int`, `long`, `char`, `bool`, and enum types. In practice, the common supported forms are string keys, integer keys, long keys, and enum keys.
 
-```javascript
+```doof
 // Integer keys
 let m: Map<int, string> = { 1: "one", 2: "two" }
 
@@ -1286,20 +1286,20 @@ Replacing the value for an existing key does not move it. Deleting a key and the
 
 Integer literals are contextually widened when a `long` key type is expected, so this is valid:
 
-```javascript
+```doof
 let counts: Map<long, int> = { 1: 10, 2: 20 }
 ```
 
 Floating-point keys are rejected even though they parse, to avoid surprising hash/equality behavior around exact comparison and `NaN` values.
 
-```javascript
+```doof
 let bad: Map<float, int> = {}          // Error
 let alsoBad = { 1.5: "value" }       // Error
 ```
 
 Tuple, class-instance, and other non-scalar key types are also rejected.
 
-```javascript
+```doof
 let badTuple: Map<Tuple<int, string>, int> = {}  // Error
 
 class Point { x: int }
@@ -1310,7 +1310,7 @@ let badPoint: Map<Point, int> = {}               // Error
 
 `Set<T>` is an intrinsic generic type for unique values with insertion-order iteration. When a `Set<T>` is expected, array literal syntax initializes the set and duplicate values are coalesced by the runtime representation.
 
-```javascript
+```doof
 enum Color { Red, Blue }
 
 let unique: Set<int> = [1, 2, 3, 2, 1]
@@ -1327,7 +1327,7 @@ let frozen2: readonly Set<int> = [1, 2, 3] // Same as ReadonlySet<int>
 
 When the annotation omits type arguments entirely, the checker may infer `T` only from a same-site non-empty homogeneous literal. Empty literals still require a full annotation:
 
-```javascript
+```doof
 unique: Set := [1, 2, 3]          // Set<int>
 frozen: ReadonlySet := [1, 2, 3]  // ReadonlySet<int>
 let unique: Set<int> = [1, 2, 3]  // Also valid
@@ -1362,12 +1362,12 @@ Adding a value that is already present does not move it. Deleting a value and th
 | `.cloneReadonly()` | mutable only | `ReadonlySet<T>` | Shallow-copy into a new readonly set without changing the source |
 | `.cloneMutable()` | both | `Set<T>` | Shallow-copy into a new mutable set |
 
-```javascript
+```doof
 let unique: Set<int> = [1, 2, 3]
 unique.add(4)
-print(unique.has(2))
+println(unique.has(2))
 unique.delete(1)
-print(unique.size)
+println(unique.size)
 
 snapshot := unique.cloneReadonly() // ReadonlySet<int>, unique is unchanged
 frozen := unique.drainToReadonly() // ReadonlySet<int>, unique is now empty
@@ -1391,19 +1391,19 @@ The deprecated `buildReadonly()` spelling remains accepted on mutable sets with 
 | `.cloneReadonly()` | mutable only | `ReadonlyMap<K, V>` | Shallow-copy into a new readonly map without changing the source |
 | `.cloneMutable()` | both | `Map<K, V>` | Shallow-copy into a new mutable map |
 
-```javascript
+```doof
 let m: Map<string, int> = { "a": 1, "b": 2 }
 m.set("c", 3)
 case m.get("a") {
-    s: Success -> print(s.value)
-    _: Failure -> print("missing")
+    s: Success -> println(s.value)
+    _: Failure -> println("missing")
 }
-print(m.has("d"))     // false
-print(m.size)         // 3
+println(m.has("d"))     // false
+println(m.size)         // 3
 m.delete("b")
 
 for key, value of m {
-  print("${key} = ${value}")
+  println("${key} = ${value}")
 }
 
 snapshot := m.cloneReadonly() // ReadonlyMap<string, int>, m is unchanged
@@ -1417,7 +1417,7 @@ The deprecated `buildReadonly()` spelling remains accepted on mutable maps with 
 
 Maps support bracket-based index access, which is equivalent to direct key lookup:
 
-```javascript
+```doof
 let m: Map<string, int> = { "a": 1 }
 x := m["a"]   // returns 1
 m["b"] = 2    // inserts new entry
@@ -1433,7 +1433,7 @@ insert-or-update operation.
 
 A `Tuple<T1, T2, ..., Tn>` is equivalent to a class with fields `_1: T1`, `_2: T2`, ..., `_n: Tn`. All standard class construction and destructuring rules apply.
 
-```javascript
+```doof
 // Explicit type
 let pair: Tuple<int, string> = (1, "hello")
 let vec: Tuple<float, float, float> = (1.0f, 2.0f, 3.0f)
@@ -1443,16 +1443,16 @@ coords := (3.14, 2.71)           // Tuple<double, double>
 mixed := (42, "hello", true)     // Tuple<int, string, bool>
 
 // Field access via _1, _2, etc.
-print(pair._1)   // 1
-print(pair._2)   // "hello"
-print(vec._3)    // 3.0
+println(pair._1)   // 1
+println(pair._2)   // "hello"
+println(vec._3)    // 3.0
 ```
 
 #### Tuple Construction
 
 Tuples use positional literal syntax — the same `(value, ...)` form used for class positional construction:
 
-```javascript
+```doof
 // When target type is known, constructs that type
 let p: Point = (1.0, 2.0)                  // Constructs Point (not a Tuple)
 let t: Tuple<float, float> = (1.0f, 2.0f)  // Constructs Tuple
@@ -1465,7 +1465,7 @@ result := (200, "OK")                      // Tuple<int, string>
 
 Tuples support positional destructuring, just like classes:
 
-```javascript
+```doof
 function divmod(a: int, b: int): Tuple<int, int> {
     return (a \ b, a % b)
 }
@@ -1488,7 +1488,7 @@ q = 0  // ✅ OK
 
 Tuples are particularly useful for functions that return multiple values:
 
-```javascript
+```doof
 function minMax(items: int[]): Tuple<int, int> {
     let min = items[0]
     let max = items[0]
@@ -1500,8 +1500,8 @@ function minMax(items: int[]): Tuple<int, int> {
 }
 
 (lo, hi) := minMax([3, 1, 4, 1, 5, 9])
-print(lo)  // 1
-print(hi)  // 9
+println(lo)  // 1
+println(hi)  // 9
 ```
 
 #### Design Notes
@@ -1513,7 +1513,7 @@ print(hi)  // 9
 
 ### Type Aliases
 
-```javascript
+```doof
 type UserId = int
 type Callback = (value: int): none
 type StringMap = Map<string, string>
@@ -1527,7 +1527,7 @@ type Pair<A, B> = Tuple<A, B>         // Alias for common tuple arities
 Functions are first-class values with explicit type signatures that record
 parameter names:
 
-```javascript
+```doof
 type Callback = (value: int, description: string): none
 type Predicate<T> = (item: T): bool
 type Transform = (input: int): int
@@ -1550,7 +1550,7 @@ compatibility: parameters are matched by position and type. Thus
 
 Doof distinguishes between collection-level readonly types and deep immutability on `readonly` bindings and fields:
 
-```javascript
+```doof
 // := : Shallow immutability (immutable binding, mutable content)
 data := [1, 2, 3]              // int[] - binding immutable, content mutable
 data.push(4)                   // ✅ OK - array is mutable
@@ -1591,7 +1591,7 @@ The parser also accepts `readonly Array<T>`, `readonly Map<K, V>`, and `readonly
 
 ### Readonly Classes
 
-```javascript
+```doof
 // Readonly-compatible class
 class ImmutablePoint {
     x: float
@@ -1612,7 +1612,7 @@ readonly p2 = MutablePoint { x: 1.0, y: 2.0 }    // ❌ Error: class has mutable
 
 Readonly classes must contain only readonly-compatible types:
 
-```javascript
+```doof
 class Container {
     readonly items: int[]           // ✅ OK - implied as readonly int[]
     readonly count: int             // ✅ OK
@@ -1629,7 +1629,7 @@ class BadPoints {
 
 ### Bindings vs Fields vs Values
 
-```javascript
+```doof
 class Container {
     readonly items: int[]           // field surface is treated as readonly int[]
     let count: int                  // mutable field
@@ -1663,7 +1663,7 @@ Doof uses reference counting for memory management (see [Classes and Interfaces]
 
 `weak` is a **reference qualifier**, not a type modifier. It applies to the entire type expression:
 
-```javascript
+```doof
 class TreeNode {
     children: TreeNode[] = []
     parent: weak TreeNode | none  // weak reference to (TreeNode | none)
@@ -1672,7 +1672,7 @@ class TreeNode {
 
 In union types, `weak` qualifies the whole reference — `weak Foo | Bar` means a weak reference to a value of type `Foo | Bar`, not `(weak Foo) | Bar`:
 
-```javascript
+```doof
 class Observer {
     target: weak Widget | Panel  // weak (Widget | Panel)
 }
@@ -1687,7 +1687,7 @@ A `case` subject that stores `weak T` reads it once as
 case; `Failure` reports expiration. For `weak (T | none)`, an absent reference
 is `Success(none)`, while an expired non-absent reference is `Failure`.
 
-```javascript
+```doof
 class Node {
     backEdge: weak Node | none
     
@@ -1719,10 +1719,10 @@ Doof keeps implicit narrowing intentionally narrow. It does not perform broad fl
 
 `if` conditions do not narrow types implicitly. A none check can still guard control flow, but the checked value keeps its original type unless you use an explicit form such as `!`, declaration-`else`, `case`, or `as`:
 
-```javascript
+```doof
 function process(value: int | none): none {
     if value != none {
-        print(value!)  // explicit assertion still required
+        println(value!)  // explicit assertion still required
     }
 }
 
@@ -1742,14 +1742,14 @@ Use explicit narrowing forms instead:
 - `case` to discriminate unions and enums
 - `expr as T` for checked runtime narrowing
 
-```javascript
+```doof
 value: int | none := getValue()
 
 if value == none {
     return
 }
 
-print(value!)  // explicit assertion still required here
+println(value!)  // explicit assertion still required here
 ```
 
 ### Explicit Narrowing Forms
@@ -1758,7 +1758,7 @@ For everything beyond the simple none-check rule above, use an explicit narrowin
 
 #### `case` with Type Capture
 
-```javascript
+```doof
 class Success {
     kind: "Success"
     value: int
@@ -1773,8 +1773,8 @@ type Result = Success | Failure
 
 function handle(r: Result): none {
     case r {
-        s: Success -> print(s.value)
-        f: Failure -> print(f.error)
+        s: Success -> println(s.value)
+        f: Failure -> println(f.error)
     }
 }
 
@@ -1796,7 +1796,7 @@ function describe(dir: Direction): string {
 
 Use `name := expr else { ... }` to unwrap nullable and `Result` values with an explicit bail-out path:
 
-```javascript
+```doof
 function loadName(): Result<string, string> => Success("Ada")
 
 function test(): int {
@@ -1819,7 +1819,7 @@ unwraps the Result, but a none carried by `Success` remains part of its payload.
 
 Use `expr as T` for checked runtime narrowing/conversion. It returns a `Result`:
 
-```javascript
+```doof
 value: int | string := "hello"
 name := value as string              // Result<string, string>
 
@@ -1839,7 +1839,7 @@ small := numeric as int              // Result<int, string>
 
 Use `expr!` when you want an assertion rather than a typed failure path:
 
-```javascript
+```doof
 name: string | none := maybeName()
 println(name!)  // panics at runtime if name is none
 

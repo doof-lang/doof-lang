@@ -12,7 +12,7 @@ Doof uses an ESM-style module system with explicit imports and exports. Each fil
 
 Export declarations directly:
 
-```javascript
+```doof
 // math.do
 export readonly PI = 3.14159
 export readonly E = 2.71828
@@ -31,7 +31,7 @@ export type Result<T> = Success<T> | Failure
 
 Or export separately from declaration:
 
-```javascript
+```doof
 class Helper { ... }
 function publicFunction(): none { ... }
 function privateFunction(): none { ... }
@@ -41,7 +41,7 @@ export { Helper, publicFunction }
 
 ### Export Renaming
 
-```javascript
+```doof
 class InternalVector { ... }
 function internalAdd(a: int, b: int): int => a + b
 
@@ -55,7 +55,7 @@ export {
 
 Doof omits default exports to encourage explicit naming:
 
-```javascript
+```doof
 // ❌ Not supported
 export default class Foo { }
 
@@ -71,8 +71,8 @@ export class Foo { }
 
 ### Named Imports
 
-```javascript
-import { Vector, add, PI } from "math"
+```doof
+import { Vector, add, PI } from "./math"
 
 let v = Vector { x: 1.0, y: 2.0, z: 3.0 }
 let sum = add(1, 2)
@@ -80,9 +80,9 @@ let sum = add(1, 2)
 
 ### Import Renaming
 
-```javascript
-import { Vector as Vec3, add as addInts } from "math"
-import { Vector as Vec2 } from "math2d"
+```doof
+import { Vector as Vec3, add as addInts } from "./math"
+import { Vector as Vec2 } from "./math2d"
 
 let v3 = Vec3 { x: 1.0, y: 2.0, z: 3.0 }
 let v2 = Vec2 { x: 1.0, y: 2.0 }
@@ -90,19 +90,19 @@ let v2 = Vec2 { x: 1.0, y: 2.0 }
 
 ### Namespace Import
 
-```javascript
-import * as math from "math"
+```doof
+import * as math from "./math"
 
 let v = math.Vector { x: 1.0, y: 2.0, z: 3.0 }
 let sum = math.add(1, 2)
-print(math.PI)
+println(math.PI)
 ```
 
 ### Type-Only Import
 
 Import only type information (erased at runtime):
 
-```javascript
+```doof
 import type { User, Config } from "./types"
 
 function process(user: User, config: Config): none { ... }
@@ -116,7 +116,7 @@ Useful for avoiding circular import issues with values while still using types.
 
 Doof can import native C++ classes directly:
 
-```javascript
+```doof
 export import class BlobReader from "blob_reader.hpp" as native::BlobReader {
     static constructor(data: readonly byte[], offset: int = 0): BlobReader
     current(): byte
@@ -145,7 +145,7 @@ headers.
 
 ### Relative Paths
 
-```javascript
+```doof
 import { Helper } from "./helper"       // Same directory
 import { Config } from "../config"       // Parent directory
 import { Database } from "./db/database" // Subdirectory
@@ -153,10 +153,10 @@ import { Database } from "./db/database" // Subdirectory
 
 ### Package Imports
 
-```javascript
-import { HttpClient } from "http"     // No path prefix
-import { JsonParser } from "json"
-import { Assert } from "std/assert"   // Compiler-provided standard module
+```doof
+import { HttpClient } from "std/http"   // Standard-library package
+import { Assert } from "std/assert"
+import { say } from "hello-doof/hello" // Declared local dependency (below)
 ```
 
 The compiler may provide standard-library modules under the `std/` namespace. They use the same bare-specifier import syntax as other package-style imports.
@@ -175,7 +175,7 @@ Package-style imports are wired through the nearest `doof.json` above the entry 
 
 allows imports such as:
 
-```javascript
+```doof
 import { say } from "hello-doof/hello"
 ```
 
@@ -211,7 +211,7 @@ src/util.do   -> hello_doof::src::util
 
 Extensions are optional and inferred:
 
-```javascript
+```doof
 import { Foo } from "./foo"      // Equivalent
 import { Foo } from "./foo.do"   // Equivalent
 ```
@@ -222,7 +222,7 @@ import { Foo } from "./foo.do"   // Equivalent
 
 ### Simple Re-export
 
-```javascript
+```doof
 // index.do
 export { Vector, Matrix } from "./math/linear"
 export { sin, cos, tan } from "./math/trig"
@@ -231,7 +231,7 @@ export { PI, E } from "./math/constants"
 
 ### Re-export with Renaming
 
-```javascript
+```doof
 export { InternalVector as Vector } from "./internal"
 ```
 
@@ -256,7 +256,7 @@ imply support for namespace re-exports.
 A root `.test.do` module can replace a dependency imported by one specific
 source module in its compilation graph:
 
-```javascript
+```doof
 mock import for "./checkout" {
     "./payments" => "./payments.mock"
 }
@@ -289,14 +289,14 @@ mylib/
 └── types.do
 ```
 
-```javascript
+```doof
 // mylib/index.do
 export { Parser } from "./internal/parser"
 export { Validator } from "./internal/validator"
 export { Config, Options } from "./types"
 ```
 
-```javascript
+```doof
 // Consumer code
 import { Parser, Config } from "mylib"
 ```
@@ -305,7 +305,7 @@ import { Parser, Config } from "mylib"
 
 Items not exported are module-private:
 
-```javascript
+```doof
 readonly INTERNAL_PRECISION = 1e-10  // Private
 
 function internalHelper(): none { ... }  // Private
@@ -322,7 +322,7 @@ export function calculate(): float {
 
 Doof handles circular imports cleanly because module-level `readonly` declarations are immutable and functions hoist at global scope:
 
-```javascript
+```doof
 // a.do
 import { B } from "./b"
 export class A {
@@ -346,15 +346,15 @@ export class B {
 
 A module becomes **executable** by defining a `main()` function:
 
-```javascript
+```doof
 function main(): none {
-    print("Hello, Doof!")
+    println("Hello, Doof!")
 }
 ```
 
 The `main()` function serves as the program's entry point and must have one of the following signatures:
 
-```javascript
+```doof
 // No arguments
 function main(): none { ... }
 
@@ -378,17 +378,17 @@ arguments. The executable path is omitted, so `doof-server ./site` receives
 
 The presence of a `main()` function distinguishes executable modules from library modules:
 
-```javascript
+```doof
 // app.do — Executable module
 import { processData } from "./lib"
 
 function main(): none {
     data := processData()
-    print("Result: ${data}")
+    println("Result: ${data}")
 }
 ```
 
-```javascript
+```doof
 // lib.do — Library module (no main)
 export function processData(): string {
     return "processed"
@@ -472,7 +472,7 @@ doofc test.do          # Compiles test.do + any of its imports
 
 A project can have multiple executable modules:
 
-```javascript
+```doof
 // server.do
 import { startServer } from "./http"
 
@@ -481,7 +481,7 @@ function main(): none {
 }
 ```
 
-```javascript
+```doof
 // migrate.do
 import { runMigrations } from "./database"
 
@@ -512,7 +512,7 @@ Current conventions:
 
 Example:
 
-```javascript
+```doof
 // math.test.do
 export function testAdd(): none {
     assert(1 + 1 == 2, "expected addition to work")
@@ -538,13 +538,13 @@ doof test src
 List discovered tests without running them:
 
 ```bash
-doof test --list src
+doof test src --list
 ```
 
 Filter discovered tests by id:
 
 ```bash
-doof test --filter math src
+doof test src --filter math
 ```
 
 Each discovered test is assigned an id of the form `<relative-path>::<functionName>`, for example `math.test.do::testAdd`.
@@ -578,12 +578,12 @@ state. Listing tests performs discovery only and does not compile them.
 
 Code at module scope executes during module initialization, **before** `main()` runs:
 
-```javascript
+```doof
 readonly config = { name: "default" }
 
 function main(): none {
     // Executes after declarative modules are initialized
-    print("Starting app with config: ${config.name}")
+    println("Starting app with config: ${config.name}")
 }
 ```
 
@@ -625,34 +625,34 @@ than a per-module state machine.
 
 The `main()` function can use `try!/try?` for error handling:
 
-```javascript
-import { readFile } from "io"
+```doof
+import { IoError, readText } from "std/fs"
 import type { Config } from "./types"
 
 function main(): none {
     // Panic if file read fails (acceptable for entry point)
     config := try! loadConfig("config.json")
-    print("Loaded: ${config.name}")
+    println("Loaded: ${config.name}")
 }
 
-function loadConfig(path: string): Result<Config, Error> {
-    content := try readFile(path)
+function loadConfig(path: string): Result<Config, IoError> {
+    try content := readText(path)
     return parseConfig(content)
 }
 ```
 
 Or return an exit code based on results:
 
-```javascript
+```doof
 function main(): int {
     result := processData()
     case result {
-        Success { value } => {
-            print("Success: ${value}")
+        s: Success -> {
+            println("Success: ${s.value}")
             return 0
         },
-        Failure { error } => {
-            print("Error: ${error}")
+        f: Failure -> {
+            println("Error: ${f.error}")
             return 1
         }
     }
@@ -681,7 +681,7 @@ Doof can import external C++ classes to enable interop with existing C++ librari
 
 ### Basic Syntax
 
-```javascript
+```doof
 // Import a C++ class — header inferred as "Logger.hpp"
 import class Logger {
     log(message: string): none
@@ -699,7 +699,7 @@ The body declares the fields and methods that Doof code may access. This serves 
 
 Extern methods may also be declared `static`, which emits a direct `ClassName::method(...)` call instead of an instance call:
 
-```javascript
+```doof
 import class MathBridge from "./math_bridge.hpp" as native::MathBridge {
     static cos(x: float): float
     static sin(x: float): float
@@ -712,7 +712,7 @@ Extern methods may optionally provide a Doof body. A signature without a body
 remains a native C++ member declaration; a method with a block or arrow body is
 emitted as an out-of-line C++ member definition for the imported class:
 
-```javascript
+```doof
 import class NativeWebSocketEvent from "./native_http_server.hpp" as doof_http_server::NativeWebSocketEvent {
     kind(): int
     text(): string
@@ -748,7 +748,7 @@ Angle-bracket paths (`<...>`) produce system-style includes.
 
 Extern classes behave exactly like regular Doof classes — they're heap-allocated and reference-counted using `std::shared_ptr`:
 
-```javascript
+```doof
 import class Database from "./db.hpp" {
     query(sql: string): Result<Array<string>, string>
     close(): none
@@ -766,7 +766,7 @@ This ensures consistent memory management across Doof and C++ code — all class
 
 When the C++ class lives in a namespace, use `as` to provide the fully-qualified C++ name:
 
-```javascript
+```doof
 import class HttpClient from "<httplib.h>" as httplib::Client {
     get(path: string): Result<string, int>
 }
@@ -789,7 +789,7 @@ Prefer a Doof-first boundary when designing interop modules:
 
 Example:
 
-```javascript
+```doof
 // types.do
 export enum NativeBoardgameEventKind {
     Unknown = 0,
@@ -822,7 +822,7 @@ This avoids duplicate conversion tables and keeps the Doof and C++ views of the 
 
 Extern classes can declare fields:
 
-```javascript
+```doof
 import class Point from "./geometry.hpp" {
     x, y: float
 }
@@ -839,7 +839,7 @@ Field declarations follow the same syntax as Doof class fields. The transpiler h
 
 Construction works like native Doof classes — positional or named:
 
-```javascript
+```doof
 import class Rect from "./shapes.hpp" {
     x, y, width, height: float
 }
@@ -860,7 +860,7 @@ The transpiler emits the appropriate C++ constructor call. The extern C++ class 
 
 ### Practical Example — Wrapping a C++ Library
 
-```javascript
+```doof
 // sqlite.do
 import class NativeSqliteDatabase from "./native_sqlite.hpp" {
     static open(path: string): Result<NativeSqliteDatabase, string>
@@ -896,7 +896,7 @@ Doof can import standalone C/C++ functions using `import function` declarations.
 
 ### Basic Syntax
 
-```javascript
+```doof
 // Import a C++ function — no header (assume it's available)
 import function myHelper(n: int): int
 
@@ -913,7 +913,7 @@ import isolated function monotonicNanos(): long from "native_time.hpp"
 Bodyless native functions and class methods that are safe to call from isolated
 code must declare that contract explicitly:
 
-```javascript
+```doof
 import isolated function poll(): int from "native_process.hpp" as native::poll
 
 import class NativeProcess from "native_process.hpp" {
@@ -944,7 +944,7 @@ callback immediately, store it, or schedule it.
 
 When the C++ function lives in a namespace, use `as` to provide the fully-qualified name:
 
-```javascript
+```doof
 import function sin(x: float): float from "<cmath>" as std::sin
 import function cos(x: float): float from "<cmath>" as std::cos
 
@@ -957,7 +957,7 @@ Doof code uses `sin` and `cos`; the transpiler emits `std::sin` and `std::cos` i
 
 Imported functions can be exported and imported by other Doof modules:
 
-```javascript
+```doof
 // math.do
 export import function sin(x: float): float from "<cmath>" as std::sin
 export import function cos(x: float): float from "<cmath>" as std::cos

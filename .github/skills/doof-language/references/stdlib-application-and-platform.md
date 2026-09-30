@@ -115,3 +115,58 @@ Use package-resource loaders for bundled assets. `Camera.screen()` uses logical
 top-left coordinates; mesh helpers use counter-clockwise front faces. iOS uses
 the generated UIKit app shell and maps single touch through mouse APIs; hardware
 keyboard input is not currently exposed there.
+
+## `std/appkit`
+
+```doof
+import { Button, Text, TextField, Window, runApp } from "std/appkit"
+
+function main(): none {
+  let count = 0
+  window := <Window title="Counter" width=420 height=260>
+    <Text value={(): string => "Count: ${count}"}/>
+    <TextField label="Name" onChange={(name): none => println(name)}/>
+    <Button title="Increment" onClick={(): none => { count += 1 }}/>
+  </Window>
+  window.show()
+  runApp()
+}
+```
+
+Native macOS interfaces built from typed tags. AppKit owns windows, controls,
+focus, menus, dialogs, scrolling, and accessibility; `std/layout` owns view
+geometry. Direct `Window` children form a column with 16-point padding and
+8-point gaps; `Row`/`Column` accept `gap` and `grow`. Reactive text, enabled,
+checked, and visibility state resynchronize after native actions and queued
+`std/event` work. The package also provides tables and outline views, a code
+editor, sheets and alerts, file dialogs (`openFile`, `saveFile`), toolbars, and
+standard application menus. Objective-C and AppKit types stay private.
+
+## `std/uikit`
+
+```doof
+import { Screen, Text, runApp } from "std/uikit"
+```
+
+UIKit screens for iPhone and iPad using the same retained-view, reactive-value,
+and `std/layout` conventions as `std/appkit`. It provides `Screen`,
+`BarButton`, `View`, `Row`, `Column`, `ScrollView`, `Spacer`, `Text`, `Button`,
+and `TextEditor` with highlights and completions. Document import/export and
+alerts on `Screen` are callback-based because UIKit presentation is
+asynchronous. Build with `doof build app.do --target ios-app --ios-destination
+simulator`; `runApp(screen)` attaches to the generated iOS shell.
+
+## `std/layout`
+
+```doof
+import { LayoutEdges, LayoutNode, LayoutRect, LayoutStyle, layout } from "std/layout"
+```
+
+A renderer-independent, flex-inspired layout engine. Build a `LayoutNode` tree
+with `LayoutStyle` (row/column direction, grow/shrink, gap, padding, absolute
+positioning, constraints, alignment, overflow), call `layout(root, viewport)`
+whenever styles, content, or the viewport change, then read `bounds()` for
+painting and hit-testing. `measureLayout(root, constraints)` reports preferred
+size without assigning rectangles; `scrollTo`/`scrollBy` update scroll placement
+without rerunning flex sizing. It draws nothing and borrows Flexbox concepts
+without promising browser-identical CSS behavior.

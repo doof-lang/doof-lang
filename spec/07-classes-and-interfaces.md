@@ -8,7 +8,7 @@ Classes define **nominal reference types** — two classes with identical struct
 
 Each field declaration must provide either a type annotation or a default value so the field's type is known at compile time.
 
-```javascript
+```doof
 class Point {
     x, y, z: float           // Multiple fields of same type
 }
@@ -71,7 +71,7 @@ field `const` are mutually exclusive.
 
 Literal-valued fields enable discriminated unions and structural typing. The older `kind := "Success"` spelling is deprecated and remains accepted temporarily with a warning:
 
-```javascript
+```doof
 class Success {
     kind: "Success"
     value: int
@@ -87,7 +87,7 @@ type Result = Success | Failure
 
 ### Methods
 
-```javascript
+```doof
 class Counter {
     let count = 0
     
@@ -115,7 +115,7 @@ use `function`.
 
 Classes can explicitly implement `Stream<T>`. A class satisfies `Stream<T>` when it exposes zero-argument `next(): bool` and `value(): T` methods. `value()` is only valid after a successful `next()` call.
 
-```javascript
+```doof
 class Counter implements Stream<int> {
     let current = 0
     end: int
@@ -144,7 +144,7 @@ Static field defaults in declarative modules follow the construction-only
 module initializer rules. They execute explicitly at the class declaration's
 position in module initialization order.
 
-```javascript
+```doof
 class MathUtils {
     static version = "1.0"
 
@@ -167,7 +167,7 @@ let version = MathUtils.version     // "1.0"
 
 Named class access uses `.`:
 
-```javascript
+```doof
 let n = MathUtils.max(10, 20)
 let v = MathUtils.version
 ```
@@ -179,7 +179,7 @@ as `Transform.zero`, and `transform: Transform = .identity()` lowers as
 
 #### Static Members and Instance State
 
-```javascript
+```doof
 class Counter {
     let count = 0
     
@@ -207,7 +207,7 @@ construction syntax delegates to that method. Both positional and named
 construction are validated against `constructor` parameters instead of fields,
 and the construction expression has the constructor method's return type:
 
-```javascript
+```doof
 class Counter {
     count: int
 
@@ -220,7 +220,7 @@ let a = Counter(10)                    // Counter.constructor(10)
 let b = Counter { initial: 10, step: 5 } // Counter.constructor(10, 5)
 ```
 
-```javascript
+```doof
 class Email {
     private value: string
 
@@ -239,7 +239,7 @@ Generic classes follow the same rule. The class type arguments may be written
 explicitly or inferred from constructor arguments, including named construction
 and explicit static constructor calls:
 
-```javascript
+```doof
 class Channel<T> {
     static constructor(handler: (value: T): none): Channel<T> {
         return Channel<T> { handler }
@@ -313,7 +313,7 @@ The following class-only features are not available on structs in v1:
 
 Instances must use `::` to access class statics:
 
-```javascript
+```doof
 class Rectangle {
     width: int
     static kind = "rectangle"
@@ -333,7 +333,7 @@ rect::describe()  // ✅ "Rectangles"
 
 Static members participate in structural interface matching only when the interface also declares them as static. Static interface methods are accessed through interface values with `::`.
 
-```javascript
+```doof
 interface Countable {
     getCount(): int
     static zeroLabel(): string
@@ -465,10 +465,10 @@ export class Counter {
 
 Within instance methods, fields and other instance methods are accessed **implicitly** — no `this` prefix is required:
 
-```javascript
+```doof
 class Player {
     name: string
-    score = 0
+    let score = 0
     
     addPoints(points: int): none {
         score += points             // Implicit this — accesses this.score
@@ -476,7 +476,7 @@ class Player {
     }
     
     logScore(): none {
-        print("${name}: ${score}")  // Implicit this for both fields
+        println("${name}: ${score}")  // Implicit this for both fields
     }
 }
 ```
@@ -485,7 +485,7 @@ class Player {
 
 `this` is available in all instance methods and **required** when a parameter or local variable shadows a field name:
 
-```javascript
+```doof
 class Point {
     x, y: float
     
@@ -514,9 +514,9 @@ Shadowing rules:
 
 `this` refers to the current instance and can be used as a value — passed as an argument, returned, or stored:
 
-```javascript
+```doof
 class Builder {
-    value = 0
+    let value = 0
     
     // Fluent API: return this for chaining
     add(n: int): Builder {
@@ -536,7 +536,7 @@ let result = Builder().add(1).add(2).add(3).build()  // 6
 
 Lambdas capture `this` from their **lexical scope**, just like any other variable. There is no re-binding of `this` — lambdas defined inside a method always refer to the enclosing instance:
 
-```javascript
+```doof
 class Processor {
     items: string[] = []
     
@@ -557,7 +557,7 @@ class Processor {
 
 `this` is **not available** in static methods. Attempting to use it is a compile-time error:
 
-```javascript
+```doof
 class Registry {
     entries: string[] = []
     
@@ -585,7 +585,7 @@ Doof provides dual syntax options: **named field syntax** and **positional synta
 
 ### Named Field Syntax
 
-```javascript
+```doof
 let p = Point { x: 1.0, y: 2.0, z: 3.0 }
 let p: Point = { x: 1.0, y: 2.0, z: 3.0 }  // Type-annotated literal
 ```
@@ -596,7 +596,7 @@ let p: Point = { x: 1.0, y: 2.0, z: 3.0 }  // Type-annotated literal
 
 ### Positional Syntax
 
-```javascript
+```doof
 let p = Point (1.0, 2.0, 3.0)
 let p: Point = (1.0, 2.0, 3.0)  // Type-annotated tuple-like literal
 ```
@@ -607,7 +607,7 @@ let p: Point = (1.0, 2.0, 3.0)  // Type-annotated tuple-like literal
 
 ### Default Values
 
-```javascript
+```doof
 class Config {
     host: string
     port: int = 8080
@@ -631,7 +631,7 @@ Positional syntax cannot skip intermediate fields — use named syntax for that.
 The compiler validates constructor arguments at compile time:
 
 **Argument count:**
-```javascript
+```doof
 class Point { x, y: float }
 
 Point(1.0)              // ❌ Error: expected 2 arguments, got 1
@@ -646,7 +646,7 @@ Config("localhost", 80) // ✅ OK
 ```
 
 **Argument types:**
-```javascript
+```doof
 class Point { x, y: float }
 
 Point("hello", "world")  // ❌ Error: string is not assignable to float
@@ -654,7 +654,7 @@ Point(1.0, 2.0)          // ✅ OK (contextually narrowed from double to float)
 ```
 
 **Named field validation:**
-```javascript
+```doof
 class Point { x, y: float }
 
 Point { z: 1.0 }              // ❌ Error: unknown field "z"
@@ -667,21 +667,21 @@ Point { x: 1.0, y: 2.0 }      // ✅ OK
 
 **Nominal construction** — literal-valued fields are auto-filled:
 
-```javascript
+```doof
 let r1 = Success { value: 42 }     // kind auto-filled to "Success"
 let r2 = Success(42)               // Positional — kind auto-filled
 ```
 
 **Structural construction** — literal-valued fields must be specified:
 
-```javascript
+```doof
 let r1: Result = { kind: "Success", value: 42 }
 let r2: Result = ("Success", 42)
 ```
 
 ### Nested Initialisation
 
-```javascript
+```doof
 class Line { start: Point; end: Point; }
 
 // Explicit types
@@ -699,7 +699,7 @@ let line = Line ((0.0, 0.0), (1.0, 1.0))
 An object literal expected to produce a union of classes or structs may omit
 its nominal type when exactly one member accepts its field shape:
 
-```javascript
+```doof
 class Leaf { value: int }
 class Branch { left: Node; right: Node }
 type Node = Leaf | Branch
@@ -719,7 +719,7 @@ construction.
 
 ### Name-Value Shorthand
 
-```javascript
+```doof
 readonly name = "Bob"
 readonly age = 25
 
@@ -733,7 +733,7 @@ Works with named construction, contextual object literals, and can be mixed with
 
 ### Field Spread
 
-```javascript
+```doof
 readonly base = BaseConfig { host: "localhost" }
 let extended = ExtendedConfig { 
     ...base,           // Spreads matching fields
@@ -758,7 +758,7 @@ Spread sources must be type-compatible — the compiler verifies field types mat
 
 Interfaces define structural contracts. In Doof's closed-world model, interfaces are automatically satisfied by any class with matching structure.
 
-```javascript
+```doof
 interface Drawable {
     draw(canvas: Canvas): none
 }
@@ -771,7 +771,7 @@ interface Positioned {
 
 ### Automatic Matching
 
-```javascript
+```doof
 class Circle {
     readonly x: float
     readonly y: float
@@ -815,7 +815,7 @@ are specified in [the type system](02-type-system.md#interface-constraints).
 
 ### Optional Explicit Implementation
 
-```javascript
+```doof
 class Circle implements Drawable, Positioned {
     readonly x: float
     readonly y: float
@@ -833,7 +833,7 @@ Benefits: early error detection, documents intent, validates refactoring compati
 
 Doof uses `${}` syntax for string interpolation:
 
-```javascript
+```doof
 let name = "Alice"
 let age = 30
 let message = "Hello, ${name}! You are ${age} years old."
@@ -845,7 +845,7 @@ let padded = "Value: ${string(age).padStart(5, '0')}"
 
 ### Multi-line Strings
 
-```javascript
+```doof
 let report = `
     User Report:
     Name: ${name}
@@ -873,7 +873,7 @@ file.
 
 **No format specifiers** — prepare a string value before interpolation:
 
-```javascript
+```doof
 // ✅ Convert, then use supported string methods
 let padded = "Value: ${string(num).padStart(5, '0')}"
 
@@ -885,7 +885,7 @@ let hex = "Color: ${255:x}"  // Not supported
 
 ## Complete Initialisation Example
 
-```javascript
+```doof
 class Point { x, y, z: float; }
 class Color { r, g, b: float; a: float = 1.0; }
 class Vertex { position: Point; color: Color; }
@@ -918,7 +918,7 @@ Doof uses **reference counting** for memory management with **deterministic dest
 
 Classes can define a `destructor` block that runs deterministically when the last reference is released:
 
-```javascript
+```doof
 class FileHandle {
     handle: int
     
@@ -947,7 +947,7 @@ function processFile(path: string): Result<Data, IOError> {
 
 Because Doof uses reference counting (not garbage collection), destruction is predictable:
 
-```javascript
+```doof
 function transferData(): Result<none, IOError> {
     src := try openFile("input.dat")
     dst := try openFile("output.dat")
@@ -969,7 +969,7 @@ To break reference cycles (the primary downside of reference counting), Doof pro
 
 `weak` applies to the **entire type expression** — it qualifies the reference, not the type:
 
-```javascript
+```doof
 class TreeNode {
     children: TreeNode[] = []
     parent: weak TreeNode | none = none  // Weak reference to parent
@@ -986,7 +986,7 @@ class Observer {
 - `weak` qualifies the binding, not the type — `weak Foo | Bar` means a weak reference to a value of type `Foo | Bar`
 - Use `?.` and `!.` operators for lightweight access (same syntax as Result/none handling)
 
-```javascript
+```doof
 // Preventing cycles in a graph
 class Node {
     edges: Node[] = []            // Strong — keeps neighbours alive

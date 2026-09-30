@@ -8,16 +8,25 @@ available.
 
 ```text
 doof <script.do> [program arguments]
-doof check <path>
-doof emit <path> [-o <directory>]
-doof build <path> [-o <directory>]
+doof check <path> [build options]
+doof emit <path> [build options]
+doof build <path> [build options]
 doof run <path> [build options] [-- program arguments]
 doof observe <path> [build options] [--no-open] [--port <port>] [--retain-events <count>] [-- program arguments]
 doof debug <path> [build options] [--launch-json <path>] [-- program arguments]
 doof profile <path> [build options] [--trace-output <file.trace>] [--time-limit <duration>] [--no-open] [-- program arguments]
-doof package <path> [-o <build-directory>] [--distdir <directory>]
-doof test <path> [filter] [--list] [--coverage] [--target wasm]
+doof package <path> [build options] [--distdir <directory>]
+doof test <path> [build options] [--filter <text> | --exact-filter <id> | --selection-json <file>]
+          [--list [--json]] [--report-json <file>] [--coverage [--coverage-output <file>]]
 ```
+
+`<path>` defaults to the current directory. Build options are
+`-o`/`--output-directory <directory>`, `--compiler <command>`,
+`--target <macos-app|ios-app|wasm>`, `--native-platform <macos|linux|windows>`
+(emit native inputs for another host), the `--macos-*` signing and sandbox
+options, and the `--ios-*` destination, device, and signing options.
+`doof --help` lists every option; `doof --version` prints the embedded
+compiler version.
 
 Commands that write compiler state (`check`, `emit`, `build`, `run`, `observe`, `debug`, `profile`,
 `package`, and executing tests) hold an exclusive project lock at
@@ -41,7 +50,9 @@ On POSIX systems, a `.do` source file can be invoked directly with a shebang:
 #!/usr/bin/env doof
 
 function main(arguments: string[]): none {
-    println(arguments.join(", "))
+    for argument of arguments {
+        println(argument)
+    }
 }
 ```
 

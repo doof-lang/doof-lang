@@ -218,7 +218,7 @@ Collection shorthand parameter names are:
 A same-line block after `)` becomes a trailing lambda only when the call is the complete expression statement:
 
 ```doof
-items.forEach() { print(it) }
+items.forEach() { println(it) }
 withTransaction() {
     writeAuditLog(it)
 }
@@ -359,6 +359,8 @@ Notes:
 - `%` is integer-only.
 - Numeric casts use call syntax such as `int(x)` or `double(x)`.
 - There is no operator overloading.
+- `?.` and `?[]` evaluate their receiver once and short-circuit to `none`
+  (calls returning `none` are skipped). They cannot be assignment targets.
 
 ## String Interpolation
 
@@ -390,7 +392,7 @@ type Message = TextMsg | ImageMsg
 
 ```doof
 class Builder {
-    value = 0
+    let value = 0
     add(n: int): Builder { value += n; return this }
     build(): int => value
 }

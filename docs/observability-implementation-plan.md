@@ -13,11 +13,12 @@ program. Ordinary `run`, `build`, and packaged release programs do not include
 observer server or UI support unless a future explicit package setting requests
 it.
 
-## Current state (2026-09-23)
+## Current state (2026-09-30)
 
-The implementation is present in the local compiler and standard-library
-worktrees; it has not been committed or published as a release. Phases 1–4 are
-implemented. Phase 5, debugger discovery, is optional and not implemented.
+The implementation was committed to the compiler on 2026-09-26 (with the
+matching `std/log` tap in the standard library) but has not yet shipped in a
+published release. Phases 1–4 are implemented. Phase 5, debugger discovery, is
+optional and not implemented.
 
 | Area | Current state |
 | --- | --- |
@@ -27,10 +28,10 @@ implemented. Phase 5, debugger discovery, is optional and not implemented.
 | HTTP/SSE and UI | Token-scoped snapshot, Prometheus, bounded SSE, built-in HTML UI, and package-selected static UI implemented. |
 | Platform acceptance | Native console and macOS app exercised on macOS. Linux native acceptance is outstanding; Windows has planning tests but no native acceptance run. |
 
-Verification completed on macOS:
+Verification completed on macOS before that commit:
 
 - `./scripts/test.sh` passed, including compiler, repository, native observer,
-  debugger, and LLDB checks; `dist/doof test /Users/andrew/doof-stdlib/log`
+  debugger, and LLDB checks; `dist/doof test $DOOF_STDLIB_ROOT/log`
   passed the affected standard-library package tests.
 - `./build.sh` reached an installed-seed generated-source fixed point in two
   generations across 424 sources.

@@ -44,7 +44,8 @@ Use `./dev-install.sh` for an incremental development compiler. Reserve
 `./build.sh` for installed-seed fixed-point verification, not the edit-test loop.
 Run `./scripts/test.sh` for normal changes and `./scripts/release.sh <version>`
 to prepare a release from clean compiler and stdlib checkouts. Release builds
-require `DOOF_SIGN_IDENTITY` and `DOOF_NOTARY_PROFILE` and do not publish to GitHub.
+require `DOOF_SIGN_IDENTITY`, `DOOF_NOTARY_PROFILE`, and a running Apple Container
+service (for the Linux musl builds), and do not publish to GitHub.
 
 The release gate includes macOS Wasm builds. It requires `em++` and
 `xcrun swiftc`, and Emscripten must be able to write its toolchain cache.
@@ -54,7 +55,8 @@ Homebrew normally stores that cache under
 
 ### Test execution
 
-- Use `dist/doof test src --filter <exact-test-name>` for focused regression
+- Use `dist/doof test src --filter <test-name>` (substring match) or
+  `--exact-filter <file.test.do::testName>` for focused regression
   work, then run `./scripts/test.sh` once the focused tests pass.
 - Run test commands serially. Test invocations share
   `build/.doof-tests/shared`; parallel runs can overwrite the same generated

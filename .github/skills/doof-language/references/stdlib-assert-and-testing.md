@@ -71,8 +71,8 @@ export function testAddNegative(): none {
 ```bash
 doof test math.test.do
 doof test src
-doof test --list src
-doof test --filter math src
+doof test src --list
+doof test src --filter math
 doof test src --coverage
 doof test src --coverage --coverage-output build/coverage/report.json
 doof test src --target wasm
@@ -86,7 +86,8 @@ Runner behavior:
 - Each exported test runs in its own process.
 - All modules in a shared no-mock graph perform module-level initialization in each test process.
 - One failing test does not stop later tests from running.
-- `--filter` matches ids of the form `<relative-path>::<functionName>`.
+- The package path must come immediately after `test`; options follow it.
+- `--filter` selects ids containing its text; ids have the form `<relative-path>::<functionName>`. `--exact-filter <id>` selects one exact id.
 - Recursive directory discovery skips subdirectories that contain their own `doof.json`; run `doof test` against that package directly to test it.
 - `--list` performs static discovery without compiling, and warm native builds skip unchanged PCH, object, and link tasks.
 - `--coverage` instruments non-test, non-stdlib Doof modules and writes JSON plus HTML reports; `--coverage-output` selects the JSON path.

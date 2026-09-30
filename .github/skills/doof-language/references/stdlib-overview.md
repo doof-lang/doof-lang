@@ -16,6 +16,7 @@ declarations in `index.do` are the exact callable surface.
 | Import | Purpose |
 | --- | --- |
 | `std/apple-intelligence` | Apple FoundationModels sessions and reflected tools |
+| `std/appkit` | Native macOS AppKit windows and controls with typed-tag views |
 | `std/archive` | In-memory ZIP plus raw deflate/inflate and CRC-32 |
 | `std/assert` | Source-aware test assertions |
 | `std/blob` | Binary readers/builders and text codecs |
@@ -34,22 +35,27 @@ declarations in `index.do` are the exact callable surface.
 | `std/image` | Mutable RGBA images, views, resize, composite, encode/decode |
 | `std/js` | Persistent QuickJS-NG engine with a JSON boundary |
 | `std/json` | Parse and format `SerialValue`/`SerialObject` |
+| `std/layout` | Renderer-independent flex-style layout engine |
 | `std/log` | Structured global logging with console and rolling-file sinks |
 | `std/math` | Math constants, native functions, and numeric helpers |
 | `std/multiplayer` | Apple local peer discovery, invitations, and messages |
+| `std/mysql` | MySQL client with prepared statements and row streams |
 | `std/os` | Environment/process information and child processes |
 | `std/parse` | Strict boolean and numeric string parsing with typed errors |
 | `std/path` | POSIX path strings plus app/resource directory discovery |
 | `std/postgres` | `libpq` PostgreSQL wrapper with prepared statements and row streams |
 | `std/random` | Secure random doubles and integers/ranges |
 | `std/regex` | Reusable PCRE2 regular expressions |
+| `std/ssh` | libssh2 SSH command execution and SFTP with host-key verification |
 | `std/sqlite` | SQLite wrapper with prepared statements and row streams |
 | `std/stream` | Lazy stream combinators and byte-to-line adaptation |
 | `std/string` | Efficient string construction, joining, and line splitting |
 | `std/time` | Durations, instants, calendars, zones, sleep, and stopwatch metrics |
 | `std/ts` | Erasable TypeScript and TSX-to-JavaScript transformation |
+| `std/uikit` | UIKit screens, controls, and text editing for iOS apps |
 | `std/url` | Lossless parsing of URL path, query, and authority components |
 | `std/webshell` | WebKit app shell and JSON bridge for macOS/iOS |
+| `std/wol` | Wake-on-LAN magic packets over IPv4 broadcast |
 | `std/xml` | Strict practical XML document parsing and generation |
 | `std/zstd` | One-shot and streaming Zstandard compression |
 
@@ -72,6 +78,10 @@ declarations in `index.do` are the exact callable surface.
   does not type-check or execute it.
 - `std/dom` targets browser Wasm. `std/webshell` hosts HTML in native WebKit;
   `std/game` owns a native Metal-backed render loop.
+- `std/appkit` (macOS) and `std/uikit` (iOS) build native controls and both
+  use `std/layout` for geometry; `std/layout` itself draws nothing.
+- `std/sqlite`, `std/postgres`, and `std/mysql` share one Result-first
+  open/prepare/execute/query/close lifecycle.
 
 ## Cross-package conventions
 

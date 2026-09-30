@@ -10,15 +10,15 @@ Doof treats functions as first-class values. Use `function <name>` for named cal
 
 ### Expression Form
 
-```javascript
+```doof
 function double(x: int): int => x * 2
 
-function greet(name: string): none => print("Hello, " + name)
+function greet(name: string): none => println("Hello, " + name)
 ```
 
 ### Block Form
 
-```javascript
+```doof
 function factorial(n: int): int {
     if n <= 1 {
         return 1
@@ -34,7 +34,7 @@ or otherwise be unable to complete normally (for example, an unconditional
 without a wildcard or known exhaustive Result, enum, or nominal-union pattern
 does not establish a return on every path.
 
-```javascript
+```doof
 function choose(flag: bool): int {
     if flag {
         return 1
@@ -61,7 +61,7 @@ Omitting a named function or method's return annotation makes its return type
 `none`. This rule also applies when the declaration is imported. A function
 that returns a value must declare its return type explicitly.
 
-```javascript
+```doof
 function logReady() { println("ready") } // Returns none
 
 function double(x: int): int => x * 2
@@ -71,7 +71,7 @@ function double(x: int): int => x * 2
 
 Function calls support both positional `()` and named `{}` argument forms.
 
-```javascript
+```doof
 function clamp(value: int, min: int, max: int): int {
     if value < min { return min }
     if value > max { return max }
@@ -85,7 +85,7 @@ clamp{ min: 0, max: 100, value: score } // same call, different source order
 
 Named calls are resolved by parameter name, so they work well when several parameters share the same type. They also support the same shorthand as named construction when a binding already has the target parameter name:
 
-```javascript
+```doof
 value := score
 clamp{ value, min: 0, max: 100 }      // shorthand for value: value
 ```
@@ -98,7 +98,7 @@ class, struct, and actor construction.
 
 Omitting a named parameter is only valid when that parameter has a default value:
 
-```javascript
+```doof
 function greet(name: string, punctuation: string = "!"): string => name + punctuation
 
 greet{ name: "Ada" }                 // ok
@@ -265,7 +265,7 @@ Lambdas are anonymous function values with the same expression and block forms.
 
 ### Fully Explicit Form
 
-```javascript
+```doof
 // Expression body
 double := (x: int): int => x * 2
 
@@ -275,7 +275,7 @@ triple := (x: int): int { return x * 3 }
 
 ### Inferred Return Type
 
-```javascript
+```doof
 double := (x: int) => x * 2
 
 compute := (x: int) => {
@@ -303,20 +303,20 @@ A bare `return` is valid only when the final return type is `none`; use
 
 When the lambda type is known from context, parameter types can be omitted, but **names must match the signature**:
 
-```javascript
+```doof
 type Handler = (msg: string): none
 
-let h1: Handler = (msg) => print(msg)          // ✅ Name matches
-let h2: Handler = (message) => print(message)  // ❌ Error: name mismatch
+let h1: Handler = (msg) => println(msg)          // ✅ Name matches
+let h2: Handler = (message) => println(message)  // ❌ Error: name mismatch
 ```
 
 ### Full Type Inference (Parameterless Form)
 
 When the complete function signature is known, the parameter list can be omitted entirely — parameter names are inherited from the signature:
 
-```javascript
+```doof
 type Handler = (msg: string): none
-let handler: Handler = => print(msg)  // msg from signature
+let handler: Handler = => println(msg)  // msg from signature
 
 type Transform = (x: int): int
 let transform: Transform = => x * 2  // x from signature
@@ -349,7 +349,7 @@ Capture lifetime does not bypass the owning-actor checks described in
 
 When explicitly naming parameters, you can specify **any subset in any order** — the names unambiguously bind to the signature:
 
-```javascript
+```doof
 // map signature: (it: T, index: int): U
 let nums = [1, 2, 3, 4, 5]
 
@@ -361,7 +361,7 @@ nums.map((index, it) => it + index)  // Both reversed — names disambiguate
 
 ### Inline Usage
 
-```javascript
+```doof
 c := [1, 2, 3].map((item: int): int => item * 2)
 ```
 
@@ -369,7 +369,7 @@ c := [1, 2, 3].map((item: int): int => item * 2)
 
 Enums are first-class types and can be used in function parameters and return types. When calling such functions, dot-shorthand is available for enum arguments:
 
-```javascript
+```doof
 enum Direction { North, South, East, West }
 
 function opposite(dir: Direction): Direction => case dir {
@@ -388,7 +388,7 @@ let result = opposite(.North)  // Direction.South
 
 Built-in collection methods use consistent, brief parameter names:
 
-```javascript
+```doof
 // Array method signatures:
 map:         (it: T, index: int): U
 filter:      (it: T, index: int): bool
@@ -403,7 +403,7 @@ sort:        (a: T, b: T): int
 
 ### Practical Usage
 
-```javascript
+```doof
 let numbers = [10, 20, 30, 40, 50]
 
 // Parameterless form — inherits names from signature
@@ -443,25 +443,25 @@ named-call labels.
 
 When a function call is used as a complete expression statement, a trailing block `{ body }` after the closing `)` is parsed as an additional parameterless lambda argument. The opening `{` must be on the **same line** as the closing `)`. Trailing lambdas are intentionally scoped to read as control-structure-like statement blocks (e.g. `forEach`, `withTransaction`, `withLock`):
 
-```javascript
+```doof
 // Payloadless callback — trailing lambda form
-items.forEach() { print(it) }
+items.forEach() { println(it) }
 
 // Multi-statement trailing lambda
 items.forEach() {
     label := "Item: " + it.name
-    print(label)
+    println(label)
 }
 
 // Trailing lambda appended after existing positional args
-forEachWithInit([1, 2, 3], 0) { print(it) }
+forEachWithInit([1, 2, 3], 0) { println(it) }
 ```
 
 Trailing lambdas are statement syntax, not general expression syntax. They are only valid as the final part of an expression statement:
 
-```javascript
+```doof
 // OK — complete expression statement
-items.forEach() { print(it) }
+items.forEach() { println(it) }
 
 // ERROR — trailing lambda in a binding initializer
 logged := withTransaction() { writeAuditLog(it) }
@@ -482,9 +482,9 @@ Trailing lambdas have compile-time restrictions that keep them unambiguous and s
    the expected lambda type returns a value, the trailing form is rejected—use
    an explicit lambda instead:
 
-```javascript
+```doof
 // OK — none callback
-items.forEach() { print(it) }
+items.forEach() { println(it) }
 
 // ERROR — value-returning callback; use explicit lambda
 items.map() { it * 2 }           // ✗ compile error
@@ -494,22 +494,22 @@ items.map((it) => it * 2)        // ✓ explicit lambda with params
 
 2. **No return statements:** `return` is forbidden inside trailing lambda bodies, whether bare or with a value:
 
-```javascript
+```doof
 // ERROR — return inside trailing lambda
 items.forEach() { return }       // ✗ compile error
 
 // OK — return inside a regular lambda nested within
 items.forEach() {
     fn := (x: int): int => { return x + 1 }
-    print(fn(it))
+    println(fn(it))
 }
 ```
 
 3. **No chaining:** Method or property chaining off a trailing lambda call is forbidden:
 
-```javascript
+```doof
 // ERROR — chaining after trailing lambda
-items.filter() { print(it) }.map(=> it * 2)  // ✗ compile error
+items.filter() { println(it) }.map(=> it * 2)  // ✗ compile error
 
 // OK — use explicit lambdas for chaining
 items.filter((it) => it > 0).map(=> it * 2)
@@ -522,9 +522,9 @@ items.filter((it) => it > 0).map(=> it * 2)
 - Parentheses `()` are always required before the trailing block.
 - The opening `{` must be on the **same line** as the closing `)` to avoid ambiguity with destructuring and other `{`-starting constructs on the following line:
 
-```javascript
+```doof
 // Trailing lambda — `{` on same line as `)`
-items.forEach() { print(it) }
+items.forEach() { println(it) }
 
 // NOT a trailing lambda — `{` on next line starts a new statement
 items.forEach()
@@ -537,7 +537,7 @@ items.forEach()
 
 Function types record parameter names as part of the signature:
 
-```javascript
+```doof
 type Callback = (value: int, description: string): none
 type Predicate<T> = (item: T): bool
 type Transform = (input: int): int
@@ -555,7 +555,7 @@ and parameter types in declaration order, plus the return type. For example,
 
 Named functions and local lambda bindings share the same function type model:
 
-```javascript
+```doof
 function bar(x: int): int => x * 12
 barLambda := (x: int): int => x * 12
 ```
@@ -574,13 +574,13 @@ default parameters; put those functions at module or class scope instead.
 First-class function values are actor-affine callbacks. Normal Doof call syntax
 still invokes them:
 
-```javascript
+```doof
 function apply(f: (x: int): int, x: int): int => f(x)
 ```
 
 The explicit local form is also available:
 
-```javascript
+```doof
 function apply(f: (x: int): int, x: int): int => f.call(x)
 ```
 

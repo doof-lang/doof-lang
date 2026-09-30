@@ -33,15 +33,14 @@ or supply file-descriptor redirection; assertions and sequencing are Doof.
 | Debugger test script | `debuggerChecks` in `verify.do`. |
 | Artifact-install helper and installer shell tests | `installArtifacts` delegates to the public installer's single transaction; `install.test.do` owns offline download and rollback fixtures. |
 | Editor extension build/service/verification and native-test TypeScript scripts | `extension.do` and `nativeEditorChecks`; npm commands invoke the shared Doof tool. |
-| Historical emission-model Python utility and its test | Removed; exploratory estimates are documented in the archived performance report and are not a maintained workflow. |
+| Historical emission-model Python utility and its test | Removed; exploratory estimates are not a maintained workflow. |
 
 Use `tools/run.sh test`, `verify`, `debugger-test`, `process-test`, `preflight`,
 `snapshot-test` (after `build.sh`), or
 `cache-test <old-stamped-compiler> <new-stamped-compiler>` for the corresponding
 repository checks. `verify` is the full platform acceptance gate without signing
 or publishing; `linux-test <version>` builds the static arm64 and x64 musl
-artifacts in Apple Container; `release <version>` also enforces clean inputs
-and signing.
-
-Historical reports retain the command names that were actually run at the time.
-They are not current operating instructions.
+artifacts in Apple Container; `windows-test <version>` runs the optional remote
+MSVC build; `release <version>` also enforces clean inputs and signing. The
+`extension-build`, `extension-service`, `extension-verify`, and
+`extension-native` commands back the VS Code extension's npm scripts.

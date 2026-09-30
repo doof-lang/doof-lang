@@ -3,8 +3,10 @@
 The official compiler is intentionally shipping before every former parity
 goal is complete.
 
-- Published toolchains and standalone source-snapshot builds currently support macOS arm64. Other native compiler target backends remain maintained.
-
+- Published toolchains support macOS arm64 and static Linux arm64/x64 musl.
+  Standalone source-snapshot builds support macOS arm64 only. A Windows x64
+  archive is produced only when optional remote Windows verification is
+  configured. Other native compiler target backends remain maintained.
 - Compiler development requires a mutable stdlib checkout through
   `DOOF_STDLIB_ROOT` or `../doof-stdlib`.
 - Third-party source acquisition and vendoring are intentionally outside the

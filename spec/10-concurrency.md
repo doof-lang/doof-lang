@@ -23,7 +23,7 @@ Actors wrap classes:
 
 ```doof
 class Counter {
-    value: int
+    let value: int
 
     increment(n: int): none {
         this.value = this.value + n

@@ -142,7 +142,7 @@ function encodeMessage(id: int, body: string): readonly byte[] {
 }
 
 // Decode it
-function decodeMessage(data: readonly byte[]): (int, string) {
+function decodeMessage(data: readonly byte[]): Tuple<int, string> {
     r := BlobReader(data)
     id := r.readInt()
     bodyLen := long(r.readInt())
@@ -1056,7 +1056,7 @@ import { Regex } from "std/regex"
 
 try emailRe := Regex.compile("([^@]+)@([^@]+\\.\\w+)")
 
-function extractEmail(input: string): (string, string) | none {
+function extractEmail(input: string): Tuple<string, string> | none {
     match := emailRe.find(input) else { return none }
     return (match.captures[0], match.captures[1])
 }
@@ -1089,7 +1089,7 @@ function encode(msgType: byte, payload: readonly byte[]): readonly byte[] {
     return b.build()
 }
 
-function decode(data: readonly byte[]): (byte, readonly byte[]) {
+function decode(data: readonly byte[]): Tuple<byte, readonly byte[]> {
     r := BlobReader(data)
     msgType := r.readByte()
     length  := long(r.readInt())

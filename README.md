@@ -96,11 +96,14 @@ limitations are tracked in [ROADMAP.md](ROADMAP.md).
 ## Source layout
 
 - `src/` — compiler, CLI, native build drivers, and adjacent Doof tests
+- `spec/` — normative language specification
 - `docs/` — contributor maps, operational contracts, and lowering notes
-- `runtime/` — canonical generated-program runtime header
-- `resources/` — immutable resources embedded in compiler releases
-- `scripts/` — version stamping, installed-seed builds, release verification and packaging
-- `tests/release-fixtures/` — native and platform release acceptance packages
+- `runtime/` — canonical generated-program runtime and optional observer headers
+- `observer-ui/` — built-in browser UI served by `doof observe`
+- `tools/` — Doof repository automation (`tools/repository/`), the native debugger app, and stdlib bundling
+- `extensions/vscode-doof/` — VS Code extension and editor-service packaging
+- `scripts/` — thin `test.sh` and `release.sh` launchers for the Doof repository tool
+- `tests/` — release acceptance packages (`tests/release-fixtures/`), native fixtures, and regression corpora
 - `.github/skills/doof-language/` — Codex/Copilot language guidance
 
 ## License

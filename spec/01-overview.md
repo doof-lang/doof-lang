@@ -49,6 +49,9 @@ This specification is organised into the following sections:
 | [09-error-handling.md](09-error-handling.md) | Result types, panic, design rationale |
 | [10-concurrency.md](10-concurrency.md) | Isolation, actors, workers, promises, parameter passing rules |
 | [11-modules.md](11-modules.md) | Imports, exports, re-exports, module organisation |
+| [12-json-serialization.md](12-json-serialization.md) | On-demand `toSerialObject` / `fromSerialValue`, interfaces, unions, enums |
+| [13-descriptions.md](13-descriptions.md) | Description metadata and generated tool metadata |
+| [14-stdlib.md](14-stdlib.md) | Selected `std/*` package contracts used by the language and compiler |
 
 ## Semicolons
 
@@ -56,15 +59,15 @@ Semicolons are **optional statement terminators**. They may appear after any sta
 
 The sole exception is the traditional `for` loop header, where semicolons are **required separators** between the init, condition, and update clauses:
 
-```javascript
+```doof
 for let i = 0; i < 10; i += 1 {
-    print(i)
+    println(i)
 }
 ```
 
 Semicolons may be used to place multiple statements on a single line, though this is discouraged:
 
-```javascript
+```doof
 let x = 1; let y = 2; let z = 3    // legal but discouraged
 ```
 
@@ -81,23 +84,23 @@ The canonical executable-script form is:
 #!/usr/bin/env doof
 
 function main(arguments: string[]): none {
-    println(arguments.join(", "))
+    for argument of arguments {
+        println(argument)
+    }
 }
 ```
 
 ## Hello World
 
-```javascript
+```doof
 function main(): none {
-    print("Hello, Doof!")
+    println("Hello, Doof!")
 }
 ```
 
 ## Quick Taste
 
-```javascript
-import { readFile } from "io"
-
+```doof
 class User {
     readonly id: int
     readonly name: string
@@ -106,23 +109,23 @@ class User {
 
 function processUsers(users: readonly User[]): Map<int, string> {
     result: Map<int, string> := {}
-    
+
     for user of users {
         case user.email {
-            none -> print("${user.name} has no email"),
+            none -> println("${user.name} has no email"),
             e: string -> result.set(user.id, e)
         }
     }
-    
+
     return result
 }
 
-users = [
+readonly users = [
     User { id: 1, name: "Alice", email: "alice@example.com" },
     User { id: 2, name: "Bob" },
     User { id: 3, name: "Charlie", email: "charlie@example.com" }
 ]
 
 readonly emailMap = processUsers(users)
-print("Found ${emailMap.size} users with emails")
+println("Found ${emailMap.size} users with emails")
 ```

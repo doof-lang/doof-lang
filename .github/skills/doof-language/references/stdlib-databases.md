@@ -1,6 +1,7 @@
 # Standard Database APIs
 
-`std/sqlite` and `std/postgres` intentionally share a similar Result-first API:
+`std/sqlite`, `std/postgres`, and `std/mysql` intentionally share a similar
+Result-first API:
 open/close connections, prepare reusable statements, execute mutations, stream
 queries, fetch one row, convert rows for JSON decoding, and control basic
 transactions. Both use native client libraries and return categorized error
@@ -54,3 +55,21 @@ import {
 Prepared statements are connection-bound. Keep the connection and statement
 alive until a returned row stream is fully consumed, and explicitly close
 connections when their work is complete.
+
+## `std/mysql`
+
+```doof
+import {
+  open, close, prepare, execute, executeSql, query, queryOne,
+  begin, commit, rollback, toJsonRow,
+  ConnectionOptions, Database, Statement, ExecResult, MySqlError, MySqlParam, MySqlValue,
+} from "std/mysql"
+```
+
+- `open(ConnectionOptions { user, password, database, ... })` links Oracle's
+  MySQL C client (`brew install mysql-client`, or the distribution's
+  `libmysqlclient` development package).
+- Parameters use `?` placeholders, and the value count must match exactly.
+- `ExecResult` contains `rowsAffected`, `lastInsertId`, and `warningCount`.
+- Closing the database invalidates its statements and streams; stream errors
+  are terminal.

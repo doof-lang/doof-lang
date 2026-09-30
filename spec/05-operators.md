@@ -4,7 +4,7 @@
 
 Standard arithmetic operators with familiar precedence:
 
-```javascript
+```doof
 a := 10 + 5    // Addition: 15
 b := 10 - 5    // Subtraction: 5
 c := 10 * 5    // Multiplication: 50
@@ -25,7 +25,7 @@ Doof has two division operators:
 - **`/`** — floating-point division. **Cannot** be applied to two integer operands (compile error). At least one operand must be `float` or `double`, or use a numeric cast.
 - **`\`** — integer division. **Requires** both operands to be integer types (`int` or `long`). Truncates toward zero.
 
-```javascript
+```doof
 // Floating-point division (/ operator)
 floatDiv := 7.0 / 2.0          // 3.5
 mixed := float(7) / 2.0        // 3.5 (cast int to float)
@@ -46,7 +46,7 @@ longDiv := 100L \ 3L   // 33L
 
 The `%` operator requires both operands to be integer types (`int` or `long`):
 
-```javascript
+```doof
 remainder := 10 % 3    // 1
 negMod := -7 % 3       // -1 (C++ truncated division semantics)
 ```
@@ -55,7 +55,7 @@ negMod := -7 % 3       // -1 (C++ truncated division semantics)
 
 Numeric types can be explicitly cast using function-call syntax:
 
-```javascript
+```doof
 x := 42
 f := float(x)         // int → float
 d := double(x)        // int → double
@@ -72,7 +72,7 @@ Numeric casts accept exactly one argument of a numeric type (`int`, `long`, `flo
 
 ### Unary Operators
 
-```javascript
+```doof
 x := 5
 neg := -x     // Negation: -5
 pos := +x     // Unary plus: 5
@@ -82,7 +82,7 @@ pos := +x     // Unary plus: 5
 
 Doof does **not** have `++` or `--` operators:
 
-```javascript
+```doof
 let x = 5
 x++      // ❌ Error: no increment operator
 x += 1   // ✅ Use compound assignment instead
@@ -94,7 +94,7 @@ x += 1   // ✅ Use compound assignment instead
 
 ## Comparison Operators
 
-```javascript
+```doof
 a == b     // Equality (reference for objects)
 a != b     // Inequality
 a < b      // Less than
@@ -105,7 +105,7 @@ a >= b     // Greater than or equal
 
 ### Reference vs Structural Equality
 
-```javascript
+```doof
 class Point { x, y: int; }
 
 p1 := Point { x: 1, y: 2 }
@@ -142,7 +142,7 @@ support equality with `none`, including through generic functions such as
 
 ## Logical Operators
 
-```javascript
+```doof
 a && b    // Logical AND
 a || b    // Logical OR
 !a        // Logical NOT
@@ -150,7 +150,7 @@ a || b    // Logical OR
 
 All logical operators require `bool` operands. Short-circuit evaluation applies:
 
-```javascript
+```doof
 false && expensiveCall()  // expensiveCall() never executed
 true || expensiveCall()   // expensiveCall() never executed
 
@@ -167,7 +167,7 @@ if list.length > 0 && list[0] == target {
 
 Provides a fallback value when an expression is `none` or a `Failure`:
 
-```javascript
+```doof
 // With nullable types
 name: string | none := none
 displayName := name ?? "Anonymous"  // "Anonymous"
@@ -188,7 +188,7 @@ data := readFile("cache.txt") ?? ""      // string
 
 **Lazy evaluation:** The right operand is **only evaluated if needed** (i.e., if left is `none` or `Failure`). This is crucial for performance and avoiding side effects:
 
-```javascript
+```doof
 // expensiveComputation() only called if loadFromCache() fails
 data := loadFromCache() ?? expensiveComputation()
 
@@ -205,7 +205,7 @@ config := loadFromCache() ?? loadFromDisk() ?? fetchFromNetwork() ?? defaultConf
 
 Assigns a value only if the variable is currently `none` or `Failure`:
 
-```javascript
+```doof
 // With nullable types
 let cache: string | none = none
 cache ??= loadFromDisk()  // Assigns result of loadFromDisk()
@@ -219,7 +219,7 @@ config ??= defaultConfig  // Only assigns if getConfig() returned none
 
 `??=` also works with variables holding `Result` types, assigning only if the current value is a `Failure`:
 
-```javascript
+```doof
 let data: Result<string, Error> = readCache()
 data ??= readFromDisk()     // Replaces data only if readCache() failed
 data ??= fetchFromNetwork() // No-op if data is Success from previous line
@@ -238,7 +238,7 @@ value ??= fetchDefault()     // Use default if both failed
 
 Safely access properties/methods on potentially none values:
 
-```javascript
+```doof
 user: User | none := getUser()
 city := user?.address?.city    // string | none
 logger?.log("Hello")           // Only calls if logger is present
@@ -253,7 +253,7 @@ field reads and value-returning calls produce `none`, and calls returning
 When the `?.` operator is used with Result types, it propagates `none` while
 preserving the Result wrapper:
 
-```javascript
+```doof
 // foo(): Result<MyObject, Error>
 // MyObject.bar(): Result<int, Error>
 
@@ -275,7 +275,7 @@ The `?.` operator only checks for none and propagates it - it does not unwrap Re
 
 ### Combining `?.` and `??`
 
-```javascript
+```doof
 // Nullable types
 city := user?.address?.city ?? "Unknown"  // string (never none)
 
@@ -289,7 +289,7 @@ data := parseFile("config.json") ?? { data: [] }  // Clearer: explicit about Fai
 
 ### Optional Indexing (`?[]`)
 
-```javascript
+```doof
 items: string[] | none := getItems()
 first := items?[0]  // string | none
 
@@ -303,7 +303,7 @@ The `!.` operator provides non-optional access with **panic on failure**. It wor
 
 **With nullable types:**
 
-```javascript
+```doof
 user: User | none := getUser()
 name := user!.name  // string (panics if user is `none`)
 
@@ -318,7 +318,7 @@ name := user.name
 
 When accessing fields or calling methods on a `Result<T, E>`, the `!.` operator unwraps the Success value or panics on Failure:
 
-```javascript
+```doof
 // loadUser(): Result<User, Error>
 result := loadUser()
 name := result!.name  // string (panics if result is Failure)
@@ -329,7 +329,7 @@ email := loadUser()!.getEmail()  // Panics if loadUser fails
 
 This is equivalent to using `try!` followed by regular access:
 
-```javascript
+```doof
 // These are equivalent:
 name := result!.name
 name := (try! result).name
@@ -337,7 +337,7 @@ name := (try! result).name
 
 The postfix `!` operator on a `Result<T, E>` does the same unwrap-or-panic step when you want the success value itself:
 
-```javascript
+```doof
 import { parseInt } from "std/parse"
 
 value := parseInt("12")!      // int
@@ -350,7 +350,7 @@ Applying postfix `!` to a value that is neither nullable nor a `Result` is a com
 
 **When to use `!.`:**
 
-```javascript
+```doof
 // ✅ When none/failure indicates a programming error
 let config: Config | none = loadConfig()
 port := config!.port  // Config should always exist here; panic if not
@@ -375,7 +375,7 @@ value := optional!.field  // Bad: failure might be expected; use case or try? in
 | `?.` | Short-circuits, propagates none | `T \| none` or `Result<T \| none, E>` |
 | `!.` | Panics immediately | `T` (never none/Failure) |
 
-```javascript
+```doof
 user: User | none := getUser()
 
 // Optional: safe, returns `none` if user is `none`
@@ -398,7 +398,7 @@ email2 := result!.getEmail()  // string (panics if result is Failure)
 
 ## Bitwise Operators
 
-```javascript
+```doof
 a & b     // Bitwise AND
 a | b     // Bitwise OR
 a ^ b     // Bitwise XOR
@@ -414,7 +414,7 @@ a >>> 2   // Unsigned right shift
 
 ### Compound Assignment
 
-```javascript
+```doof
 let x = 10
 x += 5    // x = x + 5
 x -= 3    // x = x - 3
@@ -437,7 +437,7 @@ x >>= 1
 
 Finite range operators produce a built-in `Range` value:
 
-```javascript
+```doof
 1..5      // Inclusive range: 1, 2, 3, 4, 5
 1..<5     // Exclusive upper bound: 1, 2, 3, 4
 ```
@@ -451,7 +451,7 @@ patterns.
 
 ## String Operators
 
-```javascript
+```doof
 greeting := "Hello, " + "World!"  // Concatenation
 
 // Prefer string interpolation
@@ -465,7 +465,7 @@ msg := "Hello, ${name}!"
 
 The `as` operator performs checked runtime narrowing/conversion. For plain values it yields `Result<T, string>`. For `Result<V, F>` sources it narrows the success channel and yields `Result<T, F | string>`:
 
-```javascript
+```doof
 value: int | string := "hello"
 r := value as string   // Result<string, string>
 
@@ -494,7 +494,7 @@ Since `as` always returns a `Result`, use standard Result patterns:
 
 Unlike `int(x)` / `long(x)` / `float(x)` / `double(x)`, which are direct casts, numeric `as` is checked. For example, `x as int` fails when a `long` is out of range or a floating-point value has a fractional component.
 
-```javascript
+```doof
 // With try (in Result-returning function):
 try s := value as string
 
@@ -518,7 +518,7 @@ case value as string {
 
 `as` binds tighter than unary prefix operators (`try`, `try!`, `try?`, `!`, `-`) but looser than postfix operators (`.`, `()`, `[]`):
 
-```javascript
+```doof
 try! value as string        // try! (value as string)
 obj.method() as Foo         // (obj.method()) as Foo
 ```
@@ -527,7 +527,7 @@ obj.method() as Foo         // (obj.method()) as Foo
 
 The compiler rejects narrowing that has no runtime path to success:
 
-```javascript
+```doof
 x: int := 42
 r := x as string    // ❌ Error: Cannot narrow "int" to "string"
 ```
@@ -542,7 +542,7 @@ Doof provides three prefix operators for working with `Result<T, E>` types:
 
 Unwraps a `Success` value or returns the `Failure` from the enclosing function:
 
-```javascript
+```doof
 function loadConfig(): Result<Config, Error> {
     content := try readFile("config.json")   // Returns Failure early if error
     parsed := try parseJSON(content)
@@ -557,7 +557,7 @@ Can only be used inside functions returning `Result<T, E>`.
 
 Unwraps a `Success` value or panics:
 
-```javascript
+```doof
 config := try! loadConfig()  // Config (panics if loadConfig fails)
 ```
 
@@ -565,7 +565,7 @@ config := try! loadConfig()  // Config (panics if loadConfig fails)
 
 Converts `Result<T, E>` to `T | none`:
 
-```javascript
+```doof
 config := try? loadConfig()  // Config | none (none on Failure)
 value := try? foo()?.bar()   // Combines with optional chaining
 ```
@@ -607,7 +607,7 @@ From highest to lowest:
 
 Doof does **not** support user-defined operator overloading:
 
-```javascript
+```doof
 class Vector {
     x, y: float
     
