@@ -1,6 +1,6 @@
 import { Assert as EditorAssert } from "std/assert"
 import { Parser as EditorParser } from "./parser"
-import { Block, FunctionDeclaration, ImmutableBinding, LambdaExpression, NamedType } from "./ast"
+import { Block, CaseExpression, CaseStatement, FunctionDeclaration, ImmutableBinding, LambdaExpression, MemberExpression, NamedType, UnaryExpression, ValuePattern, RangePattern, DotShorthand } from "./ast"
 
 export function testEditorStatementRecoveryKeepsLaterDeclarations(): none {
   parser := EditorParser { source: "function main(): int {\nlet broken = ;\nreturn 42\n}", editorMode: true }
@@ -89,4 +89,74 @@ export function testDiagnosesNestedFunctionFeaturesWithoutLambdaSemantics(): non
   EditorAssert.equal(editorProgram.statements.length, 1)
   EditorAssert.equal(editorParser.issues.length, 1)
   EditorAssert.equal(editorParser.issues[0].message, "Nested generic functions are not supported; use a non-generic local function or a top-level generic function")
+}
+
+function parsedCaseExpression(source: string): CaseExpression {
+  parser := EditorParser { source, editorMode: true }
+  program := parser.parse()
+  EditorAssert.equal(parser.issues.length, 0)
+  case program.statements[0] {
+    binding: ImmutableBinding -> { case binding.value {
+      expression: CaseExpression -> { return expression }
+      _ -> { panic("expected case expression") }
+    } }
+    _ -> { panic("expected immutable binding") }
+  }
+}
+
+export function testLineSeparatedCaseArmsStartingWithOperatorTokens(): none {
+  expression := parsedCaseExpression(
+    "result := case value {\n" +
+    "  0 -> \"zero\"\n" +
+    "  -1 -> \"minus\"\n" +
+    "  ..<0 -> \"negative\"\n" +
+    "  .North -> \"north\"\n" +
+    "  _ -> \"other\"\n" +
+    "}")
+  EditorAssert.equal(expression.arms.length, 5)
+  case expression.arms[1].patterns[0] {
+    value: ValuePattern -> { case value.value {
+      _: UnaryExpression -> { }
+      _ -> { panic("expected negative literal pattern") }
+    } }
+    _ -> { panic("expected value pattern") }
+  }
+  case expression.arms[2].patterns[0] {
+    range: RangePattern -> { EditorAssert.equal(range.start == none, true) }
+    _ -> { panic("expected open range pattern") }
+  }
+  case expression.arms[3].patterns[0] {
+    value: ValuePattern -> { case value.value {
+      _: DotShorthand -> { }
+      _ -> { panic("expected dot-shorthand pattern") }
+    } }
+    _ -> { panic("expected value pattern") }
+  }
+}
+
+export function testCaseArmBodyStillContinuesAcrossLines(): none {
+  expression := parsedCaseExpression(
+    "result := case value {\n" +
+    "  0 -> items\n" +
+    "    .first\n" +
+    "  _ -> fallback(case other {\n" +
+    "    1 -> 2\n" +
+    "    _ -> 3\n" +
+    "  })\n" +
+    "}")
+  EditorAssert.equal(expression.arms.length, 2)
+  case expression.arms[0].body {
+    member: MemberExpression -> { EditorAssert.equal(member.property, "first") }
+    _ -> { panic("expected continued member access body") }
+  }
+}
+
+export function testLineSeparatedCaseStatementArmsStartingWithDot(): none {
+  parser := EditorParser { source: "case direction {\n  .North -> go(1)\n  .South -> go(2)\n  -1 -> go(3)\n}", editorMode: true }
+  program := parser.parse()
+  EditorAssert.equal(parser.issues.length, 0)
+  case program.statements[0] {
+    statement: CaseStatement -> { EditorAssert.equal(statement.arms.length, 3) }
+    _ -> { panic("expected case statement") }
+  }
 }

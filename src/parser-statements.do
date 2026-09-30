@@ -1,7 +1,7 @@
 // Statement, control-flow, and case-pattern parsing for the Doof parser.
 
 import type { Parser } from "./parser"
-import { TokenType } from "./lexer"
+import { Token, TokenType } from "./lexer"
 import {
   Block, IfBranch, WithBinding, CaseArm, CaseExpression, CaseExpressionArm, CaseStatement,
   CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern,
@@ -144,7 +144,7 @@ function parseCaseStatement(parser: Parser): Statement {
     let patterns: CasePattern[] = [parseCasePattern(parser)]
     while parser.match(TokenType.Pipe) { patterns.push(parseCasePattern(parser)) }
     parser.expect(TokenType.RightArrow)
-    body := if parser.check(TokenType.LeftBrace) then parseBlock(parser) else parseInlineCaseArm(parser)
+    body := if parser.check(TokenType.LeftBrace) then parseBlock(parser) else parseBoundedCaseArm(parser)
     arms.push(CaseArm { kind: "case-arm", patterns, body, span: parser.span(armStart) })
     parser.match(TokenType.Comma)
   }
@@ -176,7 +176,57 @@ export function parseCaseExpression(parser: Parser): Expression {
 // does not try to represent this choice as a native conditional expression.
 function parseCaseExpressionBody(parser: Parser): Expression | Block {
   if parser.check(TokenType.LeftBrace) { return parseBlock(parser) }
-  return parser.parseExpression()
+  previousBoundary := parser.caseArmBoundary
+  parser.caseArmBoundary = nextCaseArmBoundary(parser)
+  body := parser.parseExpression()
+  parser.caseArmBoundary = previousBoundary
+  return body
+}
+
+function parseBoundedCaseArm(parser: Parser): Block {
+  previousBoundary := parser.caseArmBoundary
+  parser.caseArmBoundary = nextCaseArmBoundary(parser)
+  body := parseInlineCaseArm(parser)
+  parser.caseArmBoundary = previousBoundary
+  return body
+}
+
+// Inline arm bodies continue across lines like other expressions, so an arm
+// beginning with `.`, `-`, or `..<` would otherwise extend the previous body.
+// The next arm starts on the first later line whose depth-0 tokens reach `->`.
+function nextCaseArmBoundary(parser: Parser): int {
+  tokens := parser.tokens
+  let depth = 0
+  for index of parser.pos..<tokens.length {
+    kind := tokens[index].kind
+    if depth == 0 && index > parser.pos {
+      if kind == TokenType.Comma || kind == TokenType.RightBrace || kind == TokenType.EndOfFile { return -1 }
+      if tokens[index].line > tokens[index - 1].line && lineStartsCaseArm(tokens, index) { return index }
+    }
+    if kind == TokenType.LeftParen || kind == TokenType.LeftBracket || kind == TokenType.LeftBrace { depth += 1 }
+    else if kind == TokenType.RightParen || kind == TokenType.RightBracket || kind == TokenType.RightBrace {
+      if depth == 0 { return -1 }
+      depth -= 1
+    }
+  }
+  return -1
+}
+
+function lineStartsCaseArm(tokens: Token[], start: int): bool {
+  line := tokens[start].line
+  let depth = 0
+  let index = start
+  while index < tokens.length && tokens[index].line == line {
+    kind := tokens[index].kind
+    if depth == 0 && kind == TokenType.RightArrow { return true }
+    if kind == TokenType.LeftParen || kind == TokenType.LeftBracket || kind == TokenType.LeftBrace { depth += 1 }
+    else if kind == TokenType.RightParen || kind == TokenType.RightBracket || kind == TokenType.RightBrace {
+      if depth == 0 { return false }
+      depth -= 1
+    }
+    index += 1
+  }
+  return false
 }
 
 function parseInlineCaseArm(parser: Parser): Block {

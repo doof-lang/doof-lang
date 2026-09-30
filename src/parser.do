@@ -44,6 +44,10 @@ export class Parser {
   let inForIterable: bool = false
   let inTagAttribute: bool = false
   let tagAttributeDelimiterDepth: int = 0
+  // Token index where the next case arm starts while an inline arm body is
+  // parsed; reads at or beyond it see end of input so the body cannot continue
+  // into that arm across a line break.
+  let caseArmBoundary: int = -1
   let errorMessage: string = ""
   let errorLine: int = 0
   let errorColumn: int = 0
@@ -118,7 +122,13 @@ export class Parser {
   // callers should continue to use parse() or the top-level parse() function.
   current(): Token {
     if remainingTypeClosers > 0 { return typeCloser(tokens[pos].length - remainingTypeClosers) }
+    if caseArmBoundary >= 0 && pos >= caseArmBoundary { return caseArmEnd() }
     return tokens[pos]
+  }
+
+  private caseArmEnd(): Token {
+    token := tokens[caseArmBoundary]
+    return Token { kind: TokenType.EndOfFile, length: 0, valueOffset: token.offset, valueLength: 0, needsDecode: false, line: token.line, column: token.column, offset: token.offset }
   }
 
   private typeCloser(part: int): Token {
@@ -131,6 +141,7 @@ export class Parser {
       return typeCloser(tokens[pos].length - remainingTypeClosers + offset)
     }
     index := pos + offset + if remainingTypeClosers > 0 then 1 - remainingTypeClosers else 0
+    if caseArmBoundary >= 0 && index >= caseArmBoundary { return caseArmEnd() }
     if index >= tokens.length { return tokens[tokens.length - 1] }
     return tokens[index]
   }
