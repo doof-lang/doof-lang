@@ -5,7 +5,7 @@
 // token state here preserves the existing Parser { source }.parse() API while
 // allowing each grammar area to stay independently focused.
 
-import { Lexer, Token, TokenType, tokenValue } from "./lexer"
+import { Lexer, LexerDiagnostic, Token, TokenType, tokenValue } from "./lexer"
 import {
   parseExport as parseExportImpl, parseConst as parseConstImpl,
   parseReadonly as parseReadonlyImpl, parseLet as parseLetImpl,
@@ -63,15 +63,7 @@ export class Parser {
     tokens = lexer.tokenize()
     if editorMode {
       for diagnostic of lexer.diagnostics {
-        let offset = 0
-        let sourceLine = 1
-        while offset < source.length && sourceLine < diagnostic.line {
-          if source[offset] == '\n' { sourceLine += 1 }
-          offset += 1
-        }
-        offset += diagnostic.column - 1
-        if offset > source.length { offset = source.length }
-        location := AstLocation { line: diagnostic.line, column: diagnostic.column, offset }
+        location := diagnosticLocation(diagnostic)
         issues.push(ParserIssue { message: diagnostic.message, span: SourceSpan { start: location, end: location } })
       }
     }
@@ -81,7 +73,29 @@ export class Parser {
     start := location()
     let statements: Statement[] = []
     while !atEnd() { appendStatement(statements) }
+    // Strict callers see parser errors first; lexer diagnostics fail an otherwise valid parse.
+    if !editorMode && lexer.diagnostics.length > 0 {
+      diagnostic := lexer.diagnostics[0]
+      location := diagnosticLocation(diagnostic)
+      errorMessage = diagnostic.message
+      errorLine = location.line
+      errorColumn = location.column
+      errorOffset = location.offset
+      panic("Parse error at " + string(location.line) + ":" + string(location.column) + ": " + diagnostic.message)
+    }
     return Program { kind: "program", statements, span: span(start) }
+  }
+
+  private diagnosticLocation(diagnostic: LexerDiagnostic): AstLocation {
+    let offset = 0
+    let sourceLine = 1
+    while offset < source.length && sourceLine < diagnostic.line {
+      if source[offset] == '\n' { sourceLine += 1 }
+      offset += 1
+    }
+    offset += diagnostic.column - 1
+    if offset > source.length { offset = source.length }
+    return AstLocation { line: diagnostic.line, column: diagnostic.column, offset }
   }
 
   // Recovery is opt-in. Strict callers retain the fail-fast parser contract.

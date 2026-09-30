@@ -1638,3 +1638,25 @@ export function testRejectsIntegerLiteralsOutsideTheirRange(): none {
     _ -> { panic("expected long literal") }
   }
 }
+
+export function testStrictParseRejectsMisplacedNumericSeparators(): none {
+  sources := ["x := 1__0", "x := 1000_", "x := 0xFF_", "x := 1_.5"]
+  columns := [7, 10, 10, 7]
+  for index of 0..<sources.length {
+    source := sources[index]
+    parser := Parser { source }
+    result := catchPanic(=> parser.parse())
+    case result {
+      _: Failure<string> -> { }
+      _ -> { panic("expected parse failure for " + source) }
+    }
+    Assert.equal(parser.errorMessage, "Numeric separators must appear between digits")
+    Assert.equal(parser.errorLine, 1)
+    Assert.equal(parser.errorColumn, columns[index])
+  }
+}
+
+export function testStrictParseAcceptsNumericSeparatorsBetweenDigits(): none {
+  parser := Parser { source: "x := 1_000_000\ny := 0xFF_FF\nz := 1_0.5_0" }
+  Assert.equal(parser.parse().statements.length, 3)
+}
