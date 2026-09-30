@@ -1518,7 +1518,7 @@ println(hi)  // 9
 - `Tuple` is an **intrinsic type** — it cannot be redefined or extended by user code
 - The number of type parameters is variable (variadic) — `Tuple<A>`, `Tuple<A, B>`, `Tuple<A, B, C>`, etc. are all valid
 - Tuples are **nominal** — `Tuple<int, int>` is not structurally compatible with a class that has two `int` fields
-- When a positional literal `(v1, v2, ...)` has no contextual type expectation from a named class, it infers as a `Tuple`
+- When a positional literal `(v1, v2, ...)` has no contextual type naming a single class or struct, it infers as a `Tuple` (see [Positional Syntax](07-classes-and-interfaces.md#positional-syntax))
 
 ### Type Aliases
 

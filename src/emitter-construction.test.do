@@ -96,3 +96,16 @@ export function testUnitResultPayloadPreservesEffectsInObjects(): none {
   Assert.stringContains(source, "effect()")
   Assert.stringContains(source, "doof::Failure<void>{})")
 }
+
+export function testPositionalLiteralLowersToConstruction(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Point { x, y: float }\nstruct Vec { x: int\ny: int = 7 }\n" +
+    "function main(): none { let p: Point = (1.0, 2.0)\nlet v: Vec = (1, 2)\nlet maybe: Vec | none = (3, 4)\npair := (1, 2) }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "std::make_shared<Point>(1.0, 2.0)")
+  Assert.stringContains(source, "Vec{1, 2}")
+  Assert.stringContains(source, "Vec{3, 4}")
+  Assert.stringContains(source, "std::make_tuple(1, 2)")
+}

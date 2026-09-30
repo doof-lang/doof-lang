@@ -57,3 +57,26 @@ export function testSecondConsolidationNamedFactoryResultOwner(): none {
   Assert.equal(result.diagnostics.length, 0)
   Assert.stringContains(result.emission!.modules[0].source, "Box__int::constructor(3)")
 }
+
+export function testPositionalLiteralsConstructExpectedClasses(): none {
+  valid := compile([SourceFile { path: "/main.do", source:
+    "class Point { x, y: float }\nstruct Vec { x: int\ny: int }\nclass Config { host: string\nport: int = 8080 }\n" +
+    "class Counter { count: int\nstatic constructor(initial: int, step: int): Counter { return Counter { count: initial + step } } }\n" +
+    "function draw(p: Point): float => p.x\nfunction make(): Point { return (3.0, 4.0) }\nfunction maybe(): Vec | none => (1, 2)\n" +
+    "function main(): none { let p: Point = (1.0, 2.0)\npoints: Point[] := [(1.0, 2.0)]\n" +
+    "let short: Config = (\"localhost\", 80)\nlet counter: Counter = (10, 5)\nprintln(draw((1.0, 2.0)))\npair := (1, \"one\")\nlet tuple: Tuple<int, int> = (1, 2) }",
+  }], "/main.do")
+  for diagnostic of valid.diagnostics { println(diagnostic.message) }
+  Assert.equal(valid.diagnostics.length, 0)
+
+  tooMany := compile([SourceFile { path: "/main.do", source: "class Point { x, y: float }\nfunction main(): none { let p: Point = (1.0, 2.0, 3.0) }" }], "/main.do")
+  Assert.equal(tooMany.diagnostics.length, 1)
+  Assert.stringContains(tooMany.diagnostics[0].message, "Class \"Point\" expects 2 constructor argument(s) but got 3")
+  wrongType := compile([SourceFile { path: "/main.do", source: "class Point { x, y: float }\nfunction main(): none { let p: Point = (\"a\", 2.0) }" }], "/main.do")
+  Assert.equal(wrongType.diagnostics.length, 1)
+  Assert.stringContains(wrongType.diagnostics[0].message, "Argument 1 has type string; expected float")
+  // Several class arms give no single target, so the literal stays a Tuple.
+  ambiguous := compile([SourceFile { path: "/main.do", source: "class A { x: int\ny: int }\nclass B { x: int\ny: int }\ntype AB = A | B\nfunction main(): none { let value: AB = (1, 2) }" }], "/main.do")
+  Assert.equal(ambiguous.diagnostics.length, 1)
+  Assert.stringContains(ambiguous.diagnostics[0].message, "Cannot assign (int, int) to A | B")
+}

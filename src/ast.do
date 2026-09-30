@@ -286,6 +286,9 @@ export class TupleLiteral {
   kind: string
   elements: Expression[]
   let resolvedType: ResolvedType | none = none
+  // Set when an expected class or struct turns `(a, b)` into positional construction.
+  let resolvedConstruction: CheckedConstruction | none = none
+  let resolvedClass: ClassDeclaration | none = none
   span: SourceSpan
 }
 

@@ -111,3 +111,19 @@ export function testReadonlyEmissionDependencyExtractionPreparesTypes(): none {
   Assert.isTrue(identities.snapshot().identify(type_) >= 0)
   Assert.equal(summaryNames(builder.finish()), "Item,")
 }
+
+export function testPositionalLiteralOfUnimportedClassRecordsDependency(): none {
+  result := compile([
+    SourceFile { path: "/lib.do", source: "export class Point { x, y: float }\nexport function draw(p: Point): float => p.x + p.y" },
+    SourceFile { path: "/main.do", source: "import { draw } from \"./lib\"\nfunction main(): none { println(draw((1.0, 2.0))) }" },
+  ], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  let mainModule = ""
+  let mainHeader = ""
+  for module of result.emission!.modules {
+    if module.source.contains("draw(") && module.source.contains("make_shared") { mainModule = module.source; mainHeader = module.header }
+  }
+  Assert.stringContains(mainModule, "Point>(1.0, 2.0)")
+  Assert.stringContains(mainHeader, "Point")
+}

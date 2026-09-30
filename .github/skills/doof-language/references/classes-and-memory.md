@@ -85,6 +85,9 @@ Rules:
 
 - Named construction may omit fields that have defaults.
 - Positional construction follows declaration order and may omit trailing defaults.
+- A positional literal constructs its expected class or struct: `let p: Point = (1.0, 2.0)`,
+  `draw((1.0, 2.0))`, `points.push((1.0, 2.0))`. Without a single expected class
+  (including unions of several classes) `(a, b)` is a `Tuple`; `(a)` is just parentheses.
 - If a class or struct has a static `constructor` method returning that type, or
   `Result<ThatType, E>` for fallible construction, direct construction delegates
   to `constructor`, uses its parameters for validation, and has the constructor

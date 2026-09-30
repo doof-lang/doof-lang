@@ -104,7 +104,9 @@ function literalTree(state: CheckerState, expression: Expression): bool {
     }
     tuple: TupleLiteral -> {
       for element of tuple.elements { if !literalTree(state, element) { return false } }
-      return true
+      if tuple.resolvedClass == none { return true }
+      if tuple.resolvedClass!.native_ || (tuple.resolvedConstruction != none && tuple.resolvedConstruction!.factory != none) { return false }
+      return literalPositionalClassDefaults(state, tuple.resolvedClass!, tuple.elements.length)
     }
     object: ObjectLiteral -> {
       if object.spread != none && !literalTree(state, object.spread!) { return false }

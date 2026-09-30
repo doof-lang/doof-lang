@@ -1,7 +1,7 @@
 // Class construction across call, named, and contextual object syntax.
 // Checked owner/constructor decorations select the target; shared value lowering
 // owns stored-field order, defaults, specialization, and factory arguments.
-import { ActorCreationExpression, CheckedConstruction, CallArgument, CallExpression, ConstructExpression, Expression, ObjectLiteral, ObjectProperty, SourceSpan, ThisExpression } from "./ast"
+import { ActorCreationExpression, CheckedConstruction, CallArgument, CallExpression, ConstructExpression, Expression, ObjectLiteral, ObjectProperty, SourceSpan, ThisExpression, TupleLiteral } from "./ast"
 import { ClassType, InterfaceType, ResolvedType, ResultResolvedType, TypeSubstitution } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -165,6 +165,15 @@ function emitOwnerDefaultExpression(
   result := emitDefaultExpression(expression, context, expected, callSiteSpan)
   context.substitution = previousSubstitution
   return result
+}
+
+/** Positional literal `(a, b)` checked as construction of its expected class or struct. */
+export function emitClassTuple(expression: TupleLiteral, context: EmitContext): string {
+  if expression.resolvedConstruction == none { panic("Positional literal has no checked construction plan") }
+  let args: CallArgument[] = []
+  for element of expression.elements { args.push(CallArgument { name: none, value: element, span: element.span }) }
+  inputs := ConstructionInputs { args, named: false, span: expression.span }
+  return emitPlannedConstruction(expression.resolvedConstruction!, inputs, context)
 }
 
 export function emitClassObject(expression: ObjectLiteral, context: EmitContext, resolved: ClassType): string {

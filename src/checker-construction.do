@@ -1,9 +1,9 @@
 // One specialized constructor signature and field contract for all construction syntax.
 
 import { checkArguments, propertyArguments, SuppliedArgument } from "./checker-arguments"
-import { ClassType, InterfaceType, UnknownType, FunctionParamType, FunctionType, ResolvedType, ResultResolvedType, Scope } from "./semantic"
+import { ClassType, InterfaceType, NoneType, UnknownType, FunctionParamType, FunctionType, ResolvedType, ResultResolvedType, Scope, TypeParameterType, UnionResolvedType } from "./semantic"
 
-import { CheckedConstruction, ConstructionDefault, ClassDeclaration, ConstructExpression, ObjectProperty, FunctionDeclaration, SourceSpan } from "./ast"
+import { CheckedConstruction, ConstructionDefault, ClassDeclaration, ConstructExpression, ObjectProperty, FunctionDeclaration, SourceSpan, TupleLiteral } from "./ast"
 import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
 import { memberType, resolveType, validateTypeArgumentConstraints } from "./checker-resolution"
@@ -221,4 +221,57 @@ export function validateFieldArguments(state: CheckerState, plan: CheckedConstru
       typeError(state, "Field '" + name + "' is private to module '" + owner.symbol.module + "'", argument.span)
     }
   }
+}
+
+/**
+ * The class or struct a positional literal `(a, b)` constructs when its
+ * expected type names one, directly or as the present arm of `T | none`.
+ * Anything else (unions of several classes, interfaces, tuples, generic
+ * contexts still being inferred) leaves the literal an ordinary Tuple.
+ */
+export function positionalLiteralClass(expected: ResolvedType | none): ClassType | none {
+  if expected == none { return none }
+  case expected! {
+    class_: ClassType -> { return if containsTypeParameter(class_) then none else class_ }
+    union_: UnionResolvedType -> {
+      let found: ClassType | none = none
+      for member of union_.types {
+        case member {
+          _: NoneType -> { }
+          class_: ClassType -> {
+            if found != none { return none }
+            found = class_
+          }
+          _ -> { return none }
+        }
+      }
+      return if found == none || containsTypeParameter(found!) then none else found
+    }
+    _ -> { return none }
+  }
+}
+
+function containsTypeParameter(class_: ClassType): bool {
+  for argument of class_.typeArgs {
+    case argument {
+      _: TypeParameterType -> { return true }
+      nested: ClassType -> { if containsTypeParameter(nested) { return true } }
+      _ -> { }
+    }
+  }
+  return false
+}
+
+/** Checks `(a, b)` against an expected class exactly like the positional call `Point(a, b)`. */
+export function checkPositionalLiteralConstruction(state: CheckerState, expression: TupleLiteral, scope: Scope, class_: ClassType): ResolvedType {
+  construction := resolveConstructor(state, class_, !insideConstructorFactory(scope, class_))
+  expression.resolvedConstruction = construction
+  expression.resolvedClass = construction.declaration
+  if construction.factory != none { validateConstructorVisibility(state, class_, construction.factory!, expression.span) }
+  let args: SuppliedArgument[] = []
+  for element of expression.elements { args.push(SuppliedArgument { name: none, value: element, span: element.span }) }
+  validateFieldArguments(state, construction, class_, args)
+  kind := if class_.symbol.kind == "struct" then "Struct" else "Class"
+  checkArguments(state, args, construction.signature.params, scope, expression.span, kind + " \"" + class_.name + "\"")
+  return finish(state, expression, construction.signature.returnType)
 }

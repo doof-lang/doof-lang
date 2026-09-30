@@ -208,6 +208,7 @@ function releaseExpression(expression: Expression): none {
     }
     member: MemberExpression -> { member.resolvedMember = none; member.resolvedStaticOwner = none; member.resolvedJsonAlias = none }
     object: ObjectLiteral -> { object.resolvedConstruction = none; object.resolvedClass = none }
+    tuple: TupleLiteral -> { tuple.resolvedConstruction = none; tuple.resolvedClass = none }
     construct: ConstructExpression -> {
       construct.resolvedConstruction = none; construct.resolvedClass = none; construct.resolvedConstructor = none
     }

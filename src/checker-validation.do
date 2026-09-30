@@ -226,7 +226,10 @@ export function validateExpression(expression: Expression, module: string, diagn
         }
       }
     }
-    tuple: TupleLiteral -> { for item of tuple.elements { validateExpression(item, module, diagnostics) } }
+    tuple: TupleLiteral -> {
+      if tuple.resolvedClass != none { validateConstructionPlan(tuple.resolvedConstruction, tuple.span, module, diagnostics) }
+      for item of tuple.elements { validateExpression(item, module, diagnostics) }
+    }
     lambda: LambdaExpression -> {
       if lambda.returnType != none { validateTypeAnnotation(lambda.returnType!, module, diagnostics) }
       for parameter of lambda.params {

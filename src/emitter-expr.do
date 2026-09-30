@@ -11,7 +11,7 @@ import { ClassType, SerialValueResolvedType, NoneType, PrimitiveType, ResolvedTy
 import { EmitContext } from "./emitter-context"
 import { emitAs, emitAssignment, emitBinary, emitIdentifier, emitIndex, emitMember, emitUnary, cppIdentifier as emitCppIdentifier } from "./emitter-expr-ops"
 import { emitCall } from "./emitter-expr-calls"
-import { emitConstruct } from "./emitter-construction"
+import { emitClassTuple, emitConstruct } from "./emitter-construction"
 import { emitArray, emitChar, emitNoneLiteral, emitObject, emitString, emitTuple } from "./emitter-expr-literals"
 import { emitCaseExpression, emitCatchExpression, emitDotShorthand, emitIfExpression, emitYieldBlockExpression } from "./emitter-expr-control"
 import { emitLambdaExpression } from "./emitter-expr-lambda"
@@ -48,7 +48,7 @@ export function emitExpression(expression: Expression, context: EmitContext, exp
     call: CallExpression -> { value = emitCall(call, context, expected); sourcePosition = .Return }
     array: ArrayLiteral -> { value = emitArray(array, context, expected) }
     object: ObjectLiteral -> { value = emitObject(object, context, expected) }
-    tuple: TupleLiteral -> { value = emitTuple(tuple, context) }
+    tuple: TupleLiteral -> { value = if tuple.resolvedConstruction != none then emitClassTuple(tuple, context) else emitTuple(tuple, context) }
     lambda: LambdaExpression -> { value = emitLambdaExpression(lambda, context, expected) }
     if_: IfExpression -> { value = emitIfExpression(if_, context, expected) }
     case_: CaseExpression -> { value = emitCaseExpression(case_, context, expected) }

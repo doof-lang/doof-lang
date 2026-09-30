@@ -59,19 +59,15 @@ JSON decoding previously validated only string and int literal fields; enum,
 bool, negative and other literal fields accepted any value. They are now
 decoded with the field's type and compared against the declared constant.
 
-### A3. Positional literals don't construct classes — **Decide**
+### A3. Positional literals don't construct classes — **Fixed**
 
-The spec (ch. 2, 7) says `(1.0, 2.0)` constructs `Point` when the expected type
-is a class. The compiler always builds a Tuple, so every one of these fails:
-
-- `draw((1.0, 2.0))` (argument)
-- `let p: Point = (…)` (annotation)
-- `return (…)` (return value)
-- `[(1.0, 2.0)]` for `Point[]` (array element)
-- `verts.push((…))`
-- `Line ((0.0, 0.0), (1.0, 1.0))` (nested)
-
-**Recommendation**: implement it if positional construction by context is still wanted. Otherwise remove the claims from ch. 2 and ch. 7. `Point(1.0, 2.0)` already covers the need, so removing them is the cheaper option.
+`(a, b)` now constructs the class or struct its expected type names (directly
+or as the present arm of `T | none`) in every listed context, and is checked
+and lowered exactly like `Point(a, b)`, including defaults, custom
+constructors, generic classes, cross-module classes and module initializers.
+With no single class expected, it remains a Tuple. The spec's positional union
+example `let r2: Result = ("Success", 42)` was removed: positional construction
+skips literal-valued fields, so it could never select a union member.
 
 ### A4. `Array<T>` and `ReadonlyArray<T>` — **Implement**
 
@@ -290,4 +286,4 @@ parser rule at the same time.
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes.** Cheap, and they remove misleading examples.
 3. **Common gaps: A5, A6, A8, A9, A10, A12, A13, A29.**
-4. **Needs a decision first: A3, A7, A14, A16, A23, A26, A30.**
+4. **Needs a decision first: A7, A14, A16, A23, A26, A30.**

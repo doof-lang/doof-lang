@@ -624,6 +624,19 @@ let p: Point = (1.0, 2.0, 3.0)  // Type-annotated tuple-like literal
 - Natural for mathematical types
 - Fields map in declaration order
 
+A positional literal of two or more values constructs a class or struct when
+its expected type names exactly one, either directly or as the present arm of
+`T | none`. The expected type may come from an annotation, parameter, return
+type, array element, method argument such as `push`, or an enclosing
+construction. The literal is then checked and lowered exactly like the call
+`Point(1.0, 2.0)`: arguments fill fields in declaration order, trailing
+defaults may be omitted, literal-valued fields are skipped, and a dedicated
+`constructor` method receives the arguments instead. `(value)` with a single
+value is an ordinary parenthesized expression, not a one-field construction.
+
+Without such an expected type, including a union of several classes, the
+literal is a `Tuple`.
+
 ### Default Values
 
 ```doof
@@ -695,8 +708,10 @@ let r2 = Success(42)               // Positional — kind auto-filled
 
 ```doof
 let r1: Result = { kind: "Success", value: 42 }
-let r2: Result = ("Success", 42)
 ```
+
+Positional literals cannot select a union member; use an object literal or
+explicit construction such as `Success(42)`.
 
 ### Nested Initialisation
 

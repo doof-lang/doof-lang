@@ -101,3 +101,10 @@ export function testUnionMutabilityNominalGuardPreservesNestedDiagnostics(): non
   Assert.equal(diagnostics[0].span.start.line, 2)
   Assert.stringContains(diagnostics[0].message, "cannot be distinguished at runtime")
 }
+
+export function testPositionalLiteralConstructionIsValidated(): none {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "class Point { x, y: float }\nfunction main(): none { let p: Point = (1.0, 2.0) }" }]).analyze("/main.do")
+  checked := createChecker(analysis, "/main.do").check("/main.do")
+  Assert.equal(checked.diagnostics.length, 0)
+  Assert.equal(validateCheckedTypes(analysis).length, 0)
+}

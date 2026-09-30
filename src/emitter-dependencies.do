@@ -4,7 +4,7 @@ import { SemanticTypeIdentities } from "./semantic-type-identities"
 import {
   ActorCreationExpression, ArrayType, AstFunctionType, Block, CallExpression, ClassDeclaration, ConstDeclaration, ConstructExpression, EnumDeclaration,
   ExportDeclaration, Expression, FunctionDeclaration, Identifier, ImmutableBinding, InterfaceDeclaration, MemberExpression, NamedType, ObjectLiteral,
-  ReadonlyDeclaration, Statement, TypeAliasDeclaration,
+  ReadonlyDeclaration, Statement, TupleLiteral, TypeAliasDeclaration,
   TypeAnnotation, UnionType, WeakType,
 } from "./ast"
 import { interfaceInstantiationKey } from "./emitter-monomorphize"
@@ -109,6 +109,9 @@ export function collectDependencyExpression(
       }
       object: ObjectLiteral -> {
         if object.resolvedConstruction != none { collectCompleteDependencyType(object.resolvedConstruction!.owner, index) }
+      }
+      tuple: TupleLiteral -> {
+        if tuple.resolvedConstruction != none { collectCompleteDependencyType(tuple.resolvedConstruction!.owner, index) }
       }
       construct: ConstructExpression -> {
         if construct.resolvedConstruction != none { collectCompleteDependencyType(construct.resolvedConstruction!.owner, index) }

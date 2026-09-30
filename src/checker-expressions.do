@@ -24,7 +24,7 @@ import { checkArray, checkObject } from "./checker-literals"
 import { fieldAssignmentBinding, resolveType, memberType, indexType } from "./checker-resolution"
 import { deprecatedNoneAlias, finish, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, isTypeOnlyNamespaceImport, namespaceMemberSymbol, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
-import { resolveConstructor, validateConstructorVisibility, validateFieldArguments, checkConstruct } from "./checker-construction"
+import { checkPositionalLiteralConstruction, positionalLiteralClass, resolveConstructor, validateConstructorVisibility, validateFieldArguments, checkConstruct } from "./checker-construction"
 import { checkerSemanticSpan } from "./checker-validation"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
 
@@ -568,6 +568,8 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     call: CallExpression -> { return checkCall(state, call, scope, expected) }
     array: ArrayLiteral -> { return checkArray(state, array, scope, expected) }
     tuple: TupleLiteral -> {
+      constructed := positionalLiteralClass(expected)
+      if constructed != none { return checkPositionalLiteralConstruction(state, tuple, scope, constructed!) }
       let elements: ResolvedType[] = []
       let diverges = false
       let expectedTuple: TupleResolvedType | none = none
