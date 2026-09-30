@@ -156,6 +156,12 @@ case day {
 | `n..` | Open-ended from n | `90..` matches 90 and above |
 | `..<n` | Open-ended up to n (exclusive) | `..<18` matches 0 to 17 |
 
+Case expressions over `byte`, `int`, or `long` subjects are exhaustive without
+`_` when their value and range patterns together cover every value of the
+subject type, as in `..<0 -> ..., 0 -> ..., 1.. -> ...`. Other subjects need a
+wildcard, a matching type pattern, or complete enum, `bool`, union, or `Result`
+coverage.
+
 In expression positions, only finite `a..b` and `a..<b` forms create `Range`
 values. Open-ended forms are pattern-only. Expression `Range` values expose
 `lowerBound` and exclusive `upperBound`; descending expression ranges are empty

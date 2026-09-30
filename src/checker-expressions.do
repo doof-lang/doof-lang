@@ -76,7 +76,9 @@ export function casePatternsExhaustive(state: CheckerState, subjectType: Resolve
   }
   case subjectType {
     primitive_: PrimitiveType -> {
-      if primitive_.name == "int" { return integerPatternsExhaustive(arms) }
+      if primitive_.name == "byte" { return integerPatternsExhaustive(arms, 0L, 255L) }
+      if primitive_.name == "int" { return integerPatternsExhaustive(arms, -2147483648L, 2147483647L) }
+      if primitive_.name == "long" { return integerPatternsExhaustive(arms, -9223372036854775807L - 1L, 9223372036854775807L) }
       if primitive_.name != "bool" { return false }
       let hasTrue = false
       let hasFalse = false
@@ -123,73 +125,60 @@ export function casePatternsExhaustive(state: CheckerState, subjectType: Resolve
   return false
 }
 
-function integerPatternsExhaustive(arms: CasePattern[][]): bool {
-  let hasLower: bool[] = []
-  let lowers: int[] = []
-  let hasUpper: bool[] = []
-  let uppers: int[] = []
+// Integer subjects are exhaustive when their value and range patterns cover
+// every value of the subject type, [minimum, maximum], without gaps.
+function integerPatternsExhaustive(arms: CasePattern[][], minimum: long, maximum: long): bool {
+  let lowers: long[] = []
+  let uppers: long[] = []
   for patterns of arms {
     for pattern of patterns {
       case pattern {
         range: RangePattern -> {
-          let lower = 0
-          let lowerPresent = range.start != none
-          if lowerPresent {
+          let lower = minimum
+          if range.start != none {
             resolvedLower := integerPatternValue(range.start!)
             if resolvedLower == none { continue }
             lower = resolvedLower!
           }
-          let upper = 0
-          let upperPresent = range.end != none
-          if upperPresent {
+          let upper = maximum
+          if range.end != none {
             resolvedUpper := integerPatternValue(range.end!)
             if resolvedUpper == none { continue }
             upper = resolvedUpper!
             if !range.inclusive {
-              if upper == (-2147483647 - 1) { continue }
-              upper = upper - 1
+              if upper <= minimum { continue }
+              upper = upper - 1L
             }
           }
-          hasLower.push(lowerPresent); lowers.push(lower)
-          hasUpper.push(upperPresent); uppers.push(upper)
+          lowers.push(lower); uppers.push(upper)
         }
         value: ValuePattern -> {
           resolved := integerPatternValue(value.value)
-          if resolved != none {
-            hasLower.push(true); lowers.push(resolved!)
-            hasUpper.push(true); uppers.push(resolved!)
-          }
+          if resolved != none { lowers.push(resolved!); uppers.push(resolved!) }
         }
         _ -> { }
       }
     }
   }
-  let started = false
-  let currentUpper = 0
-  for index of 0..<hasLower.length {
-    if hasLower[index] { continue }
-    if !hasUpper[index] { return true }
-    if !started || uppers[index] > currentUpper { currentUpper = uppers[index]; started = true }
-  }
-  if !started { return false }
-  for pass of 0..<hasLower.length {
+  // Extend the covered prefix [minimum, next) until no pattern reaches it.
+  let next = minimum
+  while true {
     let extended = false
-    for index of 0..<hasLower.length {
-      if !hasLower[index] { continue }
-      connects := lowers[index] <= currentUpper || (currentUpper < 2147483647 && lowers[index] == currentUpper + 1)
-      if !connects { continue }
-      if !hasUpper[index] { return true }
-      if uppers[index] > currentUpper { currentUpper = uppers[index]; extended = true }
+    for index of 0..<lowers.length {
+      if lowers[index] > next || uppers[index] < next { continue }
+      if uppers[index] >= maximum { return true }
+      next = uppers[index] + 1L
+      extended = true
     }
-    if currentUpper == 2147483647 { return true }
     if !extended { return false }
   }
-  return currentUpper == 2147483647
+  return false
 }
 
-function integerPatternValue(expression: Expression): int | none {
+function integerPatternValue(expression: Expression): long | none {
   case expression {
-    literal: IntLiteral -> { return literal.value }
+    literal: IntLiteral -> { return long(literal.value) }
+    literal: LongLiteral -> { return literal.value }
     unary: UnaryExpression -> {
       if unary.operator == "-" {
         value := integerPatternValue(unary.operand)

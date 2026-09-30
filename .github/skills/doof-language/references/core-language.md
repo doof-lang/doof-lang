@@ -341,6 +341,9 @@ Rules:
 - Commas may appear before line endings, and the final arm may have a trailing comma.
 - Multiple patterns for one arm use `|`.
 - No destructuring or guard clauses in `case` arms.
+- Case expressions must be exhaustive: use `_`, or cover every enum variant,
+  `bool` value, union member, `Result` arm, or the full `byte`/`int`/`long`
+  range with values and ranges.
 - `return` and statement-level `try` are forbidden inside `case` expression arms.
 
 ## Operators

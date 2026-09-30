@@ -273,3 +273,36 @@ export function testBareTryIsRejectedInExpressionPosition(): none {
   valid := checked(prefix + "function run(): Result<int, string> {\ntry x := load()\ny := try! load()\nz := try? load()\nreturn Success(x + y + (z ?? 0))\n}")
   Assert.equal(valid.diagnostics.length, 0)
 }
+
+function caseDiagnostics(subject: string, arms: string): CheckResult {
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source: "function f(n: " + subject + "): int => case n { " + arms + " }" }]).analyze("/main.do")
+  Assert.equal(analysis.diagnostics.length, 0)
+  return createChecker(analysis, "/main.do").check("/main.do")
+}
+
+export function testIntegerRangeExhaustivenessUsesSubjectBounds(): none {
+  complete := [
+    ["byte", "0..127 -> 1, 128..255 -> 2"],
+    ["byte", "0 -> 1, 1.. -> 2"],
+    ["int", "..<0 -> 1, 0 -> 2, 1.. -> 3"],
+    ["int", "-2147483648..-1 -> 1, 0..2147483647 -> 2"],
+    ["long", "..<0L -> 1, 0L.. -> 2"],
+    ["long", "..<5000000001L -> 1, 5000000001L.. -> 2"],
+  ]
+  for entry of complete {
+    Assert.equal(caseDiagnostics(entry[0], entry[1]).diagnostics.length, 0)
+  }
+  incomplete := [
+    ["byte", "0..127 -> 1, 129..255 -> 2"],
+    ["byte", "1.. -> 1"],
+    ["int", "..<0 -> 1, 1.. -> 2"],
+    ["int", "..<2147483647 -> 1"],
+    ["long", "..<0L -> 1, 1L.. -> 2"],
+    ["long", "..<2147483648L -> 1, 2147483648L..5000000000L -> 2"],
+  ]
+  for entry of incomplete {
+    result := caseDiagnostics(entry[0], entry[1])
+    Assert.isTrue(result.diagnostics.length > 0)
+    Assert.stringContains(result.diagnostics[0].message, "Case expression must be exhaustive")
+  }
+}
