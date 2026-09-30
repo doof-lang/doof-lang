@@ -1268,6 +1268,34 @@ inline bool serial_is_number(const SerialValue& value) {
         || std::holds_alternative<double>(serial_storage(value));
 }
 
+// JSON has a single number kind, so integral targets accept any number whose
+// value is whole and inside the target range, whatever representation parsing
+// chose. Out-of-range or fractional values never truncate or wrap.
+inline bool serial_fits_integer(const SerialValue& value, int64_t minimum, int64_t maximum) {
+    const auto& storage = serial_storage(value);
+    if (const auto* result = std::get_if<int32_t>(&storage)) return *result >= minimum && *result <= maximum;
+    if (const auto* result = std::get_if<int64_t>(&storage)) return *result >= minimum && *result <= maximum;
+    double number = 0.0;
+    if (const auto* result = std::get_if<float>(&storage)) number = static_cast<double>(*result);
+    else if (const auto* result = std::get_if<double>(&storage)) number = *result;
+    else return false;
+    if (!std::isfinite(number) || std::trunc(number) != number) return false;
+    // Every whole double in [-2^63, 2^63) converts to int64_t exactly.
+    if (number < -9223372036854775808.0 || number >= 9223372036854775808.0) return false;
+    const auto whole = static_cast<int64_t>(number);
+    return whole >= minimum && whole <= maximum;
+}
+
+inline bool serial_fits_byte(const SerialValue& value) { return serial_fits_integer(value, 0, 255); }
+
+inline bool serial_fits_int(const SerialValue& value) {
+    return serial_fits_integer(value, std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max());
+}
+
+inline bool serial_fits_long(const SerialValue& value) {
+    return serial_fits_integer(value, std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max());
+}
+
 inline bool serial_is_integer(const SerialValue& value) {
     return std::holds_alternative<int32_t>(serial_storage(value)) ||
            std::holds_alternative<int64_t>(serial_storage(value));
@@ -1343,19 +1371,19 @@ inline bool serial_as_bool(const SerialValue& value) {
 }
 
 inline int32_t serial_as_int(const SerialValue& value) {
+    if (!serial_fits_int(value)) panic("Expected a whole number in int range");
     if (const auto* result = std::get_if<int32_t>(&serial_storage(value))) return *result;
     if (const auto* result = std::get_if<int64_t>(&serial_storage(value))) return static_cast<int32_t>(*result);
     if (const auto* result = std::get_if<float>(&serial_storage(value))) return static_cast<int32_t>(*result);
-    if (const auto* result = std::get_if<double>(&serial_storage(value))) return static_cast<int32_t>(*result);
-    panic("Expected number");
+    return static_cast<int32_t>(std::get<double>(serial_storage(value)));
 }
 
 inline int64_t serial_as_long(const SerialValue& value) {
+    if (!serial_fits_long(value)) panic("Expected a whole number in long range");
     if (const auto* result = std::get_if<int32_t>(&serial_storage(value))) return *result;
     if (const auto* result = std::get_if<int64_t>(&serial_storage(value))) return *result;
     if (const auto* result = std::get_if<float>(&serial_storage(value))) return static_cast<int64_t>(*result);
-    if (const auto* result = std::get_if<double>(&serial_storage(value))) return static_cast<int64_t>(*result);
-    panic("Expected number");
+    return static_cast<int64_t>(std::get<double>(serial_storage(value)));
 }
 
 inline float serial_as_float(const SerialValue& value) {
@@ -1399,6 +1427,10 @@ inline bool serial_is_lenient_boolean(const SerialValue& value) {
 inline bool serial_is_lenient_number(const SerialValue& value) {
     return serial_is_number(value) || serial_is_boolean(value);
 }
+
+inline bool serial_fits_byte_lenient(const SerialValue& value) { return serial_is_boolean(value) || serial_fits_byte(value); }
+inline bool serial_fits_int_lenient(const SerialValue& value) { return serial_is_boolean(value) || serial_fits_int(value); }
+inline bool serial_fits_long_lenient(const SerialValue& value) { return serial_is_boolean(value) || serial_fits_long(value); }
 
 inline bool serial_is_lenient_string(const SerialValue& value) {
     return serial_is_null(value) || serial_is_string(value) || serial_is_boolean(value) || serial_is_number(value);

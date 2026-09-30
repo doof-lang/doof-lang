@@ -144,8 +144,9 @@ function emitJsonAs(source: string, target: ResolvedType, resultCpp: string, suc
     primitive: PrimitiveType -> {
       if primitive.name == "bool" { condition = "doof::serial_is_boolean(_as_value)"; value = "doof::serial_as_bool(_as_value)" }
       else if primitive.name == "string" { condition = "doof::serial_is_string(_as_value)"; value = "doof::serial_as_string(_as_value)" }
-      else if primitive.name == "int" { condition = "doof::serial_is_number(_as_value)"; value = "doof::serial_as_int(_as_value)" }
-      else if primitive.name == "long" { condition = "doof::serial_is_number(_as_value)"; value = "doof::serial_as_long(_as_value)" }
+      else if primitive.name == "byte" { condition = "doof::serial_fits_byte(_as_value)"; value = "static_cast<uint8_t>(doof::serial_as_int(_as_value))" }
+      else if primitive.name == "int" { condition = "doof::serial_fits_int(_as_value)"; value = "doof::serial_as_int(_as_value)" }
+      else if primitive.name == "long" { condition = "doof::serial_fits_long(_as_value)"; value = "doof::serial_as_long(_as_value)" }
       else if primitive.name == "float" { condition = "doof::serial_is_number(_as_value)"; value = "doof::serial_as_float(_as_value)" }
       else if primitive.name == "double" { condition = "doof::serial_is_number(_as_value)"; value = "doof::serial_as_double(_as_value)" }
     }

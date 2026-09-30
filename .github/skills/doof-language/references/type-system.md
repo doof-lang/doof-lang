@@ -270,6 +270,12 @@ their payload members are intentionally not shared across the union.
 
 Narrow with `as` or `case` before comparing a SerialValue with a typed scalar or collection. Direct comparison with `none` tests absence.
 
+Numeric narrowing follows the value, not the parsed representation: `byte`,
+`int`, and `long` accept only whole numbers in range (`3.0` is an `int`, `1.5`
+and `5000000000` are not), while `float`/`double` accept any number. Nothing
+truncates or wraps, so `n: int -> ..., d: double -> ...` splits whole numbers
+from the rest without matching every numeric type.
+
 ```doof
 payload: SerialValue := { name: "Ada", scores: [1, 2, 3] }
 ```

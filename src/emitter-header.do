@@ -403,7 +403,7 @@ function emitEnumDeclaration(declaration: EnumDeclaration, context: EmitContext)
   }
   result = result + "}); }\n"
   valueRead := if declaration.backingKind == "string" then "doof::serial_as_string(value)" else "doof::serial_as_int(value)"
-  typeCheck := if declaration.backingKind == "string" then "doof::serial_is_string(value)" else "doof::serial_is_integer(value)"
+  typeCheck := if declaration.backingKind == "string" then "doof::serial_is_string(value)" else "doof::serial_fits_int(value)"
   expectedType := if declaration.backingKind == "string" then "string" else "integer"
   result = result + "inline doof::SerialValue " + declaration.name + "_toSerialValue(" + declaration.name + " value) { return doof::serial_value(" + declaration.name + "_value(value)); }\n"
   result = result + "inline doof::Result<" + declaration.name + ", std::string> " + declaration.name + "_fromSerialValue(const doof::SerialValue& value, bool) {\n"

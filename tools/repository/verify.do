@@ -10,7 +10,7 @@ export function runtimeChecks(root: string): Result<none, string> {
   try makeDirectory(work)
   binary := path(work, "scheduler")
   try command("c++", ["-std=c++17", "-O0", "-pthread", path(root, "runtime/doof_runtime.test.cpp"), "-o", binary])
-  for mode of ["limit", "nested", "first-completed", "actor", "actor-waits", "failures", "application", "release", "priority", "configuration", "collections", "nulls", "string-builder", "string-padding", "metrics"] { try command(binary, [mode]) }
+  for mode of ["limit", "nested", "first-completed", "actor", "actor-waits", "failures", "application", "release", "priority", "configuration", "collections", "nulls", "serial-integers", "string-builder", "string-padding", "metrics"] { try command(binary, [mode]) }
   observerBinary := path(work, "observer")
   try command("c++", ["-std=c++17", "-O0", "-pthread", "-DDOOF_OBSERVE=1", path(root, "runtime/doof_runtime.test.cpp"), "-o", observerBinary])
   environment: Map<string, string> := { DOOF_OBSERVE_NO_OPEN: "1", DOOF_OBSERVE_RETAIN_EVENTS: "2" }

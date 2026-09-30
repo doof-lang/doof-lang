@@ -107,3 +107,19 @@ export function testReadonlyEmissionOperatorsUsesExplicitNames(): none {
   Assert.stringContains(output, "::mapped::types::Choice")
   Assert.stringNotContains(output, "app_vendor_types_")
 }
+
+export function testSerialIntegralAsRequiresExactFit(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function small(value: SerialValue): int { b := value as byte else { return -1 }\nreturn int(b) }\n" +
+    "function whole(value: SerialValue): int { n := value as int else { return -1 }\nreturn n }\n" +
+    "function wide(value: SerialValue): long { n := value as long else { return -1L }\nreturn n }\n" +
+    "function any(value: SerialValue): double { n := value as double else { return -1.0 }\nreturn n }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::serial_fits_byte(_as_value)")
+  Assert.stringContains(source, "doof::serial_fits_int(_as_value)")
+  Assert.stringContains(source, "doof::serial_fits_long(_as_value)")
+  Assert.stringContains(source, "doof::serial_is_number(_as_value)")
+}

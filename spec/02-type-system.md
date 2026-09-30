@@ -102,6 +102,15 @@ row: readonly Map<string, SerialValue> := payload
 
 64-bit integers are preserved as `long` inside `SerialValue`, including values parsed from JSON that do not fit in `int`.
 
+JSON has one number kind, so numeric narrowing depends on the value, not on how
+it was parsed or stored. `as` and `case` patterns for `byte`, `int`, and `long`
+accept only whole numbers inside that type's range (`3.0` matches `int`, while
+`1.5` and `5000000000` do not); `float` and `double` accept any number. Values
+never truncate or wrap: a number that does not fit takes the `else` branch or
+falls through to the next `case` arm, so `n: int -> ..., d: double -> ...`
+separates whole numbers from everything else without listing every numeric
+type. Generated `fromSerialValue` applies the same rule to fields.
+
 Equality between a `SerialValue` and a typed scalar or collection requires
 explicit narrowing with `as` or `case`. For example, narrow a schema value
 with `schema := value as int else { return false }` before `schema == 4`.

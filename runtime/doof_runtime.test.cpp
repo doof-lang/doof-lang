@@ -342,6 +342,26 @@ void test_collection_indexing() {
     require(doof::array_at(values, 0, "runtime-test", 1) == 2, "ordinary array indexing changed");
 }
 
+void test_serial_integers() {
+    using doof::SerialValue;
+    require(doof::serial_fits_int(SerialValue{int32_t{3}}), "int storage did not fit int");
+    require(doof::serial_fits_int(SerialValue{3.0}), "whole double did not fit int");
+    require(doof::serial_fits_int(SerialValue{-2147483648.0}), "int minimum did not fit int");
+    require(!doof::serial_fits_int(SerialValue{1.5}), "fraction fitted int");
+    require(!doof::serial_fits_int(SerialValue{int64_t{2147483648LL}}), "int overflow fitted int");
+    require(!doof::serial_fits_int(SerialValue{std::nan("")}), "NaN fitted int");
+    require(!doof::serial_fits_int(SerialValue{std::string("3")}), "string fitted int");
+    require(doof::serial_fits_long(SerialValue{int64_t{5000000000LL}}), "long storage did not fit long");
+    require(doof::serial_fits_long(SerialValue{-9223372036854775808.0}), "long minimum did not fit long");
+    require(!doof::serial_fits_long(SerialValue{9223372036854775808.0}), "2^63 fitted long");
+    require(!doof::serial_fits_long(SerialValue{std::numeric_limits<double>::infinity()}), "infinity fitted long");
+    require(doof::serial_fits_byte(SerialValue{255.0}) && !doof::serial_fits_byte(SerialValue{int32_t{256}}), "byte range was not exact");
+    require(!doof::serial_fits_byte(SerialValue{int32_t{-1}}), "negative fitted byte");
+    require(doof::serial_as_int(SerialValue{3.0}) == 3, "whole double did not read as int");
+    require(doof::serial_as_long(SerialValue{int32_t{-4}}) == -4, "int storage did not read as long");
+    require(doof::serial_fits_int_lenient(SerialValue{true}) && !doof::serial_fits_int_lenient(SerialValue{0.5}), "lenient int fit changed");
+}
+
 void test_null_carriers() {
     require(doof::is_null(std::monostate{}), "stored unit was not recognized");
     require(doof::is_null(doof::SerialValue{}), "JSON null was not recognized");
@@ -717,6 +737,7 @@ int main(int argc, char** argv) {
     else if (mode == "configuration") test_configuration();
     else if (mode == "collections") test_collection_indexing();
     else if (mode == "nulls") test_null_carriers();
+    else if (mode == "serial-integers") test_serial_integers();
     else if (mode == "string-builder") test_string_builder();
     else if (mode == "string-padding") test_string_padding();
     else if (mode == "metrics") test_runtime_metrics();

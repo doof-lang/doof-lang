@@ -213,3 +213,16 @@ export function testReadonlyEmissionPatternsUsesExplicitNames(): none {
   Assert.stringContains(output, "std::shared_ptr<::mapped::types::Item>")
   Assert.stringNotContains(output, "app_vendor_types_")
 }
+
+export function testSerialIntegralPatternsRequireExactFit(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function inspect(value: SerialValue): int => case value { b: byte -> int(b), n: int -> n, l: long -> 2, d: double -> 3, _ -> 4 }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::serial_fits_byte(_case_subject)")
+  Assert.stringContains(source, "doof::serial_fits_int(_case_subject)")
+  Assert.stringContains(source, "doof::serial_fits_long(_case_subject)")
+  Assert.stringContains(source, "doof::serial_is_number(_case_subject)")
+}

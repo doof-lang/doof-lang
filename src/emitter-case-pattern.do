@@ -139,8 +139,9 @@ function emitJsonValuePattern(patternType: ResolvedType, subject: string, bindin
     primitive: PrimitiveType -> {
       if primitive.name == "bool" { condition = "doof::serial_is_boolean(" + subject + ")"; value = "doof::serial_as_bool(" + subject + ")" }
       else if primitive.name == "string" { condition = "doof::serial_is_string(" + subject + ")"; value = "doof::serial_as_string(" + subject + ")" }
-      else if primitive.name == "int" { condition = "doof::serial_is_number(" + subject + ")"; value = "doof::serial_as_int(" + subject + ")" }
-      else if primitive.name == "long" { condition = "doof::serial_is_number(" + subject + ")"; value = "doof::serial_as_long(" + subject + ")" }
+      else if primitive.name == "byte" { condition = "doof::serial_fits_byte(" + subject + ")"; value = "static_cast<uint8_t>(doof::serial_as_int(" + subject + "))" }
+      else if primitive.name == "int" { condition = "doof::serial_fits_int(" + subject + ")"; value = "doof::serial_as_int(" + subject + ")" }
+      else if primitive.name == "long" { condition = "doof::serial_fits_long(" + subject + ")"; value = "doof::serial_as_long(" + subject + ")" }
       else if primitive.name == "float" { condition = "doof::serial_is_number(" + subject + ")"; value = "doof::serial_as_float(" + subject + ")" }
       else if primitive.name == "double" { condition = "doof::serial_is_number(" + subject + ")"; value = "doof::serial_as_double(" + subject + ")" }
       else { panic("Unsupported primitive SerialValue case pattern " + primitive.name) }

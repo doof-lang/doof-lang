@@ -68,7 +68,7 @@ println(formatJsonValue(u.toSerialObject()))
 
 | Doof Type | JSON Representation |
 |-----------|-------------------|
-| `int`, `long` | JSON number |
+| `byte`, `int`, `long` | JSON number; decoding requires a whole number in range |
 | `float`, `double` | JSON number |
 | `string` | JSON string |
 | `char` | JSON string (single character) |
@@ -169,6 +169,15 @@ Field values are checked during deserialization:
 ```doof
 Point.fromSerialValue({ x: "not a number", y: 2.5 })
 // Failure: "Field \"x\" expected number but got string"
+```
+
+Integral fields (`byte`, `int`, `long`) accept any JSON number whose value is
+whole and inside the field type's range, so `3.0` decodes as `3`. Fractional or
+out-of-range values fail instead of truncating or wrapping:
+
+```doof
+Counter.fromSerialValue({ count: 1.5 })
+// Failure: "Field \"count\" expected int but got number"
 ```
 
 ### Unknown Fields

@@ -27,3 +27,10 @@ export function testReadonlyEmissionNativeAliasesUsesExplicitNames(): none {
   Assert.stringContains(output, "using Item = ::mapped::types::Item;")
   Assert.stringNotContains(output, "app_vendor_types_")
 }
+
+export function testIntBackedEnumDecodingRequiresWholeIntValues(): none {
+  result := compile([SourceFile { path: "/main.do", source: "enum Level { Low = 1, High = 2 }\nfunction decode(value: SerialValue): Result<Level, string> => Level.fromSerialValue(value)" }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  Assert.stringContains(result.emission!.modules[0].header, "if (!(doof::serial_fits_int(value)))")
+}

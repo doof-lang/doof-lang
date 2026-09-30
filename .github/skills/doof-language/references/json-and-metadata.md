@@ -30,7 +30,7 @@ Rules:
 
 | Doof Type | JSON |
 |-----------|------|
-| `int`, `long` | number |
+| `byte`, `int`, `long` | number (whole and in range when decoding) |
 | `float`, `double` | number |
 | `string`, `char` | string |
 | `bool` | boolean |
@@ -79,6 +79,8 @@ Rules:
 - Literal-valued fields are auto-filled; if present in JSON, value must match
 - Extra JSON fields are silently ignored
 - Type mismatches produce `Failure`
+- Integral fields accept whole numbers in range (`3.0` → `3`); `1.5` or an
+  out-of-range number fails instead of truncating or wrapping
 - Non-object SerialValue input produces `Failure`
 
 When `lenient` is `true`:

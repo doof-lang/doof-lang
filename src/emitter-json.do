@@ -124,7 +124,7 @@ function emitJsonConstFieldValidation(field: ClassField, name: string, failureTy
     }
     value: IntLiteral -> {
       let result = "    if (auto " + iterator + " = _object->find(\"" + name + "\"); " + iterator + " != _object->end()) {\n"
-      result = result + "        if (!doof::serial_is_number(" + iterator + "->second) || doof::serial_as_int(" + iterator + "->second) != " + string(value.value) + ") { return " + failureType + "{\"Field \\\"" + name + "\\\" must be " + string(value.value) + "\"}; }\n"
+      result = result + "        if (!doof::serial_fits_int(" + iterator + "->second) || doof::serial_as_int(" + iterator + "->second) != " + string(value.value) + ") { return " + failureType + "{\"Field \\\"" + name + "\\\" must be " + string(value.value) + "\"}; }\n"
       return result + "    }\n"
     }
     _ -> { return "" }
@@ -176,6 +176,9 @@ export function emitJsonTypeCheck(json: string, type_: ResolvedType, context: Em
       if primitive.name == "bool" { return "(_lenient ? doof::serial_is_lenient_boolean(" + json + ") : doof::serial_is_boolean(" + json + "))" }
       if primitive.name == "char" { return "doof::serial_is_char(" + json + ", _lenient)" }
       if primitive.name == "string" { return "(_lenient ? doof::serial_is_lenient_string(" + json + ") : doof::serial_is_string(" + json + "))" }
+      if primitive.name == "byte" || primitive.name == "int" || primitive.name == "long" {
+        return "(_lenient ? doof::serial_fits_" + primitive.name + "_lenient(" + json + ") : doof::serial_fits_" + primitive.name + "(" + json + "))"
+      }
       return "(_lenient ? doof::serial_is_lenient_number(" + json + ") : doof::serial_is_number(" + json + "))"
     }
     _: NoneType -> { return "doof::serial_is_null(" + json + ")" }
@@ -183,7 +186,7 @@ export function emitJsonTypeCheck(json: string, type_: ResolvedType, context: Em
     _: ClassType -> { return "doof::serial_is_object(" + json + ")" }
     enum_: EnumType -> {
       if context != none && enumBackingKind(enum_, context!) == "string" { return "doof::serial_is_string(" + json + ")" }
-      return "doof::serial_is_integer(" + json + ")"
+      return "doof::serial_fits_int(" + json + ")"
     }
     _: ArrayResolvedType -> { return "doof::serial_is_array(" + json + ")" }
     tuple: TupleResolvedType -> { return "doof::serial_is_array(" + json + ") && doof::serial_as_array(" + json + ")->size() == " + string(tuple.elements.length) }
@@ -265,6 +268,7 @@ export function jsonTypeName(type_: ResolvedType, context: EmitContext | none = 
     primitive: PrimitiveType -> {
       if primitive.name == "bool" { return "boolean" }
       if primitive.name == "string" || primitive.name == "char" { return "string" }
+      if primitive.name == "byte" || primitive.name == "int" || primitive.name == "long" { return primitive.name }
       return "number"
     }
     _: NoneType -> { return "null" }

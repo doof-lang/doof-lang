@@ -1,3 +1,4 @@
+import { parseJsonValue } from "std/json"
 import { ModuleNamespaceMapping } from "./emitter-names"
 import { noSourceLoader } from "./resolver"
 import { compileWithLoader } from "./compiler"
@@ -45,4 +46,55 @@ export function testReadonlyEmissionJsonUsesExplicitNames(): none {
   for module of result.emission!.modules { if module.modulePath == "/main.do" { output = module.header + module.source } }
   Assert.stringContains(output, "::mapped::types::Item")
   Assert.stringNotContains(output, "app_vendor_types_")
+}
+
+export function testIntegralJsonFieldsValidateExactFit(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Data { small: byte\ncount: int\ntotal: long\nratio: double }\nfunction decode(input: SerialValue): Result<Data, string> => Data.fromSerialValue(input)",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "doof::serial_fits_byte_lenient(")
+  Assert.stringContains(source, "doof::serial_fits_int(")
+  Assert.stringContains(source, "doof::serial_fits_long(")
+  Assert.stringContains(source, "expected int but got")
+  Assert.stringContains(source, "expected number but got")
+}
+
+class JsonExactBox { count: int }
+class JsonExactWide { total: long }
+
+function jsonExactCase(text: string): string {
+  value := parseJsonValue(text) else { return "parse error" }
+  return case value { n: int -> "int ${n}", l: long -> "long ${l}", d: double -> "double ${d}", _ -> "other" }
+}
+function jsonExactAs(text: string): string {
+  value := parseJsonValue(text) else { return "parse error" }
+  n := value as int else { return "not int" }
+  return "int ${n}"
+}
+function jsonExactDecode(text: string): string {
+  value := parseJsonValue(text) else { return "parse error" }
+  box := JsonExactBox.fromSerialValue(value) else error { return error }
+  return "count ${box.count}"
+}
+function jsonExactDecodeWide(text: string): string {
+  value := parseJsonValue(text) else { return "parse error" }
+  box := JsonExactWide.fromSerialValue(value) else error { return error }
+  return "total ${box.total}"
+}
+
+export function testJsonIntegralNarrowingNeverTruncatesOrWraps(): none {
+  Assert.equal(jsonExactCase("3"), "int 3")
+  Assert.equal(jsonExactCase("3.0"), "int 3")
+  Assert.equal(jsonExactCase("1.5"), "double 1.5")
+  Assert.equal(jsonExactCase("5000000000"), "long 5000000000")
+  Assert.equal(jsonExactAs("3.0"), "int 3")
+  Assert.equal(jsonExactAs("1.5"), "not int")
+  Assert.equal(jsonExactAs("5000000000"), "not int")
+  Assert.equal(jsonExactDecode("{\"count\": 3.0}"), "count 3")
+  Assert.equal(jsonExactDecode("{\"count\": 1.5}"), "Field \"count\" expected int but got number")
+  Assert.equal(jsonExactDecode("{\"count\": 5000000000}"), "Field \"count\" expected int but got number")
+  Assert.equal(jsonExactDecodeWide("{\"total\": 5000000000}"), "total 5000000000")
 }
