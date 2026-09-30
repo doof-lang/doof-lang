@@ -58,7 +58,7 @@ Current v1 restrictions:
 | none | shallow immutable field; mutable interiors remain usable |
 | `let` | reassignable field |
 | `readonly` | deeply immutable field |
-| literal value after `:` | compile-time constant, for example `kind: "circle"` or `version: 1` |
+| literal value after `:` | compile-time constant, for example `kind: "circle"`, `version: 1`, or enum variant `kind: ShapeKind.Circle`; JSON decoding rejects a different value |
 | `private` | file-scoped visibility |
 
 Assigning a bare field after construction is an error. Bare collection fields

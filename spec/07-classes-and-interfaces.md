@@ -88,7 +88,13 @@ type Result = Success | Failure
 ```
 
 The value must be a single non-interpolated string, character, boolean, or
-numeric literal, optionally negated (`version: -1`). A literal-valued field
+numeric literal, optionally negated (`version: -1`), or an enum variant
+(`kind: ShapeKind.Circle`; see
+[Enums as Union Discriminators](02-type-system.md#enums-as-union-discriminators)).
+A dotted value that is followed by `=`, `<`, `|`, or `[`, or that follows a
+field modifier, is read as a type annotation instead. JSON decoding accepts
+an absent literal-valued field and rejects a present value that differs from
+the declared one. A literal-valued field
 declares exactly one name, cannot be `static`, and cannot be combined with
 `let`, `readonly`, `weak`, or a separate default value. It may carry a
 description (`kind "Wire discriminator.": "circle"`). Construction fills it

@@ -98,3 +98,18 @@ export function testJsonIntegralNarrowingNeverTruncatesOrWraps(): none {
   Assert.equal(jsonExactDecode("{\"count\": 5000000000}"), "Field \"count\" expected int but got number")
   Assert.equal(jsonExactDecodeWide("{\"total\": 5000000000}"), "total 5000000000")
 }
+
+export function testLiteralFieldDecodingValidatesEnumsAndOtherLiterals(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "enum Kind { Circle, Square }\nenum Wire { Small = \"small\" }\n" +
+    "class Shape { kind: Kind.Circle\nsize: Wire.Small\nversion: -2\nenabled: true\nradius: double }\n" +
+    "function decode(input: SerialValue): Result<Shape, string> => Shape.fromSerialValue(input)",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "Field \\\"kind\\\" must be Kind.Circle")
+  Assert.stringContains(source, "Field \\\"size\\\" must be Wire.Small")
+  Assert.stringContains(source, "Field \\\"version\\\" must be -2")
+  Assert.stringContains(source, "Field \\\"enabled\\\" must be true")
+}

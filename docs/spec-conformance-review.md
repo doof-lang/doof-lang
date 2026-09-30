@@ -46,12 +46,18 @@ recommends the new spelling, and `checker.test.do`'s helper now reports
 parse diagnostics. The never-implemented `kind := "circle"` spelling was
 removed from the spec rather than added.
 
-### A2. Enum-valued discriminator fields — **Implement** (after A1)
+### A2. Enum-valued discriminator fields — **Fixed**
 
-`kind: ShapeKind.Circle` doesn't parse (ch. 2 "Enums as Union
-Discriminators"). A1 deliberately left this out: in type position
-`ShapeKind.Circle` is ambiguous with a namespace-qualified type such as
-`math.Vector`, so resolving it needs checker support, not just parsing.
+`kind: ShapeKind.Circle` now declares a literal-valued field. Qualified type
+names don't exist in Doof today, so a dotted name after a field's `:` is read
+as an enum member unless it continues like a type (`=`, `<`, `|`, `[`) or
+follows a modifier. The checker rejects dotted values that aren't enum
+variants, such as static fields. If namespace-qualified types are added later
+(see A30), this rule needs revisiting.
+
+JSON decoding previously validated only string and int literal fields; enum,
+bool, negative and other literal fields accepted any value. They are now
+decoded with the field's type and compared against the declared constant.
 
 ### A3. Positional literals don't construct classes — **Decide**
 
@@ -236,6 +242,16 @@ compiler rejects it ("too few arguments"). Ch. 12 shows this exact example.
 declarations emit a warning with a replacement. (Class-field `const` now warns;
 see A1.)
 
+### A30. Namespace-qualified enums and types — **Decide**
+
+With `import * as m from "./m"`:
+- `m.Kind.B` fails in any expression with "Enum variant 'B' cannot be accessed through a value".
+- `v: m.Vector` doesn't parse as a type annotation.
+
+Ch. 11 shows namespace imports only for values and construction, so the spec
+doesn't clearly promise either. If qualified types are wanted, revisit A2's
+parser rule at the same time.
+
 ---
 
 ## B. Spec text that contradicts itself or the compiler (doc fixes)
@@ -270,7 +286,7 @@ see A1.)
 
 ## Suggested order
 
-1. **A2, A27, A28** (enum discriminators and discriminated-union JSON), now that A1 is done, plus the remaining checker test helpers.
+1. **A27, A28** (discriminated-union JSON), now that A1 and A2 are done, plus the remaining checker test helpers.
 2. **Chapter B doc fixes.** Cheap, and they remove misleading examples.
 3. **Common gaps: A5, A6, A8, A9, A10, A12, A13, A29.**
-4. **Needs a decision first: A3, A7, A14, A16, A23, A26.**
+4. **Needs a decision first: A3, A7, A14, A16, A23, A26, A30.**

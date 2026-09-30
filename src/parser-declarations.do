@@ -9,7 +9,7 @@ import {
   FunctionDeclaration, ImportDeclaration, NamespaceImport, NamedImport,
   TypeAliasDeclaration, ClassDeclaration, InterfaceDeclaration, EnumDeclaration,
   ExportList, MockImportDirective, MockImportMapping, YieldBlockExpression, TypeParameterConstraint,
-  StringLiteral, UnaryExpression,
+  StringLiteral, UnaryExpression, MemberExpression,
 } from "./ast"
 import type { Statement, Expression, TypeAnnotation, ImportSpecifier, SourceSpan } from "./ast"
 
@@ -341,8 +341,10 @@ function parseClassField(parser: Parser, static_: bool, private_: bool): ClassFi
     names.push(parser.text(parser.expect(TokenType.Identifier)))
     descriptions.push(parseDescription(parser))
   }
-  if parser.check(TokenType.Colon) && startsFieldLiteral(parser, 1) {
-    return parseLiteralValuedField(parser, start, names, descriptions, static_, private_, const_ || let_ || readonly_ || weak_)
+  modified := const_ || let_ || readonly_ || weak_
+  // A dotted name after a modifier is a type position, never an enum-member value.
+  if parser.check(TokenType.Colon) && startsFieldLiteral(parser, 1) && !(modified && parser.peek(1).kind == TokenType.Identifier) {
+    return parseLiteralValuedField(parser, start, names, descriptions, static_, private_, modified)
   }
   typeValue := parser.parseOptionalType()
   let defaultValue: Expression | none = none
@@ -357,6 +359,17 @@ function parseClassField(parser: Parser, static_: bool, private_: bool): ClassFi
 // tokens, so the literal and ordinary type annotations cannot be confused.
 function startsFieldLiteral(parser: Parser, offset: int): bool {
   kind := parser.peek(offset).kind
+  // Type annotations have no dotted names, so `Enum.Variant` (or a
+  // namespace-qualified `ns.Enum.Variant`) can only be an enum-member value.
+  // Anything that continues like a type (a default, generic arguments, a union,
+  // or an array suffix) stays on the type path.
+  if kind == TokenType.Identifier {
+    let next = offset + 1
+    if parser.peek(next).kind != TokenType.Dot { return false }
+    while parser.peek(next).kind == TokenType.Dot && parser.peek(next + 1).kind == TokenType.Identifier { next = next + 2 }
+    after := parser.peek(next).kind
+    return after != TokenType.Dot && after != TokenType.Equal && after != TokenType.Less && after != TokenType.Pipe && after != TokenType.LeftBracket
+  }
   if kind == TokenType.Minus {
     next := parser.peek(offset + 1).kind
     return next == TokenType.IntLiteral || next == TokenType.LongLiteral || next == TokenType.FloatLiteral || next == TokenType.DoubleLiteral
@@ -373,7 +386,7 @@ function parseLiteralValuedField(parser: Parser, start: AstLocation, names: stri
   if names.length != 1 { parser.fail("A literal-valued field declares exactly one name") }
   parser.expect(TokenType.Colon)
   value := parser.parseUnary()
-  if !isFieldLiteral(value) { parser.fail("Literal-valued fields require a single literal value, such as kind: \"circle\"") }
+  if !isFieldLiteral(value) { parser.fail("Literal-valued fields require a single literal or enum member, such as kind: \"circle\" or kind: Shape.Circle") }
   if parser.check(TokenType.Equal) { parser.fail("Literal-valued fields cannot also declare a default value") }
   parser.consumeSemicolon()
   return ClassField {
@@ -384,6 +397,7 @@ function parseLiteralValuedField(parser: Parser, start: AstLocation, names: stri
 
 function isFieldLiteral(expression: Expression): bool {
   case expression {
+    member: MemberExpression -> { return !member.optional && !member.force && isQualifiedName(member.object) }
     string_: StringLiteral -> { return string_.interpolations.length == 0 }
     unary: UnaryExpression -> {
       return unary.operator == "-" && (unary.operand.kind == "int-literal" || unary.operand.kind == "long-literal" || unary.operand.kind == "float-literal" || unary.operand.kind == "double-literal")
@@ -625,4 +639,12 @@ function parseCppQualifiedName(parser: Parser): string {
     result = result + "::" + parser.text(parser.expect(TokenType.Identifier))
   }
   return result
+}
+
+function isQualifiedName(expression: Expression): bool {
+  case expression {
+    _: Identifier -> { return true }
+    member: MemberExpression -> { return !member.optional && !member.force && isQualifiedName(member.object) }
+    _ -> { return false }
+  }
 }

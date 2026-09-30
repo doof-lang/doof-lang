@@ -5,7 +5,11 @@
 
 import { carrierOf } from "./emitter-carriers"
 import { emitCarrierAbsence } from "./emitter-carrier-values"
-import { ClassDeclaration, ClassField, EnumDeclaration, ExportDeclaration, IntLiteral, InterfaceDeclaration, NoneLiteral, Statement, StringLiteral } from "./ast"
+import {
+  BoolLiteral, CharLiteral, ClassDeclaration, ClassField, DoubleLiteral, EnumDeclaration, ExportDeclaration, Expression, FloatLiteral, Identifier,
+  IntLiteral, InterfaceDeclaration, LongLiteral, MemberExpression, NoneLiteral, Statement, StringLiteral, UnaryExpression,
+} from "./ast"
+import { quote } from "./emitter-expr-literals"
 import { ArrayResolvedType, ClassType, EnumType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, ResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -92,7 +96,7 @@ function emitFromJsonValue(owner: ClassDeclaration, context: EmitContext): strin
   for field of owner.fields {
     if field.static_ { continue }
     for name of field.names {
-      if field.const_ { result = result + emitJsonConstFieldValidation(field, name, failureType) }
+      if field.const_ { result = result + emitJsonConstFieldValidation(field, name, context, failureType) }
       else { result = result + emitJsonFieldRead(field, name, context, failureType) }
     }
   }
@@ -113,7 +117,7 @@ function emitFromJsonValue(owner: ClassDeclaration, context: EmitContext): strin
     "    }\n}\n"
 }
 
-function emitJsonConstFieldValidation(field: ClassField, name: string, failureType: string): string {
+function emitJsonConstFieldValidation(field: ClassField, name: string, context: EmitContext, failureType: string): string {
   if field.defaultValue == none { return "" }
   iterator := "_iterator_" + cppIdentifier(name)
   case field.defaultValue! {
@@ -127,9 +131,33 @@ function emitJsonConstFieldValidation(field: ClassField, name: string, failureTy
       result = result + "        if (!doof::serial_fits_int(" + iterator + "->second) || doof::serial_as_int(" + iterator + "->second) != " + string(value.value) + ") { return " + failureType + "{\"Field \\\"" + name + "\\\" must be " + string(value.value) + "\"}; }\n"
       return result + "    }\n"
     }
-    _ -> { return "" }
+    _ -> { }
   }
-  return ""
+  // Remaining literal and enum-member values decode with the field's own type
+  // and compare against the constant; a mismatch fails instead of being ignored.
+  if field.resolvedType == none { return "" }
+  type_ := field.resolvedType!
+  if type_.kind != "primitive" && type_.kind != "enum" { return "" }
+  json := iterator + "->second"
+  message := quote("Field \"" + name + "\" must be " + constFieldDisplay(field.defaultValue!))
+  let result = "    if (auto " + iterator + " = _object->find(\"" + name + "\"); " + iterator + " != _object->end()) {\n"
+  result = result + "        if (!(" + emitJsonTypeCheck(json, type_, context) + ") || " + emitJsonRead(json, type_, context) + " != " + emitExpression(field.defaultValue!, context, type_) + ") { return " + failureType + "{" + message + "}; }\n"
+  return result + "    }\n"
+}
+
+function constFieldDisplay(value: Expression): string {
+  case value {
+    member: MemberExpression -> { return constFieldDisplay(member.object) + "." + member.property }
+    identifier: Identifier -> { return identifier.name }
+    unary: UnaryExpression -> { return unary.operator + constFieldDisplay(unary.operand) }
+    integer: IntLiteral -> { return string(integer.value) }
+    long_: LongLiteral -> { return string(long_.value) }
+    double_: DoubleLiteral -> { return double_.raw }
+    float_: FloatLiteral -> { return float_.raw }
+    bool_: BoolLiteral -> { return string(bool_.value) }
+    char_: CharLiteral -> { return "'" + string(char_.value) + "'" }
+    _ -> { return "its declared value" }
+  }
 }
 
 function emitJsonFieldRead(field: ClassField, name: string, context: EmitContext, failureType: string): string {

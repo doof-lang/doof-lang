@@ -188,3 +188,18 @@ export function testConstClassFieldsAreDeprecated(): none {
   current := checked("class Circle { kind: \"circle\"\nradius: double }")
   Assert.equal(current.diagnostics.length, 0)
 }
+
+export function testEnumLiteralFieldsDiscriminateUnions(): none {
+  result := checked(
+    "enum ShapeKind { Circle, Square }\nclass Circle { kind: ShapeKind.Circle\nradius: double }\nclass Square { kind: ShapeKind.Square\nside: double }\ntype Shape = Circle | Square\n" +
+    "function area(shape: Shape): double => case shape { c: Circle -> c.radius, s: Square -> s.side }\n" +
+    "function main(): none { let shape: Shape = { kind: .Square, side: 2.0 }\ncircle := Circle { radius: 1.0 }\nsame: bool := circle.kind == ShapeKind.Circle\nprintln(area(shape)) }")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  staticField := checked("class Holder { static value = 1 }\nclass Bad { kind: Holder.value }")
+  Assert.equal(staticField.diagnostics.length, 1)
+  Assert.stringContains(staticField.diagnostics[0].message, "Literal-valued field \"kind\" must be a literal or an enum variant")
+  missing := checked("enum Kind { A }\nclass Bad { kind: Kind.Missing }")
+  Assert.isTrue(missing.diagnostics.length > 0)
+  Assert.stringContains(missing.diagnostics[0].message, "has no member \"Missing\"")
+}

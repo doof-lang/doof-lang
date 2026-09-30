@@ -1698,8 +1698,8 @@ export function testRejectsInvalidLiteralValuedFields(): none {
   assertFieldParseError("class Bad { let kind: \"a\" }", "Literal-valued fields cannot use 'let', 'readonly', 'const', or 'weak'")
   assertFieldParseError("class Bad { static kind: \"a\" }", "Literal-valued fields cannot be static; use a static field with a default value")
   assertFieldParseError("class Bad { a, b: \"a\" }", "A literal-valued field declares exactly one name")
-  assertFieldParseError("class Bad { kind: \"a\${1}\" }", "Literal-valued fields require a single literal value, such as kind: \"circle\"")
-  assertFieldParseError("class Bad { kind: \"a\".length }", "Literal-valued fields require a single literal value, such as kind: \"circle\"")
+  assertFieldParseError("class Bad { kind: \"a\${1}\" }", "Literal-valued fields require a single literal or enum member, such as kind: \"circle\" or kind: Shape.Circle")
+  assertFieldParseError("class Bad { kind: \"a\".length }", "Literal-valued fields require a single literal or enum member, such as kind: \"circle\" or kind: Shape.Circle")
   assertFieldParseError("class Bad { kind: \"a\" = \"b\" }", "Literal-valued fields cannot also declare a default value")
 }
 
@@ -1711,4 +1711,31 @@ function assertFieldParseError(source: string, message: string): none {
     _ -> { panic("expected parse failure for: " + source) }
   }
   Assert.equal(parser.errorMessage, message)
+}
+
+export function testParsesEnumMemberLiteralFields(): none {
+  case first("class Circle { kind: ShapeKind.Circle\ntag: shapes.Kind.Round; radius: double }") {
+    class_: ClassDeclaration -> {
+      Assert.equal(class_.fields.length, 3)
+      Assert.equal(class_.fields[0].const_, true)
+      case class_.fields[0].defaultValue! {
+        member: MemberExpression -> { Assert.equal(member.property, "Circle") }
+        _ -> { panic("expected enum member literal field") }
+      }
+      Assert.equal(class_.fields[1].const_, true)
+      Assert.equal(class_.fields[2].const_, false)
+    }
+    _ -> { panic("expected class declaration") }
+  }
+  assertFieldParseError("class Bad { kind: Kind.values() }", "Literal-valued fields require a single literal or enum member, such as kind: \"circle\" or kind: Shape.Circle")
+  // Dotted names that continue like a type, or follow a modifier, stay on the type path.
+  for source of ["class Bad { let kind: Kind.Circle }", "class Bad { kind: Kind.Circle = Kind.Circle }", "class Bad { kind: Kind.Circle | none }"] {
+    parser := Parser { source }
+    result := catchPanic(=> parser.parse())
+    case result {
+      _: Failure<string> -> { }
+      _ -> { panic("expected parse failure for: " + source) }
+    }
+    Assert.isFalse(parser.errorMessage.contains("Literal-valued"))
+  }
 }

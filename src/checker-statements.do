@@ -449,6 +449,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
       fieldType = checkExpression(state, field.defaultValue!, classScope, none)
       state.allowsCaller = previousAllowsCaller
     }
+    validateEnumLiteralField(state, field, fieldType)
     if field.readonly_ || field.const_ { fieldType = applyDeepReadonly(fieldType) }
     field.resolvedType = optionalResolvedType(if field.weak_ then weakType(fieldType) else fieldType)
     if field.weak_ && !isWeakReferenceTarget(fieldType) {
@@ -807,6 +808,30 @@ function enumConstantInt(expression: Expression): long | none {
     _ -> { return none }
   }
   return none
+}
+
+// The parser accepts any dotted name as a literal-valued field; only an enum
+// variant is a compile-time constant, so static fields and namespaces are rejected.
+function validateEnumLiteralField(state: CheckerState, field: ClassField, fieldType: ResolvedType): none {
+  if !field.const_ || field.legacyConstSpan != none || field.defaultValue == none || field.names.length == 0 || fieldType.kind == "unknown" { return }
+  case field.defaultValue! {
+    member: MemberExpression -> {
+      case fieldType {
+        enum_: EnumType -> {
+          declaration := declarationFor(state.result, enum_.symbol)
+          if declaration != none {
+            case declaration! {
+              owner: EnumDeclaration -> { for variant of owner.variants { if variant.name == member.property { return } } }
+              _ -> { }
+            }
+          }
+        }
+        _ -> { }
+      }
+      typeError(state, "Literal-valued field \"" + field.names[0] + "\" must be a literal or an enum variant such as Kind.Variant", member.span)
+    }
+    _ -> { }
+  }
 }
 
 export function validateInterfaces(state: CheckerState, module: ModuleInfo): none {

@@ -73,3 +73,7 @@ export function testOptionalChainingNative(): none {
 export function testLoopThenAndCoalescingNative(): none {
   runNativeFixture("loop-then-and-coalescing")
 }
+
+export function testLiteralFieldDiscriminatorsNative(): none {
+  runNativeFixture("literal-field-discriminators")
+}
