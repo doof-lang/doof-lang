@@ -43,7 +43,7 @@ import { validateStructLayout } from "./checker-struct-layout"
 import { checkedCaseSubjectType, casePatternsExhaustive, checkCasePatterns, checkExpression, addClassMethods, nonNoneType, hasNoneMember } from "./checker-expressions"
 import { checkOmittedCollectionLiteral } from "./checker-literals"
 import { resolveType, memberType } from "./checker-resolution"
-import { deprecatedClassMethodFunction, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
+import { deprecatedClassMethodFunction, deprecatedConstField, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
 import { decorateAnnotationWithResolved, blockContainsLoopExit, containsString, optionalResolvedType, resolveAnnotation, declare, declareShadowing, lookup, returnScope, valueYieldScope, iterableElement, symbolFor, declarationFor } from "./checker-symbols"
 import { symbolSpan, addImplementedInterfaceType, classSatisfiesConcreteInterface, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
@@ -436,6 +436,7 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
   for typeParam of class_.typeParams { ownerTypeArgs.push(typeParameter(typeParam)) }
   owner := classType(class_.name, symbol!, ownerTypeArgs)
   for field of class_.fields {
+    deprecatedConstField(state, field)
     for fieldName of field.names {
       if generatedMemberName(fieldName) { typeError(state, "Member name \"" + fieldName + "\" is reserved for compiler-generated reflection and JSON support", field.span) }
     }

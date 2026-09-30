@@ -156,7 +156,7 @@ export function testDeclaresPublicAndPrivateModuleConstantsBeforeClassFieldDefau
 
 export function testEmitsAssignableDefaultConstructedStructStaticStorage(): none {
   result := emit(
-    "struct Vec3 { const kind = \"vec3\"\nx: double\ny: double\nz: double\n" +
+    "struct Vec3 { kind: \"vec3\"\nx: double\ny: double\nz: double\n" +
     "static zero = Vec3 { x: 0.0, y: 0.0, z: 0.0 } }\n" +
     "struct Defaults { value: int = 0\nstatic zero = Defaults {} }\n" +
     "readonly origin = Vec3 { x: 0.0, y: 0.0, z: 0.0 }\n" +
@@ -1500,7 +1500,7 @@ export function testEmitsStringMapAutomaticJsonTypes(): none {
 }
 
 export function testEmitsDiscriminatedInterfaceJsonDeserialization(): none {
-  result := emit("interface Shape { area(): double }\nclass Circle implements Shape { const kind = \"circle\"\nradius: double\narea(): double => radius * radius }\nclass Rect implements Shape { const kind = \"rect\"\nwidth: double\nheight: double\narea(): double => width * height }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value, true)")
+  result := emit("interface Shape { area(): double }\nclass Circle implements Shape { kind: \"circle\"\nradius: double\narea(): double => radius * radius }\nclass Rect implements Shape { kind: \"rect\"\nwidth: double\nheight: double\narea(): double => width * height }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value, true)")
   Assert.stringContains(result.header, "doof::Result<Shape, std::string> Shape_fromSerialValue(const doof::SerialValue& _json, bool _lenient);")
   Assert.stringContains(result.source, "Shape_fromSerialValue(value, true)")
   Assert.stringContains(result.source, "_object->find(\"kind\")")

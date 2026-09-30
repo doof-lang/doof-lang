@@ -69,7 +69,9 @@ field `const` are mutually exclusive.
 
 ### Literal-Valued Fields
 
-Literal-valued fields enable discriminated unions and structural typing. The older `kind := "Success"` spelling is deprecated and remains accepted temporarily with a warning:
+Literal-valued fields enable discriminated unions and structural typing. A
+literal after the field name's `:` makes the field a compile-time constant
+whose type is the literal's type:
 
 ```doof
 class Success {
@@ -84,6 +86,17 @@ class Failure {
 
 type Result = Success | Failure
 ```
+
+The value must be a single non-interpolated string, character, boolean, or
+numeric literal, optionally negated (`version: -1`). A literal-valued field
+declares exactly one name, cannot be `static`, and cannot be combined with
+`let`, `readonly`, `weak`, or a separate default value. It may carry a
+description (`kind "Wire discriminator.": "circle"`). Construction fills it
+automatically, it cannot be assigned, and supplying a different value is an
+error.
+
+The older `const kind = "Success"` field spelling is deprecated. It remains
+accepted temporarily with a warning and has the same meaning.
 
 ### Methods
 

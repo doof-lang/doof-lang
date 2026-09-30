@@ -37,23 +37,21 @@ Items are ordered by how much they affect users.
 
 ## A. The compiler lacks or rejects documented features
 
-### A1. Literal-valued fields — **Decide (high priority)**
+### A1. Literal-valued fields — **Fixed**
 
-- **Spec** (ch. 2, 7, 12): `kind: "Success"` is the canonical form. `kind := "Success"` is deprecated. Field `const` is deprecated.
-- **Compiler**:
-  - Only `const kind = "circle"` parses, and it gives no deprecation warning.
-  - `kind: "a"` fails with "Expected a type name". `kind := "a"` also fails.
-  - JSON diagnostics still recommend `const kind = "variant"`.
-- **Test gap**: `checker.test.do:188` asserts that `kind: "point"` is valid. It only passes because its `checked()` helper doesn't surface parse errors.
-
-Discriminated unions are central to the spec, so this gap affects many examples.
-
-**Recommendation**: implement `kind: "literal"`, since it matches the spec and the literal type sits in type position. Then warn on field `const`, update the JSON diagnostic text, and make the checker test helpers fail on parse diagnostics.
+`kind: "circle"` (and other string, char, boolean or numeric literals) now
+parses as a literal-valued field with the same meaning as the legacy
+`const kind = "circle"`, which now warns. The JSON interface diagnostic
+recommends the new spelling, and `checker.test.do`'s helper now reports
+parse diagnostics. The never-implemented `kind := "circle"` spelling was
+removed from the spec rather than added.
 
 ### A2. Enum-valued discriminator fields — **Implement** (after A1)
 
 `kind: ShapeKind.Circle` doesn't parse (ch. 2 "Enums as Union
-Discriminators"). This belongs in the same literal-type work as A1.
+Discriminators"). A1 deliberately left this out: in type position
+`ShapeKind.Circle` is ambiguous with a namespace-qualified type such as
+`math.Vector`, so resolving it needs checker support, not just parsing.
 
 ### A3. Positional literals don't construct classes — **Decide**
 
@@ -218,6 +216,26 @@ exports an interface for consumers to implement can't be checked on its own.
 **Recommendation**: emit nothing (or a warning) when no value of the
 interface type is reachable, and document the rule in ch. 7.
 
+### A27. Named union alias deserialization — **Implement**
+
+`type Shape = Circle | Rect` followed by `Shape.fromSerialValue(...)` fails
+with "Type 'Shape' cannot be used as a value", even when both classes share a
+literal discriminator. Ch. 12 "Named Union Alias Deserialization" documents it.
+Interface deserialization with the same classes works.
+
+### A28. Generic `T.fromSerialValue(json)` emits invalid C++ — **Implement**
+
+Inside `function decode<T: Serializable>(json: SerialValue)`,
+`T.fromSerialValue(json)` passes the checker, but the specialization calls
+`User::fromSerialValue(json)` without the `lenient` argument, and the C++
+compiler rejects it ("too few arguments"). Ch. 12 shows this exact example.
+
+### A29. Deprecated module `const` gives no warning — **Implement**
+
+`const X = 1` at module scope is accepted silently. Ch. 3 says legacy `const`
+declarations emit a warning with a replacement. (Class-field `const` now warns;
+see A1.)
+
 ---
 
 ## B. Spec text that contradicts itself or the compiler (doc fixes)
@@ -246,13 +264,13 @@ interface type is reachable, and document the rule in ch. 7.
 
 ## C. Test infrastructure
 
-- **Parse errors can hide.** The `checked()` helpers in several `checker*.test.do` files build through `createAnalyzer(...).analyze(...)`, and some don't assert on parse diagnostics. `checker.test.do:188` passes even though its source doesn't parse. Make every checker helper fail on parse diagnostics, as `checker-statements.test.do` already does.
+- **Parse errors can hide.** The `checked()` helpers in several `checker*.test.do` files build through `createAnalyzer(...).analyze(...)`, and some don't assert on parse diagnostics. `checker.test.do:188` passed even though its source didn't parse. `checker.test.do` now includes analysis diagnostics; `checker-async.test.do`, `checker-symbols.test.do` and `checker-validation.test.do` still don't, and should get the same treatment.
 - **Emitter bugs need native builds to show up.** The fixed emitter bugs were only visible when the generated C++ was compiled. The `runNativeFixture` harness in `emitter-carrier-native.test.do` catches this class of bug; adding a native fixture per statement and expression family would reduce future regressions.
 - **Spec examples aren't compile-checked.** A `tools/` check that extracts fenced `doof` examples marked as valid and compile-checks them would stop the spec and compiler drifting apart. Many spec blocks are deliberately partial, so this needs an opt-in marker such as `doof check` fences.
 
 ## Suggested order
 
-1. **A1 and A2** (literal and enum fields), plus the checker test helper fix. Discriminated unions depend on them.
+1. **A2, A27, A28** (enum discriminators and discriminated-union JSON), now that A1 is done, plus the remaining checker test helpers.
 2. **Chapter B doc fixes.** Cheap, and they remove misleading examples.
-3. **Common gaps: A5, A6, A8, A9, A10, A12, A13.**
+3. **Common gaps: A5, A6, A8, A9, A10, A12, A13, A29.**
 4. **Needs a decision first: A3, A7, A14, A16, A23, A26.**

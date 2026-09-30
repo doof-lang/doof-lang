@@ -91,7 +91,7 @@ export function testNoneCarrierShorthandObject(): none {
 
 export function testEmissionCleanupContextualFieldsAndJsonObjects(): none {
   result := compile([SourceFile { path: "/main.do", source:
-    "class Box { const kind = \"box\"\nvalue: int = 7\nsource: SourceLocation = @caller }\n" +
+    "class Box { kind: \"box\"\nvalue: int = 7\nsource: SourceLocation = @caller }\n" +
     "function make(): Box => {}\nfunction json(): SerialValue => {}",
   }], "/main.do")
   Assert.equal(hasErrorDiagnostics(result.diagnostics), false)

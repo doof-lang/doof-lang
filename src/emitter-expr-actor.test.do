@@ -33,7 +33,7 @@ export function testRestrictedAsyncYieldRuntime(): none {
 
 export function testSecondConsolidationActorStoredAndFactoryDefaults(): none {
   result := compile([SourceFile { path: "/main.do", source:
-    "class Stored { const kind: string = \"stored\"\nvalue: int = 7 }\nclass Factory { value: int\nstatic constructor(value: int = 9): Factory => Factory { value } }\nfunction make(): none { first := Actor<Stored>()\nsecond := Actor<Factory>() }",
+    "class Stored { kind: \"stored\"\nvalue: int = 7 }\nclass Factory { value: int\nstatic constructor(value: int = 9): Factory => Factory { value } }\nfunction make(): none { first := Actor<Stored>()\nsecond := Actor<Factory>() }",
   }], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.isTrue(result.emission != none)

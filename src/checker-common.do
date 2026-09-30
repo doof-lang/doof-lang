@@ -4,7 +4,7 @@ import { EditorScope, Scope } from "./semantic"
 import {
   Binding, Diagnostic, NeverType, ResolvedType,
 } from "./semantic"
-import { Expression, FunctionDeclaration, SourceSpan } from "./ast"
+import { ClassField, Expression, FunctionDeclaration, SourceSpan } from "./ast"
 import { typeName } from "./checker-types"
 import { CheckerState } from "./checker-state"
 import { optionalResolvedType } from "./checker-symbols"
@@ -38,6 +38,15 @@ export function deprecatedClassMethodFunction(state: CheckerState, fn: FunctionD
     span: checkerSemanticSpan(fn.legacyMethodFunctionSpan!),
     module: state.info!.path,
     replacement: fn.name,
+  })
+}
+export function deprecatedConstField(state: CheckerState, field: ClassField): none {
+  if field.legacyConstSpan == none || field.names.length == 0 { return }
+  state.diagnostics.push(Diagnostic {
+    severity: "warning",
+    message: "'const' on class fields is deprecated; declare a literal-valued field such as '" + field.names[0] + ": <literal>' instead",
+    span: checkerSemanticSpan(field.legacyConstSpan!),
+    module: state.info!.path,
   })
 }
 export function validateAssignmentBinding(state: CheckerState, binding: Binding, span: SourceSpan): none {

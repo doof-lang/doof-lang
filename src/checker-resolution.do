@@ -463,7 +463,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
             }
             discriminator := interfaceJsonDiscriminator(interface_, jsonPrograms(state.result))
             if discriminator == none {
-              typeError(state, "Cannot deserialize interface \"" + interface_.name + "\": all implementing classes must share a const string field with distinct values (e.g. const kind = \"variant\")", span)
+              typeError(state, "Cannot deserialize interface \"" + interface_.name + "\": all implementing classes must share a literal-valued string field with distinct values (e.g. kind: \"variant\")", span)
               return unknownType()
             }
             interface_.needsJson = true

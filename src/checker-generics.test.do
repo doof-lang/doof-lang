@@ -38,7 +38,7 @@ export function testInterfaceBoundPreservesIsolationEffects(): none {
 }
 
 export function testCheckerConsolidationFieldInferenceSkipsConstants(): none {
-  result := compile([SourceFile { path: "/main.do", source: "class Box<T> { const kind = \"box\"\nvalue: T }\nfunction main(): int => Box(3).value" }], "/main.do")
+  result := compile([SourceFile { path: "/main.do", source: "class Box<T> { kind: \"box\"\nvalue: T }\nfunction main(): int => Box(3).value" }], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(hasErrorDiagnostics(result.diagnostics), false)
   Assert.isTrue(result.emission != none)

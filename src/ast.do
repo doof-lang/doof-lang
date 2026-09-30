@@ -706,6 +706,8 @@ export class ClassField {
   defaultValue: Expression | none
   static_: bool
   const_: bool = false
+  // Span of the deprecated `const` keyword; literal-valued `name: "value"` fields leave it unset.
+  legacyConstSpan: SourceSpan | none = none
   let_: bool = false
   readonly_: bool
   weak_: bool = false

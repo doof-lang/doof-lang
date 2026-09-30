@@ -211,6 +211,7 @@ export function testParsesFixedConstClassFields(): none {
     class_: ClassDeclaration -> {
       Assert.equal(class_.fields[0].const_, true)
       Assert.equal(class_.fields[0].readonly_, false)
+      Assert.isTrue(class_.fields[0].legacyConstSpan != none)
       case class_.fields[0].defaultValue! {
         value: StringLiteral -> { Assert.equal(value.value, "circle") }
         _ -> { panic("expected fixed string field") }
@@ -1659,4 +1660,55 @@ export function testStrictParseRejectsMisplacedNumericSeparators(): none {
 export function testStrictParseAcceptsNumericSeparatorsBetweenDigits(): none {
   parser := Parser { source: "x := 1_000_000\ny := 0xFF_FF\nz := 1_0.5_0" }
   Assert.equal(parser.parse().statements.length, 3)
+}
+
+export function testParsesLiteralValuedFields(): none {
+  case first("class Circle { kind: \"circle\"\nversion \"Schema version.\": -2\nenabled: true; radius: double }") {
+    class_: ClassDeclaration -> {
+      Assert.equal(class_.fields.length, 4)
+      Assert.equal(class_.fields[0].const_, true)
+      Assert.isTrue(class_.fields[0].legacyConstSpan == none)
+      Assert.isTrue(class_.fields[0].type_ == none)
+      case class_.fields[0].defaultValue! {
+        value: StringLiteral -> { Assert.equal(value.value, "circle") }
+        _ -> { panic("expected literal string field") }
+      }
+      Assert.equal(class_.fields[1].const_, true)
+      Assert.equal(class_.fields[1].descriptions[0], "Schema version.")
+      case class_.fields[1].defaultValue! {
+        negative: UnaryExpression -> { Assert.equal(negative.operator, "-") }
+        _ -> { panic("expected negative literal field") }
+      }
+      Assert.equal(class_.fields[2].const_, true)
+      Assert.equal(class_.fields[3].const_, false)
+      Assert.isTrue(class_.fields[3].type_ != none)
+    }
+    _ -> { panic("expected class declaration") }
+  }
+  case first("struct Tag { kind: \"tag\"\nlet count: int | none = none }") {
+    struct_: ClassDeclaration -> {
+      Assert.equal(struct_.fields[0].const_, true)
+      Assert.equal(struct_.fields[1].const_, false)
+    }
+    _ -> { panic("expected struct declaration") }
+  }
+}
+
+export function testRejectsInvalidLiteralValuedFields(): none {
+  assertFieldParseError("class Bad { let kind: \"a\" }", "Literal-valued fields cannot use 'let', 'readonly', 'const', or 'weak'")
+  assertFieldParseError("class Bad { static kind: \"a\" }", "Literal-valued fields cannot be static; use a static field with a default value")
+  assertFieldParseError("class Bad { a, b: \"a\" }", "A literal-valued field declares exactly one name")
+  assertFieldParseError("class Bad { kind: \"a\${1}\" }", "Literal-valued fields require a single literal value, such as kind: \"circle\"")
+  assertFieldParseError("class Bad { kind: \"a\".length }", "Literal-valued fields require a single literal value, such as kind: \"circle\"")
+  assertFieldParseError("class Bad { kind: \"a\" = \"b\" }", "Literal-valued fields cannot also declare a default value")
+}
+
+function assertFieldParseError(source: string, message: string): none {
+  parser := Parser { source }
+  result := catchPanic(=> parser.parse())
+  case result {
+    _: Failure<string> -> { }
+    _ -> { panic("expected parse failure for: " + source) }
+  }
+  Assert.equal(parser.errorMessage, message)
 }

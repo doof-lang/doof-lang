@@ -9,8 +9,9 @@ import {
   FunctionDeclaration, ImportDeclaration, NamespaceImport, NamedImport,
   TypeAliasDeclaration, ClassDeclaration, InterfaceDeclaration, EnumDeclaration,
   ExportList, MockImportDirective, MockImportMapping, YieldBlockExpression, TypeParameterConstraint,
+  StringLiteral, UnaryExpression,
 } from "./ast"
-import type { Statement, Expression, TypeAnnotation, ImportSpecifier } from "./ast"
+import type { Statement, Expression, TypeAnnotation, ImportSpecifier, SourceSpan } from "./ast"
 
 class ParsedTypeParameters {
   names: string[]
@@ -315,7 +316,10 @@ function parseClassField(parser: Parser, static_: bool, private_: bool): ClassFi
   if parser.check(TokenType.Private) || parser.check(TokenType.Static) {
     parser.fail("Field modifiers must use '[private] [static] [let|readonly|const] [weak] name' order without duplicates")
   }
+  constStart := parser.location()
   const_ := parser.match(TokenType.Const)
+  let legacyConstSpan: SourceSpan | none = none
+  if const_ { legacyConstSpan = parser.span(constStart) }
   let_ := parser.match(TokenType.Let)
   readonly_ := parser.match(TokenType.Readonly)
   if (if const_ then 1 else 0) + (if let_ then 1 else 0) + (if readonly_ then 1 else 0) > 1 {
@@ -337,12 +341,58 @@ function parseClassField(parser: Parser, static_: bool, private_: bool): ClassFi
     names.push(parser.text(parser.expect(TokenType.Identifier)))
     descriptions.push(parseDescription(parser))
   }
+  if parser.check(TokenType.Colon) && startsFieldLiteral(parser, 1) {
+    return parseLiteralValuedField(parser, start, names, descriptions, static_, private_, const_ || let_ || readonly_ || weak_)
+  }
   typeValue := parser.parseOptionalType()
   let defaultValue: Expression | none = none
   if parser.match(TokenType.Equal) { defaultValue = parser.parseExpression() }
   if const_ && defaultValue == none { parser.fail("Const class fields require a fixed value") }
   parser.consumeSemicolon()
-  return ClassField { kind: "class-field", names, descriptions, type_: typeValue, defaultValue, static_, const_, let_, readonly_, weak_, private_, span: parser.span(start) }
+  return ClassField { kind: "class-field", names, descriptions, type_: typeValue, defaultValue, static_, const_, legacyConstSpan, let_, readonly_, weak_, private_, span: parser.span(start) }
+}
+
+// A literal after a field's `:` makes it literal-valued: a compile-time
+// constant used as a union discriminator. Type names never start with these
+// tokens, so the literal and ordinary type annotations cannot be confused.
+function startsFieldLiteral(parser: Parser, offset: int): bool {
+  kind := parser.peek(offset).kind
+  if kind == TokenType.Minus {
+    next := parser.peek(offset + 1).kind
+    return next == TokenType.IntLiteral || next == TokenType.LongLiteral || next == TokenType.FloatLiteral || next == TokenType.DoubleLiteral
+  }
+  return kind == TokenType.StringLiteral || kind == TokenType.TemplateLiteralStart || kind == TokenType.CharLiteral || kind == TokenType.IntLiteral ||
+    kind == TokenType.LongLiteral || kind == TokenType.FloatLiteral || kind == TokenType.DoubleLiteral ||
+    kind == TokenType.True || kind == TokenType.False
+}
+
+/** Parses `name: "literal"` into the same fixed-value field that legacy `const name = "literal"` produced. */
+function parseLiteralValuedField(parser: Parser, start: AstLocation, names: string[], descriptions: string[], static_: bool, private_: bool, modified: bool): ClassField {
+  if modified { parser.fail("Literal-valued fields cannot use 'let', 'readonly', 'const', or 'weak'") }
+  if static_ { parser.fail("Literal-valued fields cannot be static; use a static field with a default value") }
+  if names.length != 1 { parser.fail("A literal-valued field declares exactly one name") }
+  parser.expect(TokenType.Colon)
+  value := parser.parseUnary()
+  if !isFieldLiteral(value) { parser.fail("Literal-valued fields require a single literal value, such as kind: \"circle\"") }
+  if parser.check(TokenType.Equal) { parser.fail("Literal-valued fields cannot also declare a default value") }
+  parser.consumeSemicolon()
+  return ClassField {
+    kind: "class-field", names, descriptions, type_: none, defaultValue: value, static_, const_: true,
+    readonly_: false, private_, span: parser.span(start),
+  }
+}
+
+function isFieldLiteral(expression: Expression): bool {
+  case expression {
+    string_: StringLiteral -> { return string_.interpolations.length == 0 }
+    unary: UnaryExpression -> {
+      return unary.operator == "-" && (unary.operand.kind == "int-literal" || unary.operand.kind == "long-literal" || unary.operand.kind == "float-literal" || unary.operand.kind == "double-literal")
+    }
+    _ -> {
+      return expression.kind == "int-literal" || expression.kind == "long-literal" || expression.kind == "float-literal" ||
+        expression.kind == "double-literal" || expression.kind == "char-literal" || expression.kind == "bool-literal"
+    }
+  }
 }
 
 export function parseInterface(parser: Parser, exported: bool): Statement {

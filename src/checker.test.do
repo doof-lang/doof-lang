@@ -12,6 +12,9 @@ function checkedIncludingDeprecations(source: string): CheckResult {
   checker := createChecker(analysis, "/main.do")
   semantic := checker.check("/main.do")
   diagnostics := semantic.diagnostics
+  // Parse and module diagnostics come from analysis; without them a fixture
+  // that fails to parse can look like a clean check.
+  for diagnostic of analysis.diagnostics { diagnostics.push(diagnostic) }
   for diagnostic of validateDeepReadonlyFields(analysis) { diagnostics.push(diagnostic) }
   for diagnostic of validateIsolationEffects(analysis) { diagnostics.push(diagnostic) }
   return CheckResult { diagnostics }
@@ -245,8 +248,8 @@ export function testRequiresExhaustiveCaseExpressions(): none {
 
   exhaustive := checked(
     "enum Direction { North, South }\n" +
-    "function direction(value: Direction): string => case value { .North -> \"north\" .South -> \"south\" }\n" +
-    "function boolean(value: bool): string => case value { true -> \"yes\" false -> \"no\" }",
+    "function direction(value: Direction): string => case value { .North -> \"north\", .South -> \"south\" }\n" +
+    "function boolean(value: bool): string => case value { true -> \"yes\", false -> \"no\" }",
   )
   Assert.equal(exhaustive.diagnostics.length, 0)
 }
@@ -1320,14 +1323,14 @@ export function testChecksStringMapAutomaticJsonTypes(): none {
 }
 
 export function testChecksDiscriminatedInterfaceJsonDeserialization(): none {
-  valid := checked("interface Shape { area(): double }\nclass Circle implements Shape { const kind = \"circle\"\nradius: double\narea(): double => radius * radius }\nclass Rect implements Shape { const kind = \"rect\"\nwidth: double\nheight: double\narea(): double => width * height }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value, true)")
+  valid := checked("interface Shape { area(): double }\nclass Circle implements Shape { kind: \"circle\"\nradius: double\narea(): double => radius * radius }\nclass Rect implements Shape { kind: \"rect\"\nwidth: double\nheight: double\narea(): double => width * height }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value, true)")
   Assert.equal(valid.diagnostics.length, 0)
 
   invalid := checked("interface Shape { area(): double }\nclass Circle implements Shape { radius: double\narea(): double => radius * radius }\nclass Rect implements Shape { width: double\narea(): double => width }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value)")
   Assert.equal(invalid.diagnostics.length > 0, true)
-  Assert.stringContains(invalid.diagnostics[0].message, "must share a const string field with distinct values")
+  Assert.stringContains(invalid.diagnostics[0].message, "must share a literal-valued string field with distinct values")
 
-  duplicate := checked("interface Shape { area(): double }\nclass Circle implements Shape { const kind = \"shape\"\nradius: double\narea(): double => radius }\nclass Rect implements Shape { const kind = \"shape\"\nwidth: double\narea(): double => width }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value)")
+  duplicate := checked("interface Shape { area(): double }\nclass Circle implements Shape { kind: \"shape\"\nradius: double\narea(): double => radius }\nclass Rect implements Shape { kind: \"shape\"\nwidth: double\narea(): double => width }\nfunction decode(value: SerialValue): Result<Shape, string> => Shape.fromSerialValue(value)")
   Assert.equal(duplicate.diagnostics.length > 0, true)
   Assert.stringContains(duplicate.diagnostics[0].message, "distinct values")
 }
@@ -2186,8 +2189,8 @@ export function testInfersStructNullableDefaultShorthandAndLiteralSumObjects(): 
     "struct Pair { left: int\nright: int }\n" +
     "type Node = Leaf | Pair | none\n" +
     "function leaf(value: int): Node => { value }\n" +
-    "class TaggedSuccess { const kind = \"Success\"\nvalue: int }\n" +
-    "class TaggedFailure { const kind = \"Failure\"\nerror: string }\n" +
+    "class TaggedSuccess { kind: \"Success\"\nvalue: int }\n" +
+    "class TaggedFailure { kind: \"Failure\"\nerror: string }\n" +
     "type Outcome = TaggedSuccess | TaggedFailure\n" +
     "function outcome(): Outcome => { kind: \"Success\", value: 1 }",
   )
@@ -2209,11 +2212,11 @@ export function testRejectsUnmatchedAndSpreadContextualSumObjects(): none {
   Assert.stringContains(unmatched.diagnostics[0].message, "does not match any constructible member")
   Assert.stringContains(unmatched.diagnostics[0].message, "Left, Right")
 
-  missingLiteral := checked("class TaggedSuccess { const kind = \"Success\"\nvalue: int }\nclass TaggedFailure { const kind = \"Failure\"\nerror: string }\ntype Outcome = TaggedSuccess | TaggedFailure\nfunction make(): Outcome => { value: 1 }")
+  missingLiteral := checked("class TaggedSuccess { kind: \"Success\"\nvalue: int }\nclass TaggedFailure { kind: \"Failure\"\nerror: string }\ntype Outcome = TaggedSuccess | TaggedFailure\nfunction make(): Outcome => { value: 1 }")
   Assert.equal(missingLiteral.diagnostics.length, 1)
   Assert.stringContains(missingLiteral.diagnostics[0].message, "does not match any constructible member")
 
-  wrongLiteral := checked("class TaggedSuccess { const kind = \"Success\"\nvalue: int }\nclass TaggedFailure { const kind = \"Failure\"\nerror: string }\ntype Outcome = TaggedSuccess | TaggedFailure\nfunction make(): Outcome => { kind: \"Failure\", value: 1 }")
+  wrongLiteral := checked("class TaggedSuccess { kind: \"Success\"\nvalue: int }\nclass TaggedFailure { kind: \"Failure\"\nerror: string }\ntype Outcome = TaggedSuccess | TaggedFailure\nfunction make(): Outcome => { kind: \"Failure\", value: 1 }")
   Assert.equal(wrongLiteral.diagnostics.length, 1)
   Assert.stringContains(wrongLiteral.diagnostics[0].message, "must match its literal-valued declaration")
 
@@ -2258,7 +2261,7 @@ export function testAssignsJsonValueNullableUnions(): none {
 }
 
 export function testResolvesMapKeyAndValueArrays(): none {
-  result := checked("function main(): int { values: Map<int, string> = {}\nreturn values.keys().length + values.values().length }")
+  result := checked("function main(): int { values: Map<int, string> := {}\nreturn values.keys().length + values.values().length }")
   Assert.equal(result.diagnostics.length, 0)
 }
 

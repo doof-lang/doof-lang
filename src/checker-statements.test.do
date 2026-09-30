@@ -165,3 +165,26 @@ export function testStructsCannotDeclareInterfaces(): none {
   Assert.equal(result.diagnostics.length, 1)
   Assert.stringContains(result.diagnostics[0].message, "Struct \"Tag\" cannot implement interfaces")
 }
+
+export function testLiteralValuedFieldsDiscriminateUnions(): none {
+  result := checked(
+    "class Circle { kind: \"circle\"\nradius: double }\nclass Square { kind: \"square\"\nside: double }\ntype Shape = Circle | Square\n" +
+    "function area(shape: Shape): double => case shape { c: Circle -> c.radius, s: Square -> s.side }\n" +
+    "function main(): none { let shape: Shape = { kind: \"square\", side: 2.0 }\ncircle := Circle { radius: 1.0 }\nlabel: string := circle.kind\nprintln(area(shape)) }")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  wrong := checked("class Circle { kind: \"circle\"\nradius: double }\nfunction main(): none { circle := Circle { kind: \"square\", radius: 1.0 } }")
+  Assert.isTrue(wrong.diagnostics.length > 0)
+  assigned := checked("class Circle { kind: \"circle\"\nradius: double }\nfunction main(): none { let circle = Circle { radius: 1.0 }\ncircle.kind = \"square\" }")
+  Assert.isTrue(assigned.diagnostics.length > 0)
+}
+
+export function testConstClassFieldsAreDeprecated(): none {
+  legacy := checked("class Circle { const kind = \"circle\"\nradius: double }")
+  Assert.equal(legacy.diagnostics.length, 1)
+  Assert.equal(legacy.diagnostics[0].severity, "warning")
+  Assert.stringContains(legacy.diagnostics[0].message, "'const' on class fields is deprecated; declare a literal-valued field such as 'kind: <literal>' instead")
+  Assert.equal(legacy.diagnostics[0].span.start.column, 16)
+  current := checked("class Circle { kind: \"circle\"\nradius: double }")
+  Assert.equal(current.diagnostics.length, 0)
+}
