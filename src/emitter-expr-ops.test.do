@@ -123,3 +123,18 @@ export function testSerialIntegralAsRequiresExactFit(): none {
   Assert.stringContains(source, "doof::serial_fits_long(_as_value)")
   Assert.stringContains(source, "doof::serial_is_number(_as_value)")
 }
+
+export function testCoalescingAssignmentLowersLazily(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function load(): Result<int, string> => Failure(\"x\")\n" +
+    "function main(): none { let cache: string | none = none\ncache ??= \"disk\"\n" +
+    "let data: Result<int, string> = load()\ndata ??= 4\ndata ??= load() }",
+  }], "/main.do")
+  for diagnostic of result.diagnostics { println(diagnostic.message) }
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringNotContains(source, "??=")
+  Assert.stringContains(source, "if (doof::is_null(_assignment_target)) { _assignment_target = ")
+  Assert.stringContains(source, "if (doof::is_failure(_assignment_target)) { _assignment_target = doof::Success<int32_t>{4}; }")
+  Assert.stringContains(source, "if (doof::is_failure(_assignment_target)) { _assignment_target = load(); }")
+}

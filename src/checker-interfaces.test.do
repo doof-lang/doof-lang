@@ -41,3 +41,11 @@ export function testSecondConsolidationGenericInterfaceSignatureBeforeBodies(): 
   for diagnostic of result.diagnostics { println(diagnostic.message) }
   Assert.equal(result.diagnostics.length, 0)
 }
+
+export function testStructsDoNotStructurallySatisfyInterfaces(): none {
+  result := checked("interface Named { name: string }\nstruct Tag { name: string }\nclass User { name: string }\nfunction main(): none { let named: Named = Tag { name: \"a\" } }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Cannot assign Tag to Named")
+  valid := checked("interface Named { name: string }\nstruct Tag { name: string }\nclass User { name: string }\nfunction main(): none { let named: Named = User { name: \"a\" } }")
+  Assert.equal(valid.diagnostics.length, 0)
+}

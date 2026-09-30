@@ -74,6 +74,9 @@ export class EmitContext {
   loopLabels: string[] = []
   loopBreakTargets: string[] = []
   loopContinueTargets: string[] = []
+  // One entry per enclosing loop, innermost last. Loops with a `then` clause
+  // record the label an unlabeled `break` jumps to so it skips that clause.
+  loopUnlabeledBreakTargets: string[] = []
   // Native entry scripts lower direct bindings into private deferred storage.
   let scriptEntry: bool = false
   let tryPanics: bool = false

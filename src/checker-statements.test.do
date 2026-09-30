@@ -145,3 +145,23 @@ export function testReadonlyBindingsRequireDeeplyImmutableValues(): none {
   for diagnostic of valid.diagnostics { println(diagnostic.message) }
   Assert.equal(valid.diagnostics.length, 0)
 }
+
+export function testTrailingLambdaBodiesRejectReturn(): none {
+  result := checked("function each(xs: int[], f: (it: int): none): none { for x of xs { f(x) } }\nfunction main(): none { each([1]) { return } }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "'return' cannot be used inside a trailing lambda")
+}
+
+export function testAssignedResultsSatisfyMustUse(): none {
+  valid := checked("function load(): Result<int, string> => Success(1)\nfunction main(): none { let data: Result<int, string> = load()\ndata = load()\ndata ??= 2 }")
+  Assert.equal(valid.diagnostics.length, 0)
+  bare := checked("function load(): Result<int, string> => Success(1)\nfunction main(): none { load() }")
+  Assert.equal(bare.diagnostics.length, 1)
+  Assert.stringContains(bare.diagnostics[0].message, "Result value must be handled")
+}
+
+export function testStructsCannotDeclareInterfaces(): none {
+  result := checked("interface Named { name: string }\nstruct Tag implements Named { name: string }\nclass User { name: string }")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Struct \"Tag\" cannot implement interfaces")
+}

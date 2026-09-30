@@ -69,3 +69,7 @@ export function testCallbackEqualityNative(): none {
 export function testOptionalChainingNative(): none {
   runNativeFixture("optional-chaining")
 }
+
+export function testLoopThenAndCoalescingNative(): none {
+  runNativeFixture("loop-then-and-coalescing")
+}

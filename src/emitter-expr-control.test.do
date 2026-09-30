@@ -178,3 +178,13 @@ export function testGenericCaseAndYieldExpressionsRunSpecialized(): none {
   Assert.equal(case picked { s: Success -> s.value, _: Failure -> "" }, "fallback")
   Assert.equal(case pickGenericYield<int>(true, 3, 9) { s: Success -> s.value, _: Failure -> -1 }, 3)
 }
+
+export function testResultIfExpressionConvertsEachArm(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function read(ok: bool): Result<string, string> => if ok then Success(\"yes\") else Failure(\"no\")",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "{ if (ok) { return ")
+  Assert.stringNotContains(source, "(ok ? ")
+}

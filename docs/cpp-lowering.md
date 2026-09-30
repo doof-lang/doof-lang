@@ -37,6 +37,13 @@ name helper, while JSON and JSON Schema consume checked backing values. A
 single `Enum | none` lowers uniformly to `std::optional<Enum>` so all ordinary
 narrowing forms yield `Enum`, not a residual optional variant.
 
+A loop `then` clause is emitted as a block after the loop, followed by the
+loop's break label. Breaks that exit that loop, labeled or unlabeled, become
+`goto` that label so they skip the clause; normal completion falls into it.
+`target ??= value` lowers to a lambda that tests the target with `is_null` or
+`is_failure` and evaluates the value only when it assigns; a plain value
+assigned to a Result target is wrapped as its `Success` arm.
+
 Renamed nominal imports emit from resolved symbol identity. Shared members on
 union values and construction-time union promotion are driven by decorated
 source and target types; compiler source declaration names have no special

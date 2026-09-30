@@ -107,3 +107,14 @@ export function testEditorCheckedCasePatternRetainsResolvedTypeSymbol(): none {
   }
   EditorAssert.isTrue(found)
 }
+
+export function testStructsSatisfyInterfaceBoundsButNotInterfaceValues(): none {
+  source := "interface Reader { read(): int }\nstruct Total { value: int\nread(): int => value }\nclass Fixed { read(): int => 1 }\n" +
+    "function readOne<T: Reader>(reader: T): int => reader.read()\n"
+  analysis := createAnalyzer([SourceFile { path: "/main.do", source: source + "function main(): int => readOne(Total { value: 3 })" }]).analyze("/main.do")
+  Assert.equal(createChecker(analysis, "/main.do").check("/main.do").diagnostics.length, 0)
+  asValue := createAnalyzer([SourceFile { path: "/main.do", source: source + "function main(): none { let reader: Reader = Total { value: 3 } }" }]).analyze("/main.do")
+  diagnostics := createChecker(asValue, "/main.do").check("/main.do").diagnostics
+  Assert.equal(diagnostics.length, 1)
+  Assert.stringContains(diagnostics[0].message, "Cannot assign Total to Reader")
+}

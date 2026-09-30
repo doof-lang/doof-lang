@@ -14,6 +14,9 @@ import { checkerSemanticSpan } from "./checker-validation"
 
 export function checkLambda(state: CheckerState, expression: LambdaExpression, scope: Scope, expected: ResolvedType | none): ResolvedType {
   expectedFunction := contextualFunctionType(expected)
+  if expression.trailing && expectedFunction != none && expectedFunction!.returnType.kind != "none" {
+    typeError(state, "Trailing lambdas require a callback returning none; use an explicit lambda such as '=> ...' instead", expression.span)
+  }
   // `=> body` inherits the complete callback signature. Materializing those
   // parameters on the decorated AST keeps checking, generic inference,
   // capture analysis, and C++ emission aligned on the same representation.
@@ -28,7 +31,7 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
       })
     }
   }
-  lambdaScope := Scope { parent: scope }
+  lambdaScope := Scope { parent: scope, trailingLambda: expression.trailing }
   let params: FunctionParamType[] = []
   for i of 0..<expression.params.length {
     parameter := expression.params[i]

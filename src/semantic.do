@@ -278,6 +278,8 @@ export class Scope {
   thisType: ResolvedType | none = none
   functionName: string = ""
   staticContext: bool = false
+  // Trailing lambda bodies are statement-like blocks and reject `return`.
+  trailingLambda: bool = false
   let inValueYieldBlock: bool = false
   let yieldExpectedType: ResolvedType | none = none
   let yieldType: ResolvedType | none = none

@@ -77,6 +77,10 @@ export function emitStatement(statement: Statement, level: int = 1, context: Emi
     }
     break_: BreakStatement -> {
       if break_.label != none { return sourceMark + coverageMark + ind + "goto " + loopTarget(context, break_.label!, true) + ";\n" }
+      innermost := context.loopUnlabeledBreakTargets.length - 1
+      if innermost >= 0 && context.loopUnlabeledBreakTargets[innermost] != "" {
+        return sourceMark + coverageMark + ind + "goto " + context.loopUnlabeledBreakTargets[innermost] + ";\n"
+      }
       return sourceMark + coverageMark + ind + "break;\n"
     }
     continue_: ContinueStatement -> {
@@ -499,19 +503,19 @@ function emitIf(statement: IfStatement, level: int, context: EmitContext): strin
 
 function emitWhile(statement: WhileStatement, level: int, context: EmitContext): string {
   ind := indent(level)
-  loopId := beginLabeledLoop(statement.label, context)
+  loopId := beginLabeledLoop(statement.label, statement.then_ != none, context)
   body := emitLabeledLoopBody(statement.body, level + 1, loopId, context)
   endLabeledLoop(loopId, context)
   return ind + "while (" + emitCondition(statement.condition, context) + ") {\n" +
-    body + ind + "}\n" + labeledBreakTarget(loopId, level)
+    body + ind + "}\n" + loopCompletion(statement.then_, loopId, level, context)
 }
 
 function emitForOf(statement: ForOfStatement, level: int, context: EmitContext): string {
   ind := indent(level)
-  labeledLoopId := beginLabeledLoop(statement.label, context)
+  labeledLoopId := beginLabeledLoop(statement.label, statement.then_ != none, context)
   body := emitLabeledLoopBody(statement.body, level + 1, labeledLoopId, context)
   endLabeledLoop(labeledLoopId, context)
-  breakTarget := labeledBreakTarget(labeledLoopId, level)
+  breakTarget := loopCompletion(statement.then_, labeledLoopId, level, context)
   context.tryCounter = context.tryCounter + 1
   loopId := context.tryCounter
   name := if statement.bindings.length == 0 then "_item" else discardableCppName(statement.bindings[0], loopId, 0)
@@ -563,7 +567,7 @@ function discardableCppName(name: string, scopeId: int, position: int): string {
 
 function emitFor(statement: ForStatement, level: int, context: EmitContext): string {
   ind := indent(level)
-  loopId := beginLabeledLoop(statement.label, context)
+  loopId := beginLabeledLoop(statement.label, statement.then_ != none, context)
   body := emitLabeledLoopBody(statement.body, level + 1, loopId, context)
   endLabeledLoop(loopId, context)
   let init = ""
@@ -579,20 +583,31 @@ function emitFor(statement: ForStatement, level: int, context: EmitContext): str
     update = update + emitDiscardedExpression(statement.update[i], context)
   }
   return ind + "for (" + init + "; " + condition + "; " + update + ") {\n" +
-    body + ind + "}\n" + labeledBreakTarget(loopId, level)
+    body + ind + "}\n" + loopCompletion(statement.then_, loopId, level, context)
 }
 
-function beginLabeledLoop(label: string | none, context: EmitContext): int {
-  if label == none { return -1 }
+/**
+ * Allocates goto targets for a loop that is labeled or has a `then` clause.
+ * A `then` clause runs only on normal completion, so every break that exits
+ * the loop jumps past it to the shared break target.
+ */
+function beginLabeledLoop(label: string | none, hasThen: bool, context: EmitContext): int {
+  if label == none && !hasThen {
+    context.loopUnlabeledBreakTargets.push("")
+    return -1
+  }
   context.tryCounter = context.tryCounter + 1
   loopId := context.tryCounter
-  context.loopLabels.push(label!)
-  context.loopBreakTargets.push("_doof_break_" + string(loopId))
+  breakTarget := "_doof_break_" + string(loopId)
+  context.loopLabels.push(label ?? "")
+  context.loopBreakTargets.push(breakTarget)
   context.loopContinueTargets.push("_doof_continue_" + string(loopId))
+  context.loopUnlabeledBreakTargets.push(if hasThen then breakTarget else "")
   return loopId
 }
 
 function endLabeledLoop(loopId: int, context: EmitContext): none {
+  try! context.loopUnlabeledBreakTargets.pop()
   if loopId < 0 { return }
   try! context.loopLabels.pop()
   try! context.loopBreakTargets.pop()
@@ -604,6 +619,16 @@ function emitLabeledLoopBody(body: Block, level: int, loopId: int, context: Emit
   ind := indent(level)
   return ind + "{\n" + emitBlock(body, level + 1, context) + ind + "}\n" +
     ind + "_doof_continue_" + string(loopId) + ":;\n"
+}
+
+/** Emits a loop's `then` clause, reached only by normal completion, followed by its break target. */
+function loopCompletion(then_: Block | none, loopId: int, level: int, context: EmitContext): string {
+  let result = ""
+  if then_ != none {
+    ind := indent(level)
+    result = ind + "{\n" + emitBlock(then_!, level + 1, context) + ind + "}\n"
+  }
+  return result + labeledBreakTarget(loopId, level)
 }
 
 function labeledBreakTarget(loopId: int, level: int): string {

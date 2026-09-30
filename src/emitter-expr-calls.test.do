@@ -189,3 +189,24 @@ export function testUnitResultPayloadPreservesEffectsInCalls(): none {
   Assert.stringContains(source, "doof::Failure<void>{})")
   Assert.stringNotContains(source, "doof::Success<void>{ std::monostate")
 }
+
+export function testMapDeleteLowersToErase(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): none { let scores: Map<string, int> = { \"a\": 1 }\nscores.delete(\"a\") }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "->erase(std::string(\"a\"))")
+  Assert.stringNotContains(source, "delete_")
+}
+
+export function testWeakOptionalCallToNoneMethodHandlesAbsence(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "class Node { visit(): none {} }\nclass Holder { let target: weak Node | none = none }\n" +
+    "function main(): none { holder := Holder {}\n_ := holder.target?.visit() }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, ".has_value()) return doof::Success<void>{};")
+  Assert.stringNotContains(source, "void{}")
+}

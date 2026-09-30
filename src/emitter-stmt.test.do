@@ -210,3 +210,32 @@ export function testNeverReviewTryEmission(): none {
   Assert.equal(result.diagnostics.length, 0)
   Assert.stringContains(result.emission!.modules[0].source, "doof::unreachable();")
 }
+
+export function testLoopThenClausesRunOnlyOnNormalCompletion(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): none {\nfor item of [1, 2] { if item == 2 { break } } then { println(\"for-of\") }\n" +
+    "let count = 0\nwhile count < 2 { count += 1 } then { println(\"while\") }\n" +
+    "for let i = 0; i < 2; i += 1 { continue } then { println(\"for\") }\n" +
+    "for item of [1] { for other of [2] { break } } then { println(\"outer\") } }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "println(std::string(\"for-of\"))")
+  Assert.stringContains(source, "println(std::string(\"while\"))")
+  Assert.stringContains(source, "println(std::string(\"for\"))")
+  Assert.stringContains(source, "println(std::string(\"outer\"))")
+  // The break that exits a then-loop skips its clause; the inner loop's break stays local.
+  Assert.stringContains(source, "goto _doof_break_")
+  Assert.stringContains(source, "break;")
+  Assert.stringContains(source, "continue;")
+}
+
+export function testLoopsWithoutThenKeepPlainBreaks(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function main(): none { for item of [1, 2] { if item == 2 { break } } }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  source := result.emission!.modules[0].source
+  Assert.stringContains(source, "break;")
+  Assert.stringNotContains(source, "_doof_break_")
+}

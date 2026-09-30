@@ -53,3 +53,21 @@ export function testBlockLambdaBareReturnCannotOmitOptionalPayload(): none {
   Assert.isTrue(result.diagnostics.length > 0)
   Assert.stringContains(result.diagnostics[0].message, "Expected a return value")
 }
+
+export function testTrailingLambdasRequireNoneCallbacks(): none {
+  valid := compile([SourceFile { path: "/main.do", source:
+    "function each(xs: int[], f: (it: int): none): none { for x of xs { f(x) } }\n" +
+    "function main(): none { each([1]) {\nnext := (x: int): int => { return x + 1 }\nprintln(next(it)) } }",
+  }], "/main.do")
+  Assert.equal(valid.diagnostics.length, 0)
+  mapped := compile([SourceFile { path: "/main.do", source:
+    "function main(): none { let items = [1]\nitems.map() { it * 2 } }",
+  }], "/main.do")
+  Assert.isTrue(mapped.diagnostics.length > 0)
+  Assert.stringContains(mapped.diagnostics[0].message, "Trailing lambdas require a callback returning none")
+  valued := compile([SourceFile { path: "/main.do", source:
+    "function make(f: (): int): int => f()\nfunction main(): none { make() { println(1) } }",
+  }], "/main.do")
+  Assert.isTrue(valued.diagnostics.length > 0)
+  Assert.stringContains(valued.diagnostics[0].message, "Trailing lambdas require a callback returning none")
+}

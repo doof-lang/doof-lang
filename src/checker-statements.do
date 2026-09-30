@@ -207,7 +207,8 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
     expression: ExpressionStatement -> {
       expressionType := checkExpression(state, expression.expression, scope, none)
       case expressionType {
-        _: ResultResolvedType -> { typeError(state, "Result value must be handled", expression.span) }
+        // An assignment stores the Result in its target, which handles it.
+        _: ResultResolvedType -> { if expression.expression.kind != "assignment-expression" { typeError(state, "Result value must be handled", expression.span) } }
         _ -> { }
       }
       return expressionType.kind != "never"
@@ -492,6 +493,10 @@ export function checkClass(state: CheckerState, class_: ClassDeclaration, scope:
     }
   }
   for interfaceRef of class_.implements_ {
+    if class_.struct_ {
+      typeError(state, "Struct \"" + class_.name + "\" cannot implement interfaces; use a class for interface participation", interfaceRef.span)
+      continue
+    }
     target := resolveType(state, interfaceRef, state.info!, classScope)
     case target {
       _: UnknownType -> { if interfaceRef.name != "Stream" { typeError(state, "Interface \"" + interfaceRef.name + "\" is not defined", interfaceRef.span) } }
@@ -824,6 +829,11 @@ export function checkReturn(state: CheckerState, statement: ReturnStatement, sco
   }
   target := returnScope(scope)
   if target == none { typeError(state, "Return is only valid inside a function", statement.span); return false }
+  if target!.trailingLambda {
+    typeError(state, "'return' cannot be used inside a trailing lambda; use an explicit lambda instead", statement.span)
+    if statement.value != none { checkExpression(state, statement.value!, scope, none) }
+    return false
+  }
   returnType := target!.returnType!
   statement.resolvedExpectedType = optionalResolvedType(returnType)
   let actualReturn = noneType()

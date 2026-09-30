@@ -155,6 +155,7 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
               return "[&]() -> bool { auto " + temporary + " = " + emitExpression(member.object, context) + "; return " + temporary + "->find(" + emitExpression(expression.args[0].value, context) + ") != " + temporary + "->end(); }()"
             }
             if member.property == "set" { return "doof::map_set<" + emitContextType(map.keyType, context) + ", " + emitContextType(map.valueType, context) + ">(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context, map.keyType) + ", " + emitExpression(expression.args[1].value, context, map.valueType) + ", \"\", 0)" }
+            if member.property == "delete" { return emitExpression(member.object, context) + "->erase(" + emitExpression(expression.args[0].value, context, map.keyType) + ")" }
             if member.property == "get" && expression.args.length > 0 { return "doof::map_get(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
             if member.property == "keys" { return "doof::map_keys(" + emitExpression(member.object, context) + ", \"\", 0)" }
             if member.property == "values" { return "doof::map_values(" + emitExpression(member.object, context) + ", \"\", 0)" }
@@ -402,7 +403,8 @@ function emitWeakMemberCall(expression: CallExpression, member: MemberExpression
       payloadCpp := emitResultPayloadType(result.valueType, context.modulePath, context.names)
       errorCpp := emitResultPayloadType(result.errorType, context.modulePath, context.names)
       failure := if result.errorType.kind == "union" then errorCpp + "{::doof::WeakReferenceError{}}" else "::doof::WeakReferenceError{}"
-      noneReturn := if nullable then "if (!" + storage + ".has_value()) return doof::Success<" + payloadCpp + ">{" + payloadCpp + "{}}; " else ""
+      absentSuccess := if result.valueType.kind == "none" then "doof::Success<void>{}" else "doof::Success<" + payloadCpp + ">{" + payloadCpp + "{}}"
+      noneReturn := if nullable then "if (!" + storage + ".has_value()) return " + absentSuccess + "; " else ""
       prefix := "[&]() -> " + resultCpp + " { auto " + storage + " = " + object + "; " + noneReturn + "auto _weak_locked = doof::lock_weak(" + weakValue + "); if (!_weak_locked.has_value()) return doof::Failure<" + errorCpp + ">{" + failure + "}; auto " + temporary + " = std::move(_weak_locked.value()); "
       if originalReturn != none {
         case originalReturn! {

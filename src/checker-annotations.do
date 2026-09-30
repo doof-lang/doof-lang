@@ -10,7 +10,7 @@ import { CheckerState } from "./checker-state"
 import { isNumericConstraint, satisfiesNumericConstraint } from "./checker-numeric"
 import { deprecatedNoneAlias, typeError } from "./checker-common"
 import { builtinSourceLocationType, declaredSymbolName, optionalResolvedType, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, declarationFor } from "./checker-symbols"
-import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
+import { registerConcreteInterfaceImplementations, concreteTypes, classModuleFor, isAssignableWithInterfaces, satisfiesInterfaceBound } from "./checker-interfaces"
 
 class AnnotationResolution {
   state: CheckerState
@@ -291,7 +291,7 @@ export function validateAnnotationConstraints(state: CheckerState, names: string
     substitutedConstraint := substituteTypeParams(substituteTypeParams(resolvedConstraint, ownerNames, ownerArguments), names, arguments)
     if isNumericConstraint(substitutedConstraint) {
       if !satisfiesNumericConstraint(arguments[index], substitutedConstraint) { reportConstraintViolation(state, names[index], arguments[index], typeName(substitutedConstraint), span) }
-    } else if !isAssignableWithInterfaces(state.result, arguments[index], substitutedConstraint) {
+    } else if !satisfiesInterfaceBound(state.result, arguments[index], substitutedConstraint) {
       reportConstraintViolation(state, names[index], arguments[index], typeName(substitutedConstraint), span)
     }
   }

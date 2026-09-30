@@ -1,7 +1,7 @@
 // Conditional and pattern-based expression lowering.
 
 import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, RangePattern, TypePattern, ValuePattern, WildcardPattern, YieldBlockExpression } from "./ast"
-import { SerialValueResolvedType, ResolvedType } from "./semantic"
+import { ResultResolvedType, SerialValueResolvedType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
 import { emitCaseSubjectValue, emitCaseTypePattern, emitCaseValuePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
@@ -29,6 +29,7 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
   // C++ determines the common type of `?:` operands before applying the
   // surrounding expression's conversion. Mixed union arms and nullable
   // branches therefore need their checked carrier before C++ joins them.
+  // Result arms are distinct Success/Failure types with no common type.
   // An explicit lambda result type gives each branch the checked contextual
   // conversion independently.
   let contextualBranches = false
@@ -37,6 +38,7 @@ export function emitIfExpression(expression: IfExpression, context: EmitContext,
     contextualBranches = hasNoneMember(resultType) || usesVariantRepresentation(resultType)
     case resultType {
       _: SerialValueResolvedType -> { contextualBranches = true }
+      _: ResultResolvedType -> { contextualBranches = true }
       _ -> { }
     }
   }

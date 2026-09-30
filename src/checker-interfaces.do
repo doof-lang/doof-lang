@@ -195,6 +195,32 @@ export function isAssignableWithInterfaces(result: AnalysisResult, value: Resolv
   return isAssignableWithInterfacesSeen(result, value, target, [])
 }
 
+/**
+ * Checks a generic argument against its bound. Unlike value assignment, a
+ * struct argument may satisfy an interface bound structurally because the
+ * specialization keeps the concrete struct type.
+ */
+export function satisfiesInterfaceBound(result: AnalysisResult, argument: ResolvedType, bound: ResolvedType): bool {
+  case argument {
+    struct_: ClassType -> {
+      case bound {
+        interface_: InterfaceType -> {
+          declaration := declarationFor(result, struct_.symbol)
+          if declaration != none {
+            case declaration! {
+              owner: ClassDeclaration -> { if owner.struct_ { return classSatisfiesConcreteInterface(result, owner, struct_, interface_) } }
+              _ -> { }
+            }
+          }
+        }
+        _ -> { }
+      }
+    }
+    _ -> { }
+  }
+  return isAssignableWithInterfaces(result, argument, bound)
+}
+
 function isAssignableWithInterfacesSeen(result: AnalysisResult, value: ResolvedType, target: ResolvedType, seen: string[]): bool {
   if isAssignable(value, target) { return true }
   bound := interfaceBoundReceiver(value)
@@ -218,7 +244,10 @@ function isAssignableWithInterfacesSeen(result: AnalysisResult, value: ResolvedT
           declaration := declarationFor(result, class_.symbol)
           if declaration == none { return false }
           case declaration! {
-            owner: ClassDeclaration -> { return classSatisfiesConcreteInterfaceSeen(result, owner, class_, interface_, seen) }
+            // Interface values lower to variants of shared class pointers, so
+            // struct values cannot become interface values. Structs may still
+            // satisfy interface generic bounds.
+            owner: ClassDeclaration -> { return !owner.struct_ && classSatisfiesConcreteInterfaceSeen(result, owner, class_, interface_, seen) }
             _ -> { }
           }
         }

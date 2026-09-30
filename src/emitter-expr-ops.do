@@ -174,10 +174,34 @@ export function emitAssignment(expression: AssignmentExpression, context: EmitCo
     operation := "std::pow(_assignment_target, _assignment_value)"
     return "[&]() -> " + targetType + " { auto&& _assignment_target = " + target + "; auto _assignment_value = " + value + "; _assignment_target = " + operation + "; return _assignment_target; }()"
   }
+  if expression.operator == "??=" { return emitCoalescingAssignment(expression, context) }
   operator := if expression.operator == "\\=" then "/=" else expression.operator
   targetType := expression.target.resolvedType
   value := emitExpression(expression.value, context, targetType)
   return "(" + emitAssignmentTarget(expression.target, context) + " " + operator + " " + value + ")"
+}
+
+/**
+ * Lowers `target ??= value`: the value is evaluated and stored only when the
+ * target is none or a Failure. A plain value assigned to a Result target is
+ * wrapped as its Success arm.
+ */
+function emitCoalescingAssignment(expression: AssignmentExpression, context: EmitContext): string {
+  targetResolved := requireExpressionType(expression.target, "coalescing assignment target")
+  target := emitAssignmentTarget(expression.target, context)
+  let test = "doof::is_null(_assignment_target)"
+  let value = emitExpression(expression.value, context, targetResolved)
+  case targetResolved {
+    result: ResultResolvedType -> {
+      test = "doof::is_failure(_assignment_target)"
+      valueKind := requireExpressionType(expression.value, "coalescing assignment value").kind
+      if valueKind != "result" && valueKind != "success" && valueKind != "failure" && valueKind != "never" {
+        value = "doof::Success<" + emitContextType(result.valueType, context) + ">{" + emitExpression(expression.value, context, result.valueType) + "}"
+      }
+    }
+    _ -> { }
+  }
+  return "[&]() -> " + emitContextType(targetResolved, context) + " { auto&& _assignment_target = " + target + "; if (" + test + ") { _assignment_target = " + value + "; } return _assignment_target; }()"
 }
 
 function emitAssignmentTarget(target: Expression, context: EmitContext): string {
