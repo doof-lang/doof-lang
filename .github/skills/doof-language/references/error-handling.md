@@ -64,6 +64,9 @@ Statement-level `try` unwraps the success payload or propagates the failure from
 The native entry-script scope is the exception: because top-level execution
 has no return channel, statement-level `try` panics on failure.
 
+`try` is a statement, not an expression: write `try x := load()`, not
+`x := try load()`. Inside an expression use `try!` or `try?`.
+
 ```doof
 function loadConfig(): Result<Config, Error> {
     try content := readFile("config.json")

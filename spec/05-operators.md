@@ -544,9 +544,9 @@ Unwraps a `Success` value or returns the `Failure` from the enclosing function:
 
 ```doof
 function loadConfig(): Result<Config, Error> {
-    content := try readFile("config.json")   // Returns Failure early if error
-    parsed := try parseJSON(content)
-    config := try validate(parsed)
+    try content := readFile("config.json")   // Returns Failure early if error
+    try parsed := parseJSON(content)
+    try config := validate(parsed)
     return Success { value: config }
 }
 ```

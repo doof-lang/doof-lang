@@ -1037,6 +1037,14 @@ export function checkUnary(state: CheckerState, expression: UnaryExpression, sco
   // the unary state.result (notably for try! over imported Result functions).
         expression.operand.resolvedType = optionalResolvedType(value)
   if value.kind == "never" { return finish(state, expression, neverType()) }
+  if expression.operator == "try" {
+    // Bare `try` propagates by returning, so it only exists as a statement.
+    typeError(state, "'try' is a statement, not an expression; write 'try name := value' to propagate, or use 'try!' or 'try?' inside an expression", expression.span)
+    case value {
+      result: ResultResolvedType -> { return finish(state, expression, result.valueType) }
+      _ -> { return finish(state, expression, unknownType()) }
+    }
+  }
   if expression.operator == "try!" || expression.operator == "try?" {
     case value {
       result: ResultResolvedType -> {

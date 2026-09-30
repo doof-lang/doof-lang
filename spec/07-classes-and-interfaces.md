@@ -928,8 +928,8 @@ class FileHandle {
 }
 
 function processFile(path: string): Result<Data, IOError> {
-    file := try openFile(path)
-    content := try file.read()
+    try file := openFile(path)
+    try content := file.read()
     return { value: parse(content) }
     // file's destructor runs here — last reference goes out of scope
 }
@@ -949,10 +949,10 @@ Because Doof uses reference counting (not garbage collection), destruction is pr
 
 ```doof
 function transferData(): Result<none, IOError> {
-    src := try openFile("input.dat")
-    dst := try openFile("output.dat")
+    try src := openFile("input.dat")
+    try dst := openFile("output.dat")
     
-    data := try src.read()
+    try data := src.read()
     try dst.write(data)
     
     return Success()

@@ -258,3 +258,18 @@ export function testOptionalChainingOverResultReceivers(): none {
   Assert.equal(plain.diagnostics.length, 1)
   Assert.stringContains(plain.diagnostics[0].message, "has no member \"name\"")
 }
+
+export function testBareTryIsRejectedInExpressionPosition(): none {
+  prefix := "function load(): Result<int, string> => Success(1)\n"
+  for body of [
+    "x := try load()\nreturn Success(x)",
+    "return Success(1 + try load())",
+    "x: int := case 1 { 0 -> 0, _ -> try load() }\nreturn Success(x)",
+  ] {
+    result := checked(prefix + "function run(): Result<int, string> {\n" + body + "\n}")
+    Assert.isTrue(result.diagnostics.length > 0)
+    Assert.stringContains(result.diagnostics[0].message, "'try' is a statement, not an expression; write 'try name := value'")
+  }
+  valid := checked(prefix + "function run(): Result<int, string> {\ntry x := load()\ny := try! load()\nz := try? load()\nreturn Success(x + y + (z ?? 0))\n}")
+  Assert.equal(valid.diagnostics.length, 0)
+}

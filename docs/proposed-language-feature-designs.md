@@ -1323,8 +1323,8 @@ with tasks := TaskGroup { timeoutMs: 5_000 } {
     left := async(tasks) computeLeft(input)
     right := async(tasks) computeRight(input)
 
-    leftValue := try left.get()
-    rightValue := try right.get()
+    try leftValue := left.get()
+    try rightValue := right.get()
     consume(leftValue, rightValue)
 }
 ```
@@ -1352,7 +1352,7 @@ Structured concurrency makes those properties lexical and checkable. Adding an
 ```doof
 with tasks := TaskGroup() {
     task := async(tasks) compute(input)
-    result := try task.get()
+    try result := task.get()
 }
 ```
 
@@ -1575,7 +1575,7 @@ payload: owned Payload := buildPayload()
 
 with tasks := TaskGroup() {
     task := async(tasks) process(move payload)
-    output := try task.get()
+    try output := task.get()
 }
 ```
 
@@ -2150,7 +2150,7 @@ export function runAll<T: Command>(
             pending.push(async(tasks) runOne(command))
         }
 
-        completed := try tasks.waitAll(pending)
+        try completed := tasks.waitAll(pending)
         let responses: Response[] = []
 
         for result of completed {
