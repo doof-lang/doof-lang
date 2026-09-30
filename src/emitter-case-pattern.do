@@ -4,7 +4,7 @@ import { weakTargetAllowsNone, weakTargetUsesVariant } from "./emitter-carriers"
 
 import { emitCarrierAbsence } from "./emitter-carrier-values"
 import { EmitContext } from "./emitter-context"
-import { NamedType, TypePattern } from "./ast"
+import { NamedType, TypePattern, ValuePattern } from "./ast"
 import {
   ArrayResolvedType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType,
   ResolvedType, ResultResolvedType, WeakResolvedType,
@@ -49,6 +49,35 @@ export function emitCaseTypePattern(
   patternType := pattern.resolvedType!
   case subjectType {
     result: ResultResolvedType -> { return emitResultPattern(pattern, result, subject, bindingName, currentModulePath, names, context) }
+    _ -> { }
+  }
+  return emitCaseTypeTest(patternType, subjectType, subject, bindingName, currentModulePath, names, context)
+}
+
+/** Lowers a checked value pattern. `none` tests absence on the subject's carrier. */
+export function emitCaseValuePattern(pattern: ValuePattern, subjectType: ResolvedType, subject: string, value: string, context: EmitContext): string {
+  valueType := pattern.value.resolvedType else { panic("Case value pattern has no resolved type") }
+  if valueType.kind == "none" {
+    return emitCaseTypeTest(valueType, subjectType, subject, "", context.modulePath, context.names, context).condition
+  }
+  if usesVariantRepresentation(subjectType) && !usesVariantRepresentation(valueType) {
+    alternative := emitContextType(valueType, context)
+    return "(std::holds_alternative<" + alternative + ">(" + subject + ") && std::get<" + alternative + ">(" + subject + ") == " + value + ")"
+  }
+  return subject + " == " + value
+}
+
+// Tests a non-Result pattern type against the subject's concrete C++ carrier.
+function emitCaseTypeTest(
+  patternType: ResolvedType,
+  subjectType: ResolvedType,
+  subject: string,
+  bindingName: string,
+  currentModulePath: string,
+  names: ModuleNames,
+  context: EmitContext | none,
+): CaseTypePatternEmission {
+  case subjectType {
     _: SerialValueResolvedType -> { return emitJsonValuePattern(patternType, subject, bindingName) }
     _ -> { }
   }

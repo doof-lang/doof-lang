@@ -17,7 +17,7 @@ import type { TypeAnnotation } from "./ast"
 import { ArrayResolvedType, ClassType, InterfaceType, PrimitiveType, RangeResolvedType, ResolvedType, ResultResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType } from "./semantic"
 import { EmitContext, isCapturedMutable, recordCoverageLine, sourceLineDirective } from "./emitter-context"
 import { emitExpressionReturn } from "./emitter-expr-utils"
-import { emitCaseSubjectValue, emitCaseTypePattern } from "./emitter-case-pattern"
+import { emitCaseSubjectValue, emitCaseTypePattern, emitCaseValuePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression, emitDiscardedExpression } from "./emitter-expr"
 import { quote } from "./emitter-expr-literals"
 import { emitContextType, emitType, specializeEmitType, usesVariantRepresentation } from "./emitter-types"
@@ -431,7 +431,7 @@ function emitCase(statement: CaseStatement, level: int, context: EmitContext): s
           condition = emitted.condition
           binding = emitted.binding
         }
-        value: ValuePattern -> { condition = subject + " == " + emitExpression(value.value, context) }
+        value: ValuePattern -> { condition = emitCaseValuePattern(value, specializeEmitType(subjectType, context), subject, emitExpression(value.value, context), context) }
         range: RangePattern -> { condition = emitRangePatternCondition(range, subject, context) }
         _: WildcardPattern -> { isWildcard = true }
       }

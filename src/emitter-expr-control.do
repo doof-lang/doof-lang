@@ -3,7 +3,7 @@
 import { Block, CaseExpression, CatchExpression, DotShorthand, Expression, IfExpression, RangePattern, TypePattern, ValuePattern, WildcardPattern, YieldBlockExpression } from "./ast"
 import { SerialValueResolvedType, ResolvedType } from "./semantic"
 import { EmitContext } from "./emitter-context"
-import { emitCaseSubjectValue, emitCaseTypePattern } from "./emitter-case-pattern"
+import { emitCaseSubjectValue, emitCaseTypePattern, emitCaseValuePattern } from "./emitter-case-pattern"
 import { cppIdentifier, emitExpression } from "./emitter-expr"
 import { emitBlock, emitCondition } from "./emitter-stmt"
 import { exprModuleNamespaceFor, hasNoneMember } from "./emitter-expr-utils"
@@ -109,7 +109,7 @@ export function emitCaseExpression(expression: CaseExpression, context: EmitCont
           condition = emitted.condition
           binding = emitted.binding
         }
-        value: ValuePattern -> { condition = "_case_subject == " + emitExpression(value.value, context) }
+        value: ValuePattern -> { condition = emitCaseValuePattern(value, specializeEmitType(subjectResult, context), "_case_subject", emitExpression(value.value, context), context) }
         range: RangePattern -> { condition = emitRangePatternCondition(range, "_case_subject", context) }
         _: WildcardPattern -> { condition = "true" }
       }

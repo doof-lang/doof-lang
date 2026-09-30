@@ -86,6 +86,91 @@ export function testQuarkWeakCaseNullableUnion(): none {
   Assert.equal(quarkOptionalUnionRead(quarkExpiredOptionalUnion()), -1)
 }
 
+class QuarkNoneValueItem { value: int }
+function quarkNoneValueOptional(email: string | none): string => case email {
+  none -> "missing",
+  e: string -> e
+}
+function quarkNoneValuePointer(item: QuarkNoneValueItem | none): int => case item {
+  none -> -1,
+  found: QuarkNoneValueItem -> found.value
+}
+function quarkNoneValueVariant(value: int | string | none): string => case value {
+  none -> "none",
+  n: int -> "int " + string(n),
+  s: string -> "string " + s
+}
+function quarkNoneValueStatement(email: string | none): int {
+  case email {
+    none -> { return 0 }
+    "a" -> { return 1 }
+    _ -> { return 2 }
+  }
+}
+
+export function testNoneValuePatternRuntimeAcrossCarriers(): none {
+  Assert.equal(quarkNoneValueOptional(none), "missing")
+  Assert.equal(quarkNoneValueOptional("a@b.c"), "a@b.c")
+  Assert.equal(quarkNoneValuePointer(none), -1)
+  Assert.equal(quarkNoneValuePointer(QuarkNoneValueItem { value: 4 }), 4)
+  Assert.equal(quarkNoneValueVariant(none), "none")
+  Assert.equal(quarkNoneValueVariant(3), "int 3")
+  Assert.equal(quarkNoneValueVariant("x"), "string x")
+  Assert.equal(quarkNoneValueStatement(none), 0)
+  Assert.equal(quarkNoneValueStatement("a"), 1)
+  Assert.equal(quarkNoneValueStatement("b"), 2)
+}
+
+export function testNoneValuePatternTestsCarrierAbsence(): none {
+  cases := [
+    ["string", "doof::is_null(_case_subject)"],
+    ["Item", "doof::is_null(_case_subject)"],
+    ["int | string", "std::holds_alternative<std::monostate>(_case_subject)"],
+  ]
+  for entry of cases {
+    result := compile([SourceFile { path: "/main.do", source:
+      "class Item {}\n" +
+      "function inspect(value: " + entry[0] + " | none): int => case value { none -> 1, _ -> 2 }\n" +
+      "function run(value: " + entry[0] + " | none): int { case value { none -> { return 1 }\n_ -> { return 2 } } }",
+    }], "/main.do")
+    Assert.equal(result.diagnostics.length, 0)
+    Assert.isTrue(result.emission != none)
+    source := result.emission!.modules[0].source
+    Assert.stringContains(source, "if (" + entry[1] + ")")
+    Assert.stringNotContains(source, "== std::monostate{}")
+  }
+}
+
+function quarkValueVariant(value: int | string | none): string => case value {
+  1 -> "one",
+  "x" -> "x",
+  none -> "none",
+  _ -> "other"
+}
+
+export function testValuePatternOnVariantComparesMatchingAlternative(): none {
+  Assert.equal(quarkValueVariant(1), "one")
+  Assert.equal(quarkValueVariant(2), "other")
+  Assert.equal(quarkValueVariant("x"), "x")
+  Assert.equal(quarkValueVariant("y"), "other")
+  Assert.equal(quarkValueVariant(none), "none")
+  result := compile([SourceFile { path: "/main.do", source:
+    "function inspect(value: int | string): int => case value { 1 -> 1, _ -> 2 }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  Assert.stringContains(result.emission!.modules[0].source, "(std::holds_alternative<int32_t>(_case_subject) && std::get<int32_t>(_case_subject) == 1)")
+}
+
+export function testNoneValuePatternOnJsonTestsNull(): none {
+  result := compile([SourceFile { path: "/main.do", source:
+    "function inspect(value: SerialValue): int => case value { none -> 1, _ -> 2 }",
+  }], "/main.do")
+  Assert.equal(result.diagnostics.length, 0)
+  Assert.isTrue(result.emission != none)
+  Assert.stringContains(result.emission!.modules[0].source, "doof::serial_is_null(_case_subject)")
+}
+
 export function testNoneCarrierJsonPatternBindsUnit(): none {
   result := compile([SourceFile { path: "/main.do", source:
     "function take(value: none): none {}\n" +
