@@ -299,15 +299,28 @@ Unreachable statements still receive type checking.
 A bare `return` is valid only when the final return type is `none`; use
 `return none` to contribute an explicit absence value to an optional result.
 
+When an annotation or context does supply the return type, that type is the
+lambda's return type for expression bodies as well as block bodies, and the
+body must be assignable to it. `(x: int): double => x + 1` has type
+`(x: int): double`, not `(x: int): int`. An annotation takes precedence over the
+contextual return type.
+
+An expression body in a lambda returning `none` is evaluated like an expression
+statement, and its value is discarded, so `items.forEach(=> total += it)` is
+valid. As with expression statements, an unhandled `Result` value is an error.
+
 ### Inferred Parameter Types
 
-When the lambda type is known from context, parameter types can be omitted, but **names must match the signature**:
+When the lambda type is known from context, parameter types can be omitted.
+Parameter names do not have to match the signature; see
+[Flexible Parameter Specification](#flexible-parameter-specification) for how
+they bind:
 
 ```doof
 type Handler = (msg: string): none
 
-let h1: Handler = (msg) => println(msg)          // ✅ Name matches
-let h2: Handler = (message) => println(message)  // ❌ Error: name mismatch
+let h1: Handler = (msg) => println(msg)          // ✅ Binds msg by name
+let h2: Handler = (message) => println(message)  // ✅ Binds msg by position
 ```
 
 ### Full Type Inference (Parameterless Form)
@@ -347,7 +360,9 @@ Capture lifetime does not bypass the owning-actor checks described in
 
 ### Flexible Parameter Specification
 
-When explicitly naming parameters, you can specify **any subset in any order** — the names unambiguously bind to the signature:
+When every parameter in an explicit list names a parameter of the contextual
+signature, the names bind to the signature, so you can specify **any subset in
+any order**:
 
 ```doof
 // map signature: (it: T, index: int): U
@@ -359,10 +374,24 @@ nums.map((it, index) => it + index)  // Both in order
 nums.map((index, it) => it + index)  // Both reversed — names disambiguate
 ```
 
+Otherwise, the parameters bind by position, and trailing parameters may be
+omitted. This lets a lambda rename parameters for clarity:
+
+```doof
+users.map((user) => user.name)                    // user is `it`
+totals.reduce(0, (sum, value) => sum + value)     // sum is `acc`, value is `it`
+nums.map((value, index) => value * index)         // value is `it`, index is `index`
+nums.map((index, value) => value)                 // ❌ Error: 'index' is out of position
+```
+
+A positional list may not use a signature name at a different position, because
+it would be unclear which parameter it means. `(value, index)` is accepted, since
+`index` is in position 2 in both lists, but `(index, value)` is an error.
+
 ### Inline Usage
 
 ```doof
-c := [1, 2, 3].map((item: int): int => item * 2)
+c := [1, 2, 3].map((item: int): int => item * 2)   // item binds to `it` by position
 ```
 
 ### Enum Types in Function Signatures
@@ -389,17 +418,47 @@ let result = opposite(.North)  // Direction.South
 Built-in collection methods use consistent, brief parameter names:
 
 ```doof
-// Array method signatures:
+// Array callback signatures:
 map:         (it: T, index: int): U
 filter:      (it: T, index: int): bool
 forEach:     (it: T, index: int): none
 find:        (it: T, index: int): bool
 some:        (it: T, index: int): bool
 every:       (it: T, index: int): bool
-reduce:      (acc: U, it: T, index: int): U
-reduceRight: (acc: U, it: T, index: int): U
-sort:        (a: T, b: T): int
+reduce:      (acc: U, it: T, index: int): U    // reduce(initial: U, reducer)
+reduceRight: (acc: U, it: T, index: int): U    // reduceRight(initial: U, reducer)
+sort:        (a: T, b: T): int                 // mutable arrays only
 ```
+
+A named function passed as a callback may omit the trailing `index`
+parameter, so `items.map(format)` accepts `function format(value: int): string`.
+
+### Callback Result Types
+
+`map`, `reduce`, and `reduceRight` are generic in their result type `U`. Each
+of these sources fixes `U`, and they rank in this order:
+
+1. Explicit type arguments: `items.map<double>(=> it + 1)`.
+2. Argument values, such as `reduce`'s initial value, and lambdas that declare
+   a return type: `items.map((it): double => it + 1)`.
+3. The contextual result type: `r: double[] := items.map(=> it + 1)`.
+4. The callback body, when nothing else determines `U`.
+
+A lower-ranked source converts to the type fixed by a higher-ranked one. In all
+three examples above, the body `it + 1` produces an `int` that widens to
+`double`, and the result is `double[]`. When explicit sources disagree, the
+checker reports the clash instead of choosing one:
+
+```doof
+items.map<string>((it): double => it)     // ❌ Argument 1 returns double; expected a callback returning string
+r: string[] := items.map((it): double => it) // ❌ Cannot assign double[] to string[]
+r: string[] := items.map(=> it + 1)       // ❌ Cannot return int from lambda returning string
+total := items.reduce(0, => acc + it * 0.5) // ❌ Cannot return double from lambda returning int
+total := items.reduce(0.0, => acc + it * 0.5) // ✅ double
+```
+
+These ranks apply to every generic call whose type parameters a lambda helps
+determine, not only array methods.
 
 ### Practical Usage
 
@@ -409,7 +468,7 @@ let numbers = [10, 20, 30, 40, 50]
 // Parameterless form — inherits names from signature
 numbers.map(=> it * 2)                    // [20, 40, 60, 80, 100]
 numbers.filter(=> it > 25)                // [30, 40, 50]
-numbers.reduce(=> acc + it)               // 150
+numbers.reduce(0, => acc + it)            // 150
 
 // Using multiple parameters
 numbers.map(=> it * index)                // [0, 20, 60, 120, 200]

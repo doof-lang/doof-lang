@@ -2,13 +2,13 @@
 // Syntax adapters preserve spans and shorthand properties; boundary rules stay
 // with the caller and consume the decorated values after this check.
 import { CallArgument, Expression, ObjectProperty, SourceSpan } from "./ast"
-import { FunctionParamType, ResolvedType, Scope } from "./semantic"
+import { FunctionParamType, FunctionType, ResolvedType, Scope } from "./semantic"
 import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
 import { checkPropertyValue } from "./checker-properties"
 import { containsString, functionParameterIndex } from "./checker-symbols"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
-import { typeName } from "./checker-types"
+import { displayTypeName, sameType, typeName } from "./checker-types"
 import { typeError } from "./checker-common"
 
 export class SuppliedArgument {
@@ -77,7 +77,7 @@ export function checkArguments(
     actual := checkArgumentValue(state, argument, scope, if contextual then expected else none)
     if validateTypes && expected != none && !isAssignableWithInterfaces(state.result, actual, expected!) {
       label := if named then "'" + argument.name! + "'" else string(i + 1)
-      typeError(state, argumentPrefix + " " + label + " has type " + typeName(actual) + "; expected " + typeName(expected!), argument.span)
+      typeError(state, argumentMismatch(argumentPrefix + " " + label, actual, expected!), argument.span)
     }
   }
   if named {
@@ -97,4 +97,29 @@ export function checkArguments(
 function checkArgumentValue(state: CheckerState, argument: SuppliedArgument, scope: Scope, expected: ResolvedType | none): ResolvedType {
   if argument.property != none { return checkPropertyValue(state, argument.property!, scope, expected) }
   return checkExpression(state, argument.value!, scope, expected)
+}
+
+// A callback whose parameters line up but whose result does not is reported
+// by result type, which is the part a caller can act on.
+function argumentMismatch(subject: string, actual: ResolvedType, expected: ResolvedType): string {
+  case actual {
+    actualFunction: FunctionType -> {
+      case expected {
+        expectedFunction: FunctionType -> {
+          let sameParams = actualFunction.params.length == expectedFunction.params.length
+          if sameParams {
+            for i of 0..<actualFunction.params.length {
+              if !sameType(actualFunction.params[i].type_, expectedFunction.params[i].type_) { sameParams = false }
+            }
+          }
+          if sameParams {
+            return subject + " returns " + displayTypeName(actualFunction.returnType) + "; expected a callback returning " + displayTypeName(expectedFunction.returnType)
+          }
+        }
+        _ -> { }
+      }
+    }
+    _ -> { }
+  }
+  return subject + " has type " + displayTypeName(actual) + "; expected " + displayTypeName(expected)
 }

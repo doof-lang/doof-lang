@@ -361,8 +361,13 @@ Common APIs:
 | `.indexOf(value)` | first match or `-1` |
 | `.some(pred)` | any match |
 | `.every(pred)` | all match |
+| `.find(pred)` | first match as `T \| none` |
 | `.filter(pred)` | preserves mutability |
-| `.map(mapper)` | preserves mutability |
+| `.map(mapper)` | `<U>`; preserves mutability |
+| `.forEach(action)` | `action` returns `none`; expression bodies discard their value |
+| `.reduce(initial, reducer)` | `<U>`; `(acc, it, index)`, first to last |
+| `.reduceRight(initial, reducer)` | `<U>`; `(acc, it, index)`, last to first |
+| `.sort(compare)` | mutable arrays only; stable, in place; `(a, b)` returns a negative int when `a` comes first |
 | `.slice(start, end)` | shallow slice |
 | `.drainToReadonly()` | mutable array only; move-drains into readonly and leaves the source empty |
 | `.cloneReadonly()` | mutable array only; shallow-copies into readonly and preserves the source |

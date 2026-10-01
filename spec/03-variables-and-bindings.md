@@ -424,7 +424,7 @@ with x := computeX(), y := computeY(x) {
 Type annotations can be provided for any binding:
 
 ```doof
-with total: double := prices.reduce(0.0, (a, b) => a + b) {
+with total: double := prices.reduce(0.0, (sum, price) => sum + price) {
     println("Total: ${total}")
 }
 ```

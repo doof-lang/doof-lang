@@ -3,10 +3,10 @@
 import { checkArguments, callArguments } from "./checker-arguments"
 import { insideConstructorFactory, resolveConstructor, validateConstructorVisibility, validateFieldArguments } from "./checker-construction"
 
-import { ActorType, Binding, ClassType, EnumType, FunctionParamType, FunctionType, PrimitiveType, ResolvedType, ResultResolvedType, Scope, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
+import { ActorType, Binding, ClassType, EnumType, FunctionParamType, FunctionType, PrimitiveType, ResolvedType, ResultResolvedType, Scope, UnionResolvedType, UnknownType, WeakResolvedType } from "./semantic"
 
 import { CallExpression, ClassDeclaration, DotShorthand, Expression, FunctionDeclaration, Identifier, LambdaExpression, MemberExpression, SourceSpan, TypeParameterConstraint } from "./ast"
-import { classType, functionType, resultType, neverType, noneType, primitive, sameType, typeName, unionType, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
+import { classType, functionType, resultType, neverType, noneType, primitive, typeName, unionType, substituteTypeParams, unknownType, weakReferenceErrorType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 
@@ -16,6 +16,8 @@ import { resolveType, resolveCalleeTarget, validateTypeArgumentConstraints } fro
 import { finish, typeError } from "./checker-common"
 import { optionalResolvedType, functionParameterIndex, lookup, isBuiltinPrintlnCall, declarationFor } from "./checker-symbols"
 import { inferTypeArgument } from "./checker-generics"
+import { inferCallTypeArguments } from "./checker-call-inference"
+import { withCallbackArity } from "./checker-array-methods"
 import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
@@ -82,7 +84,8 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
     return finish(state, expression, neverType())
   }
   case calleeType {
-    resolvedFunction: FunctionType -> {
+    declaredFunction: FunctionType -> {
+      resolvedFunction := adaptArrayCallbackArity(state, expression, declaredFunction, scope)
       let effectiveFunction: FunctionType = resolvedFunction
       let genericInferenceFailed = false
       if expression.typeArgs.length > 0 {
@@ -103,54 +106,11 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
           }
         }
       } else if resolvedFunction.typeParams.length > 0 {
-        let inferred: ResolvedType[] = []
-        let complete = true
-        for typeParam of resolvedFunction.typeParams {
-          let inferredType: ResolvedType | none = none
-          for i of 0..<expression.args.length {
-            parameterIndex := if expression.args[i].name == none then i else functionParameterIndex(resolvedFunction.params, expression.args[i].name!)
-            if parameterIndex < 0 || parameterIndex >= resolvedFunction.params.length { continue }
-            parameterType := resolvedFunction.params[parameterIndex].type_
-            // Unresolved type parameters still carry useful callback input
-            // types, which are required to type shorthand lambda bindings.
-            let inferenceExpected = genericInferenceExpected(parameterType, resolvedFunction.typeParams)
-            case expression.args[i].value {
-              _: LambdaExpression -> {
-                inferenceExpected = parameterType
-                case parameterType {
-                  callback: FunctionType -> {
-                    if genericInferenceExpected(callback.returnType, resolvedFunction.typeParams) == none {
-                      inferenceExpected = functionType(callback.params, unknownType())
-                    }
-                  }
-                  _ -> { }
-                }
-              }
-              _: DotShorthand -> { if inferenceExpected == none { continue } }
-              _ -> { }
-            }
-            actual := checkExpression(state, expression.args[i].value, scope, inferenceExpected)
-            candidate := inferTypeArgument(parameterType, actual, typeParam)
-            if candidate != none {
-              let candidateIsSelf = false
-              case candidate! { parameter: TypeParameterType -> { candidateIsSelf = parameter.name == typeParam } _ -> { } }
-              let inferredIsSelf = false
-              if inferredType != none { case inferredType! { parameter: TypeParameterType -> { inferredIsSelf = parameter.name == typeParam } _ -> { } } }
-              if candidateIsSelf && inferredType != none { continue }
-              if inferredType == none || (inferredIsSelf && !candidateIsSelf) { inferredType = candidate }
-              else if sameType(inferredType!, candidate!) { }
-              else if isAssignableWithInterfaces(state.result, candidate!, inferredType!) { }
-              else if isAssignableWithInterfaces(state.result, inferredType!, candidate!) { inferredType = candidate }
-              else { complete = false }
-            }
-          }
-          if inferredType == none { complete = false; inferred.push(typeParameter(typeParam)) }
-          else { inferred.push(inferredType!) }
-        }
-        if complete {
-          expression.resolvedGenericTypeArgs = inferred
-          applyTypeArgumentConstraints(state, expression.resolvedFunction, inferred, expression.span, scope, expression.resolvedFunctionModule, expression.callee)
-          substituted := substituteTypeParams(resolvedFunction, resolvedFunction.typeParams, inferred)
+        inferred := inferCallTypeArguments(state, expression.args, resolvedFunction, scope, expected)
+        if inferred != none {
+          expression.resolvedGenericTypeArgs = inferred!
+          applyTypeArgumentConstraints(state, expression.resolvedFunction, inferred!, expression.span, scope, expression.resolvedFunctionModule, expression.callee)
+          substituted := substituteTypeParams(resolvedFunction, resolvedFunction.typeParams, inferred!)
           case substituted {
             function_: FunctionType -> { effectiveFunction = function_ }
             _ -> { }
@@ -215,16 +175,37 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
   return finish(state, expression, unknownType())
 }
 
-// Concrete parts of a generic signature remain valid contextual types during
-// inference. Expressions that depend on a type parameter are checked after
-// substitution; a direct dot-shorthand can therefore learn that type from a
-// sibling argument without producing an early no-context diagnostic.
-function genericInferenceExpected(pattern: ResolvedType, typeParams: string[]): ResolvedType | none {
-  let unknownArguments: ResolvedType[] = []
-  for _ of typeParams { unknownArguments.push(unknownType()) }
-  substituted := substituteTypeParams(pattern, typeParams, unknownArguments)
-  if sameType(pattern, substituted) { return pattern }
-  return none
+// A named function value passed to an array callback may omit the trailing
+// `index` parameter. The narrowed signature is recorded on the callee so the
+// emitter passes the argument with the arity the checker accepted.
+function adaptArrayCallbackArity(state: CheckerState, expression: CallExpression, signature: FunctionType, scope: Scope): FunctionType {
+  let member: MemberExpression | none = none
+  case expression.callee { callee: MemberExpression -> { member = callee } _ -> { } }
+  if member == none || member!.object.resolvedType == none || member!.object.resolvedType!.kind != "array" { return signature }
+  let adapted = signature
+  let changed = false
+  for i of 0..<expression.args.length {
+    argument := expression.args[i]
+    case argument.value {
+      _: LambdaExpression -> { continue }
+      _: DotShorthand -> { continue }
+      _ -> { }
+    }
+    parameterIndex := if argument.name == none then i else functionParameterIndex(adapted.params, argument.name!)
+    if parameterIndex < 0 || parameterIndex >= adapted.params.length || adapted.params[parameterIndex].type_.kind != "function" { continue }
+    diagnosticMark := state.diagnostics.length
+    actual := checkExpression(state, argument.value, scope, none)
+    while state.diagnostics.length > diagnosticMark { ignored := try! state.diagnostics.pop() }
+    case actual {
+      function_: FunctionType -> {
+        narrowed := withCallbackArity(adapted, parameterIndex, function_.params.length)
+        if narrowed != none { adapted = narrowed!; changed = true }
+      }
+      _ -> { }
+    }
+  }
+  if changed { member!.resolvedType = adapted }
+  return adapted
 }
 
 function checkedMemberCallReturnType(expression: CallExpression, returnType: ResolvedType): ResolvedType {

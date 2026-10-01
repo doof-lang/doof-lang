@@ -14,6 +14,7 @@ import { emitContextReturnType, emitContextType, emitResultPayloadType, emitType
 import { classInstantiationKey, functionInstantiationKey, methodInstantiationKey } from "./emitter-monomorphize"
 import { emitSyncActorCall } from "./emitter-expr-actor"
 import { emitOptionalCall } from "./emitter-optional-chain"
+import { emitArrayMethodCall } from "./emitter-array-methods"
 
 export function emitCall(expression: CallExpression, context: EmitContext, expected: ResolvedType | none = none): string {
   case expression.callee {
@@ -148,17 +149,9 @@ export function emitCall(expression: CallExpression, context: EmitContext, expec
           }
           _: StreamResolvedType -> { return emitInterfaceCall(member, expression, context) }
           union_: UnionResolvedType -> { if usesVariantRepresentation(union_) { return emitVariantMemberCall(member, expression, context) } }
-          _: ArrayResolvedType -> {
-            if member.property == "takeFirstCompleted" { return "doof::promise_take_first_completed(" + emitExpression(member.object, context) + ")" }
-            if member.property == "buildReadonly" || member.property == "drainToReadonly" { return "doof::array_drainToReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
-            if member.property == "cloneReadonly" { return "doof::array_cloneReadonly(" + emitExpression(member.object, context) + ", \"\", 0)" }
-            if member.property == "cloneMutable" { return "doof::array_cloneMutable(" + emitExpression(member.object, context) + ", \"\", 0)" }
-            if member.property == "contains" { return "doof::array_contains(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
-            if member.property == "indexOf" { return "doof::array_indexOf(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
-            if member.property == "some" { return "doof::array_some(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
-            if member.property == "every" { return "doof::array_every(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
-            if member.property == "filter" { return "doof::array_filter(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
-            if member.property == "map" { return "doof::array_map(" + emitExpression(member.object, context) + ", " + emitExpression(expression.args[0].value, context) + ", \"\", 0)" }
+          array: ArrayResolvedType -> {
+            lowered := emitArrayMethodCall(member, expression, array, context)
+            if lowered != none { return lowered! }
           }
           map: MapResolvedType -> {
             if member.property == "has" {

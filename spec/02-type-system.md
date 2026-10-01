@@ -290,16 +290,26 @@ Arrays support a `.length` property and the following built-in methods:
 | `.pop()` | mutable only | `(): Result<T, string>` | Remove and return the last element, or a failure message when empty |
 | `.contains(element)` | both | `(T): bool` | Whether the array contains the value |
 | `.indexOf(element)` | both | `(T): int` | Index of first matching element, or `-1` when absent |
-| `.some(predicate)` | both | `((it: T): bool): bool` | Whether any element matches the predicate |
-| `.every(predicate)` | both | `((it: T): bool): bool` | Whether all elements match the predicate |
-| `.filter(predicate)` | both | `((it: T): bool): T[]` or `readonly T[]` | Keep elements matching predicate (preserves mutability) |
-| `.map(mapper)` | both | `<U>((it: T): U): U[]` or `readonly U[]` | Transform elements (preserves mutability) |
+| `.some(predicate)` | both | `((it: T, index: int): bool): bool` | Whether any element matches the predicate |
+| `.every(predicate)` | both | `((it: T, index: int): bool): bool` | Whether all elements match the predicate |
+| `.find(predicate)` | both | `((it: T, index: int): bool): T \| none` | First matching element, or `none` |
+| `.filter(predicate)` | both | `((it: T, index: int): bool): T[]` or `readonly T[]` | Keep elements matching predicate (preserves mutability) |
+| `.map(mapper)` | both | `<U>((it: T, index: int): U): U[]` or `readonly U[]` | Transform elements (preserves mutability) |
+| `.forEach(action)` | both | `((it: T, index: int): none): none` | Run `action` for each element |
+| `.reduce(initial, reducer)` | both | `<U>(U, (acc: U, it: T, index: int): U): U` | Fold from the first element to the last |
+| `.reduceRight(initial, reducer)` | both | `<U>(U, (acc: U, it: T, index: int): U): U` | Fold from the last element to the first |
+| `.sort(compare)` | mutable only | `((a: T, b: T): int): none` | Stable in-place sort; a negative result orders `a` first |
 | `.slice(start, end)` | both | `(int, int): T[]` or `readonly T[]` | Sub-array (preserves mutability) |
 | `.drainToReadonly()` | mutable only | `(): readonly T[]` | Move-drain the array into a new readonly array (source is left empty) |
 | `.cloneReadonly()` | mutable only | `(): readonly T[]` | Shallow-copy into a new readonly array without changing the source |
 | `.cloneMutable()` | both | `(): T[]` | Shallow-copy into a new mutable array |
 
-`push`, `reserve`, `pop`, `drainToReadonly`, and `cloneReadonly` are rejected on `readonly T[]` arrays at compile time. The deprecated `buildReadonly()` spelling remains accepted on mutable arrays with a warning and has the same draining behavior as `drainToReadonly()`.
+`push`, `reserve`, `pop`, `sort`, `drainToReadonly`, and `cloneReadonly` are rejected on `readonly T[]` arrays at compile time. The deprecated `buildReadonly()` spelling remains accepted on mutable arrays with a warning and has the same draining behavior as `drainToReadonly()`.
+
+Callback parameters bind by name, so a lambda may list any subset of them, and
+a named function may omit the trailing `index`. See
+[Standard Library Conventions](04-functions-and-lambdas.md#standard-library-conventions)
+for the parameter and result-type rules.
 
 ```doof
 nums := [1, 2, 3, 4]
@@ -317,6 +327,11 @@ anyEven := nums.some((it: int): bool => it % 2 == 0)      // true
 allPositive := nums.every((it: int): bool => it > 0)      // true
 evens := nums.filter((it: int): bool => it % 2 == 0)      // [2, 4]
 labels := nums.map((it: int): string => "#${string(it)}") // ["#1", "#2", "#3", "#4"]
+firstEven := nums.find(=> it % 2 == 0)                    // 2 (int | none)
+total := nums.reduce(0, => acc + it)                      // 10
+positions := nums.map(=> it * index)                      // [0, 2, 6, 12]
+let order = [3, 1, 2]
+order.sort(=> a - b)                                      // order is now [1, 2, 3]
 
 // Build pattern: accumulate into mutable, then freeze
 let builder: int[] = []

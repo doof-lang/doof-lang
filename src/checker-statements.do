@@ -28,7 +28,7 @@ import {
 import {
   actorType, applyDeepReadonly, arrayType, classType, enumType, functionType, interfaceType, isNumeric, isWeakReferenceTarget, joinTypes,
   isJsonValueType, jsonObjectType, jsonValueType, mapType, resultType, streamType,
-  noneType, numericResult, primitive, promiseType, sameType, tupleType, typeName, unionType,
+  noneType, numericResult, primitive, promiseType, sameType, tupleType, displayTypeName, typeName, unionType,
   substituteTypeParams, typeParameter, unknownType, weakType,
 } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization } from "./json-semantics"
@@ -158,7 +158,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
         if valueType.kind == "never" { bindingsComplete = false }
         declaredType := if binding.type_ == none then valueType else resolveType(state, binding.type_!, state.info!, scope)
         binding.resolvedType = optionalResolvedType(declaredType)
-        if !isAssignableWithInterfaces(state.result, valueType, declaredType) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(declaredType), binding.span) }
+        if !isAssignableWithInterfaces(state.result, valueType, declaredType) { typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(declaredType), binding.span) }
         if binding.name == "_" {
           case valueType {
             _: ResultResolvedType -> { typeError(state, "Scoped discard '_' cannot discard a Result; handle the Result before entering the with scope", binding.span) }
@@ -199,7 +199,7 @@ export function checkStatement(state: CheckerState, statement: Statement, scope:
       }
       validateAssignmentBinding(state, binding!, assignment.span)
       if !isAssignableWithInterfaces(state.result, valueType, binding!.type_) {
-        typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(binding!.type_), assignment.span)
+        typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(binding!.type_), assignment.span)
       }
       assignment.resolvedType = optionalResolvedType(binding!.type_)
       return true
@@ -319,7 +319,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
     }
     if annotation == none { declaredType = narrowedType }
     else if validElseSubject && !isAssignableWithInterfaces(state.result, narrowedType, declaredType) {
-      typeError(state, "Cannot assign " + typeName(narrowedType) + " to " + typeName(declaredType), span)
+      typeError(state, "Cannot assign " + displayTypeName(narrowedType) + " to " + displayTypeName(declaredType), span)
     }
     elseScope := Scope { parent: scope }
     if failureName != none {
@@ -334,7 +334,7 @@ export function checkValueDeclaration(state: CheckerState, declaration: Statemen
       typeError(state, "Declaration-else block must exit scope", elseBlock!.span)
     }
   } else if !isAssignableWithInterfaces(state.result, valueType, declaredType) {
-    typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(declaredType), span)
+    typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(declaredType), span)
   }
   case declaration {
     const_: ConstDeclaration -> { const_.resolvedType = optionalResolvedType(declaredType) }
@@ -978,7 +978,7 @@ function validateDestructuringTarget(state: CheckerState, scope: Scope, name: st
   target := lookup(scope, name)
   if target == none { typeError(state, "Destructuring assignment target \"" + name + "\" is not defined", span); return }
   validateAssignmentBinding(state, target!, span)
-  if !isAssignableWithInterfaces(state.result, valueType, target!.type_) { typeError(state, "Cannot assign " + typeName(valueType) + " to " + typeName(target!.type_), span) }
+  if !isAssignableWithInterfaces(state.result, valueType, target!.type_) { typeError(state, "Cannot assign " + displayTypeName(valueType) + " to " + displayTypeName(target!.type_), span) }
 }
 
 function lookupYieldBinding(scope: Scope, name: string): Binding | none {

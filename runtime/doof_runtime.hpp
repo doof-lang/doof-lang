@@ -2077,13 +2077,36 @@ int32_t array_indexOf(const std::shared_ptr<std::vector<T>>& arr, const T& eleme
     return -1;
 }
 
+namespace detail {
+// Array callbacks declare `index` as their final parameter. Named function
+// values may omit it, so the call shape follows the callback's arity.
+template <typename F, typename Args, typename = void>
+struct accepts_index : std::false_type {};
+
+template <typename F, typename... Args>
+struct accepts_index<F, std::tuple<Args...>, std::void_t<decltype(std::declval<const F&>().call(std::declval<Args>()..., std::declval<int32_t>()))>> : std::true_type {};
+
+template <typename F, typename... Args>
+decltype(auto) call_with_index(const F& fn, int32_t index, Args&&... args) {
+    if constexpr (accepts_index<F, std::tuple<Args&&...>>::value) {
+        return fn.call(std::forward<Args>(args)..., index);
+    } else {
+        return fn.call(std::forward<Args>(args)...);
+    }
+}
+
+template <typename F, typename T>
+using element_callback_result_t = std::decay_t<decltype(call_with_index(std::declval<const F&>(), 0, std::declval<const T&>()))>;
+} // namespace detail
+
 template <typename T, typename Predicate>
 bool array_some(const std::shared_ptr<std::vector<T>>& arr, const Predicate& predicate, const char* file, int32_t line) {
     if (!arr) {
         panic_at(file, line, "Attempted to iterate null array in some()");
     }
-    for (const auto& item : *arr) {
-        if (predicate.call(item)) {
+    const auto size = static_cast<int32_t>(arr->size());
+    for (int32_t i = 0; i < size; i++) {
+        if (detail::call_with_index(predicate, i, (*arr)[static_cast<size_t>(i)])) {
             return true;
         }
     }
@@ -2095,12 +2118,27 @@ bool array_every(const std::shared_ptr<std::vector<T>>& arr, const Predicate& pr
     if (!arr) {
         panic_at(file, line, "Attempted to iterate null array in every()");
     }
-    for (const auto& item : *arr) {
-        if (!predicate.call(item)) {
+    const auto size = static_cast<int32_t>(arr->size());
+    for (int32_t i = 0; i < size; i++) {
+        if (!detail::call_with_index(predicate, i, (*arr)[static_cast<size_t>(i)])) {
             return false;
         }
     }
     return true;
+}
+
+template <typename T, typename Predicate>
+int32_t array_find_index(const std::shared_ptr<std::vector<T>>& arr, const Predicate& predicate, const char* file, int32_t line) {
+    if (!arr) {
+        panic_at(file, line, "Attempted to iterate null array in find()");
+    }
+    const auto size = static_cast<int32_t>(arr->size());
+    for (int32_t i = 0; i < size; i++) {
+        if (detail::call_with_index(predicate, i, (*arr)[static_cast<size_t>(i)])) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 template <typename T, typename Predicate>
@@ -2110,8 +2148,10 @@ std::shared_ptr<std::vector<T>> array_filter(const std::shared_ptr<std::vector<T
     }
     auto result = std::make_shared<std::vector<T>>();
     result->reserve(arr->size());
-    for (const auto& item : *arr) {
-        if (predicate.call(item)) {
+    const auto size = static_cast<int32_t>(arr->size());
+    for (int32_t i = 0; i < size; i++) {
+        const auto& item = (*arr)[static_cast<size_t>(i)];
+        if (detail::call_with_index(predicate, i, item)) {
             result->push_back(item);
         }
     }
@@ -2120,17 +2160,64 @@ std::shared_ptr<std::vector<T>> array_filter(const std::shared_ptr<std::vector<T
 
 template <typename T, typename Mapper>
 auto array_map(const std::shared_ptr<std::vector<T>>& arr, const Mapper& mapper, const char* file, int32_t line)
-    -> std::shared_ptr<std::vector<std::decay_t<decltype(std::declval<const Mapper&>().call(std::declval<const T&>()))>>> {
+    -> std::shared_ptr<std::vector<detail::element_callback_result_t<Mapper, T>>> {
     if (!arr) {
         panic_at(file, line, "Attempted to iterate null array in map()");
     }
-    using U = std::decay_t<decltype(std::declval<const Mapper&>().call(std::declval<const T&>()))>;
-    auto result = std::make_shared<std::vector<U>>();
+    auto result = std::make_shared<std::vector<detail::element_callback_result_t<Mapper, T>>>();
     result->reserve(arr->size());
-    for (const auto& item : *arr) {
-        result->push_back(mapper.call(item));
+    const auto size = static_cast<int32_t>(arr->size());
+    for (int32_t i = 0; i < size; i++) {
+        result->push_back(detail::call_with_index(mapper, i, (*arr)[static_cast<size_t>(i)]));
     }
     return result;
+}
+
+template <typename T, typename Action>
+void array_forEach(const std::shared_ptr<std::vector<T>>& arr, const Action& action, const char* file, int32_t line) {
+    if (!arr) {
+        panic_at(file, line, "Attempted to iterate null array in forEach()");
+    }
+    // Iterate a snapshot of the length; the callback may append to the array.
+    const auto size = static_cast<int32_t>(arr->size());
+    for (int32_t i = 0; i < size && i < static_cast<int32_t>(arr->size()); i++) {
+        detail::call_with_index(action, i, (*arr)[static_cast<size_t>(i)]);
+    }
+}
+
+template <typename T, typename U, typename Reducer>
+U array_reduce(const std::shared_ptr<std::vector<T>>& arr, U initial, const Reducer& reducer, const char* file, int32_t line) {
+    if (!arr) {
+        panic_at(file, line, "Attempted to iterate null array in reduce()");
+    }
+    U acc = std::move(initial);
+    const auto size = static_cast<int32_t>(arr->size());
+    for (int32_t i = 0; i < size; i++) {
+        acc = detail::call_with_index(reducer, i, acc, (*arr)[static_cast<size_t>(i)]);
+    }
+    return acc;
+}
+
+template <typename T, typename U, typename Reducer>
+U array_reduceRight(const std::shared_ptr<std::vector<T>>& arr, U initial, const Reducer& reducer, const char* file, int32_t line) {
+    if (!arr) {
+        panic_at(file, line, "Attempted to iterate null array in reduceRight()");
+    }
+    U acc = std::move(initial);
+    for (int32_t i = static_cast<int32_t>(arr->size()) - 1; i >= 0; i--) {
+        acc = detail::call_with_index(reducer, i, acc, (*arr)[static_cast<size_t>(i)]);
+    }
+    return acc;
+}
+
+// Stable in-place sort. `compare` orders a before b when it returns a
+// negative value.
+template <typename T, typename Comparer>
+void array_sort(const std::shared_ptr<std::vector<T>>& arr, const Comparer& compare, const char* file, int32_t line) {
+    if (!arr) {
+        panic_at(file, line, "Attempted to sort null array");
+    }
+    std::stable_sort(arr->begin(), arr->end(), [&compare](const T& a, const T& b) { return compare.call(a, b) < 0; });
 }
 
 template <typename T>

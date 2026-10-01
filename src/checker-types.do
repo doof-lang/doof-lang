@@ -318,6 +318,24 @@ export function typeName(resolvedType: ResolvedType): string {
   return "unknown"
 }
 
+/**
+ * Diagnostic spelling. `typeName` is also an identity key, so it keeps the
+ * opaque "function" spelling; messages show the callable's full signature.
+ */
+export function displayTypeName(resolvedType: ResolvedType): string {
+  case resolvedType {
+    function_: FunctionType -> {
+      let result = "("
+      for i of 0..<function_.params.length {
+        if i > 0 { result = result + ", " }
+        result = result + function_.params[i].name + ": " + displayTypeName(function_.params[i].type_)
+      }
+      return result + "): " + displayTypeName(function_.returnType)
+    }
+    _ -> { return typeName(resolvedType) }
+  }
+}
+
 export function sameType(left: ResolvedType, right: ResolvedType): bool {
   return compareTypes(left, right, false)
 }

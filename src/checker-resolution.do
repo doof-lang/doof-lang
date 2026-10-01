@@ -12,6 +12,7 @@ import { deprecatedBuildReadonly, typeError } from "./checker-common"
 import { resolveAnnotation, methodSignature, declarationFor } from "./checker-symbols"
 import { classModuleFor, isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
+import { arrayMemberType } from "./checker-array-methods"
 
 import { resolveCheckedAnnotation, validateAnnotationConstraints, decorateAnnotationType } from "./checker-annotations"
 
@@ -128,46 +129,7 @@ function resolveMemberType(state: CheckerState, object: ResolvedType, property: 
       if resolved != none { return resolved! }
       return unknownType()
     }
-    array: ArrayResolvedType -> {
-      if property == "length" { return primitive("int") }
-      if array.readonly_ && (property == "push" || property == "reserve" || property == "pop" || property == "takeFirstCompleted") {
-        typeError(state, "Method \"" + property + "\" is not available on readonly array", span)
-        return unknownType()
-      }
-      if property == "push" { return functionType([FunctionParamType { name: "value", type_: array.elementType, hasDefault: false }], noneType()) }
-      if property == "contains" { return functionType([FunctionParamType { name: "value", type_: array.elementType, hasDefault: false }], primitive("bool")) }
-      if property == "indexOf" { return functionType([FunctionParamType { name: "value", type_: array.elementType, hasDefault: false }], primitive("int")) }
-      if property == "reserve" { return functionType([FunctionParamType { name: "capacity", type_: primitive("int"), hasDefault: false }], noneType()) }
-      if property == "pop" { return functionType([], resultType(array.elementType, primitive("string"))) }
-      if property == "takeFirstCompleted" {
-        case array.elementType {
-          promise: PromiseType -> { return functionType([], resultType(promise.valueType, primitive("string"))) }
-          _ -> { return unknownType() }
-        }
-      }
-      if property == "some" || property == "every" {
-        predicate := functionType([FunctionParamType { name: "it", type_: array.elementType, hasDefault: false }], primitive("bool"))
-        return functionType([FunctionParamType { name: "predicate", type_: predicate, hasDefault: false }], primitive("bool"))
-      }
-      if property == "filter" {
-        predicate := functionType([FunctionParamType { name: "it", type_: array.elementType, hasDefault: false }], primitive("bool"))
-        return functionType([FunctionParamType { name: "predicate", type_: predicate, hasDefault: false }], arrayType(array.elementType, array.readonly_))
-      }
-      if property == "map" {
-        mapped := typeParameter("U")
-        mapper := functionType([FunctionParamType { name: "it", type_: array.elementType, hasDefault: false }], mapped)
-        return functionType([FunctionParamType { name: "mapper", type_: mapper, hasDefault: false }], arrayType(mapped, array.readonly_), ["U"])
-      }
-      if property == "slice" { return functionType([FunctionParamType { name: "start", type_: primitive("int"), hasDefault: false }, FunctionParamType { name: "end", type_: primitive("int"), hasDefault: false }], arrayType(array.elementType, array.readonly_)) }
-      if array.readonly_ && (property == "buildReadonly" || property == "drainToReadonly" || property == "cloneReadonly") {
-        typeError(state, "Method \"" + property + "\" is not available on readonly array", span)
-        return unknownType()
-      }
-      if property == "buildReadonly" { deprecatedBuildReadonly(state, span); return functionType([], arrayType(array.elementType, true)) }
-      if property == "drainToReadonly" || property == "cloneReadonly" { return functionType([], arrayType(array.elementType, true)) }
-      if property == "cloneMutable" { return functionType([], arrayType(array.elementType)) }
-      return unknownType()
-    }
+    array: ArrayResolvedType -> { return arrayMemberType(state, array, property, span) }
     map: MapResolvedType -> {
       if property == "size" { return primitive("int") }
       if property == "has" { return functionType([FunctionParamType { name: "key", type_: map.keyType, hasDefault: false }], primitive("bool")) }

@@ -25,3 +25,11 @@ export function testCheckerConsolidationRequiredPositionalSlots(): none {
     Assert.stringContains(result.diagnostics[0].message, "2")
   }
 }
+
+export function testCallbackArgumentMismatchNamesTheResult(): none {
+  source := "function run(f: (x: int): string): string => f(1)\nfunction main(): none {\nfn := (x: int): double => x\nrun(fn)\nrun((y: string): string => y) }"
+  result := compile([SourceFile { path: "/main.do", source }], "/main.do")
+  Assert.equal(result.diagnostics.length, 2)
+  Assert.equal(result.diagnostics[0].message, "Argument 1 returns double; expected a callback returning string")
+  Assert.equal(result.diagnostics[1].message, "Argument 1 has type (y: string): string; expected (x: int): string")
+}

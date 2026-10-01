@@ -91,13 +91,26 @@ Ch. 9 and ch. 13 document all of them. If they're deferred, mark them as planned
 `loadUser()!.email` fails with `Result<User, string> has no member "email"`.
 Ch. 5 and ch. 9 specify it, and postfix `!` already unwraps Results.
 
-### A7. Array callback conventions — **Decide**
+### A7. Array callback conventions — **Fixed**
 
-- Callbacks receive only `it`, with no `index`.
-- `forEach`, `find`, `reduce`, `reduceRight` and `sort` don't exist.
-- Ch. 4 ("Standard Library Conventions", "Practical Usage") documents all of them, and its trailing-lambda examples use `forEach`. The ch. 2 method table does not.
-
-**Recommendation**: implement `forEach`, `find` and `reduce`, which are core. Then either implement `index` or remove it and the "flexible parameter specification" example.
+- Element callbacks take `(it: T, index: int)`; `reduce` and `reduceRight`
+  take an initial value and `(acc: U, it: T, index: int)`.
+- `forEach`, `find` (`T | none`), `reduce`, `reduceRight` and `sort` (stable,
+  in place, mutable arrays only) are implemented.
+- Explicit lambda parameters that all name signature parameters bind by name
+  (any subset, any order). Other lists bind by position and may omit trailing
+  parameters, so `users.map((user) => …)` stays valid. A signature name listed
+  out of position is an error. Named functions may omit the trailing `index`.
+- Generic callback results rank their sources: explicit type arguments; then
+  argument values and lambdas with a declared return type; then the contextual
+  result type; then the lambda body. `map<double>(=> it + 1)`,
+  `map((it): double => it + 1)` and `r: double[] := map(=> it + 1)` agree, and
+  disagreeing explicit sources are reported.
+- An expression-bodied lambda's declared or contextual return type is now its
+  signature, as for block bodies. Previously `(it): double => it + 1` had type
+  `(it: int): int`.
+- Ch. 4's no-initial-value `reduce(=> acc + it)` example was changed to pass
+  an initial value. Ch. 3's `reduce(0.0, (a, b) => …)` now binds by position.
 
 ### A8. `try target = expr` doesn't unwrap — **Implement**
 
@@ -201,7 +214,7 @@ notation. Either add it to the lexer and ch. 2, or change the example.
 
 - `export function main()` (ch. 11: `main` must not be exported).
 - `return Success()` in a function returning `Result<int, string>` (ch. 9: only valid for `Result<none, E>`).
-- `(message) => …` where the contextual type names the parameter `msg` (ch. 4: names must match). The compiler currently binds by position.
+- ~~`(message) => …` where the contextual type names the parameter `msg`.~~ Resolved: ch. 4 no longer requires lambda parameter names to match the signature. Names from the signature bind by name; other names bind by position (see A7).
 
 ### A25. Minor contextual typing gaps — **Implement**
 
@@ -271,7 +284,6 @@ parser rule at the same time.
 | ch. 14 crypto and stream examples | Use `JwtError` and `IoError` without importing them. | Add the imports. |
 | ch. 5 precedence table | Leaves out `\` at level 5. | Add it next to `/`. |
 | ch. 11 exports | `export type Result<T> = Success<T> \| Failure` shadows the builtin Result and uses a bare `Failure`. | Use a different name. |
-| ch. 4 and ch. 2 | Ch. 4's array method conventions list methods that ch. 2's table and the compiler don't have. | Reconcile them after A7. |
 
 ---
 
@@ -286,4 +298,4 @@ parser rule at the same time.
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes.** Cheap, and they remove misleading examples.
 3. **Common gaps: A5, A6, A8, A9, A10, A12, A13, A29.**
-4. **Needs a decision first: A7, A14, A16, A23, A26, A30.**
+4. **Needs a decision first: A14, A16, A23, A26, A30.**

@@ -5,7 +5,7 @@ import { ResolvedType, Scope } from "./semantic"
 import { CheckerState } from "./checker-state"
 import { checkExpression } from "./checker-expressions"
 import { lookup, optionalResolvedType } from "./checker-symbols"
-import { typeName, unknownType } from "./checker-types"
+import { displayTypeName, unknownType } from "./checker-types"
 import { typeError } from "./checker-common"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
 
@@ -24,7 +24,7 @@ export function checkPropertyValue(state: CheckerState, property: ObjectProperty
 export function checkAssignableProperty(state: CheckerState, property: ObjectProperty, scope: Scope, expected: ResolvedType | none): ResolvedType {
   actual := checkPropertyValue(state, property, scope, expected)
   if expected != none && !isAssignableWithInterfaces(state.result, actual, expected!) {
-    typeError(state, "Cannot assign " + typeName(actual) + " to " + typeName(expected!), property.span)
+    typeError(state, "Cannot assign " + displayTypeName(actual) + " to " + displayTypeName(expected!), property.span)
   }
   return actual
 }

@@ -24,6 +24,10 @@ export function testBlockLambdaNative(): none {
   runNativeFixture("block-lambda-returns")
 }
 
+export function testArrayCallbacksNative(): none {
+  runNativeFixture("array-callbacks")
+}
+
 function runNativeFixture(fixture: string): none {
   root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)

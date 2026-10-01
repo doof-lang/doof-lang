@@ -4,6 +4,7 @@ import { SourceFile as EditorSource } from "./semantic"
 import { Assert } from "std/assert"
 import { createAnalyzer } from "./analyzer"
 import { createChecker } from "./checker"
+import { compile } from "./compiler"
 import { CheckResult, SourceFile } from "./semantic"
 
 function checked(source: string): CheckResult {
@@ -202,4 +203,10 @@ export function testEnumLiteralFieldsDiscriminateUnions(): none {
   missing := checked("enum Kind { A }\nclass Bad { kind: Kind.Missing }")
   Assert.isTrue(missing.diagnostics.length > 0)
   Assert.stringContains(missing.diagnostics[0].message, "has no member \"Missing\"")
+}
+
+export function testAssignmentDiagnosticsSpellCallableSignatures(): none {
+  result := compile([SourceFile { path: "/main.do", source: "function main(): none { f: (x: int): string := (x: int): int => x }" }], "/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.equal(result.diagnostics[0].message, "Cannot assign (x: int): int to (x: int): string")
 }

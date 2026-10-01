@@ -57,14 +57,16 @@ export function testEditorCompletionUsesLivePrefixBeforeReanalysis(): none {
 }
 
 export function testEditorCompletionBuiltinCatalogTracksResolver(): none {
-  source := try! readText("src/checker-resolution.do")
-  tokens := Lexer { source }.tokenize()
   candidates := builtinMemberCandidates()
-  for i of 0..<tokens.length - 2 {
-    if tokenValue(tokens[i], source) != "property" || tokenValue(tokens[i + 1], source) != "==" || tokens[i + 2].kind != TokenType.StringLiteral { continue }
-    name := tokenValue(tokens[i + 2], source)
-    let found = false
-    for candidate of candidates { if candidate == name { found = true } }
-    Assert.isTrue(found, "Missing completion candidate: " + name)
+  for path of ["src/checker-resolution.do", "src/checker-array-methods.do"] {
+    source := try! readText(path)
+    tokens := Lexer { source }.tokenize()
+    for i of 0..<tokens.length - 2 {
+      if tokenValue(tokens[i], source) != "property" || tokenValue(tokens[i + 1], source) != "==" || tokens[i + 2].kind != TokenType.StringLiteral { continue }
+      name := tokenValue(tokens[i + 2], source)
+      let found = false
+      for candidate of candidates { if candidate == name { found = true } }
+      Assert.isTrue(found, "Missing completion candidate: " + name)
+    }
   }
 }

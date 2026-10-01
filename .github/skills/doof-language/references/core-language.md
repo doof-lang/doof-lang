@@ -181,8 +181,28 @@ transform: Transform := (x) => x * 2
 numbers.map(=> it * 2)
 numbers.filter(=> it > 10)
 numbers.reduce(0, => acc + it)
+numbers.map(=> it * index)
+numbers.map((index) => index)               // signature names bind by name
+users.map((user) => user.name)              // other names bind by position
 events.reduce(0, (count, _, _): int => count + 1)
 ```
+
+Explicit lambda parameters that all name signature parameters bind by name:
+any subset, any order. Otherwise they bind by position and may omit trailing
+parameters; a signature name at a different position is an error. A named
+function passed to an array method may omit the trailing `index`.
+
+A declared or contextual return type is the lambda's return type for
+expression bodies too, and the body converts to it:
+`(x: int): double => x + 1` is `(x: int): double`. In a `none`-returning
+callback an expression body's value is discarded (except an unhandled Result).
+
+Generic callback results (`map`, `reduce`, any generic call) rank their
+sources: explicit type arguments; then argument values and lambdas with a
+declared return type; then the contextual result type; then the lambda body.
+`items.map<double>(=> it + 1)`, `items.map((it): double => it + 1)` and
+`r: double[] := items.map(=> it + 1)` all produce `double[]`. Disagreeing
+explicit sources are reported, never silently reconciled.
 
 `_` may discard explicit lambda parameters. It introduces no binding and may
 be repeated. Named function and method parameters still require names.

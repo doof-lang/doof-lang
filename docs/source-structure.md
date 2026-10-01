@@ -54,6 +54,7 @@ modules own the following decisions:
 | `checker-types.do` | Resolved-type construction, comparison, union mutability conflict detection, assignability, substitution, interface-bound receiver views, and display |
 | `checker-annotations.do` | One annotation resolver for provisional signatures and checked types; builtin arity, alias expansion, constraints, and annotation decoration |
 | `checker-resolution.do` | Bound-aware member selections (type, declaration, owner, static/field flags), assignment bindings, indexing, and annotation API forwarding |
+| `checker-array-methods.do` | Built-in array member signatures, the `(it, index)` / `(acc, it, index)` callback conventions, and narrowing callbacks to a named function's arity |
 | `checker-common.do` | State-aware diagnostics, expression type decoration, and centralized assignment-binding validation |
 | `checker-statements.do` | Statements, declarations, scopes, returns, destructuring, enum backing-value resolution, and control-flow continuation |
 | `checker-try.do` | Result propagation boundaries, error compatibility, and success declaration checking |
@@ -61,8 +62,9 @@ modules own the following decisions:
 | `checker-numeric.do` | Numeric bound membership, operator capabilities, and correlated promotion |
 | `checker-inference.do` | Contextual path validation and common-type inference; only optional unions are synthesized for value paths |
 | `checker-expressions.do` | Expression dispatch, operators, narrowing, assignment, and case expressions |
-| `checker-calls.do` | Calls, generic inference/application, callback inference context, and actor-call boundaries |
-| `checker-lambdas.do` | Lambda signatures, block-return inference, return-site decoration, and completion diagnostics |
+| `checker-calls.do` | Calls, generic application, named-function callback arity, and actor-call boundaries |
+| `checker-call-inference.do` | Ranked type-argument inference for generic calls: argument values, declared lambda returns, contextual result type, then lambda bodies; speculative diagnostics are discarded |
+| `checker-lambdas.do` | Lambda signatures, by-name or positional parameter binding, declared/contextual return types, block-return inference, return-site decoration, and completion diagnostics |
 | `checker-arguments.do` | Shared positional/named parameter mapping, contextual value checking, argument diagnostics, and required/default/spread validation |
 | `checker-construction.do` | Retained specialized construction plans for ordinary, named, contextual, and actor construction; shared field validation and visibility |
 | `checker-properties.do` | Shorthand/explicit property decoration, contextual assignability, and fixed literal field validation |
@@ -148,6 +150,7 @@ emitter or individual expression branch.
 | `emitter-expr.do` | Single expression dispatch façade; contextual conversion of checked unit expressions and native void calls to stored unit values; discarded calls bypass unused carrier conversion |
 | `emitter-expr-ops.do` | Assignment, identifiers, operators, members, indexing, and `as`; equality uses checked none types and unit unwraps produce stored unit values |
 | `emitter-expr-calls.do` | Call target selection, runtime member dispatch, and positional Result payload construction |
+| `emitter-array-methods.do` | Built-in array member lowering onto runtime helpers, with callbacks emitted against the checked signature and `find` converted into the `T \| none` carrier |
 | `emitter-optional-chain.do` | `?.` and `?[]` over nullable receivers and `?.` over Result receivers: single evaluation, none and Failure short-circuits, Result flattening for calls, and access through the checked unwrapped receiver |
 | `emitter-call-arguments.do` | Shared named/positional argument ordering, checked contextual argument types, and call-site default emission for direct and dispatched calls |
 | `emitter-construction.do` | Positional, named, contextual, and actor construction from checked plans; shared argument/default lowering, owner specialization, and spread handling |

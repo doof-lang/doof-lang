@@ -1,6 +1,6 @@
 import { Assert } from "std/assert"
 import { FunctionParamType, Symbol } from "./semantic"
-import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultType, sameType, streamType, substituteTypeParams, successType, typeParameter, unionMutabilityConflict, unionType, weakType } from "./checker-types"
+import { applyDeepReadonly, interfaceBoundReceiver, arrayType, classType, displayTypeName, failureType, functionType, isAssignable, mapType, noneType, primitive, promiseType, resultType, sameType, streamType, substituteTypeParams, successType, typeParameter, unionMutabilityConflict, unionType, weakType } from "./checker-types"
 
 export function testResultArmAssignabilityUsesOnlyItsPayloadChannel(): none {
   success := successType(primitive("int"))
@@ -185,4 +185,11 @@ export function testUnionMutabilityNominalGuardPreservesGenericConflicts(): none
   Assert.equal(unionMutabilityConflict(UnionResolvedType { types: [nominal, mutable, other, frozen] }), expected)
   Assert.equal(unionMutabilityConflict(UnionResolvedType { types: [mutable, nominal, frozen, other] }), expected)
   Assert.equal(unionMutabilityConflict(UnionResolvedType { types: [nominal] }), none)
+}
+
+export function testDisplayTypeNameSpellsCallableSignatures(): none {
+  callback := functionType([FunctionParamType { name: "it", type_: primitive("int"), hasDefault: false }, FunctionParamType { name: "index", type_: primitive("int"), hasDefault: false }], typeParameter("U"))
+  outer := functionType([FunctionParamType { name: "mapper", type_: callback, hasDefault: false }], arrayType(primitive("string")))
+  Assert.equal(displayTypeName(outer), "(mapper: (it: int, index: int): U): string[]")
+  Assert.equal(displayTypeName(unionType([primitive("int"), noneType()])), "int | none")
 }

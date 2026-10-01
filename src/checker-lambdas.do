@@ -2,13 +2,13 @@
 import { Block, Expression, LambdaExpression, Parameter } from "./ast"
 import { Binding, FunctionParamType, FunctionType, ResolvedType, Scope, UnionResolvedType } from "./semantic"
 import { CheckerState, LambdaReturnInference } from "./checker-state"
-import { functionType, neverType, noneType, typeName, unknownType } from "./checker-types"
+import { displayTypeName, functionType, neverType, noneType, unknownType } from "./checker-types"
 import { pathType } from "./checker-inference"
 import { checkBlock } from "./checker-statements"
 import { checkExpression } from "./checker-expressions"
 import { resolveType } from "./checker-resolution"
 import { finish, typeError } from "./checker-common"
-import { decorateAnnotationWithResolved, optionalResolvedType, declare } from "./checker-symbols"
+import { decorateAnnotationWithResolved, functionParameterIndex, optionalResolvedType, declare } from "./checker-symbols"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
 import { checkerSemanticSpan } from "./checker-validation"
 
@@ -31,6 +31,7 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
       })
     }
   }
+  parametersBound := expression.parameterless || expectedFunction == none || bindLambdaParameters(state, expression, expectedFunction!)
   lambdaScope := Scope { parent: scope, trailingLambda: expression.trailing }
   let params: FunctionParamType[] = []
   for i of 0..<expression.params.length {
@@ -72,19 +73,83 @@ export function checkLambda(state: CheckerState, expression: LambdaExpression, s
         for observation of inference.returns {
           observation.statement.resolvedExpectedType = optionalResolvedType(returnType)
           if observation.statement.value == none && returnType.kind != "none" && returnType.kind != "unknown" {
-            typeError(state, "Expected a return value of type " + typeName(returnType), observation.statement.span)
+            typeError(state, "Expected a return value of type " + displayTypeName(returnType), observation.statement.span)
           } else if !isAssignableWithInterfaces(state.result, observation.type_, returnType) {
-            typeError(state, "Cannot return " + typeName(observation.type_) + " from lambda returning " + typeName(returnType), observation.statement.span)
+            typeError(state, "Cannot return " + displayTypeName(observation.type_) + " from lambda returning " + displayTypeName(returnType), observation.statement.span)
           }
         }
       }
       if completes && returnType.kind != "none" && returnType.kind != "unknown" {
-        typeError(state, "Lambda may complete without returning " + typeName(returnType), expression.span)
+        typeError(state, "Lambda may complete without returning " + displayTypeName(returnType), expression.span)
       }
     }
-    expressionBody: Expression -> { returnType = checkExpression(state, expressionBody, lambdaScope, optionalResolvedType(returnType)) }
+    expressionBody: Expression -> {
+      // A declared or contextual return type is the lambda's signature, as it
+      // is for block bodies; the body converts to it. Only an unknown return
+      // type is inferred from the body.
+      bodyType := checkExpression(state, expressionBody, lambdaScope, optionalResolvedType(returnType))
+      if returnType.kind == "unknown" { returnType = bodyType }
+      else if returnType.kind == "none" {
+        // A none-returning body is an expression statement: its value is
+        // discarded, except a Result, which must still be handled.
+        if bodyType.kind == "result" && expressionBody.kind != "assignment-expression" { typeError(state, "Result value must be handled", expressionBody.span) }
+      } else if !isAssignableWithInterfaces(state.result, bodyType, returnType) {
+        typeError(state, "Cannot return " + displayTypeName(bodyType) + " from lambda returning " + displayTypeName(returnType), expressionBody.span)
+      }
+    }
   }
+  if !parametersBound { return finish(state, expression, functionType(expectedFunction!.params, returnType)) }
   return finish(state, expression, functionType(params, returnType))
+}
+
+// Explicit parameter lists bind to the contextual signature in one of two
+// ways. When every name belongs to the signature, parameters bind by name, so
+// a lambda may list any subset in any order. Otherwise they bind by position,
+// and a shorter list omits trailing parameters; this lets callers rename for
+// clarity, as in `users.map((user) => user.name)`. Either way the list is
+// rewritten into signature order, with discards for omitted positions, so the
+// checker, capture analysis, and emitter all see one positional shape.
+//
+// A positional list that uses a signature name at another position is
+// ambiguous and reported. The list is then left as written, so every recheck
+// reports it again; the caller gives the lambda the expected signature so the
+// error does not cascade into an argument mismatch.
+function bindLambdaParameters(state: CheckerState, expression: LambdaExpression, expected: FunctionType): bool {
+  params := expression.params
+  if params.length == 0 || params.length > expected.params.length { return true }
+  let slots: (Parameter | none)[] = []
+  for _ of expected.params { slots.push(none) }
+  let byName = true
+  for parameter of params {
+    index := if parameter.name == "_" then -1 else functionParameterIndex(expected.params, parameter.name)
+    if index < 0 || slots[index] != none { byName = false; break }
+    slots[index] = parameter
+  }
+  if !byName {
+    let seen: string[] = []
+    for i of 0..<params.length {
+      name := params[i].name
+      position := functionParameterIndex(expected.params, name)
+      // Repeated names are reported as duplicate bindings when declared.
+      if name != "_" && !seen.contains(name) && position >= 0 && position != i {
+        typeError(state,
+          "Lambda parameter '" + name + "' is parameter " + string(position + 1) + " of " + displayTypeName(expected) + " but is listed at position " + string(i + 1) + "; name only signature parameters to bind them by name, or list them in order",
+          params[i].span,
+        )
+        return false
+      }
+      seen.push(name)
+    }
+    if params.length == expected.params.length { return true }
+    for i of 0..<expected.params.length { slots[i] = if i < params.length then params[i] else none }
+  }
+  let bound: Parameter[] = []
+  for i of 0..<slots.length {
+    bound.push(slots[i] ?? Parameter { name: "_", type_: none, defaultValue: none, span: expression.span })
+  }
+  while params.length > 0 { ignored := try! params.pop() }
+  for parameter of bound { params.push(parameter) }
+  return true
 }
 
 // A lambda can use the single callable member of an optional or wider union as

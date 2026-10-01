@@ -10,7 +10,7 @@ import type { TypeAliasDeclaration } from "./ast"
 import { ActorType, ArrayResolvedType, Binding, ClassType, EnumType, InterfaceType, Diagnostic, FunctionParamType, FunctionType, SerialValueResolvedType, MapResolvedType, NoneType, PrimitiveType, PromiseType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Scope, TupleResolvedType, UnionResolvedType, UnknownType, TypeParameterType, WeakResolvedType } from "./semantic"
 
 import { CheckedMember, ArrayLiteral, AsExpression, AssignmentExpression, BinaryExpression, Block, BoolLiteral, CallExpression, CallerExpression, CharLiteral, ClassDeclaration, ConstructExpression, DoubleLiteral, DotShorthand, EnumDeclaration, Expression, FloatLiteral, FunctionDeclaration, IfExpression, Identifier, IndexExpression, IntLiteral, LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral, ObjectLiteral, SourceSpan, StringLiteral, ThisExpression, TupleLiteral, UnaryExpression, YieldBlockExpression, CatchExpression, CaseExpression, CasePattern, RangePattern, TypePattern, ValuePattern, WildcardPattern, AsyncExpression, RetireExpression, ActorCreationExpression } from "./ast"
-import { actorType, classType, functionType, jsonValueType, isNumeric, isJsonValueType, isSerialBytesType, resultType, successType, failureType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
+import { actorType, classType, functionType, jsonValueType, isNumeric, isJsonValueType, isSerialBytesType, resultType, successType, failureType, neverType, noneType, primitive, promiseType, rangeType, sameType, tupleType, displayTypeName, typeName, unionType, isStringInterpolatable, typeParameter, unknownType, weakReferenceErrorType } from "./checker-types"
 
 import { findActorBoundaryViolation } from "./checker-actor-boundary"
 import { asyncResultViolation } from "./checker-async"
@@ -1184,7 +1184,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       if target == none { typeError(state, "Unknown assignment target '" + identifier.name + "'", identifier.span) }
       else {
         validateAssignmentBinding(state, target!, identifier.span)
-        if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, target!.type_) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(target!.type_), expression.span) }
+        if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, target!.type_) { typeError(state, "Cannot assign " + displayTypeName(value) + " to " + displayTypeName(target!.type_), expression.span) }
       }
     }
     index: IndexExpression -> {
@@ -1193,13 +1193,13 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
         array: ArrayResolvedType -> {
           checkExpression(state, index.index, scope, optionalResolvedType(primitive("int")))
           if array.readonly_ { typeError(state, "Cannot assign through readonly array", expression.span) }
-          if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, array.elementType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(array.elementType), expression.span) }
+          if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, array.elementType) { typeError(state, "Cannot assign " + displayTypeName(value) + " to " + displayTypeName(array.elementType), expression.span) }
         }
         map: MapResolvedType -> {
           key := checkExpression(state, index.index, scope, optionalResolvedType(map.keyType))
           if !isAssignableWithInterfaces(state.result, key, map.keyType) { typeError(state, "Cannot use " + typeName(key) + " as map key " + typeName(map.keyType), index.index.span) }
           if map.readonly_ { typeError(state, "Cannot assign through readonly map", expression.span) }
-          if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, map.valueType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(map.valueType), expression.span) }
+          if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, map.valueType) { typeError(state, "Cannot assign " + displayTypeName(value) + " to " + displayTypeName(map.valueType), expression.span) }
         }
         _ -> { typeError(state, "Index assignment requires an array or map", expression.span) }
       }
@@ -1212,7 +1212,7 @@ export function checkAssignment(state: CheckerState, expression: AssignmentExpre
       fieldBinding := fieldAssignmentBinding(state, objectType, member.property, targetType, member.span)
       if fieldBinding != none { validateAssignmentBinding(state, fieldBinding!, member.span) }
       else if objectType.kind != "unknown" && objectType.kind != "never" { typeError(state, "Member '" + member.property + "' is not an assignable field", member.span) }
-      if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, targetType) { typeError(state, "Cannot assign " + typeName(value) + " to " + typeName(targetType), expression.span) }
+      if expression.operator == "=" && !isAssignableWithInterfaces(state.result, value, targetType) { typeError(state, "Cannot assign " + displayTypeName(value) + " to " + displayTypeName(targetType), expression.span) }
     }
     _ -> { typeError(state, "Assignment target must be a binding", expression.target.span) }
   }
