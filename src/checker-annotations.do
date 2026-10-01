@@ -2,7 +2,7 @@
 
 import { memberType } from "./checker-resolution"
 import { ClassType, FunctionParamType, ResolvedType, Scope, Symbol, TypeParameterType, ResolvedTypeConstraint } from "./semantic"
-import { AnalysisResult, ModuleInfo } from "./analyzer"
+import { AnalysisResult, ModuleInfo, unknownTypeMessage } from "./analyzer"
 import { ArrayType, ClassDeclaration, AstFunctionType, InterfaceDeclaration, NamedType, SourceSpan, TypeAliasDeclaration, TypeAnnotation, UnionType, WeakType, TypeParameterConstraint } from "./ast"
 import { actorType, arrayType, classType, enumType, functionType, interfaceType, isSupportedHashCollectionType, jsonObjectType, jsonValueType, mapType, resultType, setType, streamType, neverType, noneType, primitive, promiseType, rangeType, tupleType, typeName, unionMutabilityConflict, unionType, isWeakReferenceTarget, substituteTypeParams, typeParameter, unknownType, weakReferenceErrorType, weakType } from "./checker-types"
 
@@ -135,7 +135,7 @@ function resolveAnnotationType(resolution: AnnotationResolution, annotation: Typ
       let symbol: Symbol | none = named.resolvedSymbol
       if symbol == none { symbol = symbolFor(module, named.name) }
       if symbol == none {
-        typeError(state, "Unknown type '" + named.name + "'", named.span)
+        typeError(state, unknownTypeMessage(named.name), named.span)
         return finishAnnotation(resolution, annotation, unknownType())
       }
       // Types reached only while checking expressions (for example case-arm

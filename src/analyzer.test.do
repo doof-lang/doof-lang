@@ -410,3 +410,21 @@ export function testSerialAnalyzerResetsDiscoveryAndPreservesPhysicalPaths(): no
   Assert.equal(second.modules.length, 1)
   Assert.equal(second.modules[0].path, "/second.do")
 }
+
+export function testArrayTypeNamesPointAtTheShorthand(): none {
+  result := createAnalyzer([SourceFile {
+    path: "/main.do", source: "function f(values: Array<int>): none {}\nfunction g(values: ReadonlyArray<int>): none {}",
+  }]).analyze("/main.do")
+  Assert.equal(result.diagnostics.length, 2)
+  Assert.isTrue(hasDiagnostic(result, "Unknown type 'Array'; write arrays as T[]"))
+  Assert.isTrue(hasDiagnostic(result, "Unknown type 'ReadonlyArray'; write readonly arrays as readonly T[]"))
+  Assert.isTrue(hasDiagnostic(createAnalyzer([SourceFile { path: "/main.do", source: "function f(values: Arrays): none {}" }]).analyze("/main.do"), "Unknown type 'Arrays'"))
+}
+
+export function testReadonlyPrefixNoLongerAcceptsArrayName(): none {
+  result := createAnalyzer([SourceFile {
+    path: "/main.do", source: "function f(values: readonly Array<int>, ok: readonly int[], map: readonly Map<string, int>): none {}",
+  }]).analyze("/main.do")
+  Assert.isTrue(result.diagnostics.length > 0)
+  Assert.stringContains(result.diagnostics[0].message, "Unexpected readonly type modifier; expected an array, Map<K, V>, or Set<T> type")
+}

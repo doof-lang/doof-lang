@@ -1083,8 +1083,8 @@ type Event<T> = Message<T> | Ready<T> | Closed<T>
 
 | Type | Shorthand | Description |
 |------|-----------|-------------|
-| `Array<T>` | `T[]` | Mutable array |
-| `ReadonlyArray<T>` | `readonly T[]` | Immutable array |
+| `T[]` | — | Mutable array |
+| `readonly T[]` | — | Immutable array |
 | `Map<K, V>` | — | Mutable key-value map |
 | `ReadonlyMap<K, V>` | — | Immutable map |
 | `Set<T>` | — | Mutable set |
@@ -1609,9 +1609,11 @@ When `readonly` appears on a binding or class field, the referenced value must b
 5. **Unions** — all variants must be readonly-compatible
 6. **Functions** — always readonly-compatible (immutable references)
 
-Readonly collection annotations are shallow at the collection boundary: they stop collection mutation, but they do not require element or value types to be deeply immutable. Collection mutability is still part of the type, so `int[]` is not assignable to `readonly int[]`, `ReadonlyArray<int>`, `ReadonlyMap<K, V>`, or `ReadonlySet<T>`, and the reverse conversions are also rejected.
+Readonly collection annotations are shallow at the collection boundary: they stop collection mutation, but they do not require element or value types to be deeply immutable. Collection mutability is still part of the type, so `int[]` is not assignable to `readonly int[]`, `ReadonlyMap<K, V>`, or `ReadonlySet<T>`, and the reverse conversions are also rejected.
 
-The parser also accepts `readonly Array<T>`, `readonly Map<K, V>`, and `readonly Set<T>` as equivalents of `ReadonlyArray<T>`, `ReadonlyMap<K, V>`, and `ReadonlySet<T>`. Other uses of `readonly` in type position are parse errors.
+The parser also accepts `readonly Map<K, V>` and `readonly Set<T>` as equivalents of `ReadonlyMap<K, V>` and `ReadonlySet<T>`. Other uses of `readonly` in type position are parse errors.
+
+Arrays are written only as `T[]` and `readonly T[]`. There are no `Array<T>` or `ReadonlyArray<T>` type names; use parentheses for complex element types, as in `(int | string)[]`, `((x: int): int)[]`, or `(readonly int[])[]`.
 
 ### Readonly Classes
 

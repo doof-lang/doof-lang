@@ -750,7 +750,7 @@ Extern classes behave exactly like regular Doof classes — they're heap-allocat
 
 ```doof
 import class Database from "./db.hpp" {
-    query(sql: string): Result<Array<string>, string>
+    query(sql: string): Result<string[], string>
     close(): none
 }
 

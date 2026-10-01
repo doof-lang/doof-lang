@@ -69,13 +69,14 @@ With no single class expected, it remains a Tuple. The spec's positional union
 example `let r2: Result = ("Success", 42)` was removed: positional construction
 skips literal-valued fields, so it could never select a union member.
 
-### A4. `Array<T>` and `ReadonlyArray<T>` — **Implement**
+### A4. `Array<T>` and `ReadonlyArray<T>` — **Removed from the spec**
 
-- Both are unknown types.
-- `readonly Array<T>` is rewritten to `ReadonlyArray` in `parser-types.do` and then fails.
-- Spec ch. 2 and ch. 3 list both names.
-
-**Recommendation**: add both to the builtin types in `analyzer.do` and resolve them as aliases of `T[]` and `readonly T[]`.
+Nothing used either name, and `T[]` and `readonly T[]`, with parentheses for
+complex element types, already express every array type. A second spelling
+would have diverged from the `int[]` form that diagnostics print. The spec
+drops both names. The parser no longer rewrites `readonly Array<T>`, and
+`Array<…>` and `ReadonlyArray<…>` now report "Unknown type 'Array'; write
+arrays as T[]" (or the `readonly T[]` equivalent).
 
 ### A5. Result helper methods — **Implement**
 

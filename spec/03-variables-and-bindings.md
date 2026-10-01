@@ -128,7 +128,7 @@ view[0].x = 2                  // ✅ OK
 
 ```doof
 let counter = 0            // int
-let buffer = [1, 2, 3]    // Array<int> — inferred mutable
+let buffer = [1, 2, 3]    // int[] — inferred mutable
 
 counter += 1               // ✅ OK
 buffer[0] = 99             // ✅ OK
@@ -155,7 +155,7 @@ current <- {
 
 ```doof
 // Mutable binding, but readonly contents
-let frozen: ReadonlyArray<int> = [1, 2, 3]
+let frozen: readonly int[] = [1, 2, 3]
 frozen[0] = 99            // ❌ Error: readonly array
 frozen = [4, 5, 6]        // ✅ OK: binding is mutable
 ```

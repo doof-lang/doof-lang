@@ -37,10 +37,7 @@ function parseTypeMember(parser: Parser): TypeAnnotation {
   if readonlyPrefix {
     case result {
       named: NamedType -> {
-        if named.name == "Array" || named.name == "ReadonlyArray" {
-          named.name = "ReadonlyArray"
-          readonlyPrefix = false
-        } else if named.name == "Map" || named.name == "ReadonlyMap" {
+        if named.name == "Map" || named.name == "ReadonlyMap" {
           named.name = "ReadonlyMap"
           readonlyPrefix = false
         } else if named.name == "Set" || named.name == "ReadonlySet" {
@@ -51,7 +48,7 @@ function parseTypeMember(parser: Parser): TypeAnnotation {
       _ -> { }
     }
   }
-  if readonlyPrefix { parser.fail("Unexpected readonly type modifier; expected an array, Array<T>, Map<K, V>, or Set<T> type") }
+  if readonlyPrefix { parser.fail("Unexpected readonly type modifier; expected an array, Map<K, V>, or Set<T> type") }
   return result
 }
 

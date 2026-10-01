@@ -373,7 +373,7 @@ Common APIs:
 | `.cloneReadonly()` | mutable array only; shallow-copies into readonly and preserves the source |
 | `.cloneMutable()` | shallow copy into a new mutable array |
 
-`readonly T[]` and `ReadonlyArray<T>` are readonly collection types. Mutable and readonly arrays are distinct and do not implicitly convert between each other.
+`readonly T[]` is the readonly array type; there is no `Array<T>` or `ReadonlyArray<T>` spelling. Mutable and readonly arrays are distinct and do not implicitly convert between each other.
 
 Deprecated `.buildReadonly()` remains accepted on mutable arrays with a replacement warning and behaves exactly like `.drainToReadonly()`. Readonly arrays expose neither readonly-producing method.
 

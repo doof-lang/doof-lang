@@ -485,7 +485,7 @@ export class ModuleAnalyzer {
           }
           if symbol == none { symbol = findExport(info, named.name) }
           if symbol == none {
-            addError(info, "Unknown type '" + named.name + "'", named.span)
+            addError(info, unknownTypeMessage(named.name), named.span)
           } else if !isTypeSymbol(symbol!) {
             addError(info, "Symbol '" + named.name + "' is not a type", named.span)
             symbol = none
@@ -640,4 +640,11 @@ function semanticSpan(span: SourceSpan): SemanticSpan {
 function emptySemanticSpan(): SemanticSpan {
   zero := SemanticLocation { line: 0, column: 0, offset: 0 }
   return SemanticSpan { start: zero, end: zero }
+}
+
+// Arrays have only the `T[]` spelling; point TypeScript-style names at it.
+export function unknownTypeMessage(name: string): string {
+  if name == "Array" { return "Unknown type 'Array'; write arrays as T[]" }
+  if name == "ReadonlyArray" { return "Unknown type 'ReadonlyArray'; write readonly arrays as readonly T[]" }
+  return "Unknown type '" + name + "'"
 }
