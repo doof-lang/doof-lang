@@ -187,8 +187,6 @@ export class MemberExpression {
   let resolvedJsonAlias: TypeAliasDeclaration | none = none
   // Namespace imports have no runtime value. Retain the checker-selected
   // exported symbol so lowering can project its exact declaration.
-  let resolvedNamespaceAccess: bool = false
-  let resolvedNamespaceSymbol: Symbol | none = none
   let resolvedMember: CheckedMember | none = none
   let resolvedCallableField: bool = false
   // Set when '?.' short-circuits a nullable receiver: the receiver with its
@@ -792,17 +790,9 @@ export class NamedImport {
   span: SourceSpan
 }
 
-export class NamespaceImport {
-  kind: string
-  alias: string
-  span: SourceSpan
-}
-
-export type ImportSpecifier = NamedImport | NamespaceImport
-
 export class ImportDeclaration {
   kind: string
-  specifiers: ImportSpecifier[]
+  specifiers: NamedImport[]
   source: string
   typeOnly: bool
   span: SourceSpan

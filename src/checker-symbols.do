@@ -143,37 +143,6 @@ export function predeclareModuleBindings(info: ModuleInfo, scope: Scope, result:
   }
 }
 
-export function isNamespaceImport(info: ModuleInfo, name: string): bool {
-  for imported of info.namespaceImports { if imported.localName == name { return true } }
-  return false
-}
-
-export function isTypeOnlyNamespaceImport(info: ModuleInfo, name: string): bool {
-  for imported of info.namespaceImports { if imported.localName == name { return imported.typeOnly } }
-  return false
-}
-
-export function namespaceMemberType(info: ModuleInfo, namespaceName: string, memberName: string, result: AnalysisResult): ResolvedType {
-  symbol := namespaceMemberSymbol(info, namespaceName, memberName, result)
-  if symbol == none { return unknownType() }
-  source := findModule(result, symbol!.module)
-  if source == none { return unknownType() }
-  return symbolType(symbol!, source!, result)
-}
-
-export function namespaceMemberSymbol(info: ModuleInfo, namespaceName: string, memberName: string, result: AnalysisResult): Symbol | none {
-  for imported of info.namespaceImports {
-    if imported.localName != namespaceName { continue }
-    if imported.typeOnly { return none }
-    source := findModule(result, imported.sourceModule)
-    if source == none { return none }
-    for symbol of source!.exports {
-      if symbol.name == memberName && isValueSymbol(symbol) { return symbol }
-    }
-  }
-  return none
-}
-
 export function symbolType(symbol: Symbol, info: ModuleInfo, result: AnalysisResult): ResolvedType {
   if symbol.kind == "class" || symbol.kind == "struct" { return classType(declaredSymbolName(symbol), symbol) }
   if symbol.kind == "interface" { return interfaceType(declaredSymbolName(symbol), symbol) }

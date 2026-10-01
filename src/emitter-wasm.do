@@ -52,7 +52,6 @@ export function emitWasmSupport(result: AnalysisResult, entry: string, instantia
   context.names = moduleNames
   context.cppTypes = CppTypeRegistry { names: moduleNames }
   context.imports = info!.imports
-  context.namespaceImports = info!.namespaceImports
   let source = wasmPreamble(info!, result, entry, moduleNames)
   let exportIndex = 0
   for fn of exports {

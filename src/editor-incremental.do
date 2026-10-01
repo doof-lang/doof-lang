@@ -49,7 +49,6 @@ export function reusableEditorModules(previous: FrontendResult, sources: SourceF
       if contains(dirty, module.path) { continue }
       let depends = false
       for imported of module.imports { if contains(dirty, imported.sourceModule) { depends = true } }
-      for imported of module.namespaceImports { if contains(dirty, imported.sourceModule) { depends = true } }
       for path of module.reExports { if contains(dirty, path) { depends = true } }
       if depends { dirty.push(module.path); changed = true }
     }

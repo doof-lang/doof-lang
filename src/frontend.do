@@ -93,9 +93,6 @@ function checkModuleDependencies(
   for imported of module!.imports {
     checkModuleDependencies(imported.sourceModule, analysis, checker, checkedPaths, visitingPaths, diagnostics)
   }
-  for imported of module!.namespaceImports {
-    checkModuleDependencies(imported.sourceModule, analysis, checker, checkedPaths, visitingPaths, diagnostics)
-  }
   for reExport of module!.reExports {
     checkModuleDependencies(reExport, analysis, checker, checkedPaths, visitingPaths, diagnostics)
   }

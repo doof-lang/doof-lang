@@ -428,3 +428,12 @@ export function testReadonlyPrefixNoLongerAcceptsArrayName(): none {
   Assert.isTrue(result.diagnostics.length > 0)
   Assert.stringContains(result.diagnostics[0].message, "Unexpected readonly type modifier; expected an array, Map<K, V>, or Set<T> type")
 }
+
+export function testNamespaceImportsPointAtNamedImports(): none {
+  result := createAnalyzer([
+    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction main(): int => tools.present()" },
+    SourceFile { path: "/tools.do", source: "export function present(): int => 1" },
+  ]).analyze("/main.do")
+  Assert.equal(result.diagnostics.length, 1)
+  Assert.stringContains(result.diagnostics[0].message, "Namespace imports are not supported; import names with 'import { name } from ...'")
+}

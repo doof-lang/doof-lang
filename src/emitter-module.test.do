@@ -1,6 +1,6 @@
 import { prepareModuleNames, ModuleNamespaceMapping } from "./emitter-names"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { ImportBinding, NamespaceBinding } from "./semantic"
+import { ImportBinding } from "./semantic"
 import { parse } from "./parser"
 import { InstantiationPlan } from "./emitter-monomorphize"
 import { ModuleGraphEmission } from "./emitter-module"
@@ -177,8 +177,8 @@ export function testTypeLoweringGraphCanEmitSameCheckedInputTwice(): none {
 }
 
 export function testDependencyOptimizationPreservesFingerprintBytesAndClosure(): none {
-  // All three edge kinds, including a cycle, contribute in analysis-module order.
-  main := ModuleInfo { path: "/main.do", sourceHash: "main", program: parse(""), imports: [ImportBinding { localName: "x", sourceName: "x", sourceModule: "/bridge.do", typeOnly: true }], namespaceImports: [NamespaceBinding { localName: "leaf", sourceModule: "/leaf.do", typeOnly: true }] }
+  // Both edge kinds, including a cycle, contribute in analysis-module order.
+  main := ModuleInfo { path: "/main.do", sourceHash: "main", program: parse(""), imports: [ImportBinding { localName: "x", sourceName: "x", sourceModule: "/bridge.do", typeOnly: true }] }
   bridge := ModuleInfo { path: "/bridge.do", sourceHash: "bridge", program: parse(""), reExports: ["/leaf.do"] }
   leaf := ModuleInfo { path: "/leaf.do", sourceHash: "leaf", program: parse(""), reExports: ["/main.do"] }
   unused := ModuleInfo { path: "/unused.do", sourceHash: "unused", program: parse("") }

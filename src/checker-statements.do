@@ -17,7 +17,7 @@ import {
   IfExpression, IfStatement, ImmutableBinding, Identifier, ImportDeclaration, MockImportDirective,
   IndexExpression, IntLiteral, InterfaceDeclaration, LetDeclaration,
   LambdaExpression, LongLiteral, MemberExpression, NamedType, NoneLiteral,
-  NamedImport, NamespaceImport, ObjectLiteral, ObjectProperty, Program,
+  NamedImport, ObjectLiteral, ObjectProperty, Program,
   ReadonlyDeclaration, ReturnStatement, SourceSpan, Statement, StringLiteral,
   ThisExpression, TupleLiteral, TypeAliasDeclaration, TypeAnnotation,
   UnaryExpression, UnionType, WhileStatement, WithBinding, WithStatement, BreakStatement,

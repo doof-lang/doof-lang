@@ -45,12 +45,6 @@ export class ImportBinding {
   symbol: Symbol | none = none
 }
 
-export class NamespaceBinding {
-  localName: string
-  sourceModule: string
-  typeOnly: bool
-}
-
 export class SourceFile {
   path: string
   source: string

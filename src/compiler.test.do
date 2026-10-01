@@ -143,17 +143,6 @@ export function testProjectsOnlyUsedForeignDeclarations(): none {
   Assert.equal(header.contains("int32_t unused();"), false)
 }
 
-export function testProjectsOnlyUsedNamespaceMembers(): none {
-  result := compile([
-    SourceFile { path: "/main.do", source: "import * as lib from \"./lib\"\nfunction main(): int => lib.used()" },
-    SourceFile { path: "/lib.do", source: "export function used(): int => 1\nexport function unused(): int => 2" },
-  ], "/main.do")
-  Assert.equal(result.diagnostics.length, 0)
-  header := result.emission!.modules[0].header
-  Assert.stringContains(header, "int32_t used();")
-  Assert.equal(header.contains("int32_t unused();"), false)
-}
-
 export function testUnrelatedDependencyExportLeavesConsumerViewUnchanged(): none {
   first := compile([
     SourceFile { path: "/main.do", source: "import { used } from \"./lib\"\nfunction main(): int => used()" },
@@ -635,9 +624,9 @@ export function testMonomorphizesGenericStructuralInterfaces(): none {
   Assert.equal(module.source.contains("std::visit([&](auto&& _obj) -> int32_t { return _obj->read(); }, reader)"), true)
 }
 
-export function testCompilesNamespaceQualifiedGenericCallsAcrossModules(): none {
+export function testCompilesImportedGenericCallsAcrossModules(): none {
   result := compile([
-    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction main(): int => tools.identity<int>(1)" },
+    SourceFile { path: "/main.do", source: "import { identity } from \"./tools\"\nfunction main(): int => identity<int>(1)" },
     SourceFile { path: "/tools.do", source: "export function identity<T>(value: T): T => value" },
   ], "/main.do")
   for diagnostic of result.diagnostics { println(diagnostic.module + ": " + diagnostic.message) }

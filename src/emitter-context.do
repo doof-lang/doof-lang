@@ -10,7 +10,7 @@ import { CppTypeRegistry } from "./cpp-type"
 import { Program, SourceSpan } from "./ast"
 import { JsonEligibilityCache } from "./json-semantics"
 import {
-  ImportBinding, NamespaceBinding, ResolvedType, Symbol, TypeSubstitution,
+  ImportBinding, ResolvedType, Symbol, TypeSubstitution,
 } from "./semantic"
 
 export class EmitModuleSurface {
@@ -37,7 +37,6 @@ export class EmitContext {
   let modulePath: string = ""
   let sourcePath: string = ""
   allPrograms: Program[] = []
-  let namespaceImports: NamespaceBinding[] = []
   let imports: ImportBinding[] = []
   let moduleSurfaces: EmitModuleSurface[] = []
   let jsonEligibility: JsonEligibilityCache = JsonEligibilityCache {}

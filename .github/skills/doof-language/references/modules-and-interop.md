@@ -29,7 +29,6 @@ No default exports.
 ```doof
 import { Vector, add, PI } from "./math"
 import { Vector as Vec3 } from "./math"
-import * as math from "./math"
 import type { Config } from "./types"       // type-only (erased at runtime)
 ```
 
@@ -41,8 +40,8 @@ export { InternalVector as Vector } from "./internal"
 ```
 
 Re-exports require explicit names. `export * from "mod"` and
-`export * as ns from "mod"` are unsupported. Namespace imports
-(`import * as ns from "mod"`) are supported.
+`export * as ns from "mod"` are unsupported. There are no namespace imports:
+`import * as ns from "mod"` is a parse error, so import each name instead.
 
 ### Module Paths
 

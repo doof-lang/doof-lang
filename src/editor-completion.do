@@ -52,18 +52,6 @@ export function memberCompletions(index: EditorIndex, module: string, offset: in
   for expression of info.editorExpressions {
     member := expression as MemberExpression else { continue }
     if offset < member.object.span.end.offset || offset > member.span.end.offset { continue }
-    // Namespace members are compiler-resolved exports, including re-exports.
-    case member.object {
-      identifier: Identifier -> {
-        for namespace of info.namespaceImports {
-          if namespace.localName != identifier.name { continue }
-          target := editorModule(index, namespace.sourceModule) else { continue }
-          for symbol of target.exports { uniquePush(items, symbolItem(index, symbol)) }
-          return true
-        }
-      }
-      _ -> { }
-    }
     receiver := member.object.resolvedType else { return true }
     let staticReceiver = false
     case member.object {
@@ -136,13 +124,6 @@ export function contextualCompletion(index: EditorIndex, module: string, offset:
     if binding != none {
       location := AstLocation { line: 1, column: 1, offset }
       completeMembers(index, module, offset, binding!.type_, SourceSpan { start: location, end: location }, items, classNameBinding(binding!))
-    } else {
-      info := editorModule(index, module) else { return true }
-      for namespace of info.namespaceImports {
-        if namespace.localName != name { continue }
-        target := editorModule(index, namespace.sourceModule) else { continue }
-        for symbol of target.exports { uniquePush(items, symbolItem(index, symbol)) }
-      }
     }
     return true
   }

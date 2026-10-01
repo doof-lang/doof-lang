@@ -72,9 +72,9 @@ export function testUsesCheckerConformanceForConcreteInterfaceVariants(): none {
   Assert.stringContains(result.header, "using Box__int = std::variant<std::shared_ptr<IntBox>>;")
 }
 
-export function testMonomorphizesNamespaceGenericCallsInTheirDefiningModule(): none {
+export function testMonomorphizesImportedGenericCallsInTheirDefiningModule(): none {
   modules := emitSources([
-    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction main(): int => tools.identity<int>(1)" },
+    SourceFile { path: "/main.do", source: "import { identity } from \"./tools\"\nfunction main(): int => identity<int>(1)" },
     SourceFile { path: "/tools.do", source: "export function identity<T>(value: T): T => value" },
   ], "/main.do")
   let main: ModuleEmission | none = none

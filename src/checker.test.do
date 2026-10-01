@@ -329,13 +329,6 @@ export function testRejectsRuntimeUseOfTypeOnlyAndTypeSymbols(): none {
   ], "/main.do")
   Assert.equal(aliasValue.diagnostics.length, 1)
   Assert.equal(aliasValue.diagnostics[0].message, "Type 'Identifier' cannot be used as a value")
-
-  namespaceValue := checkedSources([
-    SourceFile { path: "/main.do", source: "import type * as types from \"./types\"\nfunction main(): none { ignored := types.value }" },
-    SourceFile { path: "/types.do", source: "export readonly value = 1" },
-  ], "/main.do")
-  Assert.equal(namespaceValue.diagnostics.length, 1)
-  Assert.equal(namespaceValue.diagnostics[0].message, "Type-only namespace import 'types' cannot be used as a value")
 }
 
 export function testRejectsInvalidNominalAndScalarTypeArguments(): none {
@@ -758,46 +751,9 @@ export function testReportsUnknownMembersAcrossResolvedTypes(): none {
   Assert.equal(builtinCallableResult.diagnostics[0].message, "Type \"function\" has no member \"missing\"")
 }
 
-export function testReportsUnknownImportedNamespaceMember(): none {
-  result := checkedSources([
-    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction bad(): int => tools.missing()" },
-    SourceFile { path: "/tools.do", source: "export function present(): int => 1" },
-  ], "/main.do")
-  Assert.equal(result.diagnostics.length, 1)
-  Assert.equal(result.diagnostics[0].message, "Namespace \"tools\" has no member \"missing\"")
-}
-
-export function testDecoratesImportedNamespaceMemberWithResolvedSymbol(): none {
+export function testDecoratesImportedGenericCallWithDefiningModule(): none {
   analysis := createAnalyzer([
-    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction value(): int => tools.present()" },
-    SourceFile { path: "/tools.do", source: "export function present(): int => 1" },
-  ]).analyze("/main.do")
-  checker := createChecker(analysis)
-  Assert.equal(checker.check("/tools.do").diagnostics.length, 0)
-  Assert.equal(checker.check("/main.do").diagnostics.length, 0)
-  case analysis.modules[0].program.statements[1] {
-    fn: FunctionDeclaration -> { case fn.body {
-      call: CallExpression -> { case call.callee {
-        member: MemberExpression -> {
-          Assert.equal(member.resolvedNamespaceAccess, true)
-          Assert.equal(member.resolvedNamespaceSymbol!.name, "present")
-          Assert.equal(member.resolvedNamespaceSymbol!.module, "/tools.do")
-          member.resolvedNamespaceSymbol = none
-        }
-        _ -> { panic("expected namespace member") }
-      } }
-      _ -> { panic("expected call") }
-    } }
-    _ -> { panic("expected function") }
-  }
-  diagnostics := validateCheckedTypes(analysis)
-  Assert.equal(diagnostics.length, 1)
-  Assert.stringContains(diagnostics[0].message, "has no resolved symbol")
-}
-
-export function testDecoratesNamespaceGenericCallWithDefiningModule(): none {
-  analysis := createAnalyzer([
-    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction value(): int => tools.identity<int>(1)" },
+    SourceFile { path: "/main.do", source: "import { identity } from \"./tools\"\nfunction value(): int => identity<int>(1)" },
     SourceFile { path: "/tools.do", source: "export function identity<T>(value: T): T => value" },
   ]).analyze("/main.do")
   checker := createChecker(analysis)

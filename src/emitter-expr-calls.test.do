@@ -100,9 +100,9 @@ export function testCoercesStructuralInterfaceMethodReturnsToDeclaredType(): non
   )
 }
 
-export function testEmitsNamespaceGenericCallsAgainstResolvedOwner(): none {
+export function testEmitsImportedGenericCallsAgainstResolvedOwner(): none {
   result := compile([
-    SourceFile { path: "/main.do", source: "import * as tools from \"./tools\"\nfunction main(): int => tools.identity<int>(1)" },
+    SourceFile { path: "/main.do", source: "import { identity } from \"./tools\"\nfunction main(): int => identity<int>(1)" },
     SourceFile { path: "/tools.do", source: "export function identity<T>(value: T): T => value" },
   ], "/main.do")
   Assert.equal(result.diagnostics.length, 0)

@@ -187,8 +187,7 @@ export function createEditorIndex(frontend: FrontendResult, modules: string[] = 
         }
         member: MemberExpression -> {
           let target: EditorItem | none = none
-          if member.resolvedNamespaceSymbol != none { target = symbolItem(index, member.resolvedNamespaceSymbol!) }
-          else if member.resolvedMember != none && member.resolvedMember!.function_ != none {
+          if member.resolvedMember != none && member.resolvedMember!.function_ != none {
             fn := member.resolvedMember!.function_!
             target = nameItem(index, member.resolvedMember!.modulePath, fn.name, fn.span.start.offset, fn.span.end.offset, "method")
           }

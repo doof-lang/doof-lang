@@ -23,7 +23,7 @@ import { checkCall, checkLambda } from "./checker-calls"
 import { checkArray, checkObject } from "./checker-literals"
 import { fieldAssignmentBinding, resolveType, memberType, indexType } from "./checker-resolution"
 import { deprecatedNoneAlias, finish, typeError, requireBool, validateAssignmentBinding } from "./checker-common"
-import { builtinSourceLocationType, casePatternName, optionalResolvedType, isNamespaceImport, isTypeOnlyNamespaceImport, namespaceMemberSymbol, namespaceMemberType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
+import { builtinSourceLocationType, casePatternName, optionalResolvedType, resolveAnnotation, declare, lookup, currentThisType, isBuiltinCallable, builtinCallable, hasTypeParam, typeParamConstraintName, typeParamConstraint, symbolFor, valueUseDiagnostic, declarationFor } from "./checker-symbols"
 import { checkPositionalLiteralConstruction, positionalLiteralClass, resolveConstructor, validateConstructorVisibility, validateFieldArguments, checkConstruct } from "./checker-construction"
 import { checkerSemanticSpan } from "./checker-validation"
 import { isAssignableWithInterfaces } from "./checker-interfaces"
@@ -404,24 +404,12 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
     assignment: AssignmentExpression -> { return checkAssignment(state, assignment, scope) }
     member: MemberExpression -> {
       let objectType = unknownType()
-      let namespaceMember: ResolvedType | none = none
-      let namespaceName = ""
       case member.object {
         identifier: Identifier -> {
-          // Bindings shadow namespace-like spellings. Resolve capabilities from
-          // the selected binding instead of the identifier text alone.
+          // Bindings shadow alias spellings. Resolve capabilities from the
+          // selected binding instead of the identifier text alone.
           localBinding := lookup(scope, identifier.name)
-          if localBinding == none && isNamespaceImport(state.info!, identifier.name) {
-            namespaceName = identifier.name
-            member.resolvedNamespaceAccess = true
-            if isTypeOnlyNamespaceImport(state.info!, identifier.name) {
-              typeError(state, "Type-only namespace import '" + identifier.name + "' cannot be used as a value", member.span)
-              return finish(state, expression, unknownType())
-            } else {
-              member.resolvedNamespaceSymbol = namespaceMemberSymbol(state.info!, identifier.name, member.property, state.result)
-              namespaceMember = namespaceMemberType(state.info!, identifier.name, member.property, state.result)
-            }
-          } else if localBinding == none && member.property == "fromSerialValue" && jsonAliasSymbol(state, identifier.name) != none {
+          if localBinding == none && member.property == "fromSerialValue" && jsonAliasSymbol(state, identifier.name) != none {
             return checkUnionAliasJsonMember(state, member, identifier, jsonAliasSymbol(state, identifier.name)!, scope)
           } else {
             objectType = checkExpression(state, member.object, scope, none)
@@ -430,19 +418,6 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
         _ -> { objectType = checkExpression(state, member.object, scope, none) }
       }
       if member.completionPoint { return finish(state, expression, unknownType()) }
-      if namespaceMember != none {
-        selected := CheckedMember { type_: namespaceMember }
-        if member.resolvedNamespaceSymbol != none {
-          selected.modulePath = member.resolvedNamespaceSymbol!.module
-          declaration := declarationFor(state.result, member.resolvedNamespaceSymbol!)
-          if declaration != none { case declaration! { fn: FunctionDeclaration -> { selected.function_ = fn } _ -> { } } }
-        }
-        member.resolvedMember = selected
-        if namespaceMember!.kind == "unknown" {
-          typeError(state, "Namespace \"" + namespaceName + "\" has no member \"" + member.property + "\"", member.span)
-        }
-        return finish(state, expression, namespaceMember!)
-      }
       if objectType.kind == "never" { return finish(state, expression, neverType()) }
       let weakReceiver: WeakResolvedType | none = none
       let nullableReceiver = false

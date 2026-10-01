@@ -8,13 +8,13 @@ import { PhaseTimings } from "./phase-timings"
 import { Parser } from "./parser"
 import { ModuleResolver, SourceLoader, noSourceLoader } from "./resolver"
 import {
-  Diagnostic, ImportBinding, NamespaceBinding, SemanticLocation, SemanticSpan,
+  Diagnostic, ImportBinding, SemanticLocation, SemanticSpan,
   SourceFile, Symbol, EditorScope,
 } from "./semantic"
 import {
   ArrayType, AstLocation, ClassDeclaration, ConstDeclaration, EnumDeclaration,
   ExportList, FunctionDeclaration, AstFunctionType, ImmutableBinding, InterfaceDeclaration, LetDeclaration,
-  NamedImport, NamedType, NamespaceImport, ReadonlyDeclaration, ImportDeclaration, TypeAliasDeclaration, UnionType,
+  NamedImport, NamedType, ReadonlyDeclaration, ImportDeclaration, TypeAliasDeclaration, UnionType,
   MockImportDirective, WeakType, YieldBlockAssignmentStatement, TypeParameterConstraint,
 } from "./ast"
 import type { Program, SourceSpan, Statement, TryStatement, TypeAnnotation, Expression } from "./ast"
@@ -31,7 +31,6 @@ export class ModuleInfo {
   symbols: Symbol[] = []
   exports: Symbol[] = []
   imports: ImportBinding[] = []
-  namespaceImports: NamespaceBinding[] = []
   reExports: string[] = []
   mockImportDirectives: MockImportDirective[] = []
   mockRootPath: string | none = none
@@ -348,44 +347,29 @@ export class ModuleAnalyzer {
             continue
           }
           source := resolveModule(sourcePath)
-          for specifier of import_.specifiers {
-            case specifier {
-              named: NamedImport -> {
-                let imported: Symbol | none = none
-                if source != none { imported = findExport(source!, named.name) }
-                // A failed dependency already owns the actionable diagnostic.
-                // Do not reinterpret its missing symbol table as missing exports.
-                if source != none && imported == none {
-                  addError(info, "Module '" + import_.source + "' does not export '" + named.name + "'", named.span)
-                }
-                localName := if named.alias == none then named.name else named.alias!
-                if hasModuleBinding(info, localName) {
-                  addError(info, "Duplicate module binding '" + localName + "'", named.span)
-                  continue
-                }
-                if imported == none {
-                  info.imports.push(ImportBinding {
-                    localName, sourceName: named.name, sourceModule: sourcePath,
-                    typeOnly: import_.typeOnly,
-                  })
-                } else {
-                  info.imports.push(ImportBinding {
-                    localName, sourceName: named.name, sourceModule: sourcePath,
-                    typeOnly: import_.typeOnly, symbol: imported,
-                  })
-                }
-              }
-              namespace: NamespaceImport -> {
-                if hasModuleBinding(info, namespace.alias) {
-                  addError(info, "Duplicate module binding '" + namespace.alias + "'", namespace.span)
-                  continue
-                }
-                info.namespaceImports.push(NamespaceBinding {
-                  localName: namespace.alias,
-                  sourceModule: sourcePath,
-                  typeOnly: import_.typeOnly,
-                })
-              }
+          for named of import_.specifiers {
+            let imported: Symbol | none = none
+            if source != none { imported = findExport(source!, named.name) }
+            // A failed dependency already owns the actionable diagnostic.
+            // Do not reinterpret its missing symbol table as missing exports.
+            if source != none && imported == none {
+              addError(info, "Module '" + import_.source + "' does not export '" + named.name + "'", named.span)
+            }
+            localName := if named.alias == none then named.name else named.alias!
+            if hasModuleBinding(info, localName) {
+              addError(info, "Duplicate module binding '" + localName + "'", named.span)
+              continue
+            }
+            if imported == none {
+              info.imports.push(ImportBinding {
+                localName, sourceName: named.name, sourceModule: sourcePath,
+                typeOnly: import_.typeOnly,
+              })
+            } else {
+              info.imports.push(ImportBinding {
+                localName, sourceName: named.name, sourceModule: sourcePath,
+                typeOnly: import_.typeOnly, symbol: imported,
+              })
             }
           }
         }
@@ -606,7 +590,6 @@ function findExport(info: ModuleInfo, name: string): Symbol | none {
 function hasModuleBinding(info: ModuleInfo, name: string): bool {
   if findSymbol(info, name) != none { return true }
   for imported of info.imports { if imported.localName == name { return true } }
-  for imported of info.namespaceImports { if imported.localName == name { return true } }
   return false
 }
 

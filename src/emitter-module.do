@@ -35,7 +35,7 @@ import { sha256HexString } from "std/crypto"
 import { JsonEligibilityCache } from "./json-semantics"
 import { StringBuilder } from "./string-builder"
 import {
-  ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, ImportBinding, InterfaceType, MapResolvedType, NamespaceBinding,
+  ActorType, ArrayResolvedType, ClassType, EnumType, FunctionType, ImportBinding, InterfaceType, MapResolvedType,
   PromiseType, ResolvedType, ResultResolvedType, SetResolvedType, StreamResolvedType, TupleResolvedType, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 
@@ -131,7 +131,6 @@ class CxxModuleEmitter {
   namespaceNameOverride: string = ""
   modulePath: string = ""
   allPrograms: Program[] = []
-  namespaceImports: NamespaceBinding[] = []
   imports: ImportBinding[] = []
   moduleSurfaces: EmitModuleSurface[] = []
   let worldviewModules: WorldviewModule[] = []
@@ -169,7 +168,6 @@ class CxxModuleEmitter {
     contextStart := timings.start()
     context := createEmitContextForModule(program, modulePath, allPrograms)
     context.names = names
-    context.namespaceImports = namespaceImports
     context.sourcePath = sourcePathFor(sourcePaths, context.modulePath)
     context.imports = imports
     context.cppTypes = CppTypeRegistry { base: preparedTypes, names }
@@ -423,11 +421,6 @@ function emitImportedNamespaces(context: EmitContext, worldviewModules: readonly
     namespace := moduleNamespace(imported.sourceModule, context.names)
     addNamespace(namespaces, namespace)
   }
-  for imported of context.namespaceImports {
-    if !worldviewContainsModule(worldviewModules, imported.sourceModule) { continue }
-    namespace := moduleNamespace(imported.sourceModule, context.names)
-    addNamespace(namespaces, namespace)
-  }
   let result = ""
   for namespace of namespaces { result = result + "using namespace ::" + namespace + ";\n" }
   return result
@@ -518,7 +511,6 @@ export function emitModuleGraph(
       namespaceNameOverride: module.namespaceName,
       modulePath: module.path,
       allPrograms: graphPrograms,
-      namespaceImports: infoNamespaceImports(result, module.path),
       imports: infoImports(result, module.path),
       moduleSurfaces: graphSurfaces,
       instantiations: concretePlan,
@@ -567,7 +559,6 @@ export function emitModuleGraph(
       namespaceNameOverride: job.namespaceName,
       modulePath: job.modulePath,
       allPrograms: graphPrograms,
-      namespaceImports: infoNamespaceImports(result, job.modulePath),
       imports: infoImports(result, job.modulePath),
       moduleSurfaces: graphSurfaces,
       instantiations: concretePlan,
@@ -669,7 +660,6 @@ function collectModuleDependencyClosure(moduleIndex: Map<string, ModuleInfo>, pa
   module := indexedGraphModule(moduleIndex, path)
   if module == none { return }
   for imported of module!.imports { collectModuleDependencyClosure(moduleIndex, imported.sourceModule, reachable) }
-  for imported of module!.namespaceImports { collectModuleDependencyClosure(moduleIndex, imported.sourceModule, reachable) }
   for reExport of module!.reExports { collectModuleDependencyClosure(moduleIndex, reExport, reachable) }
 }
 
@@ -909,11 +899,6 @@ function surfaceImports(surfaces: EmitModuleSurface[], path: string): ImportBind
   return []
 }
 
-function infoNamespaceImports(result: AnalysisResult, path: string): NamespaceBinding[] {
-  for module of result.modules { if module.path == path { return module.namespaceImports } }
-  return []
-}
-
 function infoImports(result: AnalysisResult, path: string): ImportBinding[] {
   for module of result.modules { if module.path == path { return module.imports } }
   return []
@@ -950,9 +935,6 @@ function visitInitializationModule(
   if info == none { return }
   visiting.push(path)
   for imported of info!.imports {
-    if !imported.typeOnly { visitInitializationModule(result, imported.sourceModule, entry, entryMode, visiting, visited, order) }
-  }
-  for imported of info!.namespaceImports {
     if !imported.typeOnly { visitInitializationModule(result, imported.sourceModule, entry, entryMode, visiting, visited, order) }
   }
   for reExport of info!.reExports { visitInitializationModule(result, reExport, entry, entryMode, visiting, visited, order) }

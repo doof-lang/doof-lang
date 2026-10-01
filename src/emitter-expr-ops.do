@@ -485,16 +485,6 @@ export function emitMember(expression: MemberExpression, context: EmitContext): 
     }
     _ -> { }
   }
-  case expression.object {
-    identifier: Identifier -> {
-      for namespace of context.namespaceImports {
-        if namespace.localName == identifier.name {
-          return "::" + exprModuleNamespaceFor(namespace.sourceModule, context.names) + "::" + cppIdentifier(expression.property)
-        }
-      }
-    }
-    _ -> { }
-  }
   let staticObjectType = decoratedExpressionType(expression.object)
   if staticObjectType != none {
     case staticObjectType! {

@@ -181,11 +181,7 @@ export function validateExpression(expression: Expression, module: string, diagn
           addValidationError(module, member.span, "Resolved member target has no defining module", diagnostics)
         }
       }
-      if member.resolvedNamespaceAccess {
-        if member.resolvedNamespaceSymbol == none {
-          addValidationError(module, member.span, "Namespace member '" + member.property + "' has no resolved symbol", diagnostics)
-        }
-      } else { validateExpression(member.object, module, diagnostics) }
+      validateExpression(member.object, module, diagnostics)
     }
     index: IndexExpression -> { validateExpression(index.object, module, diagnostics); validateExpression(index.index, module, diagnostics) }
     call: CallExpression -> {

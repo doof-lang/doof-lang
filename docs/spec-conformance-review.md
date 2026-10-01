@@ -206,9 +206,14 @@ direct storage, so optional static fields can be shorthand sources.
 - `Container { result: Success { value: 42 } }` fails with "Cannot assign int to T".
 - `each([1, 2], => println(it))` against `f: (it: T): none` leaves `it` typed as the unsubstituted `T`. This affects parameterless and trailing lambdas passed to generic functions.
 
-### A21. Namespace named construction — **Implement**
+### A21. Namespace named construction — **Removed: no namespace imports**
 
-`math.Vector { x: … }` doesn't parse. Positional `math.Vector(…)` works (ch. 11).
+Namespace imports were only partly implemented: values, calls and positional
+construction worked, but `math.Vector { … }`, qualified type annotations and
+qualified enum variants did not, and no Doof code outside the compiler's own
+tests used them. They are removed from the language. `import * as ns from
+"mod"` is now a parse error pointing at named imports, and ch. 11 documents
+named imports with `as` for collisions. This also closes A30.
 
 ### A22. Comma-separated class fields — **Spec**
 
@@ -262,15 +267,10 @@ decoder (previously both produced invalid C++).
 declarations emit a warning with a replacement. (Class-field `const` now warns;
 see A1.)
 
-### A30. Namespace-qualified enums and types — **Decide**
+### A30. Namespace-qualified enums and types — **Removed with A21**
 
-With `import * as m from "./m"`:
-- `m.Kind.B` fails in any expression with "Enum variant 'B' cannot be accessed through a value".
-- `v: m.Vector` doesn't parse as a type annotation.
-
-Ch. 11 shows namespace imports only for values and construction, so the spec
-doesn't clearly promise either. If qualified types are wanted, revisit A2's
-parser rule at the same time.
+Namespace imports no longer exist, so qualified enums and types have nothing
+to qualify.
 
 ---
 
@@ -308,4 +308,4 @@ parser rule at the same time.
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes.** Cheap, and they remove misleading examples.
 3. **Common gaps: A5, A6, A8, A9, A10, A12, A13, A29.**
-4. **Needs a decision first: A14, A16, A23, A26, A30.**
+4. **Needs a decision first: A14, A16, A23, A26.**

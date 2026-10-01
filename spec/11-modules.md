@@ -88,14 +88,14 @@ let v3 = Vec3 { x: 1.0, y: 2.0, z: 3.0 }
 let v2 = Vec2 { x: 1.0, y: 2.0 }
 ```
 
-### Namespace Import
+### No Namespace Imports
+
+Doof has no namespace imports. `import * as ns from "mod"` is a parse error;
+import each name, using `as` to resolve collisions:
 
 ```doof
-import * as math from "./math"
-
-let v = math.Vector { x: 1.0, y: 2.0, z: 3.0 }
-let sum = math.add(1, 2)
-println(math.PI)
+import { Vector, add, PI } from "./math"
+import { Vector as Vector2 } from "./math2d"
 ```
 
 ### Type-Only Import
@@ -245,9 +245,6 @@ nor `export * as ns from "mod"` is supported. Use named re-exports, with
 export { Vector, Matrix } from "./math/linear"
 export { sin, cos, tan } from "./math/trig"
 ```
-
-Namespace imports (`import * as ns from "mod"`) are supported; they do not
-imply support for namespace re-exports.
 
 ---
 
@@ -983,7 +980,6 @@ When an imported function is re-exported through another module, the transpiler 
 | `export { A as B } from "mod"` | Re-export with rename |
 | `import { A, B } from "mod"` | Named imports |
 | `import { A as B } from "mod"` | Import with rename |
-| `import * as ns from "mod"` | Namespace import |
 | `import type { A } from "mod"` | Type-only import |
 | `import class Foo { ... }` | Extern C++ class (ref-counted) |
 | `import class Foo from "h" { ... }` | Extern class with explicit header |

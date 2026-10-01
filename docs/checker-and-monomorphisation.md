@@ -286,7 +286,7 @@ compiler generations and passed the release gate before and after replacement.
 When changing checking or specialization:
 
 1. Identify the checker owner and the exact AST/semantic decoration produced.
-2. Cover named imports, renamed imports, namespace imports, implicit methods,
+2. Cover named imports, renamed imports, implicit methods,
    explicit members, constructors, and native declarations where the feature
    can reach them.
 3. Cover the feature inside defaults, case value/range patterns, `as`, lambdas,

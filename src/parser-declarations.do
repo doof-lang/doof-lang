@@ -6,12 +6,12 @@ import {
   Block, NamedType, Parameter, ClassField,
   InterfaceField, EnumVariant, ExportSpecifier, AstLocation,
   Identifier, ConstDeclaration, ReadonlyDeclaration, LetDeclaration,
-  FunctionDeclaration, ImportDeclaration, NamespaceImport, NamedImport,
+  FunctionDeclaration, ImportDeclaration, NamedImport,
   TypeAliasDeclaration, ClassDeclaration, InterfaceDeclaration, EnumDeclaration,
   ExportList, MockImportDirective, MockImportMapping, YieldBlockExpression, TypeParameterConstraint,
   StringLiteral, UnaryExpression, MemberExpression,
 } from "./ast"
-import type { Statement, Expression, TypeAnnotation, ImportSpecifier, SourceSpan } from "./ast"
+import type { Statement, Expression, TypeAnnotation, SourceSpan } from "./ast"
 
 class ParsedTypeParameters {
   names: string[]
@@ -498,23 +498,18 @@ export function parseImport(parser: Parser): Statement {
   if parser.check(TokenType.Function) { return parseNativeFunction(parser, false, isolated_, start) }
   if isolated_ { parser.fail("Expected function after import isolated") }
   typeOnly := parser.match(TokenType.Type)
-  let specifiers: ImportSpecifier[] = []
-  if parser.match(TokenType.Star) {
-    parser.match(TokenType.As)
-    alias := parser.text(parser.expect(TokenType.Identifier))
-    specifiers.push(NamespaceImport { kind: "namespace-import-specifier", alias, span: parser.span(start) })
-  } else {
-    parser.expect(TokenType.LeftBrace)
-    while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
-      itemStart := parser.location()
-      name := parser.text(parser.expect(TokenType.Identifier))
-      let alias: string | none = none
-      if parser.match(TokenType.As) { alias = parser.text(parser.expect(TokenType.Identifier)) }
-      specifiers.push(NamedImport { kind: "named-import-specifier", name, alias, span: parser.span(itemStart) })
-      if !parser.match(TokenType.Comma) { break }
-    }
-    parser.expect(TokenType.RightBrace)
+  let specifiers: NamedImport[] = []
+  if parser.check(TokenType.Star) { parser.fail("Namespace imports are not supported; import names with 'import { name } from ...'") }
+  parser.expect(TokenType.LeftBrace)
+  while !parser.check(TokenType.RightBrace) && !parser.atEnd() {
+    itemStart := parser.location()
+    name := parser.text(parser.expect(TokenType.Identifier))
+    let alias: string | none = none
+    if parser.match(TokenType.As) { alias = parser.text(parser.expect(TokenType.Identifier)) }
+    specifiers.push(NamedImport { kind: "named-import-specifier", name, alias, span: parser.span(itemStart) })
+    if !parser.match(TokenType.Comma) { break }
   }
+  parser.expect(TokenType.RightBrace)
   parser.expect(TokenType.From)
   sourceValue := parser.text(parser.expect(TokenType.StringLiteral))
   parser.consumeSemicolon()

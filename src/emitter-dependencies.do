@@ -96,9 +96,6 @@ export function collectDependencyExpression(
         }
       }
       member: MemberExpression -> {
-        if member.resolvedNamespaceSymbol != none {
-          recordSymbol(member.resolvedNamespaceSymbol!, index)
-        }
         if member.resolvedStaticOwner != none && member.resolvedStaticOwner!.resolvedSymbol != none {
           recordSymbol(member.resolvedStaticOwner!.resolvedSymbol!, index)
         }
