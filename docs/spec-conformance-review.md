@@ -123,13 +123,15 @@ among the supported `try` forms.
 `ok: Success<int> := Success(42)` becomes `Result<int, unknown>`, then fails
 with "has no member value" or internal "Unknown resolved type" errors (ch. 9).
 
-### A10. Static member access through `::` — **Implement**
+### A10. Static member access through `::` — **Decided: class name only**
 
-- `rect::kind` and `c::zeroLabel()` don't parse; the expression parser has no `::` postfix.
-- The checker's own diagnostic ("use '::'") recommends that syntax.
-- Static interface members (`static zeroLabel(): string`) don't parse either.
-
-**Recommendation**: implement both. At minimum, stop recommending `::` in the diagnostic until it exists.
+Statics are accessed only through the class name (`Rectangle.kind`). Neither
+`.` nor `::` reaches them through an instance, and the diagnostic for
+`rect.kind` now says "use 'Rectangle.kind'" instead of recommending `::`.
+Ch. 7 drops the `::` syntax. Interfaces declare instance members only; static
+interface members, and static access through a type parameter (`T.zero()`),
+are reserved for future support, since without instance access they would
+have no call site.
 
 ### A11. Implicit numeric widening isn't transitive — **Implement**
 

@@ -344,35 +344,34 @@ class Rectangle {
 
 rect := Rectangle { width: 10 }
 
-rect.kind         // ❌ Error: static field cannot be accessed with `.`
-rect.describe()   // ❌ Error: static method cannot be accessed with `.`
-rect::kind        // ✅ "rectangle"
-rect::describe()  // ✅ "Rectangles"
+Rectangle.kind        // ✅ "rectangle"
+Rectangle.describe()  // ✅ "Rectangles"
+rect.kind             // ❌ Error: use 'Rectangle.kind'
+rect.describe()       // ❌ Error: use 'Rectangle.describe'
 ```
 
 #### Static and Interfaces
 
-Static members participate in structural interface matching only when the interface also declares them as static. Static interface methods are accessed through interface values with `::`.
+Interfaces declare instance members only. A class's static members do not take
+part in structural interface matching, so `MyCounter` below satisfies
+`Countable` through `getCount` alone:
 
 ```doof
 interface Countable {
     getCount(): int
-    static zeroLabel(): string
 }
 
 class MyCounter {
     count = 0
     getCount(): int { return count; }
     static zero(): MyCounter { return MyCounter { count: 0 }; }
-    static zeroLabel(): string { return "zero"; }
 }
 
-// MyCounter satisfies Countable, including its static contract
 let c: Countable = MyCounter.zero()  // ✅
-let label = c::zeroLabel()           // ✅
 ```
 
-Interface static fields are reserved for future support and are not currently allowed.
+Static interface members are reserved for future support, together with
+static access through a type parameter (`T.zero()`).
 
 ---
 

@@ -502,7 +502,7 @@ export function checkExpression(state: CheckerState, expression: Expression, sco
       }
       member.resolvedStaticOwner = selected.staticOwner
       if member.resolvedStaticOwner != none && !isNamedStaticReceiver(member.object) {
-        typeError(state, "Static member '" + member.property + "' cannot be accessed through an instance with '.'; use '::'", member.span)
+        typeError(state, "Static member '" + member.property + "' must be accessed through its class: use '" + member.resolvedStaticOwner!.name + "." + member.property + "'", member.span)
       }
       if member.resolvedStaticOwner == none && isNamedStaticReceiver(member.object) && selected.instance {
         typeError(state, "Instance member '" + member.property + "' cannot be accessed through a class", member.span)

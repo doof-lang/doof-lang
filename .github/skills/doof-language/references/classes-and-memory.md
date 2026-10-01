@@ -156,16 +156,13 @@ rect := Rectangle { width: 10 }
 
 Rectangle.kind
 Rectangle.describe()
-rect::kind
-rect::describe()
 ```
 
 Rules:
 
 - Static methods cannot access instance state.
-- Access statics with `.` through a named class or interface type.
-- Access statics with `::` through an instance or interface value.
-- `rect.kind` and `rect.describe()` are invalid for statics.
+- Access statics only through the class name: `Rectangle.kind`.
+- Instances never reach statics; `rect.kind` is an error that names `Rectangle.kind`.
 - Static field defaults at module scope must satisfy the construction-only
   initializer rules and run in module/declaration order.
 - Construction-only non-native struct values may initialize module bindings
@@ -217,7 +214,7 @@ Rules:
 - An unresolved inferred field cannot establish structural conformance.
 - Structs do not satisfy interfaces in v1.
 - `implements` is optional and mainly useful for documentation and early validation.
-- Interface statics are checked structurally against class statics and are invoked from interface values with `::`.
+- Interfaces declare instance members only; class statics do not take part in structural matching. Static interface members and `T.member` access through type parameters are reserved.
 - Interface members cannot be `private`.
 
 ## Memory Management

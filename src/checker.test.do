@@ -269,7 +269,7 @@ export function testChecksPrimitiveCastInputs(): none {
 export function testRejectsStaticMemberAccessThroughInstances(): none {
   invalid := checked("class Counter { static count: int = 0 }\nfunction main(): none { counter := Counter {}\nvalue := counter.count }")
   Assert.equal(invalid.diagnostics.length, 1)
-  Assert.stringContains(invalid.diagnostics[0].message, "cannot be accessed through an instance")
+  Assert.equal(invalid.diagnostics[0].message, "Static member 'count' must be accessed through its class: use 'Counter.count'")
 
   valid := checked("class Counter { static count: int = 0\nvalue: int = 1 }\nfunction main(): none { staticValue := Counter.count\ncounter := Counter {}\ninstanceValue := counter.value }")
   Assert.equal(valid.diagnostics.length, 0)
@@ -2723,4 +2723,10 @@ export function testRejectsUncheckedWeakReferenceMemberAccess(): none {
   Assert.equal(result.diagnostics.length, 2)
   Assert.stringContains(result.diagnostics[0].message, "requires '?.' or '!.'")
   Assert.stringContains(result.diagnostics[1].message, "requires '?.' or '!.'")
+}
+
+export function testStaticMethodsThroughInstancesNameTheClass(): none {
+  invalid := checked("class Rectangle { width: int\nstatic describe(): string => \"Rectangles\" }\nfunction main(): none { rect := Rectangle { width: 1 }\nlabel := rect.describe() }")
+  Assert.equal(invalid.diagnostics.length, 1)
+  Assert.equal(invalid.diagnostics[0].message, "Static member 'describe' must be accessed through its class: use 'Rectangle.describe'")
 }
