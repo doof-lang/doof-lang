@@ -15,7 +15,7 @@ import { CheckerState } from "./checker-state"
 import {
   ArrayResolvedType, ClassType, EnumType, InterfaceType, SerialValueResolvedType,
   MapResolvedType, NoneType, PrimitiveType, ResolvedType, SetResolvedType,
-  TupleResolvedType, WeakResolvedType,
+  TupleResolvedType, UnionResolvedType, WeakResolvedType,
 } from "./semantic"
 import { typeError } from "./checker-common"
 import { declarationFor } from "./checker-symbols"
@@ -235,6 +235,18 @@ function supportsDirectStorage(type_: ResolvedType): bool {
     _: InterfaceType -> { return true }
     _: SerialValueResolvedType -> { return true }
     weak_: WeakResolvedType -> { return supportsDirectStorage(weak_.inner) }
+    // `T | none` uses T's nullable carrier (a null pointer or empty optional),
+    // which default-constructs to none. Interface and wider unions lower to
+    // variants and stay excluded.
+    union_: UnionResolvedType -> {
+      let present = 0
+      for member of union_.types {
+        if member.kind == "none" { continue }
+        if member.kind == "interface" || member.kind == "union" || !supportsDirectStorage(member) { return false }
+        present += 1
+      }
+      return present == 1
+    }
     tuple: TupleResolvedType -> {
       for element of tuple.elements { if !supportsDirectStorage(element) { return false } }
       return true

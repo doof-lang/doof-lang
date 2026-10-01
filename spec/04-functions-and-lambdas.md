@@ -107,8 +107,9 @@ greet{ punctuation: "?" }            // error: missing required parameter "name"
 
 Default parameter expressions may call static class methods, which makes factory
 defaults reusable across functions and class `constructor` methods. When the
-parameter type is a class, a leading-dot shorthand may access a static field or
-static method on that class:
+parameter type is a class, a leading-dot shorthand may name a static field of
+that class's type, or call a static method returning it. When the expected type
+is `T | none`, the field or method may also produce `T | none`:
 
 ```doof
 class Transform {
@@ -119,6 +120,18 @@ class Transform {
 function spawn(transform: Transform = Transform.identity()): Transform => transform
 function spawnDefault(transform: Transform = .identity()): Transform => transform
 ```
+
+The same shorthand works wherever the expected type is known, including
+bindings and arguments:
+
+```doof
+origin: Transform := .identity()
+parsed: Transform | none := .parse(text)    // static parse(text: string): Transform | none
+move(.identity())
+```
+
+A shorthand naming a static field or method of another type is an error, for
+example `.label()` where `label` returns `string`.
 
 The `{` must immediately follow the callee token with no whitespace: `clamp{ ... }`, not `clamp { ... }`.
 

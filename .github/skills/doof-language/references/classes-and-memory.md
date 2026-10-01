@@ -22,7 +22,7 @@ Classes are nominal reference types with identity and shared ownership in genera
 
 Each field needs either a type annotation or a default so the compiler can determine its type.
 Field and parameter defaults may call static methods, for example `Transform.identity()`.
-When the expected type is a class or struct, `.member` may shorthand a static field or method on that type, for example `transform: Transform = .identity()`.
+When the expected type is a class or struct, `.member` may shorthand a static field of that type or a static method returning it, for example `transform: Transform = .identity()`. It works in any typed position (defaults, bindings, arguments). With an expected `T | none`, the field or method may also produce `T | none`: `parsed: Transform | none := .parse(text)`. Members of other types are errors.
 
 ## Struct Declarations
 

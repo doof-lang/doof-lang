@@ -75,7 +75,9 @@ export function checkCall(state: CheckerState, expression: CallExpression, scope
     }
     _ -> { }
   }
-  calleeType := checkExpression(state, expression.callee, scope, none)
+  // `.identity()` names a static method on the class the call must produce,
+  // so a dot-shorthand callee resolves against the call's expected type.
+  calleeType := checkExpression(state, expression.callee, scope, if expression.callee.kind == "dot-shorthand" then expected else none)
   target := resolveCalleeTarget(state, expression.callee, calleeType)
   expression.resolvedFunction = target.function_
   expression.resolvedFunctionModule = target.modulePath

@@ -186,10 +186,17 @@ diagnostic and update the spec.
 `for let i = 0, j = 10; …` doesn't parse, though a two-part update clause does
 (ch. 6).
 
-### A19. Static-method shorthand in defaults — **Implement**
+### A19. Static-method shorthand in defaults — **Fixed**
 
-In parameter and field defaults, `.identity()` fails with "Cannot resolve
-shorthand .identity". Static fields such as `.zero` work (ch. 4, 7).
+`.identity()` failed in every position, not only defaults: a dot-shorthand
+callee was checked without the call's expected type. It now resolves against
+that type and records the selected static member, so it lowers exactly like
+`Matrix.identity()`. A shorthand must name a static field of the expected
+class's type or a static method returning it; with an expected `T | none`,
+the field or method may also produce `T | none`
+(`parsed: Matrix | none := .parse(text)`). Other members get a targeted
+diagnostic. Module-level and static `T | none` values are now accepted as
+direct storage, so optional static fields can be shorthand sources.
 
 ### A20. Generic class inference — **Implement**
 

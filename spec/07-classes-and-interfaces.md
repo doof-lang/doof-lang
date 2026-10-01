@@ -34,8 +34,9 @@ err := AssertionError { message: "boom" }
 ```
 
 Field defaults may call static class methods. When the field type is a class,
-a leading-dot shorthand may access a static field or static method on that
-class:
+a leading-dot shorthand may name a static field of that class's type, or call a
+static method returning it. For a `T | none` field, the source may also be
+`T | none`:
 
 ```doof
 class Transform {
@@ -330,7 +331,8 @@ The following class-only features are not available on structs in v1:
 - `weak` fields or `weak` references to structs
 - identity/fluent patterns that rely on returning `this` as a shared object
 
-Instances must use `::` to access class statics:
+Class statics are accessed through the class name. An instance never reaches
+its class's static members:
 
 ```doof
 class Rectangle {

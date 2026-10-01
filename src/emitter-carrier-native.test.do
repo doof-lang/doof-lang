@@ -28,6 +28,10 @@ export function testArrayCallbacksNative(): none {
   runNativeFixture("array-callbacks")
 }
 
+export function testStaticShorthandNative(): none {
+  runNativeFixture("static-shorthand")
+}
+
 function runNativeFixture(fixture: string): none {
   root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)

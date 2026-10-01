@@ -2,7 +2,7 @@
 
 import { ActorType, ArrayResolvedType, Binding, ClassMetadataResolvedType, ClassType, EnumType, InterfaceType, FunctionParamType, FunctionType, MapResolvedType, MethodReflectionResolvedType, PrimitiveType, PromiseType, RangeResolvedType, ResolvedType, ResultResolvedType, SuccessResolvedType, FailureResolvedType, Scope, SetResolvedType, Symbol, StreamResolvedType, TupleResolvedType, UnionResolvedType, TypeParameterType, NeverType, UnknownType } from "./semantic"
 import { AnalysisResult, ModuleInfo } from "./analyzer"
-import { CheckedMember, ClassDeclaration, EnumDeclaration, Expression, FunctionDeclaration, Identifier, InterfaceDeclaration, MemberExpression, Program, SourceSpan, TypeAnnotation, Parameter, TypeParameterConstraint } from "./ast"
+import { CheckedMember, ClassDeclaration, DotShorthand, EnumDeclaration, Expression, FunctionDeclaration, Identifier, InterfaceDeclaration, MemberExpression, Program, SourceSpan, TypeAnnotation, Parameter, TypeParameterConstraint } from "./ast"
 import { interfaceBoundReceiver, applyDeepReadonly, arrayType, classMetadataType, classType, functionType, joinTypes, jsonObjectType, jsonValueType, mapType, resultType, setType, noneType, primitive, promiseType, sameType, typeName, unionType, methodReflectionType, substituteTypeParams, typeParameter, unknownType } from "./checker-types"
 import { canGenerateJsonDeserialization, canGenerateJsonSerialization, interfaceJsonDiscriminator, isGeneratedJsonType } from "./json-semantics"
 
@@ -44,6 +44,9 @@ export function resolveCalleeTarget(state: CheckerState, callee: Expression, cal
   case callee {
     member: MemberExpression -> {
       if member.resolvedMember != none { return member.resolvedMember! }
+    }
+    dot: DotShorthand -> {
+      if dot.resolvedMember != none { return dot.resolvedMember! }
     }
     identifier: Identifier -> {
       if identifier.resolvedBinding != none && identifier.resolvedBinding!.symbol != none {

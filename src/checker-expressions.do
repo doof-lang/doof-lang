@@ -790,7 +790,7 @@ function enumVariantMember(state: CheckerState, receiver: ResolvedType, property
   return false
 }
 
-export function checkDotShorthand(state: CheckerState, expression: DotShorthand, expected: ResolvedType | none): ResolvedType {
+export function checkDotShorthand(state: CheckerState, expression: DotShorthand, expected: ResolvedType | none, allowsNone: bool = false): ResolvedType {
   if expected == none {
     typeError(state, "Cannot resolve shorthand ." + expression.name + " without an expected class or enum type", expression.span)
     return finish(state, expression, unknownType())
@@ -833,12 +833,53 @@ export function checkDotShorthand(state: CheckerState, expression: DotShorthand,
       expression.resolvedShorthandOwnerModule = class_.symbol.module
       expression.resolvedShorthandOwnerNative = class_.symbol.native_
       expression.resolvedShorthandOwnerCppName = class_.symbol.nativeCppName
+      expression.resolvedMember = selected
+      // A class shorthand names a static field holding, or a static method
+      // producing, the expected class: `T`, or `T | none` where the expected
+      // type admits none.
+      allowed := typeName(class_) + (if allowsNone then " or " + typeName(class_) + " | none" else "")
+      case value {
+        method: FunctionType -> {
+          if !producesShorthandOwner(method.returnType, class_, allowsNone) {
+            typeError(state, "Shorthand ." + expression.name + " must name a static method returning " + allowed + "; it returns " + displayTypeName(method.returnType), expression.span)
+            return finish(state, expression, unknownType())
+          }
+        }
+        _ -> {
+          if value.kind != "unknown" && !producesShorthandOwner(value, class_, allowsNone) {
+            typeError(state, "Shorthand ." + expression.name + " must name a static field of type " + allowed + "; it has type " + displayTypeName(value), expression.span)
+            return finish(state, expression, unknownType())
+          }
+        }
+      }
       return finish(state, expression, value)
+    }
+    union_: UnionResolvedType -> {
+      // `T | none` resolves against its single class or enum arm.
+      let owner: ResolvedType | none = none
+      let owners = 0
+      for member of union_.types {
+        if member.kind == "class" || member.kind == "enum" { owner = member; owners += 1 }
+        else if member.kind != "none" { owners += 2 }
+      }
+      if owners == 1 { return checkDotShorthand(state, expression, owner, true) }
     }
     _ -> { }
   }
   typeError(state, "Cannot resolve shorthand ." + expression.name + " for expected type \"" + typeName(expected!) + "\"", expression.span)
   return finish(state, expression, unknownType())
+}
+
+function producesShorthandOwner(returnType: ResolvedType, owner: ClassType, allowsNone: bool): bool {
+  if sameType(returnType, owner) { return true }
+  if !allowsNone { return false }
+  case returnType {
+    union_: UnionResolvedType -> {
+      for member of union_.types { if member.kind != "none" && !sameType(member, owner) { return false } }
+      return true
+    }
+    _ -> { return false }
+  }
 }
 
 export function checkIdentifier(state: CheckerState, identifier: Identifier, scope: Scope): ResolvedType {

@@ -610,6 +610,8 @@ depending on dynamic module initialization. Values whose native representation c
 safely default-created and assigned are also rejected. Non-native structs are
 default-created as compiler backing storage and may be assigned a
 construction-only value during this ordered initialization.
+Optional values `T | none` are accepted when `T` is, because they default-create
+as `none`. Interface types and other unions are rejected.
 
 Generated C++ uses direct typed variables. Doof `readonly` remains enforced by
 the Doof checker even though the backing C++ variable is assigned by generated

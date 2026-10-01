@@ -323,3 +323,42 @@ export function testUnionAliasesExposeJsonDecoders(): none {
   Assert.equal(asValue.diagnostics.length, 1)
   Assert.stringContains(asValue.diagnostics[0].message, "Type 'Shape' cannot be used as a value")
 }
+
+function shorthandMessages(declarations: string): string[] {
+  prelude := "class Matrix {\nvalue: int\nstatic count = 3\nstatic readonly maybe: Matrix | none = none\nstatic zero = Matrix { value: 0 }\nstatic label(): string => \"m\"\nstatic identity(): Matrix => Matrix { value: 1 }\nstatic find(text: string): Matrix | none => none\n}\n"
+  result := compile([SourceFile { path: "/main.do", source: prelude + declarations + "\nfunction main(): none {}" }], "/main.do")
+  let found: string[] = []
+  for diagnostic of result.diagnostics { found.push(diagnostic.message) }
+  return found
+}
+
+export function testStaticShorthandResolvesFieldsAndFactories(): none {
+  for declaration of [
+    "function a(m: Matrix = .identity(), z: Matrix = .zero): none {}",
+    "function b(m: Matrix | none = .find(\"x\"), n: Matrix | none = .maybe, o: Matrix | none = .identity()): none {}",
+    "class Holder { m: Matrix = .identity()\nn: Matrix | none = .find(\"x\") }",
+    "function c(): none { m: Matrix := .identity()\nn: Matrix | none := .find(\"x\") }",
+    "function take(m: Matrix): none {}\nfunction d(): none { take(.identity()) }",
+  ] {
+    found := shorthandMessages(declaration)
+    for message of found { println(declaration + ": " + message) }
+    Assert.equal(found.length, 0)
+  }
+}
+
+export function testStaticShorthandMustProduceTheExpectedClass(): none {
+  for pair of [
+    ["function a(m: Matrix = .label()): none {}", "Shorthand .label must name a static method returning Matrix; it returns string"],
+    ["function a(m: Matrix = .find(\"x\")): none {}", "Shorthand .find must name a static method returning Matrix; it returns Matrix | none"],
+    ["function a(m: Matrix | none = .label()): none {}", "Shorthand .label must name a static method returning Matrix or Matrix | none; it returns string"],
+    ["function a(m: Matrix = .count): none {}", "Shorthand .count must name a static field of type Matrix; it has type int"],
+    ["function a(m: Matrix = .maybe): none {}", "Shorthand .maybe must name a static field of type Matrix; it has type Matrix | none"],
+    ["function a(m: Matrix = .missing()): none {}", "Type \"Matrix\" has no static member \"missing\""],
+    ["function a(): none { x := .identity() }", "Cannot resolve shorthand .identity without an expected class or enum type"],
+  ] {
+    found := shorthandMessages(pair[0])
+    for message of found { println(pair[0] + ": " + message) }
+    Assert.equal(found.length, 1)
+    Assert.equal(found[0], pair[1])
+  }
+}

@@ -15,3 +15,19 @@ export function testPositionalClassLiteralsFollowModuleInitializerRules(): none 
   Assert.equal(factory.diagnostics.length, 1)
   Assert.stringContains(factory.diagnostics[0].message, "Module initializer for 'START' must be a literal tree")
 }
+
+export function testOptionalValuesUseNullableDirectStorage(): none {
+  for declaration of [
+    "class P { x: int }\nlet value: P | none = none", "let value: int | none = none", "let value: int[] | none = none",
+    "struct S { a: int }\nlet value: S | none = none", "class M { static readonly empty: M | none = none }",
+  ] {
+    result := compile([SourceFile { path: "/main.do", source: declaration + "\nfunction main(): none {}" }], "/main.do")
+    for diagnostic of result.diagnostics { println(declaration + ": " + diagnostic.message) }
+    Assert.equal(result.diagnostics.length, 0)
+  }
+  for declaration of ["let value: int | string = 1", "interface I { x: int }\nclass C implements I { x: int }\nlet value: I | none = none"] {
+    result := compile([SourceFile { path: "/main.do", source: declaration + "\nfunction main(): none {}" }], "/main.do")
+    Assert.isTrue(result.diagnostics.length > 0)
+    Assert.stringContains(result.diagnostics[0].message, "cannot use direct default-constructed assignable storage")
+  }
+}

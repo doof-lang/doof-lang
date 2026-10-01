@@ -337,6 +337,9 @@ export class DotShorthand {
   let resolvedShorthandOwnerModule: string = ""
   let resolvedShorthandOwnerNative: bool = false
   let resolvedShorthandOwnerCppName: string = ""
+  // The static member a class-owned shorthand selects, so `.identity()` calls
+  // lower exactly like `Owner.identity()`.
+  let resolvedMember: CheckedMember | none = none
   let resolvedType: ResolvedType | none = none
   span: SourceSpan
 }
