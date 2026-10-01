@@ -63,9 +63,14 @@ d := 3.14f
 x: float := 3.14
 n: long := 42
 count := 30_000
+avogadro := 6.02e23  // double
+tiny := 1e-10        // an exponent alone also makes a double
 ```
 
 Rules:
+
+- Decimal literals may end with an exponent (`e`/`E`, optional sign, digits),
+  which makes them `double` (or `float` with `f`). Long literals cannot have one.
 
 - An unsuffixed integer literal must fit in `int` even when the context is
   `long`, `float`, or `double`; write `3_000_000_000L` for larger values.

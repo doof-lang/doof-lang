@@ -1739,3 +1739,23 @@ export function testParsesEnumMemberLiteralFields(): none {
     Assert.isFalse(parser.errorMessage.contains("Literal-valued"))
   }
 }
+
+export function testParsesExponentLiteralValues(): none {
+  sources := ["1e3", "2.5e2", "1_000e-3", "5E+1"]
+  values := [1000.0, 250.0, 1.0, 50.0]
+  for i of 0..<sources.length {
+    case first(sources[i]) {
+      statement: ExpressionStatement -> { assertDouble(statement.expression, values[i]) }
+      _ -> { panic("expected expression statement") }
+    }
+  }
+  case first("1e-10") {
+    statement: ExpressionStatement -> {
+      case statement.expression {
+        value: DoubleLiteral -> { Assert.isTrue(value.value > 0.99e-10 && value.value < 1.01e-10); Assert.equal(value.raw, "1e-10") }
+        _ -> { panic("expected double literal") }
+      }
+    }
+    _ -> { panic("expected expression statement") }
+  }
+}

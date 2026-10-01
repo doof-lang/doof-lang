@@ -221,10 +221,13 @@ Fields stay separated by newlines or `;`; a comma after a field name still
 declares several names of one type (`x, y: int`). The ch. 2 union example now
 writes `class Request { method: string; path: string }`.
 
-### A23. Scientific-notation literals — **Decide**
+### A23. Scientific-notation literals — **Fixed**
 
-`1e-10` doesn't lex. Ch. 11 uses it, but ch. 2 doesn't define exponent
-notation. Either add it to the lexer and ch. 2, or change the example.
+Decimal literals accept an exponent (`1e-10`, `6.02E23`, `2.5e3f`), which makes
+them floating-point even without a decimal point. Long literals reject a
+fraction or exponent with a direct diagnostic, an `e` not followed by digits
+still starts the next token, and hex literals are unaffected. Ch. 2 documents
+the form; ch. 11's `1e-10` example now compiles.
 
 ### A24. Accepted when the spec says it's an error — **Implement**
 
@@ -309,4 +312,4 @@ to qualify.
 1. **The remaining checker test helpers** (section C), now that A1, A2, A27 and A28 are done.
 2. **Chapter B doc fixes.** Cheap, and they remove misleading examples.
 3. **Common gaps: A5, A6, A8, A9, A10, A12, A13, A29.**
-4. **Needs a decision first: A14, A16, A23, A26.**
+4. **Needs a decision first: A14, A16, A26.**

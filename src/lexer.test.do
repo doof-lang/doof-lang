@@ -231,3 +231,33 @@ export function testEditorLexerRetainsCommentTriviaWithoutChangingTokens(): none
   EditorAssert.equal(editor.trivia.length, 2)
   EditorAssert.equal(source.substring(editor.trivia[0].start, editor.trivia[0].end), "/* preserve\n * indentation */")
 }
+
+export function testExponentLiteralsAreFloatingPoint(): none {
+  for source of ["1e10", "1E10", "1e-10", "1e+3", "6.02e23", "1_000e3", "2.5E-3"] {
+    lexer := Lexer { source }
+    tokens := lexer.tokenize()
+    Assert.equal(tokens[0].kind, TokenType.DoubleLiteral)
+    Assert.equal(tokens[1].kind, TokenType.EndOfFile)
+    Assert.equal(lexer.diagnostics.length, 0)
+  }
+  floats := Lexer { source: "2.5e3f" }.tokenize()
+  Assert.equal(floats[0].kind, TokenType.FloatLiteral)
+  Assert.equal(tokenValue(floats[0], "2.5e3f"), "2.5e3")
+  Assert.equal(tokenValue(Lexer { source: "1_000e3" }.tokenize()[0], "1_000e3"), "1000e3")
+}
+
+export function testExponentNeedsDigits(): none {
+  // Without digits after it, `e` starts an identifier as before.
+  assertTypes(types("1e"), [TokenType.IntLiteral, TokenType.Identifier, TokenType.EndOfFile])
+  assertTypes(types("1e+x"), [TokenType.IntLiteral, TokenType.Identifier, TokenType.Plus, TokenType.Identifier, TokenType.EndOfFile])
+  assertTypes(types("0x1e5"), [TokenType.IntLiteral, TokenType.EndOfFile])
+}
+
+export function testLongLiteralsRejectFractionsAndExponents(): none {
+  for source of ["1e5L", "1.5L"] {
+    lexer := Lexer { source }
+    lexer.tokenize()
+    Assert.equal(lexer.diagnostics.length, 1)
+    Assert.equal(lexer.diagnostics[0].message, "Long literals must be whole numbers without a fraction or exponent")
+  }
+}

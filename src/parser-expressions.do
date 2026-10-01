@@ -817,6 +817,25 @@ function digitValue(ch: char): int {
 }
 
 function parseDoubleValue(parser: Parser, raw: string): double {
+  // The checker uses this value; emitted C++ keeps the literal's own text.
+  let exponentAt = -1
+  for i of 0..<raw.length { if raw[i] == 'e' || raw[i] == 'E' { exponentAt = i; break } }
+  if exponentAt < 0 { return parseDecimalValue(parser, raw) }
+  let value = parseDecimalValue(parser, raw.substring(0, exponentAt))
+  let index = exponentAt + 1
+  negative := raw[index] == '-'
+  if raw[index] == '+' || raw[index] == '-' { index += 1 }
+  let exponent = 0
+  // Beyond 400 every double has already overflowed or underflowed.
+  while index < raw.length && exponent <= 400 {
+    exponent = exponent * 10 + digitValue(raw[index])
+    index += 1
+  }
+  for _ of 0..<exponent { value = if negative then value / 10.0 else value * 10.0 }
+  return value
+}
+
+function parseDecimalValue(parser: Parser, raw: string): double {
   let dot = -1
   for i of 0..<raw.length { if raw[i] == '.' { dot = i; break } }
   if dot < 0 { return double(parseLongValue(parser, raw)) }

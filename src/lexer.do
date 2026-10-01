@@ -572,10 +572,26 @@ export class Lexer {
     }
 
     readDigits(10)
+    let fractional = false
     if peek() == '.' && peek(1) != '.' && peek(1) != '<' {
       advance()
       readDigits(10)
+      fractional = true
+    }
+    // An exponent (`1e-10`, `6.02E23`) makes the literal floating-point. The
+    // `e` must introduce digits; otherwise it starts the next token as before.
+    if (peek() == 'e' || peek() == 'E') && (isDigit(peek(1)) || ((peek(1) == '+' || peek(1) == '-') && isDigit(peek(2)))) {
+      advance()
+      if peek() == '+' || peek() == '-' { advance() }
+      readDigits(10)
+      fractional = true
+    }
+    if fractional {
       valueEnd := pos
+      if peek() == 'L' || peek() == 'l' {
+        diagnostic("Long literals must be whole numbers without a fraction or exponent", line, column)
+        advance()
+      }
       if peek() == 'f' || peek() == 'F' {
         advance()
         addToken(TokenType.FloatLiteral, start, pos - start, start, valueEnd - start, false, tokenLine, tokenColumn)

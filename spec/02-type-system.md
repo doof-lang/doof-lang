@@ -133,6 +133,9 @@ let c = 3.14     // double (default for decimal literals)
 let d = 3.14f    // float (explicit suffix)
 let e = 30_000   // int with digit separators
 let f = 3.141_59 // double with digit separators
+let g = 6.02e23  // double with an exponent
+let h = 1e-10    // an exponent alone also makes a double
+let i = 2.5e3f   // float with an exponent
 
 // Context can influence literal interpretation
 let b: byte = 42    // Literal interpreted as byte
@@ -147,6 +150,12 @@ rejected rather than implicitly truncated. An integer literal without a suffix m
 in `long`.
 
 Underscores may appear between two digits in numeric literals to improve readability. Leading, trailing, and consecutive underscores are rejected.
+
+A decimal literal may end with an exponent: `e` or `E`, an optional `+` or
+`-`, and one or more digits. An exponent makes the literal floating-point even
+without a decimal point, so `1e3` is the `double` `1000.0` and `1e3f` is a
+`float`. Long literals are whole numbers, so `1e3L` and `1.5L` are errors.
+Hexadecimal and binary literals have no exponent; `e` is a hex digit there.
 
 ### Implicit Numeric Widening
 

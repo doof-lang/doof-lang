@@ -32,6 +32,10 @@ export function testStaticShorthandNative(): none {
   runNativeFixture("static-shorthand")
 }
 
+export function testExponentLiteralsNative(): none {
+  runNativeFixture("exponent-literals")
+}
+
 function runNativeFixture(fixture: string): none {
   root := join([tempDirectory(), "doof-native-" + fixture])
   clearNativeMatrix(root)
