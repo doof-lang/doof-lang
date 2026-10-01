@@ -655,8 +655,8 @@ member access, while a single struct nullable such as `Point | none` uses an
 optional value representation. Both may still require explicit none handling for safety.
 
 ```doof
-class Request { method: string, path: string }
-class RouterRequest { method: string, path: string }
+class Request { method: string; path: string }
+class RouterRequest { method: string; path: string }
 
 type HttpRequest = Request | RouterRequest
 

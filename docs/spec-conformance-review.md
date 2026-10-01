@@ -215,10 +215,11 @@ tests used them. They are removed from the language. `import * as ns from
 "mod"` is now a parse error pointing at named imports, and ch. 11 documents
 named imports with `as` for collisions. This also closes A30.
 
-### A22. Comma-separated class fields — **Spec**
+### A22. Comma-separated class fields — **Fixed in the spec**
 
-`class Request { method: string, path: string }` doesn't parse. Use newlines
-or `;` in the ch. 2 example.
+Fields stay separated by newlines or `;`; a comma after a field name still
+declares several names of one type (`x, y: int`). The ch. 2 union example now
+writes `class Request { method: string; path: string }`.
 
 ### A23. Scientific-notation literals — **Decide**
 
